@@ -1,0 +1,3 @@
+[submodule "vnd/cobalt"]
+	path = vnd/cobalt
+	url = git@github.com:oxidecomputer/cobalt.git
