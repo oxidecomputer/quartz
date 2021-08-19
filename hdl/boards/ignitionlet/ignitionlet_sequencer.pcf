@@ -1,0 +1,30 @@
+set_io clk_50mhz A43
+set_io -pullup yes rst_nc B19
+
+set_io --warn-no-port -pullup yes io1[0] A38
+set_io --warn-no-port -pullup yes io1[1] A39
+set_io --warn-no-port -pullup yes io1[2] A40
+set_io --warn-no-port -pullup yes io1[3] A45
+set_io --warn-no-port -pullup yes io1[4] A46
+set_io --warn-no-port -pullup yes io1[5] A47
+
+set_io --warn-no-port -pullup yes io2[0] A26
+set_io --warn-no-port -pullup yes io2[1] A27
+set_io --warn-no-port -pullup yes io2[2] A31
+set_io --warn-no-port -pullup yes io2[3] A32
+set_io --warn-no-port -pullup yes io2[4] A33
+set_io --warn-no-port -pullup yes io2[5] A34
+
+set_io --warn-no-port -pullup yes io3[0] B1
+set_io --warn-no-port -pullup yes io3[1] A2
+set_io --warn-no-port -pullup yes io3[2] A4
+set_io --warn-no-port -pullup yes io3[3] B3
+set_io --warn-no-port -pullup yes io3[4] B5
+set_io --warn-no-port -pullup yes io3[5] A8
+set_io --warn-no-port -pullup yes io3[6] B8
+set_io --warn-no-port -pullup yes io3[7] A10
+
+set_io --warn-no-port -pullup yes sw A25
+
+set_io --warn-no-port led[0] A13
+set_io --warn-no-port led[1] A14
