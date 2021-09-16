@@ -499,10 +499,12 @@ module mkSpiTestController(SPITestController);
 
     rule do_shift_in (state == SHIFTING && sclk_redge);
         if (in_shifter[8] == 1) begin
-            rx_buffer[8-rem_bytes+1] <= pack(in_shifter)[7:0];
             in_shifter <= shiftInAt0(unpack('h01), cipo);
         end else begin
             in_shifter <= shiftInAt0(in_shifter, cipo);
+            if (pack(in_shifter)[8:7] == 'b01) begin
+                rx_buffer[8-rem_bytes] <= pack(shiftInAt0(in_shifter, cipo))[7:0];
+            end
         end
     endrule
 
@@ -584,6 +586,7 @@ module mkTestBenchSpiPhy(Empty);
                 $display(rx[4]);
                 $display(rx[5]);
                 $display(rx[6]);
+                $display(rx[7]);
             endaction
         endseq
     );
