@@ -1,0 +1,67 @@
+// Copyright 2021 Oxide Computer Company
+// This is SystemRDL description of the sw-accesible registers in the Gimlet
+// Sequencer FPGA.
+
+addrmap gimlet_seq_fpga {
+    name = "Gimlet Sequencer FPGA";
+    desc = "Register description of the Gimlet Sequencer FPGA";
+
+    default regwidth = 7;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Sequencer Status Register";
+        
+        field {
+            desc = "Fan power OK"
+        } FANPWROK[1] = 0;
+        field {
+            desc = "A1 power OK"
+        } A1PWROK[1] = 0;
+        field {
+            desc = "NIC power OK"
+        } NICPWROK[1] = 0;
+        field {
+            desc = "A0 power OK"
+        } A0PWROK[1] = 0;
+        field {
+            desc = "Interrupt Pending Status"
+        } INT[7:7] = 0;
+    } STATUS;
+
+    reg {
+        name = "Power Control Register";
+        field {
+            desc = "Fan power enable";
+        } FANPWREN[1] = 0;
+        field {
+            desc = "A1 power enable";
+        } A1PWREN[1] = 0;
+        field {
+            desc = "A0 power enable";
+        } A0PWREN[1] = 0;
+        field {
+            desc = "NIC power enable";
+        } NICPWREN[1] = 0;
+    } PWRCTRL;
+
+
+    reg irq_type {
+        field {
+            desc = "A0 Power-up Timeout";
+        } A0TIMEOUT[1]
+        field {
+            desc = "A0 Fault";
+        } A0FAULT[1]
+        field {
+            desc = "A1 Power-up Timeout";
+        } A0TIMEOUT[1]
+        field {
+            desc = "A0 Fault";
+        } A0FAULT[1]
+    } IFR;
+
+    reg irq_type {name = "Interrupt Flag Register"} IFR;
+    reg irq_tpe {name = "Interrupt Enable Register"} IER;
+}

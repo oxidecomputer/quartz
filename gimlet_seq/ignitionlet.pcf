@@ -1,0 +1,9 @@
+set_io --warn-no-port clk_50mhz A43
+set_io --warn-no-port RST_N A25
+set_io --warn-no-port led1 A13
+set_io --warn-no-port led2 A14
+
+set_io --warn-no-port csn B18
+set_io --warn-no-port sclk A23
+set_io --warn-no-port copi A22 
+set_io --warn-no-port cipo B17

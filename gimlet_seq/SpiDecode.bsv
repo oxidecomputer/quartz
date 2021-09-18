@@ -115,7 +115,7 @@ module mkSpiRegDecode(SpiDecodeIF);
                 end
             endmethod
         endinterface
-        // TODO: when is this valid?
+        // Return the read value
         interface Get response;
             method ActionValue#(Bit#(8)) get() if (isValid(reg_read_data));
                 let ret_data = fromMaybe(?, reg_read_data);
@@ -128,6 +128,8 @@ module mkSpiRegDecode(SpiDecodeIF);
     // Do the interface to the register block
     interface Client reg_con;
         // Request for register command
+        // TODO: How do we specify that this must fire when enabled? If we don't require that
+        // we could lose data in a larger system.
         interface Get request;
             method ActionValue#(RegRequest#(16, 8)) get() if (state == DO_READ || state == DO_WRITE);
                 let ret = RegRequest {
@@ -138,6 +140,7 @@ module mkSpiRegDecode(SpiDecodeIF);
                 return ret;
             endmethod
         endinterface
+        // Storage of the read-data is allowed anytime we don't currently have valid readdata.
         interface Put response;
             method Action put(resp) if (!isValid(reg_read_data));
                 reg_read_data <= tagged Valid resp.readdata;
@@ -275,9 +278,12 @@ endmodule
 // Physical pins interface for a SPI peripheral
 interface SpiPeriphPins;
     (* prefix = "" *)
-    method Action csn(Bit#(1) value);   // Chip select pin, always sampled
-    method Action sclk(Bit#(1) value);  // sclk pin, always sampled
-    method Action copi(Bit#(1) data);   // Input data pin sampled on appropriate sclk detected edge
+    method Action csn((* port = "csn" *) Bit#(1) value);   // Chip select pin, always sampled
+    (* prefix = "" *)
+    method Action sclk((* port = "sclk" *) Bit#(1) value);  // sclk pin, always sampled
+    (* prefix = "" *)
+    method Action copi((* port = "copi" *) Bit#(1) data);   // Input data pin sampled on appropriate sclk detected edge
+    (* prefix = "" *)
     method Bit#(1) cipo; // Output pin, always valid, shifts on appropriate sclk detected edge
 endinterface
 
@@ -299,18 +305,20 @@ endinterface
 // Main shift registers for a SPI peripheral
 module mkSpiPeriphPhy(SpiPeriphPhyIF);
     // Module registers
-    Reg#(Vector#(9, Bit#(1))) tx_shift <- mkRegU();
-    Reg#(Vector#(9, Bit#(1))) rx_shift <- mkRegU();
+    Reg#(Vector#(9, Bit#(1))) tx_shift <- mkReg(unpack('h01));
+    Reg#(Vector#(9, Bit#(1))) rx_shift <- mkReg(unpack('h01));
     Reg#(Bit#(1)) sclk_last <- mkRegU();
     Reg#(Bit#(1)) csn_last <- mkRegU();
+    Reg#(Bit#(1)) rx_shifter_msb_last <- mkReg(0);
     Reg#(Maybe#(Bit#(8))) new_tx_data <- mkReg(tagged Invalid);
 
     // Module combo things
     PulseWire sclk_redge  <- mkPulseWire();
     PulseWire sclk_fedge  <- mkPulseWire();
     PulseWire deselected  <- mkPulseWire();
+    PulseWire selected  <- mkPulseWire();
+    PulseWire rx_byte_done  <- mkPulseWire();
     
-    RWire#(Vector#(9, Bit#(1))) new_rx_data <- mkRWire();
     RWire#(Bit#(1)) cur_sclk <- mkRWire();
     RWire#(Bit#(1)) cur_csn  <- mkRWire();
     RWire#(Bit#(1)) cur_copi <- mkRWire();
@@ -319,6 +327,23 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
     rule do_lasts;
         sclk_last <= fromMaybe(sclk_last, cur_sclk.wget());
         csn_last <= fromMaybe(csn_last, cur_csn.wget());
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_done_rx;
+        rx_shifter_msb_last <= rx_shift[8];
+        if (rx_shifter_msb_last == 0 && rx_shift[8] == 1) begin
+            rx_byte_done.send();
+        end
+    
+    endrule
+
+
+    // Reset the tx_shifter
+    (* fire_when_enabled *)
+    rule do_shifter_reset (selected && !sclk_fedge && !sclk_redge);
+        tx_shift <= unpack('h01);
+        rx_shift <= unpack('h01);
     endrule
 
     // Detect rising and falling edges of the SPI clock when we're enabled (csn=0)
@@ -335,18 +360,25 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
 
     // Detect when we've lost the SPI select (rising edge of csn)
     (* fire_when_enabled *)
-    rule do_lost_select_flag;
+    rule do_cs_edge_detect;
         if (csn_last == 0 && fromMaybe(csn_last, cur_csn.wget()) == 1) begin
             deselected.send();
+        end else if (csn_last == 1 && fromMaybe(csn_last, cur_csn.wget()) == 0) begin
+            selected.send();
         end
     endrule
 
-    // Reset shifters when we've lost the peripheral select
+    // Two cases:
+    // before the first edge output something.
+
     (* fire_when_enabled *)
     rule do_tx_shifter (sclk_fedge);
-        if (isValid(new_tx_data)) begin
-            tx_shift <= unpack({fromMaybe(?, new_tx_data), 1});
+        // Accept new data into the the tx shift register before the first clock
+        if (pack(tx_shift) == 'h80 && isValid(new_tx_data)) begin
+            tx_shift <= unpack({pack(fromMaybe(?, new_tx_data)), 1});  // New data needs to be here
             new_tx_data <= tagged Invalid;
+        end else if (pack(tx_shift)[7:0] == 'h80) begin
+            tx_shift <= unpack('h01);
         end else begin
             tx_shift <= shiftInAt0(tx_shift, 0);
         end
@@ -354,13 +386,10 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
 
     // SPI mode 0,0 so shift in sampled on rising edge
     (* fire_when_enabled *)
-    rule do_shift_in;
+    rule do_shift_in (sclk_redge);
         if (rx_shift[8] == 1) begin
-            new_rx_data.wset(rx_shift);
-            rx_shift <= unpack(1);
-        end else if (fromMaybe(1, cur_csn.wget()) == 1) begin
-            rx_shift <= unpack(1);
-        end else if (sclk_redge && rx_shift[8] != 1) begin
+            rx_shift <= shiftInAt0(unpack('h01), fromMaybe(?, cur_copi.wget()));
+        end else begin
             rx_shift <= shiftInAt0(rx_shift, fromMaybe(?, cur_copi.wget()));
         end
     endrule
@@ -388,8 +417,8 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
     interface Client decoder_if;
         // Send byte to the decoder when we have a new valid byte or
         interface Get request;
-            method ActionValue#(SpiRx) get() if (isValid(new_rx_data.wget()));
-                Maybe#(Bit#(8)) data_byte = !deselected ? tagged Valid (pack(new_rx_data.wget())[7:0]) : tagged Invalid;
+            method ActionValue#(SpiRx) get() if (rx_byte_done || deselected);
+                Maybe#(Bit#(8)) data_byte = !deselected ? tagged Valid (pack(rx_shift)[7:0]) : tagged Invalid;
                 let ret = SpiRx {spi_rx_byte: data_byte, done: deselected};
                 return ret;
             endmethod
@@ -512,6 +541,8 @@ module mkSpiTestController(SPITestController);
         if (cs_cntr == 'h0f) begin
             state <= IDLE;
             cs_cntr <= 0;
+            out_shifter <= unpack('h00);
+            in_shifter <= unpack('h01);
         end else begin
             cs_cntr <= cs_cntr + 1;
         end
@@ -573,8 +604,38 @@ module mkTestBenchSpiPhy(Empty);
             action
                 Vector#(8, Bit#(8)) tx =  newVector();
                 tx[0] = unpack(zeroExtend(pack(READ)));
-                tx[1] = unpack('hBA);
-                tx[2] = unpack('hBB);
+                tx[1] = unpack('h00);
+                tx[2] = unpack('h00);
+                tx[3] = unpack('h00);
+                tx[4] = unpack('h00);
+                tx[5] = unpack('h00);
+                tx[6] = unpack('h00);
+                tx[7] = unpack('h00);
+                controller.bfm.request.put(tx);
+            endaction
+            action
+                let rx <- controller.bfm.response.get();
+                $display(rx[0]);
+                $display(rx[1]);
+                $display(rx[2]);
+                $display(rx[3]);
+                $display(rx[4]);
+                $display(rx[5]);
+                $display(rx[6]);
+                $display(rx[7]);
+            endaction
+            delay(20);
+            $display("Next");
+            action
+                Vector#(8, Bit#(8)) tx =  newVector();
+                tx[0] = unpack(zeroExtend(pack(READ)));
+                tx[1] = unpack('h00);
+                tx[2] = unpack('h00);
+                tx[3] = unpack('h00);
+                tx[4] = unpack('h00);
+                tx[5] = unpack('h00);
+                tx[6] = unpack('h00);
+                tx[7] = unpack('h00);
                 controller.bfm.request.put(tx);
             endaction
             action
