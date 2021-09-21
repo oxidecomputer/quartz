@@ -50,10 +50,8 @@ module mkIgnitionletTop(Top);
         endmethod
         method cipo = phy.pins.cipo;
     endinterface
-    method led1 = regs.led;
-    method Bit#(1) led2();
-        return 1;
-    endmethod 
+    method led1 = regs.led0;
+    method led2 = regs.led1;
 
 endmodule
 

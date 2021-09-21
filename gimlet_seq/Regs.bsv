@@ -9,8 +9,9 @@ import StmtFSM::*;
 import RegCommon::*;
 
 typedef struct {
-    ReservedZero#(7) zeros0; // bit 7..1
-    Bit#(1)          led;  // bit 0
+    Bit#(1)          led1;   // bit7
+    ReservedZero#(6) zeros0; // bit 6..1
+    Bit#(1)          led0;  // bit 0
 } LEDReg deriving (Bits, Eq);
 
 typedef struct {
@@ -19,7 +20,8 @@ typedef struct {
 
 interface RegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
-    method Bit#(1) led;
+    method Bit#(1) led1;
+    method Bit#(1) led0;
 endinterface
 
 module mkRegResponder(RegIF);
@@ -108,8 +110,11 @@ module mkRegResponder(RegIF);
             endmethod
         endinterface
     endinterface
-    method Bit#(1) led;
-        return led_reg.led;
+    method Bit#(1) led0;
+        return led_reg.led0;
+    endmethod
+    method Bit#(1) led1;
+        return led_reg.led1;
     endmethod
 endmodule
 
