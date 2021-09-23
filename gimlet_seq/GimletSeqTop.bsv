@@ -100,6 +100,13 @@ interface SeqInputPins;
 endinterface
 
 interface SeqOutputPins;
+    // Fans interface
+    method Bit#(1) seq_to_fanhp_restart_l;
+    method Bit#(1) seq_to_fan_hp_en;
+
+    // A1-related
+
+    
     method Bit#(1) seq_to_dimm_efgh_v2p5_en;
     method Bit#(1) pwr_cont_dimm_abcd_en1;
     method Bit#(1) seq_to_nic_v1p2_enet_en;
@@ -128,9 +135,9 @@ interface SeqOutputPins;
     method Bit#(1) seq_to_nic_ldo_v3p3_en;
     method Bit#(1) seq_to_vtt_efgh_en;
     method Bit#(1) seq_to_sp3_pwr_good;
-    method Bit#(1) seq_to_fanhp_restart_l;
+
     method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
-    method Bit#(1) seq_to_fan_hp_en;
+    
     method Bit#(1) seq_to_vtt_abcd_a0_en;
 endinterface
 
