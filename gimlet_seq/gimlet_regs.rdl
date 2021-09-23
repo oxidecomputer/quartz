@@ -6,27 +6,89 @@ addrmap gimlet_seq_fpga {
     name = "Gimlet Sequencer FPGA";
     desc = "Register description of the Gimlet Sequencer FPGA";
 
-    default regwidth = 7;
+    default regwidth = 8;
     default sw = rw;
     default hw = r;
 
     reg {
-        name = "Sequencer Status Register";
+        name = "Identification 0";
+        default sw = r;
         
         field {
-            desc = "Fan power OK"
+            desc = "TBD";
+        } TBD[7:0] = 0;
+    } ID0;
+    reg {
+        name = "Identification 1";
+        default sw = r;
+        
+        field {
+            desc = "TBD";
+        } TBD[7:0] = 0;
+    } ID1;
+    reg {
+        name = "Identification 2";
+        default sw = r;
+
+        field {
+            desc = "TBD";
+        } TBD[7:0] = 0;
+    } ID2;
+    reg {
+        name = "Identification 3";
+        default sw = r;
+
+        field {
+            desc = "TBD";
+        } TBD[7:0] = 0;
+    } ID3;
+
+    reg irq_type {
+        field {
+            desc = "Fan Power Timeout";
+        } FANTIMEOUT[1];
+        field {
+            desc = "Fan Power Fault";
+        } FANFAULT[1];
+        field {
+            desc = "A1 Power-up Timeout";
+        } A1TIMEOUT[1];
+        field {
+            desc = "A1 Fault";
+        } A1FAULT[1];
+        field {
+            desc = "A0 Power-up Timeout";
+        } A0TIMEOUT[1];
+        field {
+            desc = "A0 Fault";
+        } A0FAULT[1];
+
+    };
+
+    // Set up interrupt registers using a common irq_type
+    irq_type IFR;
+    IFR->name = "Interrupt Flag Register"; 
+    irq_type IER;
+    IER->name = "Interrupt Enable Register";
+
+    reg {
+        name = "Sequencer Status Register";
+        default sw = r;
+        
+        field {
+            desc = "Fan power OK";
         } FANPWROK[1] = 0;
         field {
-            desc = "A1 power OK"
+            desc = "A1 power OK";
         } A1PWROK[1] = 0;
         field {
-            desc = "NIC power OK"
+            desc = "NIC power OK";
         } NICPWROK[1] = 0;
         field {
-            desc = "A0 power OK"
+            desc = "A0 power OK";
         } A0PWROK[1] = 0;
         field {
-            desc = "Interrupt Pending Status"
+            desc = "Interrupt Pending Status";
         } INT[7:7] = 0;
     } STATUS;
 
@@ -44,24 +106,247 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "NIC power enable";
         } NICPWREN[1] = 0;
+         field {
+            desc = "External pull-up give SP control of restarting. 
+            Falling edge triggers restart function which tags 2-25sec 
+            (default 10s) set by PMBus registers. 10us glitch filter at ADM1272.
+            Writing to this will cause a strobe that exceeds the glitch filter
+            timing and will self-clear (note actual output is inverted to meet
+            circuit's active low requirement";
+            singlepulse = true;
+        } FANHP_RESTART[7:7] = 0;
     } PWRCTRL;
 
+    // Readback blocks:
+    // These are built as contiguous registers so that a single multi-byte read 
+    // could capture all of them.
 
-    reg irq_type {
-        field {
-            desc = "A0 Power-up Timeout";
-        } A0TIMEOUT[1]
-        field {
-            desc = "A0 Fault";
-        } A0FAULT[1]
-        field {
-            desc = "A1 Power-up Timeout";
-        } A0TIMEOUT[1]
-        field {
-            desc = "A0 Fault";
-        } A0FAULT[1]
-    } IFR;
+    // Readbacks of pins for FAN-power related things
+    reg {
+        name = "Fan-related readback Register";
+        default sw = r;
 
-    reg irq_type {name = "Interrupt Flag Register"} IFR;
-    reg irq_tpe {name = "Interrupt Enable Register"} IER;
-}
+        field {
+            desc = "Input from ADM1272. Rising edge enable PMBus OPERATION on
+            command or PMBus POWER_CYCLE required to clear, assuming all
+            faults are clear.";
+        } FANHP_TO_SEQ_FAULT_L[1] = 0;
+        field {
+            desc = "From ADUM1272. Asserted when PWGIN > thresh, enable pin is
+            high and UVx and OV pins are in-range, no actuive fault conditons 
+            and mosfet is fully enhanced (Vgs > 10V).";
+        } FANHP_TO_SEQ_PWRGD[1] = 0;
+        field {
+            desc = "Input from ADM1272. Rising edge enable PMBus OPERATION on 
+            command or PMBus POWER_CYCLE required to clear, assuming all faults 
+            are clear.";
+        } FAN_TO_SEQ_FAN_FAIL[1] = 0;
+    } FANREADBACKS;
+
+    reg {
+        name = "A1 SM Status";
+        desc = "A1 'live' state machine status";
+        default sw = r;
+
+        field {
+            desc = "TBD";
+        } A1SM[7:0];
+        // TODO: A1 state machine decode in here
+    } A1SMSTATUS;
+    // Readbacks of pins for A1-power related things
+    reg {
+        name = "A1 power readbacks";
+        default sw = r;
+
+        field {
+            desc = "Readback for V1P5_SP_VDD_RTC_A1 rail.
+            (SP3_TO_SEQ_RTC_V1P5_EN - a poor net name)";
+        } V1P5_RTC_PG[1] = 0;
+
+        field {
+            desc = "Readback for V3P3_SP3_VDD_33_S5_A1 rail 
+            (SP3_TO_SEQ_V3P3_S5_PG)";
+        } V3P3_S5_PG[1] = 0;
+        field {
+            desc = "Readback for V1P8_SP3_VDD_18_S5_A rail 
+            (SP3_TO_SEQ_V1P8_S5_PG)";
+        } V1P8_S5_PG[1] = 0;
+        field {
+            desc = "Readback for V0P9_SP3_VDD_SOC_S5_A1 rail 
+            (SP3_TO_SEQ_V0P9_VDD_SOC_S5_PG)";
+        } V0P9_VDD_SOC_S5_PG[1] = 0;
+    } A1READBACKS;
+
+    // Readbacks of pins for A0-power related things
+    reg {
+        name = "AMD readbacks for A0-signals";
+        default sw = r;
+
+        field {
+            desc = "SP3_TO_SP_SLP_S3 inversion of signal from AMD CPU, Used
+            at beginning of GroupB state machine";
+        } SLP_S3[1] = 0;
+        field {
+            desc = "SP3_TO_SP_SLP_S5 inversion of signal from AMD CPU, Used 
+            at beginning of GroupB state machine";
+        } SLP_S5[1] = 0;
+        field {
+            desc = "Asserted by AMD after PWR_GOOD is asserted by sequencer 
+            should be here in: min 15ms, max of 20.4ms(SP3_TO_SEQ_PWROK_V3P3 net)";
+        } PWROK[1] = 0;
+        field {
+            desc = "Asserted (and inverted) from AMD’s RESET_L pin. 10Ms minimum assertion time, 
+            remains asserted for minimum of 1ms after PWROK assertion
+            (SP3_TO_SEQ_RESET_V3P3_L net)";
+        } RESET[1] = 0;
+    } AMD_A0;
+
+    reg {
+        name = "A0 Power Goods for Group B supplies";
+        default sw = r;
+
+        field {
+            desc = "Readback from VPP_ABCD_A0 rail (PWR_CONT_DIMM_ABCD_PG0 net)";
+        } VPP_ABCD_PG[1] = 0;
+        field {
+            desc = "Readback from VPP_EFGH_A0 rail (PWR_CONT_DIMM_EFGH_PG0 net)";
+        } VPP_EFGH_PG[1] = 0;
+        field {
+            desc = "Readback from VDD_MEM_ABCD_A0 rail (PWR_CONT1_SP3_PG0)
+            Power good 0 for RA229618 (U350) should be configured for 
+            VDD_MEM_ABCD_A0";
+        } VDD_MEM_ABCD_PG[1];
+        field {
+            desc = "Readback from VDD_MEM_EFGH_A0 rail (PWR_CONT2_SP3_PG0)
+            Power good 0 for RA229618 (U351) should be configured for 
+            VDD_MEM_EFGH_A0";
+        } VDD_MEM_EFGH_PG[1];
+        field {
+            desc = "Readback for VTT_ABCD_A0 rail (VTT_ABCD_A0_TO_SEQ_PG_L) inverted";
+        } VTT_ABCD_PG[1];
+        field {
+            desc = "Readback for VTT_EFGH_A0 rail (VTT_EFGH_A0_TO_SEQ_PG_L) inverted";
+        } VTT_EFGH_PG[1];
+        field {
+            desc = "Readback for V1P8_SP3_VDD_18_A0 rail (SEQ_V1P8_SP3_VDD_PG_L) inverted";
+        } V1P8_SP3_PG[1];
+        field {
+            desc = "Readback from V3P3_SYS_A0 rail (PWR_CONT_DIMM_ABCD_PG1)
+            PG1 from ISL68224 U352, should be configured to represent 
+            V3P3_SYS_A0 rail status";
+        } V3P3_SYS_PG[1] = 0;
+    } GROUPB_PG;
+    reg {
+        name = "A0 Power Goods for Un-used supplies";
+        default sw = r;
+
+        field {
+            desc = "From ISL68224 U352. PWR_CONT_DIMM_ABCD_PG2 net. No defined function.";
+        } ABCD_PG2[1] = 0;
+
+        field {
+            desc = "From ISL68224 U418. PWR_CONT_DIMM_EFGH_PG1 net. No defined function.";
+        } EFGH_PG1[1] = 0;
+
+        field {
+            desc = "From ISL68224 U418. PWR_CONT_DIMM_EFGH_PG2 net. No defined function.";
+        } EFGH_PG2[1] = 0;
+    } GROUPB_UNUSED;
+
+    reg {
+        name = "A0 Power Faults for Group B + C supplies";
+        default sw = r;
+
+        field {
+            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, 
+            only valid after configuration (PWR_CONT1_SP3_NVRHOT net).
+            from RAA229618 U350 controlling SP3_VDD_VCORE_A0 and VDD_MEM_ABCD_A0 rails";
+        } CONT1_NVRHOT[1] = 0;
+        field {
+            desc = "Catastrophic fault protection output from RAA229618 U350 controlling 
+            SP3_VDD_VCORE_A0 and VDD_MEM_ABCD_A0 rails";
+        } CONT1_CFP[1] = 0;
+        field {
+            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, 
+            only valid after configuration from ISL68224 U352
+             driving VPP_ABCD_A0 and V3P3_SYS_A0 rails. (PWR_CONT_DIMM_ABCD_NVRHOT net)";
+        } ABCD_NVRHOT[1] = 0;
+        field {
+            desc = "Catastrophic fault protection output from ISL68224 feeding VPP_ABCD_A0 
+            and V3P3_SYS_A0 rails. (PWR_CONT_DIMM_ABCD_CFP net)";
+        } ABCD_CFP[1] = 0;
+        field {
+            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, 
+            only valid after configuration from ISL68224 U418 driving VPP_EFGH_A0 rail.
+            (PWR_CONT_DIMM_EFGH_NVRHOT net)";
+        } EFGH_NVRHOT[1] = 0;
+         field {
+            desc = "Catastrophic fault protection output for ISL68224 and downstream devices
+            driving VPP_EFGH_A0. (PWR_CONT_DIMM_EFGH_CFP net)";
+        } EFGH_CFP[1] = 0;
+        field {
+            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, only valid 
+            after configuration. From RAA229618 U351 driving rails SP3_VDDCR_SOC_A0 and 
+            VDD_MEM_EFGH_A0 (PWR_CONT2_SP3_NVRHOT net)";
+        } CONT2_NVRHOT[1] = 0;
+         field {
+            desc = "Catastrophic fault protection output from RAA229618 U351 controlling 
+            SP3_VDDCR_SOC_A0 and VDD_MEM_EFGH_A0 rails (PWR_CONT2_SP3_CFP net).";
+        } CONT2_CFP[1] = 0;
+    } GROUPBC_FLTS;
+
+    reg {
+        name = "A0 STATUS for Group C supplies";
+        default sw = r;
+
+        field {
+            desc = "Power good 1 for RA229618 (U351) should be configured for 
+                    SP3_VDDCR_SOC_A0 (PWR_CONT2_SP3_PG1 net)";
+        } VDDCR_SOC_PG[1] = 0;
+        field {
+            desc = "Power good 1 from RA229618 (U350) should be configured for
+                    SP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG1 net)";
+        } VDD_VCORE[1] = 0;
+    } GROUPC_PG;
+  
+    // We use this type to create both a status register for reading outputs
+    // and the debug control register for forcing outputs.
+    reg {
+        name = "Fan Output Status";
+        default sw = r;
+
+        field {
+            desc = "Enable for fan ADUM1272. (1us glitch filter at ADUM1272)";
+        } FAN_HP_EN[1];
+        field {
+            desc = "FANHP_RESTART pin (note actual output is inverted to meet
+            circuit's active low requirement, so a 1 here means a 0 on the board)";
+        } FANHP_RESTART[1] = 0;
+    } FANOUTSTATUS;
+
+    reg a1_output_type {
+        name = "A1 Outputs";
+        default sw = r;
+
+        field {
+            desc = "Enables V3P3_SP3_VDD_33_S5_A1 rail (SEQ_TO_SP3_V3P3_S5_EN pin)";
+        } V3P3_S5_EN[1] = 0;
+        field {
+            desc = "Enables V1P5_SP3_VDD_RTC_A1 rail (SEQ_TO_SP3_V1P5_RTC_EN pin)";
+        } V1P5_RTC_EN[1] = 0;
+        field {
+            desc = "Enables V1P8_SP3_VDD_18_S5_A1 rail (SEQ_TO_SP3_V1P8_S5_EN pin)";
+        } V1P8_S5_EN[1] = 0;
+        field {
+            desc = "Enables V0P9_SP3_VDD_SOC_S5_A1 rail (SEQ_TO_SP3_V0P9_S5_EN pin)";
+        } V0P9_S5_EN[1] = 0;
+    };
+    
+    a1_output_type OUTSTATUSA1;
+    OUTSTATUSA1->name = "A1 Output readbacks"; 
+
+    a1_output_type DBGOUTA1;
+    DBGOUTA1->name = "A1 Output debug control"; 
+
+
+};
