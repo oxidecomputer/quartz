@@ -93,18 +93,34 @@ addrmap gimlet_seq_fpga {
     } STATUS;
 
     reg {
-        name = "Power Control Register";
+        name = "Early Power Control Register";
         field {
             desc = "Fan power enable";
         } FANPWREN[1] = 0;
         field {
-            desc = "A1 power enable";
+            desc = "Enables V2P5_DIMM_ABCD_SPD_A0 rail (SEQ_TO_DIMM_ABCD_V2P5_EN net).";
+        } ABCD_SPD_EN[1] = 0;
+        field {
+            desc = "Enables V2P5_DIMM_EFGH_SPD_A0 rail. (SEQ_TO_DIMM_EFGH_V2P5_EN net).";
+        } EFGH_SPD_EN[1] = 0;
+    } EARLY_PWRCTRL;
+    
+    reg { 
+        field {
+            desc = "A1 power enable (starts state machine)";
         } A1PWREN[1] = 0;
         field {
-            desc = "A0 power enable";
-        } A0PWREN[1] = 0;
+            desc = "A0 Group A power enable (starts state machine)";
+        } A0A_EN[1] = 0;
         field {
-            desc = "NIC power enable";
+            desc = "A0 Group B power enable (starts state machine)";
+        } A0B_EN[1] = 0;
+        field {
+            desc = "A0 Group C power stages occur autonomously (assuming SMBus commands turn on the 
+            RA229618 outputs) *unless* this bit is set.";
+        } A0C_DIS[1] = 0;
+        field {
+            desc = "NIC power enable (starts state machine)";
         } NICPWREN[1] = 0;
          field {
             desc = "External pull-up give SP control of restarting. 
@@ -123,7 +139,7 @@ addrmap gimlet_seq_fpga {
 
     // Readbacks of pins for FAN-power related things
     reg {
-        name = "Fan-related readback Register";
+        name = "Pre-A1 Power Readback Register";
         default sw = r;
 
         field {
@@ -141,7 +157,15 @@ addrmap gimlet_seq_fpga {
             command or PMBus POWER_CYCLE required to clear, assuming all faults 
             are clear.";
         } FAN_TO_SEQ_FAN_FAIL[1] = 0;
-    } FANREADBACKS;
+        field {
+            desc = "Readback for V2P5_DIMM_ABCD_SPD_A0 rail (DIMM_TO_SEQ_ABCD_V2P5_PG net)";
+
+        } ABCD_V2P5_SPD_PG[1] = 0;
+        field {
+            desc = "Readback for V2P5_DIMM_EFGH_SPD_A0 rail (DIMM_TO_SEQ_EFGH_V2P5_PG net)";
+
+        } EFGH_V2P5_SPD_PG[1] = 0;
+    } EARLY_RBKS;
 
     reg {
         name = "A1 SM Status";
@@ -308,6 +332,80 @@ addrmap gimlet_seq_fpga {
                     SP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG1 net)";
         } VDD_VCORE[1] = 0;
     } GROUPC_PG;
+
+    // NIC readbacks
+    reg {
+        name = "Power Status for NIC HP supplies";
+        default sw = r;
+        
+        field {
+            desc = "Power good for V0P96_NIC_VDD_A0HP (PWR_CONT_NIC_PG0 net)";
+        } NIC_V0P96_PG[1] = 0;
+        field {
+            desc = "Power good for V1P1_NIC_ETH_IO_A0HP (inverted NIC_TO_SEQ_V1P1_PG_L net)";
+        } NIC_V1P1_PG[1] = 0;
+        field {
+            desc = "Power good for V1P2_NIC_MDIO_A0HP  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+        } NIC_V1P2_PG[1] = 0;
+        field {
+            desc = "Power good for V1P5_NIC_AVDD_A0HP (inverted NIC_TO_SEQ_V1P5A_PG_L net)";
+        } NIC_AV1P5_PG[1] = 0;
+        field {
+            desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP (inverted NIC_TO_SEQ_V1P5D_PG_L net)";
+        } NIC_V1P5_PG[1] = 0;
+        field {
+            desc = "Power good for V1P8_NIC_A0HP  (PWR_CONT_NIC_PG1 net)";
+        } NIC_V1P8_PG[1] = 0;
+        field {
+            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, only valid after 
+            configuration (PWR_CONT_NIC_NVRHOT net)";
+        } NIC_NVRHOT[1] = 0;
+        field {
+            desc = "Catastrophic fault protection output from ISL68224 U357 driving V1P8_NIC_A0HP 
+            VOP96_NIC_VDD_A0HP (PWR_CONT_NIC_CFP)";
+        } NIC_CFP[1] = 0;
+    } NIC_STATUS;
+
+    reg {
+        name = "Cock Generator GPIO Readbacks";
+        field {
+            desc = "GPIO1";
+        } GPIO1[1] = 0;
+        field {
+            desc = "GPIO2";
+        } GPIO2[1] = 0;
+        field {
+            desc = "GPIO3";
+        } GPIO3[1] = 0;
+        field {
+            desc = "GPIO4";
+        } GPIO4[1] = 0;
+        field {
+            desc = "GPIO5";
+        } GPIO5[1] = 0;
+        field {
+            desc = "GPIO8";
+        } GPIO8[1] = 0;
+        field {
+            desc = "GPIO9";
+        } GPIO9[1] = 0;
+    } CLKGEN_STATUS;
+
+    reg {
+        name = "General AMD readbacks";
+        field {
+            desc = "inverted CPU's thermtrip_L, 500ms to shut down power planes into S5 state. De-assertion of PWROK resets THERMTRIP_L";
+        } THERMTRIP[1] = 0;
+        field {
+            desc = "inverted FSR_REQ_L net. Maybe used in host reset detection, see RFD138. No defined use in power-up";
+        } FSR_REQ[1] = 0;
+        field {
+            desc = "Output from the AMD processor that it has effectively acknowledged that power is itself
+                    good.  This  is  connected  from  the  BSP  to  the  AP’s  PWR_GOOD  input  in  a  two  socket
+                    system.  The  FCH  may  actually  control  this  being  generated  via  the
+                    FCH::PM::RESETCONTROL2 register. ";
+        } PWRGD_OUT[1] = 0;
+    } AMD_STATUS;
   
     // We use this type to create both a status register for reading outputs
     // and the debug control register for forcing outputs.
@@ -341,12 +439,172 @@ addrmap gimlet_seq_fpga {
             desc = "Enables V0P9_SP3_VDD_SOC_S5_A1 rail (SEQ_TO_SP3_V0P9_S5_EN pin)";
         } V0P9_S5_EN[1] = 0;
     };
-    
-    a1_output_type OUTSTATUSA1;
-    OUTSTATUSA1->name = "A1 Output readbacks"; 
+
+    reg a0_output1_type {
+        field {
+            desc = "Drives VPP_ABCD_A0 rail (PWR_CONT_DIMM_ABCD_EN0 net)";
+        } VPP_ABCD_EN[1] = 0;
+        field {
+            desc = "Drives VPP_EFGH_A0 rail (PWR_CONT_DIMM_EFGH_EN0 net)";
+        } VPP_EFGH_EN[1] = 0;
+        field {
+            desc = "Enables VTT_ABCD_A0 rail (SEQ_TO_VTT_ABCD_A0_EN net)";            
+        } VTT_ABCD_EN[1] = 0;
+        field {
+            desc = "Enables VTT_EFGH_A0 rail, should enable in parallel with 
+            PWR_CONT1_SP3_EN (SEQ_TO_VTT_EFGH_EN net)";
+        } VTT_EFGH_EN[1] = 0;
+        field {
+            desc = "Drives EN of ISL68224 and ISL99390 UP32,33,34 for enabling the 
+            V3P3_SYS_A0 rail (PWR_CONT_DIMM_ABCD_EN1 net)";
+        } V3P3_SYS_EN[1] = 0;
+        field {
+            desc = "Enable 1 for ISL68224, no defined use (PWR_CONT_DIMM_EFGH_EN1 net)";
+        } EFGH_EN1[1] = 0;
+        field {
+            desc = "EN2 of ISL68224 U352, no defined function (PWR_CONT_DIMM_ABCD_EN2 net)";
+        } ABCD_EN2[1] = 0;
+        field {
+            desc = "To ISL68224 U418. No defined function (PWR_CONT_DIMM_EFGH_EN2 net)";
+        } EFGH_EN2[1] = 0;
+    };
+
+    reg a0_output2_type {
+        field {
+            desc = "Strap High, no definition yet. PWROK pin to RAA229618 U350 driving 
+            SP3_VDD_VCORE_A0 and VDD_MEM_ABCD_A0";
+        } U350_PWROK[1] = 1;
+        field {
+            desc = "Strap High, no definition yet. PWROK pin to RAA229618 U351 driving
+            SP3_VDDCR_SOC_A0 and VDD_MEM_EFGH_A0 (PWR_CONT2_SP3_PWROK net)";
+        } U351_PWROK[1] = 1;
+        field {
+            desc = "Enables V1P8_SP3_VDD_18_A0 rail (SEQ_TO_SP3_V1P8_EN net)";
+        } V1P8_SP3_EN[1] = 0;
+        field {
+            desc = "Enable for RAA229618 (U350) VDD_MEM_ABCD_A0 (PWR_CONT1_SP3_EN net)";
+        } CONT1_EN[1] = 0;
+        field {
+            desc = "Enable for RAA229618 (U35) VDD_MEM_EFGH_A0 (and gates SP3_VDDCR_SOC_A0) 
+            (PWR_CONT2_SP3_EN net)";
+        } CONT2_EN[1] = 0;
+        field {
+            desc = "Pulsed according to AMD's EDS min 15ms (SP_TO_SP3_PWR_BTN_L net, inverted from this register)";
+        } PWR_BTN[1] = 0;
+        field {
+            desc = "This is asserted to CPU, 1ms before asserting. Set when A0 rails are good. (SEQ_TO_SP3_PWR_GOOD net)";
+        } PWR_GOOD[1] = 0;
+        field {
+            desc = "De-asserted to processor after GroupA supplies are stable (10ms after S5 rails minimum) 
+            (SEQ_TO_SP3_RSMRST_V3P3_L net inverted from this register)";
+        } RSMRST[1] = 0;
+    };
+
+    reg nic_output1_type {
+        field {
+            desc = "Turns on V1P2_NIC_ENET_A0HP, no readback (SEQ_TO_NIC_V1P2_ENET_EN net)";
+        } NIC_V1P2_ETH_EN[1] = 0;
+        field {
+            desc = "EN0 for ISL68224 (U357), V0P96_NIC_VDD_A0HP rail (PWR_CONT_NIC_EN0 net)";
+        } NIC_CONT_EN0[1] = 0;
+        field {
+            desc = "EN1 for ISL68224 (U357), V1P8_NIC_A0HP rail (PWR_CONT_NIC_EN1 ent)  ";
+        } NIC_CONT_EN1[1] = 0;
+        field {
+            desc = "En for V1P5_NIC_AVDD_A0HP rail (SEQ_TO_NIC_V1P5A_EN net)";
+        } NIC_V1P5A_EN[1] = 0;
+        field {
+            desc = "En for V1P5_NIC_PCIE_MEM_A0HP rail (SEQ_TO_NIC_V1P5D_EN net)";
+        } NIC_V1P5D_EN[1] = 0;
+        field {
+            desc = "Enable for V1P2_NIC_MDIO_A0HP rail (SEQ_TO_NIC_V1P2_EN net)";
+        } NIC_V1P2_EN[1] = 0;
+        field {
+            desc = "Turns on V1P1_NIC_ETH_IO_A0HP rail (SEQ_TO_NIC_V1P1_EN net)";
+        } NIC_V1P1_EN[1] = 0;
+        field {
+            desc = "Enables V3PV_NIC_A0HP rail (SEQ_TO_NIC_LDO_V3P3_EN net)";
+        } NIC_V3P3[1] = 0;
+    };
+
+    reg nic_output2_type {
+        field {
+            desc = "Becomes clock enable for clk_100M_TO_RSW (SEQ_TO_NIC_COMB_PG net)";
+        } NIC_COMB_PG[1] = 0;
+        field {
+            desc = "CLD Reset to Chelsio. De-asserted after NIC power stable (SEQ_TO_NIC_CLD_RST_L net inverted)";
+        } NIC_CLD_RST[1] = 0;
+        field {
+            desc = "Alert SP3 of a NIC power fault (NIC_TO_SP3_PWRFLT_L inverted net)";
+        } PWRFLT[1] = 0;
+    };
+
+    reg clk_gen_output_type {
+        // TODO: need to understand GPIO pinouts and functions
+        field {
+            desc = "CLK_TO_SEQ_NMR_L inverted to clk generator";
+        } SEQ_NMR[1] = 0;
+    };
+
+    reg amd_output_type {
+        field {
+            desc = "CPU's `SYS_RESET_L`, see EDS. 10ms assertion time, would traditionally be wired to a PC reset button";
+        } SYS_RESET[1] = 0;
+    };
+
+    // Status registers
+    a1_output_type OUTSTATUS_A1;
+    OUTSTATUS_A1->name = "A1 Output readbacks"; 
+
+    a0_output1_type OUTSTATUS_A0_1;
+    OUTSTATUS_A0_1->name = "A0 Register 1 Output readbacks"; 
+    a0_output2_type OUTSTATUS_A0_2;
+    OUTSTATUS_A0_2->name = "A0 Register 2 Output readbacks";
+
+    nic_output1_type OUTSTATUS_NIC1;
+    OUTSTATUS_NIC1->name = "Readbacks of FPGA outputs (register 1 of 2) to NIC supplies/NIC";
+    nic_output2_type OUTSTATUS_NIC2;
+    OUTSTATUS_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
+
+    clk_gen_output_type OUTSTATUS_CLKGEN;
+    OUTSTATUS_CLKGEN->name = "Readbacks of FPGA outputs to clock generator";
+
+    amd_output_type OUTSTATUS_AMD;
+    OUTSTATUS_AMD->name = "Readbacks of FPGA outputs to AMD";
+
+    // Debug registers
+    reg {
+        name = "Debug Control register";
+        field {
+            desc = "Debug enable bit. Setting this flips a mux on FPGA output pins to
+            be controlled by the following debug registers. If state maintence or pre-conditions
+            are required you may use the next bit to capture the current state, or write to the
+            debug registers to set up any desired pre-conditions";
+        } REG_CTRL_EN[1] = 0;
+        field {
+            desc = "Self-clearing bit that will store the current output state in the debug registers";
+            singlepulse = true;
+        } STORE_CURRENT[1] = 0;
+    } DBG_CTRL;
 
     a1_output_type DBGOUTA1;
-    DBGOUTA1->name = "A1 Output debug control"; 
+    DBGOUTA1->name = "A1 Output debug control";  
 
 
+    a0_output1_type DBGOUTA0_1;
+    DBGOUTA0_1->name = "A0 Register 1 Output debug control"; 
+
+    a0_output2_type DBGOUTA0_2;
+    DBGOUTA0_2->name = "A0 Register 2 Output debug control"; 
+
+    nic_output1_type DBGOUT_NIC1;
+    DBGOUT_NIC1->name = "NIC REgister 1 Output debug control";
+    nic_output2_type DBGOUT_NIC2;
+    DBGOUT_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
+
+    clk_gen_output_type DBGOUT_CLKGEN;
+    DBGOUT_CLKGEN->name = "Clock Generator Output readbacks";
+
+    amd_output_type DBGOUT_AMD;
+    DBGOUT_AMD->name = "Readbacks of FPGA outputs to AMD";
 };
