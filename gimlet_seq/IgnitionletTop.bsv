@@ -10,9 +10,9 @@ import SpiDecode::*;
 
 (* always_enabled *)
 interface Top;
-    (* prefix = "" *)
+    (* prefix = "" *) // <- this is fine and does something
     interface SpiPeriphPins pins;
-    (* prefix = "" *)
+    (* prefix = "" *) // <- This does nothing and is redundant
     method Bit#(1) led1();
     method Bit#(1) led2();
 endinterface
@@ -23,7 +23,11 @@ module mkIgnitionletTop(Top);
     SpiDecodeIF decode <- mkSpiRegDecode();
     RegIF regs <- mkRegResponder();
 
-    //Synchronizers
+    // use longer names.
+    // Don't postfix interfaces with IF/IFC doesn't add much value
+    // Top level interfaces want (* always_enabled *) only applies to inputs and the outputs imply *always_ready*
+
+    // Synchronizers
     Reg#(Bit#(1)) csn_sync  <- mkReg(1);
     Reg#(Bit#(1)) sclk_sync <- mkReg(1);
     Reg#(Bit#(1)) copi_sync <- mkReg(1);
@@ -39,7 +43,7 @@ module mkIgnitionletTop(Top);
     
     interface SpiPeriphPins pins;
         // Chip select pin, always sampled
-        method Action csn(Bit#(1) value);
+        method Action csn(Bit#(1) value);  // Could also do: method csn = cs_sync._write;
             csn_sync <= value;
         endmethod
         method Action sclk(Bit#(1) value);  // sclk pin, always sampled
@@ -50,7 +54,7 @@ module mkIgnitionletTop(Top);
         endmethod
         method cipo = phy.pins.cipo;
     endinterface
-    method led1 = regs.led0;
+    method led1 = regs.led0; // <- This is implicitly calling the _read()
     method led2 = regs.led1;
 
 endmodule

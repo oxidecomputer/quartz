@@ -325,6 +325,8 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
 
     (* fire_when_enabled *)
     rule do_lasts;
+        // TODO: Move the edge detectors here, also check no implicit conditions
+        // Tend toward putting reads + writes of registers in the 
         sclk_last <= fromMaybe(sclk_last, cur_sclk.wget());
         csn_last <= fromMaybe(csn_last, cur_csn.wget());
     endrule
@@ -359,7 +361,7 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
     endrule
 
     // Detect when we've lost the SPI select (rising edge of csn)
-    (* fire_when_enabled *)
+    (* fire_when_enabled, no_implicit_conditions *)
     rule do_cs_edge_detect;
         if (csn_last == 0 && fromMaybe(csn_last, cur_csn.wget()) == 1) begin
             deselected.send();
@@ -373,12 +375,15 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
 
     (* fire_when_enabled *)
     rule do_tx_shifter (sclk_fedge);
+    // TODO: At least put a note here about 1st byte might not be valid!!
         // Accept new data into the the tx shift register before the first clock
+        // TODO: Could use a FIFO which allows deq before enq
         if (pack(tx_shift) == 'h80 && isValid(new_tx_data)) begin
+            // TODO: is there a function list that makes this prettier.
             tx_shift <= unpack({pack(fromMaybe(?, new_tx_data)), 1});  // New data needs to be here
             new_tx_data <= tagged Invalid;
         end else if (pack(tx_shift)[7:0] == 'h80) begin
-            tx_shift <= unpack('h01);
+            tx_shift <= unpack('h01);  //TODO: Can declare a constant
         end else begin
             tx_shift <= shiftInAt0(tx_shift, 0);
         end
@@ -417,6 +422,7 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
     interface Client decoder_if;
         // Send byte to the decoder when we have a new valid byte or
         interface Get request;
+            // TODO: could build a protocol
             method ActionValue#(SpiRx) get() if (rx_byte_done || deselected);
                 Maybe#(Bit#(8)) data_byte = !deselected ? tagged Valid (pack(rx_shift)[7:0]) : tagged Invalid;
                 let ret = SpiRx {spi_rx_byte: data_byte, done: deselected};
