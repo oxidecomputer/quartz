@@ -8,3 +8,14 @@ Quartz leans heavily on [Cobalt](https://github.com/oxidecomputer/cobalt) and un
 experimental or specific to an Oxide system, our posture should be to push as much into that project
 as possible. Having said that, it is acceptable to prototype in private under the Quartz project and
 move something to Cobalt once deemed ready.
+
+# Cloning instructions
+Note that cobble is a submodule of cobalt which is used as a submodule here.
+```sh
+git clone --recursive
+```
+or if already checked out:
+
+```sh
+ git submodule update --init --recursive
+```

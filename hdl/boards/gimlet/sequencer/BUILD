@@ -53,14 +53,14 @@ bluespec_library('IgnitionletTop',
     ])
 
 bluesim_binary('reg_test',
-    env = 'bluesim_default',
+    env = 'cobalt//bluesim_default',
     top = ':regs_sim#mkTestBenchSimpleReg',
     deps = [
         ':regs_sim',
     ])
 
 bluesim_binary('spi_phy_test',
-    env = 'bluesim_default',
+    env = 'cobalt//bluesim_default',
     top = ':decode_sim#mkTestBenchSpiPhy',
     deps = [
         ':decode_sim',
@@ -75,20 +75,20 @@ bluespec_verilog('ign_verilog',
         ':IgnitionletTop',
     ])
 
-yosys_design('ignitionlet_yosys',
+yosys_design('ignitionlet_spi_yosys',
     top_module = 'mkIgnitionletTop',
     sources = [
         ':ign_verilog#mkIgnitionletTop',
-        '//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/cobalt/vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':ign_verilog',
-        '//vnd/bluespec:Verilog.v',
+        '//vnd/cobalt/vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_spi',
-    env = 'ignitionlet',
-    design = ':ignitionlet_yosys#ignitionlet_yosys.json',
+    env = 'ignitionlet_spi',
+    design = ':ignitionlet_spi_yosys#ignitionlet_spi_yosys.json',
     deps = [
-        ':ignitionlet_yosys',
+        ':ignitionlet_spi_yosys',
     ])
