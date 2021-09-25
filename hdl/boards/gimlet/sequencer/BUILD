@@ -79,11 +79,11 @@ yosys_design('ignitionlet_spi_yosys',
     top_module = 'mkIgnitionletTop',
     sources = [
         ':ign_verilog#mkIgnitionletTop',
-        '//vnd/cobalt/vnd/bluespec:Verilog.v#Verilog.v',
+        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':ign_verilog',
-        '//vnd/cobalt/vnd/bluespec:Verilog.v',
+        'cobalt//vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_spi',
