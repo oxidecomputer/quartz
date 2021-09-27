@@ -11,7 +11,7 @@ import SpiDecode::*;
 (* always_enabled *)
 interface Top;
     (* prefix = "" *) // <- this is fine and does something
-    interface SpiPeriphPins pins;
+    interface SpiPeripheralPins pins;
     (* prefix = "" *) // <- This does nothing and is redundant
     method Bit#(1) led1();
     method Bit#(1) led2();
@@ -19,7 +19,7 @@ endinterface
 
 (* synthesize, default_clock_osc="clk_50mhz" *)
 module mkIgnitionletTop(Top);
-    SpiPeriphPhyIF phy <- mkSpiPeriphPhy();
+    SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     SpiDecodeIF decode <- mkSpiRegDecode();
     RegIF regs <- mkRegResponder();
 
@@ -41,17 +41,12 @@ module mkIgnitionletTop(Top);
     mkConnection(csn_sync, phy.pins.csn);
     // connect all the gpio pins
     
-    interface SpiPeriphPins pins;
-        // Chip select pin, always sampled
-        method Action csn(Bit#(1) value);  // Could also do: method csn = cs_sync._write;
-            csn_sync <= value;
-        endmethod
-        method Action sclk(Bit#(1) value);  // sclk pin, always sampled
-            sclk_sync <= value;
-        endmethod
-        method Action copi(Bit#(1) data);
-            copi_sync <= data;
-        endmethod
+    interface SpiPeripheralPins pins;
+        // Inputs
+        method csn = csn_sync._write;  // Bind action method to _write
+        method sclk = sclk_sync._write;
+        method copi = copi_sync._write;
+        // Outputs
         method cipo = phy.pins.cipo;
     endinterface
     method led1 = regs.led0; // <- This is implicitly calling the _read()

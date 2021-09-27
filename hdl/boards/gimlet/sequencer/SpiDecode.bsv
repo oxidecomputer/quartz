@@ -1,8 +1,10 @@
 package SpiDecode;
 
-import GetPut::*;
 import ClientServer::*;
 import Connectable::*;
+import FIFO::*;
+import FIFOF::*;
+import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
@@ -24,22 +26,20 @@ typedef enum {CMD, ADDR1, ADDR2, DO_READ, DO_WRITE, READ_WAIT, WRITE_WAIT} State
 module mkSpiRegDecode(SpiDecodeIF);
     // Registers
     Reg#(State) state <- mkReg(CMD);
-    Reg#(Bit#(16)) addr_reg <- mkRegU();
+    Reg#(Bit#(16)) address <- mkRegU();
     Reg#(RegOps) operation <- mkRegU();
     Reg#(Maybe#(Bit#(8))) reg_read_data <- mkReg(tagged Invalid);
     Reg#(Maybe#(Bit#(8))) reg_write_data <- mkReg(tagged Invalid);
 
-
     // comb signals
     RWire#(Bit#(8)) data <- mkRWire();
-    PulseWire done <- mkPulseWire();
+    PulseWire spi_deselected <- mkPulseWire();
     PulseWire got_data <- mkPulseWire();
-    PulseWire do_reg_txn <- mkPulseWire();
     let my_data = fromMaybe(?, data.wget());
 
     // Store first byte which is the opcode
     rule store_op (state == CMD);
-        if (done) begin
+        if (spi_deselected) begin
             state <= CMD;
         end else if (got_data) begin
             // Turn opcode byte into an actual opcode
@@ -50,11 +50,11 @@ module mkSpiRegDecode(SpiDecodeIF);
 
     // Store first byte which is the MSB of address
     rule do_addr1 (state == ADDR1);
-        if (done) begin
+        if (spi_deselected) begin
             state <= CMD;
         end else if (got_data) begin
             state <= ADDR2;
-            addr_reg <= {pack(my_data), addr_reg[7:0]};
+            address <= {pack(my_data), address[7:0]};
         end
     endrule
 
@@ -64,23 +64,28 @@ module mkSpiRegDecode(SpiDecodeIF);
     // at the next SPI clock cycle
     rule do_addr2 (state == ADDR2);
         let next_state = operation == READ ? DO_READ : WRITE_WAIT;
-        if (done) begin
+        if (spi_deselected) begin
             state <= CMD;
         end else if (got_data) begin
             state <= next_state;
-            addr_reg <= {addr_reg[15:8], pack(my_data)};
+            address <= {address[15:8], pack(my_data)};
         end
     endrule
 
     // This is a single-cycle state where the Client request
-    // is sent to the register block
-    rule do_txn (state == DO_READ || state == DO_WRITE);
-        if (done) begin
+    // is "executed" by sending the request to the register block
+    // This is also the last state in which the current address is
+    // needed so we'll increment the address here for contiguous blocks
+    // of reads or writes.
+    rule do_register_request (state == DO_READ || state == DO_WRITE);
+        if (spi_deselected) begin
             state <= CMD;
         end else begin
             let next_state = operation == READ ? READ_WAIT : WRITE_WAIT;
             state <= next_state;
-            addr_reg <= addr_reg + 1;  // get ready for the next read/write
+            // We've consumed the curent address and we're done with it so increment 
+            // to get ready for the next read or write
+            address <= address + 1;
             // Clear valid flag since this write data was consumed.
             reg_write_data <= tagged Invalid;
         end
@@ -89,12 +94,11 @@ module mkSpiRegDecode(SpiDecodeIF);
     // When doing reads or writes, we're going to auto-increment the address
     rule do_wait (state == READ_WAIT || state == WRITE_WAIT);
         let next_state = operation == READ ? DO_READ : DO_WRITE;
-        if (done) begin
+        if (spi_deselected) begin
             state <= CMD;
         end else if (got_data) begin
             state <= next_state;
-            // We got data while waiting. If this is a read,
-            // we don't care what happens here, if this is a write
+            // We got data while waiting. If this is a read, we don't care what happens here, if this is a write
             // we store the data to build the transaction.
             reg_write_data <= tagged Valid my_data;
         end
@@ -108,7 +112,7 @@ module mkSpiRegDecode(SpiDecodeIF);
             method Action put(spi_rx_struct);
                 got_data.send();
                 if (spi_rx_struct.done) begin
-                    done.send();
+                    spi_deselected.send();
                 end
                 if (isValid(spi_rx_struct.spi_rx_byte)) begin
                     data.wset(fromMaybe(?, spi_rx_struct.spi_rx_byte));
@@ -133,7 +137,7 @@ module mkSpiRegDecode(SpiDecodeIF);
         interface Get request;
             method ActionValue#(RegRequest#(16, 8)) get() if (state == DO_READ || state == DO_WRITE);
                 let ret = RegRequest {
-                    address: addr_reg, 
+                    address: address, 
                     wdata: fromMaybe(?, reg_write_data),
                     op: operation
                 };
@@ -276,7 +280,7 @@ module mkTestSpiDecode(Empty);
 endmodule
 
 // Physical pins interface for a SPI peripheral
-interface SpiPeriphPins;
+interface SpiPeripheralPins;
     (* prefix = "" *)
     method Action csn((* port = "csn" *) Bit#(1) value);   // Chip select pin, always sampled
     (* prefix = "" *)
@@ -295,93 +299,106 @@ interface SpiControllerPins;
     method Action cipo(Bit#(1) data);
 endinterface
 
-interface SpiPeriphPhyIF;
+interface SpiPeripheralPhy;
     (* prefix = "" *)
-    interface SpiPeriphPins pins;  // Physical pins interface
+    interface SpiPeripheralPins pins;  // Physical pins interface
     // Interface to decoderinterface Server#(SpiRx, Bit#(8)) spi_byte;
     interface Client#(SpiRx, Bit#(8)) decoder_if;
 endinterface
 
 // Main shift registers for a SPI peripheral
-module mkSpiPeriphPhy(SpiPeriphPhyIF);
+module mkSpiPeripheralPhy(SpiPeripheralPhy);
+    // SPI Mode notation: CPOL, CPHA:
+    // SPI devices have two bits that determine their functionality CPOL (clock polarity)
+    // and CPHA (clock phase).
+    // CPOL=0: Clock idles at 0, clock cycle is a pulse of 1. Leading edge is rising, trailing edge is falling
+    // CPOL=1: Clock idles at 1, clock cycle is a pulse of 0. Leading edge is falling, trailing edge is rising.
+    // CPHA=0: "out" side changes data on trailing edge of preceding clock cycle, in side captures data on leading edge.
+    //    The out side must hold data valid until the trailing edge of current clock cycle.
+    //    First cycle, the first bit must be on COPI *before* the leading edge of first clock.
+    // CPHA=1: "out" side changes data on leading edge of current clock cycle, "in" side captures data on trailing edge
+    //    of clock cycle.
+    //    Last cycle: the peripheral holds the CIPO line valid until deselected.
+    //
+    // Note: This module is currently designed to function in mode 0 (CPOL=0, CPHA=0).
+    // Note: There isn't currently function to put valid data out on the CIPO wire for
+    // the first byte after being selected. Typical SPI peripherals don't have valid data
+    // to return the first cycle since the usually require a command byte/address byte to 
+    // present the requested data.
+
     // Module registers
+    // For the TX and RX shift registers we're using 9 bit vectors: the "extra" bit is 
+    // "done shifting" flag vs using counters
     Reg#(Vector#(9, Bit#(1))) tx_shift <- mkReg(unpack('h01));
     Reg#(Vector#(9, Bit#(1))) rx_shift <- mkReg(unpack('h01));
     Reg#(Bit#(1)) sclk_last <- mkRegU();
     Reg#(Bit#(1)) csn_last <- mkRegU();
     Reg#(Bit#(1)) rx_shifter_msb_last <- mkReg(0);
-    Reg#(Maybe#(Bit#(8))) new_tx_data <- mkReg(tagged Invalid);
+    // We want unguarded deq here because we don't want to pass a deq implicit condition up to the shifter rule generally.
+    // It will manually check for empty before dequeing when appropriate.
+    FIFOF#(Bit#(8)) new_tx_data <- mkGFIFOF(False, True);
 
     // Module combo things
-    PulseWire sclk_redge  <- mkPulseWire();
-    PulseWire sclk_fedge  <- mkPulseWire();
-    PulseWire deselected  <- mkPulseWire();
-    PulseWire selected  <- mkPulseWire();
-    PulseWire rx_byte_done  <- mkPulseWire();
+    PulseWire sclk_leading_edge <- mkPulseWire();   // Single cycle pulse for leading edge
+    PulseWire sclk_trailing_edge <- mkPulseWire();  // Single cycle pulse for trailing edge
+    PulseWire deselected  <- mkPulseWire();         // Single cycle pulse for losing bus selection
+    PulseWire selected  <- mkPulseWire();           // Single cycle pulse for gaining bus selection
+    PulseWire rx_byte_done  <- mkPulseWire();       
     
     RWire#(Bit#(1)) cur_sclk <- mkRWire();
     RWire#(Bit#(1)) cur_csn  <- mkRWire();
     RWire#(Bit#(1)) cur_copi <- mkRWire();
 
-    (* fire_when_enabled *)
-    rule do_lasts;
-        // TODO: Move the edge detectors here, also check no implicit conditions
-        // Tend toward putting reads + writes of registers in the 
-        sclk_last <= fromMaybe(sclk_last, cur_sclk.wget());
-        csn_last <= fromMaybe(csn_last, cur_csn.wget());
+    // csn and sclk edge detectors making combo flags on edge conditions.
+    (* fire_when_enabled, no_implicit_conditions *)
+    rule do_edge_detectors;
+        let sclk =  fromMaybe(sclk_last, cur_sclk.wget());
+        let csn = fromMaybe(csn_last, cur_csn.wget());
+        // csn edge detector
+        if (csn_last == 0 && csn == 1) begin
+            deselected.send();
+        end else if (csn_last == 1 && csn == 0) begin
+            selected.send();
+        end
+        // sclk edge detector (only when selected ie: CSN=0)
+        if (csn == 0 && sclk_last == 0 && sclk == 1) begin
+            sclk_leading_edge.send();
+        end
+        if (csn == 0 && sclk_last == 1 && sclk == 0) begin
+            sclk_trailing_edge.send();
+        end
+        csn_last <= csn;
+        sclk_last <= sclk;
     endrule
 
-    (* fire_when_enabled *)
+    // Use the extra flag to know when we've shifted in a valid byte.
+    (* fire_when_enabled, no_implicit_conditions *)
     rule do_done_rx;
         rx_shifter_msb_last <= rx_shift[8];
         if (rx_shifter_msb_last == 0 && rx_shift[8] == 1) begin
             rx_byte_done.send();
         end
-    
     endrule
 
-
-    // Reset the tx_shifter
-    (* fire_when_enabled *)
-    rule do_shifter_reset (selected && !sclk_fedge && !sclk_redge);
+    // Upon gaining bus selection, reset the tx and rx shifters.
+    // Note that the sclk_trailing_edge and sclk_leading_edge can't really happen this
+    // cycle in a normal system but we put them here to help the compiler prove that there is 
+    // rule exclusivity since we're writing to the tx_shift and rx_shift registers in multiple rules.
+    (* fire_when_enabled, no_implicit_conditions *)
+    rule do_shifter_reset (selected && !sclk_trailing_edge && !sclk_leading_edge);
+        // TODO: Note we could check to see if we have valid tx data here to solve the first clock problem.
         tx_shift <= unpack('h01);
         rx_shift <= unpack('h01);
     endrule
 
-    // Detect rising and falling edges of the SPI clock when we're enabled (csn=0)
-    (* fire_when_enabled *)
-    rule do_edge_detect (fromMaybe(1, cur_csn.wget()) == 0);
-        let sclk = fromMaybe(sclk_last, cur_sclk.wget());
-        if (sclk_last == 0 && sclk == 1) begin
-            sclk_redge.send();
-        end
-        if (sclk_last == 1 && sclk == 0) begin
-            sclk_fedge.send();
-        end
-    endrule
-
-    // Detect when we've lost the SPI select (rising edge of csn)
-    (* fire_when_enabled, no_implicit_conditions *)
-    rule do_cs_edge_detect;
-        if (csn_last == 0 && fromMaybe(csn_last, cur_csn.wget()) == 1) begin
-            deselected.send();
-        end else if (csn_last == 1 && fromMaybe(csn_last, cur_csn.wget()) == 0) begin
-            selected.send();
-        end
-    endrule
-
-    // Two cases:
-    // before the first edge output something.
-
-    (* fire_when_enabled *)
-    rule do_tx_shifter (sclk_fedge);
-    // TODO: At least put a note here about 1st byte might not be valid!!
-        // Accept new data into the the tx shift register before the first clock
-        // TODO: Could use a FIFO which allows deq before enq
-        if (pack(tx_shift) == 'h80 && isValid(new_tx_data)) begin
+    (* fire_when_enabled, no_implicit_conditions*)
+    rule do_tx_shifter (sclk_trailing_edge);
+        // Accept new data into the the tx shift register before the first clock if we're done shifting
+        // and there's new data available in the FIFO.
+        if (pack(tx_shift) == 'h80 && new_tx_data.notEmpty()) begin
             // TODO: is there a function list that makes this prettier.
-            tx_shift <= unpack({pack(fromMaybe(?, new_tx_data)), 1});  // New data needs to be here
-            new_tx_data <= tagged Invalid;
+            tx_shift <= unpack({pack(new_tx_data.first), 1});  // New data needs to be here
+            new_tx_data.deq();
         end else if (pack(tx_shift)[7:0] == 'h80) begin
             tx_shift <= unpack('h01);  //TODO: Can declare a constant
         end else begin
@@ -390,8 +407,8 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
     endrule
 
     // SPI mode 0,0 so shift in sampled on rising edge
-    (* fire_when_enabled *)
-    rule do_shift_in (sclk_redge);
+    (* fire_when_enabled, no_implicit_conditions *)
+    rule do_shift_in (sclk_leading_edge);
         if (rx_shift[8] == 1) begin
             rx_shift <= shiftInAt0(unpack('h01), fromMaybe(?, cur_copi.wget()));
         end else begin
@@ -399,24 +416,17 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
         end
     endrule
 
-    interface SpiPeriphPins pins;
+    interface SpiPeripheralPins pins;
         // Chip select pin, always sampled
-        method Action csn(Bit#(1) value);   
-            cur_csn.wset(value);
-        endmethod
+        method csn = cur_csn.wset;
         // sclk pin, always sampled
-        method Action sclk(Bit#(1) value);
-            cur_sclk.wset(value);
-        endmethod
+        method sclk = cur_sclk.wset;
         // Input data pin latched on appropriate sclk detected edge
-        method Action copi(Bit#(1) data);
-            cur_copi.wset(data);
-        endmethod
+        method copi = cur_copi.wset;
         // Output pin, always valid, shifts on appropriate sclk detected edge
         method Bit#(1) cipo;
             return tx_shift[8];
         endmethod
-
     endinterface
 
     interface Client decoder_if;
@@ -431,8 +441,8 @@ module mkSpiPeriphPhy(SpiPeriphPhyIF);
         endinterface
         // accept byte from the decoder when it hands one to us.
         interface Put response;
-            method Action put(resp) if (!isValid(new_tx_data) && !sclk_fedge);
-                new_tx_data <= tagged Valid resp;
+            method Action put(resp);  // implicit condition here is fifo is empty
+                new_tx_data.enq(resp);
             endmethod
         endinterface
     endinterface
@@ -555,18 +565,13 @@ module mkSpiTestController(SPITestController);
     endrule
 
     interface SpiControllerPins pins;
-        method Bit#(1) csn();  // CSN output
-            return csn;
-        endmethod
-        method Bit#(1) sclk(); // sclk output
-            return sclk;
-        endmethod
+        
+        method csn = csn._read;  // CSN output
+        method sclk = sclk._read; // sclk output
         method Bit#(1) copi(); // data output
             return out_shifter[8];
         endmethod
-        method Action cipo(Bit#(1) data);
-            cipo <= data;
-        endmethod
+        method cipo = cipo._write;
     endinterface
 
     interface Server bfm;
@@ -574,7 +579,6 @@ module mkSpiTestController(SPITestController);
             method ActionValue#(Vector#(8, Bit#(8))) get() if (state == CS_STOP);
                 return rx_buffer;
             endmethod
-
         endinterface
 
         interface Put request;
@@ -593,7 +597,7 @@ endmodule
 module mkTestBenchSpiPhy(Empty);
     SPITestController controller <- mkSpiTestController();
     SpiDecodeIF decode <- mkSpiRegDecode();
-    SpiPeriphPhyIF phy <- mkSpiPeriphPhy();
+    SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     Server#(RegRequest#(16, 8), RegResp#(8)) fake_reg <- mkTestRegResponder();
     
     mkConnection(decode.reg_con, fake_reg); // client-server interface between decoder and reg
