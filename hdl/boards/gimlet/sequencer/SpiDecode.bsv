@@ -1,5 +1,6 @@
 package SpiDecode;
 
+import Clocks::*;
 import ClientServer::*;
 import Connectable::*;
 import FIFO::*;
@@ -155,6 +156,43 @@ module mkSpiRegDecode(SpiDecodeIF);
 
 endmodule
 
+interface SpiPeripheralSync;
+    interface SpiPeripheralPins in_pins;
+    interface SpiControllerPins syncd_pins;
+endinterface
+
+
+module mkSpiPeripheralPinSync(SpiPeripheralSync);
+    Clock clk_sys <- exposeCurrentClock();
+    Reset rst_sys <- exposeCurrentReset();
+    // This is an output from the FPGA so we just bypass through here, no need to delay or synchronize.
+    Wire#(Bit#(1)) cipo <- mkBypassWire();  
+
+    SyncBitIfc#(Bit#(1)) copi_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
+    SyncBitIfc#(Bit#(1)) csn_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
+    SyncBitIfc#(Bit#(1)) sclk_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
+
+
+    interface SpiPeripheralPins in_pins;
+         // Chip select pin, always sampled
+        method csn = csn_sync.send;
+        // sclk pin, always sampled
+        method sclk = sclk_sync.send;
+        // Input data pin latched on appropriate sclk detected edge
+        method copi = copi_sync.send;
+        // Output pin, always valid, shifts on appropriate sclk detected edge
+        method cipo = cipo._read;
+    endinterface
+
+    interface SpiControllerPins syncd_pins;
+        method csn = csn_sync.read;  // CSN output
+        method sclk = sclk_sync.read; // sclk output
+        method copi = copi_sync.read; // data output
+        method cipo = cipo._write;
+    endinterface
+
+endmodule
+
 // This is a server instance meant to be used in testing  the SPI
 // decode block by acting like a register server interface.
 //
@@ -298,6 +336,15 @@ interface SpiControllerPins;
     method Bit#(1) copi; // data output
     method Action cipo(Bit#(1) data);
 endinterface
+
+instance Connectable#(SpiControllerPins, SpiPeripheralPins);
+        module mkConnection#(SpiControllerPins cpin, SpiPeripheralPins ppin) (Empty);
+            mkConnection(cpin.csn, ppin.csn);
+            mkConnection(cpin.sclk, ppin.sclk);
+            mkConnection(cpin.cipo, ppin.cipo);
+            mkConnection(cpin.copi, ppin.copi);
+        endmodule
+    endinstance
 
 interface SpiPeripheralPhy;
     (* prefix = "" *)

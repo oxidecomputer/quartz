@@ -34,6 +34,38 @@ bluespec_library('SpiDecode',
         ':RegCommon',
     ])
 
+bluespec_library('NicBlock',
+    sources = [
+        'NicBlock.bsv',
+    ],
+    deps = [
+    ])
+
+bluespec_library('GimletSeqTop',
+    sources = [
+        'GimletSeqTop.bsv',
+    ],
+    deps = [
+        ':SpiDecode',
+        ':NicBlock'
+    ])
+
+bluespec_sim('gimlet_sim_top',
+    top = 'GimletSeqTop.bsv',
+    modules = [
+        'mkGimletTestTop',
+    ],
+    deps = [
+        ':GimletSeqTop',
+    ],)
+
+bluesim_binary('gimlet_test',
+    env = 'cobalt//bluesim_default',
+    top = ':gimlet_sim_top#mkGimletTestTop',
+    deps = [
+        ':gimlet_sim_top',
+    ])
+
 bluespec_sim('decode_sim',
     top = 'SpiDecode.bsv',
     modules = [

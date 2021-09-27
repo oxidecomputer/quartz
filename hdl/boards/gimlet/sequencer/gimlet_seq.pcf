@@ -9,13 +9,11 @@ set_io --warn-no-port pwr_cont_nic_en0 B15
 set_io --warn-no-port pwr_cont_nic_cfp B16
 set_io --warn-no-port seq_to_nic_ldo_v3p3_en B2
 set_io --warn-no-port seq_to_nic_v1p2_en B3
-set_io --warn-no-port n5745690117 B4
 set_io --warn-no-port nic_to_seq_v1p5d_pg_l C1
 set_io --warn-no-port pwr_cont_nic_nvrhot C14
 set_io --warn-no-port pwr_cont_nic_en1 C16
 set_io --warn-no-port nic_to_seq_v1p5a_pg_l C2
 set_io --warn-no-port nic_to_seq_v1p2_pg_l C3
-set_io --warn-no-port n5745690129 C4
 set_io --warn-no-port seq_to_nic_v1p5d_en D1
 set_io --warn-no-port seq_to_fanhp_restart_l D14
 set_io --warn-no-port fanhp_to_seq_fault_l D15
@@ -29,7 +27,7 @@ set_io --warn-no-port seq_to_clk_gpio3 F1
 set_io --warn-no-port pwr_cont_dimm_efgh_pg2 F15
 set_io --warn-no-port seq_to_vtt_efgh_en F16
 set_io --warn-no-port seq_to_clk_gpio9 F2
-set_io --warn-no-port clk50m_to_seq_gbin0 F7
+set_io --warn-no-port clk50m F7
 set_io --warn-no-port seq_to_clk_gpio8 G1
 set_io --warn-no-port pwr_cont_dimm_efgh_pg0 G15
 set_io --warn-no-port pwr_cont_dimm_efgh_pg1 G16
@@ -65,8 +63,8 @@ set_io --warn-no-port pwr_cont_dimm_abcd_pg1 N16
 set_io --warn-no-port sp3_to_seq_v3p3_s5_pg N2
 set_io --warn-no-port pwr_cont1_sp3_cfp P1
 set_io --warn-no-port seq_to_sp_misc_b P10
-set_io --warn-no-port seq_sdi_r P11
-set_io --warn-no-port seq_sdo_r P12
+set_io --warn-no-port copi P11
+set_io --warn-no-port cipo P12
 set_io --warn-no-port pwr_cont2_sp3_pg1 P13
 set_io --warn-no-port pwr_cont2_sp3_cfp P14
 set_io --warn-no-port pwr_cont_dimm_abcd_nvrhot P15
@@ -78,8 +76,8 @@ set_io --warn-no-port sp3_to_seq_pwrgd_out P8
 set_io --warn-no-port seq_to_sp_misc_a P9
 set_io --warn-no-port pwr_cont1_sp3_en R1
 set_io --warn-no-port sp3_to_sp_slp_s3_l R10
-set_io --warn-no-port seq_sck_r R11
-set_io --warn-no-port seq_ss_r R12
+set_io --warn-no-port sclk R11
+set_io --warn-no-port csn R12
 set_io --warn-no-port pwr_cont2_sp3_pwrok R14
 set_io --warn-no-port pwr_cont_dimm_abcd_en1 R15
 set_io --warn-no-port pwr_cont_dimm_abcd_en0 R16
