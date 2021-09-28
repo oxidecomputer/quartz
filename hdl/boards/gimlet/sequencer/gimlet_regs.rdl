@@ -89,7 +89,7 @@ addrmap gimlet_seq_fpga {
         } A0PWROK[1] = 0;
         field {
             desc = "Interrupt Pending Status";
-        } INT[7:7] = 0;
+        } INT_PEND[7:7] = 0;
     } STATUS;
 
     reg {

@@ -4,6 +4,35 @@ package NicBlock;
 import ClientServer::*;
 import Connectable::*;
 import GetPut::*;
+import GimletSeqFpgaRegs::*;
+
+    // Chip periphery pin signal names for outputs
+    interface NicOutputPinsRawSource;
+        method Bit#(1) seq_to_nic_v1p2_enet_en;
+        method Bit#(1) seq_to_nic_comb_pg;
+        method Bit#(1) pwr_cont_nic_en1;
+        method Bit#(1) pwr_cont_nic_en0;
+        method Bit#(1) seq_to_nic_cld_rst_l;
+        method Bit#(1) seq_to_nic_v1p5a_en;
+        method Bit#(1) seq_to_nic_v1p5d_en;
+        method Bit#(1) seq_to_nic_v1p2_en;
+        method Bit#(1) seq_to_nic_v1p1_en;
+        method Bit#(1) seq_to_nic_ldo_v3p3_en;
+        method Bit#(1) nic_to_sp3_pwrflt_l;
+    endinterface
+    interface NicOutputPinsRawSink;
+        method Action seq_to_nic_v1p2_enet_en(Bit#(1) value);
+        method Action seq_to_nic_comb_pg(Bit#(1) value);
+        method Action pwr_cont_nic_en1(Bit#(1) value);
+        method Action pwr_cont_nic_en0(Bit#(1) value);
+        method Action seq_to_nic_cld_rst_l(Bit#(1) value);
+        method Action seq_to_nic_v1p5a_en(Bit#(1) value);
+        method Action seq_to_nic_v1p5d_en(Bit#(1) value);
+        method Action seq_to_nic_v1p2_en(Bit#(1) value);
+        method Action seq_to_nic_v1p1_en(Bit#(1) value);
+        method Action seq_to_nic_ldo_v3p3_en(Bit#(1) value);
+        method Action nic_to_sp3_pwrflt_l(Bit#(1) value);
+    endinterface
 
     // Chip periphery pin signal names for inputs.
     interface NicInputPinsRawSink;
@@ -51,6 +80,7 @@ import GetPut::*;
         method Bit#(1) pwr_cont_nic_pg1;
     endinterface
 
+
     instance Connectable#(NicInputPinsRawSink, NicInputPinsRawSource);
         module mkConnection#(NicInputPinsRawSink sink, NicInputPinsRawSource source) (Empty);
             mkConnection(source.pwr_cont_nic_pg0, sink.pwr_cont_nic_pg0);
@@ -80,6 +110,7 @@ import GetPut::*;
     interface TBTestRawNicPinsSource;
         interface Client#(Bit#(8), Bool) bfm;
         interface NicInputPinsRawSource pins;
+
     endinterface
 
     module mkTestNicRawPinsSource(TBTestRawNicPinsSource);
@@ -109,6 +140,35 @@ import GetPut::*;
             interface Put response;
             endinterface
         endinterface
+    endmodule
+
+    interface NicRegs;
+        // Normalized pin readbacks to registers
+        interface NicInputPinsNormalizedSource in_pin_status;
+        // Debug outputs from registers
+        interface NicOutputPinsRawSink dbg_out;
+        //  TODO: sm control
+        //  TODO: debug control
+    endinterface
+    interface NicTop;
+        interface NicRegs reg_if;
+        interface NicInputPinsNormalizedSink syncd_pins;
+    endinterface
+
+    module mkNicBlock(NicTop);
+        // Output Registers
+        Reg#(Bit#(1)) seq_to_nic_v1p2_enet_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_nic_en1 <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_nic_en0 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_v1p5a_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_v1p5d_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_v1p2_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_v1p1_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_ldo_v3p3_en <- mkReg(0);
+        Reg#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkReg(0);
+
     endmodule
 
 endpackage

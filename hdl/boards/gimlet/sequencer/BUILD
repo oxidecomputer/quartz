@@ -5,6 +5,23 @@ bluespec_library('RegCommon',
         'RegCommon.bsv',
     ])
 
+bluespec_library('GimletSeqFpgaRegs',
+    sources = [
+        'GimletSeqFpgaRegs.bsv',
+    ],
+    deps = [
+        ':RegCommon',
+    ])
+bluespec_library('GimletRegs',
+    sources = [
+        'GimletRegs.bsv',
+    ],
+    deps = [
+        ':RegCommon',
+        ':GimletSeqFpgaRegs',
+        ':NicBlock',
+    ])
+
 bluespec_library('Regs',
     sources = [
         'Regs.bsv',
@@ -20,6 +37,15 @@ bluespec_sim('regs_sim',
     ],
     deps = [
         ':Regs',
+    ],)
+
+bluespec_sim('gimlet_regs_sim',
+    top = 'GimletRegs.bsv',
+    modules = [
+        'mkSimpleTest',
+    ],
+    deps = [
+        ':GimletRegs',
     ],)
 
 bluespec_library('SpiDecode',
@@ -39,6 +65,7 @@ bluespec_library('NicBlock',
         'NicBlock.bsv',
     ],
     deps = [
+         ':GimletSeqFpgaRegs',
     ])
 
 bluespec_library('GimletSeqTop',
@@ -47,7 +74,8 @@ bluespec_library('GimletSeqTop',
     ],
     deps = [
         ':SpiDecode',
-        ':NicBlock'
+        ':NicBlock',
+        ':GimletRegs',
     ])
 
 bluespec_sim('gimlet_sim_top',
@@ -64,6 +92,13 @@ bluesim_binary('gimlet_test',
     top = ':gimlet_sim_top#mkGimletTestTop',
     deps = [
         ':gimlet_sim_top',
+    ])
+
+bluesim_binary('gimlet_regs_test',
+    env = 'cobalt//bluesim_default',
+    top = ':gimlet_regs_sim#mkSimpleTest',
+    deps = [
+        ':gimlet_regs_sim',
     ])
 
 bluespec_sim('decode_sim',

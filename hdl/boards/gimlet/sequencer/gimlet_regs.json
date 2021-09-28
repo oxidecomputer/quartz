@@ -286,7 +286,7 @@
                 },
                 {
                     "type": "field",
-                    "inst_name": "INT",
+                    "inst_name": "INT_PEND",
                     "lsb": 7,
                     "msb": 7,
                     "reset": 0,

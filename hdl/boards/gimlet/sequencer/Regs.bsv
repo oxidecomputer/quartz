@@ -39,7 +39,7 @@ module mkRegResponder(RegIF);
     // Combo inputs/outputs to/from the interface
     Wire#(Bit#(8)) writedata <- mkDWire(0);
     Wire#(Bit#(16)) address <- mkDWire(0);
-    Wire#(RegOps) operation <- mkDWire(READ);
+    Wire#(RegOps) operation <- mkDWire(NOOP);
 
     // Registers
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);

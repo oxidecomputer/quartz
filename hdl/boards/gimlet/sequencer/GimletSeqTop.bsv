@@ -7,6 +7,7 @@ import Connectable::*;
 
 import SpiDecode::*;
 import NicBlock::*;
+import GimletRegs::*;
 (* always_enabled *)
 interface Top;
     // SPI interface
@@ -183,6 +184,7 @@ module mkNicInputSync(NicInputSync);
 
 endmodule
 
+// This is the top-level module for the Gimlet Sequencer FPGA.
 (* synthesize, default_clock_osc="clk50m" *)
 module mkGimletSeq (Top);
     // Sequencer Input synchronizers (meta-harden inputs)
@@ -198,12 +200,13 @@ module mkGimletSeq (Top);
     // State machine blocks
 
     // Connections
-    mkConnection(spi_sync.syncd_pins, phy.pins);
-    mkConnection(decode.spi_byte, phy.decoder_if); 
+    mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)
+    mkConnection(decode.spi_byte, phy.decoder_if);  // Output of the SPI PHY block to the SPI decoder block (client/server interface)
 
 
     interface SequencerInputPins in_pins;
         interface NicInputPinsRawSink nic_pins;
+            // Feed the nic pins into the nic pin synchronizer
             method pwr_cont_nic_pg0 = nic_pins.sink.pwr_cont_nic_pg0;
             method pwr_cont_nic_nvrhot = nic_pins.sink.pwr_cont_nic_nvrhot;
             method pwr_cont_nic_cfp = nic_pins.sink.pwr_cont_nic_cfp;
@@ -216,6 +219,7 @@ module mkGimletSeq (Top);
     endinterface
 
     interface SpiPeripheralPins spi_pins;
+        // Feed the spi pins into the spi pin synchronizer
         method csn = spi_sync.in_pins.csn;
         method sclk = spi_sync.in_pins.sclk;
         method copi = spi_sync.in_pins.copi;
@@ -234,7 +238,7 @@ module mkGimletTestTop(Empty);
     
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
     mkConnection(gimlet_fpga_top.in_pins.nic_pins, nic_pins_bfm.pins);
-    // TODO: nic_pins_bfm client inter
+    // TODO: nic_pins_bfm client interface for testbenching
 
 endmodule
 

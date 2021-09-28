@@ -639,6 +639,14 @@ module mkSpiTestController(SPITestController);
 
 endmodule
 
+// Want: a SPI Controller BFM with the following functionality:
+// Read address method, takes address, byte_number, returns a list of byte_number bytes
+// Read check method, takes address, list of bytes, returns true if bytes returned match
+// Request interface looks like this:
+// Address, operation, list{bytes}
+// Write address method, takes address, byte buffer
+
+
 // Test bench
 (* synthesize *)
 module mkTestBenchSpiPhy(Empty);
