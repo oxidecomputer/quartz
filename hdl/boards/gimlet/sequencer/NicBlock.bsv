@@ -81,8 +81,8 @@ import GimletSeqFpgaRegs::*;
     endinterface
 
 
-    instance Connectable#(NicInputPinsRawSink, NicInputPinsRawSource);
-        module mkConnection#(NicInputPinsRawSink sink, NicInputPinsRawSource source) (Empty);
+    instance Connectable#(NicInputPinsRawSource, NicInputPinsRawSink);
+        module mkConnection#(NicInputPinsRawSource source, NicInputPinsRawSink sink) (Empty);
             mkConnection(source.pwr_cont_nic_pg0, sink.pwr_cont_nic_pg0);
             mkConnection(source.pwr_cont_nic_nvrhot, sink.pwr_cont_nic_nvrhot);
             mkConnection(source.pwr_cont_nic_cfp, sink.pwr_cont_nic_cfp);
@@ -94,8 +94,8 @@ import GimletSeqFpgaRegs::*;
         endmodule
     endinstance
 
-    instance Connectable#(NicInputPinsNormalizedSink, NicInputPinsNormalizedSource);
-        module mkConnection#(NicInputPinsNormalizedSink sink, NicInputPinsNormalizedSource source) (Empty);
+    instance Connectable#(NicInputPinsNormalizedSource, NicInputPinsNormalizedSink);
+        module mkConnection#(NicInputPinsNormalizedSource source, NicInputPinsNormalizedSink sink) (Empty);
             mkConnection(source.pwr_cont_nic_pg0, sink.pwr_cont_nic_pg0);
             mkConnection(source.pwr_cont_nic_nvrhot, sink.pwr_cont_nic_nvrhot);
             mkConnection(source.pwr_cont_nic_cfp, sink.pwr_cont_nic_cfp);
@@ -144,16 +144,27 @@ import GimletSeqFpgaRegs::*;
 
     interface NicRegs;
         // Normalized pin readbacks to registers
-        interface NicInputPinsNormalizedSource in_pin_status;
+        method NicStatus nic_status;
         // Debug outputs from registers
-        interface NicOutputPinsRawSink dbg_out;
+        //interface NicOutputPinsRawSink dbg_out;
         //  TODO: sm control
         //  TODO: debug control
     endinterface
+
+    interface NicRegPinInputs;  // Register input interface
+        method Action nic_pins(NicStatus value);
+    endinterface
+
     interface NicTop;
         interface NicRegs reg_if;
         interface NicInputPinsNormalizedSink syncd_pins;
     endinterface
+
+     instance Connectable#(NicRegs, NicRegPinInputs);
+        module mkConnection#(NicRegs source, NicRegPinInputs sink) (Empty);
+            mkConnection(source.nic_status, sink.nic_pins);
+        endmodule
+    endinstance
 
     module mkNicBlock(NicTop);
         // Output Registers
@@ -168,6 +179,50 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) seq_to_nic_v1p1_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_ldo_v3p3_en <- mkReg(0);
         Reg#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkReg(0);
+
+        // Comb Inputs
+        Wire#(Bit#(1)) pwr_cont_nic_pg0 <- mkDWire(0);
+        Wire#(Bit#(1)) pwr_cont_nic_nvrhot <- mkDWire(0);
+        Wire#(Bit#(1)) pwr_cont_nic_cfp <- mkDWire(0);
+        Wire#(Bit#(1)) nic_to_seq_v1p5a_pg <- mkDWire(0);
+        Wire#(Bit#(1)) nic_to_seq_v1p5d_pg <- mkDWire(0);
+        Wire#(Bit#(1)) nic_to_seq_v1p2_pg <- mkDWire(0);
+        Wire#(Bit#(1)) nic_to_seq_v1p1_pg <- mkDWire(0);
+        Wire#(Bit#(1)) pwr_cont_nic_pg1 <- mkDWire(0);
+
+        // Comb Outputs
+        Wire#(NicStatus) cur_nic_status <- mkDWire(unpack(0));
+
+
+        // Put all of the inputs into a NicStatus struct.
+        // This is not registered but pushed over to the register block.
+        rule do_nic_status;
+            cur_nic_status <= NicStatus {
+                nic_cfp: pwr_cont_nic_cfp,
+                nic_nvrhot: pwr_cont_nic_nvrhot,
+                nic_v1p8_pg: pwr_cont_nic_pg1,
+                nic_v1p5_pg: nic_to_seq_v1p5d_pg,
+                nic_av1p5_pg: nic_to_seq_v1p5a_pg,
+                nic_v1p2_pg: nic_to_seq_v1p2_pg,
+                nic_v1p1_pg: nic_to_seq_v1p1_pg,
+                nic_v0p96_pg: pwr_cont_nic_pg0
+            };
+        endrule
+
+        interface NicInputPinsNormalizedSink syncd_pins;
+            method pwr_cont_nic_pg0 = pwr_cont_nic_pg0._write;
+            method pwr_cont_nic_nvrhot = pwr_cont_nic_nvrhot._write;
+            method pwr_cont_nic_cfp = pwr_cont_nic_cfp._write;
+            method nic_to_seq_v1p5a_pg = nic_to_seq_v1p5a_pg._write;
+            method nic_to_seq_v1p5d_pg = nic_to_seq_v1p5d_pg._write;
+            method nic_to_seq_v1p2_pg = nic_to_seq_v1p2_pg._write;
+            method nic_to_seq_v1p1_pg = nic_to_seq_v1p1_pg._write;
+            method pwr_cont_nic_pg1 = pwr_cont_nic_pg1._write;
+        endinterface
+
+        interface NicRegs reg_if;
+            method nic_status = cur_nic_status._read;
+        endinterface
 
     endmodule
 

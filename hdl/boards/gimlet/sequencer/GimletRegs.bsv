@@ -10,13 +10,10 @@ import RegCommon::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
 
-interface NicRegPinInputs;
-        method Action nic_pins(NicStatus value);
-endinterface
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
-    interface NicRegPinInputs from_sync;
+    interface NicRegPinInputs nic_in_pins;
 endinterface
 
 
@@ -66,7 +63,7 @@ module mkGimletRegs(GimletRegIF);
         endinterface
     endinterface
 
-    interface NicRegPinInputs from_sync;
+    interface NicRegPinInputs nic_in_pins;
         method nic_pins = cur_nic_pins.wset;
     endinterface
 
@@ -78,7 +75,7 @@ module mkSimpleTest(Empty);
     Reg#(NicStatus) nic_stim <- mkReg(unpack('hAA));
 
     rule do_pins;
-        dut.from_sync.nic_pins(nic_stim);
+        dut.nic_in_pins.nic_pins(nic_stim);
     endrule
 
     mkAutoFSM(

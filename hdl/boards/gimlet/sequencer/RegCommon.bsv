@@ -21,6 +21,7 @@ typedef struct {
 } RegResp#(numeric type dataWidth) deriving (Bits);
 
 // This function deals with the write, bitset, bitclear etc
+// TODO, would like to better deal with software enables etc or generate this whole thing
 function treg reg_update(treg current_value, treg next_value, taddr address, Integer my_address, RegOps operation, Bit#(bitSize) writedata)
     provisos(Bits#(treg, bitSize), Eq#(taddr), Literal#(taddr), Bits#(taddr, addrSize));
     let reg_out = current_value;  // Default to hold current value

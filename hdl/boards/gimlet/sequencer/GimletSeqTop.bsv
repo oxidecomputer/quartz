@@ -191,18 +191,23 @@ module mkGimletSeq (Top);
     NicInputSync nic_pins <- mkNicInputSync();
     
 
-
     // SPI block, including synchronizer
     SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync;    
     SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     SpiDecodeIF decode <- mkSpiRegDecode();
     // Regiser block
+    GimletRegIF regs <- mkGimletRegs();
     // State machine blocks
+    NicTop nic_block <- mkNicBlock();
 
     // Connections
+    //  SPI
     mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)
     mkConnection(decode.spi_byte, phy.decoder_if);  // Output of the SPI PHY block to the SPI decoder block (client/server interface)
-
+    mkConnection(decode.reg_con, regs.decoder_if);  // Client of SPI decoder to Server of registers block.
+    //  NIC pins
+    mkConnection(nic_pins.source, nic_block.syncd_pins);  // Synchronized pins to NIC block
+    mkConnection(nic_block.reg_if, regs.nic_in_pins);
 
     interface SequencerInputPins in_pins;
         interface NicInputPinsRawSink nic_pins;
@@ -237,7 +242,7 @@ module mkGimletTestTop(Empty);
     Top gimlet_fpga_top <- mkGimletSeq();
     
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
-    mkConnection(gimlet_fpga_top.in_pins.nic_pins, nic_pins_bfm.pins);
+    mkConnection(nic_pins_bfm.pins, gimlet_fpga_top.in_pins.nic_pins);
     // TODO: nic_pins_bfm client interface for testbenching
 
 endmodule
