@@ -92,8 +92,7 @@ addrmap gimlet_seq_fpga {
         } INT_PEND[7:7] = 0;
     } STATUS;
 
-    reg {
-        name = "Early Power Control Register";
+    reg early_power {
         field {
             desc = "Fan power enable";
         } FANPWREN[1] = 0;
@@ -103,7 +102,19 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Enables V2P5_DIMM_EFGH_SPD_A0 rail. (SEQ_TO_DIMM_EFGH_V2P5_EN net).";
         } EFGH_SPD_EN[1] = 0;
-    } EARLY_PWRCTRL;
+        field {
+            desc = "External pull-up give SP control of restarting. 
+            Falling edge triggers restart function which tags 2-25sec 
+            (default 10s) set by PMBus registers. 10us glitch filter at ADM1272.
+            Writing to this will cause a strobe that exceeds the glitch filter
+            timing and will self-clear (note actual output is inverted to meet
+            circuit's active low requirement";
+            singlepulse = true;
+        } FANHP_RESTART[7:7] = 0;
+    };
+
+    early_power EARLY_POWER_CTRL;
+    EARLY_POWER_CTRL->name = "Early Power Control Register";
     
     reg { 
         field {
@@ -122,15 +133,6 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "NIC power enable (starts state machine)";
         } NICPWREN[1] = 0;
-         field {
-            desc = "External pull-up give SP control of restarting. 
-            Falling edge triggers restart function which tags 2-25sec 
-            (default 10s) set by PMBus registers. 10us glitch filter at ADM1272.
-            Writing to this will cause a strobe that exceeds the glitch filter
-            timing and will self-clear (note actual output is inverted to meet
-            circuit's active low requirement";
-            singlepulse = true;
-        } FANHP_RESTART[7:7] = 0;
     } PWRCTRL;
 
     // Readback blocks:
@@ -145,8 +147,8 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Input from ADM1272. Rising edge enable PMBus OPERATION on
             command or PMBus POWER_CYCLE required to clear, assuming all
-            faults are clear.";
-        } FANHP_TO_SEQ_FAULT_L[1] = 0;
+            faults are clear. (Inverted to active high in register)";
+        } FANHP_TO_SEQ_FAULT[1] = 0;
         field {
             desc = "From ADUM1272. Asserted when PWGIN > thresh, enable pin is
             high and UVx and OV pins are in-range, no actuive fault conditons 
@@ -553,24 +555,26 @@ addrmap gimlet_seq_fpga {
     };
 
     // Status registers
-    a1_output_type OUTSTATUS_A1;
-    OUTSTATUS_A1->name = "A1 Output readbacks"; 
+    early_power EARLY_PWR_STATUS;
+    EARLY_PWR_STATUS->name = "Early Power Output readbacks";
+    a1_output_type OUT_STATUS_A1;
+    OUT_STATUS_A1->name = "A1 Output readbacks"; 
 
-    a0_output1_type OUTSTATUS_A0_1;
-    OUTSTATUS_A0_1->name = "A0 Register 1 Output readbacks"; 
-    a0_output2_type OUTSTATUS_A0_2;
-    OUTSTATUS_A0_2->name = "A0 Register 2 Output readbacks";
+    a0_output1_type OUT_STATUS_A0_1;
+    OUT_STATUS_A0_1->name = "A0 Register 1 Output readbacks"; 
+    a0_output2_type OUT_STATUS_A0_2;
+    OUT_STATUS_A0_2->name = "A0 Register 2 Output readbacks";
 
-    nic_output1_type OUTSTATUS_NIC1;
-    OUTSTATUS_NIC1->name = "Readbacks of FPGA outputs (register 1 of 2) to NIC supplies/NIC";
-    nic_output2_type OUTSTATUS_NIC2;
-    OUTSTATUS_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
+    nic_output1_type OUT_STATUS_NIC1;
+    OUT_STATUS_NIC1->name = "Readbacks of FPGA outputs (register 1 of 2) to NIC supplies/NIC";
+    nic_output2_type OUT_STATUS_NIC2;
+    OUT_STATUS_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
 
-    clk_gen_output_type OUTSTATUS_CLKGEN;
-    OUTSTATUS_CLKGEN->name = "Readbacks of FPGA outputs to clock generator";
+    clk_gen_output_type OUT_STATUS_CLKGEN;
+    OUT_STATUS_CLKGEN->name = "Readbacks of FPGA outputs to clock generator";
 
-    amd_output_type OUTSTATUS_AMD;
-    OUTSTATUS_AMD->name = "Readbacks of FPGA outputs to AMD";
+    amd_output_type OUT_STATUS_AMD;
+    OUT_STATUS_AMD->name = "Readbacks of FPGA outputs to AMD";
 
     // Debug registers
     reg {
@@ -587,24 +591,24 @@ addrmap gimlet_seq_fpga {
         } STORE_CURRENT[1] = 0;
     } DBG_CTRL;
 
-    a1_output_type DBGOUTA1;
-    DBGOUTA1->name = "A1 Output debug control";  
+    a1_output_type DBG_OUT_A1;
+    DBG_OUT_A1->name = "A1 Output debug control";  
 
 
-    a0_output1_type DBGOUTA0_1;
-    DBGOUTA0_1->name = "A0 Register 1 Output debug control"; 
+    a0_output1_type DBG_OUT_A0_1;
+    DBG_OUT_A0_1->name = "A0 Register 1 Output debug control"; 
 
-    a0_output2_type DBGOUTA0_2;
-    DBGOUTA0_2->name = "A0 Register 2 Output debug control"; 
+    a0_output2_type DBG_OUT_A0_2;
+    DBG_OUT_A0_2->name = "A0 Register 2 Output debug control"; 
 
-    nic_output1_type DBGOUT_NIC1;
-    DBGOUT_NIC1->name = "NIC REgister 1 Output debug control";
-    nic_output2_type DBGOUT_NIC2;
-    DBGOUT_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
+    nic_output1_type DBG_OUT_NIC1;
+    DBG_OUT_NIC1->name = "NIC REgister 1 Output debug control";
+    nic_output2_type DBG_OUT_NIC2;
+    DBG_OUT_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
 
-    clk_gen_output_type DBGOUT_CLKGEN;
-    DBGOUT_CLKGEN->name = "Clock Generator Output readbacks";
+    clk_gen_output_type DBG_OUT_CLKGEN;
+    DBG_OUT_CLKGEN->name = "Clock Generator Output readbacks";
 
-    amd_output_type DBGOUT_AMD;
-    DBGOUT_AMD->name = "Readbacks of FPGA outputs to AMD";
+    amd_output_type DBG_OUT_AMD;
+    DBG_OUT_AMD->name = "Readbacks of FPGA outputs to AMD";
 };

@@ -299,7 +299,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "EARLY_PWRCTRL",
+            "inst_name": "EARLY_POWER_CTRL",
             "addr_offset": 7,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -336,6 +336,17 @@
                     "se_onread": null,
                     "se_onwrite": null,
                     "desc": "Enables V2P5_DIMM_EFGH_SPD_A0 rail. (SEQ_TO_DIMM_EFGH_V2P5_EN net)."
+                },
+                {
+                    "type": "field",
+                    "inst_name": "FANHP_RESTART",
+                    "lsb": 7,
+                    "msb": 7,
+                    "reset": 0,
+                    "sw_access": "rw",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "External pull-up give SP control of restarting. \nFalling edge triggers restart function which tags 2-25sec \n(default 10s) set by PMBus registers. 10us glitch filter at ADM1272.\nWriting to this will cause a strobe that exceeds the glitch filter\ntiming and will self-clear (note actual output is inverted to meet\ncircuit's active low requirement"
                 }
             ]
         },
@@ -400,17 +411,6 @@
                     "se_onread": null,
                     "se_onwrite": null,
                     "desc": "NIC power enable (starts state machine)"
-                },
-                {
-                    "type": "field",
-                    "inst_name": "FANHP_RESTART",
-                    "lsb": 7,
-                    "msb": 7,
-                    "reset": 0,
-                    "sw_access": "rw",
-                    "se_onread": null,
-                    "se_onwrite": null,
-                    "desc": "External pull-up give SP control of restarting. \nFalling edge triggers restart function which tags 2-25sec \n(default 10s) set by PMBus registers. 10us glitch filter at ADM1272.\nWriting to this will cause a strobe that exceeds the glitch filter\ntiming and will self-clear (note actual output is inverted to meet\ncircuit's active low requirement"
                 }
             ]
         },
@@ -423,14 +423,14 @@
             "children": [
                 {
                     "type": "field",
-                    "inst_name": "FANHP_TO_SEQ_FAULT_L",
+                    "inst_name": "FANHP_TO_SEQ_FAULT",
                     "lsb": 0,
                     "msb": 0,
                     "reset": 0,
                     "sw_access": "r",
                     "se_onread": null,
                     "se_onwrite": null,
-                    "desc": "Input from ADM1272. Rising edge enable PMBus OPERATION on\ncommand or PMBus POWER_CYCLE required to clear, assuming all\nfaults are clear."
+                    "desc": "Input from ADM1272. Rising edge enable PMBus OPERATION on\ncommand or PMBus POWER_CYCLE required to clear, assuming all\nfaults are clear. (Inverted to active high in register)"
                 },
                 {
                     "type": "field",
@@ -1129,8 +1129,61 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_A1",
+            "inst_name": "EARLY_PWR_STATUS",
             "addr_offset": 21,
+            "regwidth": 8,
+            "min_accesswidth": 8,
+            "children": [
+                {
+                    "type": "field",
+                    "inst_name": "FANPWREN",
+                    "lsb": 0,
+                    "msb": 0,
+                    "reset": 0,
+                    "sw_access": "rw",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "Fan power enable"
+                },
+                {
+                    "type": "field",
+                    "inst_name": "ABCD_SPD_EN",
+                    "lsb": 1,
+                    "msb": 1,
+                    "reset": 0,
+                    "sw_access": "rw",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "Enables V2P5_DIMM_ABCD_SPD_A0 rail (SEQ_TO_DIMM_ABCD_V2P5_EN net)."
+                },
+                {
+                    "type": "field",
+                    "inst_name": "EFGH_SPD_EN",
+                    "lsb": 2,
+                    "msb": 2,
+                    "reset": 0,
+                    "sw_access": "rw",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "Enables V2P5_DIMM_EFGH_SPD_A0 rail. (SEQ_TO_DIMM_EFGH_V2P5_EN net)."
+                },
+                {
+                    "type": "field",
+                    "inst_name": "FANHP_RESTART",
+                    "lsb": 7,
+                    "msb": 7,
+                    "reset": 0,
+                    "sw_access": "rw",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "External pull-up give SP control of restarting. \nFalling edge triggers restart function which tags 2-25sec \n(default 10s) set by PMBus registers. 10us glitch filter at ADM1272.\nWriting to this will cause a strobe that exceeds the glitch filter\ntiming and will self-clear (note actual output is inverted to meet\ncircuit's active low requirement"
+                }
+            ]
+        },
+        {
+            "type": "reg",
+            "inst_name": "OUT_STATUS_A1",
+            "addr_offset": 22,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1183,7 +1236,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_A0_1",
-            "addr_offset": 22,
+            "addr_offset": 23,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1280,7 +1333,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_A0_2",
-            "addr_offset": 23,
+            "addr_offset": 24,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1377,7 +1430,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_NIC1",
-            "addr_offset": 24,
+            "addr_offset": 25,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1474,7 +1527,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_NIC2",
-            "addr_offset": 25,
+            "addr_offset": 26,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1516,7 +1569,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_CLKGEN",
-            "addr_offset": 26,
+            "addr_offset": 27,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1536,7 +1589,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_AMD",
-            "addr_offset": 27,
+            "addr_offset": 28,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1556,7 +1609,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_CTRL",
-            "addr_offset": 28,
+            "addr_offset": 29,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1587,7 +1640,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_A1",
-            "addr_offset": 29,
+            "addr_offset": 30,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1640,7 +1693,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_A0_1",
-            "addr_offset": 30,
+            "addr_offset": 31,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1737,7 +1790,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_A0_2",
-            "addr_offset": 31,
+            "addr_offset": 32,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1834,7 +1887,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_NIC1",
-            "addr_offset": 32,
+            "addr_offset": 33,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1931,7 +1984,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_NIC2",
-            "addr_offset": 33,
+            "addr_offset": 34,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1973,7 +2026,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_CLKGEN",
-            "addr_offset": 34,
+            "addr_offset": 35,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1993,7 +2046,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_AMD",
-            "addr_offset": 35,
+            "addr_offset": 36,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [

@@ -8,10 +8,12 @@ import StmtFSM::*;
 import RegCommon::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
+import EarlyPowerBlock::*;
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
     interface NicRegPinInputs nic_in_pins;
+    interface EarlyRegsReverse early_block;
 endinterface
 
 module mkGimletRegs(GimletRegIF);
@@ -23,6 +25,10 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(OutStatusNic2) nic2_out_status <- mkRegU(); // RO register for outputs
     ConfigReg#(DbgOutNic1) dbg_nic1_out       <- mkReg(unpack(0));
     ConfigReg#(DbgOutNic2) dbg_nic2_out       <- mkReg(unpack(0));
+    // Early output signals
+    ConfigReg#(EarlyPwrStatus) early_output_rdbks  <- mkRegU();
+    ConfigReg#(EarlyRbks) early_inputs  <- mkRegU();
+    ConfigReg#(EarlyPowerCtrl) early_ctrl  <- mkReg(unpack(0));
     
 
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);
@@ -34,7 +40,8 @@ module mkGimletRegs(GimletRegIF);
     RWire#(NicStatus) cur_nic_pins <- mkRWire();
     RWire#(OutStatusNic1) cur_nic1_out_status <- mkRWire();
     RWire#(OutStatusNic2) cur_nic2_out_status <- mkRWire();
-
+    RWire#(EarlyPwrStatus) cur_early_outputs <- mkRWire();
+    RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
     // SW readbacks
     rule do_reg_read (operation == READ && !isValid(readdata));
@@ -45,6 +52,9 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(outStatusNic2Offset) : readdata <= tagged Valid (pack(nic2_out_status));
             fromInteger(dbgOutNic1Offset) : readdata <= tagged Valid (pack(dbg_nic1_out));
             fromInteger(dbgOutNic2Offset) : readdata <= tagged Valid (pack(dbg_nic2_out));
+            fromInteger(earlyRbksOffset) : readdata <= tagged Valid (pack(early_inputs));
+            fromInteger(earlyPwrStatusOffset) : readdata <= tagged Valid (pack(early_output_rdbks));
+            fromInteger(earlyPowerCtrlOffset) : readdata <= tagged Valid (pack(early_ctrl));
             default : readdata <= tagged Valid (0);
         endcase
     endrule
@@ -59,6 +69,10 @@ module mkGimletRegs(GimletRegIF);
         dbg_nic1_out    <= reg_update(dbg_nic1_out, dbg_nic1_out, address, dbgOutNic1Offset, operation, writedata); // Normal sw register
         dbg_nic2_out    <= reg_update(dbg_nic2_out, dbg_nic2_out, address, dbgOutNic2Offset, operation, writedata); // Normal sw register
 
+        // Early registers
+        early_inputs    <= fromMaybe(early_inputs, cur_early_inputs.wget());
+        early_output_rdbks <= fromMaybe(early_output_rdbks, cur_early_outputs.wget());
+        early_ctrl      <= reg_update(early_ctrl, early_ctrl, address, earlyPowerCtrlOffset, operation, writedata);
         //nic2_out_status <= reg_update(nic2_out_status, fromMaybe(nic2_out_status, cur_nic2_out_status.wget()), address, outStatusNic2Offset, operation, writedata);
     endrule
 
@@ -88,6 +102,12 @@ module mkGimletRegs(GimletRegIF);
         endmethod
         method dbg_nic1 = dbg_nic1_out._read;
         method dbg_nic2 = dbg_nic2_out._read;
+    endinterface
+
+    interface EarlyRegsReverse early_block;
+        method input_readbacks = cur_early_inputs.wset; // Input sampling
+        method output_readbacks = cur_early_outputs.wset; // Output sampling
+        method output_ctrl = early_ctrl._read;
     endinterface
 
 endmodule
