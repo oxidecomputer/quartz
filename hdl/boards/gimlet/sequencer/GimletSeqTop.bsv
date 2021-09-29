@@ -15,6 +15,8 @@ interface Top;
     interface SpiPeripheralPins spi_pins;
     (* prefix = "" *)
     interface SequencerInputPins in_pins;
+    (* prefix = "" *)
+    interface SeqOutputPins out_pins;
 endinterface
 
 interface SequencerInputPins;
@@ -90,7 +92,8 @@ interface SequencerInputPins;
     
 endinterface
 
-// interface SeqOutputPins;
+interface SeqOutputPins;
+    interface NicOutputPinsRawSource nic_pins;
 //     // Fans interface
 //     method Bit#(1) seq_to_fanhp_restart_l;
 //     method Bit#(1) seq_to_fan_hp_en;
@@ -130,7 +133,7 @@ endinterface
 //     method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
     
 //     method Bit#(1) seq_to_vtt_abcd_a0_en;
-// endinterface
+endinterface
 
 interface NicInputSync;
     interface NicInputPinsRawSink sink;
@@ -198,7 +201,7 @@ module mkGimletSeq (Top);
     // Regiser block
     GimletRegIF regs <- mkGimletRegs();
     // State machine blocks
-    NicTop nic_block <- mkNicBlock();
+    NicBlockTop nic_block <- mkNicBlock();
 
     // Connections
     //  SPI
@@ -231,6 +234,9 @@ module mkGimletSeq (Top);
         method cipo = spi_sync.in_pins.cipo;
     endinterface
 
+    interface SeqOutputPins out_pins;
+        interface nic_pins = nic_block.out_pins;
+    endinterface
 
 endmodule
 

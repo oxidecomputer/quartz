@@ -142,9 +142,15 @@ import GimletSeqFpgaRegs::*;
         endinterface
     endmodule
 
-    interface NicRegs;
+    interface ToNicRegs; // Interface at register block
         // Normalized pin readbacks to registers
-        method NicStatus nic_status;
+        method NicStatus nic_status; 
+        method OutStatusNic1 nic1_out_status;
+        method OutStatusNic2 nic2_out_status;
+        method Action dbg_en(Bit#(1) value);
+        method Action dbg_nic1(DbgOutNic1 value);
+        method Action dbg_nic2(DbgOutNic2 value);
+
         // Debug outputs from registers
         //interface NicOutputPinsRawSink dbg_out;
         //  TODO: sm control
@@ -153,20 +159,31 @@ import GimletSeqFpgaRegs::*;
 
     interface NicRegPinInputs;  // Register input interface
         method Action nic_pins(NicStatus value);
+        method Action nic1_out_status(OutStatusNic1 value);
+        method Action nic2_out_status(OutStatusNic2 value);
+        method Bit#(1) dbg_en;
+        method DbgOutNic1 dbg_nic1;
+        method DbgOutNic2 dbg_nic2;
     endinterface
 
-    interface NicTop;
-        interface NicRegs reg_if;
+    interface NicBlockTop;
+        interface ToNicRegs reg_if;
         interface NicInputPinsNormalizedSink syncd_pins;
+        interface NicOutputPinsRawSource out_pins;
     endinterface
 
-     instance Connectable#(NicRegs, NicRegPinInputs);
-        module mkConnection#(NicRegs source, NicRegPinInputs sink) (Empty);
+     instance Connectable#(ToNicRegs, NicRegPinInputs);
+        module mkConnection#(ToNicRegs source, NicRegPinInputs sink) (Empty);
             mkConnection(source.nic_status, sink.nic_pins);
+            mkConnection(source.nic1_out_status, sink.nic1_out_status);
+            mkConnection(source.nic2_out_status, sink.nic2_out_status);
+            mkConnection(source.dbg_nic1, sink.dbg_nic1);
+            mkConnection(source.dbg_nic2, sink.dbg_nic2);
+            mkConnection(source.dbg_en, sink.dbg_en);
         endmodule
     endinstance
 
-    module mkNicBlock(NicTop);
+    module mkNicBlock(NicBlockTop);
         // Output Registers
         Reg#(Bit#(1)) seq_to_nic_v1p2_enet_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(0);
@@ -192,7 +209,11 @@ import GimletSeqFpgaRegs::*;
 
         // Comb Outputs
         Wire#(NicStatus) cur_nic_status <- mkDWire(unpack(0));
-
+        Wire#(OutStatusNic1) cur_nic1_out_status <- mkDWire(unpack(0));
+        Wire#(OutStatusNic2) cur_nic2_out_status <- mkDWire(unpack(0));
+        Wire#(Bit#(1)) dbg_en <- mkDWire(0);
+        Wire#(DbgOutNic1) cur_dbg_nic1 <- mkDWire(unpack(0));
+        Wire#(DbgOutNic2) cur_dbg_nic2 <- mkDWire(unpack(0));
 
         // Put all of the inputs into a NicStatus struct.
         // This is not registered but pushed over to the register block.
@@ -207,6 +228,37 @@ import GimletSeqFpgaRegs::*;
                 nic_v1p1_pg: nic_to_seq_v1p1_pg,
                 nic_v0p96_pg: pwr_cont_nic_pg0
             };
+            cur_nic1_out_status <= OutStatusNic1 {
+                nic_v3p3: seq_to_nic_ldo_v3p3_en,
+                nic_v1p1_en: seq_to_nic_v1p1_en,
+                nic_v1p2_en: seq_to_nic_v1p2_en,
+                nic_v1p5d_en: seq_to_nic_v1p5d_en,
+                nic_v1p5a_en: seq_to_nic_v1p5a_en,
+                nic_cont_en1: pwr_cont_nic_en1,
+                nic_cont_en0: pwr_cont_nic_en0,
+                nic_v1p2_eth_en: seq_to_nic_v1p2_enet_en
+            };
+            cur_nic2_out_status <= OutStatusNic2 {
+                pwrflt: ~nic_to_sp3_pwrflt_l,
+                nic_cld_rst: ~seq_to_nic_cld_rst_l,
+                nic_comb_pg: seq_to_nic_comb_pg
+            };
+        endrule
+
+        rule do_output_pins;
+            // For now, there are no sm outputs so dbg status goes to pins.
+            seq_to_nic_v1p2_enet_en <= cur_dbg_nic1.nic_v1p2_eth_en;
+            seq_to_nic_comb_pg <= cur_dbg_nic2.nic_comb_pg;
+            pwr_cont_nic_en1 <= cur_dbg_nic1.nic_cont_en1;
+            pwr_cont_nic_en0 <= cur_dbg_nic1.nic_cont_en0;
+            seq_to_nic_cld_rst_l <= ~cur_dbg_nic2.nic_cld_rst;
+            seq_to_nic_v1p5a_en <= cur_dbg_nic1.nic_v1p5a_en;
+            seq_to_nic_v1p5d_en <= cur_dbg_nic1.nic_v1p5d_en;
+            seq_to_nic_v1p2_en <= cur_dbg_nic1.nic_v1p2_en;
+            seq_to_nic_v1p1_en <= cur_dbg_nic1.nic_v1p1_en;
+            seq_to_nic_ldo_v3p3_en <= cur_dbg_nic1.nic_v3p3;
+            nic_to_sp3_pwrflt_l <= ~cur_dbg_nic2.pwrflt;
+
         endrule
 
         interface NicInputPinsNormalizedSink syncd_pins;
@@ -220,10 +272,28 @@ import GimletSeqFpgaRegs::*;
             method pwr_cont_nic_pg1 = pwr_cont_nic_pg1._write;
         endinterface
 
-        interface NicRegs reg_if;
+        interface ToNicRegs reg_if;
             method nic_status = cur_nic_status._read;
+            method nic1_out_status = cur_nic1_out_status._read;
+            method nic2_out_status = cur_nic2_out_status._read;
+            method dbg_en = dbg_en._write;
+            method dbg_nic1 = cur_dbg_nic1._write;
+            method dbg_nic2 = cur_dbg_nic2._write;
         endinterface
 
+        interface NicOutputPinsRawSource out_pins;
+            method seq_to_nic_v1p2_enet_en = seq_to_nic_v1p2_enet_en._read;
+            method seq_to_nic_comb_pg = seq_to_nic_comb_pg._read;
+            method pwr_cont_nic_en1 = pwr_cont_nic_en1._read;
+            method pwr_cont_nic_en0 = pwr_cont_nic_en0._read;
+            method seq_to_nic_cld_rst_l = seq_to_nic_cld_rst_l._read;
+            method seq_to_nic_v1p5a_en = seq_to_nic_v1p5a_en._read;
+            method seq_to_nic_v1p5d_en = seq_to_nic_v1p5d_en._read;
+            method seq_to_nic_v1p2_en = seq_to_nic_v1p2_en._read;
+            method seq_to_nic_v1p1_en = seq_to_nic_v1p1_en._read;
+            method seq_to_nic_ldo_v3p3_en = seq_to_nic_ldo_v3p3_en._read;
+            method nic_to_sp3_pwrflt_l = nic_to_sp3_pwrflt_l._read;
+        endinterface
     endmodule
 
 endpackage

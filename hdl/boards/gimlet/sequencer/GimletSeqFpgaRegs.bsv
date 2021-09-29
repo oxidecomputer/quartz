@@ -239,7 +239,7 @@ typedef struct {
 
 Integer outstatusA1Offset = 21;
 
-// Register OUTSTATUS_A0_1 definitions
+// Register OUT_STATUS_A0_1 definitions
 typedef struct {
     Bit#(1)            efgh_en2   ;  // bit 7
     Bit#(1)            abcd_en2   ;  // bit 6
@@ -249,11 +249,11 @@ typedef struct {
     Bit#(1)            vtt_abcd_en;  // bit 2
     Bit#(1)            vpp_efgh_en;  // bit 1
     Bit#(1)            vpp_abcd_en;  // bit 0
-} OutstatusA01 deriving (Bits, Eq, FShow);
+} OutStatusA01 deriving (Bits, Eq, FShow);
 
-Integer outstatusA01Offset = 22;
+Integer outStatusA01Offset = 22;
 
-// Register OUTSTATUS_A0_2 definitions
+// Register OUT_STATUS_A0_2 definitions
 typedef struct {
     Bit#(1)            rsmrst     ;  // bit 7
     Bit#(1)            pwr_good   ;  // bit 6
@@ -263,11 +263,11 @@ typedef struct {
     Bit#(1)            v1p8_sp3_en;  // bit 2
     Bit#(1)            u351_pwrok ;  // bit 1
     Bit#(1)            u350_pwrok ;  // bit 0
-} OutstatusA02 deriving (Bits, Eq, FShow);
+} OutStatusA02 deriving (Bits, Eq, FShow);
 
-Integer outstatusA02Offset = 23;
+Integer outStatusA02Offset = 23;
 
-// Register OUTSTATUS_NIC1 definitions
+// Register OUT_STATUS_NIC1 definitions
 typedef struct {
     Bit#(1)            nic_v3p3       ;  // bit 7
     Bit#(1)            nic_v1p1_en    ;  // bit 6
@@ -277,35 +277,35 @@ typedef struct {
     Bit#(1)            nic_cont_en1   ;  // bit 2
     Bit#(1)            nic_cont_en0   ;  // bit 1
     Bit#(1)            nic_v1p2_eth_en;  // bit 0
-} OutstatusNic1 deriving (Bits, Eq, FShow);
+} OutStatusNic1 deriving (Bits, Eq, FShow);
 
-Integer outstatusNic1Offset = 24;
+Integer outStatusNic1Offset = 24;
 
-// Register OUTSTATUS_NIC2 definitions
+// Register OUT_STATUS_NIC2 definitions
 typedef struct {
     ReservedZero#(5)   zeros0     ;  // bit 7:3
     Bit#(1)            pwrflt     ;  // bit 2
     Bit#(1)            nic_cld_rst;  // bit 1
     Bit#(1)            nic_comb_pg;  // bit 0
-} OutstatusNic2 deriving (Bits, Eq, FShow);
+} OutStatusNic2 deriving (Bits, Eq, FShow);
 
-Integer outstatusNic2Offset = 25;
+Integer outStatusNic2Offset = 25;
 
-// Register OUTSTATUS_CLKGEN definitions
+// Register OUT_STATUS_CLKGEN definitions
 typedef struct {
     ReservedZero#(7)   zeros0 ;  // bit 7:1
     Bit#(1)            seq_nmr;  // bit 0
-} OutstatusClkgen deriving (Bits, Eq, FShow);
+} OutStatusClkgen deriving (Bits, Eq, FShow);
 
-Integer outstatusClkgenOffset = 26;
+Integer outStatusClkgenOffset = 26;
 
-// Register OUTSTATUS_AMD definitions
+// Register OUT_STATUS_AMD definitions
 typedef struct {
     ReservedZero#(7)   zeros0   ;  // bit 7:1
     Bit#(1)            sys_reset;  // bit 0
-} OutstatusAmd deriving (Bits, Eq, FShow);
+} OutStatusAmd deriving (Bits, Eq, FShow);
 
-Integer outstatusAmdOffset = 27;
+Integer outStatusAmdOffset = 27;
 
 // Register DBG_CTRL definitions
 typedef struct {
@@ -316,18 +316,18 @@ typedef struct {
 
 Integer dbgCtrlOffset = 28;
 
-// Register DBGOUTA1 definitions
+// Register DBG_OUT_A1 definitions
 typedef struct {
     ReservedZero#(4)   zeros0     ;  // bit 7:4
     Bit#(1)            v0p9_s5_en ;  // bit 3
     Bit#(1)            v1p8_s5_en ;  // bit 2
     Bit#(1)            v1p5_rtc_en;  // bit 1
     Bit#(1)            v3p3_s5_en ;  // bit 0
-} Dbgouta1 deriving (Bits, Eq, FShow);
+} DbgOutA1 deriving (Bits, Eq, FShow);
 
-Integer dbgouta1Offset = 29;
+Integer dbgOutA1Offset = 29;
 
-// Register DBGOUTA0_1 definitions
+// Register DBG_OUT_A0_1 definitions
 typedef struct {
     Bit#(1)            efgh_en2   ;  // bit 7
     Bit#(1)            abcd_en2   ;  // bit 6
@@ -337,11 +337,11 @@ typedef struct {
     Bit#(1)            vtt_abcd_en;  // bit 2
     Bit#(1)            vpp_efgh_en;  // bit 1
     Bit#(1)            vpp_abcd_en;  // bit 0
-} Dbgouta01 deriving (Bits, Eq, FShow);
+} DbgOutA01 deriving (Bits, Eq, FShow);
 
-Integer dbgouta01Offset = 30;
+Integer dbgOutA01Offset = 30;
 
-// Register DBGOUTA0_2 definitions
+// Register DBG_OUT_A0_2 definitions
 typedef struct {
     Bit#(1)            rsmrst     ;  // bit 7
     Bit#(1)            pwr_good   ;  // bit 6
@@ -351,11 +351,11 @@ typedef struct {
     Bit#(1)            v1p8_sp3_en;  // bit 2
     Bit#(1)            u351_pwrok ;  // bit 1
     Bit#(1)            u350_pwrok ;  // bit 0
-} Dbgouta02 deriving (Bits, Eq, FShow);
+} DbgOutA02 deriving (Bits, Eq, FShow);
 
-Integer dbgouta02Offset = 31;
+Integer dbgOutA02Offset = 31;
 
-// Register DBGOUT_NIC1 definitions
+// Register DBG_OUT_NIC1 definitions
 typedef struct {
     Bit#(1)            nic_v3p3       ;  // bit 7
     Bit#(1)            nic_v1p1_en    ;  // bit 6
@@ -365,34 +365,34 @@ typedef struct {
     Bit#(1)            nic_cont_en1   ;  // bit 2
     Bit#(1)            nic_cont_en0   ;  // bit 1
     Bit#(1)            nic_v1p2_eth_en;  // bit 0
-} DbgoutNic1 deriving (Bits, Eq, FShow);
+} DbgOutNic1 deriving (Bits, Eq, FShow);
 
-Integer dbgoutNic1Offset = 32;
+Integer dbgOutNic1Offset = 32;
 
-// Register DBGOUT_NIC2 definitions
+// Register DBG_OUT_NIC2 definitions
 typedef struct {
     ReservedZero#(5)   zeros0     ;  // bit 7:3
     Bit#(1)            pwrflt     ;  // bit 2
     Bit#(1)            nic_cld_rst;  // bit 1
     Bit#(1)            nic_comb_pg;  // bit 0
-} DbgoutNic2 deriving (Bits, Eq, FShow);
+} DbgOutNic2 deriving (Bits, Eq, FShow);
 
-Integer dbgoutNic2Offset = 33;
+Integer dbgOutNic2Offset = 33;
 
-// Register DBGOUT_CLKGEN definitions
+// Register DBG_OUT_CLKGEN definitions
 typedef struct {
     ReservedZero#(7)   zeros0 ;  // bit 7:1
     Bit#(1)            seq_nmr;  // bit 0
-} DbgoutClkgen deriving (Bits, Eq, FShow);
+} DbgOutClkgen deriving (Bits, Eq, FShow);
 
-Integer dbgoutClkgenOffset = 34;
+Integer dbgOutClkgenOffset = 34;
 
-// Register DBGOUT_AMD definitions
+// Register DBG_OUT_AMD definitions
 typedef struct {
     ReservedZero#(7)   zeros0   ;  // bit 7:1
     Bit#(1)            sys_reset;  // bit 0
-} DbgoutAmd deriving (Bits, Eq, FShow);
+} DbgOutAmd deriving (Bits, Eq, FShow);
 
-Integer dbgoutAmdOffset = 35;
+Integer dbgOutAmdOffset = 35;
 
 endpackage: GimletSeqFpgaRegs

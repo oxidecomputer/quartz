@@ -1182,7 +1182,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_A0_1",
+            "inst_name": "OUT_STATUS_A0_1",
             "addr_offset": 22,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1279,7 +1279,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_A0_2",
+            "inst_name": "OUT_STATUS_A0_2",
             "addr_offset": 23,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1376,7 +1376,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_NIC1",
+            "inst_name": "OUT_STATUS_NIC1",
             "addr_offset": 24,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1473,7 +1473,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_NIC2",
+            "inst_name": "OUT_STATUS_NIC2",
             "addr_offset": 25,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1515,7 +1515,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_CLKGEN",
+            "inst_name": "OUT_STATUS_CLKGEN",
             "addr_offset": 26,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1535,7 +1535,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUTSTATUS_AMD",
+            "inst_name": "OUT_STATUS_AMD",
             "addr_offset": 27,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1586,7 +1586,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUTA1",
+            "inst_name": "DBG_OUT_A1",
             "addr_offset": 29,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1639,7 +1639,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUTA0_1",
+            "inst_name": "DBG_OUT_A0_1",
             "addr_offset": 30,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1736,7 +1736,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUTA0_2",
+            "inst_name": "DBG_OUT_A0_2",
             "addr_offset": 31,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1833,7 +1833,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUT_NIC1",
+            "inst_name": "DBG_OUT_NIC1",
             "addr_offset": 32,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1930,7 +1930,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUT_NIC2",
+            "inst_name": "DBG_OUT_NIC2",
             "addr_offset": 33,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1972,7 +1972,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUT_CLKGEN",
+            "inst_name": "DBG_OUT_CLKGEN",
             "addr_offset": 34,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1992,7 +1992,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBGOUT_AMD",
+            "inst_name": "DBG_OUT_AMD",
             "addr_offset": 35,
             "regwidth": 8,
             "min_accesswidth": 8,

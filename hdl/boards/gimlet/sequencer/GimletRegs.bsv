@@ -1,27 +1,29 @@
 package GimletRegs;
-
-
+// BSV imports
 import GetPut::*;
 import ClientServer::*;
 import ConfigReg::*;
 import StmtFSM::*;
-
+// Oxide imports
 import RegCommon::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
-
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
     interface NicRegPinInputs nic_in_pins;
 endinterface
 
-
-
-
 module mkGimletRegs(GimletRegIF);
     // Registers
-    ConfigReg#(NicStatus) nic_status <- mkRegU();
+    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(unpack(0)); // Debug mux control register
+    //  NIC domain signals
+    ConfigReg#(NicStatus) nic_status <- mkRegU();  // RO register for inputs
+    ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
+    ConfigReg#(OutStatusNic2) nic2_out_status <- mkRegU(); // RO register for outputs
+    ConfigReg#(DbgOutNic1) dbg_nic1_out       <- mkReg(unpack(0));
+    ConfigReg#(DbgOutNic2) dbg_nic2_out       <- mkReg(unpack(0));
+    
 
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);
 
@@ -30,20 +32,34 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bit#(16)) address <- mkDWire(0);
     Wire#(RegOps) operation <- mkDWire(NOOP);
     RWire#(NicStatus) cur_nic_pins <- mkRWire();
+    RWire#(OutStatusNic1) cur_nic1_out_status <- mkRWire();
+    RWire#(OutStatusNic2) cur_nic2_out_status <- mkRWire();
 
 
     // SW readbacks
     rule do_reg_read (operation == READ && !isValid(readdata));
         case (address)
+            fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
+            fromInteger(outStatusNic1Offset) : readdata <= tagged Valid (pack(nic1_out_status));
+            fromInteger(outStatusNic2Offset) : readdata <= tagged Valid (pack(nic2_out_status));
+            fromInteger(dbgOutNic1Offset) : readdata <= tagged Valid (pack(dbg_nic1_out));
+            fromInteger(dbgOutNic2Offset) : readdata <= tagged Valid (pack(dbg_nic2_out));
             default : readdata <= tagged Valid (0);
         endcase
     endrule
 
     // Register updates, note software writes take precedence for same-clock cycle hw and software updates on read/write registers
-    rule do_reg_updates;
-        // NIC status register
-        nic_status <= reg_update(nic_status, fromMaybe(nic_status, cur_nic_pins.wget()), address, nicStatusOffset, operation, writedata);
+    rule do_reg_updates; 
+        dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
+        // NIC registers
+        nic_status      <= fromMaybe(nic_status, cur_nic_pins.wget());  // Always update from pins, no writing from sw.
+        nic1_out_status <= fromMaybe(nic1_out_status, cur_nic1_out_status.wget()); // Always update from pins, no writing from sw.
+        nic2_out_status <= fromMaybe(nic2_out_status, cur_nic2_out_status.wget()); // Always update from pins, no writing from sw.
+        dbg_nic1_out    <= reg_update(dbg_nic1_out, dbg_nic1_out, address, dbgOutNic1Offset, operation, writedata); // Normal sw register
+        dbg_nic2_out    <= reg_update(dbg_nic2_out, dbg_nic2_out, address, dbgOutNic2Offset, operation, writedata); // Normal sw register
+
+        //nic2_out_status <= reg_update(nic2_out_status, fromMaybe(nic2_out_status, cur_nic2_out_status.wget()), address, outStatusNic2Offset, operation, writedata);
     endrule
 
     interface Server decoder_if;
@@ -65,6 +81,13 @@ module mkGimletRegs(GimletRegIF);
 
     interface NicRegPinInputs nic_in_pins;
         method nic_pins = cur_nic_pins.wset;
+        method nic1_out_status = cur_nic1_out_status.wset;
+        method nic2_out_status = cur_nic2_out_status.wset;
+        method Bit#(1) dbg_en;
+            return dbgCtrl_reg.reg_ctrl_en;
+        endmethod
+        method dbg_nic1 = dbg_nic1_out._read;
+        method dbg_nic2 = dbg_nic2_out._read;
     endinterface
 
 endmodule
