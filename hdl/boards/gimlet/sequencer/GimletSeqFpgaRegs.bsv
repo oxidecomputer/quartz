@@ -112,16 +112,16 @@ typedef struct {
 
 Integer a1smstatusOffset = 10;
 
-// Register A1READBACKS definitions
+// Register A1_READBACKS definitions
 typedef struct {
     ReservedZero#(4)   zeros0            ;  // bit 7:4
     Bit#(1)            v0p9_vdd_soc_s5_pg;  // bit 3
     Bit#(1)            v1p8_s5_pg        ;  // bit 2
     Bit#(1)            v3p3_s5_pg        ;  // bit 1
     Bit#(1)            v1p5_rtc_pg       ;  // bit 0
-} A1readbacks deriving (Bits, Eq, FShow);
+} A1Readbacks deriving (Bits, Eq, FShow);
 
-Integer a1readbacksOffset = 11;
+Integer a1ReadbacksOffset = 11;
 
 // Register AMD_A0 definitions
 typedef struct {
@@ -239,18 +239,18 @@ typedef struct {
 
 Integer earlyPwrStatusOffset = 21;
 
-// Register OUT_STATUS_A1 definitions
+// Register A1_OUT_STATUS definitions
 typedef struct {
     ReservedZero#(4)   zeros0     ;  // bit 7:4
     Bit#(1)            v0p9_s5_en ;  // bit 3
     Bit#(1)            v1p8_s5_en ;  // bit 2
     Bit#(1)            v1p5_rtc_en;  // bit 1
     Bit#(1)            v3p3_s5_en ;  // bit 0
-} OutStatusA1 deriving (Bits, Eq, FShow);
+} A1OutStatus deriving (Bits, Eq, FShow);
 
-Integer outStatusA1Offset = 22;
+Integer a1OutStatusOffset = 22;
 
-// Register OUT_STATUS_A0_1 definitions
+// Register A0_OUT_STATUS_1 definitions
 typedef struct {
     Bit#(1)            efgh_en2   ;  // bit 7
     Bit#(1)            abcd_en2   ;  // bit 6
@@ -260,11 +260,11 @@ typedef struct {
     Bit#(1)            vtt_abcd_en;  // bit 2
     Bit#(1)            vpp_efgh_en;  // bit 1
     Bit#(1)            vpp_abcd_en;  // bit 0
-} OutStatusA01 deriving (Bits, Eq, FShow);
+} A0OutStatus1 deriving (Bits, Eq, FShow);
 
-Integer outStatusA01Offset = 23;
+Integer a0OutStatus1Offset = 23;
 
-// Register OUT_STATUS_A0_2 definitions
+// Register A0_OUT_STATUS_2 definitions
 typedef struct {
     Bit#(1)            rsmrst     ;  // bit 7
     Bit#(1)            pwr_good   ;  // bit 6
@@ -274,9 +274,9 @@ typedef struct {
     Bit#(1)            v1p8_sp3_en;  // bit 2
     Bit#(1)            u351_pwrok ;  // bit 1
     Bit#(1)            u350_pwrok ;  // bit 0
-} OutStatusA02 deriving (Bits, Eq, FShow);
+} A0OutStatus2 deriving (Bits, Eq, FShow);
 
-Integer outStatusA02Offset = 24;
+Integer a0OutStatus2Offset = 24;
 
 // Register OUT_STATUS_NIC1 definitions
 typedef struct {
@@ -302,21 +302,21 @@ typedef struct {
 
 Integer outStatusNic2Offset = 26;
 
-// Register OUT_STATUS_CLKGEN definitions
+// Register CLKGEN_OUT_STATUS definitions
 typedef struct {
     ReservedZero#(7)   zeros0 ;  // bit 7:1
     Bit#(1)            seq_nmr;  // bit 0
-} OutStatusClkgen deriving (Bits, Eq, FShow);
+} ClkgenOutStatus deriving (Bits, Eq, FShow);
 
-Integer outStatusClkgenOffset = 27;
+Integer clkgenOutStatusOffset = 27;
 
-// Register OUT_STATUS_AMD definitions
+// Register AMD_OUT_STATUS definitions
 typedef struct {
     ReservedZero#(7)   zeros0   ;  // bit 7:1
     Bit#(1)            sys_reset;  // bit 0
-} OutStatusAmd deriving (Bits, Eq, FShow);
+} AmdOutStatus deriving (Bits, Eq, FShow);
 
-Integer outStatusAmdOffset = 28;
+Integer amdOutStatusOffset = 28;
 
 // Register DBG_CTRL definitions
 typedef struct {
@@ -327,18 +327,18 @@ typedef struct {
 
 Integer dbgCtrlOffset = 29;
 
-// Register DBG_OUT_A1 definitions
+// Register A1_DBG_OUT definitions
 typedef struct {
     ReservedZero#(4)   zeros0     ;  // bit 7:4
     Bit#(1)            v0p9_s5_en ;  // bit 3
     Bit#(1)            v1p8_s5_en ;  // bit 2
     Bit#(1)            v1p5_rtc_en;  // bit 1
     Bit#(1)            v3p3_s5_en ;  // bit 0
-} DbgOutA1 deriving (Bits, Eq, FShow);
+} A1DbgOut deriving (Bits, Eq, FShow);
 
-Integer dbgOutA1Offset = 30;
+Integer a1DbgOutOffset = 30;
 
-// Register DBG_OUT_A0_1 definitions
+// Register A0_DBG_OUT_1 definitions
 typedef struct {
     Bit#(1)            efgh_en2   ;  // bit 7
     Bit#(1)            abcd_en2   ;  // bit 6
@@ -348,11 +348,11 @@ typedef struct {
     Bit#(1)            vtt_abcd_en;  // bit 2
     Bit#(1)            vpp_efgh_en;  // bit 1
     Bit#(1)            vpp_abcd_en;  // bit 0
-} DbgOutA01 deriving (Bits, Eq, FShow);
+} A0DbgOut1 deriving (Bits, Eq, FShow);
 
-Integer dbgOutA01Offset = 31;
+Integer a0DbgOut1Offset = 31;
 
-// Register DBG_OUT_A0_2 definitions
+// Register A0_DBG_OUT_2 definitions
 typedef struct {
     Bit#(1)            rsmrst     ;  // bit 7
     Bit#(1)            pwr_good   ;  // bit 6
@@ -362,9 +362,9 @@ typedef struct {
     Bit#(1)            v1p8_sp3_en;  // bit 2
     Bit#(1)            u351_pwrok ;  // bit 1
     Bit#(1)            u350_pwrok ;  // bit 0
-} DbgOutA02 deriving (Bits, Eq, FShow);
+} A0DbgOut2 deriving (Bits, Eq, FShow);
 
-Integer dbgOutA02Offset = 32;
+Integer a0DbgOut2Offset = 32;
 
 // Register DBG_OUT_NIC1 definitions
 typedef struct {
@@ -390,20 +390,20 @@ typedef struct {
 
 Integer dbgOutNic2Offset = 34;
 
-// Register DBG_OUT_CLKGEN definitions
+// Register CLKGEN_DBG_OUT definitions
 typedef struct {
     ReservedZero#(7)   zeros0 ;  // bit 7:1
     Bit#(1)            seq_nmr;  // bit 0
-} DbgOutClkgen deriving (Bits, Eq, FShow);
+} ClkgenDbgOut deriving (Bits, Eq, FShow);
 
-Integer dbgOutClkgenOffset = 35;
+Integer clkgenDbgOutOffset = 35;
 
-// Register DBG_OUT_AMD definitions
+// Register AMD_DBG_OUT definitions
 typedef struct {
     ReservedZero#(7)   zeros0   ;  // bit 7:1
     Bit#(1)            sys_reset;  // bit 0
-} DbgOutAmd deriving (Bits, Eq, FShow);
+} AmdDbgOut deriving (Bits, Eq, FShow);
 
-Integer dbgOutAmdOffset = 36;
+Integer amdDbgOutOffset = 36;
 
 endpackage: GimletSeqFpgaRegs

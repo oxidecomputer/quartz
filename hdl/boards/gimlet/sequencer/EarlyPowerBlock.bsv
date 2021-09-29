@@ -6,7 +6,7 @@ import Connectable::*;
 import GetPut::*;
 import GimletSeqFpgaRegs::*;
 
-    // Interface for output pins
+    // Interface for output pins (test benches etc)
     interface EarlyOutputPinsRawSource;
         method Bit#(1) seq_to_fanhp_restart_l;
         method Bit#(1) seq_to_fan_hp_en;
@@ -23,6 +23,7 @@ import GimletSeqFpgaRegs::*;
         method Action dimm_to_seq_efgh_v2p5_pg(Bit#(1) value);
     endinterface
 
+    // Sourcing input pins (for testbenches etc)
     interface EarlyInputPinsRawSource;
         method Bit#(1) fanhp_to_seq_fault_l;
         method Bit#(1) fan_to_seq_fan_fail;
@@ -31,6 +32,7 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) dimm_to_seq_efgh_v2p5_pg;
     endinterface
 
+    // Allow our input pin source to connect to our input pin sink
     instance Connectable#(EarlyInputPinsRawSource, EarlyInputPinsRawSink);
         module mkConnection#(EarlyInputPinsRawSource source, EarlyInputPinsRawSink sink) (Empty);
             mkConnection(source.fanhp_to_seq_fault_l, sink.fanhp_to_seq_fault_l);
@@ -117,16 +119,16 @@ import GimletSeqFpgaRegs::*;
     module mkEarlyBlock(EarlyBlockTop);
 
         // Output registers
-        Reg#(Bit#(1)) seq_to_fanhp_restart_l <- mkReg(unpack(0));
-        Reg#(Bit#(1)) seq_to_fan_hp_en <- mkReg(unpack(0));
-        Reg#(Bit#(1)) seq_to_dimm_efgh_v2p5_en <- mkReg(unpack(0));
-        Reg#(Bit#(1)) seq_to_dimm_abcd_v2p5_en <- mkReg(unpack(0));
+        Reg#(Bit#(1)) seq_to_fanhp_restart_l <- mkReg(1);
+        Reg#(Bit#(1)) seq_to_fan_hp_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_dimm_efgh_v2p5_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_dimm_abcd_v2p5_en <- mkReg(0);
 
         // Combo output readback
+        Wire#(EarlyPwrStatus) cur_out_pins <- mkDWire(unpack(0));
 
         // Combo input wires
         Wire#(EarlyRbks) cur_syncd_pins <- mkDWire(unpack(0));
-        Wire#(EarlyPwrStatus) cur_out_pins <- mkDWire(unpack(0));
         Wire#(EarlyPowerCtrl) dbg_out_pins <- mkDWire(unpack(0));
 
         rule do_pack_output_readbacks;

@@ -500,7 +500,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "A1READBACKS",
+            "inst_name": "A1_READBACKS",
             "addr_offset": 11,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1182,7 +1182,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUT_STATUS_A1",
+            "inst_name": "A1_OUT_STATUS",
             "addr_offset": 22,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1235,7 +1235,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUT_STATUS_A0_1",
+            "inst_name": "A0_OUT_STATUS_1",
             "addr_offset": 23,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1332,7 +1332,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUT_STATUS_A0_2",
+            "inst_name": "A0_OUT_STATUS_2",
             "addr_offset": 24,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1568,7 +1568,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUT_STATUS_CLKGEN",
+            "inst_name": "CLKGEN_OUT_STATUS",
             "addr_offset": 27,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1588,7 +1588,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "OUT_STATUS_AMD",
+            "inst_name": "AMD_OUT_STATUS",
             "addr_offset": 28,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1639,7 +1639,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBG_OUT_A1",
+            "inst_name": "A1_DBG_OUT",
             "addr_offset": 30,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1692,7 +1692,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBG_OUT_A0_1",
+            "inst_name": "A0_DBG_OUT_1",
             "addr_offset": 31,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -1789,7 +1789,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBG_OUT_A0_2",
+            "inst_name": "A0_DBG_OUT_2",
             "addr_offset": 32,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -2025,7 +2025,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBG_OUT_CLKGEN",
+            "inst_name": "CLKGEN_DBG_OUT",
             "addr_offset": 35,
             "regwidth": 8,
             "min_accesswidth": 8,
@@ -2045,7 +2045,7 @@
         },
         {
             "type": "reg",
-            "inst_name": "DBG_OUT_AMD",
+            "inst_name": "AMD_DBG_OUT",
             "addr_offset": 36,
             "regwidth": 8,
             "min_accesswidth": 8,

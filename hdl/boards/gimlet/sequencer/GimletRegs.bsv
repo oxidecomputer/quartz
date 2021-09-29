@@ -9,11 +9,13 @@ import RegCommon::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
+import A1Block::*;
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
     interface NicRegPinInputs nic_in_pins;
     interface EarlyRegsReverse early_block;
+    interface A1RegsReverse a1_block;
 endinterface
 
 module mkGimletRegs(GimletRegIF);
@@ -29,6 +31,10 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(EarlyPwrStatus) early_output_rdbks  <- mkRegU();
     ConfigReg#(EarlyRbks) early_inputs  <- mkRegU();
     ConfigReg#(EarlyPowerCtrl) early_ctrl  <- mkReg(unpack(0));
+    // A1 registers
+    ConfigReg#(A1DbgOut) a1_dbg <- mkReg(unpack(0));
+    ConfigReg#(A1OutStatus) a1_output_readbacks <- mkRegU();
+    ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
     
 
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);
@@ -43,6 +49,9 @@ module mkGimletRegs(GimletRegIF);
     RWire#(EarlyPwrStatus) cur_early_outputs <- mkRWire();
     RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
+    RWire#(A1OutStatus) cur_a1_outputs <- mkRWire();
+    RWire#(A1Readbacks) cur_a1_inputs <- mkRWire();
+
     // SW readbacks
     rule do_reg_read (operation == READ && !isValid(readdata));
         case (address)
@@ -55,6 +64,9 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(earlyRbksOffset) : readdata <= tagged Valid (pack(early_inputs));
             fromInteger(earlyPwrStatusOffset) : readdata <= tagged Valid (pack(early_output_rdbks));
             fromInteger(earlyPowerCtrlOffset) : readdata <= tagged Valid (pack(early_ctrl));
+            fromInteger(a1DbgOutOffset) : readdata <= tagged Valid (pack(a1_dbg));
+            fromInteger(a1OutStatusOffset) : readdata <= tagged Valid (pack(a1_output_readbacks));
+            fromInteger(a1ReadbacksOffset) : readdata <= tagged Valid (pack(a1_inputs));
             default : readdata <= tagged Valid (0);
         endcase
     endrule
@@ -73,6 +85,11 @@ module mkGimletRegs(GimletRegIF);
         early_inputs    <= fromMaybe(early_inputs, cur_early_inputs.wget());
         early_output_rdbks <= fromMaybe(early_output_rdbks, cur_early_outputs.wget());
         early_ctrl      <= reg_update(early_ctrl, early_ctrl, address, earlyPowerCtrlOffset, operation, writedata);
+
+        // A1 registers
+        a1_inputs   <= fromMaybe(a1_inputs, cur_a1_inputs.wget());
+        a1_output_readbacks <= fromMaybe(a1_output_readbacks, cur_a1_outputs.wget());
+        a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
         //nic2_out_status <= reg_update(nic2_out_status, fromMaybe(nic2_out_status, cur_nic2_out_status.wget()), address, outStatusNic2Offset, operation, writedata);
     endrule
 
@@ -108,6 +125,16 @@ module mkGimletRegs(GimletRegIF);
         method input_readbacks = cur_early_inputs.wset; // Input sampling
         method output_readbacks = cur_early_outputs.wset; // Output sampling
         method output_ctrl = early_ctrl._read;
+    endinterface
+
+    interface A1RegsReverse a1_block;
+        // Normalized pin readbacks to registers
+        method input_readbacks = cur_a1_inputs.wset; // Input sampling
+        method output_readbacks = cur_a1_outputs.wset; // Output sampling
+        method A1DbgOut dbg_ctrl =  a1_dbg._read; // Output control
+        method Bit#(1) dbg_en;
+            return dbgCtrl_reg.reg_ctrl_en;
+        endmethod
     endinterface
 
 endmodule

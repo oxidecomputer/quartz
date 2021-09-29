@@ -201,7 +201,7 @@ addrmap gimlet_seq_fpga {
             desc = "Readback for V0P9_SP3_VDD_SOC_S5_A1 rail 
             (SP3_TO_SEQ_V0P9_VDD_SOC_S5_PG)";
         } V0P9_VDD_SOC_S5_PG[1] = 0;
-    } A1READBACKS;
+    } A1_READBACKS;
 
     // Readbacks of pins for A0-power related things
     reg {
@@ -557,24 +557,24 @@ addrmap gimlet_seq_fpga {
     // Status registers
     early_power EARLY_PWR_STATUS;
     EARLY_PWR_STATUS->name = "Early Power Output readbacks";
-    a1_output_type OUT_STATUS_A1;
-    OUT_STATUS_A1->name = "A1 Output readbacks"; 
+    a1_output_type A1_OUT_STATUS;
+    A1_OUT_STATUS->name = "A1 Output readbacks"; 
 
-    a0_output1_type OUT_STATUS_A0_1;
-    OUT_STATUS_A0_1->name = "A0 Register 1 Output readbacks"; 
-    a0_output2_type OUT_STATUS_A0_2;
-    OUT_STATUS_A0_2->name = "A0 Register 2 Output readbacks";
+    a0_output1_type A0_OUT_STATUS_1;
+    A0_OUT_STATUS_1->name = "A0 Register 1 Output readbacks"; 
+    a0_output2_type A0_OUT_STATUS_2;
+    A0_OUT_STATUS_2->name = "A0 Register 2 Output readbacks";
 
     nic_output1_type OUT_STATUS_NIC1;
     OUT_STATUS_NIC1->name = "Readbacks of FPGA outputs (register 1 of 2) to NIC supplies/NIC";
     nic_output2_type OUT_STATUS_NIC2;
     OUT_STATUS_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
 
-    clk_gen_output_type OUT_STATUS_CLKGEN;
-    OUT_STATUS_CLKGEN->name = "Readbacks of FPGA outputs to clock generator";
+    clk_gen_output_type CLKGEN_OUT_STATUS;
+    CLKGEN_OUT_STATUS->name = "Readbacks of FPGA outputs to clock generator";
 
-    amd_output_type OUT_STATUS_AMD;
-    OUT_STATUS_AMD->name = "Readbacks of FPGA outputs to AMD";
+    amd_output_type AMD_OUT_STATUS;
+    AMD_OUT_STATUS->name = "Readbacks of FPGA outputs to AMD";
 
     // Debug registers
     reg {
@@ -591,24 +591,23 @@ addrmap gimlet_seq_fpga {
         } STORE_CURRENT[1] = 0;
     } DBG_CTRL;
 
-    a1_output_type DBG_OUT_A1;
-    DBG_OUT_A1->name = "A1 Output debug control";  
+    a1_output_type A1_DBG_OUT;
+    A1_DBG_OUT->name = "A1 Output debug control";  
 
+    a0_output1_type A0_DBG_OUT_1;
+    A0_DBG_OUT_1->name = "A0 Register 1 Output debug control"; 
 
-    a0_output1_type DBG_OUT_A0_1;
-    DBG_OUT_A0_1->name = "A0 Register 1 Output debug control"; 
-
-    a0_output2_type DBG_OUT_A0_2;
-    DBG_OUT_A0_2->name = "A0 Register 2 Output debug control"; 
+    a0_output2_type A0_DBG_OUT_2;
+    A0_DBG_OUT_2->name = "A0 Register 2 Output debug control"; 
 
     nic_output1_type DBG_OUT_NIC1;
     DBG_OUT_NIC1->name = "NIC REgister 1 Output debug control";
     nic_output2_type DBG_OUT_NIC2;
     DBG_OUT_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
 
-    clk_gen_output_type DBG_OUT_CLKGEN;
-    DBG_OUT_CLKGEN->name = "Clock Generator Output readbacks";
+    clk_gen_output_type CLKGEN_DBG_OUT;
+    CLKGEN_DBG_OUT->name = "Clock Generator Output readbacks";
 
-    amd_output_type DBG_OUT_AMD;
-    DBG_OUT_AMD->name = "Readbacks of FPGA outputs to AMD";
+    amd_output_type AMD_DBG_OUT;
+    AMD_DBG_OUT->name = "Readbacks of FPGA outputs to AMD";
 };

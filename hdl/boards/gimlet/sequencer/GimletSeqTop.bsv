@@ -9,6 +9,7 @@ import SpiDecode::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
 import GimletRegs::*;
+import A1Block::*;
 (* always_enabled *)
 interface Top;
     // SPI interface
@@ -196,6 +197,7 @@ module mkGimletSeq (Top);
     // Sequencer Input synchronizers (meta-harden inputs)
     NicInputSync nic_pins <- mkNicInputSync();
     EarlyInputSyncBlock early_pins <- mkEarlySync();
+    A1InputSyncBlock a1_pins <- mkA1Sync();
 
     // SPI block, including synchronizer
     SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync;    
@@ -206,6 +208,7 @@ module mkGimletSeq (Top);
     // State machine blocks
     NicBlockTop nic_block <- mkNicBlock();
     EarlyBlockTop early_block <- mkEarlyBlock();
+    A1BlockTop a1_block <- mkA1Block();
 
     // Connections
     //  SPI
@@ -218,6 +221,9 @@ module mkGimletSeq (Top);
     // Early block pins
     mkConnection(early_pins.syncd_pins, early_block.syncd_pins); // Synchronized pins to early block
     mkConnection(early_block.reg_if, regs.early_block); // Connect registers and early block
+    // A1 block pins
+    mkConnection(a1_pins.syncd_pins, a1_block.syncd_pins);
+    mkConnection(a1_block.reg_if, regs.a1_block);
 
     interface SequencerInputPins in_pins;
         interface NicInputPinsRawSink nic_pins;
