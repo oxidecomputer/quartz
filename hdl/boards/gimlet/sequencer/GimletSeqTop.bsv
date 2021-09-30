@@ -10,6 +10,7 @@ import NicBlock::*;
 import EarlyPowerBlock::*;
 import GimletRegs::*;
 import A1Block::*;
+import A0Block::*;
 (* always_enabled *)
 interface Top;
     // SPI interface
@@ -33,6 +34,8 @@ interface SequencerInputPins;
     // NIC input interface
     interface NicInputPinsRawSink nic_pins;
     interface EarlyInputPinsRawSink early_in_pins;
+    interface A1InputPinsRawSink a1_pins;
+    interface A0InputPinsRawSink a0_pins;
     // General AMD
     // method Action sp3_to_seq_thermtrip_l(Bit#(1) value);
     // method Action sp3_to_seq_fsr_req_l(Bit#(1) value);
@@ -98,6 +101,8 @@ endinterface
 interface SeqOutputPins;
     interface NicOutputPinsRawSource nic_pins;
     interface EarlyOutputPinsRawSource early_pins;
+    interface A1OutputSource a1_pins;
+    interface A0OutputSource a0_pins;
 //     // Fans interface
 //     method Bit#(1) seq_to_fanhp_restart_l;
 //     method Bit#(1) seq_to_fan_hp_en;
@@ -198,6 +203,7 @@ module mkGimletSeq (Top);
     NicInputSync nic_pins <- mkNicInputSync();
     EarlyInputSyncBlock early_pins <- mkEarlySync();
     A1InputSyncBlock a1_pins <- mkA1Sync();
+    A0InputSyncBlock a0_pins <- mkA0Sync();
 
     // SPI block, including synchronizer
     SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync;    
@@ -209,6 +215,7 @@ module mkGimletSeq (Top);
     NicBlockTop nic_block <- mkNicBlock();
     EarlyBlockTop early_block <- mkEarlyBlock();
     A1BlockTop a1_block <- mkA1Block();
+    A0BlockTop a0_block <- mkA0Block();
 
     // Connections
     //  SPI
@@ -224,6 +231,9 @@ module mkGimletSeq (Top);
     // A1 block pins
     mkConnection(a1_pins.syncd_pins, a1_block.syncd_pins);
     mkConnection(a1_block.reg_if, regs.a1_block);
+    // A0 block pins
+    mkConnection(a0_pins.syncd_pins, a0_block.syncd_pins);
+    mkConnection(a0_block.reg_if, regs.a0_block);
 
     interface SequencerInputPins in_pins;
         interface NicInputPinsRawSink nic_pins;
@@ -238,6 +248,8 @@ module mkGimletSeq (Top);
             method pwr_cont_nic_pg1 = nic_pins.sink.pwr_cont_nic_pg1;
         endinterface
         interface early_in_pins = early_pins.in_pins;
+        interface a1_pins = a1_pins.in_pins;
+        interface a0_pins = a0_pins.in_pins;
     endinterface
 
     interface SpiPeripheralPins spi_pins;
@@ -251,6 +263,8 @@ module mkGimletSeq (Top);
     interface SeqOutputPins out_pins;
         interface nic_pins = nic_block.out_pins;
         interface early_pins = early_block.out_pins;
+        interface a1_pins = a1_block.out_pins;
+        interface a0_pins = a0_block.out_pins;
 
         
     endinterface
@@ -262,12 +276,16 @@ module mkGimletTestTop(Empty);
     SPITestController controller <- mkSpiTestController();
     TBTestRawNicPinsSource nic_pins_bfm <- mkTestNicRawPinsSource();
     TBTestEarlyPinsSource early_pins_bfm <- mkTestEarlyPinsSource();
+    TBTestA1PinsSource a1_pins_bfm <- mkTestA1PinsSource();
+    TBTestA0PinsSource a0_pins_bfm <- mkTestA0PinsSource();
 
     Top gimlet_fpga_top <- mkGimletSeq();
     
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
     mkConnection(nic_pins_bfm.pins, gimlet_fpga_top.in_pins.nic_pins);
     mkConnection(early_pins_bfm.pins, gimlet_fpga_top.in_pins.early_in_pins);
+    mkConnection(a1_pins_bfm.pins, gimlet_fpga_top.in_pins.a1_pins);
+    mkConnection(a0_pins_bfm.pins, gimlet_fpga_top.in_pins.a0_pins);
     // TODO: nic_pins_bfm client interface for testbenching
 
 endmodule

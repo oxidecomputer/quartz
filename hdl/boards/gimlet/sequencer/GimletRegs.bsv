@@ -10,12 +10,14 @@ import GimletSeqFpgaRegs::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
 import A1Block::*;
+import A0Block::*;
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
     interface NicRegPinInputs nic_in_pins;
     interface EarlyRegsReverse early_block;
     interface A1RegsReverse a1_block;
+    interface A0RegsReverse a0_block;
 endinterface
 
 module mkGimletRegs(GimletRegIF);
@@ -35,6 +37,16 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(A1DbgOut) a1_dbg <- mkReg(unpack(0));
     ConfigReg#(A1OutStatus) a1_output_readbacks <- mkRegU();
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
+    // A0 registers
+    ConfigReg#(A0OutStatus1) a0_status1 <- mkReg(unpack(0)); // a0OutStatus1Offset
+    ConfigReg#(A0OutStatus2) a0_status2 <- mkReg(unpack(0)); // a0OutStatus2Offset
+    ConfigReg#(A0DbgOut1) a0_dbg_out1 <- mkReg(unpack(0)); // a0DbgOut1Offset
+    ConfigReg#(A0DbgOut2) a0_dbg_out2 <- mkReg(unpack(0)); // a0DbgOut1Offset
+    ConfigReg#(AmdA0) a0_amd_rdbks <- mkReg(unpack(0)); // amdA0Offset
+    ConfigReg#(GroupbPg) a0_groupB_pg <- mkReg(unpack(0)); // groupbPgOffset
+    ConfigReg#(GroupbUnused) a0_groupB_unused <- mkReg(unpack(0)); //groupbUnusedOffset
+    ConfigReg#(GroupbcFlts) a0_groupC_faults <-mkReg(unpack(0)); //groupbcFltsOffset
+    ConfigReg#(GroupcPg) a0_groupC_pg <- mkReg(unpack(0)); // groupcPgOffset
     
 
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);
@@ -51,6 +63,10 @@ module mkGimletRegs(GimletRegIF);
 
     RWire#(A1OutStatus) cur_a1_outputs <- mkRWire();
     RWire#(A1Readbacks) cur_a1_inputs <- mkRWire();
+    
+    RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
+    RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
+    Wire#(A0OutPinsStruct) desired_a0_dbg_outputs <- mkDWire(unpack(0));
 
     // SW readbacks
     rule do_reg_read (operation == READ && !isValid(readdata));
@@ -67,6 +83,15 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(a1DbgOutOffset) : readdata <= tagged Valid (pack(a1_dbg));
             fromInteger(a1OutStatusOffset) : readdata <= tagged Valid (pack(a1_output_readbacks));
             fromInteger(a1ReadbacksOffset) : readdata <= tagged Valid (pack(a1_inputs));
+            fromInteger(a0OutStatus1Offset) : readdata <= tagged Valid (pack(a0_status1));
+            fromInteger(a0OutStatus2Offset) : readdata <= tagged Valid (pack(a0_status2));
+            fromInteger(a0DbgOut1Offset) : readdata <= tagged Valid (pack(a0_dbg_out1));
+            fromInteger(a0DbgOut2Offset) : readdata <= tagged Valid (pack(a0_dbg_out2));
+            fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(a0_amd_rdbks));
+            fromInteger(groupbPgOffset) : readdata <= tagged Valid (pack(a0_groupB_pg));
+            fromInteger(groupbUnusedOffset) : readdata <= tagged Valid (pack(a0_groupB_unused));
+            fromInteger(groupbcFltsOffset) : readdata <= tagged Valid (pack(a0_groupC_faults));
+            fromInteger(groupcPgOffset) : readdata <= tagged Valid (pack(a0_groupC_pg));
             default : readdata <= tagged Valid (0);
         endcase
     endrule
@@ -90,6 +115,90 @@ module mkGimletRegs(GimletRegIF);
         a1_inputs   <= fromMaybe(a1_inputs, cur_a1_inputs.wget());
         a1_output_readbacks <= fromMaybe(a1_output_readbacks, cur_a1_outputs.wget());
         a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
+
+        // A0 registers
+        let cur_a0_inputs_wget = fromMaybe(?, cur_a0_inputs.wget());  // This should always be a real value
+        let cur_a0_outputs_wget = fromMaybe(?, cur_a0_outputs.wget()); // This should always be a real value
+        // TODO: should really write a function to do this
+        a0_status1 <= A0OutStatus1 {
+            efgh_en2: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en2,
+            abcd_en2: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en2,
+            efgh_en1: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en1,
+            v3p3_sys_en: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en1,
+            vtt_efgh_en: cur_a0_outputs_wget.seq_to_vtt_efgh_en,
+            vtt_abcd_en: cur_a0_outputs_wget.seq_to_vtt_abcd_a0_en,
+            vpp_efgh_en: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en0,
+            vpp_abcd_en: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en0
+        };
+        a0_status2 <= A0OutStatus2 {
+            rsmrst: cur_a0_outputs_wget.seq_to_sp3_rsmrst_v3p3,
+            pwr_good: cur_a0_outputs_wget.seq_to_sp3_pwr_good,
+            pwr_btn: cur_a0_outputs_wget.sp_to_sp3_pwr_btn,
+            cont2_en: cur_a0_outputs_wget.pwr_cont2_sp3_en,
+            cont1_en: cur_a0_outputs_wget.pwr_cont1_sp3_en,
+            v1p8_sp3_en: cur_a0_outputs_wget.seq_to_sp3_v1p8_en,
+            u351_pwrok: cur_a0_outputs_wget.pwr_cont2_sp3_pwrok,
+            u350_pwrok: cur_a0_outputs_wget.pwr_cont1_sp3_pwrok
+        };
+        desired_a0_dbg_outputs <= A0OutPinsStruct {
+            pwr_cont_dimm_abcd_en1: a0_dbg_out1.v3p3_sys_en,
+            pwr_cont_dimm_efgh_en0: a0_dbg_out1.vpp_efgh_en,
+            pwr_cont_dimm_efgh_en2: a0_dbg_out1.efgh_en2,
+            pwr_cont2_sp3_pwrok: a0_dbg_out2.u351_pwrok,
+            seq_to_sp3_v1p8_en: a0_dbg_out2.v1p8_sp3_en,
+            pwr_cont1_sp3_pwrok: a0_dbg_out2.u350_pwrok,
+            pwr_cont2_sp3_en: a0_dbg_out2.cont2_en,
+            pwr_cont1_sp3_en: a0_dbg_out2.cont1_en,
+            pwr_cont_dimm_abcd_en2: a0_dbg_out1.abcd_en2,
+            pwr_cont_dimm_abcd_en0: a0_dbg_out1.vpp_abcd_en,
+            pwr_cont_dimm_efgh_en1: a0_dbg_out1.efgh_en1,
+            sp_to_sp3_pwr_btn: a0_dbg_out2.pwr_btn,
+            seq_to_vtt_efgh_en: a0_dbg_out1.vtt_efgh_en,
+            seq_to_sp3_pwr_good: a0_dbg_out2.pwr_good,
+            seq_to_sp3_rsmrst_v3p3: a0_dbg_out2.rsmrst,
+            seq_to_vtt_abcd_a0_en: a0_dbg_out1.vtt_efgh_en
+        };
+        a0_dbg_out1 <= reg_update(a0_dbg_out1, a0_dbg_out1, address, a0DbgOut1Offset, operation, writedata); // Normal sw register
+        a0_dbg_out2 <= reg_update(a0_dbg_out2, a0_dbg_out2, address, a0DbgOut2Offset, operation, writedata); // Normal sw register
+        a0_amd_rdbks <=  AmdA0 {
+            reset: cur_a0_inputs_wget.sp3_to_seq_reset_v3p3,
+            pwrok: cur_a0_inputs_wget.sp3_to_seq_pwrok_v3p3,
+            slp_s5: cur_a0_inputs_wget.sp3_to_sp_slp_s5,
+            slp_s3: cur_a0_inputs_wget.sp3_to_sp_slp_s3
+        };
+
+        a0_groupB_pg <= GroupbPg {
+            v3p3_sys_pg: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg1,
+            v1p8_sp3_pg: cur_a0_inputs_wget.seq_v1p8_sp3_vdd_pg,
+            vtt_efgh_pg: cur_a0_inputs_wget.vtt_efgh_a0_to_seq_pg,
+            vtt_abcd_pg: cur_a0_inputs_wget.vtt_abcd_a0_to_seq_pg,
+            vdd_mem_efgh_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg0,
+            vdd_mem_abcd_pg: cur_a0_inputs_wget.pwr_cont1_sp3_pg0,
+            vpp_efgh_pg: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg0,
+            vpp_abcd_pg: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg0
+        };
+
+        a0_groupB_unused <= GroupbUnused {
+            efgh_pg2: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg2,
+            efgh_pg1: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg1,
+            abcd_pg2: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg2
+        };
+
+        a0_groupC_faults <= GroupbcFlts {
+            cont2_cfp: cur_a0_inputs_wget.pwr_cont2_sp3_cfp,
+            cont2_nvrhot: cur_a0_inputs_wget.pwr_cont2_sp3_nvrhot,
+            efgh_cfp: cur_a0_inputs_wget.pwr_cont_dimm_efgh_cfp,
+            efgh_nvrhot: cur_a0_inputs_wget.pwr_cont_dimm_efgh_nvrhot,
+            abcd_cfp: cur_a0_inputs_wget.pwr_cont_dimm_abcd_cfp,
+            abcd_nvrhot: cur_a0_inputs_wget.pwr_cont_dimm_abcd_nvrhot,
+            cont1_cfp: cur_a0_inputs_wget.pwr_cont1_sp3_cfp,
+            cont1_nvrhot: cur_a0_inputs_wget.pwr_cont1_sp3_nvrhot
+        };
+
+        a0_groupC_pg <= GroupcPg {
+            vdd_vcore: cur_a0_inputs_wget.pwr_cont1_sp3_pg1,
+            vddcr_soc_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg1
+        };
         //nic2_out_status <= reg_update(nic2_out_status, fromMaybe(nic2_out_status, cur_nic2_out_status.wget()), address, outStatusNic2Offset, operation, writedata);
     endrule
 
@@ -133,6 +242,15 @@ module mkGimletRegs(GimletRegIF);
         method output_readbacks = cur_a1_outputs.wset; // Output sampling
         method A1DbgOut dbg_ctrl =  a1_dbg._read; // Output control
         method Bit#(1) dbg_en;
+            return dbgCtrl_reg.reg_ctrl_en;
+        endmethod
+    endinterface
+    interface A0RegsReverse a0_block;
+        // Normalized pin readbacks to registers
+        method input_readbacks = cur_a0_inputs.wset; // Input sampling
+        method output_readbacks = cur_a0_outputs.wset; // Output sampling
+        method dbg_ctrl = desired_a0_dbg_outputs._read; // Output control
+        method Bit#(1) dbg_en;    // Debug enable pin
             return dbgCtrl_reg.reg_ctrl_en;
         endmethod
     endinterface
