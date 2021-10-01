@@ -11,6 +11,7 @@ import EarlyPowerBlock::*;
 import GimletRegs::*;
 import A1Block::*;
 import A0Block::*;
+import MiscIO::*;
 (* always_enabled *)
 interface Top;
     // SPI interface
@@ -23,79 +24,11 @@ interface Top;
 endinterface
 
 interface SequencerInputPins;
-    // SP general
-    // method Action seq_to_sp_misc_a(Bit#(1) value);
-    // method Action seq_to_sp_misc_b(Bit#(1) value);
-    // method Action seq_to_sp_misc_c(Bit#(1) value);
-    // method Action seq_to_sp_misc_d(Bit#(1) value);
-    // // Early signals
-    // method Action dimm_to_seq_abcd_v2p5_pg(Bit#(1) value);
-    // method Action dimm_to_seq_efgh_v2p5_pg(Bit#(1) value);
-    // NIC input interface
     interface NicInputPinsRawSink nic_pins;
     interface EarlyInputPinsRawSink early_in_pins;
     interface A1InputPinsRawSink a1_pins;
     interface A0InputPinsRawSink a0_pins;
-    // General AMD
-    // method Action sp3_to_seq_thermtrip_l(Bit#(1) value);
-    // method Action sp3_to_seq_fsr_req_l(Bit#(1) value);
-    // method Action sp3_to_seq_pwrgd_out(Bit#(1) value);
-    // // Fans interface
-    // method Action fanhp_to_seq_fault_l(Bit#(1) value);
-    // method Action fan_to_seq_fan_fail(Bit#(1) value);
-    // method Action fanhp_to_seq_pwrgd(Bit#(1) value);
-    // // Clock gen interface
-    // method Action seq_to_clk_gpio1        // TODO: input or output?(Bit#(1) value);
-    // method Action seq_to_clk_gpio2        // TODO: input or output?(Bit#(1) value);
-    // method Action seq_to_clk_gpio3        // TODO: input or output?(Bit#(1) value);
-    // method Action seq_to_clk_gpio4        // TODO: input or output?(Bit#(1) value);
-    // method Action seq_to_clk_gpio5        // TODO: input or output?(Bit#(1) value);
-    // method Action seq_to_clk_gpio8        // TODO: input or output?(Bit#(1) value);
-    // method Action seq_to_clk_gpio9        // TODO: input or output?(Bit#(1) value);
-    // // A1 Power-related
-    // method Action sp3_to_seq_v1p8_s5_pg(Bit#(1) value);
-    // method Action sp3_to_seq_rtc_v1p5_en(Bit#(1) value);
-    // method Action sp3_to_seq_v3p3_s5_pg(Bit#(1) value);
-    // method Action sp3_to_seq_v0p9_vdd_soc_s5_pg(Bit#(1) value);
-    // // A0 Power-related
-    // method Action sp3_to_sp_slp_s3_l(Bit#(1) value);
-    // method Action sp3_to_sp_slp_s5_l(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_pg0(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_pg1(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_pg2(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_cfp(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_nvrhot(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_pg0(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_pg1(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_pg2(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_cfp(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_nvrhot(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_cfp(Bit#(1) value);
-    // method Action pwr_cont1_sp3_nvrhot(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_pg0(Bit#(1) value);
-    // method Action pwr_cont1_sp3_cfp(Bit#(1) value);
-    // method Action pwr_cont2_sp3_pg1(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_pg2(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_cfp(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_pg1(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_pg0(Bit#(1) value);
-    // method Action sp3_to_sp_slp_s3_l(Bit#(1) value);
-    // method Action pwr_cont2_sp3_pg0(Bit#(1) value);
-    // method Action sp3_to_sp_slp_s5_l(Bit#(1) value);
-    // method Action vtt_efgh_a0_to_seq_pg_l(Bit#(1) value);
-    // method Action pwr_cont1_sp3_pg1(Bit#(1) value);
-    // method Action pwr_cont2_sp3_nvrhot(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_pg2(Bit#(1) value);
-    // method Action pwr_cont1_sp3_pg0(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_pg1(Bit#(1) value);
-    // method Action pwr_cont2_sp3_cfp(Bit#(1) value);
-    // method Action seq_v1p8_sp3_vdd_pg_l(Bit#(1) value);
-    // method Action sp3_to_seq_pwrok_v3p3(Bit#(1) value);
-    // method Action pwr_cont_dimm_efgh_nvrhot(Bit#(1) value);
-    // method Action sp3_to_seq_reset_v3p3_l(Bit#(1) value);
-    // method Action pwr_cont_dimm_abcd_nvrhot(Bit#(1) value);
-    // method Action vtt_abcd_a0_to_seq_pg_l(Bit#(1) value);
-    
+    interface MiscInputPinsRawSink misc_pins;
 endinterface
 
 interface SeqOutputPins;
@@ -103,45 +36,7 @@ interface SeqOutputPins;
     interface EarlyOutputPinsRawSource early_pins;
     interface A1OutputSource a1_pins;
     interface A0OutputSource a0_pins;
-//     // Fans interface
-//     method Bit#(1) seq_to_fanhp_restart_l;
-//     method Bit#(1) seq_to_fan_hp_en;
-
-//     // A1-related
-
-    
-//     method Bit#(1) seq_to_dimm_efgh_v2p5_en;
-//     method Bit#(1) pwr_cont_dimm_abcd_en1;
-//     method Bit#(1) seq_to_nic_v1p2_enet_en;
-//     method Bit#(1) seq_to_nic_comb_pg;
-//     method Bit#(1) pwr_cont_dimm_efgh_en0;
-//     method Bit#(1) pwr_cont_dimm_efgh_en2;
-//     method Bit#(1) sp3_to_seq_rtc_v1p5_en;
-//     method Bit#(1) pwr_cont1_sp3_cfp;
-//     method Bit#(1) seq_to_sp3_v1p8_en;
-//     method Bit#(1) pwr_cont2_sp3_en;
-//     method Bit#(1) seq_to_dimm_abcd_v2p5_en;
-//     method Bit#(1) seq_to_sp3_v1p5_rtc_en;
-//     method Bit#(1) pwr_cont_nic_en1;
-//     method Bit#(1) seq_to_sp3_v1p8_s5_en;
-//     method Bit#(1) pwr_cont_dimm_abcd_en2;
-//     method Bit#(1) pwr_cont_nic_en0;
-//     method Bit#(1) pwr_cont_dimm_abcd_en0;
-//     method Bit#(1) seq_to_nic_cld_rst_l;
-//     method Bit#(1) seq_to_sp3_v0p9_s5_en;
-//     method Bit#(1) pwr_cont_dimm_efgh_en1;
-//     method Bit#(1) clk_to_seq_nmr_l;
-//     method Bit#(1) sp_to_sp3_pwr_btn_l;
-//     method Bit#(1) seq_to_nic_v1p5a_en;
-//     method Bit#(1) seq_to_nic_v1p5d_en;
-//     method Bit#(1) seq_to_nic_v1p2_en;
-//     method Bit#(1) seq_to_nic_ldo_v3p3_en;
-//     method Bit#(1) seq_to_vtt_efgh_en;
-//     method Bit#(1) seq_to_sp3_pwr_good;
-
-//     method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
-    
-//     method Bit#(1) seq_to_vtt_abcd_a0_en;
+    interface MiscOutputSource misc_pins;
 endinterface
 
 interface NicInputSync;
@@ -204,6 +99,7 @@ module mkGimletSeq (Top);
     EarlyInputSyncBlock early_pins <- mkEarlySync();
     A1InputSyncBlock a1_pins <- mkA1Sync();
     A0InputSyncBlock a0_pins <- mkA0Sync();
+    MiscInputSyncBlock misc_pins <- mkMiscSync();
 
     // SPI block, including synchronizer
     SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync;    
@@ -216,7 +112,7 @@ module mkGimletSeq (Top);
     EarlyBlockTop early_block <- mkEarlyBlock();
     A1BlockTop a1_block <- mkA1Block();
     A0BlockTop a0_block <- mkA0Block();
-
+    MiscBlockTop misc_block <- mkMiscBlock();
     // Connections
     //  SPI
     mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)
@@ -234,6 +130,9 @@ module mkGimletSeq (Top);
     // A0 block pins
     mkConnection(a0_pins.syncd_pins, a0_block.syncd_pins);
     mkConnection(a0_block.reg_if, regs.a0_block);
+    // A0 block pins
+    mkConnection(misc_pins.syncd_pins, misc_block.syncd_pins);
+    mkConnection(misc_block.reg_if, regs.misc_block);
 
     interface SequencerInputPins in_pins;
         interface NicInputPinsRawSink nic_pins;
@@ -250,6 +149,7 @@ module mkGimletSeq (Top);
         interface early_in_pins = early_pins.in_pins;
         interface a1_pins = a1_pins.in_pins;
         interface a0_pins = a0_pins.in_pins;
+        interface misc_pins = misc_pins.in_pins;
     endinterface
 
     interface SpiPeripheralPins spi_pins;
@@ -265,8 +165,7 @@ module mkGimletSeq (Top);
         interface early_pins = early_block.out_pins;
         interface a1_pins = a1_block.out_pins;
         interface a0_pins = a0_block.out_pins;
-
-        
+        interface misc_pins = misc_block.out_pins;
     endinterface
 
 endmodule
@@ -278,6 +177,7 @@ module mkGimletTestTop(Empty);
     TBTestEarlyPinsSource early_pins_bfm <- mkTestEarlyPinsSource();
     TBTestA1PinsSource a1_pins_bfm <- mkTestA1PinsSource();
     TBTestA0PinsSource a0_pins_bfm <- mkTestA0PinsSource();
+    TBTestMiscPinsSource misc_pins_bfm <- mkTestMiscPinsSource();
 
     Top gimlet_fpga_top <- mkGimletSeq();
     
@@ -286,7 +186,7 @@ module mkGimletTestTop(Empty);
     mkConnection(early_pins_bfm.pins, gimlet_fpga_top.in_pins.early_in_pins);
     mkConnection(a1_pins_bfm.pins, gimlet_fpga_top.in_pins.a1_pins);
     mkConnection(a0_pins_bfm.pins, gimlet_fpga_top.in_pins.a0_pins);
-    // TODO: nic_pins_bfm client interface for testbenching
+    mkConnection(misc_pins_bfm.pins, gimlet_fpga_top.in_pins.misc_pins);
 
 endmodule
 

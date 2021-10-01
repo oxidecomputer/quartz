@@ -23,6 +23,7 @@ bluespec_library('GimletRegs',
         ':EarlyPowerBlock',
         ':A1Block',
         ':A0Block',
+        ':MiscIO',
     ])
 
 bluespec_library('Regs',
@@ -84,6 +85,13 @@ bluespec_library('A0Block',
     deps = [
          ':GimletSeqFpgaRegs',
     ])
+bluespec_library('MiscIO',
+    sources = [
+        'MiscIO.bsv',
+    ],
+    deps = [
+         ':GimletSeqFpgaRegs',
+    ])
 bluespec_library('EarlyPowerBlock',
     sources = [
         'EarlyPowerBlock.bsv',
@@ -103,6 +111,7 @@ bluespec_library('GimletSeqTop',
         ':EarlyPowerBlock',
         ':A1Block',
         ':A0Block',
+        ':MiscIO',
     ])
 
 bluespec_sim('gimlet_sim_top',

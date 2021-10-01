@@ -12,8 +12,8 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) clk_to_seq_nmr_l;
     endinterface
     typedef struct {
-        Bit#(1) seq_to_sp3_sys_rst,
-        Bit#(1) clk_to_seq_nmr
+        Bit#(1) seq_to_sp3_sys_rst;
+        Bit#(1) clk_to_seq_nmr;
     } MiscOutPinsStruct deriving(Bits);
     // Interface for input pins
     interface MiscInputPinsRawSink;
@@ -42,16 +42,16 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) seq_to_clk_gpio4;
     endinterface
     typedef struct {
-        Bit#(1) sp3_to_seq_thermtrip,
-        Bit#(1) sp3_to_seq_fsr_req,
-        Bit#(1) sp3_to_seq_pwrgd_out,
-        Bit#(1) seq_to_clk_gpio3,
-        Bit#(1) seq_to_clk_gpio9,
-        Bit#(1) seq_to_clk_gpio8,
-        Bit#(1) seq_to_clk_gpio2,
-        Bit#(1) seq_to_clk_gpio1,
-        Bit#(1) seq_to_clk_gpio5,
-        Bit#(1) seq_to_clk_gpio4
+        Bit#(1) sp3_to_seq_thermtrip;
+        Bit#(1) sp3_to_seq_fsr_req;
+        Bit#(1) sp3_to_seq_pwrgd_out;
+        Bit#(1) seq_to_clk_gpio3;
+        Bit#(1) seq_to_clk_gpio9;
+        Bit#(1) seq_to_clk_gpio8;
+        Bit#(1) seq_to_clk_gpio2;
+        Bit#(1) seq_to_clk_gpio1;
+        Bit#(1) seq_to_clk_gpio5;
+        Bit#(1) seq_to_clk_gpio4;
     } MiscInPinsStruct deriving (Bits);
     // Allow our input pin source to connect to our input pin sink
     instance Connectable#(MiscInputPinsRawSource, MiscInputPinsRawSink);
@@ -101,9 +101,9 @@ import GimletSeqFpgaRegs::*;
     endinstance
     // Block top (syncd pins in, pins out, register if)
     interface MiscBlockTop;
-        method Action syncd_pins(MiscOutPinsStruct value);
+        method Action syncd_pins(MiscInPinsStruct value);
         interface MiscRegs reg_if;
-        interface MiscRegsReverse out_pins;
+        interface MiscOutputSource out_pins;
     endinterface
     // Input synchronization module (pins -> syncs -> structs)
     module mkMiscSync(MiscInputSyncBlock);
@@ -129,7 +129,7 @@ import GimletSeqFpgaRegs::*;
         rule do_structurize;
             cur_syncd_pins <= MiscInPinsStruct {
                 sp3_to_seq_thermtrip: ~sp3_to_seq_thermtrip_l.read(),
-                sp3_to_seq_fsr_req: ~sp3_to_seq_fsr_req.read(),
+                sp3_to_seq_fsr_req: ~sp3_to_seq_fsr_req_l.read(),
                 sp3_to_seq_pwrgd_out: sp3_to_seq_pwrgd_out.read(),
                 seq_to_clk_gpio3: seq_to_clk_gpio3.read(),
                 seq_to_clk_gpio9: seq_to_clk_gpio9.read(),
@@ -137,7 +137,7 @@ import GimletSeqFpgaRegs::*;
                 seq_to_clk_gpio2: seq_to_clk_gpio2.read(),
                 seq_to_clk_gpio1: seq_to_clk_gpio1.read(),
                 seq_to_clk_gpio5: seq_to_clk_gpio5.read(),
-                seq_to_clk_gpio4: seq_to_clk_gpi.read()
+                seq_to_clk_gpio4: seq_to_clk_gpio4.read()
             };
         endrule
 
@@ -157,15 +157,78 @@ import GimletSeqFpgaRegs::*;
         method syncd_pins = cur_syncd_pins._read;
     endmodule
     // Block top module
-    module mkA0Block(MiscBlockTop);
+    module mkMiscBlock(MiscBlockTop);
 
         // Output registers
-        Reg#(Bit#(1))
+        Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);
+        Reg#(Bit#(1)) clk_to_seq_nmr_l <- mkReg(0);
 
         // Combo output readbacks
-        Wire#(A0OutPinsStruct) cur_out_pins <- mkDWire(unpack(0));
+        Wire#(MiscOutPinsStruct) cur_out_pins <- mkDWire(unpack(0));
         // Combo input wires
-        Wire#(A0InPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
-        Wire#(A0OutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
+        Wire#(MiscInPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
+        Wire#(MiscOutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
+
+        rule do_pack_output_readbacks;
+            cur_out_pins <= MiscOutPinsStruct {
+                seq_to_sp3_sys_rst: ~seq_to_sp3_sys_rst_l,
+                clk_to_seq_nmr: ~clk_to_seq_nmr_l
+            };
+        endrule
+        rule do_output_pins;
+            seq_to_sp3_sys_rst_l <= ~dbg_out_pins.seq_to_sp3_sys_rst;
+            clk_to_seq_nmr_l <= ~dbg_out_pins.clk_to_seq_nmr;
+        endrule
+        method syncd_pins = cur_syncd_pins._write;
+        interface MiscRegs reg_if;
+            method input_readbacks = cur_syncd_pins._read;
+            method output_readbacks = cur_out_pins._read; // Output sampling
+            method dbg_ctrl = dbg_out_pins._write; // Output control
+            method dbg_en = dbg_en._write;    // Debug enable pin
+        endinterface       
+        interface MiscOutputSource out_pins;
+            method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._read;
+            method clk_to_seq_nmr_l = clk_to_seq_nmr_l._read;
+        endinterface
+    endmodule
+
+     interface TBTestMiscPinsSource;
+        interface Client#(Bit#(8), Bool) bfm;
+        interface MiscInputPinsRawSource pins;
+    endinterface
+
+    module mkTestMiscPinsSource(TBTestMiscPinsSource);
+        Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(0);
+        Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(0);
+        Reg#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio3 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio9 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio8 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio2 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio1 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio5 <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_clk_gpio4 <- mkReg(0);
+        
+        
+        interface MiscInputPinsRawSource pins;
+            method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._read;
+            method sp3_to_seq_fsr_req_l = sp3_to_seq_fsr_req_l._read;
+            method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out._read;
+            method seq_to_clk_gpio3 = seq_to_clk_gpio3._read;
+            method seq_to_clk_gpio9 = seq_to_clk_gpio9._read;
+            method seq_to_clk_gpio8 = seq_to_clk_gpio8._read;
+            method seq_to_clk_gpio2 = seq_to_clk_gpio2._read;
+            method seq_to_clk_gpio1 = seq_to_clk_gpio1._read;
+            method seq_to_clk_gpio5 = seq_to_clk_gpio5._read;
+            method seq_to_clk_gpio4 = seq_to_clk_gpio4._read;
+        endinterface
+        interface Client bfm;
+            interface Get request;
+            endinterface
+            interface Put response;
+            endinterface
+        endinterface
+    endmodule
+
 endpackage
