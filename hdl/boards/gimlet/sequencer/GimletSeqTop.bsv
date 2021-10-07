@@ -24,18 +24,28 @@ interface Top;
 endinterface
 
 interface SequencerInputPins;
+(* prefix = "" *)
     interface NicInputPinsRawSink nic_pins;
+    (* prefix = "" *)
     interface EarlyInputPinsRawSink early_in_pins;
+    (* prefix = "" *)
     interface A1InputPinsRawSink a1_pins;
+    (* prefix = "" *)
     interface A0InputPinsRawSink a0_pins;
+    (* prefix = "" *)
     interface MiscInputPinsRawSink misc_pins;
 endinterface
 
 interface SeqOutputPins;
+    (* prefix = "" *)
     interface NicOutputPinsRawSource nic_pins;
+    (* prefix = "" *)
     interface EarlyOutputPinsRawSource early_pins;
+    (* prefix = "" *)
     interface A1OutputSource a1_pins;
+    (* prefix = "" *)
     interface A0OutputSource a0_pins;
+    (* prefix = "" *)
     interface MiscOutputSource misc_pins;
 endinterface
 
@@ -93,7 +103,7 @@ endmodule
 
 // This is the top-level module for the Gimlet Sequencer FPGA.
 (* synthesize, default_clock_osc="clk50m" *)
-module mkGimletSeq (Top);
+module mkGimletSeqTop (Top);
     // Sequencer Input synchronizers (meta-harden inputs)
     NicInputSync nic_pins <- mkNicInputSync();
     EarlyInputSyncBlock early_pins <- mkEarlySync();
@@ -179,7 +189,7 @@ module mkGimletTestTop(Empty);
     TBTestA0PinsSource a0_pins_bfm <- mkTestA0PinsSource();
     TBTestMiscPinsSource misc_pins_bfm <- mkTestMiscPinsSource();
 
-    Top gimlet_fpga_top <- mkGimletSeq();
+    Top gimlet_fpga_top <- mkGimletSeqTop();
     
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
     mkConnection(nic_pins_bfm.pins, gimlet_fpga_top.in_pins.nic_pins);

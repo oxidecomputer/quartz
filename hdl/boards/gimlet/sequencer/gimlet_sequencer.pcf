@@ -73,7 +73,7 @@ set_io --warn-no-port pwr_cont1_sp3_nvrhot P2
 set_io --warn-no-port pwr_cont1_sp3_pwrok P4
 set_io --warn-no-port sp3_to_seq_fsr_req_l P7
 set_io --warn-no-port sp3_to_seq_pwrgd_out P8
-set_io --warn-no-port seq_to_sp_misc_a P9
+set_io --warn-no-port RST_N P9
 set_io --warn-no-port pwr_cont1_sp3_en R1
 set_io --warn-no-port sp3_to_sp_slp_s3_l R10
 set_io --warn-no-port sclk R11

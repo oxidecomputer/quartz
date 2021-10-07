@@ -17,16 +17,26 @@ import GimletSeqFpgaRegs::*;
     } MiscOutPinsStruct deriving(Bits);
     // Interface for input pins
     interface MiscInputPinsRawSink;
-        method Action sp3_to_seq_thermtrip_l(Bit#(1) value);
-        method Action sp3_to_seq_fsr_req_l(Bit#(1) value);
-        method Action sp3_to_seq_pwrgd_out(Bit#(1) value);
-        method Action seq_to_clk_gpio3(Bit#(1) value);
-        method Action seq_to_clk_gpio9(Bit#(1) value);
-        method Action seq_to_clk_gpio8(Bit#(1) value);
-        method Action seq_to_clk_gpio2(Bit#(1) value);
-        method Action seq_to_clk_gpio1(Bit#(1) value);
-        method Action seq_to_clk_gpio5(Bit#(1) value);
-        method Action seq_to_clk_gpio4(Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_thermtrip_l((* port = "sp3_to_seq_thermtrip_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_fsr_req_l((* port = "sp3_to_seq_fsr_req_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_pwrgd_out((* port = "sp3_to_seq_pwrgd_out" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio3((* port = "seq_to_clk_gpio3" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio9((* port = "seq_to_clk_gpio9" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio8((* port = "seq_to_clk_gpio8" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio2((* port = "seq_to_clk_gpio2" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio1((* port = "seq_to_clk_gpio1" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio5((* port = "seq_to_clk_gpio5" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_clk_gpio4((* port = "seq_to_clk_gpio4" *) Bit#(1) value);
     endinterface
     // Sourcing input pins (for testbenches etc)
     interface MiscInputPinsRawSource;

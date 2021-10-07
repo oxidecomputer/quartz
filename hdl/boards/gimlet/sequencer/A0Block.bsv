@@ -28,31 +28,56 @@ import GimletSeqFpgaRegs::*;
     
     // Interface for input pins
     interface A0InputPinsRawSink;
-        method Action pwr_cont_dimm_efgh_cfp(Bit#(1) value);
-        method Action pwr_cont1_sp3_nvrhot(Bit#(1) value);
-        method Action pwr_cont_dimm_efgh_pg0(Bit#(1) value);
-        method Action pwr_cont1_sp3_cfp(Bit#(1) value);
-        method Action pwr_cont2_sp3_pg1(Bit#(1) value);
-        method Action pwr_cont_dimm_abcd_pg2(Bit#(1) value);
-        method Action pwr_cont_dimm_abcd_cfp(Bit#(1) value);
-        method Action pwr_cont_dimm_efgh_pg1(Bit#(1) value);
-        method Action pwr_cont_dimm_abcd_pg0(Bit#(1) value);
-        method Action sp3_to_sp_slp_s3_l(Bit#(1) value);
-        method Action pwr_cont2_sp3_pg0(Bit#(1) value);
-        method Action sp3_to_sp_slp_s5_l(Bit#(1) value);
-        method Action vtt_efgh_a0_to_seq_pg_l(Bit#(1) value);
-        method Action pwr_cont1_sp3_pg1(Bit#(1) value);
-        method Action pwr_cont2_sp3_nvrhot(Bit#(1) value);
-        method Action pwr_cont_dimm_efgh_pg2(Bit#(1) value);
-        method Action pwr_cont1_sp3_pg0(Bit#(1) value);
-        method Action pwr_cont_dimm_abcd_pg1(Bit#(1) value);
-        method Action pwr_cont2_sp3_cfp(Bit#(1) value);
-        method Action seq_v1p8_sp3_vdd_pg_l(Bit#(1) value);
-        method Action sp3_to_seq_pwrok_v3p3(Bit#(1) value);
-        method Action pwr_cont_dimm_efgh_nvrhot(Bit#(1) value);
-        method Action sp3_to_seq_reset_v3p3_l(Bit#(1) value);
-        method Action pwr_cont_dimm_abcd_nvrhot(Bit#(1) value);
-        method Action vtt_abcd_a0_to_seq_pg_l(Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_efgh_cfp((*port = "pwr_cont_dimm_efgh_cfp" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont1_sp3_nvrhot((*port = "pwr_cont1_sp3_nvrhot" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_efgh_pg0((*port = "pwr_cont_dimm_efgh_pg0" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont1_sp3_cfp((*port = "pwr_cont1_sp3_cfp" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont2_sp3_pg1((*port = "pwr_cont2_sp3_pg1" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_abcd_pg2((*port = "pwr_cont_dimm_abcd_pg2" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_abcd_cfp((*port = "pwr_cont_dimm_abcd_cfp" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_efgh_pg1((*port = "pwr_cont_dimm_efgh_pg1" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_abcd_pg0((*port = "pwr_cont_dimm_abcd_pg0" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_sp_slp_s3_l((*port = "sp3_to_sp_slp_s3_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont2_sp3_pg0((*port = "pwr_cont2_sp3_pg0" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_sp_slp_s5_l((*port = "sp3_to_sp_slp_s5_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action vtt_efgh_a0_to_seq_pg_l((*port = "vtt_efgh_a0_to_seq_pg_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont1_sp3_pg1((*port = "pwr_cont1_sp3_pg1" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont2_sp3_nvrhot((*port = "pwr_cont2_sp3_nvrhot" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_efgh_pg2((*port = "pwr_cont_dimm_efgh_pg2" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont1_sp3_pg0((*port = "pwr_cont1_sp3_pg0" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_abcd_pg1((*port = "pwr_cont_dimm_abcd_pg1" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont2_sp3_cfp((*port = "pwr_cont2_sp3_cfp" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_v1p8_sp3_vdd_pg_l((*port = "seq_v1p8_sp3_vdd_pg_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_pwrok_v3p3((*port = "sp3_to_seq_pwrok_v3p3" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_efgh_nvrhot((*port = "pwr_cont_dimm_efgh_nvrhot" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_reset_v3p3_l((*port = "sp3_to_seq_reset_v3p3_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_dimm_abcd_nvrhot((*port = "pwr_cont_dimm_abcd_nvrhot" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action vtt_abcd_a0_to_seq_pg_l((*port = "vtt_abcd_a0_to_seq_pg_l" *) Bit#(1) value);
     endinterface
 
     // Sourcing input pins (for testbenches etc)

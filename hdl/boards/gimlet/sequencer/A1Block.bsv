@@ -16,10 +16,14 @@ import GimletSeqFpgaRegs::*;
 
     // Interface for input pins
     interface A1InputPinsRawSink;
-        method Action sp3_to_seq_v1p8_s5_pg(Bit#(1) value);
-        method Action sp3_to_seq_rtc_v1p5_en(Bit#(1) value);
-        method Action sp3_to_seq_v3p3_s5_pg(Bit#(1) value);
-        method Action sp3_to_seq_v0p9_vdd_soc_s5_pg(Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_v1p8_s5_pg((*port = "sp3_to_seq_v1p8_s5_pg" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_rtc_v1p5_en((*port = "sp3_to_seq_rtc_v1p5_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_v3p3_s5_pg((*port = "sp3_to_seq_v3p3_s5_pg" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action sp3_to_seq_v0p9_vdd_soc_s5_pg((*port = "sp3_to_seq_v0p9_vdd_soc_s5_pg" *) Bit#(1) value);
     endinterface
     // Sourcing input pins (for testbenches etc)
     interface A1InputPinsRawSource;

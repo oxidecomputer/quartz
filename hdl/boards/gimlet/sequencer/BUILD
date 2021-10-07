@@ -178,6 +178,15 @@ bluespec_verilog('ign_verilog',
         ':IgnitionletTop',
     ])
 
+bluespec_verilog('seq_verilog',
+    top = 'GimletSeqTop.bsv',
+    modules = [
+        'mkGimletSeqTop',
+    ],
+    deps = [
+        ':GimletSeqTop',
+    ])
+
 yosys_design('ignitionlet_spi_yosys',
     top_module = 'mkIgnitionletTop',
     sources = [
@@ -189,9 +198,26 @@ yosys_design('ignitionlet_spi_yosys',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
+yosys_design('gimlet_sequencer_yosys',
+    top_module = 'mkGimletSeqTop',
+    sources = [
+        ':seq_verilog#mkGimletSeqTop',
+        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+    ],
+    deps = [
+        ':seq_verilog',
+        'cobalt//vnd/bluespec:Verilog.v',
+    ])
+
 nextpnr_ice40_bitstream('ignitionlet_spi',
     env = 'ignitionlet_spi',
     design = ':ignitionlet_spi_yosys#ignitionlet_spi_yosys.json',
     deps = [
         ':ignitionlet_spi_yosys',
+    ])
+nextpnr_ice40_bitstream('gimlet_sequencer',
+    env = 'gimlet_sequencer',
+    design = ':gimlet_sequencer_yosys#gimlet_sequencer_yosys.json',
+    deps = [
+        ':gimlet_sequencer_yosys',
     ])

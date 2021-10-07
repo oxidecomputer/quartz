@@ -21,29 +21,48 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) nic_to_sp3_pwrflt_l;
     endinterface
     interface NicOutputPinsRawSink;
-        method Action seq_to_nic_v1p2_enet_en(Bit#(1) value);
-        method Action seq_to_nic_comb_pg(Bit#(1) value);
-        method Action pwr_cont_nic_en1(Bit#(1) value);
-        method Action pwr_cont_nic_en0(Bit#(1) value);
-        method Action seq_to_nic_cld_rst_l(Bit#(1) value);
-        method Action seq_to_nic_v1p5a_en(Bit#(1) value);
-        method Action seq_to_nic_v1p5d_en(Bit#(1) value);
-        method Action seq_to_nic_v1p2_en(Bit#(1) value);
-        method Action seq_to_nic_v1p1_en(Bit#(1) value);
-        method Action seq_to_nic_ldo_v3p3_en(Bit#(1) value);
-        method Action nic_to_sp3_pwrflt_l(Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_v1p2_enet_en((* port = "seq_to_nic_v1p2_enet_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_comb_pg((* port = "seq_to_nic_comb_pg" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_nic_en1((* port = "pwr_cont_nic_en1" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_nic_en0((* port = "pwr_cont_nic_en0" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_cld_rst_l((* port = "seq_to_nic_cld_rst_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_v1p5a_en((* port = "seq_to_nic_v1p5a_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_v1p5d_en((* port = "seq_to_nic_v1p5d_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_v1p2_en((* port = "seq_to_nic_v1p2_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_v1p1_en((* port = "seq_to_nic_v1p1_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action seq_to_nic_ldo_v3p3_en((* port = "seq_to_nic_ldo_v3p3_en" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action nic_to_sp3_pwrflt_l((* port = "nic_to_sp3_pwrflt_l" *) Bit#(1) value);
     endinterface
 
     // Chip periphery pin signal names for inputs.
     interface NicInputPinsRawSink;
-        method Action pwr_cont_nic_pg0(Bit#(1) value);
-        method Action pwr_cont_nic_nvrhot(Bit#(1) value);
-        method Action pwr_cont_nic_cfp(Bit#(1) value);
-        method Action nic_to_seq_v1p5a_pg_l(Bit#(1) value);
-        method Action nic_to_seq_v1p5d_pg_l(Bit#(1) value);
-        method Action nic_to_seq_v1p2_pg_l(Bit#(1) value);
-        method Action nic_to_seq_v1p1_pg_l(Bit#(1) value);
-        method Action pwr_cont_nic_pg1(Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_nic_pg0((* port = "pwr_cont_nic_pg0" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_nic_nvrhot((* port = "pwr_cont_nic_nvrhot" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_nic_cfp((* port = "pwr_cont_nic_cfp" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action nic_to_seq_v1p5a_pg_l((* port = "nic_to_seq_v1p5a_pg_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action nic_to_seq_v1p5d_pg_l((* port = "nic_to_seq_v1p5d_pg_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action nic_to_seq_v1p2_pg_l((* port = "nic_to_seq_v1p2_pg_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action nic_to_seq_v1p1_pg_l((* port = "nic_to_seq_v1p1_pg_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action pwr_cont_nic_pg1((* port = "pwr_cont_nic_pg1" *) Bit#(1) value);
     endinterface
     interface NicInputPinsRawSource;
         method Bit#(1) pwr_cont_nic_pg0;

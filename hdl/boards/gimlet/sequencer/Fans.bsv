@@ -8,9 +8,11 @@ import StmtFSM::*;
 interface FansPinsIfc;
     // Fans interface
     method Bit#(1) seq_to_fanhp_restart_l();  // Strobe low
-    method Action fanhp_to_seq_fault_l(Bit#(1) val);
+    (* prefix = "" *)
+    method Action fanhp_to_seq_fault_l((* port = "fanhp_to_seq_fault_l" *) Bit#(1) val);
     method Bit#(1) seq_to_fan_hp_en();
-    method Action fan_to_seq_fan_fail(Bit#(1) val);
+    (* prefix = "" *)
+    method Action fan_to_seq_fan_fail((* port = "fan_to_seq_fan_fail" *) Bit#(1) val);
     method Action fanhp_to_seq_pwrgd(Bit#(1) val);
 endinterface
 

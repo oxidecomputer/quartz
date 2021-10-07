@@ -16,11 +16,16 @@ import GimletSeqFpgaRegs::*;
 
     // Catching input pins
     interface EarlyInputPinsRawSink;
-        method Action fanhp_to_seq_fault_l(Bit#(1) value);
-        method Action fan_to_seq_fan_fail(Bit#(1) value);
-        method Action fanhp_to_seq_pwrgd(Bit#(1) value);
-        method Action dimm_to_seq_abcd_v2p5_pg(Bit#(1) value);
-        method Action dimm_to_seq_efgh_v2p5_pg(Bit#(1) value);
+        (* prefix = "" *)
+        method Action fanhp_to_seq_fault_l((* port = "fanhp_to_seq_fault_l" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action fan_to_seq_fan_fail((* port = "fan_to_seq_fan_fail" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action fanhp_to_seq_pwrgd((* port = "fanhp_to_seq_pwrgd" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action dimm_to_seq_abcd_v2p5_pg((* port = "dimm_to_seq_abcd_v2p5_pg" *) Bit#(1) value);
+        (* prefix = "" *)
+        method Action dimm_to_seq_efgh_v2p5_pg((* port = "dimm_to_seq_efgh_v2p5_pg" *) Bit#(1) value);
     endinterface
 
     // Sourcing input pins (for testbenches etc)
