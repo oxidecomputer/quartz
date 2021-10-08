@@ -24,6 +24,10 @@ endinterface
 
 module mkGimletRegs(GimletRegIF);
     // Registers
+    ConfigReg#(Id0) id0 <- mkReg(unpack('h01));
+    ConfigReg#(Id1) id1 <- mkReg(unpack('hde));
+    ConfigReg#(Id2) id2 <- mkReg(unpack('hAA));
+    ConfigReg#(Id3) id3 <- mkReg(unpack('h55));
     ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(unpack(0)); // Debug mux control register
     //  NIC domain signals
     ConfigReg#(NicStatus) nic_status <- mkRegU();  // RO register for inputs
@@ -84,6 +88,10 @@ module mkGimletRegs(GimletRegIF);
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_read (operation == READ && !isValid(readdata));
         case (address)
+            fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0));
+            fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1));
+            fromInteger(id2Offset) : readdata <= tagged Valid (pack(id2));
+            fromInteger(id3Offset) : readdata <= tagged Valid (pack(id3));
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
             fromInteger(outStatusNic1Offset) : readdata <= tagged Valid (pack(nic1_out_status));
@@ -109,7 +117,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(clkgenDbgOutOffset) : readdata <= tagged Valid (pack(clkgen_dbg_out));
             fromInteger(amdOutStatusOffset) : readdata <= tagged Valid (pack(amd_out_status));
             fromInteger(amdDbgOutOffset) : readdata <= tagged Valid (pack(amd_dbg_out));
-            default : readdata <= tagged Valid (0);
+            default : readdata <= tagged Valid ('hff);
         endcase
     endrule
 

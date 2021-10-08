@@ -2,8 +2,13 @@
 
 package GimletSeqTop;
 
+
 import Clocks::*;
 import Connectable::*;
+import ClientServer::*;
+import GetPut::*;
+import StmtFSM::*;
+import Vector::*;
 
 import SpiDecode::*;
 import NicBlock::*;
@@ -12,6 +17,8 @@ import GimletRegs::*;
 import A1Block::*;
 import A0Block::*;
 import MiscIO::*;
+import RegCommon::*;  // Testbench only
+
 (* always_enabled *)
 interface Top;
     // SPI interface
@@ -197,6 +204,34 @@ module mkGimletTestTop(Empty);
     mkConnection(a1_pins_bfm.pins, gimlet_fpga_top.in_pins.a1_pins);
     mkConnection(a0_pins_bfm.pins, gimlet_fpga_top.in_pins.a0_pins);
     mkConnection(misc_pins_bfm.pins, gimlet_fpga_top.in_pins.misc_pins);
+
+    mkAutoFSM(
+    seq
+        action
+            Vector#(8, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(READ)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack('h00);
+            tx[3] = unpack('h00);
+            tx[4] = unpack('h00);
+            tx[5] = unpack('h00);
+            tx[6] = unpack('h00);
+            tx[7] = unpack('h00);
+            controller.bfm.request.put(tx);
+        endaction
+        action
+            let rx <- controller.bfm.response.get();
+            $display(rx[0]);
+            $display(rx[1]);
+            $display(rx[2]);
+            $display(rx[3]);
+            $display(rx[4]);
+            $display(rx[5]);
+            $display(rx[6]);
+            $display(rx[7]);
+        endaction
+    endseq
+    );
 
 endmodule
 
