@@ -37,7 +37,7 @@ module mkIgnitionTarget (IgnitionTarget);
     Reg#(Vector#(6, Bool)) status_cur <- mkRegU();
     Wire#(Vector#(6, Bool)) status_next <- mkWire();
 
-    Reg#(Vector#(3, Bool)) cmd_cur <- mkRegA(vec(False, True, True));
+    Reg#(Vector#(3, Bool)) cmd_cur <- mkRegA(vec(False, False, True));
 
     PulseWire button_pressed_ <- mkPulseWire();
     PulseWire tick_1khz_ <- mkPulseWire();
@@ -45,7 +45,7 @@ module mkIgnitionTarget (IgnitionTarget);
     (* fire_when_enabled *)
     rule do_handle_button_pressed (button_pressed_);
         let system_enable_next = !cmd_cur[0];
-        let cmd_next = vec(system_enable_next, !system_enable_next, !system_enable_next);
+        let cmd_next = vec(system_enable_next, cmd_cur[1], !system_enable_next);
         cmd_cur <= cmd_next;
     endrule
 

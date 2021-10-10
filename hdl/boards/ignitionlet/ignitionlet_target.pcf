@@ -1,5 +1,4 @@
 set_io clk_50mhz A43
-set_io -pullup yes rst_nc B19
 
 set_io --warn-no-port -pullup yes id[0] A38
 set_io --warn-no-port -pullup yes id[1] A39

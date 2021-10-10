@@ -48,6 +48,7 @@ yosys_design('ignition_target_top',
     sources = [
         '//hdl/ignition/target:top#mkIgnitionTargetTop',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../../vnd/cobalt/hdl/InitialReset.v',
     ],
     deps = [
         '//hdl/ignition/target:top',

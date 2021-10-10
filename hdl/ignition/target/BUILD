@@ -15,6 +15,8 @@ bluespec_verilog('top',
     ],
     deps = [
         ':IgnitionTarget',
+        'cobalt//hdl:InitialReset',
+        'cobalt//hdl:InputReg',
         'cobalt//hdl:SchmittReg',
         'cobalt//hdl:Strobe',
         'cobalt//hdl/interfaces:ICE40',
