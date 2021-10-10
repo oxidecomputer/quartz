@@ -371,16 +371,16 @@ import GimletSeqFpgaRegs::*;
         endrule
 
         rule do_output_pins;
-            pwr_cont_dimm_abcd_en1 <= dbg_out_pins.pwr_cont_dimm_abcd_en1;
-            pwr_cont_dimm_efgh_en0 <= dbg_out_pins.pwr_cont_dimm_efgh_en0;
+            pwr_cont_dimm_abcd_en1 <= 1; //dbg_out_pins.pwr_cont_dimm_abcd_en1;
+            pwr_cont_dimm_efgh_en0 <= 1; //dbg_out_pins.pwr_cont_dimm_efgh_en0;
             pwr_cont_dimm_efgh_en2 <= dbg_out_pins.pwr_cont_dimm_efgh_en2;
             pwr_cont2_sp3_pwrok <= dbg_out_pins.pwr_cont2_sp3_pwrok;
             seq_to_sp3_v1p8_en <= dbg_out_pins.seq_to_sp3_v1p8_en;
             pwr_cont1_sp3_pwrok <= dbg_out_pins.pwr_cont1_sp3_pwrok;
-            pwr_cont2_sp3_en <= dbg_out_pins.pwr_cont2_sp3_en;
+            pwr_cont2_sp3_en <= 1; //dbg_out_pins.pwr_cont2_sp3_en;
             pwr_cont1_sp3_en <= dbg_out_pins.pwr_cont1_sp3_en;
             pwr_cont_dimm_abcd_en2 <= dbg_out_pins.pwr_cont_dimm_abcd_en2;
-            pwr_cont_dimm_abcd_en0 <= dbg_out_pins.pwr_cont_dimm_abcd_en0;
+            pwr_cont_dimm_abcd_en0 <= 1; //dbg_out_pins.pwr_cont_dimm_abcd_en0;
             pwr_cont_dimm_efgh_en1 <= dbg_out_pins.pwr_cont_dimm_efgh_en1;
             sp_to_sp3_pwr_btn_l <= ~dbg_out_pins.sp_to_sp3_pwr_btn;
             seq_to_vtt_efgh_en <= dbg_out_pins.seq_to_vtt_efgh_en;

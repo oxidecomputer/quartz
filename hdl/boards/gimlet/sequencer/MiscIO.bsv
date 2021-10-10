@@ -169,6 +169,8 @@ import GimletSeqFpgaRegs::*;
     // Block top module
     module mkMiscBlock(MiscBlockTop);
 
+        Reg#(UInt#(6)) clk_rst_time <- mkReg(50);
+
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);
         Reg#(Bit#(1)) clk_to_seq_nmr_l <- mkReg(0);
@@ -180,6 +182,13 @@ import GimletSeqFpgaRegs::*;
         Wire#(MiscOutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
 
+        rule do_reset_oneshot;
+            if (clk_rst_time != 0) begin
+                clk_rst_time <= clk_rst_time - 1;
+            end
+        endrule
+
+
         rule do_pack_output_readbacks;
             cur_out_pins <= MiscOutPinsStruct {
                 seq_to_sp3_sys_rst: ~seq_to_sp3_sys_rst_l,
@@ -187,7 +196,7 @@ import GimletSeqFpgaRegs::*;
             };
         endrule
         rule do_output_pins;
-            seq_to_sp3_sys_rst_l <= ~dbg_out_pins.seq_to_sp3_sys_rst;
+            seq_to_sp3_sys_rst_l <= ~dbg_out_pins.seq_to_sp3_sys_rst & (clk_rst_time == 0 ? 'b1 : 'b0);
             clk_to_seq_nmr_l <= ~dbg_out_pins.clk_to_seq_nmr;
         endrule
         method syncd_pins = cur_syncd_pins._write;
