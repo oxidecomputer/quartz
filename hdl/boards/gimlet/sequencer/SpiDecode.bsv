@@ -442,7 +442,7 @@ module mkSpiPeripheralPhy(SpiPeripheralPhy);
     rule do_tx_shifter (sclk_trailing_edge);
         // Accept new data into the the tx shift register before the first clock if we're done shifting
         // and there's new data available in the FIFO.
-        if (pack(tx_shift) == 'h80 && new_tx_data.notEmpty()) begin
+        if (pack(tx_shift)[7:0] == 'h80 && new_tx_data.notEmpty()) begin
             // TODO: is there a function list that makes this prettier.
             tx_shift <= unpack({pack(new_tx_data.first), 1});  // New data needs to be here
             new_tx_data.deq();
