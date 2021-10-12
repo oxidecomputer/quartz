@@ -53,6 +53,7 @@ import GimletSeqFpgaRegs::*;
         // Normalized pin readbacks to registers
         method A1Readbacks input_readbacks; // Input sampling
         method A1OutStatus output_readbacks; // Output sampling
+        method A1StateType state;
         method Action dbg_ctrl(A1DbgOut value); // Output control
         method Action dbg_en(Bit#(1) value);    // Debug enable pin
         method Action a1_en(Bit#(1) value);  // SM enable pin
@@ -63,6 +64,7 @@ import GimletSeqFpgaRegs::*;
         // Normalized pin readbacks to registers
         method Action input_readbacks(A1Readbacks value); // Input sampling
         method Action output_readbacks(A1OutStatus value); // Output sampling
+        method Action state(A1StateType value);
         method A1DbgOut dbg_ctrl; // Output control
         method Bit#(1) dbg_en;    // Debug enable pin
         method Bit#(1) a1_en;    // SM enable pin
@@ -120,14 +122,14 @@ import GimletSeqFpgaRegs::*;
         method syncd_pins = cur_syncd_pins._read;
     endmodule
     
-    typedef enum {IDLE, ENABLE, WAITPG, DELAY, DONE} StateType deriving (Eq, Bits);
+    typedef enum {IDLE, ENABLE, WAITPG, DELAY, DONE} A1StateType deriving (Eq, Bits);
     
 
     // Block top module
     module mkA1Block(A1BlockTop);
 
         // State register
-        Reg#(StateType) state <- mkReg(IDLE);
+        Reg#(A1StateType) state <- mkReg(IDLE);
         Reg#(UInt#(19)) delay_counter <- mkReg(fromInteger(500000));  // 10ms @50MHz TODO: make this a constant
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_v3p3_s5_en <- mkReg(0);
@@ -226,6 +228,7 @@ import GimletSeqFpgaRegs::*;
         interface A1Regs reg_if;
             method input_readbacks = cur_syncd_pins._read; // Input sampling
             method output_readbacks = cur_out_pins._read; // Output sampling
+            method state = state._read;
             method dbg_ctrl = dbg_out_pins._write; // Output control
             method dbg_en = dbg_en._write;    // Debug enable pin
             method a1_en = a1_en._write;

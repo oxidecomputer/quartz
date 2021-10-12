@@ -46,6 +46,7 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(A1DbgOut) a1_dbg <- mkReg(unpack(0));
     ConfigReg#(A1OutStatus) a1_output_readbacks <- mkRegU();
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
+    ConfigReg#(A1smstatus) a1_sm <- mkRegU();
     // A0 registers
     ConfigReg#(A0OutStatus1) a0_status1 <- mkReg(unpack(0)); // a0OutStatus1Offset
     ConfigReg#(A0OutStatus2) a0_status2 <- mkReg(unpack(0)); // a0OutStatus2Offset
@@ -82,6 +83,7 @@ module mkGimletRegs(GimletRegIF);
 
     RWire#(A1OutStatus) cur_a1_outputs <- mkRWire();
     RWire#(A1Readbacks) cur_a1_inputs <- mkRWire();
+    RWire#((A1StateType)) a1_state <- mkRWire();
     
     RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
     RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
@@ -114,6 +116,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(a1DbgOutOffset) : readdata <= tagged Valid (pack(a1_dbg));
             fromInteger(a1OutStatusOffset) : readdata <= tagged Valid (pack(a1_output_readbacks));
             fromInteger(a1ReadbacksOffset) : readdata <= tagged Valid (pack(a1_inputs));
+            fromInteger(a1smstatusOffset) : readdata <= tagged Valid (pack(a1_sm));
             fromInteger(a0OutStatus1Offset) : readdata <= tagged Valid (pack(a0_status1));
             fromInteger(a0OutStatus2Offset) : readdata <= tagged Valid (pack(a0_status2));
             fromInteger(a0DbgOut1Offset) : readdata <= tagged Valid (pack(a0_dbg_out1));
@@ -153,7 +156,8 @@ module mkGimletRegs(GimletRegIF);
         a1_inputs   <= fromMaybe(a1_inputs, cur_a1_inputs.wget());
         a1_output_readbacks <= fromMaybe(a1_output_readbacks, cur_a1_outputs.wget());
         a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
-
+        let a1_state_bits = fromMaybe(?, a1_state.wget());
+        a1_sm.a1sm <= zeroExtend(pack(a1_state_bits));
         // A0 registers
         let cur_a0_inputs_wget = fromMaybe(?, cur_a0_inputs.wget());  // This should always be a real value
         let cur_a0_outputs_wget = fromMaybe(?, cur_a0_outputs.wget()); // This should always be a real value
@@ -304,6 +308,7 @@ module mkGimletRegs(GimletRegIF);
         // Normalized pin readbacks to registers
         method input_readbacks = cur_a1_inputs.wset; // Input sampling
         method output_readbacks = cur_a1_outputs.wset; // Output sampling
+        method state = a1_state.wset;
         method A1DbgOut dbg_ctrl =  a1_dbg._read; // Output control
         method Bit#(1) dbg_en;
             return dbgCtrl_reg.reg_ctrl_en;
