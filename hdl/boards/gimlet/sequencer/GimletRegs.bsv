@@ -28,7 +28,10 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(Id1) id1 <- mkReg(unpack('hde));
     ConfigReg#(Id2) id2 <- mkReg(unpack('hAA));
     ConfigReg#(Id3) id3 <- mkReg(unpack('h55));
+    ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
     ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(unpack(0)); // Debug mux control register
+    // Main control registers
+    ConfigReg#(Pwrctrl) power_control <- mkReg(unpack(0));
     //  NIC domain signals
     ConfigReg#(NicStatus) nic_status <- mkRegU();  // RO register for inputs
     ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
@@ -60,6 +63,11 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(AmdOutStatus) amd_out_status <- mkReg(unpack(0)); // amdOutStatusOffset
     ConfigReg#(AmdDbgOut) amd_dbg_out <- mkReg(unpack(0)); // amdDbgOutOffset
 
+    PulseWire do_read <- mkPulseWire();
+    PulseWire do_write <- mkPulseWire();
+    PulseWire do_bitset <- mkPulseWire();
+    PulseWire do_bitclear <- mkPulseWire();
+
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);
 
      // Combo inputs/outputs to/from the interface
@@ -86,12 +94,14 @@ module mkGimletRegs(GimletRegIF);
 
     // SW readbacks
     (* fire_when_enabled, no_implicit_conditions *)
-    rule do_reg_read (operation == READ && !isValid(readdata));
+    rule do_reg_read (do_read && !isValid(readdata));
         case (address)
             fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0));
             fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1));
             fromInteger(id2Offset) : readdata <= tagged Valid (pack(id2));
             fromInteger(id3Offset) : readdata <= tagged Valid (pack(id3));
+            fromInteger(scrtchpadOffset) : readdata <= tagged Valid (pack(scratchpad));
+            fromInteger(pwrctrlOffset): readdata <= tagged Valid (pack(power_control));
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
             fromInteger(outStatusNic1Offset) : readdata <= tagged Valid (pack(nic1_out_status));
@@ -124,7 +134,9 @@ module mkGimletRegs(GimletRegIF);
     // Register updates, note software writes take precedence for same-clock cycle hw and software updates on read/write registers
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_updates; 
+        scratchpad <= reg_update(scratchpad, scratchpad, address, scrtchpadOffset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
+        power_control <= reg_update(power_control, power_control, address, pwrctrlOffset, operation, writedata);
         // NIC registers
         nic_status      <= fromMaybe(nic_status, cur_nic_pins.wget());  // Always update from pins, no writing from sw.
         nic1_out_status <= fromMaybe(nic1_out_status, cur_nic1_out_status.wget()); // Always update from pins, no writing from sw.
@@ -157,7 +169,6 @@ module mkGimletRegs(GimletRegIF);
             vpp_abcd_en: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en0
         };
         a0_status2 <= A0OutStatus2 {
-            rsmrst: cur_a0_outputs_wget.seq_to_sp3_rsmrst_v3p3,
             pwr_good: cur_a0_outputs_wget.seq_to_sp3_pwr_good,
             pwr_btn: cur_a0_outputs_wget.sp_to_sp3_pwr_btn,
             cont2_en: cur_a0_outputs_wget.pwr_cont2_sp3_en,
@@ -181,7 +192,6 @@ module mkGimletRegs(GimletRegIF);
             sp_to_sp3_pwr_btn: a0_dbg_out2.pwr_btn,
             seq_to_vtt_efgh_en: a0_dbg_out1.vtt_efgh_en,
             seq_to_sp3_pwr_good: a0_dbg_out2.pwr_good,
-            seq_to_sp3_rsmrst_v3p3: a0_dbg_out2.rsmrst,
             seq_to_vtt_abcd_a0_en: a0_dbg_out1.vtt_efgh_en
         };
         a0_dbg_out1 <= reg_update(a0_dbg_out1, a0_dbg_out1, address, a0DbgOut1Offset, operation, writedata); // Normal sw register
@@ -252,6 +262,16 @@ module mkGimletRegs(GimletRegIF);
                 writedata <= request.wdata;
                 address <= request.address;
                 operation <= request.op;
+
+                if (request.op == WRITE) begin
+                    do_write.send();
+                end else if (request.op == BITSET) begin
+                    do_bitset.send();
+                end else if (request.op == BITCLEAR) begin
+                    do_bitclear.send();
+                end else if (request.op == READ) begin
+                    do_read.send();
+                end
             endmethod
         endinterface
         interface Get response;
@@ -287,6 +307,9 @@ module mkGimletRegs(GimletRegIF);
         method A1DbgOut dbg_ctrl =  a1_dbg._read; // Output control
         method Bit#(1) dbg_en;
             return dbgCtrl_reg.reg_ctrl_en;
+        endmethod
+        method Bit#(1) a1_en;
+            return power_control.a1pwren;
         endmethod
     endinterface
     interface A0RegsReverse a0_block;

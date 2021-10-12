@@ -22,7 +22,6 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) sp_to_sp3_pwr_btn_l;
         method Bit#(1) seq_to_vtt_efgh_en;
         method Bit#(1) seq_to_sp3_pwr_good;
-        method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
         method Bit#(1) seq_to_vtt_abcd_a0_en;
     endinterface
     
@@ -151,7 +150,6 @@ import GimletSeqFpgaRegs::*;
         Bit#(1) sp_to_sp3_pwr_btn;
         Bit#(1) seq_to_vtt_efgh_en;
         Bit#(1) seq_to_sp3_pwr_good;
-        Bit#(1) seq_to_sp3_rsmrst_v3p3;
         Bit#(1) seq_to_vtt_abcd_a0_en;
     } A0OutPinsStruct deriving (Bits);
 
@@ -339,7 +337,6 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) sp_to_sp3_pwr_btn_l <- mkReg(1);
         Reg#(Bit#(1)) seq_to_vtt_efgh_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_pwr_good <- mkReg(0);
-        Reg#(Bit#(1)) seq_to_sp3_rsmrst_v3p3_l <- mkReg(1);
         Reg#(Bit#(1)) seq_to_vtt_abcd_a0_en <- mkReg(0);
 
         // Combo output readbacks
@@ -348,6 +345,22 @@ import GimletSeqFpgaRegs::*;
         Wire#(A0InPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
         Wire#(A0OutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
+
+        //  Wait for SP to check power good and say go
+        //  PWR_BTN_L asserted (timing rules?)
+        //  SLP_S5_L and SLP_S3_L asserted (timing rules?)
+        //  GroupB stage1 EN
+        //  GroupB stage1 PG
+        //  GroupB stage 2 EN
+        //  GroupB stage 2 PG
+        //  GroupB checkpoint
+        //  SP does RA229618 things via SMBUS
+        //  GroupC STABLE
+        //  1 ms delay
+        // Assert power good
+        // AMD asserts PWROK
+        // ADM de-asserts RESET_L
+        // A0 OK
 
         rule do_pack_output_readbacks;
             cur_out_pins <= A0OutPinsStruct {
@@ -365,7 +378,6 @@ import GimletSeqFpgaRegs::*;
                 sp_to_sp3_pwr_btn: ~sp_to_sp3_pwr_btn_l,
                 seq_to_vtt_efgh_en: seq_to_vtt_efgh_en,
                 seq_to_sp3_pwr_good: seq_to_sp3_pwr_good,
-                seq_to_sp3_rsmrst_v3p3: ~seq_to_sp3_rsmrst_v3p3_l,
                 seq_to_vtt_abcd_a0_en: seq_to_vtt_abcd_a0_en
             };
         endrule
@@ -385,7 +397,6 @@ import GimletSeqFpgaRegs::*;
             sp_to_sp3_pwr_btn_l <= ~dbg_out_pins.sp_to_sp3_pwr_btn;
             seq_to_vtt_efgh_en <= dbg_out_pins.seq_to_vtt_efgh_en;
             seq_to_sp3_pwr_good <= dbg_out_pins.seq_to_sp3_pwr_good;
-            seq_to_sp3_rsmrst_v3p3_l <= ~dbg_out_pins.seq_to_sp3_rsmrst_v3p3;
             seq_to_vtt_abcd_a0_en <= dbg_out_pins.seq_to_vtt_abcd_a0_en;
         endrule
 
@@ -411,7 +422,6 @@ import GimletSeqFpgaRegs::*;
             method sp_to_sp3_pwr_btn_l = sp_to_sp3_pwr_btn_l._read;
             method seq_to_vtt_efgh_en = seq_to_vtt_efgh_en._read;
             method seq_to_sp3_pwr_good = seq_to_sp3_pwr_good._read;
-            method seq_to_sp3_rsmrst_v3p3_l = seq_to_sp3_rsmrst_v3p3_l._read;
             method seq_to_vtt_abcd_a0_en = seq_to_vtt_abcd_a0_en._read;
         endinterface
     endmodule

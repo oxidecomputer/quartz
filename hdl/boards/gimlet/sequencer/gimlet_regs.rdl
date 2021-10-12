@@ -43,6 +43,14 @@ addrmap gimlet_seq_fpga {
         } TBD[7:0] = 0;
     } ID3;
 
+    reg {
+        name = "Scratchpad";
+
+        field {
+            desc = "Scribble Register for read-write use";
+        } TBD[7:0] = 0;
+    } SCRTCHPAD;
+
     reg irq_type {
         field {
             desc = "Fan Power Timeout";
@@ -440,6 +448,10 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Enables V0P9_SP3_VDD_SOC_S5_A1 rail (SEQ_TO_SP3_V0P9_S5_EN pin)";
         } V0P9_S5_EN[1] = 0;
+        field {
+            desc = "De-asserted to processor after GroupA supplies are stable (10ms after S5 rails minimum) 
+            (SEQ_TO_SP3_RSMRST_V3P3_L net inverted from this register)";
+        } RSMRST[1] = 0;
     };
 
     reg a0_output1_type {
@@ -496,10 +508,6 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "This is asserted to CPU, 1ms before asserting. Set when A0 rails are good. (SEQ_TO_SP3_PWR_GOOD net)";
         } PWR_GOOD[1] = 0;
-        field {
-            desc = "De-asserted to processor after GroupA supplies are stable (10ms after S5 rails minimum) 
-            (SEQ_TO_SP3_RSMRST_V3P3_L net inverted from this register)";
-        } RSMRST[1] = 0;
     };
 
     reg nic_output1_type {

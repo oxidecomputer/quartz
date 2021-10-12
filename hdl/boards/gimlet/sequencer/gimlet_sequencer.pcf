@@ -27,6 +27,7 @@ set_io --warn-no-port pwr_cont_dimm_efgh_pg2 F15
 set_io --warn-no-port seq_to_vtt_efgh_en F16
 set_io --warn-no-port seq_to_clk_gpio9 F2
 set_io --warn-no-port clk50m F7
+set_io --warn-no-port testpoint C4
 set_io --warn-no-port seq_to_clk_gpio8 G1
 set_io --warn-no-port pwr_cont_dimm_efgh_pg0 G15
 set_io --warn-no-port pwr_cont_dimm_efgh_pg1 G16
@@ -76,7 +77,8 @@ set_io --warn-no-port RST_N P9
 set_io --warn-no-port pwr_cont1_sp3_en R1
 set_io --warn-no-port sp3_to_sp_slp_s3_l R10
 set_io --warn-no-port sclk R11
-set_io --warn-no-port csn P10
+#set_io --warn-no-port csn P10
+set_io --warn-no-port csn R12
 set_io --warn-no-port pwr_cont2_sp3_pwrok R14
 set_io --warn-no-port pwr_cont_dimm_abcd_en1 R15
 set_io --warn-no-port pwr_cont_dimm_abcd_en0 R16

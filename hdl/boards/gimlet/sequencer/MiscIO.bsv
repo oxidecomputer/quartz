@@ -10,6 +10,7 @@ import GimletSeqFpgaRegs::*;
     interface MiscOutputSource;
         method Bit#(1) seq_to_sp3_sys_rst_l;
         method Bit#(1) clk_to_seq_nmr_l;
+        method Bit#(1) testpoint;
     endinterface
     typedef struct {
         Bit#(1) seq_to_sp3_sys_rst;
@@ -170,6 +171,7 @@ import GimletSeqFpgaRegs::*;
     module mkMiscBlock(MiscBlockTop);
 
         Reg#(UInt#(6)) clk_rst_time <- mkReg(50);
+        Reg#(Bit#(1)) testpoint <- mkReg(1);
 
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);
@@ -209,6 +211,7 @@ import GimletSeqFpgaRegs::*;
         interface MiscOutputSource out_pins;
             method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._read;
             method clk_to_seq_nmr_l = clk_to_seq_nmr_l._read;
+            method testpoint = testpoint._read;
         endinterface
     endmodule
 

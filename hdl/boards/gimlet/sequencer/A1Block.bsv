@@ -12,6 +12,7 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) seq_to_sp3_v1p5_rtc_en;
         method Bit#(1) seq_to_sp3_v1p8_s5_en;
         method Bit#(1) seq_to_sp3_v0p9_s5_en;
+        method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
     endinterface
 
     // Interface for input pins
@@ -54,6 +55,7 @@ import GimletSeqFpgaRegs::*;
         method A1OutStatus output_readbacks; // Output sampling
         method Action dbg_ctrl(A1DbgOut value); // Output control
         method Action dbg_en(Bit#(1) value);    // Debug enable pin
+        method Action a1_en(Bit#(1) value);  // SM enable pin
     endinterface
 
     // "Reverse" Interface at register block
@@ -63,6 +65,7 @@ import GimletSeqFpgaRegs::*;
         method Action output_readbacks(A1OutStatus value); // Output sampling
         method A1DbgOut dbg_ctrl; // Output control
         method Bit#(1) dbg_en;    // Debug enable pin
+        method Bit#(1) a1_en;    // SM enable pin
     endinterface
 
     // Allow register block interfaces to connect
@@ -72,6 +75,7 @@ import GimletSeqFpgaRegs::*;
             mkConnection(source.output_readbacks, sink.output_readbacks);
             mkConnection(source.dbg_ctrl, sink.dbg_ctrl);
             mkConnection(source.dbg_en, sink.dbg_en);
+            mkConnection(source.a1_en, sink.a1_en);
         endmodule
     endinstance
 
@@ -115,15 +119,22 @@ import GimletSeqFpgaRegs::*;
         
         method syncd_pins = cur_syncd_pins._read;
     endmodule
+    
+    typedef enum {IDLE, ENABLE, WAITPG, DELAY, DONE} StateType deriving (Eq, Bits);
+    
 
     // Block top module
     module mkA1Block(A1BlockTop);
 
+        // State register
+        Reg#(StateType) state <- mkReg(IDLE);
+        Reg#(UInt#(19)) delay_counter <- mkReg(fromInteger(500000));  // 10ms @50MHz TODO: make this a constant
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_v3p3_s5_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_v1p5_rtc_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_v1p8_s5_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_v0p9_s5_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_sp3_rsmrst_v3p3_l <- mkReg(1);
 
         // Combo output readback
         Wire#(A1OutStatus) cur_out_pins <- mkDWire(unpack(0));
@@ -132,9 +143,11 @@ import GimletSeqFpgaRegs::*;
         Wire#(A1Readbacks) cur_syncd_pins <- mkDWire(unpack(0));
         Wire#(A1DbgOut) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
+        Wire#(Bit#(1)) a1_en <- mkDWire(0);
         
         rule do_pack_output_readbacks;
             cur_out_pins <= A1OutStatus {
+                rsmrst : ~seq_to_sp3_rsmrst_v3p3_l,
                 v0p9_s5_en : seq_to_sp3_v0p9_s5_en,
                 v1p8_s5_en : seq_to_sp3_v1p8_s5_en,
                 v1p5_rtc_en: seq_to_sp3_v1p5_rtc_en,
@@ -142,11 +155,71 @@ import GimletSeqFpgaRegs::*;
             };
         endrule
 
-        rule do_output_pins;
+        rule do_sm_idle (state == IDLE && dbg_en == 0);
+            delay_counter <= fromInteger(500000);
+            seq_to_sp3_v3p3_s5_en <= 0;
+            seq_to_sp3_v1p5_rtc_en <= 0;
+            seq_to_sp3_v1p8_s5_en <= 0;
+            seq_to_sp3_v0p9_s5_en <= 0;
+            seq_to_sp3_rsmrst_v3p3_l <= 0;
+            if (a1_en == 1) begin
+                state <= ENABLE;
+            end 
+        endrule
+        // Enable all rails in parallel
+        rule do_enable (state == ENABLE && dbg_en == 0);
+            seq_to_sp3_v3p3_s5_en <= 1;
+            seq_to_sp3_v1p5_rtc_en <= 1;
+            seq_to_sp3_v1p8_s5_en <= 1;
+            seq_to_sp3_v0p9_s5_en <= 1;
+            if (a1_en == 0) begin
+                state <= IDLE;
+            end else begin
+                state <= WAITPG;
+            end
+        endrule
+        // Wait for all PGs (Group A Stable)
+        rule do_enable_pg (state == WAITPG && dbg_en == 0);
+            let all_pg_good = A1Readbacks {
+                v0p9_vdd_soc_s5_pg: 1,
+                v1p8_s5_pg: 1,
+                v3p3_s5_pg: 1,
+                v1p5_rtc_pg: 1
+            };
+            if (a1_en == 0) begin
+                state <= IDLE;
+            end else begin
+                if (cur_syncd_pins == all_pg_good) begin
+                    state <= DELAY;
+                end
+            end
+
+        endrule
+        // 10ms delay 
+        rule do_10ms_delay (state == DELAY && dbg_en == 0);
+            delay_counter <= delay_counter - 1;
+            if (a1_en == 0) begin
+                state <= IDLE;
+            end else begin
+                if (delay_counter == 1) begin
+                    state <= DONE;
+                end
+            end
+        endrule
+        // RSMRST_L deasserted.
+        rule do_done (state == DONE && dbg_en == 0);
+            seq_to_sp3_rsmrst_v3p3_l <= 0;
+            if (a1_en == 0) begin
+                state <= IDLE;
+            end
+        endrule
+
+        rule do_output_pins (dbg_en == 1);
             seq_to_sp3_v3p3_s5_en <= dbg_out_pins.v3p3_s5_en;
             seq_to_sp3_v1p5_rtc_en <= dbg_out_pins.v1p5_rtc_en;
             seq_to_sp3_v1p8_s5_en <= dbg_out_pins.v1p8_s5_en;
             seq_to_sp3_v0p9_s5_en <= dbg_out_pins.v0p9_s5_en;
+            seq_to_sp3_rsmrst_v3p3_l <= ~dbg_out_pins.rsmrst;
         endrule
 
         method syncd_pins = cur_syncd_pins._write;
@@ -155,8 +228,10 @@ import GimletSeqFpgaRegs::*;
             method output_readbacks = cur_out_pins._read; // Output sampling
             method dbg_ctrl = dbg_out_pins._write; // Output control
             method dbg_en = dbg_en._write;    // Debug enable pin
+            method a1_en = a1_en._write;
         endinterface
         interface A1OutputSource out_pins;
+            method seq_to_sp3_rsmrst_v3p3_l = seq_to_sp3_rsmrst_v3p3_l._read;
             method seq_to_sp3_v3p3_s5_en = seq_to_sp3_v3p3_s5_en._read;
             method seq_to_sp3_v1p5_rtc_en = seq_to_sp3_v1p5_rtc_en._read;
             method seq_to_sp3_v1p8_s5_en = seq_to_sp3_v1p8_s5_en._read;
