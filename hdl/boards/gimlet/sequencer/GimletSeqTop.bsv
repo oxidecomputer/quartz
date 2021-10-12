@@ -207,6 +207,7 @@ module mkGimletTestTop(Empty);
 
     mkAutoFSM(
     seq
+        // Basic read-write
         action
             Vector#(8, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(READ)));
@@ -230,6 +231,7 @@ module mkGimletTestTop(Empty);
             $display(rx[6]);
             $display(rx[7]);
         endaction
+        // Enable A1, sunny day case
     endseq
     );
 

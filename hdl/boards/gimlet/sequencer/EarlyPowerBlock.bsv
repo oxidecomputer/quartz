@@ -146,8 +146,8 @@ import GimletSeqFpgaRegs::*;
         endrule
 
         rule do_output_pins;
-            seq_to_fanhp_restart_l <= 1; //~dbg_out_pins.fanhp_restart;  // TODO need a one-shot here eventually
-            seq_to_fan_hp_en <= 1; //dbg_out_pins.fanpwren;
+            seq_to_fanhp_restart_l <= ~dbg_out_pins.fanhp_restart;  // TODO need a one-shot here eventually
+            seq_to_fan_hp_en <= dbg_out_pins.fanpwren;
             seq_to_dimm_abcd_v2p5_en <= 1; //dbg_out_pins.abcd_spd_en;
             seq_to_dimm_efgh_v2p5_en <= 1; //dbg_out_pins.efgh_spd_en;
         endrule
