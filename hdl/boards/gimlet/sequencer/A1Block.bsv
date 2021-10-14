@@ -76,6 +76,7 @@ import GimletSeqFpgaRegs::*;
             mkConnection(source.input_readbacks, sink.input_readbacks);
             mkConnection(source.output_readbacks, sink.output_readbacks);
             mkConnection(source.dbg_ctrl, sink.dbg_ctrl);
+            mkConnection(source.state, sink.state);
             mkConnection(source.dbg_en, sink.dbg_en);
             mkConnection(source.a1_en, sink.a1_en);
         endmodule

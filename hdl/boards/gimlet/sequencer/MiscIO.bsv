@@ -8,12 +8,10 @@ import GimletSeqFpgaRegs::*;
 
     // Interface for output pins
     interface MiscOutputSource;
-        method Bit#(1) seq_to_sp3_sys_rst_l;
         method Bit#(1) clk_to_seq_nmr_l;
         method Bit#(1) testpoint;
     endinterface
     typedef struct {
-        Bit#(1) seq_to_sp3_sys_rst;
         Bit#(1) clk_to_seq_nmr;
     } MiscOutPinsStruct deriving(Bits);
     // Interface for input pins
@@ -22,8 +20,6 @@ import GimletSeqFpgaRegs::*;
         method Action sp3_to_seq_thermtrip_l((* port = "sp3_to_seq_thermtrip_l" *) Bit#(1) value);
         (* prefix = "" *)
         method Action sp3_to_seq_fsr_req_l((* port = "sp3_to_seq_fsr_req_l" *) Bit#(1) value);
-        (* prefix = "" *)
-        method Action sp3_to_seq_pwrgd_out((* port = "sp3_to_seq_pwrgd_out" *) Bit#(1) value);
         (* prefix = "" *)
         method Action seq_to_clk_gpio3((* port = "seq_to_clk_gpio3" *) Bit#(1) value);
         (* prefix = "" *)
@@ -43,7 +39,6 @@ import GimletSeqFpgaRegs::*;
     interface MiscInputPinsRawSource;
         method Bit#(1) sp3_to_seq_thermtrip_l;
         method Bit#(1) sp3_to_seq_fsr_req_l;
-        method Bit#(1) sp3_to_seq_pwrgd_out;
         method Bit#(1) seq_to_clk_gpio3;
         method Bit#(1) seq_to_clk_gpio9;
         method Bit#(1) seq_to_clk_gpio8;
@@ -55,7 +50,6 @@ import GimletSeqFpgaRegs::*;
     typedef struct {
         Bit#(1) sp3_to_seq_thermtrip;
         Bit#(1) sp3_to_seq_fsr_req;
-        Bit#(1) sp3_to_seq_pwrgd_out;
         Bit#(1) seq_to_clk_gpio3;
         Bit#(1) seq_to_clk_gpio9;
         Bit#(1) seq_to_clk_gpio8;
@@ -69,7 +63,6 @@ import GimletSeqFpgaRegs::*;
         module mkConnection#(MiscInputPinsRawSource source, MiscInputPinsRawSink sink) (Empty);
             mkConnection(source.sp3_to_seq_thermtrip_l, sink.sp3_to_seq_thermtrip_l);
             mkConnection(source.sp3_to_seq_fsr_req_l, sink.sp3_to_seq_fsr_req_l);
-            mkConnection(source.sp3_to_seq_pwrgd_out, sink.sp3_to_seq_pwrgd_out);
             mkConnection(source.seq_to_clk_gpio3, sink.seq_to_clk_gpio3);
             mkConnection(source.seq_to_clk_gpio9, sink.seq_to_clk_gpio9);
             mkConnection(source.seq_to_clk_gpio8, sink.seq_to_clk_gpio8);
@@ -124,7 +117,6 @@ import GimletSeqFpgaRegs::*;
         // Synchronizers
         SyncBitIfc#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
         SyncBitIfc#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-        SyncBitIfc#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
         SyncBitIfc#(Bit#(1)) seq_to_clk_gpio3 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
         SyncBitIfc#(Bit#(1)) seq_to_clk_gpio9 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
         SyncBitIfc#(Bit#(1)) seq_to_clk_gpio8 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
@@ -141,7 +133,6 @@ import GimletSeqFpgaRegs::*;
             cur_syncd_pins <= MiscInPinsStruct {
                 sp3_to_seq_thermtrip: ~sp3_to_seq_thermtrip_l.read(),
                 sp3_to_seq_fsr_req: ~sp3_to_seq_fsr_req_l.read(),
-                sp3_to_seq_pwrgd_out: sp3_to_seq_pwrgd_out.read(),
                 seq_to_clk_gpio3: seq_to_clk_gpio3.read(),
                 seq_to_clk_gpio9: seq_to_clk_gpio9.read(),
                 seq_to_clk_gpio8: seq_to_clk_gpio8.read(),
@@ -155,7 +146,6 @@ import GimletSeqFpgaRegs::*;
         interface MiscInputPinsRawSink in_pins;
             method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l.send;
             method sp3_to_seq_fsr_req_l = sp3_to_seq_fsr_req_l.send;
-            method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out.send;
             method seq_to_clk_gpio3 = seq_to_clk_gpio3.send;
             method seq_to_clk_gpio9 = seq_to_clk_gpio9.send;
             method seq_to_clk_gpio8 = seq_to_clk_gpio8.send;
@@ -174,7 +164,6 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) testpoint <- mkReg(1);
 
         // Output registers
-        Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);
         Reg#(Bit#(1)) clk_to_seq_nmr_l <- mkReg(0);
 
         // Combo output readbacks
@@ -193,13 +182,11 @@ import GimletSeqFpgaRegs::*;
 
         rule do_pack_output_readbacks;
             cur_out_pins <= MiscOutPinsStruct {
-                seq_to_sp3_sys_rst: ~seq_to_sp3_sys_rst_l,
                 clk_to_seq_nmr: ~clk_to_seq_nmr_l
             };
         endrule
         rule do_output_pins;
-            seq_to_sp3_sys_rst_l <= ~dbg_out_pins.seq_to_sp3_sys_rst & (clk_rst_time == 0 ? 'b1 : 'b0);
-            clk_to_seq_nmr_l <= ~dbg_out_pins.clk_to_seq_nmr;
+            clk_to_seq_nmr_l <= ~dbg_out_pins.clk_to_seq_nmr & (clk_rst_time == 0 ? 'b1 : 'b0);
         endrule
         method syncd_pins = cur_syncd_pins._write;
         interface MiscRegs reg_if;
@@ -209,7 +196,6 @@ import GimletSeqFpgaRegs::*;
             method dbg_en = dbg_en._write;    // Debug enable pin
         endinterface       
         interface MiscOutputSource out_pins;
-            method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._read;
             method clk_to_seq_nmr_l = clk_to_seq_nmr_l._read;
             method testpoint = testpoint._read;
         endinterface
@@ -223,7 +209,6 @@ import GimletSeqFpgaRegs::*;
     module mkTestMiscPinsSource(TBTestMiscPinsSource);
         Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(0);
         Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(0);
-        Reg#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio3 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio9 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio8 <- mkReg(0);
@@ -236,8 +221,6 @@ import GimletSeqFpgaRegs::*;
         interface MiscInputPinsRawSource pins;
             method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._read;
             method sp3_to_seq_fsr_req_l = sp3_to_seq_fsr_req_l._read;
-            method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out._read;
-            method seq_to_clk_gpio3 = seq_to_clk_gpio3._read;
             method seq_to_clk_gpio9 = seq_to_clk_gpio9._read;
             method seq_to_clk_gpio8 = seq_to_clk_gpio8._read;
             method seq_to_clk_gpio2 = seq_to_clk_gpio2._read;

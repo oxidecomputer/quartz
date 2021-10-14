@@ -436,8 +436,48 @@
         },
         {
             "type": "reg",
-            "inst_name": "EARLY_RBKS",
+            "inst_name": "A1SMSTATUS",
             "addr_offset": 10,
+            "regwidth": 8,
+            "min_accesswidth": 8,
+            "children": [
+                {
+                    "type": "field",
+                    "inst_name": "A1SM",
+                    "lsb": 0,
+                    "msb": 7,
+                    "reset": null,
+                    "sw_access": "r",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "TBD"
+                }
+            ]
+        },
+        {
+            "type": "reg",
+            "inst_name": "A0SMSTATUS",
+            "addr_offset": 11,
+            "regwidth": 8,
+            "min_accesswidth": 8,
+            "children": [
+                {
+                    "type": "field",
+                    "inst_name": "A0SM",
+                    "lsb": 0,
+                    "msb": 7,
+                    "reset": null,
+                    "sw_access": "r",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "TBD"
+                }
+            ]
+        },
+        {
+            "type": "reg",
+            "inst_name": "EARLY_RBKS",
+            "addr_offset": 12,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -500,28 +540,8 @@
         },
         {
             "type": "reg",
-            "inst_name": "A1SMSTATUS",
-            "addr_offset": 11,
-            "regwidth": 8,
-            "min_accesswidth": 8,
-            "children": [
-                {
-                    "type": "field",
-                    "inst_name": "A1SM",
-                    "lsb": 0,
-                    "msb": 7,
-                    "reset": null,
-                    "sw_access": "r",
-                    "se_onread": null,
-                    "se_onwrite": null,
-                    "desc": "TBD"
-                }
-            ]
-        },
-        {
-            "type": "reg",
             "inst_name": "A1_READBACKS",
-            "addr_offset": 12,
+            "addr_offset": 13,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -574,7 +594,7 @@
         {
             "type": "reg",
             "inst_name": "AMD_A0",
-            "addr_offset": 13,
+            "addr_offset": 14,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -627,7 +647,7 @@
         {
             "type": "reg",
             "inst_name": "GROUPB_PG",
-            "addr_offset": 14,
+            "addr_offset": 15,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -724,7 +744,7 @@
         {
             "type": "reg",
             "inst_name": "GROUPB_UNUSED",
-            "addr_offset": 15,
+            "addr_offset": 16,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -766,7 +786,7 @@
         {
             "type": "reg",
             "inst_name": "GROUPBC_FLTS",
-            "addr_offset": 16,
+            "addr_offset": 17,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -863,7 +883,7 @@
         {
             "type": "reg",
             "inst_name": "GROUPC_PG",
-            "addr_offset": 17,
+            "addr_offset": 18,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -894,7 +914,7 @@
         {
             "type": "reg",
             "inst_name": "NIC_STATUS",
-            "addr_offset": 18,
+            "addr_offset": 19,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -991,7 +1011,7 @@
         {
             "type": "reg",
             "inst_name": "CLKGEN_STATUS",
-            "addr_offset": 19,
+            "addr_offset": 20,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1077,7 +1097,7 @@
         {
             "type": "reg",
             "inst_name": "AMD_STATUS",
-            "addr_offset": 20,
+            "addr_offset": 21,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1119,7 +1139,7 @@
         {
             "type": "reg",
             "inst_name": "FANOUTSTATUS",
-            "addr_offset": 21,
+            "addr_offset": 22,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1150,7 +1170,7 @@
         {
             "type": "reg",
             "inst_name": "EARLY_PWR_STATUS",
-            "addr_offset": 22,
+            "addr_offset": 23,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1203,7 +1223,7 @@
         {
             "type": "reg",
             "inst_name": "A1_OUT_STATUS",
-            "addr_offset": 23,
+            "addr_offset": 24,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1267,7 +1287,7 @@
         {
             "type": "reg",
             "inst_name": "A0_OUT_STATUS_1",
-            "addr_offset": 24,
+            "addr_offset": 25,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1364,7 +1384,7 @@
         {
             "type": "reg",
             "inst_name": "A0_OUT_STATUS_2",
-            "addr_offset": 25,
+            "addr_offset": 26,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1450,7 +1470,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_NIC1",
-            "addr_offset": 26,
+            "addr_offset": 27,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1547,7 +1567,7 @@
         {
             "type": "reg",
             "inst_name": "OUT_STATUS_NIC2",
-            "addr_offset": 27,
+            "addr_offset": 28,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1589,7 +1609,7 @@
         {
             "type": "reg",
             "inst_name": "CLKGEN_OUT_STATUS",
-            "addr_offset": 28,
+            "addr_offset": 29,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1609,7 +1629,7 @@
         {
             "type": "reg",
             "inst_name": "AMD_OUT_STATUS",
-            "addr_offset": 29,
+            "addr_offset": 30,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1629,15 +1649,26 @@
         {
             "type": "reg",
             "inst_name": "DBG_CTRL",
-            "addr_offset": 30,
+            "addr_offset": 31,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
                 {
                     "type": "field",
-                    "inst_name": "REG_CTRL_EN",
+                    "inst_name": "ignore_sp",
                     "lsb": 0,
                     "msb": 0,
+                    "reset": 0,
+                    "sw_access": "rw",
+                    "se_onread": null,
+                    "se_onwrite": null,
+                    "desc": "Debug ONLY. Setting this allows the A0 state machine to ingore SP3 handshakes.\nThis is potentially useful for power bringup but should not be used when a CPU is actually\ninstalled"
+                },
+                {
+                    "type": "field",
+                    "inst_name": "REG_CTRL_EN",
+                    "lsb": 1,
+                    "msb": 1,
                     "reset": 0,
                     "sw_access": "rw",
                     "se_onread": null,
@@ -1647,8 +1678,8 @@
                 {
                     "type": "field",
                     "inst_name": "STORE_CURRENT",
-                    "lsb": 1,
-                    "msb": 1,
+                    "lsb": 2,
+                    "msb": 2,
                     "reset": 0,
                     "sw_access": "rw",
                     "se_onread": null,
@@ -1660,7 +1691,7 @@
         {
             "type": "reg",
             "inst_name": "A1_DBG_OUT",
-            "addr_offset": 31,
+            "addr_offset": 32,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1724,7 +1755,7 @@
         {
             "type": "reg",
             "inst_name": "A0_DBG_OUT_1",
-            "addr_offset": 32,
+            "addr_offset": 33,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1821,7 +1852,7 @@
         {
             "type": "reg",
             "inst_name": "A0_DBG_OUT_2",
-            "addr_offset": 33,
+            "addr_offset": 34,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -1907,7 +1938,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_NIC1",
-            "addr_offset": 34,
+            "addr_offset": 35,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -2004,7 +2035,7 @@
         {
             "type": "reg",
             "inst_name": "DBG_OUT_NIC2",
-            "addr_offset": 35,
+            "addr_offset": 36,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -2046,7 +2077,7 @@
         {
             "type": "reg",
             "inst_name": "CLKGEN_DBG_OUT",
-            "addr_offset": 36,
+            "addr_offset": 37,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [
@@ -2066,7 +2097,7 @@
         {
             "type": "reg",
             "inst_name": "AMD_DBG_OUT",
-            "addr_offset": 37,
+            "addr_offset": 38,
             "regwidth": 8,
             "min_accesswidth": 8,
             "children": [

@@ -57,6 +57,7 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(GroupbUnused) a0_groupB_unused <- mkReg(unpack(0)); //groupbUnusedOffset
     ConfigReg#(GroupbcFlts) a0_groupC_faults <-mkReg(unpack(0)); //groupbcFltsOffset
     ConfigReg#(GroupcPg) a0_groupC_pg <- mkReg(unpack(0)); // groupcPgOffset
+    ConfigReg#(A0smstatus) a0_sm <- mkRegU();
     // Misc IO registers
     ConfigReg#(ClkgenOutStatus) clkgen_out_status <- mkReg(unpack(0)); // clkgenOutStatusOffset
     ConfigReg#(ClkgenDbgOut) clkgen_dbg_out <- mkReg(unpack(0)); // clkgenDbgOutOffset
@@ -84,6 +85,7 @@ module mkGimletRegs(GimletRegIF);
     RWire#(A1OutStatus) cur_a1_outputs <- mkRWire();
     RWire#(A1Readbacks) cur_a1_inputs <- mkRWire();
     RWire#((A1StateType)) a1_state <- mkRWire();
+    RWire#((A0StateType)) a0_state <- mkRWire();
     
     RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
     RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
@@ -119,6 +121,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(a1smstatusOffset) : readdata <= tagged Valid (pack(a1_sm));
             fromInteger(a0OutStatus1Offset) : readdata <= tagged Valid (pack(a0_status1));
             fromInteger(a0OutStatus2Offset) : readdata <= tagged Valid (pack(a0_status2));
+            fromInteger(a0smstatusOffset) : readdata <= tagged Valid (pack(a0_sm));
             fromInteger(a0DbgOut1Offset) : readdata <= tagged Valid (pack(a0_dbg_out1));
             fromInteger(a0DbgOut2Offset) : readdata <= tagged Valid (pack(a0_dbg_out2));
             fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(a0_amd_rdbks));
@@ -156,12 +159,15 @@ module mkGimletRegs(GimletRegIF);
         a1_inputs   <= fromMaybe(a1_inputs, cur_a1_inputs.wget());
         a1_output_readbacks <= fromMaybe(a1_output_readbacks, cur_a1_outputs.wget());
         a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
-        let a1_state_bits = fromMaybe(?, a1_state.wget());
-        a1_sm.a1sm <= zeroExtend(pack(a1_state_bits));
+        a1_sm <= unpack(zeroExtend(pack(fromMaybe(?, a1_state.wget()))));
         // A0 registers
         let cur_a0_inputs_wget = fromMaybe(?, cur_a0_inputs.wget());  // This should always be a real value
         let cur_a0_outputs_wget = fromMaybe(?, cur_a0_outputs.wget()); // This should always be a real value
+        // Misc registers
+        let cur_misc_ins = fromMaybe(?, cur_misc_inputs.wget());
+        let cur_misc_outs = fromMaybe(?, cur_misc_outputs.wget());
         // TODO: should really write a function to do this
+        a0_sm <= unpack(zeroExtend(pack(fromMaybe(?, a0_state.wget()))));
         a0_status1 <= A0OutStatus1 {
             efgh_en2: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en2,
             abcd_en2: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en2,
@@ -182,6 +188,7 @@ module mkGimletRegs(GimletRegIF);
             u350_pwrok: cur_a0_outputs_wget.pwr_cont1_sp3_pwrok
         };
         dbg_a0_outputs <= A0OutPinsStruct {
+            seq_to_sp3_sys_rst: amd_dbg_out.sys_reset,
             pwr_cont_dimm_abcd_en1: a0_dbg_out1.v3p3_sys_en,
             pwr_cont_dimm_efgh_en0: a0_dbg_out1.vpp_efgh_en,
             pwr_cont_dimm_efgh_en2: a0_dbg_out1.efgh_en2,
@@ -240,21 +247,17 @@ module mkGimletRegs(GimletRegIF);
             vddcr_soc_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg1
         };
 
-        // Misc registers
-        let cur_misc_ins = fromMaybe(?, cur_misc_inputs.wget());
-        let cur_misc_outs = fromMaybe(?, cur_misc_outputs.wget());
         clkgen_out_status <= ClkgenOutStatus {
             seq_nmr: cur_misc_outs.clk_to_seq_nmr
         };
         clkgen_dbg_out <= reg_update(clkgen_dbg_out, clkgen_dbg_out, address, clkgenDbgOutOffset, operation, writedata); // Normal sw register
 
         amd_out_status <= AmdOutStatus {
-            sys_reset: cur_misc_outs.seq_to_sp3_sys_rst
+            sys_reset: cur_a0_outputs_wget.seq_to_sp3_sys_rst
         };
         amd_dbg_out <= reg_update(amd_dbg_out, amd_dbg_out, address, amdDbgOutOffset, operation, writedata); // Normal sw register
         
         dbg_misc_outputs <= MiscOutPinsStruct {
-            seq_to_sp3_sys_rst: amd_dbg_out.sys_reset,
             clk_to_seq_nmr: clkgen_dbg_out.seq_nmr
          };
 
@@ -322,8 +325,12 @@ module mkGimletRegs(GimletRegIF);
         method input_readbacks = cur_a0_inputs.wset; // Input sampling
         method output_readbacks = cur_a0_outputs.wset; // Output sampling
         method dbg_ctrl = dbg_a0_outputs._read; // Output control
+        method state = a0_state.wset;
         method Bit#(1) dbg_en;    // Debug enable pin
             return dbgCtrl_reg.reg_ctrl_en;
+        endmethod
+        method Bit#(1) ignore_sp;
+            return dbgCtrl_reg.ignore_sp;
         endmethod
     endinterface
     interface MiscRegsReverse misc_block;

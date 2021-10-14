@@ -496,7 +496,6 @@ module mkSpiPeripheralPhy(SpiPeripheralPhy);
 
 endmodule
 
-
 interface SPITestController;
     interface SpiControllerPins pins;
     interface Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm;

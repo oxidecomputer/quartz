@@ -212,8 +212,8 @@ module mkGimletTestTop(Empty);
             Vector#(8, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(READ)));
             tx[1] = unpack('h00);
-            tx[2] = unpack('h00);
-            tx[3] = unpack('h00);
+            tx[2] = unpack('h09);
+            tx[3] = unpack('h01);
             tx[4] = unpack('h00);
             tx[5] = unpack('h00);
             tx[6] = unpack('h00);
@@ -232,6 +232,52 @@ module mkGimletTestTop(Empty);
             $display(rx[7]);
         endaction
         // Enable A1, sunny day case
+         action
+            Vector#(8, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(WRITE)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack('h09);
+            tx[3] = unpack('h01);
+            tx[4] = unpack('h00);
+            tx[5] = unpack('h00);
+            tx[6] = unpack('h00);
+            tx[7] = unpack('h00);
+            controller.bfm.request.put(tx);
+        endaction
+        action
+            let rx <- controller.bfm.response.get();
+            $display(rx[0]);
+            $display(rx[1]);
+            $display(rx[2]);
+            $display(rx[3]);
+            $display(rx[4]);
+            $display(rx[5]);
+            $display(rx[6]);
+            $display(rx[7]);
+        endaction
+        action
+            Vector#(8, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(READ)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack('h09);
+            tx[3] = unpack('h00);
+            tx[4] = unpack('h00);
+            tx[5] = unpack('h00);
+            tx[6] = unpack('h00);
+            tx[7] = unpack('h00);
+            controller.bfm.request.put(tx);
+        endaction
+        action
+            let rx <- controller.bfm.response.get();
+            $display(rx[0]);
+            $display(rx[1]);
+            $display(rx[2]);
+            $display(rx[3]);
+            $display(rx[4]);
+            $display(rx[5]);
+            $display(rx[6]);
+            $display(rx[7]);
+        endaction
     endseq
     );
 

@@ -142,7 +142,26 @@ addrmap gimlet_seq_fpga {
             desc = "NIC power enable (starts state machine)";
         } NICPWREN[1] = 0;
     } PWRCTRL;
+    reg {
+        name = "A1 SM Status";
+        desc = "A1 'live' state machine status";
+        default sw = r;
 
+        field {
+            desc = "TBD";
+        } A1SM[7:0];
+        // TODO: A1 state machine decode in here
+    } A1SMSTATUS;
+        reg {
+        name = "A0 SM Status";
+        desc = "A0 'live' state machine status";
+        default sw = r;
+
+        field {
+            desc = "TBD";
+        } A0SM[7:0];
+        // TODO: A1 state machine decode in here
+    } A0SMSTATUS;
     // Readback blocks:
     // These are built as contiguous registers so that a single multi-byte read 
     // could capture all of them.
@@ -177,16 +196,6 @@ addrmap gimlet_seq_fpga {
         } EFGH_V2P5_SPD_PG[1] = 0;
     } EARLY_RBKS;
 
-    reg {
-        name = "A1 SM Status";
-        desc = "A1 'live' state machine status";
-        default sw = r;
-
-        field {
-            desc = "TBD";
-        } A1SM[7:0];
-        // TODO: A1 state machine decode in here
-    } A1SMSTATUS;
     // Readbacks of pins for A1-power related things
     reg {
         name = "A1 power readbacks";
@@ -587,6 +596,11 @@ addrmap gimlet_seq_fpga {
     // Debug registers
     reg {
         name = "Debug Control register";
+        field {
+            desc = "Debug ONLY. Setting this allows the A0 state machine to ingore SP3 handshakes.
+            This is potentially useful for power bringup but should not be used when a CPU is actually
+            installed";
+        } ignore_sp[1] = 0;
         field {
             desc = "Debug enable bit. Setting this flips a mux on FPGA output pins to
             be controlled by the following debug registers. If state maintence or pre-conditions
