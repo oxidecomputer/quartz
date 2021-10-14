@@ -204,6 +204,7 @@ import GimletSeqFpgaRegs::*;
         method A0StateType state;
         method Action dbg_en(Bit#(1) value);    // Debug enable pin
         method Action ignore_sp(Bit#(1) value);
+        method Action a0_en(Bit#(1) value);  // SM enable pin
     endinterface
     // "Reverse" Interface at register block
     interface A0RegsReverse;
@@ -214,6 +215,7 @@ import GimletSeqFpgaRegs::*;
         method A0OutPinsStruct dbg_ctrl; // Output control
         method Bit#(1) dbg_en;    // Debug enable pin
         method Bit#(1) ignore_sp;
+        method Bit#(1) a0_en;    // SM enable pin
     endinterface
 
     // Allow register block interfaces to connect
@@ -224,6 +226,8 @@ import GimletSeqFpgaRegs::*;
             mkConnection(source.dbg_ctrl, sink.dbg_ctrl);
             mkConnection(source.dbg_en, sink.dbg_en);
             mkConnection(source.ignore_sp, sink.ignore_sp);
+            mkConnection(source.state, sink.state);
+            mkConnection(source.a0_en, sink.a0_en);
         endmodule
     endinstance
 
@@ -588,6 +592,7 @@ import GimletSeqFpgaRegs::*;
             method dbg_ctrl = dbg_out_pins._write; // Output control
             method dbg_en = dbg_en._write;    // Debug enable pin
             method ignore_sp = ignore_sp._write;
+            method a0_en = a0_en._write;
         endinterface
         interface A0OutputSource out_pins;
             method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._read;

@@ -332,6 +332,9 @@ module mkGimletRegs(GimletRegIF);
         method Bit#(1) ignore_sp;
             return dbgCtrl_reg.ignore_sp;
         endmethod
+         method Bit#(1) a0_en;
+            return power_control.a0a_en;
+        endmethod
     endinterface
     interface MiscRegsReverse misc_block;
         method input_readbacks = cur_misc_inputs.wset; // Input sampling
