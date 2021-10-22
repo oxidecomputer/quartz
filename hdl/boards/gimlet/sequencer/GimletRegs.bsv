@@ -41,7 +41,7 @@ module mkGimletRegs(GimletRegIF);
     // Early output signals
     ConfigReg#(EarlyPwrStatus) early_output_rdbks  <- mkRegU();
     ConfigReg#(EarlyRbks) early_inputs  <- mkRegU();
-    ConfigReg#(EarlyPowerCtrl) early_ctrl  <- mkReg(unpack(0));
+    ConfigReg#(EarlyPowerCtrl) early_ctrl  <- mkReg(unpack('h06));  // want to force the 2V5 on due to level translator issue on gimlet.
     // A1 registers
     ConfigReg#(A1DbgOut) a1_dbg <- mkReg(unpack(0));
     ConfigReg#(A1OutStatus) a1_output_readbacks <- mkRegU();
