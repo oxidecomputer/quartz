@@ -144,10 +144,12 @@ module mkGimletSeqTop (Top);
     // A1 block pins
     mkConnection(a1_pins.syncd_pins, a1_block.syncd_pins);
     mkConnection(a1_block.reg_if, regs.a1_block);
+    // A1 -> A0 interlock
+    mkConnection(a1_block.a1_ok, a0_block.upstream_ok);
     // A0 block pins
     mkConnection(a0_pins.syncd_pins, a0_block.syncd_pins);
     mkConnection(a0_block.reg_if, regs.a0_block);
-    // A0 block pins
+    // Misc block pins
     mkConnection(misc_pins.syncd_pins, misc_block.syncd_pins);
     mkConnection(misc_block.reg_if, regs.misc_block);
 
@@ -187,6 +189,75 @@ module mkGimletSeqTop (Top);
 
 endmodule
 
+function Stmt spiRead(Bit#(8) addr, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);
+    return seq
+        action
+            Vector#(8, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(READ)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack(addr);
+            tx[3] = unpack('h00);
+            tx[4] = unpack('h00);
+            tx[5] = unpack('h00);
+            tx[6] = unpack('h00);
+            tx[7] = unpack('h00);
+            bfm.request.put(tx);
+        endaction
+        action
+            let rx <- bfm.response.get();
+            $display("0x%x", rx[0]);
+            $display("0x%x", rx[1]);
+            $display("0x%x", rx[2]);
+            $display("0x%x", rx[3]);
+            $display("0x%x", rx[4]);
+            $display("0x%x", rx[5]);
+            $display("0x%x", rx[6]);
+            $display("0x%x", rx[7]);
+        endaction
+    endseq;
+endfunction
+function Stmt spiWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);
+    return seq
+         action
+            Vector#(8, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(WRITE)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack(addr);
+            tx[3] = unpack(data);  
+            tx[4] = unpack('h00);
+            tx[5] = unpack('h00);
+            tx[6] = unpack('h00);
+            tx[7] = unpack('h00);
+            bfm.request.put(tx);
+        endaction
+        action
+            let rx <- bfm.response.get();
+            $display(rx[0]);
+            $display(rx[1]);
+            $display(rx[2]);
+            $display(rx[3]);
+            $display(rx[4]);
+            $display(rx[5]);
+            $display(rx[6]);
+            $display(rx[7]);
+        endaction
+    endseq;
+endfunction
+
+// function Stmt spiReadUntil(Bit#(8) addr, Bit#(8) expected, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);
+//     return seq
+//         action
+//             Bit#(8) read = ~expected;
+//         endaction
+//         while (read != expected) seq
+//             spiRead(addr, bfm);
+//             action
+//                 read <= rx[3];
+//             endaction
+//         endseq
+//     endseq;
+// endfunction
+
 (* synthesize *)
 module mkGimletTestTop(Empty);
     SPITestController controller <- mkSpiTestController();
@@ -201,83 +272,57 @@ module mkGimletTestTop(Empty);
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
     mkConnection(nic_pins_bfm.pins, gimlet_fpga_top.in_pins.nic_pins);
     mkConnection(early_pins_bfm.pins, gimlet_fpga_top.in_pins.early_in_pins);
-    mkConnection(a1_pins_bfm.pins, gimlet_fpga_top.in_pins.a1_pins);
-    mkConnection(a0_pins_bfm.pins, gimlet_fpga_top.in_pins.a0_pins);
+    // A1 testbench connections
+    mkConnection(a1_pins_bfm.tb_pins_src, gimlet_fpga_top.in_pins.a1_pins);
+    mkConnection(gimlet_fpga_top.out_pins.a1_pins, a1_pins_bfm.tb_pins_sink);
+    // A0 testbench connections
+    mkConnection(a0_pins_bfm.tb_pins_src, gimlet_fpga_top.in_pins.a0_pins);
+    mkConnection(gimlet_fpga_top.out_pins.a0_pins, a0_pins_bfm.tb_pins_sink);
+    // misc connections
     mkConnection(misc_pins_bfm.pins, gimlet_fpga_top.in_pins.misc_pins);
 
     mkAutoFSM(
     seq
-        // Basic read-write
+        // Basic read
+        spiRead('h00, controller.bfm);
+        // Enable A1+A0 (now interlocked), sunny day case
+        spiWrite('h09, 'h03, controller.bfm);
         action
-            Vector#(8, Bit#(8)) tx =  newVector();
-            tx[0] = unpack(zeroExtend(pack(READ)));
-            tx[1] = unpack('h00);
-            tx[2] = unpack('h09);
-            tx[3] = unpack('h01);
-            tx[4] = unpack('h00);
-            tx[5] = unpack('h00);
-            tx[6] = unpack('h00);
-            tx[7] = unpack('h00);
-            controller.bfm.request.put(tx);
+            $display("Delay for A1 SM good...");
         endaction
+        delay(500010); // TODO: Be smarter about a Wait for A1 SM good
         action
-            let rx <- controller.bfm.response.get();
-            $display(rx[0]);
-            $display(rx[1]);
-            $display(rx[2]);
-            $display(rx[3]);
-            $display(rx[4]);
-            $display(rx[5]);
-            $display(rx[6]);
-            $display(rx[7]);
+            $display("Delay for A0 SM good...");
         endaction
-        // Enable A1, sunny day case
-         action
-            Vector#(8, Bit#(8)) tx =  newVector();
-            tx[0] = unpack(zeroExtend(pack(WRITE)));
-            tx[1] = unpack('h00);
-            tx[2] = unpack('h09);
-            tx[3] = unpack('h01);
-            tx[4] = unpack('h00);
-            tx[5] = unpack('h00);
-            tx[6] = unpack('h00);
-            tx[7] = unpack('h00);
-            controller.bfm.request.put(tx);
-        endaction
-        action
-            let rx <- controller.bfm.response.get();
-            $display(rx[0]);
-            $display(rx[1]);
-            $display(rx[2]);
-            $display(rx[3]);
-            $display(rx[4]);
-            $display(rx[5]);
-            $display(rx[6]);
-            $display(rx[7]);
-        endaction
-        action
-            Vector#(8, Bit#(8)) tx =  newVector();
-            tx[0] = unpack(zeroExtend(pack(READ)));
-            tx[1] = unpack('h00);
-            tx[2] = unpack('h09);
-            tx[3] = unpack('h00);
-            tx[4] = unpack('h00);
-            tx[5] = unpack('h00);
-            tx[6] = unpack('h00);
-            tx[7] = unpack('h00);
-            controller.bfm.request.put(tx);
-        endaction
-        action
-            let rx <- controller.bfm.response.get();
-            $display(rx[0]);
-            $display(rx[1]);
-            $display(rx[2]);
-            $display(rx[3]);
-            $display(rx[4]);
-            $display(rx[5]);
-            $display(rx[6]);
-            $display(rx[7]);
-        endaction
+        delay(1100010); // TODO: Be smarter about a Wait for A0 SM good
+        // Check MAPO by taking out stage 1
+        spiWrite('h09, 'h02, controller.bfm);
+        delay(100);
+        // action
+        //     Vector#(8, Bit#(8)) tx =  newVector();
+        //     tx[0] = unpack(zeroExtend(pack(READ)));
+        //     tx[1] = unpack('h00);
+        //     tx[2] = unpack('h09);
+        //     tx[3] = unpack('h00);
+        //     tx[4] = unpack('h00);
+        //     tx[5] = unpack('h00);
+        //     tx[6] = unpack('h00);
+        //     tx[7] = unpack('h00);
+        //     controller.bfm.request.put(tx);
+        // endaction
+        // action
+        //     let rx <- controller.bfm.response.get();
+        //     $display(rx[0]);
+        //     $display(rx[1]);
+        //     $display(rx[2]);
+        //     $display(rx[3]);
+        //     $display(rx[4]);
+        //     $display(rx[5]);
+        //     $display(rx[6]);
+        //     $display(rx[7]);
+        // endaction
+        // TODO: enable A0, sunny day case.
+        // TODO: wait for pmbus state
     endseq
     );
 

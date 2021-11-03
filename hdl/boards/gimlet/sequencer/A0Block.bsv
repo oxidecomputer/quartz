@@ -25,6 +25,48 @@ import GimletSeqFpgaRegs::*;
         method Bit#(1) seq_to_sp3_pwr_good;
         method Bit#(1) seq_to_vtt_abcd_a0_en;
     endinterface
+
+    // Sinking output pins interface (for testbenches etc)
+    interface A0OutputSink;
+        method Action seq_to_sp3_sys_rst_l(Bit#(1) value);
+        method Action pwr_cont_dimm_abcd_en1(Bit#(1) value);
+        method Action pwr_cont_dimm_efgh_en0(Bit#(1) value);
+        method Action pwr_cont_dimm_efgh_en2(Bit#(1) value);
+        method Action pwr_cont2_sp3_pwrok(Bit#(1) value);
+        method Action seq_to_sp3_v1p8_en(Bit#(1) value);
+        method Action pwr_cont1_sp3_pwrok(Bit#(1) value);
+        method Action pwr_cont2_sp3_en(Bit#(1) value);
+        method Action pwr_cont1_sp3_en(Bit#(1) value);
+        method Action pwr_cont_dimm_abcd_en2(Bit#(1) value);
+        method Action pwr_cont_dimm_abcd_en0(Bit#(1) value);
+        method Action pwr_cont_dimm_efgh_en1(Bit#(1) value);
+        method Action sp_to_sp3_pwr_btn_l(Bit#(1) value);
+        method Action seq_to_vtt_efgh_en(Bit#(1) value);
+        method Action seq_to_sp3_pwr_good(Bit#(1) value);
+        method Action seq_to_vtt_abcd_a0_en(Bit#(1) value);
+    endinterface
+
+    // Allow our output pin source to connect to our output pin sink
+    instance Connectable#(A0OutputSource, A0OutputSink);
+        module mkConnection#(A0OutputSource source, A0OutputSink sink) (Empty);
+            mkConnection(source.seq_to_sp3_sys_rst_l, sink.seq_to_sp3_sys_rst_l);
+            mkConnection(source.pwr_cont_dimm_abcd_en1, sink.pwr_cont_dimm_abcd_en1);
+            mkConnection(source.pwr_cont_dimm_efgh_en0, sink.pwr_cont_dimm_efgh_en0);
+            mkConnection(source.pwr_cont_dimm_efgh_en2, sink.pwr_cont_dimm_efgh_en2);
+            mkConnection(source.pwr_cont2_sp3_pwrok, sink.pwr_cont2_sp3_pwrok);
+            mkConnection(source.seq_to_sp3_v1p8_en, sink.seq_to_sp3_v1p8_en);
+            mkConnection(source.pwr_cont1_sp3_pwrok, sink.pwr_cont1_sp3_pwrok);
+            mkConnection(source.pwr_cont2_sp3_en, sink.pwr_cont2_sp3_en);
+            mkConnection(source.pwr_cont1_sp3_en, sink.pwr_cont1_sp3_en);
+            mkConnection(source.pwr_cont_dimm_abcd_en2, sink.pwr_cont_dimm_abcd_en2);
+            mkConnection(source.pwr_cont_dimm_abcd_en0, sink.pwr_cont_dimm_abcd_en0);
+            mkConnection(source.pwr_cont_dimm_efgh_en1, sink.pwr_cont_dimm_efgh_en1);
+            mkConnection(source.sp_to_sp3_pwr_btn_l, sink.sp_to_sp3_pwr_btn_l);
+            mkConnection(source.seq_to_vtt_efgh_en, sink.seq_to_vtt_efgh_en);
+            mkConnection(source.seq_to_sp3_pwr_good, sink.seq_to_sp3_pwr_good);
+            mkConnection(source.seq_to_vtt_abcd_a0_en, sink.seq_to_vtt_abcd_a0_en);
+        endmodule
+    endinstance
     
     // Interface for input pins
     interface A0InputPinsRawSink;
@@ -138,7 +180,23 @@ import GimletSeqFpgaRegs::*;
         Bit#(1) sp3_to_seq_reset_v3p3;
         Bit#(1) pwr_cont_dimm_abcd_nvrhot;
         Bit#(1) vtt_abcd_a0_to_seq_pg;
-    } A0InPinsStruct deriving (Bits);
+    } A0InPinsStruct deriving (Bits, Eq);
+
+    typedef struct {
+        Bit#(1) pwr_cont_dimm_efgh_pg0;
+        Bit#(1) pwr_cont2_sp3_pg1;
+        Bit#(1) pwr_cont_dimm_abcd_pg2;
+        Bit#(1) pwr_cont_dimm_efgh_pg1;
+        Bit#(1) pwr_cont_dimm_abcd_pg0;
+        Bit#(1) pwr_cont2_sp3_pg0;
+        Bit#(1) vtt_efgh_a0_to_seq_pg;
+        Bit#(1) pwr_cont1_sp3_pg1;
+        Bit#(1) pwr_cont_dimm_efgh_pg2;
+        Bit#(1) pwr_cont1_sp3_pg0;
+        Bit#(1) pwr_cont_dimm_abcd_pg1;
+        Bit#(1) seq_v1p8_sp3_vdd_pg;
+        Bit#(1) vtt_abcd_a0_to_seq_pg;
+    } A0PGs deriving (Bits, Eq);
 
     typedef struct {
         Bit#(1) seq_to_sp3_sys_rst;
@@ -157,7 +215,7 @@ import GimletSeqFpgaRegs::*;
         Bit#(1) seq_to_vtt_efgh_en;
         Bit#(1) seq_to_sp3_pwr_good;
         Bit#(1) seq_to_vtt_abcd_a0_en;
-    } A0OutPinsStruct deriving (Bits);
+    } A0OutPinsStruct deriving (Bits, Eq);
 
     // Allow our input pin source to connect to our input pin sink
     instance Connectable#(A0InputPinsRawSource, A0InputPinsRawSink);
@@ -234,6 +292,7 @@ import GimletSeqFpgaRegs::*;
     // Block top (syncd pins in, pins out, register if)
     interface A0BlockTop;
         method Action syncd_pins(A0InPinsStruct value);
+        method Action upstream_ok(Bool value);
         interface A0Regs reg_if;
         interface A0OutputSource out_pins;
     endinterface
@@ -290,19 +349,19 @@ import GimletSeqFpgaRegs::*;
                 sp3_to_sp_slp_s3: ~sp3_to_sp_slp_s3_l.read(),
                 pwr_cont2_sp3_pg0: pwr_cont2_sp3_pg0.read(),
                 sp3_to_sp_slp_s5: ~sp3_to_sp_slp_s5_l.read(),
-                vtt_efgh_a0_to_seq_pg: ~vtt_efgh_a0_to_seq_pg_l.read(),
+                vtt_efgh_a0_to_seq_pg: vtt_efgh_a0_to_seq_pg_l.read(),
                 pwr_cont1_sp3_pg1: pwr_cont1_sp3_pg1.read(),
                 pwr_cont2_sp3_nvrhot: pwr_cont2_sp3_nvrhot.read(),
                 pwr_cont_dimm_efgh_pg2: pwr_cont_dimm_efgh_pg2.read(),
                 pwr_cont1_sp3_pg0: pwr_cont1_sp3_pg0.read(),
                 pwr_cont_dimm_abcd_pg1: pwr_cont_dimm_abcd_pg1.read(),
                 pwr_cont2_sp3_cfp: pwr_cont2_sp3_cfp.read(),
-                seq_v1p8_sp3_vdd_pg: ~seq_v1p8_sp3_vdd_pg_l.read(),
+                seq_v1p8_sp3_vdd_pg: seq_v1p8_sp3_vdd_pg_l.read(),
                 sp3_to_seq_pwrok_v3p3: sp3_to_seq_pwrok_v3p3.read(),
                 pwr_cont_dimm_efgh_nvrhot: pwr_cont_dimm_efgh_nvrhot.read(),
                 sp3_to_seq_reset_v3p3: ~sp3_to_seq_reset_v3p3_l.read(),
                 pwr_cont_dimm_abcd_nvrhot: pwr_cont_dimm_abcd_nvrhot.read(),
-                vtt_abcd_a0_to_seq_pg: ~vtt_abcd_a0_to_seq_pg_l.read()
+                vtt_abcd_a0_to_seq_pg: vtt_abcd_a0_to_seq_pg_l.read()
             };
         endrule
 
@@ -339,19 +398,19 @@ import GimletSeqFpgaRegs::*;
     endmodule
 
     typedef enum {
-        IDLE, 
-        PBTN, 
-        WAITSLP, 
-        GROUPB1_EN, 
-        GROUPB1_PG, 
-        GROUPB2_EN, 
-        GROUPB2_PG,
-        GROUPC_PG,
-        DELAY_1MS,
-        ASSERT_PG,
-        WAIT_PWROK,
-        WAIT_RESET_L,
-        DONE
+        IDLE,           // 0x00
+        PBTN,           // 0x01
+        WAITSLP,        // 0x02
+        GROUPB1_EN,     // 0x03
+        GROUPB1_PG,     // 0x04
+        GROUPB2_EN,     // 0x05
+        GROUPB2_PG,     // 0x06
+        GROUPC_PG,      // 0x07
+        DELAY_1MS,      // 0x08
+        ASSERT_PG,      // 0x09
+        WAIT_PWROK,     // 0x0a
+        WAIT_RESET_L,   // 0x0b
+        DONE            // 0x0c
    
     } A0StateType deriving (Eq, Bits);
 
@@ -378,18 +437,48 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) seq_to_vtt_efgh_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_pwr_good <- mkReg(0);
         Reg#(Bit#(1)) seq_to_vtt_abcd_a0_en <- mkReg(0);
-
+        Reg#(A0PGs) expected_pgs <- mkReg(unpack(0));
         // Combo output readbacks
         Wire#(A0OutPinsStruct) cur_out_pins <- mkDWire(unpack(0));
         // Combo input wires
         Wire#(A0InPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
+        Wire#(Bool) cur_upstream_ok <- mkDWire(False);
+        Wire#(Bool) pg_fault    <- mkDWire(False);
         Wire#(A0OutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) ignore_sp <- mkDWire(0);
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a0_en    <- mkDWire(0);
+        
+
+
+        rule monitor_expected;
+
+            let cur_pgs = A0PGs {
+                pwr_cont_dimm_efgh_pg0: cur_syncd_pins.pwr_cont_dimm_efgh_pg0,
+                pwr_cont2_sp3_pg1: cur_syncd_pins.pwr_cont2_sp3_pg1,
+                pwr_cont_dimm_abcd_pg2: cur_syncd_pins.pwr_cont_dimm_abcd_pg2,
+                pwr_cont_dimm_efgh_pg1: cur_syncd_pins.pwr_cont_dimm_efgh_pg1,
+                pwr_cont_dimm_abcd_pg0: cur_syncd_pins.pwr_cont_dimm_abcd_pg0,
+                pwr_cont2_sp3_pg0: cur_syncd_pins.pwr_cont2_sp3_pg0,
+                vtt_efgh_a0_to_seq_pg: cur_syncd_pins.vtt_efgh_a0_to_seq_pg,
+                pwr_cont1_sp3_pg1: cur_syncd_pins.pwr_cont1_sp3_pg1,
+                pwr_cont_dimm_efgh_pg2: cur_syncd_pins.pwr_cont_dimm_efgh_pg2,
+                pwr_cont1_sp3_pg0: cur_syncd_pins.pwr_cont1_sp3_pg0,
+                pwr_cont_dimm_abcd_pg1: cur_syncd_pins.pwr_cont_dimm_abcd_pg1,
+                seq_v1p8_sp3_vdd_pg: cur_syncd_pins.seq_v1p8_sp3_vdd_pg,
+                vtt_abcd_a0_to_seq_pg: cur_syncd_pins.vtt_abcd_a0_to_seq_pg
+            }; 
+            let masked_pgs = unpack(pack(cur_pgs) & pack(expected_pgs));
+            if (a0_en == 0) begin  // Clear flag when enable 0'd
+                pg_fault <= False;
+            end else begin
+                pg_fault <= masked_pgs != expected_pgs;
+            end
+        endrule
 
         //  Wait for SP to check power good and say go
         rule do_idle (state == IDLE && dbg_en == 0);
+            expected_pgs <= unpack(0);
             delay_counter <= fromInteger(500000);  // Want 20ms
             pwr_cont_dimm_abcd_en1 <= 0;
             pwr_cont_dimm_efgh_en0 <= 0;
@@ -406,14 +495,14 @@ import GimletSeqFpgaRegs::*;
             seq_to_vtt_efgh_en <= 0;
             seq_to_sp3_pwr_good <= 0;
             seq_to_vtt_abcd_a0_en <= 0;
-            if (a0_en == 1) begin
+            if (a0_en == 1 && !pg_fault && cur_upstream_ok) begin
                 state <= PBTN;
             end
         endrule
         //  PWR_BTN_L asserted (timing rules = 15ms minimum, per AMD 55441.  go for 20)
         rule do_pwrbtn (state == PBTN && dbg_en == 0);
              sp_to_sp3_pwr_btn_l <= 0;
-                if (a0_en == 0) begin
+                if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
                 end else begin
                     if (delay_counter == 0) begin
@@ -423,13 +512,13 @@ import GimletSeqFpgaRegs::*;
                     end
                 end
         endrule
-        //  SLP_S5_L and SLP_S3_L asserted (timing rules = 14ms minimum, 17ms maximum from pwrbtn-L)
+        //  SLP_S5_L and SLP_S3_L de-asserted (timing rules = 14ms minimum, 17ms maximum from pwrbtn-L)
         rule do_wait_for_slp (state == WAITSLP && dbg_en == 0);
             sp_to_sp3_pwr_btn_l <= 1;
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
-                if ((cur_syncd_pins.sp3_to_sp_slp_s3 == 1 && cur_syncd_pins.sp3_to_sp_slp_s5 == 1) || ignore_sp == 1) begin
+                if ((cur_syncd_pins.sp3_to_sp_slp_s3 == 0 && cur_syncd_pins.sp3_to_sp_slp_s5 == 0) || ignore_sp == 1) begin
                     state <= GROUPB1_EN;
                 end
             end
@@ -440,7 +529,7 @@ import GimletSeqFpgaRegs::*;
             pwr_cont_dimm_abcd_en0 <= 1;
             seq_to_sp3_v1p8_en <= 1;
             pwr_cont_dimm_efgh_en0 <= 1;
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
                 state <= GROUPB1_PG;
@@ -448,23 +537,39 @@ import GimletSeqFpgaRegs::*;
         endrule
         //  GroupB stage1 PG
         rule do_wait_groupb1_pg  (state == GROUPB1_PG && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
                 if (cur_syncd_pins.pwr_cont_dimm_abcd_pg0 == 1 && cur_syncd_pins.pwr_cont_dimm_efgh_pg0 == 1) begin
+                    expected_pgs <= A0PGs {
+                        pwr_cont_dimm_efgh_pg0: 1,
+                        pwr_cont2_sp3_pg1: 0,
+                        pwr_cont_dimm_abcd_pg2: 0,
+                        pwr_cont_dimm_efgh_pg1: 0,
+                        pwr_cont_dimm_abcd_pg0: 1,
+                        pwr_cont2_sp3_pg0: 0,
+                        vtt_efgh_a0_to_seq_pg: 0,
+                        pwr_cont1_sp3_pg1: 0,
+                        pwr_cont_dimm_efgh_pg2: 0,
+                        pwr_cont1_sp3_pg0: 0,
+                        pwr_cont_dimm_abcd_pg1: 0,
+                        seq_v1p8_sp3_vdd_pg: 0,
+                        vtt_abcd_a0_to_seq_pg: 0
+                    }; 
                     state <= GROUPB2_EN;
                 end
             end
         endrule
         //  GroupB stage 2 EN
         rule do_groupb2_en (state == GROUPB2_EN && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
                 pwr_cont1_sp3_en <= 1;
                 seq_to_vtt_abcd_a0_en <= 1;
                 seq_to_vtt_efgh_en <= 1;
                 pwr_cont2_sp3_en <= 1;
+                state <= GROUPB2_PG;
             end
         endrule
         //  GroupB stage 2 PG.  TODO: would like an interrupt exiting this case!
@@ -473,11 +578,26 @@ import GimletSeqFpgaRegs::*;
             let stage1_ok = cur_syncd_pins.pwr_cont_dimm_abcd_pg0 == 1 && cur_syncd_pins.pwr_cont_dimm_efgh_pg0 == 1;
             let stage2_ok = cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1 && cur_syncd_pins.vtt_abcd_a0_to_seq_pg == 1 && cur_syncd_pins.vtt_efgh_a0_to_seq_pg == 1;
             let unstaged_ok = cur_syncd_pins.pwr_cont_dimm_abcd_pg1 == 1 && cur_syncd_pins.seq_v1p8_sp3_vdd_pg == 1; 
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
                 if (stage1_ok && stage2_ok && unstaged_ok) begin
                     state <= GROUPC_PG;
+                    expected_pgs <= A0PGs {
+                        pwr_cont_dimm_efgh_pg0: 1,
+                        pwr_cont2_sp3_pg1: 0,
+                        pwr_cont_dimm_abcd_pg2: 0,
+                        pwr_cont_dimm_efgh_pg1: 0,
+                        pwr_cont_dimm_abcd_pg0: 1,
+                        pwr_cont2_sp3_pg0: 1,
+                        vtt_efgh_a0_to_seq_pg: 1,
+                        pwr_cont1_sp3_pg1: 0,
+                        pwr_cont_dimm_efgh_pg2: 0,
+                        pwr_cont1_sp3_pg0: 1,
+                        pwr_cont_dimm_abcd_pg1: 1,
+                        seq_v1p8_sp3_vdd_pg: 1,
+                        vtt_abcd_a0_to_seq_pg: 1
+                    }; 
                 end
             end
 
@@ -491,18 +611,33 @@ import GimletSeqFpgaRegs::*;
         //  GroupC STABLE, Current plan is to have the SP enable the RAA2219xx's
         // via SMBUS but we just fall through to wait for the PG. ST wants a timeout here.
         rule do_wait_groupc_pg (state == GROUPC_PG && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
-                if (cur_syncd_pins.pwr_cont2_sp3_pg1 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg1 == 1) begin
+                if (cur_syncd_pins.pwr_cont1_sp3_pg1 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg1 == 1) begin
                     delay_counter <= fromInteger(50000);
                     state <= DELAY_1MS;
+                    expected_pgs <= A0PGs {
+                        pwr_cont_dimm_efgh_pg0: 1,
+                        pwr_cont2_sp3_pg1: 1,
+                        pwr_cont_dimm_abcd_pg2: 0,
+                        pwr_cont_dimm_efgh_pg1: 0,
+                        pwr_cont_dimm_abcd_pg0: 1,
+                        pwr_cont2_sp3_pg0: 1,
+                        vtt_efgh_a0_to_seq_pg: 1,
+                        pwr_cont1_sp3_pg1: 1,
+                        pwr_cont_dimm_efgh_pg2: 0,
+                        pwr_cont1_sp3_pg0: 1,
+                        pwr_cont_dimm_abcd_pg1: 1,
+                        seq_v1p8_sp3_vdd_pg: 1,
+                        vtt_abcd_a0_to_seq_pg: 1
+                    };
                 end
             end
         endrule
         //  min 1 ms delay
         rule do_1ms_delay (state == DELAY_1MS && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
                 if (delay_counter == 0) begin
@@ -514,12 +649,16 @@ import GimletSeqFpgaRegs::*;
         endrule
         // Assert power good.  We have min 10.2ms max 26.8ms to assert clks. 
         rule do_assert_power_good (state == ASSERT_PG && dbg_en == 0);
-            seq_to_sp3_pwr_good <= 1;
-            state <= WAIT_PWROK;
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+                state <= IDLE;
+            end else begin
+                seq_to_sp3_pwr_good <= 1;
+                state <= WAIT_PWROK;
+            end
         endrule
         // AMD asserts PWROK (min 15ms max 20.4 ms from power good) 
         rule do_wait_amd_pwrok (state == WAIT_PWROK && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
             end else begin
                 if (cur_syncd_pins.sp3_to_seq_pwrok_v3p3 == 1) begin // AMD Power-ok
@@ -529,17 +668,17 @@ import GimletSeqFpgaRegs::*;
         endrule
         // AMD de-asserts RESET_L (min 20.2 ms to 28.6ms max from power good)
         rule do_wait_amd_reset_l (state == WAIT_RESET_L && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
             end else begin
-                if (seq_to_sp3_sys_rst_l == 0) begin // AMD RESET_L
+                if (cur_syncd_pins.sp3_to_seq_reset_v3p3 == 0  || ignore_sp == 1) begin // AMD RESET_L
                     state <= DONE;
                 end
             end
         endrule
         // A0 OK
         rule do_done (state == DONE && dbg_en == 0);
-            if (a0_en == 0) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end
         endrule
@@ -585,6 +724,7 @@ import GimletSeqFpgaRegs::*;
         endrule
 
         method syncd_pins = cur_syncd_pins._write;
+        method upstream_ok = cur_upstream_ok._write;
         interface A0Regs reg_if;
             method input_readbacks = cur_syncd_pins._read;
             method output_readbacks = cur_out_pins._read; // Output sampling
@@ -616,10 +756,27 @@ import GimletSeqFpgaRegs::*;
 
     interface TBTestA0PinsSource;
         interface Client#(Bit#(8), Bool) bfm;
-        interface A0InputPinsRawSource pins;
+        interface A0InputPinsRawSource tb_pins_src;
+        interface A0OutputSink tb_pins_sink;
     endinterface
 
     module mkTestA0PinsSource(TBTestA0PinsSource);
+        Reg#(Bit#(1)) pwr_cont_dimm_abcd_en1 <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_dimm_efgh_en0 <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_dimm_efgh_en2 <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont2_sp3_pwrok <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_sp3_v1p8_en <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont1_sp3_pwrok <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont2_sp3_en <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont1_sp3_en <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_dimm_abcd_en2 <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_dimm_abcd_en0 <- mkReg(0);
+        Reg#(Bit#(1)) pwr_cont_dimm_efgh_en1 <- mkReg(0);
+        Reg#(Bit#(1)) sp_to_sp3_pwr_btn_l <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_vtt_efgh_en <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_sp3_pwr_good <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_vtt_abcd_a0_en <- mkReg(0);
+
         Reg#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_dimm_efgh_cfp <- mkReg(0);
@@ -647,9 +804,48 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_dimm_abcd_nvrhot <- mkReg(0);
         Reg#(Bit#(1)) vtt_abcd_a0_to_seq_pg_l <- mkReg(0);
+        Reg#(UInt#(16)) delay_counter <- mkReg(1000);
+
+        rule do_slp;
+            // Wait for falling edge pwr_btn. deassert sleep signals
+            if (sp_to_sp3_pwr_btn_l == 0) begin
+                sp3_to_sp_slp_s3_l <= 1;
+                sp3_to_sp_slp_s5_l <= 1;
+            end
+        endrule
+
+        rule do_groupB;
+            pwr_cont_dimm_efgh_pg0 <= pwr_cont_dimm_efgh_en0;
+            pwr_cont_dimm_abcd_pg0 <= pwr_cont_dimm_abcd_en0;
+            pwr_cont2_sp3_pg0      <= pwr_cont2_sp3_en;
+            pwr_cont1_sp3_pg0      <= pwr_cont1_sp3_en;
+            vtt_efgh_a0_to_seq_pg_l  <= seq_to_vtt_efgh_en;
+            vtt_abcd_a0_to_seq_pg_l  <= seq_to_vtt_abcd_a0_en;
+            pwr_cont_dimm_abcd_pg1  <= pwr_cont_dimm_abcd_en1;
+            seq_v1p8_sp3_vdd_pg_l   <= seq_to_sp3_v1p8_en;
+        endrule
+
+        rule do_groupC;  // This is a hack to "simulate" the PMBus power control for group-c
+            if (seq_to_sp3_v1p8_en == 1 && delay_counter > 0 ) begin
+                delay_counter <= delay_counter - 1;
+            end else begin
+                delay_counter <= fromInteger(1000);
+            end
+
+            if (delay_counter == 0) begin
+                pwr_cont2_sp3_pg1 <= 1;
+                pwr_cont1_sp3_pg1 <= 1;
+            end
+        endrule
+
+        rule do_SP3_handshake;  // this is not quite properly sequenced bug good enough to complete the sequence.
+            sp3_to_seq_pwrgd_out <= seq_to_sp3_pwr_good;
+            sp3_to_seq_pwrok_v3p3 <= seq_to_sp3_pwr_good;
+            sp3_to_seq_reset_v3p3_l <= seq_to_sp3_pwr_good;
+        endrule
 
 
-        interface A0InputPinsRawSource pins;
+        interface A0InputPinsRawSource tb_pins_src;
             method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out._read;
             method pwr_cont_dimm_efgh_cfp = pwr_cont_dimm_efgh_cfp._read;
             method pwr_cont1_sp3_nvrhot = pwr_cont1_sp3_nvrhot._read;
@@ -676,6 +872,24 @@ import GimletSeqFpgaRegs::*;
             method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._read;
             method pwr_cont_dimm_abcd_nvrhot = pwr_cont_dimm_abcd_nvrhot._read;
             method vtt_abcd_a0_to_seq_pg_l = vtt_abcd_a0_to_seq_pg_l._read;
+        endinterface
+        interface A0OutputSink tb_pins_sink;
+            method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._write;
+            method pwr_cont_dimm_abcd_en1 = pwr_cont_dimm_abcd_en1._write;
+            method pwr_cont_dimm_efgh_en0 = pwr_cont_dimm_efgh_en0._write;
+            method pwr_cont_dimm_efgh_en2 = pwr_cont_dimm_efgh_en2._write;
+            method pwr_cont2_sp3_pwrok = pwr_cont2_sp3_pwrok._write;
+            method seq_to_sp3_v1p8_en = seq_to_sp3_v1p8_en._write;
+            method pwr_cont1_sp3_pwrok = pwr_cont1_sp3_pwrok._write;
+            method pwr_cont2_sp3_en = pwr_cont2_sp3_en._write;
+            method pwr_cont1_sp3_en = pwr_cont1_sp3_en._write;
+            method pwr_cont_dimm_abcd_en2 = pwr_cont_dimm_abcd_en2._write;
+            method pwr_cont_dimm_abcd_en0 = pwr_cont_dimm_abcd_en0._write;
+            method pwr_cont_dimm_efgh_en1 = pwr_cont_dimm_efgh_en1._write;
+            method sp_to_sp3_pwr_btn_l = sp_to_sp3_pwr_btn_l._write;
+            method seq_to_vtt_efgh_en = seq_to_vtt_efgh_en._write;
+            method seq_to_sp3_pwr_good = seq_to_sp3_pwr_good._write;
+            method seq_to_vtt_abcd_a0_en = seq_to_vtt_abcd_a0_en._write;
         endinterface
         interface Client bfm;
             interface Get request;
