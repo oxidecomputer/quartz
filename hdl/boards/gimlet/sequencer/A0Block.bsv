@@ -576,7 +576,7 @@ import GimletSeqFpgaRegs::*;
         rule do_wait_groupb2_pg  (state == GROUPB2_PG && dbg_en == 0);
         
             let stage1_ok = cur_syncd_pins.pwr_cont_dimm_abcd_pg0 == 1 && cur_syncd_pins.pwr_cont_dimm_efgh_pg0 == 1;
-            let stage2_ok = cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1 && cur_syncd_pins.vtt_abcd_a0_to_seq_pg == 1 && cur_syncd_pins.vtt_efgh_a0_to_seq_pg == 1;
+            let stage2_ok = cur_syncd_pins.pwr_cont1_sp3_pg1 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg1 == 1 && cur_syncd_pins.vtt_abcd_a0_to_seq_pg == 1 && cur_syncd_pins.vtt_efgh_a0_to_seq_pg == 1;
             let unstaged_ok = cur_syncd_pins.pwr_cont_dimm_abcd_pg1 == 1 && cur_syncd_pins.seq_v1p8_sp3_vdd_pg == 1; 
             if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
@@ -585,15 +585,15 @@ import GimletSeqFpgaRegs::*;
                     state <= GROUPC_PG;
                     expected_pgs <= A0PGs {
                         pwr_cont_dimm_efgh_pg0: 1,
-                        pwr_cont2_sp3_pg1: 0,
+                        pwr_cont2_sp3_pg1: 1,
                         pwr_cont_dimm_abcd_pg2: 0,
                         pwr_cont_dimm_efgh_pg1: 0,
                         pwr_cont_dimm_abcd_pg0: 1,
-                        pwr_cont2_sp3_pg0: 1,
+                        pwr_cont2_sp3_pg0: 0,
                         vtt_efgh_a0_to_seq_pg: 1,
-                        pwr_cont1_sp3_pg1: 0,
+                        pwr_cont1_sp3_pg1: 1,
                         pwr_cont_dimm_efgh_pg2: 0,
-                        pwr_cont1_sp3_pg0: 1,
+                        pwr_cont1_sp3_pg0: 0,
                         pwr_cont_dimm_abcd_pg1: 1,
                         seq_v1p8_sp3_vdd_pg: 1,
                         vtt_abcd_a0_to_seq_pg: 1
@@ -614,7 +614,7 @@ import GimletSeqFpgaRegs::*;
             if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
             end else begin
-                if (cur_syncd_pins.pwr_cont1_sp3_pg1 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg1 == 1) begin
+                if (cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1) begin
                     delay_counter <= fromInteger(50000);
                     state <= DELAY_1MS;
                     expected_pgs <= A0PGs {
