@@ -158,7 +158,7 @@ import GimletSeqFpgaRegs::*;
 
         // State register
         Reg#(A1StateType) state <- mkReg(IDLE);
-        Reg#(UInt#(19)) delay_counter <- mkReg(fromInteger(500000));  // 10ms @50MHz TODO: make this a constant
+        Reg#(UInt#(24)) delay_counter <- mkReg(fromInteger(500000));  // 10ms @50MHz TODO: make this a constant
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_v3p3_s5_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_v1p5_rtc_en <- mkReg(0);
@@ -200,7 +200,7 @@ import GimletSeqFpgaRegs::*;
         endrule
 
         rule do_sm_idle (state == IDLE && dbg_en == 0);
-            delay_counter <= fromInteger(500000);
+            delay_counter <= fromInteger(1000000); // TODO: 20ms
             expected_pgs <= unpack(0);
             seq_to_sp3_v3p3_s5_en <= 0;
             seq_to_sp3_v1p5_rtc_en <= 0;

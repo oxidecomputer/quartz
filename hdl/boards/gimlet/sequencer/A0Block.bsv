@@ -479,7 +479,7 @@ import GimletSeqFpgaRegs::*;
         //  Wait for SP to check power good and say go
         rule do_idle (state == IDLE && dbg_en == 0);
             expected_pgs <= unpack(0);
-            delay_counter <= fromInteger(500000);  // Want 20ms
+            delay_counter <= fromInteger(2000000);  // Want 40ms
             pwr_cont_dimm_abcd_en1 <= 0;
             pwr_cont_dimm_efgh_en0 <= 0;
             pwr_cont_dimm_efgh_en2 <= 0;
@@ -499,7 +499,7 @@ import GimletSeqFpgaRegs::*;
                 state <= PBTN;
             end
         endrule
-        //  PWR_BTN_L asserted (timing rules = 15ms minimum, per AMD 55441.  go for 20)
+        //  PWR_BTN_L asserted (timing rules = 15ms minimum, per AMD 55441.  go for 40)
         rule do_pwrbtn (state == PBTN && dbg_en == 0);
              sp_to_sp3_pwr_btn_l <= 0;
                 if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
@@ -615,8 +615,8 @@ import GimletSeqFpgaRegs::*;
                 state <= IDLE;
             end else begin
                 if (cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1) begin
-                    delay_counter <= fromInteger(50000);
-                    state <= DELAY_1MS;
+                    delay_counter <= fromInteger(100000);
+                    state <= DELAY_1MS; // NDH really 2ms now
                     expected_pgs <= A0PGs {
                         pwr_cont_dimm_efgh_pg0: 1,
                         pwr_cont2_sp3_pg1: 1,

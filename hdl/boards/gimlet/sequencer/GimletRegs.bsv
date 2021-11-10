@@ -219,8 +219,8 @@ module mkGimletRegs(GimletRegIF);
             v1p8_sp3_pg: cur_a0_inputs_wget.seq_v1p8_sp3_vdd_pg,
             vtt_efgh_pg: cur_a0_inputs_wget.vtt_efgh_a0_to_seq_pg,
             vtt_abcd_pg: cur_a0_inputs_wget.vtt_abcd_a0_to_seq_pg,
-            vdd_mem_efgh_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg0,
-            vdd_mem_abcd_pg: cur_a0_inputs_wget.pwr_cont1_sp3_pg0,
+            vdd_mem_efgh_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg1,
+            vdd_mem_abcd_pg: cur_a0_inputs_wget.pwr_cont1_sp3_pg1,
             vpp_efgh_pg: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg0,
             vpp_abcd_pg: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg0
         };
@@ -243,8 +243,8 @@ module mkGimletRegs(GimletRegIF);
         };
 
         a0_groupC_pg <= GroupcPg {
-            vdd_vcore: cur_a0_inputs_wget.pwr_cont1_sp3_pg1,
-            vddcr_soc_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg1
+            vdd_vcore: cur_a0_inputs_wget.pwr_cont1_sp3_pg0,
+            vddcr_soc_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg0
         };
 
         clkgen_out_status <= ClkgenOutStatus {

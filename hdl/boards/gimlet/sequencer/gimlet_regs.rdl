@@ -255,13 +255,13 @@ addrmap gimlet_seq_fpga {
             desc = "Readback from VPP_EFGH_A0 rail (PWR_CONT_DIMM_EFGH_PG0 net)";
         } VPP_EFGH_PG[1] = 0;
         field {
-            desc = "Readback from VDD_MEM_ABCD_A0 rail (PWR_CONT1_SP3_PG0)
-            Power good 0 for RA229618 (U350) should be configured for 
+            desc = "Readback from VDD_MEM_ABCD_A0 rail (PWR_CONT1_SP3_PG1)
+            Power good 1 for RA229618 (U350) is configured for 
             VDD_MEM_ABCD_A0";
         } VDD_MEM_ABCD_PG[1];
         field {
-            desc = "Readback from VDD_MEM_EFGH_A0 rail (PWR_CONT2_SP3_PG0)
-            Power good 0 for RA229618 (U351) should be configured for 
+            desc = "Readback from VDD_MEM_EFGH_A0 rail (PWR_CONT2_SP3_PG1)
+            Power good 1 for RA229618 (U351) is configured for 
             VDD_MEM_EFGH_A0";
         } VDD_MEM_EFGH_PG[1];
         field {
@@ -343,12 +343,12 @@ addrmap gimlet_seq_fpga {
         default sw = r;
 
         field {
-            desc = "Power good 1 for RA229618 (U351) should be configured for 
-                    SP3_VDDCR_SOC_A0 (PWR_CONT2_SP3_PG1 net)";
+            desc = "Power good 0 for RA229618 (U351) is configured for 
+                    SP3_VDDCR_SOC_A0 (PWR_CONT2_SP3_PG0 net)";
         } VDDCR_SOC_PG[1] = 0;
         field {
-            desc = "Power good 1 from RA229618 (U350) should be configured for
-                    SP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG1 net)";
+            desc = "Power good 0 from RA229618 (U350) is configured for
+                    SP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG0 net)";
         } VDD_VCORE[1] = 0;
     } GROUPC_PG;
 
