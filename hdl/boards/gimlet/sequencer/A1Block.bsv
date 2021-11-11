@@ -149,7 +149,8 @@ import GimletSeqFpgaRegs::*;
         ENABLE, // 0x01
         WAITPG, // 0x02
         DELAY,  // 0x03
-        DONE    // 0x04
+        DONE_DELAY, // 0x04
+        DONE    // 0x05
     } A1StateType deriving (Eq, Bits);
     
 
@@ -243,6 +244,20 @@ import GimletSeqFpgaRegs::*;
         endrule
         // 10ms delay 
         rule do_10ms_delay (state == DELAY && dbg_en == 0);
+            if (a1_en == 0 || pg_fault) begin
+                state <= IDLE;
+            end else begin
+                if (delay_counter == 1) begin
+                    delay_counter <= fromInteger(1000000); // TODO: 20ms
+                    state <= DONE_DELAY;
+                end else begin
+                    delay_counter <= delay_counter - 1;
+                end
+            end
+        endrule
+        // RSMRST_L deasserted.
+        rule do_done_delay (state == DONE_DELAY && dbg_en == 0);
+            seq_to_sp3_rsmrst_v3p3_l <= 1;
             delay_counter <= delay_counter - 1;
             if (a1_en == 0 || pg_fault) begin
                 state <= IDLE;
@@ -252,9 +267,8 @@ import GimletSeqFpgaRegs::*;
                 end
             end
         endrule
-        // RSMRST_L deasserted.
+        // Done state
         rule do_done (state == DONE && dbg_en == 0);
-            seq_to_sp3_rsmrst_v3p3_l <= 1;
             if (a1_en == 0 || pg_fault) begin
                 state <= IDLE;
             end
