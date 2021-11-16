@@ -146,6 +146,7 @@ module mkGimletSeqTop (Top);
     mkConnection(a1_block.reg_if, regs.a1_block);
     // A1 -> A0 interlock
     mkConnection(a1_block.a1_ok, a0_block.upstream_ok);
+    mkConnection(a0_block.a0_idle, a1_block.a0_idle);
     // A0 block pins
     mkConnection(a0_pins.syncd_pins, a0_block.syncd_pins);
     mkConnection(a0_block.reg_if, regs.a0_block);

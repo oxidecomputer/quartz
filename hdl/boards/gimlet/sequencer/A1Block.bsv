@@ -105,6 +105,7 @@ import GimletSeqFpgaRegs::*;
     // Interface for Block top (syncd pins in, pins out, register if)
     interface A1BlockTop;
         method Action syncd_pins(A1Readbacks value);
+        method Action a0_idle(Bool value);
         method Bool a1_ok;
         interface A1Regs reg_if;
         interface A1OutputSource out_pins;
@@ -150,7 +151,8 @@ import GimletSeqFpgaRegs::*;
         WAITPG, // 0x02
         DELAY,  // 0x03
         DONE_DELAY, // 0x04
-        DONE    // 0x05
+        DONE,    // 0x05
+        SAFE_DISABLE // 0x06
     } A1StateType deriving (Eq, Bits);
     
 
@@ -172,6 +174,7 @@ import GimletSeqFpgaRegs::*;
 
         // Combo input wires
         Wire#(A1Readbacks) cur_syncd_pins <- mkDWire(unpack(0));
+        Wire#(Bool) cur_a0_idle <- mkDWire(False);
         Wire#(A1DbgOut) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a1_en <- mkDWire(0);
@@ -248,7 +251,7 @@ import GimletSeqFpgaRegs::*;
                 state <= IDLE;
             end else begin
                 if (delay_counter == 1) begin
-                    delay_counter <= fromInteger(1000000); // TODO: 20ms
+                    delay_counter <= fromInteger(10000000); // TODO: 20ms
                     state <= DONE_DELAY;
                 end else begin
                     delay_counter <= delay_counter - 1;
@@ -270,6 +273,12 @@ import GimletSeqFpgaRegs::*;
         // Done state
         rule do_done (state == DONE && dbg_en == 0);
             if (a1_en == 0 || pg_fault) begin
+                state <= SAFE_DISABLE;
+            end
+        endrule
+        //Going down state
+        rule do_stafe_disable (state == SAFE_DISABLE);
+            if (cur_a0_idle) begin
                 state <= IDLE;
             end
         endrule
@@ -284,8 +293,9 @@ import GimletSeqFpgaRegs::*;
 
         method syncd_pins = cur_syncd_pins._write;
         method Bool a1_ok();
-            return (state == DONE);
+            return (state == DONE || state == SAFE_DISABLE);
         endmethod
+        method a0_idle = cur_a0_idle._write;
         interface A1Regs reg_if;
             method input_readbacks = cur_syncd_pins._read; // Input sampling
             method output_readbacks = cur_out_pins._read; // Output sampling

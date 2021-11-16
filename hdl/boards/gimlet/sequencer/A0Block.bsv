@@ -293,6 +293,7 @@ import GimletSeqFpgaRegs::*;
     interface A0BlockTop;
         method Action syncd_pins(A0InPinsStruct value);
         method Action upstream_ok(Bool value);
+        method Bool a0_idle;
         interface A0Regs reg_if;
         interface A0OutputSource out_pins;
     endinterface
@@ -410,7 +411,8 @@ import GimletSeqFpgaRegs::*;
         ASSERT_PG,      // 0x09
         WAIT_PWROK,     // 0x0a
         WAIT_RESET_L,   // 0x0b
-        DONE            // 0x0c
+        DONE,           // 0x0c
+        SAFE_DISABLE    // 0x0d
    
     } A0StateType deriving (Eq, Bits);
 
@@ -448,6 +450,10 @@ import GimletSeqFpgaRegs::*;
         Wire#(Bit#(1)) ignore_sp <- mkDWire(0);
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a0_en    <- mkDWire(0);
+
+        Integer pbtn_low_counts = 2000000;  // 40 ms
+        Integer one_ms_counts = 100000;  // 1ms
+        Integer onehundred_ms_counts = 5000000;  // 100 ms
         
 
 
@@ -476,16 +482,28 @@ import GimletSeqFpgaRegs::*;
             end
         endrule
 
+        // For SVI2 we want to pass the power ok from the CPU to the power controllers
+        rule raa_power_ok (dbg_en == 0);
+            let cpu_power_ok = cur_syncd_pins.sp3_to_seq_pwrok_v3p3;
+            if (state == WAIT_PWROK || state == WAIT_RESET_L ||
+                state == DONE || state == SAFE_DISABLE) begin
+                
+                pwr_cont2_sp3_pwrok <= cpu_power_ok;
+                pwr_cont1_sp3_pwrok <= cpu_power_ok;
+            end else begin
+                pwr_cont2_sp3_pwrok <= 0;
+                pwr_cont1_sp3_pwrok <= 0;
+            end
+        endrule
+
         //  Wait for SP to check power good and say go
         rule do_idle (state == IDLE && dbg_en == 0);
             expected_pgs <= unpack(0);
-            delay_counter <= fromInteger(2000000);  // Want 40ms
+            delay_counter <= fromInteger(pbtn_low_counts);  // Want 40ms
             pwr_cont_dimm_abcd_en1 <= 0;
             pwr_cont_dimm_efgh_en0 <= 0;
             pwr_cont_dimm_efgh_en2 <= 0;
-            pwr_cont2_sp3_pwrok <= 1;
             seq_to_sp3_v1p8_en <= 0;
-            pwr_cont1_sp3_pwrok <= 1;
             pwr_cont2_sp3_en <= 0;
             pwr_cont1_sp3_en <= 0;
             pwr_cont_dimm_abcd_en2 <=0;
@@ -615,8 +633,8 @@ import GimletSeqFpgaRegs::*;
                 state <= IDLE;
             end else begin
                 if (cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1) begin
-                    delay_counter <= fromInteger(100000);
-                    state <= DELAY_1MS; // NDH really 2ms now
+                    delay_counter <= fromInteger(one_ms_counts);
+                    state <= DELAY_1MS;
                     expected_pgs <= A0PGs {
                         pwr_cont_dimm_efgh_pg0: 1,
                         pwr_cont2_sp3_pg1: 1,
@@ -649,8 +667,11 @@ import GimletSeqFpgaRegs::*;
         endrule
         // Assert power good.  We have min 10.2ms max 26.8ms to assert clks. 
         rule do_assert_power_good (state == ASSERT_PG && dbg_en == 0);
-            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+            if (!cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
+            end else if (a0_en == 0) begin
+                state <= SAFE_DISABLE;
+                delay_counter <= fromInteger(onehundred_ms_counts);
             end else begin
                 seq_to_sp3_pwr_good <= 1;
                 state <= WAIT_PWROK;
@@ -658,18 +679,24 @@ import GimletSeqFpgaRegs::*;
         endrule
         // AMD asserts PWROK (min 15ms max 20.4 ms from power good) 
         rule do_wait_amd_pwrok (state == WAIT_PWROK && dbg_en == 0);
-            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+            if (!cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
+            end else if (a0_en == 0) begin
+                state <= SAFE_DISABLE;
+                delay_counter <= fromInteger(onehundred_ms_counts);
             end else begin
-                if (cur_syncd_pins.sp3_to_seq_pwrok_v3p3 == 1) begin // AMD Power-ok
+                if (cur_syncd_pins.sp3_to_seq_pwrok_v3p3 == 1 || ignore_sp == 1) begin // AMD Power-ok
                     state <= WAIT_RESET_L;
                 end
             end
         endrule
         // AMD de-asserts RESET_L (min 20.2 ms to 28.6ms max from power good)
         rule do_wait_amd_reset_l (state == WAIT_RESET_L && dbg_en == 0);
-            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+            if (!cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
+            end else if (a0_en == 0) begin
+                state <= SAFE_DISABLE;
+                delay_counter <= fromInteger(onehundred_ms_counts);
             end else begin
                 if (cur_syncd_pins.sp3_to_seq_reset_v3p3 == 0  || ignore_sp == 1) begin // AMD RESET_L
                     state <= DONE;
@@ -678,7 +705,18 @@ import GimletSeqFpgaRegs::*;
         endrule
         // A0 OK
         rule do_done (state == DONE && dbg_en == 0);
-            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+            if (!cur_upstream_ok || pg_fault) begin
+                    state <= IDLE;
+            end else if (a0_en == 0) begin
+                state <= SAFE_DISABLE;
+                delay_counter <= fromInteger(onehundred_ms_counts);
+            end
+        endrule
+        // Safe disable
+        rule do_safe_disable (state == SAFE_DISABLE && dbg_en == 0);
+            delay_counter <= delay_counter - 1;
+            seq_to_sp3_pwr_good <= 0;  // de-assert power good and wait for 100 ms
+            if (delay_counter == 1) begin
                 state <= IDLE;
             end
         endrule
@@ -725,6 +763,9 @@ import GimletSeqFpgaRegs::*;
 
         method syncd_pins = cur_syncd_pins._write;
         method upstream_ok = cur_upstream_ok._write;
+         method Bool a0_idle();
+            return (state == IDLE);
+        endmethod
         interface A0Regs reg_if;
             method input_readbacks = cur_syncd_pins._read;
             method output_readbacks = cur_out_pins._read; // Output sampling
