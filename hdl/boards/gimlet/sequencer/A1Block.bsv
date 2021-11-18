@@ -251,7 +251,7 @@ import GimletSeqFpgaRegs::*;
                 state <= IDLE;
             end else begin
                 if (delay_counter == 1) begin
-                    delay_counter <= fromInteger(10000000); // TODO: 20ms
+                    delay_counter <= fromInteger(100000); // TODO: 20ms
                     state <= DONE_DELAY;
                 end else begin
                     delay_counter <= delay_counter - 1;

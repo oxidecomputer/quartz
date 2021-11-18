@@ -291,14 +291,14 @@ module mkGimletTestTop(Empty);
         action
             $display("Delay for A1 SM good...");
         endaction
-        delay(500010); // TODO: Be smarter about a Wait for A1 SM good
+        delay(2000010); // TODO: Be smarter about a Wait for A1 SM good
         action
             $display("Delay for A0 SM good...");
         endaction
-        delay(1100010); // TODO: Be smarter about a Wait for A0 SM good
-        // Check MAPO by taking out stage 1
+        delay(4100010); // TODO: Be smarter about a Wait for A0 SM good
+        // prove that when A0 is up we can't disable A1
         spiWrite('h09, 'h02, controller.bfm);
-        delay(100);
+        delay(10000);
         // action
         //     Vector#(8, Bit#(8)) tx =  newVector();
         //     tx[0] = unpack(zeroExtend(pack(READ)));
