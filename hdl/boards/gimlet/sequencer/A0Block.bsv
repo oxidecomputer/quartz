@@ -451,9 +451,10 @@ import GimletSeqFpgaRegs::*;
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a0_en    <- mkDWire(0);
 
-        Integer pbtn_low_counts = 2000000;  // 40 ms
         Integer one_ms_counts = 100000;  // 1ms
-        Integer onehundred_ms_counts = 5000000;  // 100 ms
+        Integer two_ms_counts = 2 * one_ms_counts;
+        Integer pbtn_low_counts = 40 * one_ms_counts;  // 40 ms
+        Integer onehundred_ms_counts = 100 * one_ms_counts;  // 100 ms
         
 
 

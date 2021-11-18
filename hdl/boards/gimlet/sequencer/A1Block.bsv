@@ -179,6 +179,9 @@ import GimletSeqFpgaRegs::*;
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a1_en <- mkDWire(0);
         Wire#(Bool) pg_fault    <- mkDWire(False);
+
+        Integer one_ms_counts = 100000;  // 1ms
+        Integer delay_counts = 50 * one_ms_counts;
         
         rule do_pack_output_readbacks;
             cur_out_pins <= A1OutStatus {
@@ -204,7 +207,7 @@ import GimletSeqFpgaRegs::*;
         endrule
 
         rule do_sm_idle (state == IDLE && dbg_en == 0);
-            delay_counter <= fromInteger(1000000); // TODO: 20ms
+            delay_counter <= fromInteger(delay_counts);
             expected_pgs <= unpack(0);
             seq_to_sp3_v3p3_s5_en <= 0;
             seq_to_sp3_v1p5_rtc_en <= 0;
@@ -245,13 +248,13 @@ import GimletSeqFpgaRegs::*;
             end
 
         endrule
-        // 10ms delay 
-        rule do_10ms_delay (state == DELAY && dbg_en == 0);
+        // delay 
+        rule do_delay (state == DELAY && dbg_en == 0);
             if (a1_en == 0 || pg_fault) begin
                 state <= IDLE;
             end else begin
                 if (delay_counter == 1) begin
-                    delay_counter <= fromInteger(100000); // TODO: 20ms
+                    delay_counter <= fromInteger(delay_counts);
                     state <= DONE_DELAY;
                 end else begin
                     delay_counter <= delay_counter - 1;
