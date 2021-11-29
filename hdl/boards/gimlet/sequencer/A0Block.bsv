@@ -419,8 +419,14 @@ import GimletSeqFpgaRegs::*;
     // Block top module
     module mkA0Block(A0BlockTop);
 
+        Integer one_ms_counts = 50000;  // 1ms
+        Integer two_ms_counts = 2 * one_ms_counts;
+        Integer pbtn_low_counts = 40 * one_ms_counts;  // 40 ms
+        Integer onehundred_ms_counts = 100 * one_ms_counts;  // 100 ms
+        Integer pb_delay_cnts = 796130;
+
         // State registers
-        Reg#(UInt#(24)) delay_counter <- mkReg(fromInteger(500000));  // up to 25ms @50MHz TODO: make this a constant
+        Reg#(UInt#(24)) delay_counter <- mkReg(fromInteger(pb_delay_cnts));  // up to 25ms @50MHz TODO: make this a constant
         Reg#(A0StateType) state <- mkReg(IDLE);
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);
@@ -450,11 +456,6 @@ import GimletSeqFpgaRegs::*;
         Wire#(Bit#(1)) ignore_sp <- mkDWire(0);
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a0_en    <- mkDWire(0);
-
-        Integer one_ms_counts = 100000;  // 1ms
-        Integer two_ms_counts = 2 * one_ms_counts;
-        Integer pbtn_low_counts = 40 * one_ms_counts;  // 40 ms
-        Integer onehundred_ms_counts = 100 * one_ms_counts;  // 100 ms
         
 
 
@@ -500,7 +501,6 @@ import GimletSeqFpgaRegs::*;
         //  Wait for SP to check power good and say go
         rule do_idle (state == IDLE && dbg_en == 0);
             expected_pgs <= unpack(0);
-            delay_counter <= fromInteger(pbtn_low_counts);  // Want 40ms
             pwr_cont_dimm_abcd_en1 <= 0;
             pwr_cont_dimm_efgh_en0 <= 0;
             pwr_cont_dimm_efgh_en2 <= 0;
@@ -514,7 +514,14 @@ import GimletSeqFpgaRegs::*;
             seq_to_vtt_efgh_en <= 0;
             seq_to_sp3_pwr_good <= 0;
             seq_to_vtt_abcd_a0_en <= 0;
-            if (a0_en == 1 && !pg_fault && cur_upstream_ok) begin
+            if (a0_en == 1 && delay_counter == 0) begin
+                delay_counter <= fromInteger(pbtn_low_counts);
+            end else if (a0_en == 1 && cur_upstream_ok) begin
+                delay_counter <= delay_counter - 1;
+            end else begin
+                delay_counter <= fromInteger(pb_delay_cnts);  // Want 40ms
+            end
+            if (a0_en == 1 && !pg_fault && cur_upstream_ok && delay_counter == 0) begin
                 state <= PBTN;
             end
         endrule

@@ -131,7 +131,7 @@ import GimletSeqFpgaRegs::*;
                 v0p9_vdd_soc_s5_pg: sp3_to_seq_v0p9_vdd_soc_s5_pg.read(),
                 v1p8_s5_pg: sp3_to_seq_v1p8_s5_pg.read(),
                 v3p3_s5_pg: sp3_to_seq_v3p3_s5_pg.read(),
-                v1p5_rtc_pg: sp3_to_seq_v0p9_vdd_soc_s5_pg.read()
+                v1p5_rtc_pg: sp3_to_seq_rtc_v1p5_en.read()
             };
         endrule
 
@@ -158,10 +158,12 @@ import GimletSeqFpgaRegs::*;
 
     // Block top module
     module mkA1Block(A1BlockTop);
+        Integer one_ms_counts = 50000;  // 1ms
+        Integer delay_counts = 200 * one_ms_counts;  //50 * one_ms_counts;
 
         // State register
         Reg#(A1StateType) state <- mkReg(IDLE);
-        Reg#(UInt#(24)) delay_counter <- mkReg(fromInteger(500000));  // 10ms @50MHz TODO: make this a constant
+        Reg#(UInt#(24)) delay_counter <- mkReg(fromInteger(delay_counts));  // 10ms @50MHz TODO: make this a constant
         // Output registers
         Reg#(Bit#(1)) seq_to_sp3_v3p3_s5_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_sp3_v1p5_rtc_en <- mkReg(0);
@@ -180,8 +182,7 @@ import GimletSeqFpgaRegs::*;
         Wire#(Bit#(1)) a1_en <- mkDWire(0);
         Wire#(Bool) pg_fault    <- mkDWire(False);
 
-        Integer one_ms_counts = 100000;  // 1ms
-        Integer delay_counts = 50 * one_ms_counts;
+       
         
         rule do_pack_output_readbacks;
             cur_out_pins <= A1OutStatus {
@@ -210,7 +211,7 @@ import GimletSeqFpgaRegs::*;
             delay_counter <= fromInteger(delay_counts);
             expected_pgs <= unpack(0);
             seq_to_sp3_v3p3_s5_en <= 0;
-            seq_to_sp3_v1p5_rtc_en <= 0;
+            seq_to_sp3_v1p5_rtc_en <= 1;
             seq_to_sp3_v1p8_s5_en <= 0;
             seq_to_sp3_v0p9_s5_en <= 0;
             seq_to_sp3_rsmrst_v3p3_l <= 0;
@@ -264,13 +265,10 @@ import GimletSeqFpgaRegs::*;
         // RSMRST_L deasserted.
         rule do_done_delay (state == DONE_DELAY && dbg_en == 0);
             seq_to_sp3_rsmrst_v3p3_l <= 1;
-            delay_counter <= delay_counter - 1;
             if (a1_en == 0 || pg_fault) begin
                 state <= IDLE;
             end else begin
-                if (delay_counter == 1) begin
-                    state <= DONE;
-                end
+                state <= DONE;
             end
         endrule
         // Done state
