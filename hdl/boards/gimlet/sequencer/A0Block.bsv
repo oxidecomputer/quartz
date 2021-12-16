@@ -293,6 +293,7 @@ import GimletSeqFpgaRegs::*;
     interface A0BlockTop;
         method Action syncd_pins(A0InPinsStruct value);
         method Action upstream_ok(Bool value);
+        method Action thermtrip(Bool value);
         method Bool a0_idle;
         interface A0Regs reg_if;
         interface A0OutputSource out_pins;
@@ -421,6 +422,7 @@ import GimletSeqFpgaRegs::*;
 
         Integer one_ms_counts = 50000;  // 1ms
         Integer two_ms_counts = 2 * one_ms_counts;
+        Integer five_ms_counts = 5 * one_ms_counts;
         Integer pbtn_low_counts = 40 * one_ms_counts;  // 40 ms
         Integer onehundred_ms_counts = 100 * one_ms_counts;  // 100 ms
         Integer pb_delay_cnts = 796130;
@@ -451,6 +453,7 @@ import GimletSeqFpgaRegs::*;
         // Combo input wires
         Wire#(A0InPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
         Wire#(Bool) cur_upstream_ok <- mkDWire(False);
+        Wire#(Bool) cur_thermtrip <- mkDWire(False);
         Wire#(Bool) pg_fault    <- mkDWire(False);
         Wire#(A0OutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) ignore_sp <- mkDWire(0);
@@ -628,16 +631,11 @@ import GimletSeqFpgaRegs::*;
             end
 
         endrule
-        // //  GroupB checkpoint this stuff not currently used, depends on how power sequencing goes.
-        // rule do_groupb_checkpoint;
-        // endrule
-        //  SP does RA229618 things via SMBUS
-        // rule do_group_c_enable;
-        // endrule
-        //  GroupC STABLE, Current plan is to have the SP enable the RAA2219xx's
-        // via SMBUS but we just fall through to wait for the PG. ST wants a timeout here.
+        // Thermtrip is now valid as V3P3_SYS_A0 is up which is the pull-up supply
+        // for this signal signal is pulled u
+        
         rule do_wait_groupc_pg (state == GROUPC_PG && dbg_en == 0);
-            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault || cur_thermtrip) begin
                 state <= IDLE;
             end else begin
                 if (cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1) begin
@@ -663,7 +661,7 @@ import GimletSeqFpgaRegs::*;
         endrule
         //  min 1 ms delay
         rule do_1ms_delay (state == DELAY_1MS && dbg_en == 0);
-            if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
+            if (a0_en == 0 || !cur_upstream_ok || pg_fault || cur_thermtrip) begin
                 state <= IDLE;
             end else begin
                 if (delay_counter == 0) begin
@@ -677,9 +675,9 @@ import GimletSeqFpgaRegs::*;
         rule do_assert_power_good (state == ASSERT_PG && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
-            end else if (a0_en == 0) begin
+            end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
-                delay_counter <= fromInteger(onehundred_ms_counts);
+                delay_counter <= fromInteger(five_ms_counts);
             end else begin
                 seq_to_sp3_pwr_good <= 1;
                 state <= WAIT_PWROK;
@@ -689,9 +687,9 @@ import GimletSeqFpgaRegs::*;
         rule do_wait_amd_pwrok (state == WAIT_PWROK && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
-            end else if (a0_en == 0) begin
+            end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
-                delay_counter <= fromInteger(onehundred_ms_counts);
+                delay_counter <= fromInteger(five_ms_counts);
             end else begin
                 if (cur_syncd_pins.sp3_to_seq_pwrok_v3p3 == 1 || ignore_sp == 1) begin // AMD Power-ok
                     state <= WAIT_RESET_L;
@@ -702,9 +700,9 @@ import GimletSeqFpgaRegs::*;
         rule do_wait_amd_reset_l (state == WAIT_RESET_L && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
-            end else if (a0_en == 0) begin
+            end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
-                delay_counter <= fromInteger(onehundred_ms_counts);
+                delay_counter <= fromInteger(five_ms_counts);
             end else begin
                 if (cur_syncd_pins.sp3_to_seq_reset_v3p3 == 0  || ignore_sp == 1) begin // AMD RESET_L
                     state <= DONE;
@@ -715,9 +713,9 @@ import GimletSeqFpgaRegs::*;
         rule do_done (state == DONE && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
-            end else if (a0_en == 0) begin
+            end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
-                delay_counter <= fromInteger(onehundred_ms_counts);
+                delay_counter <= fromInteger(five_ms_counts);
             end
         endrule
         // Safe disable
@@ -771,6 +769,7 @@ import GimletSeqFpgaRegs::*;
 
         method syncd_pins = cur_syncd_pins._write;
         method upstream_ok = cur_upstream_ok._write;
+        method thermtrip = cur_thermtrip._write;
          method Bool a0_idle();
             return (state == IDLE);
         endmethod

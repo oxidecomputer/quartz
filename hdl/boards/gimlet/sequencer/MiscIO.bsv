@@ -108,6 +108,7 @@ import GimletSeqFpgaRegs::*;
         method Action syncd_pins(MiscInPinsStruct value);
         interface MiscRegs reg_if;
         interface MiscOutputSource out_pins;
+        method Bool thermtrip;
     endinterface
     // Input synchronization module (pins -> syncs -> structs)
     module mkMiscSync(MiscInputSyncBlock);
@@ -127,7 +128,7 @@ import GimletSeqFpgaRegs::*;
 
         // Output combo
         Wire#(MiscInPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
-
+            
         // Put sync'd bits into a combo structure to make passing it around easier
         rule do_structurize;
             cur_syncd_pins <= MiscInPinsStruct {
@@ -172,6 +173,12 @@ import GimletSeqFpgaRegs::*;
         Wire#(MiscInPinsStruct) cur_syncd_pins <- mkDWire(unpack(0));
         Wire#(MiscOutPinsStruct) dbg_out_pins <- mkDWire(unpack(0));
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
+        Wire#(Bool) cur_thermtrip <- mkDWire(False);
+
+        rule do_thermtrip;
+            cur_thermtrip <= (cur_syncd_pins.sp3_to_seq_thermtrip == 1); 
+        endrule
+
 
         rule do_reset_oneshot;
             if (clk_rst_time != 0) begin
@@ -189,6 +196,7 @@ import GimletSeqFpgaRegs::*;
             clk_to_seq_nmr_l <= ~dbg_out_pins.clk_to_seq_nmr & (clk_rst_time == 0 ? 'b1 : 'b0);
         endrule
         method syncd_pins = cur_syncd_pins._write;
+        method thermtrip = cur_thermtrip._read;
         interface MiscRegs reg_if;
             method input_readbacks = cur_syncd_pins._read;
             method output_readbacks = cur_out_pins._read; // Output sampling

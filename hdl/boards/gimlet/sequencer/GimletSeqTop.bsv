@@ -147,6 +147,7 @@ module mkGimletSeqTop (Top);
     mkConnection(a1_pins.syncd_pins, a1_block.syncd_pins);
     mkConnection(a1_block.reg_if, regs.a1_block);
     // A1 -> A0 interlock
+    
     mkConnection(a1_block.a1_ok, a0_block.upstream_ok);
     mkConnection(a0_block.a0_idle, a1_block.a0_idle);
     // A0 block pins
@@ -155,6 +156,7 @@ module mkGimletSeqTop (Top);
     // Misc block pins
     mkConnection(misc_pins.syncd_pins, misc_block.syncd_pins);
     mkConnection(misc_block.reg_if, regs.misc_block);
+    mkConnection(misc_block.thermtrip, a0_block.thermtrip);
 
     interface SequencerInputPins in_pins;
         interface NicInputPinsRawSink nic_pins;
