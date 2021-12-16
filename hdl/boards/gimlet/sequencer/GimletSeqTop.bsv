@@ -111,25 +111,27 @@ endmodule
 // This is the top-level module for the Gimlet Sequencer FPGA.
 (* synthesize, default_clock_osc="clk50m" *)
 module mkGimletSeqTop (Top);
+    Clock cur_clk <- exposeCurrentClock();
+    Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);
     // Sequencer Input synchronizers (meta-harden inputs)
-    NicInputSync nic_pins <- mkNicInputSync();
-    EarlyInputSyncBlock early_pins <- mkEarlySync();
-    A1InputSyncBlock a1_pins <- mkA1Sync();
-    A0InputSyncBlock a0_pins <- mkA0Sync();
-    MiscInputSyncBlock misc_pins <- mkMiscSync();
+    NicInputSync nic_pins <- mkNicInputSync(reset_by reset_sync);
+    EarlyInputSyncBlock early_pins <- mkEarlySync(reset_by reset_sync);
+    A1InputSyncBlock a1_pins <- mkA1Sync(reset_by reset_sync);
+    A0InputSyncBlock a0_pins <- mkA0Sync(reset_by reset_sync);
+    MiscInputSyncBlock misc_pins <- mkMiscSync(reset_by reset_sync);
 
     // SPI block, including synchronizer
-    SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync;    
-    SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
-    SpiDecodeIF decode <- mkSpiRegDecode();
+    SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync(reset_by reset_sync);    
+    SpiPeripheralPhy phy <- mkSpiPeripheralPhy(reset_by reset_sync);
+    SpiDecodeIF decode <- mkSpiRegDecode(reset_by reset_sync);
     // Regiser block
-    GimletRegIF regs <- mkGimletRegs();
+    GimletRegIF regs <- mkGimletRegs(reset_by reset_sync);
     // State machine blocks
-    NicBlockTop nic_block <- mkNicBlock();
-    EarlyBlockTop early_block <- mkEarlyBlock();
-    A1BlockTop a1_block <- mkA1Block();
-    A0BlockTop a0_block <- mkA0Block();
-    MiscBlockTop misc_block <- mkMiscBlock();
+    NicBlockTop nic_block <- mkNicBlock(reset_by reset_sync);
+    EarlyBlockTop early_block <- mkEarlyBlock(reset_by reset_sync);
+    A1BlockTop a1_block <- mkA1Block(reset_by reset_sync);
+    A0BlockTop a0_block <- mkA0Block(reset_by reset_sync);
+    MiscBlockTop misc_block <- mkMiscBlock(reset_by reset_sync);
     // Connections
     //  SPI
     mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)
@@ -187,7 +189,6 @@ module mkGimletSeqTop (Top);
         interface a0_pins = a0_block.out_pins;
         interface misc_pins = misc_block.out_pins;
     endinterface
-
 endmodule
 
 function Stmt spiRead(Bit#(8) addr, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);

@@ -51,7 +51,7 @@ set_io --warn-no-port dimm_to_seq_efgh_v2p5_pg L16
 set_io --warn-no-port seq_to_dimm_abcd_v2p5_en L3
 set_io --warn-no-port dimm_to_seq_abcd_v2p5_pg M1
 #set_io --warn-no-port seq_to_sp_cdone_l M10
-set_io --warn-no-port seq_to_sp_misc_d M11
+#set_io --warn-no-port seq_to_sp_misc_d M11
 set_io --warn-no-port seq_to_sp3_v1p8_s5_en M12
 set_io --warn-no-port pwr_cont_dimm_abcd_pg0 M14
 set_io --warn-no-port pwr_cont_dimm_abcd_pg2 M15
@@ -90,7 +90,7 @@ set_io --warn-no-port seq_to_sp3_v0p9_s5_en R6
 set_io --warn-no-port sp3_to_seq_thermtrip_l R9
 set_io --warn-no-port pwr_cont1_sp3_pg1 T1
 set_io --warn-no-port sp3_to_sp_slp_s5_l T10
-set_io --warn-no-port seq_to_sp_misc_c T11
+#set_io --warn-no-port seq_to_sp_misc_c T11
 set_io --warn-no-port pwr_cont2_sp3_en T13
 set_io --warn-no-port pwr_cont2_sp3_pg0 T14
 set_io --warn-no-port pwr_cont2_sp3_nvrhot T15

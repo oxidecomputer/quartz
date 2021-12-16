@@ -402,7 +402,7 @@ module mkSpiPeripheralPhy(SpiPeripheralPhy);
         let sclk =  fromMaybe(sclk_last, cur_sclk.wget());
         let csn = fromMaybe(csn_last, cur_csn.wget());
         // csn edge detector
-        if (csn_last == 0 && csn == 1) begin
+        if (csn == 1) begin
             deselected.send();
         end else if (csn_last == 1 && csn == 0) begin
             selected.send();
