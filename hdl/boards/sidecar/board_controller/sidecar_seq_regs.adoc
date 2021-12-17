@@ -1,0 +1,119 @@
+
+Test Output:
+
+Identification 0
+[caption="Address: "]
+.0x0000 - ID0 Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | r | TBD | TBD
+|===
+
+Identification 1
+[caption="Address: "]
+.0x0001 - ID1 Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | r | TBD | TBD
+|===
+
+Identification 2
+[caption="Address: "]
+.0x0002 - ID2 Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | r | TBD | TBD
+|===
+
+Identification 3
+[caption="Address: "]
+.0x0003 - ID3 Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | r | TBD | TBD
+|===
+
+Scratchpad
+[caption="Address: "]
+.0x0004 - SCRATCHPAD Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | rw | TBD | Scribble Register for read-write use
+|===
+
+Enable Tofino Power
+[caption="Address: "]
+.0x0005 - TOFINO_EN Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:1] |  | - | Reserved
+|[0] | rw | EN | 0->1 transition = power down sequence, 1->0 transition = power down sequence
+|===
+
+Tofino Sequencer State
+[caption="Address: "]
+.0x0006 - TOFINO_SEQ_STATE Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | r | STATE | sequencer state
+|===
+
+Tofino Sequencer Error
+[caption="Address: "]
+.0x0007 - TOFINO_SEQ_ERROR Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:0] | r | ERROR | sequencer state
+|===
+
+Tofino Power Enables
+[caption="Address: "]
+.0x0008 - TOFINO_POWER_ENABLES Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:6] |  | - | Reserved
+|[5] | r | VDDA_1P8_EN | VDDA 1.8V Enable
+|[4] | r | VDDA_1P5_EN | VDDA 1.5V Enable
+|[3] | r | VDD_VDDT_EN | VDD 0.9V VDDT Enable
+|[2] | r | VDD_PCIE_EN | VDD 0.75V PCIe Enable
+|[1] | r | VDD_CORE_EN | VDD Core Enable
+|[0] | r | VDD_1P8_EN | VDD 1.8V Enable
+|===
+
+Tofino Power Goods
+[caption="Address: "]
+.0x0009 - TOFINO_POWER_GOODS Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:6] |  | - | Reserved
+|[5] | r | VDDA_1P8_PG | VDDA 1.8V Power Good
+|[4] | r | VDDA_1P5_PG | VDDA 1.5V Power Good
+|[3] | r | VDD_VDDT_PG | VDD 0.9V VDDT Power Good
+|[2] | r | VDD_PCIE_PG | VDD 0.75V PCIe Power Good
+|[1] | r | VDD_CORE_PG | VDD Core Power Good
+|[0] | r | VDD_1P8_PG | VDD 1.8V Power Good
+|===
+
+Tofino VID Bits
+[caption="Address: "]
+.0x000a - TOFINO_VID Register
+[cols=4,options="header"]
+|===
+| Bits | SW Access | Name | Function
+|[7:4] |  | - | Reserved
+|[3:0] | r | VID | VID bits
+|===
+
+
+
+
