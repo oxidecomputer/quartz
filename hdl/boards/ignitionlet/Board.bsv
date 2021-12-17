@@ -36,7 +36,7 @@ endinterface
 interface IgnitionletTarget;
     (* prefix = "" *) method Action id((* port = "id" *) UInt#(6) val);
     (* prefix = "" *) method Action flt((* port = "flt" *) Vector#(6, Bool) val);
-    (* prefix = "" *) method Action sys_rst((* port = "sys_rst" *) Bool val);
+    (* prefix = "" *) method Action btn((* port = "btn" *) Bool val);
     method Vector#(3, Bool) cmd;
 
     interface DifferentialTransceiver#(Bit#(1)) aux0;

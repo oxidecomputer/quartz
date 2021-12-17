@@ -18,7 +18,7 @@ set_io --warn-no-port cmd[0] A13
 set_io --warn-no-port cmd[1] A14
 set_io --warn-no-port cmd[2] A16
 
-set_io --warn-no-port sys_rst A25
+set_io --warn-no-port btn A25
 
 # AUX0
 set_io --warn-no-port aux0_rx_p A4

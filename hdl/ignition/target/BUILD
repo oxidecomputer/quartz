@@ -6,6 +6,7 @@ bluespec_library('IgnitionTarget',
     ],
     deps = [
         '//hdl/boards/ignitionlet:Board',
+        'cobalt//hdl:Strobe',
     ])
 
 bluespec_verilog('top',
