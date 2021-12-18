@@ -498,7 +498,7 @@ endmodule
 
 interface SPITestController;
     interface SpiControllerPins pins;
-    interface Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm;
+    interface Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm;
 endinterface
 
 typedef enum {IDLE, CS_START, SHIFTING, CS_STOP} ContState deriving (Eq, Bits);
@@ -508,8 +508,8 @@ typedef struct {
 
 module mkSpiTestController(SPITestController);
 
-    Reg#(Vector#(8, Bit#(8))) tx_buffer <- mkRegU();
-    Reg#(Vector#(8, Bit#(8))) rx_buffer <- mkRegU();
+    Reg#(Vector#(4, Bit#(8))) tx_buffer <- mkRegU();
+    Reg#(Vector#(4, Bit#(8))) rx_buffer <- mkRegU();
     Reg#(UInt#(4)) sclk_cntr <- mkRegU();
     Reg#(Bit#(1)) sclk <- mkReg(0);
     Reg#(Bit#(1)) sclk_last <- mkReg(0);
@@ -578,7 +578,7 @@ module mkSpiTestController(SPITestController);
         end
         // Load data to be tx'd
         if (pack(out_shifter)[7:0] == 'h80) begin
-            let head_data = tx_buffer[8-rem_bytes+1];
+            let head_data = tx_buffer[4-rem_bytes+1];
             out_shifter <= unpack({pack(head_data), 1});
             rem_bytes <= rem_bytes - 1;
         end else begin
@@ -594,7 +594,7 @@ module mkSpiTestController(SPITestController);
         end else begin
             in_shifter <= shiftInAt0(in_shifter, cipo);
             if (pack(in_shifter)[8:7] == 'b01) begin
-                rx_buffer[8-rem_bytes] <= pack(shiftInAt0(in_shifter, cipo))[7:0];
+                rx_buffer[4-rem_bytes] <= pack(shiftInAt0(in_shifter, cipo))[7:0];
             end
         end
     endrule
@@ -622,7 +622,7 @@ module mkSpiTestController(SPITestController);
 
     interface Server bfm;
         interface Get response;
-            method ActionValue#(Vector#(8, Bit#(8))) get() if (state == CS_STOP);
+            method ActionValue#(Vector#(4, Bit#(8))) get() if (state == CS_STOP);
                 return rx_buffer;
             endmethod
         endinterface
@@ -630,7 +630,7 @@ module mkSpiTestController(SPITestController);
         interface Put request;
             method Action put(request) if (state == IDLE);
                 tx_buffer <= request;
-                rem_bytes <= 8;
+                rem_bytes <= 4;
                 start.send();
             endmethod
         endinterface
@@ -666,15 +666,11 @@ module mkTestBenchSpiPhy(Empty);
     mkAutoFSM(
         seq
             action
-                Vector#(8, Bit#(8)) tx =  newVector();
+                Vector#(4, Bit#(8)) tx =  newVector();
                 tx[0] = unpack(zeroExtend(pack(READ)));
                 tx[1] = unpack('h00);
                 tx[2] = unpack('h00);
                 tx[3] = unpack('h00);
-                tx[4] = unpack('h00);
-                tx[5] = unpack('h00);
-                tx[6] = unpack('h00);
-                tx[7] = unpack('h00);
                 controller.bfm.request.put(tx);
             endaction
             action
@@ -683,23 +679,15 @@ module mkTestBenchSpiPhy(Empty);
                 $display(rx[1]);
                 $display(rx[2]);
                 $display(rx[3]);
-                $display(rx[4]);
-                $display(rx[5]);
-                $display(rx[6]);
-                $display(rx[7]);
             endaction
             delay(20);
             $display("Next");
             action
-                Vector#(8, Bit#(8)) tx =  newVector();
+                Vector#(4, Bit#(8)) tx =  newVector();
                 tx[0] = unpack(zeroExtend(pack(READ)));
                 tx[1] = unpack('h00);
                 tx[2] = unpack('h00);
                 tx[3] = unpack('h00);
-                tx[4] = unpack('h00);
-                tx[5] = unpack('h00);
-                tx[6] = unpack('h00);
-                tx[7] = unpack('h00);
                 controller.bfm.request.put(tx);
             endaction
             action

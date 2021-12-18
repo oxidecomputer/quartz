@@ -2,10 +2,11 @@
 
 package GimletSeqTop;
 
-
+// BSV-provided stuff
 import Clocks::*;
 import Connectable::*;
 import ClientServer::*;
+import DefaultValue::*;
 import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
@@ -108,30 +109,43 @@ module mkNicInputSync(NicInputSync);
 
 endmodule
 
+typedef struct {
+    Integer one_ms_counts;
+} GimletSeqTopParameters;
+
 // This is the top-level module for the Gimlet Sequencer FPGA.
 (* synthesize, default_clock_osc="clk50m" *)
 module mkGimletSeqTop (Top);
     Clock cur_clk <- exposeCurrentClock();
     Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);
+    let synth_params = GimletSeqTopParameters {one_ms_counts: 50000};    // 1ms @ 50MHz
+
+    let inner <- mkGimletInnerTop(synth_params, reset_by reset_sync);
+    return inner;
+endmodule
+
+module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
+    Clock cur_clk <- exposeCurrentClock();
+    Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);
     // Sequencer Input synchronizers (meta-harden inputs)
-    NicInputSync nic_pins <- mkNicInputSync(reset_by reset_sync);
-    EarlyInputSyncBlock early_pins <- mkEarlySync(reset_by reset_sync);
-    A1InputSyncBlock a1_pins <- mkA1Sync(reset_by reset_sync);
-    A0InputSyncBlock a0_pins <- mkA0Sync(reset_by reset_sync);
-    MiscInputSyncBlock misc_pins <- mkMiscSync(reset_by reset_sync);
+    NicInputSync nic_pins <- mkNicInputSync();
+    EarlyInputSyncBlock early_pins <- mkEarlySync();
+    A1InputSyncBlock a1_pins <- mkA1Sync();
+    A0InputSyncBlock a0_pins <- mkA0Sync();
+    MiscInputSyncBlock misc_pins <- mkMiscSync();
 
     // SPI block, including synchronizer
-    SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync(reset_by reset_sync);    
-    SpiPeripheralPhy phy <- mkSpiPeripheralPhy(reset_by reset_sync);
-    SpiDecodeIF decode <- mkSpiRegDecode(reset_by reset_sync);
+    SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync();    
+    SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
+    SpiDecodeIF decode <- mkSpiRegDecode();
     // Regiser block
-    GimletRegIF regs <- mkGimletRegs(reset_by reset_sync);
+    GimletRegIF regs <- mkGimletRegs();
     // State machine blocks
-    NicBlockTop nic_block <- mkNicBlock(reset_by reset_sync);
-    EarlyBlockTop early_block <- mkEarlyBlock(reset_by reset_sync);
-    A1BlockTop a1_block <- mkA1Block(reset_by reset_sync);
-    A0BlockTop a0_block <- mkA0Block(reset_by reset_sync);
-    MiscBlockTop misc_block <- mkMiscBlock(reset_by reset_sync);
+    NicBlockTop nic_block <- mkNicBlock();
+    EarlyBlockTop early_block <- mkEarlyBlock();
+    A1BlockTop a1_block <- mkA1Block(parameters.one_ms_counts);
+    A0BlockTop a0_block <- mkA0Block(parameters.one_ms_counts);
+    MiscBlockTop misc_block <- mkMiscBlock();
     // Connections
     //  SPI
     mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)
@@ -193,77 +207,102 @@ module mkGimletSeqTop (Top);
     endinterface
 endmodule
 
-function Stmt spiRead(Bit#(8) addr, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);
+function Stmt spiRead(Reg#(Bit#(8)) read_data, Bit#(8) addr, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
     return seq
         action
-            Vector#(8, Bit#(8)) tx =  newVector();
+            Vector#(4, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(READ)));
             tx[1] = unpack('h00);
             tx[2] = unpack(addr);
             tx[3] = unpack('h00);
-            tx[4] = unpack('h00);
-            tx[5] = unpack('h00);
-            tx[6] = unpack('h00);
-            tx[7] = unpack('h00);
             bfm.request.put(tx);
         endaction
         action
             let rx <- bfm.response.get();
-            $display("0x%x", rx[0]);
-            $display("0x%x", rx[1]);
-            $display("0x%x", rx[2]);
-            $display("0x%x", rx[3]);
-            $display("0x%x", rx[4]);
-            $display("0x%x", rx[5]);
-            $display("0x%x", rx[6]);
-            $display("0x%x", rx[7]);
+            // $display("0x%x", rx[0]);
+            // $display("0x%x", rx[1]);
+            // $display("0x%x", rx[2]);
+            // $display("0x%x", rx[3]);
+            // $display("0x%x", rx[4]);
+            // $display("0x%x", rx[5]);
+            // $display("0x%x", rx[6]);
+            // $display("0x%x", rx[7]);
+            read_data <= rx[3];
         endaction
     endseq;
 endfunction
-function Stmt spiWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);
+function Stmt spiWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
     return seq
          action
-            Vector#(8, Bit#(8)) tx =  newVector();
+            Vector#(4, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(WRITE)));
             tx[1] = unpack('h00);
             tx[2] = unpack(addr);
             tx[3] = unpack(data);  
-            tx[4] = unpack('h00);
-            tx[5] = unpack('h00);
-            tx[6] = unpack('h00);
-            tx[7] = unpack('h00);
             bfm.request.put(tx);
         endaction
         action
             let rx <- bfm.response.get();
-            $display(rx[0]);
-            $display(rx[1]);
-            $display(rx[2]);
-            $display(rx[3]);
-            $display(rx[4]);
-            $display(rx[5]);
-            $display(rx[6]);
-            $display(rx[7]);
+            // $display(rx[0]);
+            // $display(rx[1]);
+            // $display(rx[2]);
+            // $display(rx[3]);
+            // $display(rx[4]);
+            // $display(rx[5]);
+            // $display(rx[6]);
+            // $display(rx[7]);
         endaction
     endseq;
 endfunction
 
-// function Stmt spiReadUntil(Bit#(8) addr, Bit#(8) expected, Server#(Vector#(8, Bit#(8)),Vector#(8, Bit#(8))) bfm);
-//     return seq
-//         action
-//             Bit#(8) read = ~expected;
-//         endaction
-//         while (read != expected) seq
-//             spiRead(addr, bfm);
-//             action
-//                 read <= rx[3];
-//             endaction
-//         endseq
-//     endseq;
-// endfunction
+function Bool spiNewWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+    // seq
+    // action
+    //         Vector#(8, Bit#(8)) tx =  newVector();
+    //         tx[0] = unpack(zeroExtend(pack(WRITE)));
+    //         tx[1] = unpack('h00);
+    //         tx[2] = unpack(addr);
+    //         tx[3] = unpack(data);  
+    //         tx[4] = unpack('h00);
+    //         tx[5] = unpack('h00);
+    //         tx[6] = unpack('h00);
+    //         tx[7] = unpack('h00);
+    //         bfm.request.put(tx);
+    //     endaction
+    //     action
+    //         let rx <- bfm.response.get();
+    //         $display(rx[0]);
+    //         $display(rx[1]);
+    //         $display(rx[2]);
+    //         $display(rx[3]);
+    //         $display(rx[4]);
+    //         $display(rx[5]);
+    //         $display(rx[6]);
+    //         $display(rx[7]);
+    //     endaction
+
+    //  endseq;
+    return True;
+endfunction
+function Stmt spiReadUntil(
+    Reg#(Bit#(8)) read_data, 
+    Bit#(8) addr, 
+    Bit#(8) expected, 
+    Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+   return seq
+         action
+             read_data <= ~expected;
+         endaction
+         while (read_data != expected) seq
+             delay(300);
+             spiRead(read_data, addr, bfm);
+         endseq
+     endseq;
+ endfunction
 
 (* synthesize *)
 module mkGimletTestTop(Empty);
+    let sim_params = GimletSeqTopParameters {one_ms_counts: 500};   // Speed up sim time
     SPITestController controller <- mkSpiTestController();
     TBTestRawNicPinsSource nic_pins_bfm <- mkTestNicRawPinsSource();
     TBTestEarlyPinsSource early_pins_bfm <- mkTestEarlyPinsSource();
@@ -271,8 +310,9 @@ module mkGimletTestTop(Empty);
     TBTestA0PinsSource a0_pins_bfm <- mkTestA0PinsSource();
     TBTestMiscPinsSource misc_pins_bfm <- mkTestMiscPinsSource();
 
-    Top gimlet_fpga_top <- mkGimletSeqTop();
+    Top gimlet_fpga_top <- mkGimletInnerTop(sim_params);
     
+    Reg#(Bit#(8)) read_byte <- mkReg(0);
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
     mkConnection(nic_pins_bfm.pins, gimlet_fpga_top.in_pins.nic_pins);
     mkConnection(early_pins_bfm.pins, gimlet_fpga_top.in_pins.early_in_pins);
@@ -285,23 +325,78 @@ module mkGimletTestTop(Empty);
     // misc connections
     mkConnection(misc_pins_bfm.pins, gimlet_fpga_top.in_pins.misc_pins);
 
+    //HLIST
+    //
     mkAutoFSM(
     seq
         // Basic read
-        spiRead('h00, controller.bfm);
+        spiRead(read_byte, 'h00, controller.bfm);
         // Enable A1+A0 (now interlocked), sunny day case
         spiWrite('h09, 'h03, controller.bfm);
         action
             $display("Delay for A1 SM good...");
         endaction
-        delay(2000010); // TODO: Be smarter about a Wait for A1 SM good
+        spiReadUntil(read_byte, 'h0a, 'h05, controller.bfm);
         action
             $display("Delay for A0 SM good...");
         endaction
-        delay(4100010); // TODO: Be smarter about a Wait for A0 SM good
+        spiReadUntil(read_byte, 'h0b, 'h0c, controller.bfm);
+        action
+            $display("Design Up");
+        endaction
+        //delay(4100010); // TODO: Be smarter about a Wait for A0 SM good
         // prove that when A0 is up we can't disable A1
-        spiWrite('h09, 'h02, controller.bfm);
-        delay(10000);
+        //spiWrite('h09, 'h02, controller.bfm);
+        action
+            $display("Test thermal trip");
+            let thermtrip_set_pins = MiscInPinsRawStruct {
+                sp3_to_seq_thermtrip_l: 0,
+                sp3_to_seq_fsr_req_l: 1,
+                seq_to_clk_gpio3: 0,
+                seq_to_clk_gpio9: 0,
+                seq_to_clk_gpio8: 0,
+                seq_to_clk_gpio2: 0,
+                seq_to_clk_gpio1: 0,
+                seq_to_clk_gpio5: 0,
+                seq_to_clk_gpio4: 0
+            };
+            misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
+        endaction
+        spiReadUntil(read_byte, 'h0b, 'h00, controller.bfm);
+        action
+            $display("Design Faulted A0 off.");
+            $display("Attempting restart.");
+        endaction
+        action
+            // Reset therm-trip pin
+            let thermtrip_set_pins = MiscInPinsRawStruct {
+                sp3_to_seq_thermtrip_l: 1,
+                sp3_to_seq_fsr_req_l: 1,
+                seq_to_clk_gpio3: 0,
+                seq_to_clk_gpio9: 0,
+                seq_to_clk_gpio8: 0,
+                seq_to_clk_gpio2: 0,
+                seq_to_clk_gpio1: 0,
+                seq_to_clk_gpio5: 0,
+                seq_to_clk_gpio4: 0
+            };
+            misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
+        endaction
+        spiWrite('h09, 'h01, controller.bfm);
+        delay(100);
+        spiWrite('h09, 'h03, controller.bfm);
+        action
+            $display("Delay for A1 SM good...");
+        endaction
+        spiReadUntil(read_byte, 'h0a, 'h05, controller.bfm);
+        action
+            $display("Delay for A0 SM good...");
+        endaction
+        spiReadUntil(read_byte, 'h0b, 'h0c, controller.bfm);
+        action
+            $display("Design Up");
+        endaction
+        delay(3000);
         // action
         //     Vector#(8, Bit#(8)) tx =  newVector();
         //     tx[0] = unpack(zeroExtend(pack(READ)));

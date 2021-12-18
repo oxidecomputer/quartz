@@ -418,9 +418,7 @@ import GimletSeqFpgaRegs::*;
     } A0StateType deriving (Eq, Bits);
 
     // Block top module
-    module mkA0Block(A0BlockTop);
-
-        Integer one_ms_counts = 50000;  // 1ms
+    module mkA0Block#(Integer one_ms_counts)(A0BlockTop);
         Integer two_ms_counts = 2 * one_ms_counts;
         Integer five_ms_counts = 5 * one_ms_counts;
         Integer pbtn_low_counts = 40 * one_ms_counts;  // 40 ms
@@ -448,6 +446,8 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) seq_to_sp3_pwr_good <- mkReg(0);
         Reg#(Bit#(1)) seq_to_vtt_abcd_a0_en <- mkReg(0);
         Reg#(A0PGs) expected_pgs <- mkReg(unpack(0));
+        Reg#(A0PGs)cur_goods <- mkReg(unpack(0));
+        Reg#(A0PGs) masked_goods <- mkReg(unpack(0));
         // Combo output readbacks
         Wire#(A0OutPinsStruct) cur_out_pins <- mkDWire(unpack(0));
         // Combo input wires
@@ -459,6 +459,7 @@ import GimletSeqFpgaRegs::*;
         Wire#(Bit#(1)) ignore_sp <- mkDWire(0);
         Wire#(Bit#(1)) dbg_en   <- mkDWire(0);
         Wire#(Bit#(1)) a0_en    <- mkDWire(0);
+        Reg#(Bool) faulted <- mkReg(False);
         
 
 
@@ -479,11 +480,15 @@ import GimletSeqFpgaRegs::*;
                 seq_v1p8_sp3_vdd_pg: cur_syncd_pins.seq_v1p8_sp3_vdd_pg,
                 vtt_abcd_a0_to_seq_pg: cur_syncd_pins.vtt_abcd_a0_to_seq_pg
             }; 
-            let masked_pgs = unpack(pack(cur_pgs) & pack(expected_pgs));
+            
+            let expected = expected_pgs;
+            A0PGs masked_pgs = unpack(pack(cur_pgs) & pack(expected));
+            cur_goods <= cur_pgs;
+            masked_goods <= masked_pgs;
             if (a0_en == 0) begin  // Clear flag when enable 0'd
                 pg_fault <= False;
             end else begin
-                pg_fault <= masked_pgs != expected_pgs;
+                pg_fault <= (masked_pgs != expected);
             end
         endrule
 
@@ -524,7 +529,9 @@ import GimletSeqFpgaRegs::*;
             end else begin
                 delay_counter <= fromInteger(pb_delay_cnts);  // Want 40ms
             end
-            if (a0_en == 1 && !pg_fault && cur_upstream_ok && delay_counter == 0) begin
+            if (a0_en == 0) begin
+                faulted <= False;
+            end else if (a0_en == 1 && !faulted && cur_upstream_ok && delay_counter == 0) begin
                 state <= PBTN;
             end
         endrule
@@ -533,6 +540,7 @@ import GimletSeqFpgaRegs::*;
              sp_to_sp3_pwr_btn_l <= 0;
                 if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                     state <= IDLE;
+                    faulted <= pg_fault;
                 end else begin
                     if (delay_counter == 0) begin
                         state <= WAITSLP;
@@ -560,6 +568,7 @@ import GimletSeqFpgaRegs::*;
             pwr_cont_dimm_efgh_en0 <= 1;
             if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
+                faulted <= pg_fault;
             end else begin
                 state <= GROUPB1_PG;
             end
@@ -568,6 +577,7 @@ import GimletSeqFpgaRegs::*;
         rule do_wait_groupb1_pg  (state == GROUPB1_PG && dbg_en == 0);
             if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
+                faulted <= pg_fault;
             end else begin
                 if (cur_syncd_pins.pwr_cont_dimm_abcd_pg0 == 1 && cur_syncd_pins.pwr_cont_dimm_efgh_pg0 == 1) begin
                     expected_pgs <= A0PGs {
@@ -593,6 +603,7 @@ import GimletSeqFpgaRegs::*;
         rule do_groupb2_en (state == GROUPB2_EN && dbg_en == 0);
             if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
+                faulted <= pg_fault;
             end else begin
                 pwr_cont1_sp3_en <= 1;
                 seq_to_vtt_abcd_a0_en <= 1;
@@ -609,6 +620,7 @@ import GimletSeqFpgaRegs::*;
             let unstaged_ok = cur_syncd_pins.pwr_cont_dimm_abcd_pg1 == 1 && cur_syncd_pins.seq_v1p8_sp3_vdd_pg == 1; 
             if (a0_en == 0 || !cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
+                faulted <= pg_fault;
             end else begin
                 if (stage1_ok && stage2_ok && unstaged_ok) begin
                     state <= GROUPC_PG;
@@ -637,6 +649,7 @@ import GimletSeqFpgaRegs::*;
         rule do_wait_groupc_pg (state == GROUPC_PG && dbg_en == 0);
             if (a0_en == 0 || !cur_upstream_ok || pg_fault || cur_thermtrip) begin
                 state <= IDLE;
+                faulted <= (pg_fault || cur_thermtrip);
             end else begin
                 if (cur_syncd_pins.pwr_cont1_sp3_pg0 == 1 && cur_syncd_pins.pwr_cont2_sp3_pg0 == 1) begin
                     delay_counter <= fromInteger(one_ms_counts);
@@ -663,6 +676,7 @@ import GimletSeqFpgaRegs::*;
         rule do_1ms_delay (state == DELAY_1MS && dbg_en == 0);
             if (a0_en == 0 || !cur_upstream_ok || pg_fault || cur_thermtrip) begin
                 state <= IDLE;
+                faulted <= (pg_fault || cur_thermtrip);
             end else begin
                 if (delay_counter == 0) begin
                     state <= ASSERT_PG;
@@ -675,8 +689,10 @@ import GimletSeqFpgaRegs::*;
         rule do_assert_power_good (state == ASSERT_PG && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
                 state <= IDLE;
+                faulted <= (pg_fault);
             end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
+                faulted <= cur_thermtrip;
                 delay_counter <= fromInteger(five_ms_counts);
             end else begin
                 seq_to_sp3_pwr_good <= 1;
@@ -686,9 +702,11 @@ import GimletSeqFpgaRegs::*;
         // AMD asserts PWROK (min 15ms max 20.4 ms from power good) 
         rule do_wait_amd_pwrok (state == WAIT_PWROK && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
-                    state <= IDLE;
+                state <= IDLE;
+                faulted <= (pg_fault);
             end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
+                faulted <= cur_thermtrip;
                 delay_counter <= fromInteger(five_ms_counts);
             end else begin
                 if (cur_syncd_pins.sp3_to_seq_pwrok_v3p3 == 1 || ignore_sp == 1) begin // AMD Power-ok
@@ -699,9 +717,11 @@ import GimletSeqFpgaRegs::*;
         // AMD de-asserts RESET_L (min 20.2 ms to 28.6ms max from power good)
         rule do_wait_amd_reset_l (state == WAIT_RESET_L && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
-                    state <= IDLE;
+                state <= IDLE;
+                faulted <= (pg_fault);
             end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
+                faulted <= cur_thermtrip;
                 delay_counter <= fromInteger(five_ms_counts);
             end else begin
                 if (cur_syncd_pins.sp3_to_seq_reset_v3p3 == 0  || ignore_sp == 1) begin // AMD RESET_L
@@ -712,9 +732,11 @@ import GimletSeqFpgaRegs::*;
         // A0 OK
         rule do_done (state == DONE && dbg_en == 0);
             if (!cur_upstream_ok || pg_fault) begin
-                    state <= IDLE;
+                state <= IDLE;
+                faulted <= (pg_fault);
             end else if (a0_en == 0 || cur_thermtrip) begin
                 state <= SAFE_DISABLE;
+                faulted <= cur_thermtrip;
                 delay_counter <= fromInteger(five_ms_counts);
             end
         endrule

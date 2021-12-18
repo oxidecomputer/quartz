@@ -157,8 +157,7 @@ import GimletSeqFpgaRegs::*;
     
 
     // Block top module
-    module mkA1Block(A1BlockTop);
-        Integer one_ms_counts = 50000;  // 1ms
+    module mkA1Block#(Integer one_ms_counts)(A1BlockTop);
         Integer delay_counts = 200 * one_ms_counts;  //50 * one_ms_counts;
 
         // State register
@@ -337,7 +336,7 @@ import GimletSeqFpgaRegs::*;
         // Currently a dumb rule that wraps enables back to PG
         rule do_enable_to_pg;
             sp3_to_seq_v1p8_s5_pg <= seq_to_sp3_v1p8_s5_en;
-            sp3_to_seq_rtc_v1p5_en <= sp3_to_seq_rtc_v1p5_en;
+            sp3_to_seq_rtc_v1p5_en <= seq_to_sp3_v1p5_rtc_en;
             sp3_to_seq_v3p3_s5_pg <= seq_to_sp3_v3p3_s5_en;
             sp3_to_seq_v0p9_vdd_soc_s5_pg <= seq_to_sp3_v0p9_s5_en;
         endrule

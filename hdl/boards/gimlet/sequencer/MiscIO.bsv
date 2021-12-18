@@ -58,6 +58,17 @@ import GimletSeqFpgaRegs::*;
         Bit#(1) seq_to_clk_gpio5;
         Bit#(1) seq_to_clk_gpio4;
     } MiscInPinsStruct deriving (Bits);
+    typedef struct {
+        Bit#(1) sp3_to_seq_thermtrip_l;
+        Bit#(1) sp3_to_seq_fsr_req_l;
+        Bit#(1) seq_to_clk_gpio3;
+        Bit#(1) seq_to_clk_gpio9;
+        Bit#(1) seq_to_clk_gpio8;
+        Bit#(1) seq_to_clk_gpio2;
+        Bit#(1) seq_to_clk_gpio1;
+        Bit#(1) seq_to_clk_gpio5;
+        Bit#(1) seq_to_clk_gpio4;
+    } MiscInPinsRawStruct deriving (Bits);
     // Allow our input pin source to connect to our input pin sink
     instance Connectable#(MiscInputPinsRawSource, MiscInputPinsRawSink);
         module mkConnection#(MiscInputPinsRawSource source, MiscInputPinsRawSink sink) (Empty);
@@ -210,12 +221,12 @@ import GimletSeqFpgaRegs::*;
     endmodule
 
      interface TBTestMiscPinsSource;
-        interface Client#(Bit#(8), Bool) bfm;
+        interface Server#(MiscInPinsRawStruct, Bool) bfm;
         interface MiscInputPinsRawSource pins;
     endinterface
 
     module mkTestMiscPinsSource(TBTestMiscPinsSource);
-        Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(0);
+        Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(1);
         Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio3 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio9 <- mkReg(0);
@@ -224,7 +235,6 @@ import GimletSeqFpgaRegs::*;
         Reg#(Bit#(1)) seq_to_clk_gpio1 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio5 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_clk_gpio4 <- mkReg(0);
-        
         
         interface MiscInputPinsRawSource pins;
             method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._read;
@@ -236,10 +246,21 @@ import GimletSeqFpgaRegs::*;
             method seq_to_clk_gpio5 = seq_to_clk_gpio5._read;
             method seq_to_clk_gpio4 = seq_to_clk_gpio4._read;
         endinterface
-        interface Client bfm;
-            interface Get request;
+        interface Server bfm;
+            interface Put request;
+                method Action put(request);
+                    sp3_to_seq_thermtrip_l <= request.sp3_to_seq_thermtrip_l;
+                    sp3_to_seq_fsr_req_l <= request.sp3_to_seq_fsr_req_l;
+                    seq_to_clk_gpio3 <= request.seq_to_clk_gpio3;
+                    seq_to_clk_gpio9 <= request.seq_to_clk_gpio9;
+                    seq_to_clk_gpio8 <= request.seq_to_clk_gpio8;
+                    seq_to_clk_gpio2 <= request.seq_to_clk_gpio2;
+                    seq_to_clk_gpio1 <= request.seq_to_clk_gpio1;
+                    seq_to_clk_gpio5 <= request.seq_to_clk_gpio5;
+                    seq_to_clk_gpio4 <= request.seq_to_clk_gpio4;
+                endmethod
             endinterface
-            interface Put response;
+            interface Get response;
             endinterface
         endinterface
     endmodule
