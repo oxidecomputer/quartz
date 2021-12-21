@@ -57,9 +57,7 @@ endinstance
 
 module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
     Reg#(Maybe#(UInt#(6))) system_type <- mkRegA(tagged Invalid);
-
-    Reg#(Vector#(6, Bool)) status_cur <- mkRegU();
-    Wire#(Vector#(6, Bool)) status_next <- mkWire();
+    Reg#(Vector#(6, Bool)) status_r <- mkRegU();
 
     // Default command bits. This automatically powers on the system upon (power
     // on) reset, with CMD1 showing Ignition status and CMD2 tracking power
@@ -68,7 +66,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
             system_power_enable: True,
             cmd1: False,
             cmd2: False};
-    Reg#(Commands) commands_cur <- mkRegA(commands_default);
+    Reg#(Commands) commands_r <- mkRegA(commands_default);
 
     Reg#(UInt#(12)) system_reset_ticks_remaining <- mkRegU();
 
@@ -80,7 +78,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
     // Helpers
     function Action set_system_power_enabled(Bool enabled) =
         action
-            commands_cur <= Commands{
+            commands_r <= Commands{
                 system_power_enable: enabled,
                 cmd1: commands_default.cmd1,
                 cmd2: !enabled}; // LED tracking enabled status is inverted.
@@ -137,7 +135,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
         system_type <= tagged Valid val;
     endmethod
 
-    method status = status_next._write;
+    method status = status_r._write;
 
     method Action button_event(Bool pressed);
         if (pressed)
@@ -146,7 +144,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
             button_released.send();
     endmethod
 
-    method commands = commands_cur._read;
+    method commands = commands_r;
 
     interface PulseWire tick_1khz = tick;
 endmodule
