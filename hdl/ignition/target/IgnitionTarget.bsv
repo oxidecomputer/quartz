@@ -1,10 +1,9 @@
 package IgnitionTarget;
 
-export Transceiver(..);
+export Transceiver(..), Commands(..);
 export IgnitionTarget(..), IgnitionTargetParameters(..), mkIgnitionTarget;
 export IgnitionTargetBench(..), mkIgnitionTargetBench;
 
-import BuildVector::*;
 import Connectable::*;
 import DefaultValue::*;
 import StmtFSM::*;
@@ -18,6 +17,12 @@ import Strobe::*;
 // application.
 //
 
+typedef struct {
+    Bool cmd2;
+    Bool cmd1;
+    Bool system_power_enable;
+} Commands deriving (Bits, Eq, FShow);
+
 interface Transceiver;
     method Action rx(Bit#(1) val);
     method Bit#(1) tx();
@@ -26,7 +31,7 @@ endinterface
 interface IgnitionTarget;
     (* always_enabled *) method Action id(UInt#(6) val);
     (* always_enabled *) method Action status(Vector#(6, Bool) val);
-    (* always_enabled *) method Vector#(3, Bool) cmd;
+    (* always_enabled *) method Commands commands();
     (* always_ready *) method Action button_event(Bool pressed);
 
     interface Transceiver aux0;
@@ -59,7 +64,11 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
     // Default command bits. This automatically powers on the system upon (power
     // on) reset, with CMD1 showing Ignition status and CMD2 tracking power
     // enabled status.
-    Reg#(Vector#(3, Bool)) cmd_cur <- mkRegA(vec(True, False, False));
+    let commands_default = Commands{
+            system_power_enable: True,
+            cmd1: False,
+            cmd2: False};
+    Reg#(Commands) commands_cur <- mkRegA(commands_default);
 
     Reg#(UInt#(12)) system_reset_ticks_remaining <- mkRegU();
 
@@ -69,9 +78,12 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
     PulseWire tick <- mkPulseWire();
 
     // Helpers
-    function Action set_system_enabled(Bool enabled) =
+    function Action set_system_power_enabled(Bool enabled) =
         action
-            cmd_cur <= vec(enabled, cmd_cur[1], !enabled);
+            commands_cur <= Commands{
+                system_power_enable: enabled,
+                cmd1: commands_default.cmd1,
+                cmd2: !enabled}; // LED tracking enabled status is inverted.
         endaction;
 
     function Stmt await_system_reset_ticks_remaining_zero() =
@@ -93,7 +105,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
         mkFSM(
             seq
                 action
-                    set_system_enabled(False);
+                    set_system_power_enabled(False);
                     // This sequence changes state on a tick. In order to avoid
                     // cutting this duration short by a tick, add one.
                     system_reset_ticks_remaining <=
@@ -106,7 +118,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
                     await_system_reset_ticks_remaining_zero();
                 endpar
                 action
-                    set_system_enabled(True);
+                    set_system_power_enabled(True);
                     system_reset_ticks_remaining <=
                         fromInteger(conf.system_reset_cool_down + 1);
                 endaction
@@ -134,7 +146,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
             button_released.send();
     endmethod
 
-    method cmd = cmd_cur._read;
+    method commands = commands_cur._read;
 
     interface PulseWire tick_1khz = tick;
 endmodule
@@ -169,7 +181,7 @@ module mkIgnitionTargetBench #(IgnitionTargetParameters conf, UInt#(6) id) (Igni
 
     (* no_implicit_conditions, fire_when_enabled *)
     rule do_monitor_system_power_state;
-        let system_powered_on = _target.cmd[0];
+        let system_powered_on = _target.commands.system_power_enable;
         system_powered_on_prev <= system_powered_on;
 
         if (system_powered_on != system_powered_on_prev)
@@ -189,8 +201,8 @@ module mkIgnitionTargetBench #(IgnitionTargetParameters conf, UInt#(6) id) (Igni
     method ticks_elapsed = ticks_elapsed_;
     method reset_ticks_elapsed = should_reset_ticks_elapsed.send;
 
-    method system_powered_on = _target.cmd[0];
-    method system_powered_off = !_target.cmd[0];
+    method system_powered_on = _target.commands.system_power_enable;
+    method system_powered_off = !_target.commands.system_power_enable;
 
     method Action press_button();
         $display("Button pressed");

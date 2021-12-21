@@ -6,6 +6,7 @@
 
 package Top;
 
+import BuildVector::*;
 import Clocks::*;
 import Connectable::*;
 import Vector::*;
@@ -55,9 +56,14 @@ module mkIgnitionTargetTop (IgnitionletTarget);
     // Strobe, used as a time pulse to generate timed events.
     Strobe#(24) strobe_1khz <- mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by initial_reset);
 
-    // This null crossing is needed to convince BSC the missing reset information for this output
-    // signal is acceptable.
-    ReadOnly#(Vector#(3, Bool)) cmd_sync <- mkNullCrossingWire(clk_50mhz, app.cmd);
+    // These null crossings are needed to convince BSC the missing reset
+    // information for this output signal is acceptable.
+    ReadOnly#(Bool) system_power_enable_sync <-
+        mkNullCrossingWire(clk_50mhz, app.commands.system_power_enable);
+    ReadOnly#(Vector#(2, Bool)) cmd_sync <-
+        mkNullCrossingWire(
+            clk_50mhz,
+            vec(app.commands.cmd1, app.commands.cmd2));
 
     mkConnection(id_sync, app.id);
     mkConnection(flt_sync, app.status);
@@ -85,6 +91,7 @@ module mkIgnitionTargetTop (IgnitionletTarget);
     method id = id_sync._write;
     method flt = flt_sync._write;
     method btn = btn_sync._write;
+    method system_power_enable = system_power_enable_sync._read;
     method cmd = cmd_sync._read;
 
     interface DifferentialTransceiver aux0;

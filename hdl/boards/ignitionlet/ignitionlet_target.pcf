@@ -14,9 +14,9 @@ set_io --warn-no-port -pullup yes flt[3] A32
 set_io --warn-no-port -pullup yes flt[4] A33
 set_io --warn-no-port -pullup yes flt[5] A34
 
-set_io --warn-no-port cmd[0] A13
-set_io --warn-no-port cmd[1] A14
-set_io --warn-no-port cmd[2] A16
+set_io --warn-no-port system_power_enable A13
+set_io --warn-no-port cmd[0] A14 # CMD1
+set_io --warn-no-port cmd[1] A16 # CMD2
 
 set_io --warn-no-port btn A25
 
