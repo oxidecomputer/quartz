@@ -6,22 +6,22 @@ bluespec_library('IgnitionTarget',
     ],
     deps = [
         '//hdl/boards/ignitionlet:Board',
+        'cobalt//hdl:Strobe',
     ])
 
-bluespec_verilog('top',
-    top = 'Top.bsv',
-    modules = [
-        'mkIgnitionTargetTop',
+bluespec_library('IgnitionTargetWrapper',
+    sources = [
+        'IgnitionTargetWrapper.bsv',
     ],
     deps = [
         ':IgnitionTarget',
         'cobalt//hdl:InitialReset',
-        'cobalt//hdl:InputReg',
         'cobalt//hdl:SchmittReg',
         'cobalt//hdl:Strobe',
+        'cobalt//hdl:SyncBits',
         'cobalt//hdl/interfaces:ICE40',
     ],
-    local = {
+    using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.
         'bsc_flags': [
             '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',

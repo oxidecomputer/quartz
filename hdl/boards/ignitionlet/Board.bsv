@@ -36,8 +36,10 @@ endinterface
 interface IgnitionletTarget;
     (* prefix = "" *) method Action id((* port = "id" *) UInt#(6) val);
     (* prefix = "" *) method Action flt((* port = "flt" *) Vector#(6, Bool) val);
-    (* prefix = "" *) method Action sys_rst((* port = "sys_rst" *) Bool val);
-    method Vector#(3, Bool) cmd;
+    (* prefix = "" *) method Action btn((* port = "btn" *) Bool val);
+    method Bool system_power_enable();
+    method Bool cmd1();
+    method Bool cmd2();
 
     interface DifferentialTransceiver#(Bit#(1)) aux0;
     interface DifferentialTransceiver#(Bit#(1)) aux1;
