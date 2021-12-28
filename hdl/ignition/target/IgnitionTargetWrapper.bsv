@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-package Top;
+package IgnitionTargetWrapper;
 
 import BuildVector::*;
 import Clocks::*;
@@ -20,8 +20,8 @@ import Strobe::*;
 import SyncBits::*;
 
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
-module mkIgnitionTargetTop (IgnitionletTarget);
+module mkIgnitionTargetIOAndResetWrapper
+        #(IgnitionTargetParameters app_parameters) (IgnitionletTarget);
     Clock clk_50mhz <- exposeCurrentClock();
     Reset initial_reset <- InitialReset::mkInitialReset(3);
 
@@ -50,20 +50,16 @@ module mkIgnitionTargetTop (IgnitionletTarget);
 
     // Implementation of the Ignition Target application. This module assumes inputs are
     // synchronized/filtered/debounced and Inout interfaces are resolved.
-    IgnitionTargetParameters app_parameters = defaultValue;
     IgnitionTarget app <- mkIgnitionTarget(app_parameters, reset_by initial_reset);
 
     // Strobe, used as a time pulse to generate timed events.
-    Strobe#(24) strobe_1khz <- mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by initial_reset);
+    Strobe#(24) strobe_1khz <-
+        mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by initial_reset);
 
-    // These null crossings are needed to convince BSC the missing reset
-    // information for this output signal is acceptable.
-    ReadOnly#(Bool) system_power_enable_sync <-
-        mkNullCrossingWire(clk_50mhz, app.commands.system_power_enable);
-    ReadOnly#(Vector#(2, Bool)) cmd_sync <-
-        mkNullCrossingWire(
-            clk_50mhz,
-            vec(app.commands.cmd1, app.commands.cmd2));
+    // This null crossings is needed to convince BSC the missing reset
+    // information for these output signals is acceptable.
+    ReadOnly#(Commands) commands_sync <-
+        mkNullCrossingWire(clk_50mhz, app.commands);
 
     mkConnection(id_sync.read, app.id);
     mkConnection(flt_sync.read, app.status);
@@ -91,8 +87,9 @@ module mkIgnitionTargetTop (IgnitionletTarget);
     method id = id_sync.send;
     method flt = flt_sync.send;
     method btn = btn_sync.send;
-    method system_power_enable = system_power_enable_sync._read;
-    method cmd = cmd_sync._read;
+    method system_power_enable = commands_sync.system_power_enable;
+    method cmd1 = commands_sync.cmd1;
+    method cmd2 = commands_sync.cmd2;
 
     interface DifferentialTransceiver aux0;
         interface DifferentialPairRx rx = aux0_rx.pads;
@@ -105,4 +102,4 @@ module mkIgnitionTargetTop (IgnitionletTarget);
     endinterface
 endmodule
 
-endpackage: Top
+endpackage: IgnitionTargetWrapper

@@ -43,21 +43,31 @@ nextpnr_ice40_bitstream('ignitionlet_sequencer_blinky',
 # Ignition Target targets.
 #
 
-yosys_design('ignition_target_top',
-    top_module = 'mkIgnitionTargetTop',
+bluespec_verilog('IgnitionletTargetTop',
+    top = 'IgnitionletTargetTop.bsv',
+    modules = [
+        'mkIgnitionletTarget',
+    ],
+    deps = [
+        '//hdl/ignition/target:IgnitionTarget',
+        '//hdl/ignition/target:IgnitionTargetWrapper',
+    ])
+
+yosys_design('ignitionlet_target_top',
+    top_module = 'mkIgnitionletTarget',
     sources = [
-        '//hdl/ignition/target:top#mkIgnitionTargetTop',
+        ':IgnitionletTargetTop#mkIgnitionletTarget',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../vnd/cobalt/hdl/InitialReset.v',
     ],
     deps = [
-        '//hdl/ignition/target:top',
+        ':IgnitionletTargetTop',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignition_target',
+nextpnr_ice40_bitstream('ignitionlet_target',
     env = 'ignitionlet_target',
-    design = ':ignition_target_top#ignition_target_top.json',
+    design = ':ignitionlet_target_top#ignitionlet_target_top.json',
     deps = [
-        ':ignition_target_top',
+        ':ignitionlet_target_top',
     ])

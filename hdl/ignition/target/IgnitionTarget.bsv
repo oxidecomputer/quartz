@@ -47,12 +47,14 @@ endinterface
 typedef struct {
     Integer system_reset_min_duration;
     Integer system_reset_cool_down;
+    Bool invert_cmd_bits;
 } IgnitionTargetParameters;
 
 instance DefaultValue#(IgnitionTargetParameters);
     defaultValue = IgnitionTargetParameters{
         system_reset_min_duration: 2000,    // 2 seconds.
-        system_reset_cool_down: 1000};      // 1 seconds.
+        system_reset_cool_down: 1000,       // 1 seconds.
+        invert_cmd_bits: False};
 endinstance
 
 module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
@@ -64,8 +66,8 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
     // enabled status.
     let commands_default = Commands{
             system_power_enable: True,
-            cmd1: False,
-            cmd2: False};
+            cmd1: conf.invert_cmd_bits ? False : True,
+            cmd2: conf.invert_cmd_bits ? False : True};
     Reg#(Commands) commands_r <- mkRegA(commands_default);
 
     Reg#(UInt#(12)) system_reset_ticks_remaining <- mkRegU();
@@ -81,7 +83,7 @@ module mkIgnitionTarget #(IgnitionTargetParameters conf) (IgnitionTarget);
             commands_r <= Commands{
                 system_power_enable: enabled,
                 cmd1: commands_default.cmd1,
-                cmd2: !enabled}; // LED tracking enabled status is inverted.
+                cmd2: conf.invert_cmd_bits ? !enabled : enabled};
         endaction;
 
     function Stmt await_system_reset_ticks_remaining_zero() =

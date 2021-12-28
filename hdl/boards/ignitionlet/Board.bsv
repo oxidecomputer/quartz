@@ -38,7 +38,8 @@ interface IgnitionletTarget;
     (* prefix = "" *) method Action flt((* port = "flt" *) Vector#(6, Bool) val);
     (* prefix = "" *) method Action btn((* port = "btn" *) Bool val);
     method Bool system_power_enable();
-    method Vector#(2, Bool) cmd();
+    method Bool cmd1();
+    method Bool cmd2();
 
     interface DifferentialTransceiver#(Bit#(1)) aux0;
     interface DifferentialTransceiver#(Bit#(1)) aux1;
