@@ -17,7 +17,10 @@ import git_version::*;
 import RegCommon::*;
 import WriteOnceReg::*;
 
+import IgnitionController::*;
+import IgnitionControllerRegisters::*;
 import PCIeEndpointController::*;
+import SidecarMainboardController::*;
 import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
 import TofinoDebugPort::*;
@@ -40,10 +43,15 @@ endinstance
 module mkSpiServer #(
         Tofino2Sequencer::Registers tofino,
         TofinoDebugPort::Registers tofino_debug_port,
-        PCIeEndpointController::Registers pcie)
+        PCIeEndpointController::Registers pcie,
+        IgnitionRegisterPages#(n_ignition_controllers) ignition_pages)
             (SpiServer)
-        provisos (
-            NumAlias#(3, n_pages));
+                provisos (
+                    Add#(n_ignition_controllers, 4, n_pages),
+                    Add#(TLog#(n_pages), a__, 8),
+                    Add#(TLog#(n_ignition_controllers), b__, 8),
+                    // Less than 40 Ignition Controllers.
+                    Add#(n_ignition_controllers, c__, 40));
     Wire#(SpiRequest) in <- mkWire();
     Wire#(SpiResponse) out <- mkWire();
 
@@ -61,6 +69,9 @@ module mkSpiServer #(
     Reg#(Maybe#(PageRequest)) page_request <- mkRegU();
     Vector#(n_pages, Reg#(SpiResponse)) page_responses <- replicateM(mkRegU());
 
+    Reg#(UInt#(TLog#(n_ignition_controllers))) selected_ignition_page <- mkRegU();
+    Reg#(Bool) ignition_page_request <- mkDReg(False);
+
     Reg#(Bool) select_response <- mkDReg(False);
 
     (* fire_when_enabled *)
@@ -76,6 +87,15 @@ module mkSpiServer #(
                 op: in.op,
                 address: unpack(in.address[7:0]),
                 wdata: in.wdata};
+
+        // Determine if this a request for an Ignition Controller page.
+        let first_ignition_page = 4;
+        let last_ignition_page = first_ignition_page + valueOf(n_ignition_controllers);
+
+        ignition_page_request <=
+            page >= fromInteger(first_ignition_page) &&
+            page <= fromInteger(last_ignition_page);
+        selected_ignition_page <= unpack(truncate(page - first_ignition_page));
     endrule
 
     (* fire_when_enabled *)
@@ -105,14 +125,26 @@ module mkSpiServer #(
     endfunction
 
     function Bool read_page(Integer i);
-        return page_selected(i) &&
+        return !ignition_page_request &&
+            page_selected(i) &&
             fromMaybe(defaultValue, page_request).op == READ;
     endfunction
 
     function Bool write_page(Integer i);
         let op = fromMaybe(defaultValue, page_request).op;
         let write_op = (op != NOOP && op != READ);
-        return page_selected(i) && write_op;
+        return !ignition_page_request && page_selected(i) && write_op;
+    endfunction
+
+    function Bool read_ignition_page();
+        return ignition_page_request &&
+            fromMaybe(defaultValue, page_request).op == READ;
+    endfunction
+
+    function Bool write_ignition_page();
+        let op = fromMaybe(defaultValue, page_request).op;
+        let write_op = (op != NOOP && op != READ);
+        return ignition_page_request && write_op;
     endfunction
 
     //
@@ -251,6 +283,115 @@ module mkSpiServer #(
                 update(request.op, tofino_debug_port.state, request.wdata);
             fromOffset(tofinoDebugPortBufferOffset):
                 write(WRITE, tofino_debug_port.buffer._write, request.wdata);
+        endcase
+    endrule
+
+    //
+    // Ignition Pages
+    //
+
+    ConfigReg#(Vector#(5, Bit#(8))) target_present_summary <- mkConfigRegU();
+
+    (* fire_when_enabled *)
+    rule do_demux_target_present_summary;
+        // Collect a summary of the Target present bits as a 64 bit-vector.
+        function target_present(registers) =
+            registers.controller_status.target_present;
+
+        target_present_summary <=
+            unpack(extend(pack(map(target_present, ignition_pages))));
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_ignition_summary_page_read (read_page(3));
+        let reader =
+            case (page_request.Valid.address)
+                fromOffset(ignitionControllersCountOffset):
+                    read(Bit#(8)'(fromInteger(valueOf(n_ignition_controllers))));
+                fromOffset(ignitionTargetsPresent0Offset): read(target_present_summary[0]);
+                fromOffset(ignitionTargetsPresent1Offset): read(target_present_summary[1]);
+                fromOffset(ignitionTargetsPresent2Offset): read(target_present_summary[2]);
+                fromOffset(ignitionTargetsPresent3Offset): read(target_present_summary[3]);
+                fromOffset(ignitionTargetsPresent4Offset): read(target_present_summary[4]);
+                default: read(8'h00);
+            endcase;
+
+        let data <- reader;
+        page_responses[3] <= data;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_ignition_controller_page_read (read_ignition_page);
+        let registers = asIfc(ignition_pages[selected_ignition_page]);
+        let reader =
+                case (page_request.Valid.address)
+                    // Controller state
+                    fromInteger(controllerStatusOffset):
+                        read(registers.controller_status);
+                    fromInteger(controllerLinkStatusOffset):
+                        read(registers.controller_link_status);
+                    fromInteger(targetSystemTypeOffset):
+                        read(registers.target_system_type);
+                    fromInteger(targetSystemStatusOffset):
+                        read(registers.target_system_status);
+                    fromInteger(targetSystemFaultsOffset):
+                        read(registers.target_system_faults);
+                    fromInteger(targetRequestStatusOffset):
+                        read(registers.target_request_status);
+                    fromInteger(targetLink0StatusOffset):
+                        read(registers.target_link0_status);
+                    fromInteger(targetLink1StatusOffset):
+                        read(registers.target_link1_status);
+
+                    // Target Request
+                    fromInteger(targetRequestOffset):
+                        read(registers.target_request);
+
+                    // Controller Counters
+                    fromInteger(controllerStatusReceivedCountOffset):
+                        read_volatile(registers.controller_status_received_count);
+                    fromInteger(controllerHelloSentCountOffset):
+                        read_volatile(registers.controller_hello_sent_count);
+                    fromInteger(controllerRequestSentCountOffset):
+                        read_volatile(registers.controller_request_sent_count);
+                    fromInteger(controllerMessageDroppedCountOffset):
+                        read_volatile(registers.controller_message_dropped_count);
+
+                    // Controller Link Events
+                    fromInteger(controllerLinkEventsSummaryOffset):
+                        read(registers.controller_link_counters.summary);
+
+                    // Target Link 0 Events
+                    fromInteger(targetLink0EventsSummaryOffset):
+                        read(registers.target_link0_counters.summary);
+
+                    // Target Link 1 Events
+                    fromInteger(targetLink1EventsSummaryOffset):
+                        read(registers.target_link1_counters.summary);
+
+                    default: read(8'h00);
+                endcase;
+
+        let data <- reader;
+        page_responses[fromOInt(selected_page.Valid)] <= data;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_ignition_controller_page_write (write_ignition_page);
+        let op = page_request.Valid.op;
+        let address = page_request.Valid.address;
+        let wdata = page_request.Valid.wdata;
+        let registers = asIfc(ignition_pages[selected_ignition_page]);
+
+        case (address)
+            fromInteger(targetRequestOffset):
+                update(op, registers.target_request, wdata);
+            fromInteger(controllerLinkEventsSummaryOffset):
+                update(op, registers.controller_link_counters.summary, wdata);
+            fromInteger(targetLink0EventsSummaryOffset):
+                update(op, registers.target_link0_counters.summary, wdata);
+            fromInteger(targetLink1EventsSummaryOffset):
+                update(op, registers.target_link1_counters.summary, wdata);
         endcase
     endrule
 

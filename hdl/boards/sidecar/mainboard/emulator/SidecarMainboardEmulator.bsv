@@ -2,11 +2,15 @@ package SidecarMainboardEmulator;
 
 import BuildVector::*;
 import Clocks::*;
+import ConfigReg::*;
 import Connectable::*;
+import GetPut::*;
 import TriState::*;
 import Vector::*;
 
+import BitSampling::*;
 import ECP5::*;
+import SerialIO::*;
 import SPI::*;
 import Strobe::*;
 
@@ -17,6 +21,10 @@ import SidecarMainboardController::*;
 import SidecarMainboardControllerSpiServer::*;
 import Tofino2Sequencer::*;
 
+import IgnitionProtocol::*;
+import IgnitionTarget::*;
+import IgnitionTransceiver::*;
+
 
 (* always_enabled *)
 interface SidecarMainboardEmulator;
@@ -25,6 +33,11 @@ interface SidecarMainboardEmulator;
     (* prefix = "" *) method Action spi_copi(Bit#(1) spi_copi);
     method Bit#(1) spi_cipo;
     method Bit#(8) led();
+
+    (* prefix = "" *) method Action aux_rx(Bit#(2) aux_rx);
+    (* prefix = "" *) method Bit#(2) aux_tx();
+
+    (* prefix = "" *) method Bit#(1) debug();
 endinterface
 
 (* default_clock_osc = "clk_12mhz",
@@ -74,9 +87,13 @@ module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
     return _emulator;
 endmodule
 
-module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
+module mkSidecarMainboardEmulatorOnEcp5EvnWrapper
+        (SidecarMainboardEmulator)
+            provisos (
+                NumAlias#(4, n_ignition_controllers));
     Parameters parameters = defaultValue;
-    MainboardController controller <- mkMainboardController(parameters);
+    MainboardController#(n_ignition_controllers) controller <-
+        mkMainboardController(parameters);
 
     //
     // SPI peripheral.
@@ -88,7 +105,8 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
         mkSpiServer(
             controller.registers.tofino,
             controller.registers.tofino_debug_port,
-            controller.registers.pcie);
+            controller.registers.pcie,
+            controller.registers.ignition_pages);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
     InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
@@ -136,12 +154,98 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
 
     mkConnection(vid._read, controller.pins.tofino.vid);
 
+    //
+    // Ignition
+    //
+
+    Strobe#(3) aux_tx_strobe <- mkLimitStrobe(1, 5, 0);
+    mkFreeRunningStrobe(aux_tx_strobe);
+
+    // Instantiate Transceivers and IO adapters.
+    Vector#(n_ignition_controllers, Transceiver)
+        ignition_controller_txrs <- mkTransceivers();
+
+    Vector#(n_ignition_controllers, SerialIOAdapter#(5))
+        ignition_controller_io <-
+            mapM(mkSerialIOAdapter(aux_tx_strobe),
+                map(toSerialIO, ignition_controller_txrs));
+
+    // Connect the Transceivers to their clients.
+    zipWithM(mkConnection, ignition_controller_txrs, controller.ignition_txrs);
+
+    //
+    // Ignition Target, connected to Ignition Controllers 0, 1.
+    //
+
+    Target target <- mkTarget(default_app_with_reset_button);
+    TargetTransceiver target_txr <- mkTargetTransceiver();
+
+    mkConnection(asIfc(tick_1khz), asIfc(target.tick_1khz));
+    mkConnection(target_txr, target.txr);
+
+    Strobe#(3) target_tx_strobe <- mkLimitStrobe(1, 5, 3);
+    mkFreeRunningStrobe(target_tx_strobe);
+
+    SerialIOAdapter#(5) target_link0 <-
+        mkSerialIOAdapter(
+            target_tx_strobe,
+            tuple2(target_txr.to_link, target_txr.from_link[0]));
+    SerialIOAdapter#(5) target_link1 <-
+        mkSerialIOAdapterPassiveTx(
+            tuple2(target_txr.to_link, target_txr.from_link[1]));
+
+    mkConnection(ignition_controller_io[0], target_link0);
+
+    // Link 1 has its polarity inverted to show a difference in link state.
+    (* fire_when_enabled *)
+    rule do_controller1_link_polarity_inverted;
+        target_link1.rx(~ignition_controller_io[1].tx);
+        ignition_controller_io[1].rx(~target_link1.tx);
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_set_target_system_type;
+        target.set_system_type(5);
+    endrule
+
+    //
+    // LED, add register without reset to avoid warnings about crossing a reset
+    // boundary.
+    //
+
+    Reg#(Bit#(8)) led_r <- mkConfigRegU();
+
+    (* fire_when_enabled *)
+    rule do_set_led;
+        led_r <=  ~{pack(target.system_power), '0, pack(controller.status)};
+    endrule
+
+    //
+    // Additinal debug
+    //
+
+    Reg#(Bit#(1)) debug_r <- mkRegU();
+
+    (* fire_when_enabled *)
+    rule do_debug;
+        debug_r <= 0;
+    endrule
+
     method spi_csn = sync(csn);
     method spi_sclk = sync(sclk);
     method spi_copi = sync(copi);
     method spi_cipo = cipo;
 
-    method led = ~{extend(pack(controller.status))};
+    method Action aux_rx(Bit#(2) rx);
+        ignition_controller_io[2].rx(rx[0]);
+        ignition_controller_io[3].rx(rx[1]);
+    endmethod
+    method aux_tx = {
+        ignition_controller_io[3].tx,
+        ignition_controller_io[2].tx};
+
+    method led = led_r;
+    method debug = debug_r;
 endmodule
 
 endpackage

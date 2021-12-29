@@ -6,13 +6,19 @@ export mkSidecarMainboardControllerTop;
 import Clocks::*;
 import ConfigReg::*;
 import Connectable::*;
+import GetPut::*;
 import TriState::*;
+import Vector::*;
 
 import Bidirection::*;
+import BitSampling::*;
 import IOSync::*;
+import SerialIO::*;
 import SPI::*;
+import Strobe::*;
 
 import FanModule::*;
+import IgnitionTransceiver::*;
 import PCIeEndpointController::*;
 import PowerRail::*;
 import SidecarMainboardController::*;
@@ -167,14 +173,126 @@ interface SidecarMainboardControllerTop;
 
     method Bool fpga_to_front_io_hsc_en();
     (* prefix = "" *) method Action front_io_hsc_to_fpga_pg(Bool front_io_hsc_to_fpga_pg);
+
+    //
+    // Ignition
+    //
+
+    (* prefix = "" *) method Action s0_rsw_aux_p(Bit#(1) s0_rsw_aux_p);
+    method Bit#(1) rsw_s0_aux_dc_p();
+
+    (* prefix = "" *) method Action s1_rsw_aux_p(Bit#(1) s1_rsw_aux_p);
+    method Bit#(1) rsw_s1_aux_dc_p();
+
+    (* prefix = "" *) method Action s2_rsw_aux_p(Bit#(1) s2_rsw_aux_p);
+    method Bit#(1) rsw_s2_aux_dc_p();
+
+    (* prefix = "" *) method Action s3_rsw_aux_p(Bit#(1) s3_rsw_aux_p);
+    method Bit#(1) rsw_s3_aux_dc_p();
+
+    (* prefix = "" *) method Action s4_rsw_aux_p(Bit#(1) s4_rsw_aux_p);
+    method Bit#(1) rsw_s4_aux_dc_p();
+
+    (* prefix = "" *) method Action s5_rsw_aux_p(Bit#(1) s5_rsw_aux_p);
+    method Bit#(1) rsw_s5_aux_dc_p();
+
+    (* prefix = "" *) method Action s6_rsw_aux_p(Bit#(1) s6_rsw_aux_p);
+    method Bit#(1) rsw_s6_aux_dc_p();
+
+    (* prefix = "" *) method Action s7_rsw_aux_p(Bit#(1) s7_rsw_aux_p);
+    method Bit#(1) rsw_s7_aux_dc_p();
+
+    (* prefix = "" *) method Action s8_rsw_aux_p(Bit#(1) s8_rsw_aux_p);
+    method Bit#(1) rsw_s8_aux_dc_p();
+
+    (* prefix = "" *) method Action s9_rsw_aux_p(Bit#(1) s9_rsw_aux_p);
+    method Bit#(1) rsw_s9_aux_dc_p();
+
+    (* prefix = "" *) method Action s10_rsw_aux_p(Bit#(1) s10_rsw_aux_p);
+    method Bit#(1) rsw_s10_aux_dc_p();
+
+    (* prefix = "" *) method Action s11_rsw_aux_p(Bit#(1) s11_rsw_aux_p);
+    method Bit#(1) rsw_s11_aux_dc_p();
+
+    (* prefix = "" *) method Action s12_rsw_aux_p(Bit#(1) s12_rsw_aux_p);
+    method Bit#(1) rsw_s12_aux_dc_p();
+
+    (* prefix = "" *) method Action s13_rsw_aux_p(Bit#(1) s13_rsw_aux_p);
+    method Bit#(1) rsw_s13_aux_dc_p();
+
+    (* prefix = "" *) method Action s14_rsw_aux_p(Bit#(1) s14_rsw_aux_p);
+    method Bit#(1) rsw_s14_aux_dc_p();
+
+    (* prefix = "" *) method Action s15_rsw_aux_p(Bit#(1) s15_rsw_aux_p);
+    method Bit#(1) rsw_s15_aux_dc_p();
+
+    (* prefix = "" *) method Action s16_rsw_aux_p(Bit#(1) s16_rsw_aux_p);
+    method Bit#(1) rsw_s16_aux_dc_p();
+
+    (* prefix = "" *) method Action s17_rsw_aux_p(Bit#(1) s17_rsw_aux_p);
+    method Bit#(1) rsw_s17_aux_dc_p();
+
+    (* prefix = "" *) method Action s18_rsw_aux_p(Bit#(1) s18_rsw_aux_p);
+    method Bit#(1) rsw_s18_aux_dc_p();
+
+    (* prefix = "" *) method Action s19_rsw_aux_p(Bit#(1) s19_rsw_aux_p);
+    method Bit#(1) rsw_s19_aux_dc_p();
+
+    (* prefix = "" *) method Action s20_rsw_aux_p(Bit#(1) s20_rsw_aux_p);
+    method Bit#(1) rsw_s20_aux_dc_p();
+
+    (* prefix = "" *) method Action s21_rsw_aux_p(Bit#(1) s21_rsw_aux_p);
+    method Bit#(1) rsw_s21_aux_dc_p();
+
+    (* prefix = "" *) method Action s22_rsw_aux_p(Bit#(1) s22_rsw_aux_p);
+    method Bit#(1) rsw_s22_aux_dc_p();
+
+    (* prefix = "" *) method Action s23_rsw_aux_p(Bit#(1) s23_rsw_aux_p);
+    method Bit#(1) rsw_s23_aux_dc_p();
+
+    (* prefix = "" *) method Action s24_rsw_aux_p(Bit#(1) s24_rsw_aux_p);
+    method Bit#(1) rsw_s24_aux_dc_p();
+
+    (* prefix = "" *) method Action s25_rsw_aux_p(Bit#(1) s25_rsw_aux_p);
+    method Bit#(1) rsw_s25_aux_dc_p();
+
+    (* prefix = "" *) method Action s26_rsw_aux_p(Bit#(1) s26_rsw_aux_p);
+    method Bit#(1) rsw_s26_aux_dc_p();
+
+    (* prefix = "" *) method Action s27_rsw_aux_p(Bit#(1) s27_rsw_aux_p);
+    method Bit#(1) rsw_s27_aux_dc_p();
+
+    (* prefix = "" *) method Action s28_rsw_aux_p(Bit#(1) s28_rsw_aux_p);
+    method Bit#(1) rsw_s28_aux_dc_p();
+
+    (* prefix = "" *) method Action s29_rsw_aux_p(Bit#(1) s29_rsw_aux_p);
+    method Bit#(1) rsw_s29_aux_dc_p();
+
+    (* prefix = "" *) method Action s30_rsw_aux_p(Bit#(1) s30_rsw_aux_p);
+    method Bit#(1) rsw_s30_aux_dc_p();
+
+    (* prefix = "" *) method Action s31_rsw_aux_p(Bit#(1) s31_rsw_aux_p);
+    method Bit#(1) rsw_s31_aux_dc_p();
+
+    (* prefix = "" *) method Action ignition_psc0_to_ctrl_p(Bit#(1) ignition_psc0_to_ctrl_p);
+    method Bit#(1) ignition_ctrl_to_psc0_dc_p();
+
+    (* prefix = "" *) method Action ignition_psc1_to_ctrl_p(Bit#(1) ignition_psc1_to_ctrl_p);
+    method Bit#(1) ignition_ctrl_to_psc1_dc_p();
+
+    (* prefix = "" *) method Action ignition_rsw_b_to_ctrl_p(Bit#(1) ignition_rsw_b_to_ctrl_p);
+    method Bit#(1) ignition_ctrl_to_rsw_b_dc_p();
 endinterface
 
-module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
+module mkSidecarMainboardControllerTop
+        (SidecarMainboardControllerTop)
+            provisos (
+                NumAlias#(35, n_ignition_controllers));
     // Synchronize the default reset to the default clock.
     Clock clk_50mhz <- exposeCurrentClock();
     Reset reset_sync <- mkAsyncResetFromCR(2, clk_50mhz);
 
-    MainboardController controller <-
+    MainboardController#(n_ignition_controllers) controller <-
         mkMainboardController(defaultValue, reset_by reset_sync);
 
     //
@@ -193,6 +311,7 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
             controller.registers.tofino,
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
+            controller.registers.ignition_pages,
             reset_by reset_sync);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
@@ -208,6 +327,8 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     //
 
     ReadOnly#(Bit#(1)) clk_1hz <- mkOutputSyncFor(controller.status.clk_1hz);
+    Reg#(Bit#(1)) debug0 <- mkRegU();
+    Reg#(Bit#(1)) debug1 <- mkRegU();
 
     //
     // Clock Generator Sequencer
@@ -345,6 +466,96 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     InputReg#(Bool, 2) front_io_pg <- mkInputSync();
 
     //
+    // Ignition
+    //
+
+    // Generate five TX strobes, each with a different phase offset (0, 1, 2, 3,
+    // 4). This allows the controller tranmitters to assigned to these TX
+    // strobes and not have all links generate bit edges on same clock cycle.
+    function mk_ignition_tx_strobe(phase_offset) =
+        mkLimitStrobe(1, 5, fromInteger(phase_offset), reset_by reset_sync);
+
+    Vector#(5, Strobe#(3)) ignition_tx_strobe <-
+        mapM(mk_ignition_tx_strobe, genVector);
+
+    // Make the TX strobes free-running.
+    mapM(mkFreeRunningStrobe, ignition_tx_strobe);
+
+    // Allocate a Transceivers for the Controllers. Because multiple receiver
+    // channels share a decode and parser path it is desirable to map these on
+    // device pins which are close together.
+    Vector#(8, Transceiver) ignition_txrs_bank2 <- mkTransceivers(reset_by reset_sync);
+    Vector#(6, Transceiver) ignition_txrs_bank3_0 <- mkTransceivers(reset_by reset_sync);
+    Vector#(6, Transceiver) ignition_txrs_bank3_1 <- mkTransceivers(reset_by reset_sync);
+    Vector#(6, Transceiver) ignition_txrs_bank6_0 <- mkTransceivers(reset_by reset_sync);
+    Vector#(6, Transceiver) ignition_txrs_bank6_1 <- mkTransceivers(reset_by reset_sync);
+    Vector#(3, Transceiver) ignition_txrs_bank7 <- mkTransceivers(reset_by reset_sync);
+
+    // Allocate IO adapters for each Transceiver.
+    function mk_ignition_io_adapter(i, serialio) =
+        mkSerialIOAdapter(ignition_tx_strobe[i], serialio, reset_by reset_sync);
+
+    Vector#(8, SerialIOAdapter#(5)) ignition_io_bank2 <-
+        mapM(mk_ignition_io_adapter(0), map(toSerialIO, ignition_txrs_bank2));
+    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank3_0 <-
+        mapM(mk_ignition_io_adapter(1), map(toSerialIO, ignition_txrs_bank3_0));
+    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank3_1 <-
+        mapM(mk_ignition_io_adapter(1), map(toSerialIO, ignition_txrs_bank3_1));
+    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank6_0 <-
+        mapM(mk_ignition_io_adapter(1), map(toSerialIO, ignition_txrs_bank6_0));
+    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank6_1 <-
+        mapM(mk_ignition_io_adapter(2), map(toSerialIO, ignition_txrs_bank6_1));
+    Vector#(3, SerialIOAdapter#(5)) ignition_io_bank7 <-
+        mapM(mk_ignition_io_adapter(3), map(toSerialIO, ignition_txrs_bank7));
+
+    // Connect Transceivers to their Clients. This is done in a specific order
+    // to maintain a logical channel order in the register interface. See
+    // further down in this module how the transceiver channels map to device
+    // pins.
+    //
+    // Cubbies
+    //
+    mkConnection(controller.ignition_txrs[0], ignition_txrs_bank3_1[1]);
+    mkConnection(controller.ignition_txrs[1], ignition_txrs_bank3_1[0]);
+    mkConnection(controller.ignition_txrs[2], ignition_txrs_bank3_1[5]);
+    mkConnection(controller.ignition_txrs[3], ignition_txrs_bank3_1[4]);
+    mkConnection(controller.ignition_txrs[4], ignition_txrs_bank3_0[4]);
+    mkConnection(controller.ignition_txrs[5], ignition_txrs_bank3_1[3]);
+    mkConnection(controller.ignition_txrs[6], ignition_txrs_bank3_1[2]);
+    mkConnection(controller.ignition_txrs[7], ignition_txrs_bank3_0[5]);
+    mkConnection(controller.ignition_txrs[8], ignition_txrs_bank3_0[3]);
+    mkConnection(controller.ignition_txrs[9], ignition_txrs_bank2[6]);
+    mkConnection(controller.ignition_txrs[10], ignition_txrs_bank2[5]);
+    mkConnection(controller.ignition_txrs[11], ignition_txrs_bank2[4]);
+    mkConnection(controller.ignition_txrs[12], ignition_txrs_bank2[3]);
+    mkConnection(controller.ignition_txrs[13], ignition_txrs_bank2[2]);
+    mkConnection(controller.ignition_txrs[14], ignition_txrs_bank2[1]);
+    mkConnection(controller.ignition_txrs[15], ignition_txrs_bank2[0]);
+    mkConnection(controller.ignition_txrs[16], ignition_txrs_bank3_0[2]);
+    mkConnection(controller.ignition_txrs[17], ignition_txrs_bank3_0[1]);
+    mkConnection(controller.ignition_txrs[18], ignition_txrs_bank3_0[0]);
+    mkConnection(controller.ignition_txrs[19], ignition_txrs_bank2[7]);
+    mkConnection(controller.ignition_txrs[20], ignition_txrs_bank6_0[0]);
+    mkConnection(controller.ignition_txrs[21], ignition_txrs_bank6_0[1]);
+    mkConnection(controller.ignition_txrs[22], ignition_txrs_bank6_0[2]);
+    mkConnection(controller.ignition_txrs[23], ignition_txrs_bank6_0[3]);
+    mkConnection(controller.ignition_txrs[24], ignition_txrs_bank6_0[4]);
+    mkConnection(controller.ignition_txrs[25], ignition_txrs_bank6_0[5]);
+    mkConnection(controller.ignition_txrs[26], ignition_txrs_bank6_1[3]);
+    mkConnection(controller.ignition_txrs[27], ignition_txrs_bank6_1[2]);
+    mkConnection(controller.ignition_txrs[28], ignition_txrs_bank6_1[4]);
+    mkConnection(controller.ignition_txrs[29], ignition_txrs_bank6_1[5]);
+    mkConnection(controller.ignition_txrs[30], ignition_txrs_bank6_1[0]);
+    mkConnection(controller.ignition_txrs[31], ignition_txrs_bank6_1[1]);
+
+    //
+    // PSC 0/1, Sidecar B
+    //
+    mkConnection(controller.ignition_txrs[32], ignition_txrs_bank7[0]);
+    mkConnection(controller.ignition_txrs[33], ignition_txrs_bank7[1]);
+    mkConnection(controller.ignition_txrs[34], ignition_txrs_bank7[2]);
+
+    //
     // Interface, wiring up device signals.
     //
 
@@ -444,6 +655,176 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     // Front IO
     method fpga_to_front_io_hsc_en = front_io_en;
     method front_io_hsc_to_fpga_pg = sync(front_io_pg);
+
+    // Ignition
+    //
+    // Groups of Ignition SerDes pins are mapped on specific Transceivers in
+    // order to try and reduce routing latency and placement pressure. IO tiles
+    // in the ECP5 family seem to be placed in a single row at the "top" of the
+    // die and linear distance is used as a proxy to bundle the IO pins.
+    //
+    // Please do not change the grouping/assignment order unless data shows that
+    // the change improves placement of the design.
+    //
+    //
+    // Bank 7
+    //
+    // pin 'ignition_psc0_to_ctrl_p$tr_io' constrained to Bel 'X0/Y11/PIOC'.
+    // pin 'ignition_psc1_to_ctrl_p$tr_io' constrained to Bel 'X0/Y14/PIOC'.
+    // pin 'ignition_rsw_b_to_ctrl_p$tr_io' constrained to Bel 'X0/Y17/PIOC'.
+    //
+    method ignition_psc0_to_ctrl_p = ignition_io_bank7[0].rx;
+    method ignition_ctrl_to_psc0_dc_p = ignition_io_bank7[0].tx;
+
+    method ignition_psc1_to_ctrl_p = ignition_io_bank7[1].rx;
+    method ignition_ctrl_to_psc1_dc_p = ignition_io_bank7[1].tx;
+
+    method ignition_rsw_b_to_ctrl_p = ignition_io_bank7[2].rx;
+    method ignition_ctrl_to_rsw_b_dc_p = ignition_io_bank7[2].tx;
+
+    //
+    // Bank 6
+    //
+    // pin 's20_rsw_aux_p$tr_io' constrained to Bel 'X0/Y35/PIOC'.
+    // pin 's21_rsw_aux_p$tr_io' constrained to Bel 'X0/Y38/PIOC'.
+    // pin 's22_rsw_aux_p$tr_io' constrained to Bel 'X0/Y41/PIOC'.
+    // pin 's23_rsw_aux_p$tr_io' constrained to Bel 'X0/Y44/PIOC'.
+    // pin 's24_rsw_aux_p$tr_io' constrained to Bel 'X0/Y47/PIOC'.
+    // pin 's25_rsw_aux_p$tr_io' constrained to Bel 'X0/Y50/PIOC'.
+    //
+    method s20_rsw_aux_p = ignition_io_bank6_0[0].rx;
+    method rsw_s20_aux_dc_p = ignition_io_bank6_0[0].tx;
+
+    method s21_rsw_aux_p = ignition_io_bank6_0[1].rx;
+    method rsw_s21_aux_dc_p = ignition_io_bank6_0[1].tx;
+
+    method s22_rsw_aux_p = ignition_io_bank6_0[2].rx;
+    method rsw_s22_aux_dc_p = ignition_io_bank6_0[2].tx;
+
+    method s23_rsw_aux_p = ignition_io_bank6_0[3].rx;
+    method rsw_s23_aux_dc_p = ignition_io_bank6_0[3].tx;
+
+    method s24_rsw_aux_p = ignition_io_bank6_0[4].rx;
+    method rsw_s24_aux_dc_p = ignition_io_bank6_0[4].tx;
+
+    method s25_rsw_aux_p = ignition_io_bank6_0[5].rx;
+    method rsw_s25_aux_dc_p = ignition_io_bank6_0[5].tx;
+
+    //
+    // pin 's30_rsw_aux_p$tr_io' constrained to Bel 'X0/Y53/PIOC'.
+    // pin 's31_rsw_aux_p$tr_io' constrained to Bel 'X0/Y56/PIOC'.
+    // pin 's27_rsw_aux_p$tr_io' constrained to Bel 'X0/Y59/PIOC'.
+    // pin 's26_rsw_aux_p$tr_io' constrained to Bel 'X0/Y62/PIOC'.
+    // pin 's28_rsw_aux_p$tr_io' constrained to Bel 'X0/Y65/PIOC'.
+    // pin 's29_rsw_aux_p$tr_io' constrained to Bel 'X0/Y68/PIOC'.
+    //
+    method s30_rsw_aux_p = ignition_io_bank6_1[0].rx;
+    method rsw_s30_aux_dc_p = ignition_io_bank6_1[0].tx;
+
+    method s31_rsw_aux_p = ignition_io_bank6_1[1].rx;
+    method rsw_s31_aux_dc_p = ignition_io_bank6_1[1].tx;
+
+    method s27_rsw_aux_p = ignition_io_bank6_1[2].rx;
+    method rsw_s27_aux_dc_p = ignition_io_bank6_1[2].tx;
+
+    method s26_rsw_aux_p = ignition_io_bank6_1[3].rx;
+    method rsw_s26_aux_dc_p = ignition_io_bank6_1[3].tx;
+
+    method s28_rsw_aux_p = ignition_io_bank6_1[4].rx;
+    method rsw_s28_aux_dc_p = ignition_io_bank6_1[4].tx;
+
+    method s29_rsw_aux_p = ignition_io_bank6_1[5].rx;
+    method rsw_s29_aux_dc_p = ignition_io_bank6_1[5].tx;
+
+    //
+    // Bank 2
+    //
+    // pin 's15_rsw_aux_p$tr_io' constrained to Bel 'X90/Y11/PIOC'.
+    // pin 's14_rsw_aux_p$tr_io' constrained to Bel 'X90/Y14/PIOC'.
+    // pin 's13_rsw_aux_p$tr_io' constrained to Bel 'X90/Y17/PIOC'.
+    // pin 's12_rsw_aux_p$tr_io' constrained to Bel 'X90/Y20/PIOC'.
+    // pin 's11_rsw_aux_p$tr_io' constrained to Bel 'X90/Y23/PIOC'.
+    // pin 's10_rsw_aux_p$tr_io' constrained to Bel 'X90/Y26/PIOC'.
+    // pin 's9_rsw_aux_p$tr_io' constrained to Bel 'X90/Y29/PIOC'.
+    // pin 's19_rsw_aux_p$tr_io' constrained to Bel 'X90/Y32/PIOC'.
+    //
+    method s15_rsw_aux_p = ignition_io_bank2[0].rx;
+    method rsw_s15_aux_dc_p = ignition_io_bank2[0].tx;
+
+    method s14_rsw_aux_p = ignition_io_bank2[1].rx;
+    method rsw_s14_aux_dc_p = ignition_io_bank2[1].tx;
+
+    method s13_rsw_aux_p = ignition_io_bank2[2].rx;
+    method rsw_s13_aux_dc_p = ignition_io_bank2[2].tx;
+
+    method s12_rsw_aux_p = ignition_io_bank2[3].rx;
+    method rsw_s12_aux_dc_p = ignition_io_bank2[3].tx;
+
+    method s11_rsw_aux_p = ignition_io_bank2[4].rx;
+    method rsw_s11_aux_dc_p = ignition_io_bank2[4].tx;
+
+    method s10_rsw_aux_p = ignition_io_bank2[5].rx;
+    method rsw_s10_aux_dc_p = ignition_io_bank2[5].tx;
+
+    method s9_rsw_aux_p = ignition_io_bank2[6].rx;
+    method rsw_s9_aux_dc_p = ignition_io_bank2[6].tx;
+
+    method s19_rsw_aux_p = ignition_io_bank2[7].rx;
+    method rsw_s19_aux_dc_p = ignition_io_bank2[7].tx;
+
+    //
+    // Bank 3
+    //
+    // pin 's18_rsw_aux_p$tr_io' constrained to Bel 'X90/Y35/PIOC'.
+    // pin 's17_rsw_aux_p$tr_io' constrained to Bel 'X90/Y38/PIOC'.
+    // pin 's16_rsw_aux_p$tr_io' constrained to Bel 'X90/Y41/PIOC'.
+    // pin 's8_rsw_aux_p$tr_io' constrained to Bel 'X90/Y44/PIOC'.
+    // pin 's4_rsw_aux_p$tr_io' constrained to Bel 'X90/Y47/PIOC'.
+    // pin 's7_rsw_aux_p$tr_io' constrained to Bel 'X90/Y50/PIOC'.
+    //
+    method s18_rsw_aux_p = ignition_io_bank3_0[0].rx;
+    method rsw_s18_aux_dc_p = ignition_io_bank3_0[0].tx;
+
+    method s17_rsw_aux_p = ignition_io_bank3_0[1].rx;
+    method rsw_s17_aux_dc_p = ignition_io_bank3_0[1].tx;
+
+    method s16_rsw_aux_p = ignition_io_bank3_0[2].rx;
+    method rsw_s16_aux_dc_p = ignition_io_bank3_0[2].tx;
+
+    method s8_rsw_aux_p = ignition_io_bank3_0[3].rx;
+    method rsw_s8_aux_dc_p = ignition_io_bank3_0[3].tx;
+
+    method s4_rsw_aux_p = ignition_io_bank3_0[4].rx;
+    method rsw_s4_aux_dc_p = ignition_io_bank3_0[4].tx;
+
+    method s7_rsw_aux_p = ignition_io_bank3_0[5].rx;
+    method rsw_s7_aux_dc_p = ignition_io_bank3_0[5].tx;
+
+    //
+    // pin 's1_rsw_aux_p$tr_io' constrained to Bel 'X90/Y53/PIOC'.
+    // pin 's0_rsw_aux_p$tr_io' constrained to Bel 'X90/Y56/PIOC'.
+    // pin 's6_rsw_aux_p$tr_io' constrained to Bel 'X90/Y59/PIOC'.
+    // pin 's5_rsw_aux_p$tr_io' constrained to Bel 'X90/Y62/PIOC'.
+    // pin 's3_rsw_aux_p$tr_io' constrained to Bel 'X90/Y65/PIOC'.
+    // pin 's2_rsw_aux_p$tr_io' constrained to Bel 'X90/Y68/PIOC'.
+    //
+    method s1_rsw_aux_p = ignition_io_bank3_1[0].rx;
+    method rsw_s1_aux_dc_p = ignition_io_bank3_1[0].tx;
+
+    method s0_rsw_aux_p = ignition_io_bank3_1[1].rx;
+    method rsw_s0_aux_dc_p = ignition_io_bank3_1[1].tx;
+
+    method s6_rsw_aux_p = ignition_io_bank3_1[2].rx;
+    method rsw_s6_aux_dc_p = ignition_io_bank3_1[2].tx;
+
+    method s5_rsw_aux_p = ignition_io_bank3_1[3].rx;
+    method rsw_s5_aux_dc_p = ignition_io_bank3_1[3].tx;
+
+    method s3_rsw_aux_p = ignition_io_bank3_1[4].rx;
+    method rsw_s3_aux_dc_p = ignition_io_bank3_1[4].tx;
+
+    method s2_rsw_aux_p = ignition_io_bank3_1[5].rx;
+    method rsw_s2_aux_dc_p = ignition_io_bank3_1[5].tx;
 endmodule
 
 (* default_clock_osc = "clk_50m_fpga_refclk",
@@ -477,6 +858,8 @@ interface SidecarMainboardControllerTopRevA;
     //
 
     method Bit#(1) fpga_led0();
+    method Bit#(1) fpga_debug0();
+    method Bit#(1) fpga_debug1();
 
     //
     // Tofino
@@ -603,6 +986,115 @@ interface SidecarMainboardControllerTopRevA;
 
     method Bool fpga_to_front_io_hsc_en();
     (* prefix = "" *) method Action front_io_hsc_to_fpga_pg(Bool front_io_hsc_to_fpga_pg);
+
+    //
+    // Ignition
+    //
+
+    (* prefix = "" *) method Action s0_rsw_aux_p(Bit#(1) s0_rsw_aux_p);
+    method Bit#(1) rsw_s0_aux_dc_p();
+
+    (* prefix = "" *) method Action s1_rsw_aux_p(Bit#(1) s1_rsw_aux_p);
+    method Bit#(1) rsw_s1_aux_dc_p();
+
+    (* prefix = "" *) method Action s2_rsw_aux_p(Bit#(1) s2_rsw_aux_p);
+    method Bit#(1) rsw_s2_aux_dc_p();
+
+    (* prefix = "" *) method Action s3_rsw_aux_p(Bit#(1) s3_rsw_aux_p);
+    method Bit#(1) rsw_s3_aux_dc_p();
+
+    (* prefix = "" *) method Action s4_rsw_aux_p(Bit#(1) s4_rsw_aux_p);
+    method Bit#(1) rsw_s4_aux_dc_p();
+
+    (* prefix = "" *) method Action s5_rsw_aux_p(Bit#(1) s5_rsw_aux_p);
+    method Bit#(1) rsw_s5_aux_dc_p();
+
+    (* prefix = "" *) method Action s6_rsw_aux_p(Bit#(1) s6_rsw_aux_p);
+    method Bit#(1) rsw_s6_aux_dc_p();
+
+    (* prefix = "" *) method Action s7_rsw_aux_p(Bit#(1) s7_rsw_aux_p);
+    method Bit#(1) rsw_s7_aux_dc_p();
+
+    (* prefix = "" *) method Action s8_rsw_aux_p(Bit#(1) s8_rsw_aux_p);
+    method Bit#(1) rsw_s8_aux_dc_p();
+
+    (* prefix = "" *) method Action s9_rsw_aux_p(Bit#(1) s9_rsw_aux_p);
+    method Bit#(1) rsw_s9_aux_dc_p();
+
+    (* prefix = "" *) method Action s10_rsw_aux_p(Bit#(1) s10_rsw_aux_p);
+    method Bit#(1) rsw_s10_aux_dc_p();
+
+    (* prefix = "" *) method Action s11_rsw_aux_p(Bit#(1) s11_rsw_aux_p);
+    method Bit#(1) rsw_s11_aux_dc_p();
+
+    (* prefix = "" *) method Action s12_rsw_aux_p(Bit#(1) s12_rsw_aux_p);
+    method Bit#(1) rsw_s12_aux_dc_p();
+
+    (* prefix = "" *) method Action s13_rsw_aux_p(Bit#(1) s13_rsw_aux_p);
+    method Bit#(1) rsw_s13_aux_dc_p();
+
+    (* prefix = "" *) method Action s14_rsw_aux_p(Bit#(1) s14_rsw_aux_p);
+    method Bit#(1) rsw_s14_aux_dc_p();
+
+    (* prefix = "" *) method Action s15_rsw_aux_p(Bit#(1) s15_rsw_aux_p);
+    method Bit#(1) rsw_s15_aux_dc_p();
+
+    (* prefix = "" *) method Action s16_rsw_aux_p(Bit#(1) s16_rsw_aux_p);
+    method Bit#(1) rsw_s16_aux_dc_p();
+
+    (* prefix = "" *) method Action s17_rsw_aux_p(Bit#(1) s17_rsw_aux_p);
+    method Bit#(1) rsw_s17_aux_dc_p();
+
+    (* prefix = "" *) method Action s18_rsw_aux_p(Bit#(1) s18_rsw_aux_p);
+    method Bit#(1) rsw_s18_aux_dc_p();
+
+    (* prefix = "" *) method Action s19_rsw_aux_p(Bit#(1) s19_rsw_aux_p);
+    method Bit#(1) rsw_s19_aux_dc_p();
+
+    (* prefix = "" *) method Action s20_rsw_aux_p(Bit#(1) s20_rsw_aux_p);
+    method Bit#(1) rsw_s20_aux_dc_p();
+
+    (* prefix = "" *) method Action s21_rsw_aux_p(Bit#(1) s21_rsw_aux_p);
+    method Bit#(1) rsw_s21_aux_dc_p();
+
+    (* prefix = "" *) method Action s22_rsw_aux_p(Bit#(1) s22_rsw_aux_p);
+    method Bit#(1) rsw_s22_aux_dc_p();
+
+    (* prefix = "" *) method Action s23_rsw_aux_p(Bit#(1) s23_rsw_aux_p);
+    method Bit#(1) rsw_s23_aux_dc_p();
+
+    (* prefix = "" *) method Action s24_rsw_aux_p(Bit#(1) s24_rsw_aux_p);
+    method Bit#(1) rsw_s24_aux_dc_p();
+
+    (* prefix = "" *) method Action s25_rsw_aux_p(Bit#(1) s25_rsw_aux_p);
+    method Bit#(1) rsw_s25_aux_dc_p();
+
+    (* prefix = "" *) method Action s26_rsw_aux_p(Bit#(1) s26_rsw_aux_p);
+    method Bit#(1) rsw_s26_aux_dc_p();
+
+    (* prefix = "" *) method Action s27_rsw_aux_p(Bit#(1) s27_rsw_aux_p);
+    method Bit#(1) rsw_s27_aux_dc_p();
+
+    (* prefix = "" *) method Action s28_rsw_aux_p(Bit#(1) s28_rsw_aux_p);
+    method Bit#(1) rsw_s28_aux_dc_p();
+
+    (* prefix = "" *) method Action s29_rsw_aux_p(Bit#(1) s29_rsw_aux_p);
+    method Bit#(1) rsw_s29_aux_dc_p();
+
+    (* prefix = "" *) method Action s30_rsw_aux_p(Bit#(1) s30_rsw_aux_p);
+    method Bit#(1) rsw_s30_aux_dc_p();
+
+    (* prefix = "" *) method Action s31_rsw_aux_p(Bit#(1) s31_rsw_aux_p);
+    method Bit#(1) rsw_s31_aux_dc_p();
+
+    (* prefix = "" *) method Action ignition_psc0_to_ctrl_p(Bit#(1) ignition_psc0_to_ctrl_p);
+    method Bit#(1) ignition_ctrl_to_psc0_dc_p();
+
+    (* prefix = "" *) method Action ignition_psc1_to_ctrl_p(Bit#(1) ignition_psc1_to_ctrl_p);
+    method Bit#(1) ignition_ctrl_to_psc1_dc_p();
+
+    (* prefix = "" *) method Action ignition_rsw_b_to_ctrl_p(Bit#(1) ignition_rsw_b_to_ctrl_p);
+    method Bit#(1) ignition_ctrl_to_rsw_b_dc_p();
 endinterface
 
 (* default_clock_osc = "clk_50m_fpga_refclk",
@@ -617,6 +1109,8 @@ module mkSidecarMainboardControllerRevA (SidecarMainboardControllerTopRevA);
 
     method fpga_led0 = _top.fpga_led0;
     method tf_pg_led = _top.tf_pg_led;
+    method fpga_debug0 = _top.fpga_debug0;
+    method fpga_debug1 = _top.fpga_debug1;
 
     method fpga_to_tf_core_rst_l = _top.fpga_to_tf_core_rst_l;
     method fpga_to_tf_pwron_rst_l = _top.fpga_to_tf_pwron_rst_l;
@@ -685,6 +1179,111 @@ module mkSidecarMainboardControllerRevA (SidecarMainboardControllerTopRevA);
 
     method fpga_to_front_io_hsc_en = _top.fpga_to_front_io_hsc_en;
     method front_io_hsc_to_fpga_pg = _top.front_io_hsc_to_fpga_pg;
+
+    method s0_rsw_aux_p = _top.s0_rsw_aux_p;
+    method rsw_s0_aux_dc_p = _top.rsw_s0_aux_dc_p;
+
+    method s1_rsw_aux_p = _top.s1_rsw_aux_p;
+    method rsw_s1_aux_dc_p = _top.rsw_s1_aux_dc_p;
+
+    method s2_rsw_aux_p = _top.s2_rsw_aux_p;
+    method rsw_s2_aux_dc_p = _top.rsw_s2_aux_dc_p;
+
+    method s3_rsw_aux_p = _top.s3_rsw_aux_p;
+    method rsw_s3_aux_dc_p = _top.rsw_s3_aux_dc_p;
+
+    method s4_rsw_aux_p = _top.s4_rsw_aux_p;
+    method rsw_s4_aux_dc_p = _top.rsw_s4_aux_dc_p;
+
+    method s5_rsw_aux_p = _top.s5_rsw_aux_p;
+    method rsw_s5_aux_dc_p = _top.rsw_s5_aux_dc_p;
+
+    method s6_rsw_aux_p = _top.s6_rsw_aux_p;
+    method rsw_s6_aux_dc_p = _top.rsw_s6_aux_dc_p;
+
+    method s7_rsw_aux_p = _top.s7_rsw_aux_p;
+    method rsw_s7_aux_dc_p = _top.rsw_s7_aux_dc_p;
+
+    method s8_rsw_aux_p = _top.s8_rsw_aux_p;
+    method rsw_s8_aux_dc_p = _top.rsw_s8_aux_dc_p;
+
+    method s9_rsw_aux_p = _top.s9_rsw_aux_p;
+    method rsw_s9_aux_dc_p = _top.rsw_s9_aux_dc_p;
+
+    method s10_rsw_aux_p = _top.s10_rsw_aux_p;
+    method rsw_s10_aux_dc_p = _top.rsw_s10_aux_dc_p;
+
+    method s11_rsw_aux_p = _top.s11_rsw_aux_p;
+    method rsw_s11_aux_dc_p = _top.rsw_s11_aux_dc_p;
+
+    method s12_rsw_aux_p = _top.s12_rsw_aux_p;
+    method rsw_s12_aux_dc_p = _top.rsw_s12_aux_dc_p;
+
+    method s13_rsw_aux_p = _top.s13_rsw_aux_p;
+    method rsw_s13_aux_dc_p = _top.rsw_s13_aux_dc_p;
+
+    method s14_rsw_aux_p = _top.s14_rsw_aux_p;
+    method rsw_s14_aux_dc_p = _top.rsw_s14_aux_dc_p;
+
+    method s15_rsw_aux_p = _top.s15_rsw_aux_p;
+    method rsw_s15_aux_dc_p = _top.rsw_s15_aux_dc_p;
+
+    method s16_rsw_aux_p = _top.s16_rsw_aux_p;
+    method rsw_s16_aux_dc_p = _top.rsw_s16_aux_dc_p;
+
+    method s17_rsw_aux_p = _top.s17_rsw_aux_p;
+    method rsw_s17_aux_dc_p = _top.rsw_s17_aux_dc_p;
+
+    method s18_rsw_aux_p = _top.s18_rsw_aux_p;
+    method rsw_s18_aux_dc_p = _top.rsw_s18_aux_dc_p;
+
+    method s19_rsw_aux_p = _top.s19_rsw_aux_p;
+    method rsw_s19_aux_dc_p = _top.rsw_s19_aux_dc_p;
+
+    method s20_rsw_aux_p = _top.s20_rsw_aux_p;
+    method rsw_s20_aux_dc_p = _top.rsw_s20_aux_dc_p;
+
+    method s21_rsw_aux_p = _top.s21_rsw_aux_p;
+    method rsw_s21_aux_dc_p = _top.rsw_s21_aux_dc_p;
+
+    method s22_rsw_aux_p = _top.s22_rsw_aux_p;
+    method rsw_s22_aux_dc_p = _top.rsw_s22_aux_dc_p;
+
+    method s23_rsw_aux_p = _top.s23_rsw_aux_p;
+    method rsw_s23_aux_dc_p = _top.rsw_s23_aux_dc_p;
+
+    method s24_rsw_aux_p = _top.s24_rsw_aux_p;
+    method rsw_s24_aux_dc_p = _top.rsw_s24_aux_dc_p;
+
+    method s25_rsw_aux_p = _top.s25_rsw_aux_p;
+    method rsw_s25_aux_dc_p = _top.rsw_s25_aux_dc_p;
+
+    method s26_rsw_aux_p = _top.s26_rsw_aux_p;
+    method rsw_s26_aux_dc_p = _top.rsw_s26_aux_dc_p;
+
+    method s27_rsw_aux_p = _top.s27_rsw_aux_p;
+    method rsw_s27_aux_dc_p = _top.rsw_s27_aux_dc_p;
+
+    method s28_rsw_aux_p = _top.s28_rsw_aux_p;
+    method rsw_s28_aux_dc_p = _top.rsw_s28_aux_dc_p;
+
+    method s29_rsw_aux_p = _top.s29_rsw_aux_p;
+    method rsw_s29_aux_dc_p = _top.rsw_s29_aux_dc_p;
+
+    method s30_rsw_aux_p = _top.s30_rsw_aux_p;
+    method rsw_s30_aux_dc_p = _top.rsw_s30_aux_dc_p;
+
+    method s31_rsw_aux_p = _top.s31_rsw_aux_p;
+    method rsw_s31_aux_dc_p = _top.rsw_s31_aux_dc_p;
+
+    method ignition_psc0_to_ctrl_p = _top.ignition_psc0_to_ctrl_p;
+    method ignition_ctrl_to_psc0_dc_p = _top.ignition_ctrl_to_psc0_dc_p;
+
+    method ignition_psc1_to_ctrl_p = _top.ignition_psc1_to_ctrl_p;
+    method ignition_ctrl_to_psc1_dc_p = _top.ignition_ctrl_to_psc1_dc_p;
+
+    method ignition_rsw_b_to_ctrl_p = _top.ignition_rsw_b_to_ctrl_p;
+    method ignition_ctrl_to_rsw_b_dc_p = _top.ignition_ctrl_to_rsw_b_dc_p;
 endmodule
 
 endpackage

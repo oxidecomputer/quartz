@@ -362,4 +362,79 @@ addrmap sidecar_mainboard_controller {
             desc = "Field indicating the type of I2C error occured";
         } ERROR_DETAILS[1] = 0;
     } TOFINO_DEBUG_PORT_STATE;
+
+    reg {
+        name = "Ignition Controllers Count";
+
+        field {
+            desc = "The number of present/active Ignition Controllers";
+            sw = r;
+            hw = r;
+        } COUNT[7:0];
+    } IGNITION_CONTROLLERS_COUNT @ 0x300;
+
+    reg {
+        name = "Ignition Targets Present 0";
+        field {
+            desc = "Byte 0 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY0[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT0;
+    reg {
+        name = "Ignition Targets Present 1";
+        field {
+            desc = "Byte 1 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY1[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT1;
+    reg {
+        name = "Ignition Targets Present 2";
+        field {
+            desc = "Byte 2 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY2[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT2;
+    reg {
+        name = "Ignition Targets Present 3";
+        field {
+            desc = "Byte 3 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY3[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT3;
+    reg {
+        name = "Ignition Targets Present 4";
+        field {
+            desc = "Byte 4 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY4[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT4;
+    reg {
+        name = "Ignition Targets Present 5";
+        field {
+            desc = "Byte 5 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY5[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT5;
+    reg {
+        name = "Ignition Targets Present 6";
+        field {
+            desc = "Byte 6 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY6[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT6;
+    reg {
+        name = "Ignition Targets Present 7";
+        field {
+            desc = "Byte 7 of Ignition Target Present summary";
+            sw = r;
+            hw = w;
+        } PRESENT_SUMMARY7[7:0] = 0;
+    } IGNITION_TARGETS_PRESENT7;
 };

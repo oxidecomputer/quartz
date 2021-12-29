@@ -5,6 +5,9 @@ bluespec_library('Board',
         'Board.bsv',
     ],
     deps = [
+        '//hdl:IOSync',
+        'cobalt//hdl:InitialReset',
+        'cobalt//hdl:TestUtils',
         # TODO (arjen): error on this: '//vnd/cobalt/hdl/interfaces:ICE40',
         'cobalt//hdl/interfaces:ICE40',
     ])
@@ -48,11 +51,11 @@ bluespec_verilog('IgnitionletTargetTop',
     modules = [
         'mkIgnitionletTargetWithPowerButton',
         'mkIgnitionletTargetWithResetButton',
-        'mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators',
+        'mkIgnitionletTargetDebug',
     ],
     deps = [
-        '//hdl/ignition/target:IgnitionTarget',
-        '//hdl/ignition/target:IgnitionTargetWrapper',
+        '//hdl/ignition:Target',
+        '//hdl/ignition:TargetWrapper',
     ])
 
 yosys_design('ignitionlet_target_power_button_top',
@@ -93,22 +96,45 @@ nextpnr_ice40_bitstream('ignitionlet_target_reset_button',
         ':ignitionlet_target_reset_button_top',
     ])
 
-yosys_design('ignitionlet_target_reset_button_aux_loopback_indicators_top',
-    top_module = 'mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators',
+bluespec_verilog('TransceiverDebugTop',
+    top = 'TransceiverDebugTop.bsv',
+    modules = [
+        'mkTransceiverDebugTop',
+    ],
+    deps = [
+        ':Board',
+        '//hdl:IOSync',
+        '//hdl/ignition:Transceiver',
+        'cobalt//hdl:InitialReset',
+        'cobalt//hdl/interfaces:ICE40',
+    ],
+    local = {
+        'bsc_flags': [
+            # The folling script is needed to fix the inout syntax used in the
+            # generated Verilog.
+            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+        ],
+    })
+
+yosys_design('transceiver_debug_top',
+    top_module = 'mkTransceiverDebugTop',
     sources = [
-        ':IgnitionletTargetTop#mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators',
+        ':TransceiverDebugTop#mkTransceiverDebugTop',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../vnd/cobalt/hdl/InitialReset.v',
     ],
     deps = [
-        ':IgnitionletTargetTop',
+        ':TransceiverDebugTop',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignitionlet_target_reset_button_aux_loopback_indicators',
+nextpnr_ice40_bitstream('transceiver_debug',
     env = 'ignition_target_rev_a',
-    design = ':ignitionlet_target_reset_button_aux_loopback_indicators_top#' \
-                'ignitionlet_target_reset_button_aux_loopback_indicators_top.json',
+    design = ':transceiver_debug_top#transceiver_debug_top.json',
     deps = [
-        ':ignitionlet_target_reset_button_aux_loopback_indicators_top',
-    ])
+        ':transceiver_debug_top',
+    ],
+    local = {
+        'nextpnr_constraints':
+            ROOT + '/hdl/ignition/ignition_target_rev_a_debug.pcf',
+    })

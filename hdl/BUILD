@@ -18,3 +18,8 @@ bluespec_library('PowerRail',
         'cobalt//hdl:Countdown',
         'cobalt//hdl:Strobe',
     ])
+
+bluespec_library('SettableCRC',
+    sources = [
+        'SettableCRC.bsv',
+    ])

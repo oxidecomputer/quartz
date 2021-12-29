@@ -1,0 +1,67 @@
+[*]
+[*] GTKWave Analyzer v3.3.107 (w)1999-2020 BSI
+[*] Thu Oct 27 03:13:34 2022
+[*]
+[dumpfile] "/Users/arjen/oxidecomputer/quartz/build/vcd/TargetTransceiverTests_mkStartUpLink0PolarityInvertedLink1PolarityInvertedTest.vcd"
+[dumpfile_mtime] "Thu Oct 27 03:09:17 2022"
+[dumpfile_size] 45502
+[savefile] "/Users/arjen/oxidecomputer/quartz/hdl/ignition/test/TargetTransceiverTests.gtkw"
+[timestart] 0
+[size] 3440 1387
+[pos] -1 -1
+*-7.000000 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] main.
+[treeopen] main.top.
+[sst_width] 638
+[signals_width] 494
+[sst_expanded] 1
+[sst_vpaned_height] 434
+@28
+main.top.link_rx_reset_or_fetch_select
+main.top.link_rx_decode_done
+main.top.link_rx_parse_value
+@200
+-
+-Shared
+@22
+main.top.link_rx_parser_state[7:0]
+main.top.link_rx_crc_rRemainder[7:0]
+@200
+-
+-Channel 0
+@28
+main.top.link_rx_channels_0_reset_receiver
+main.top.link_rx_channels_0_aligned
+main.top.link_rx_channels_0_locked
+main.top.link_rx_channels_0_polarity_inverted
+@24
+main.top.link_rx_channels_0_phase[1:0]
+@28
+main.top.link_rx_channels_0_character_accepted
+@22
+main.top.link_rx_channels_0_parser_state[7:0]
+main.top.link_rx_channels_0_running_checksum[7:0]
+@28
+main.top.link_rx_channels_0_character_valid_history[11:0]
+main.top.link_rx_channels_0_idle_set_valid_history[3:0]
+@200
+-
+-Channel 1
+@28
+main.top.link_rx_channels_1_reset_receiver
+main.top.link_rx_channels_1_aligned
+main.top.link_rx_channels_1_locked
+main.top.link_rx_channels_1_polarity_inverted
+@24
+main.top.link_rx_channels_1_phase[1:0]
+@28
+main.top.link_rx_channels_1_character_accepted
+@22
+main.top.link_rx_channels_1_parser_state[7:0]
+main.top.link_rx_channels_1_running_checksum[7:0]
+@28
+main.top.link_rx_channels_1_character_valid_history[11:0]
+@29
+main.top.link_rx_channels_1_idle_set_valid_history[3:0]
+[pattern_trace] 1
+[pattern_trace] 0
