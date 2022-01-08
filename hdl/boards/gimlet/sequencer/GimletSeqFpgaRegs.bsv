@@ -50,6 +50,29 @@ typedef struct {
     Bit#(1)            fantimeout;  // bit 0
 } Ifr deriving (Bits, Eq, FShow);
 
+instance Bitwise#(Ifr);
+    function Ifr \& (Ifr i1, Ifr i2) =
+        unpack(pack(i1) & pack(i2));
+    function Ifr \| (Ifr i1, Ifr i2) =
+        unpack(pack(i1) | pack(i2));
+    function Ifr \^ (Ifr i1, Ifr i2) =
+        unpack(pack(i1) ^ pack(i2));
+    function Ifr \~^ (Ifr i1, Ifr i2) =
+        unpack(pack(i1) ~^ pack(i2));
+    function Ifr \^~ (Ifr i1, Ifr i2) =
+        unpack(pack(i1) ^~ pack(i2));
+    function Ifr invert (Ifr i) =
+        unpack(invert(pack(i)));
+    function Ifr \<< (Ifr i, t x) =
+        error("Left shift operation is not supported with type Ifr");
+    function Ifr \>> (Ifr i, t x) =
+        error("Right shift operation is not supported with type Ifr");
+    function Bit#(1) msb (Ifr i) =
+        error("msb operation is not supported with type Ifr");
+    function Bit#(1) lsb (Ifr i) =
+        error("lsb operation is not supported with type Ifr");
+endinstance
+
 Integer ifrOffset = 5;
 
 // Register IER definitions

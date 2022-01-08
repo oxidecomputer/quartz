@@ -1,10 +1,13 @@
 package GimletRegs;
 // BSV imports
+import DReg::*;
 import GetPut::*;
+import Connectable::*;
 import ClientServer::*;
 import ConfigReg::*;
 import StmtFSM::*;
 // Oxide imports
+import IrqBlock::*;
 import RegCommon::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
@@ -20,6 +23,7 @@ interface GimletRegIF;
     interface A1RegsReverse a1_block;
     interface A0RegsReverse a0_block;
     interface MiscRegsReverse misc_block;
+    method Bit#(1) seq_to_sp_interrupt;
 endinterface
 
 module mkGimletRegs(GimletRegIF);
@@ -65,6 +69,12 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(AmdOutStatus) amd_out_status <- mkReg(unpack(0)); // amdOutStatusOffset
     ConfigReg#(AmdDbgOut) amd_dbg_out <- mkReg(unpack(0)); // amdDbgOutOffset
 
+    ConfigReg#(Ifr) irq_en_reg <- mkReg(unpack(0));
+    ConfigReg#(Ifr) irq_cause_reg <- mkReg(unpack(0));
+    ConfigReg#(Ifr) irq_dbg_flags <- mkDReg(unpack(0));
+    ConfigReg#(Ifr) irq_clr_flags <- mkDReg(unpack(0));
+    ConfigReg#(Ifr) irq_cause_raw <- mkDReg(unpack(0));
+
     PulseWire do_read <- mkPulseWire();
     PulseWire do_write <- mkPulseWire();
     PulseWire do_bitset <- mkPulseWire();
@@ -95,6 +105,12 @@ module mkGimletRegs(GimletRegIF);
     Wire#(MiscOutPinsStruct) dbg_misc_outputs <- mkDWire(unpack(0));
     RWire#(MiscOutPinsStruct) cur_misc_outputs <- mkRWire();
 
+    IRQBlock#(Ifr) irq_block <- mkIRQBlock();
+
+    mkConnection(irq_en_reg, irq_block.enables);
+    mkConnection(irq_dbg_flags, irq_block.debug);
+    mkConnection(irq_clr_flags, irq_block.clear);
+    mkConnection(irq_cause_raw, irq_block.cause_raw);
 
     // SW readbacks
     (* fire_when_enabled, no_implicit_conditions *)
@@ -105,6 +121,8 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(id2Offset) : readdata <= tagged Valid (pack(id2));
             fromInteger(id3Offset) : readdata <= tagged Valid (pack(id3));
             fromInteger(scrtchpadOffset) : readdata <= tagged Valid (pack(scratchpad));
+            fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
+            fromInteger(ifrOffset) : readdata <= tagged Valid (pack(irq_block.cause_reg));
             fromInteger(pwrctrlOffset): readdata <= tagged Valid (pack(power_control));
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
@@ -140,6 +158,20 @@ module mkGimletRegs(GimletRegIF);
     // Register updates, note software writes take precedence for same-clock cycle hw and software updates on read/write registers
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_updates; 
+        // IRQ Enable works like a normal register
+        irq_en_reg <= reg_update(irq_en_reg, irq_en_reg, address, ierOffset, operation, writedata);
+        // IRQ Cause does some special things:
+        if (address == fromInteger(ifrOffset)) begin
+            // Normal does nothing?
+            // Bitset sets debug registers
+            if (operation == BITSET) begin
+                irq_dbg_flags <= unpack(writedata);
+            // Bitclear clears bits as expected
+            end else if  (operation == BITCLEAR) begin
+                irq_clr_flags <= unpack(writedata);
+            end
+        end
+
         scratchpad <= reg_update(scratchpad, scratchpad, address, scrtchpadOffset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
         power_control <= reg_update(power_control, power_control, address, pwrctrlOffset, operation, writedata);
@@ -344,6 +376,8 @@ module mkGimletRegs(GimletRegIF);
             return dbgCtrl_reg.reg_ctrl_en;
         endmethod
     endinterface
+
+    method seq_to_sp_interrupt = irq_block.irq_pin;
 
 endmodule
 

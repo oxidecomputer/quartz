@@ -46,6 +46,8 @@ endinterface
 
 interface SeqOutputPins;
     (* prefix = "" *)
+    method Bit#(1) seq_to_sp_interrupt;
+    (* prefix = "" *)
     interface NicOutputPinsRawSource nic_pins;
     (* prefix = "" *)
     interface EarlyOutputPinsRawSource early_pins;
@@ -199,6 +201,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     endinterface
 
     interface SeqOutputPins out_pins;
+        method seq_to_sp_interrupt = regs.seq_to_sp_interrupt;
         interface nic_pins = nic_block.out_pins;
         interface early_pins = early_block.out_pins;
         interface a1_pins = a1_block.out_pins;
@@ -243,14 +246,36 @@ function Stmt spiWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),V
         endaction
         action
             let rx <- bfm.response.get();
-            // $display(rx[0]);
-            // $display(rx[1]);
-            // $display(rx[2]);
-            // $display(rx[3]);
-            // $display(rx[4]);
-            // $display(rx[5]);
-            // $display(rx[6]);
-            // $display(rx[7]);
+        endaction
+    endseq;
+endfunction
+function Stmt spiBitSet(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+    return seq
+         action
+            Vector#(4, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(BITSET)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack(addr);
+            tx[3] = unpack(data);  
+            bfm.request.put(tx);
+        endaction
+        action
+            let rx <- bfm.response.get();
+        endaction
+    endseq;
+endfunction
+function Stmt spiBitClear(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+    return seq
+         action
+            Vector#(4, Bit#(8)) tx =  newVector();
+            tx[0] = unpack(zeroExtend(pack(BITCLEAR)));
+            tx[1] = unpack('h00);
+            tx[2] = unpack(addr);
+            tx[3] = unpack(data);  
+            bfm.request.put(tx);
+        endaction
+        action
+            let rx <- bfm.response.get();
         endaction
     endseq;
 endfunction
@@ -396,6 +421,11 @@ module mkGimletTestTop(Empty);
         action
             $display("Design Up");
         endaction
+        delay(3000);
+        // Make interrupts go
+        spiWrite('h06, 'hff, controller.bfm);  // enable all interrupts
+        spiBitSet('h05, 'h01, controller.bfm);  // use debug to fire an interrupt
+        spiBitClear('h05, 'h01, controller.bfm);  // use bitclear to clear pending interrupt
         delay(3000);
         // action
         //     Vector#(8, Bit#(8)) tx =  newVector();
