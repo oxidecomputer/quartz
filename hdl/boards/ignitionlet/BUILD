@@ -46,17 +46,18 @@ nextpnr_ice40_bitstream('ignitionlet_sequencer_blinky',
 bluespec_verilog('IgnitionletTargetTop',
     top = 'IgnitionletTargetTop.bsv',
     modules = [
-        'mkIgnitionletTarget',
+        'mkIgnitionletTargetWithPowerButton',
+        'mkIgnitionletTargetWithResetButton',
     ],
     deps = [
         '//hdl/ignition/target:IgnitionTarget',
         '//hdl/ignition/target:IgnitionTargetWrapper',
     ])
 
-yosys_design('ignitionlet_target_top',
-    top_module = 'mkIgnitionletTarget',
+yosys_design('ignitionlet_target_power_button_top',
+    top_module = 'mkIgnitionletTargetWithPowerButton',
     sources = [
-        ':IgnitionletTargetTop#mkIgnitionletTarget',
+        ':IgnitionletTargetTop#mkIgnitionletTargetWithPowerButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../vnd/cobalt/hdl/InitialReset.v',
     ],
@@ -65,9 +66,28 @@ yosys_design('ignitionlet_target_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignitionlet_target',
+nextpnr_ice40_bitstream('ignitionlet_target_power_button',
     env = 'ignitionlet_target',
-    design = ':ignitionlet_target_top#ignitionlet_target_top.json',
+    design = ':ignitionlet_target_power_button_top#ignitionlet_target_power_button_top.json',
     deps = [
-        ':ignitionlet_target_top',
+        ':ignitionlet_target_power_button_top',
+    ])
+
+yosys_design('ignitionlet_target_reset_button_top',
+    top_module = 'mkIgnitionletTargetWithResetButton',
+    sources = [
+        ':IgnitionletTargetTop#mkIgnitionletTargetWithResetButton',
+        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../../vnd/cobalt/hdl/InitialReset.v',
+    ],
+    deps = [
+        ':IgnitionletTargetTop',
+        'cobalt//vnd/bluespec:Verilog.v',
+    ])
+
+nextpnr_ice40_bitstream('ignitionlet_target_reset_button',
+    env = 'ignitionlet_target',
+    design = ':ignitionlet_target_reset_button_top#ignitionlet_target_reset_button_top.json',
+    deps = [
+        ':ignitionlet_target_reset_button_top',
     ])

@@ -21,7 +21,7 @@ import SyncBits::*;
 
 
 module mkIgnitionTargetIOAndResetWrapper
-        #(IgnitionTargetParameters app_parameters) (IgnitionletTarget);
+        #(Parameters parameters) (IgnitionletTarget);
     Clock clk_50mhz <- exposeCurrentClock();
     Reset initial_reset <- InitialReset::mkInitialReset(3);
 
@@ -50,7 +50,7 @@ module mkIgnitionTargetIOAndResetWrapper
 
     // Implementation of the Ignition Target application. This module assumes inputs are
     // synchronized/filtered/debounced and Inout interfaces are resolved.
-    IgnitionTarget app <- mkIgnitionTarget(app_parameters, reset_by initial_reset);
+    IgnitionTarget app <- mkIgnitionTarget(parameters, reset_by initial_reset);
 
     // Strobe, used as a time pulse to generate timed events.
     Strobe#(24) strobe_1khz <-
