@@ -1,9 +1,15 @@
 # -*- python -*- vim:syntax=python:
 
+bluespec_library('IrqBlock',
+    sources = [
+        'IrqBlock.bsv',
+    ])
+
 bluespec_library('RegCommon',
     sources = [
         'RegCommon.bsv',
     ])
+
 
 bluespec_library('GimletSeqFpgaRegs',
     sources = [
@@ -17,6 +23,7 @@ bluespec_library('GimletRegs',
         'GimletRegs.bsv',
     ],
     deps = [
+        ':IrqBlock',
         ':RegCommon',
         ':GimletSeqFpgaRegs',
         ':NicBlock',
