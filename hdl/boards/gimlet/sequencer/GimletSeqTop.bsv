@@ -59,58 +59,6 @@ interface SeqOutputPins;
     interface MiscOutputSource misc_pins;
 endinterface
 
-interface NicInputSync;
-    interface NicInputPinsRawSink sink;
-    interface NicInputPinsNormalizedSource source;
-endinterface
-
-module mkNicInputSync(NicInputSync);
-    Clock clk_sys <- exposeCurrentClock();
-    Reset rst_sys <- exposeCurrentReset();
-
-    // Synchronizers
-    SyncBitIfc#(Bit#(1)) pwr_cont_nic_pg0_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) pwr_cont_nic_nvrhot_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) pwr_cont_nic_cfp_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) nic_to_seq_v1p5a_pg_l_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) nic_to_seq_v1p5d_pg_l_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) nic_to_seq_v1p2_pg_l_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) nic_to_seq_v1p1_pg_l_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) pwr_cont_nic_pg1_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-
-    interface NicInputPinsRawSink sink;
-        method pwr_cont_nic_pg0 = pwr_cont_nic_pg0_sync.send;
-        method pwr_cont_nic_nvrhot = pwr_cont_nic_nvrhot_sync.send;
-        method pwr_cont_nic_cfp = pwr_cont_nic_cfp_sync.send;
-        method nic_to_seq_v1p5a_pg_l = nic_to_seq_v1p5a_pg_l_sync.send;
-        method nic_to_seq_v1p5d_pg_l = nic_to_seq_v1p5d_pg_l_sync.send;
-        method nic_to_seq_v1p2_pg_l = nic_to_seq_v1p2_pg_l_sync.send;
-        method nic_to_seq_v1p1_pg_l = nic_to_seq_v1p1_pg_l_sync.send;
-        method pwr_cont_nic_pg1 = pwr_cont_nic_pg1_sync.send;
-    endinterface
-
-    interface NicInputPinsNormalizedSource source;
-        method pwr_cont_nic_pg0 = pwr_cont_nic_pg0_sync.read;
-        method pwr_cont_nic_nvrhot = pwr_cont_nic_nvrhot_sync.read;
-        method pwr_cont_nic_cfp = pwr_cont_nic_cfp_sync.read;
-        method pwr_cont_nic_pg1 = pwr_cont_nic_pg1_sync.read;
-        // Invert the active low signals
-        method Bit#(1) nic_to_seq_v1p5a_pg;
-            return ~nic_to_seq_v1p5a_pg_l_sync.read();
-        endmethod
-        method Bit#(1) nic_to_seq_v1p5d_pg;
-            return ~nic_to_seq_v1p5d_pg_l_sync.read();
-        endmethod
-        method Bit#(1) nic_to_seq_v1p2_pg;
-            return ~nic_to_seq_v1p2_pg_l_sync.read();
-        endmethod
-        method Bit#(1) nic_to_seq_v1p1_pg;
-            return ~nic_to_seq_v1p1_pg_l_sync.read();
-        endmethod
-    endinterface
-
-endmodule
-
 typedef struct {
     Integer one_ms_counts;
 } GimletSeqTopParameters;
@@ -143,7 +91,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     // Regiser block
     GimletRegIF regs <- mkGimletRegs();
     // State machine blocks
-    NicBlockTop nic_block <- mkNicBlock();
+    NicBlockTop nic_block <- mkNicBlock(parameters.one_ms_counts);
     EarlyBlockTop early_block <- mkEarlyBlock();
     A1BlockTop a1_block <- mkA1Block(parameters.one_ms_counts);
     A0BlockTop a0_block <- mkA0Block(parameters.one_ms_counts);
@@ -155,7 +103,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     mkConnection(decode.reg_con, regs.decoder_if);  // Client of SPI decoder to Server of registers block.
     //  NIC pins
     mkConnection(nic_pins.source, nic_block.syncd_pins);  // Synchronized pins to NIC block
-    mkConnection(nic_block.reg_if, regs.nic_in_pins); // Connect registers and NIC block
+    mkConnection(nic_block.reg_if, regs.nic_block); // Connect registers and NIC block
     // Early block pins
     mkConnection(early_pins.syncd_pins, early_block.syncd_pins); // Synchronized pins to early block
     mkConnection(early_block.reg_if, regs.early_block); // Connect registers and early block
@@ -166,6 +114,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     
     mkConnection(a1_block.a1_ok, a0_block.upstream_ok);
     mkConnection(a0_block.a0_idle, a1_block.a0_idle);
+    mkConnection(a0_block.a0_ok, nic_block.upstream_ok);
     // A0 block pins
     mkConnection(a0_pins.syncd_pins, a0_block.syncd_pins);
     mkConnection(a0_block.reg_if, regs.a0_block);
@@ -329,17 +278,16 @@ function Stmt spiReadUntil(
 module mkGimletTestTop(Empty);
     let sim_params = GimletSeqTopParameters {one_ms_counts: 500};   // Speed up sim time
     SPITestController controller <- mkSpiTestController();
-    TBTestRawNicPinsSource nic_pins_bfm <- mkTestNicRawPinsSource();
     TBTestEarlyPinsSource early_pins_bfm <- mkTestEarlyPinsSource();
     TBTestA1PinsSource a1_pins_bfm <- mkTestA1PinsSource();
     TBTestA0PinsSource a0_pins_bfm <- mkTestA0PinsSource();
     TBTestMiscPinsSource misc_pins_bfm <- mkTestMiscPinsSource();
+    TBTestNicPinsSource nic_pins_bfm <- mkTestNicPinsSource();
 
     Top gimlet_fpga_top <- mkGimletInnerTop(sim_params);
     
     Reg#(Bit#(8)) read_byte <- mkReg(0);
     mkConnection(controller.pins, gimlet_fpga_top.spi_pins);
-    mkConnection(nic_pins_bfm.pins, gimlet_fpga_top.in_pins.nic_pins);
     mkConnection(early_pins_bfm.pins, gimlet_fpga_top.in_pins.early_in_pins);
     // A1 testbench connections
     mkConnection(a1_pins_bfm.tb_pins_src, gimlet_fpga_top.in_pins.a1_pins);
@@ -349,6 +297,9 @@ module mkGimletTestTop(Empty);
     mkConnection(gimlet_fpga_top.out_pins.a0_pins, a0_pins_bfm.tb_pins_sink);
     // misc connections
     mkConnection(misc_pins_bfm.pins, gimlet_fpga_top.in_pins.misc_pins);
+    // Nic testbench connections
+    mkConnection(nic_pins_bfm.tb_pins_src, gimlet_fpga_top.in_pins.nic_pins);
+    mkConnection(gimlet_fpga_top.out_pins.nic_pins, nic_pins_bfm.tb_pins_sink);
 
     //HLIST
     //
@@ -422,6 +373,11 @@ module mkGimletTestTop(Empty);
             $display("Design Up");
         endaction
         delay(3000);
+        spiWrite('h09, 'h13, controller.bfm);
+        delay(6000);
+         action
+            $display("Design Up");
+        endaction
         // Make interrupts go
         spiWrite('h06, 'hff, controller.bfm);  // enable all interrupts
         spiBitSet('h05, 'h01, controller.bfm);  // use debug to fire an interrupt

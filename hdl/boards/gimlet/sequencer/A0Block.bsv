@@ -295,6 +295,7 @@ import GimletSeqFpgaRegs::*;
         method Action upstream_ok(Bool value);
         method Action thermtrip(Bool value);
         method Bool a0_idle;
+        method Bool a0_ok;
         interface A0Regs reg_if;
         interface A0OutputSource out_pins;
     endinterface
@@ -792,8 +793,11 @@ import GimletSeqFpgaRegs::*;
         method syncd_pins = cur_syncd_pins._write;
         method upstream_ok = cur_upstream_ok._write;
         method thermtrip = cur_thermtrip._write;
-         method Bool a0_idle();
+        method Bool a0_idle();
             return (state == IDLE);
+        endmethod
+        method Bool a0_ok();
+            return (state == DONE);
         endmethod
         interface A0Regs reg_if;
             method input_readbacks = cur_syncd_pins._read;
