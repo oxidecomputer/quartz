@@ -15,6 +15,7 @@ import SpiDecode::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
 import GimletRegs::*;
+import GimletSeqFpgaRegs::*;
 import A1Block::*;
 import A0Block::*;
 import MiscIO::*;
@@ -159,13 +160,13 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     endinterface
 endmodule
 
-function Stmt spiRead(Reg#(Bit#(8)) read_data, Bit#(8) addr, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+function Stmt spiRead(Reg#(Bit#(8)) read_data, Integer addr, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
     return seq
         action
             Vector#(4, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(READ)));
             tx[1] = unpack('h00);
-            tx[2] = unpack(addr);
+            tx[2] = unpack(fromInteger(addr));
             tx[3] = unpack('h00);
             bfm.request.put(tx);
         endaction
@@ -183,13 +184,13 @@ function Stmt spiRead(Reg#(Bit#(8)) read_data, Bit#(8) addr, Server#(Vector#(4, 
         endaction
     endseq;
 endfunction
-function Stmt spiWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+function Stmt spiWrite(Integer addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
     return seq
          action
             Vector#(4, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(WRITE)));
             tx[1] = unpack('h00);
-            tx[2] = unpack(addr);
+            tx[2] = unpack(fromInteger(addr));
             tx[3] = unpack(data);  
             bfm.request.put(tx);
         endaction
@@ -198,13 +199,13 @@ function Stmt spiWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),V
         endaction
     endseq;
 endfunction
-function Stmt spiBitSet(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+function Stmt spiBitSet(Integer addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
     return seq
          action
             Vector#(4, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(BITSET)));
             tx[1] = unpack('h00);
-            tx[2] = unpack(addr);
+            tx[2] = unpack(fromInteger(addr));
             tx[3] = unpack(data);  
             bfm.request.put(tx);
         endaction
@@ -213,13 +214,13 @@ function Stmt spiBitSet(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),
         endaction
     endseq;
 endfunction
-function Stmt spiBitClear(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
+function Stmt spiBitClear(Integer addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
     return seq
          action
             Vector#(4, Bit#(8)) tx =  newVector();
             tx[0] = unpack(zeroExtend(pack(BITCLEAR)));
             tx[1] = unpack('h00);
-            tx[2] = unpack(addr);
+            tx[2] = unpack(fromInteger(addr));
             tx[3] = unpack(data);  
             bfm.request.put(tx);
         endaction
@@ -229,38 +230,9 @@ function Stmt spiBitClear(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)
     endseq;
 endfunction
 
-function Bool spiNewWrite(Bit#(8) addr, Bit#(8) data, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
-    // seq
-    // action
-    //         Vector#(8, Bit#(8)) tx =  newVector();
-    //         tx[0] = unpack(zeroExtend(pack(WRITE)));
-    //         tx[1] = unpack('h00);
-    //         tx[2] = unpack(addr);
-    //         tx[3] = unpack(data);  
-    //         tx[4] = unpack('h00);
-    //         tx[5] = unpack('h00);
-    //         tx[6] = unpack('h00);
-    //         tx[7] = unpack('h00);
-    //         bfm.request.put(tx);
-    //     endaction
-    //     action
-    //         let rx <- bfm.response.get();
-    //         $display(rx[0]);
-    //         $display(rx[1]);
-    //         $display(rx[2]);
-    //         $display(rx[3]);
-    //         $display(rx[4]);
-    //         $display(rx[5]);
-    //         $display(rx[6]);
-    //         $display(rx[7]);
-    //     endaction
-
-    //  endseq;
-    return True;
-endfunction
 function Stmt spiReadUntil(
     Reg#(Bit#(8)) read_data, 
-    Bit#(8) addr, 
+    Integer addr, 
     Bit#(8) expected, 
     Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);
    return seq
@@ -269,7 +241,7 @@ function Stmt spiReadUntil(
          endaction
          while (read_data != expected) seq
              delay(300);
-             spiRead(read_data, addr, bfm);
+             spiRead(read_data, fromInteger(addr), bfm);
          endseq
      endseq;
  endfunction
@@ -306,17 +278,17 @@ module mkGimletTestTop(Empty);
     mkAutoFSM(
     seq
         // Basic read
-        spiRead(read_byte, 'h00, controller.bfm);
+        spiRead(read_byte, id0Offset, controller.bfm);
         // Enable A1+A0 (now interlocked), sunny day case
-        spiWrite('h09, 'h03, controller.bfm);
+        spiWrite(pwrctrlOffset, pwrctrlA1pwren | pwrctrlA0aEn, controller.bfm);
         action
             $display("Delay for A1 SM good...");
         endaction
-        spiReadUntil(read_byte, 'h0a, 'h05, controller.bfm);
+        spiReadUntil(read_byte, a1smstatusOffset, 'h05, controller.bfm);
         action
             $display("Delay for A0 SM good...");
         endaction
-        spiReadUntil(read_byte, 'h0b, 'h0c, controller.bfm);
+        spiReadUntil(read_byte, a0smstatusOffset, 'h0c, controller.bfm);
         action
             $display("Design Up");
         endaction
@@ -338,7 +310,7 @@ module mkGimletTestTop(Empty);
             };
             misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
         endaction
-        spiReadUntil(read_byte, 'h0b, 'h00, controller.bfm);
+        spiReadUntil(read_byte, a0smstatusOffset, 'h00, controller.bfm);
         action
             $display("Design Faulted A0 off.");
             $display("Attempting restart.");
@@ -358,30 +330,30 @@ module mkGimletTestTop(Empty);
             };
             misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
         endaction
-        spiWrite('h09, 'h01, controller.bfm);
+        spiWrite(pwrctrlOffset, pwrctrlA1pwren, controller.bfm);
         delay(100);
-        spiWrite('h09, 'h03, controller.bfm);
+        spiWrite(pwrctrlOffset, pwrctrlA0aEn | pwrctrlA1pwren, controller.bfm);
         action
             $display("Delay for A1 SM good...");
         endaction
-        spiReadUntil(read_byte, 'h0a, 'h05, controller.bfm);
+        spiReadUntil(read_byte, a1smstatusOffset, 'h05, controller.bfm);
         action
             $display("Delay for A0 SM good...");
         endaction
-        spiReadUntil(read_byte, 'h0b, 'h0c, controller.bfm);
+        spiReadUntil(read_byte, a0smstatusOffset, 'h0c, controller.bfm);
         action
             $display("Design Up");
         endaction
         delay(3000);
-        spiWrite('h09, 'h13, controller.bfm);
+        spiWrite(pwrctrlOffset, pwrctrlNicpwren | pwrctrlA0aEn | pwrctrlA1pwren, controller.bfm);
         delay(6000);
          action
             $display("Design Up");
         endaction
         // Make interrupts go
-        spiWrite('h06, 'hff, controller.bfm);  // enable all interrupts
-        spiBitSet('h05, 'h01, controller.bfm);  // use debug to fire an interrupt
-        spiBitClear('h05, 'h01, controller.bfm);  // use bitclear to clear pending interrupt
+        spiWrite(ierOffset, 'hff, controller.bfm);  // enable all interrupts
+        spiBitSet(ifrOffset, ifrFantimeout, controller.bfm);  // use debug to fire an interrupt
+        spiBitClear(ifrOffset, ifrFantimeout, controller.bfm);  // use bitclear to clear pending interrupt
         delay(3000);
         // action
         //     Vector#(8, Bit#(8)) tx =  newVector();
