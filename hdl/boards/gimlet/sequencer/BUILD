@@ -119,7 +119,8 @@ bluespec_library('GimletSeqTop',
         ':A1Block',
         ':A0Block',
         ':MiscIO',
-    ])
+    ],
+    )
 
 bluespec_sim('gimlet_sim_top',
     top = 'GimletSeqTop.bsv',
@@ -192,7 +193,13 @@ bluespec_verilog('seq_verilog',
     ],
     deps = [
         ':GimletSeqTop',
-    ])
+    ],
+    # This suppresses the reset sync errors at the top (and seemingly any below also)
+    # In this design, that is not a problem since this is a single clock, single reset domain design.
+    local = {
+        'bsc_flags': ['-suppress-warnings', 'G0046']
+    }
+    )
 
 yosys_design('ignitionlet_spi_yosys',
     top_module = 'mkIgnitionletTop',

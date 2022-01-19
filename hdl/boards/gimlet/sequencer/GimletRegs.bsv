@@ -334,6 +334,9 @@ module mkGimletRegs(GimletRegIF);
         method Bit#(1) dbg_en;
             return dbgCtrl_reg.reg_ctrl_en;
         endmethod
+        method Bool ignore_sp;
+            return (dbgCtrl_reg.ignore_sp  == 1);
+        endmethod
         method dbg_nic1 = dbg_nic1_out._read;
         method dbg_nic2 = dbg_nic2_out._read;
     endinterface
