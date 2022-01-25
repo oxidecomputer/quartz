@@ -177,19 +177,23 @@ module mkNicInputSync(NicInputSync);
         method pwr_cont_nic_nvrhot = pwr_cont_nic_nvrhot_sync.read;
         method pwr_cont_nic_cfp = pwr_cont_nic_cfp_sync.read;
         method pwr_cont_nic_pg1 = pwr_cont_nic_pg1_sync.read;
+        method nic_to_seq_v1p5d_pg = nic_to_seq_v1p5d_pg_l_sync.read;  // not actually active low
+        method nic_to_seq_v1p5a_pg = nic_to_seq_v1p5a_pg_l_sync.read; // not actually active low
+        method nic_to_seq_v1p2_pg = nic_to_seq_v1p2_pg_l_sync.read;  // not actually active low
+        method nic_to_seq_v1p1_pg = nic_to_seq_v1p1_pg_l_sync.read; // not actually active low
         // Invert the active low signals
-        method Bit#(1) nic_to_seq_v1p5a_pg;
-            return ~nic_to_seq_v1p5a_pg_l_sync.read();
-        endmethod
-        method Bit#(1) nic_to_seq_v1p5d_pg;
-            return ~nic_to_seq_v1p5d_pg_l_sync.read();
-        endmethod
-        method Bit#(1) nic_to_seq_v1p2_pg;
-            return ~nic_to_seq_v1p2_pg_l_sync.read();
-        endmethod
-        method Bit#(1) nic_to_seq_v1p1_pg;
-            return ~nic_to_seq_v1p1_pg_l_sync.read();
-        endmethod
+        // method Bit#(1) nic_to_seq_v1p5a_pg;
+        //     return ~nic_to_seq_v1p5a_pg_l_sync.read();
+        // endmethod
+        // method Bit#(1) nic_to_seq_v1p5d_pg;
+        //     return ~nic_to_seq_v1p5d_pg_l_sync.read();
+        // endmethod
+        // method Bit#(1) nic_to_seq_v1p2_pg;
+        //     return ~nic_to_seq_v1p2_pg_l_sync.read();
+        // endmethod
+        // method Bit#(1) nic_to_seq_v1p1_pg;
+        //     return ~nic_to_seq_v1p1_pg_l_sync.read();
+        // endmethod
     endinterface
 
     endmodule
@@ -278,11 +282,11 @@ module mkNicInputSync(NicInputSync);
     endinstance
 
     typedef enum {
-        IDLE,       // 0x00
-        STAGE0,     // 0x01
-        STAGE0_PG,  // 0x02
-        DELAY,      // 0x03
-        DONE        // 0x04
+        IDLE = 'h00,
+        STAGE0 = 'h01,
+        STAGE0_PG = 'h02,
+        DELAY = 'h03,
+        DONE = 'h04
    
     } NicStateType deriving (Eq, Bits);
 
@@ -333,10 +337,10 @@ module mkNicInputSync(NicInputSync);
                 nic_cfp: pwr_cont_nic_cfp,
                 nic_nvrhot: pwr_cont_nic_nvrhot,
                 nic_v1p8_pg: pwr_cont_nic_pg1,
-                nic_v1p5_pg: nic_to_seq_v1p5d_pg,
-                nic_av1p5_pg: nic_to_seq_v1p5a_pg,
-                nic_v1p2_pg: nic_to_seq_v1p2_pg,
-                nic_v1p1_pg: nic_to_seq_v1p1_pg,
+                nic_v1p5_pg: nic_to_seq_v1p5d_pg & seq_to_nic_v1p5d_en,
+                nic_av1p5_pg: nic_to_seq_v1p5a_pg & seq_to_nic_v1p5a_en,
+                nic_v1p2_pg: nic_to_seq_v1p2_pg & seq_to_nic_v1p2_en,
+                nic_v1p1_pg: nic_to_seq_v1p1_pg & seq_to_nic_v1p1_en,
                 nic_v0p96_pg: pwr_cont_nic_pg0
             };
             cur_nic1_out_status <= OutStatusNic1 {
@@ -419,7 +423,8 @@ module mkNicInputSync(NicInputSync);
         endrule
 
         rule do_nic_done (state == DONE && dbg_en == 0);
-            if (nic_en == 0 || faulted || !(cur_upstream_ok && ignore_sp)) begin
+          seq_to_nic_cld_rst_l <= 1;
+            if (nic_en == 0 || faulted || !(cur_upstream_ok || ignore_sp)) begin
                 state <= IDLE;
             end
         endrule
@@ -503,19 +508,19 @@ module mkNicInputSync(NicInputSync);
         Reg#(Bit#(1)) pwr_cont_nic_pg0 <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_nic_nvrhot <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_nic_cfp <- mkReg(0);
-        Reg#(Bit#(1)) nic_to_seq_v1p5a_pg_l <- mkReg(1);
-        Reg#(Bit#(1)) nic_to_seq_v1p5d_pg_l <- mkReg(1);
-        Reg#(Bit#(1)) nic_to_seq_v1p2_pg_l <- mkReg(1);
-        Reg#(Bit#(1)) nic_to_seq_v1p1_pg_l <- mkReg(1);
+        Reg#(Bit#(1)) nic_to_seq_v1p5a_pg_l <- mkReg(0);
+        Reg#(Bit#(1)) nic_to_seq_v1p5d_pg_l <- mkReg(0);
+        Reg#(Bit#(1)) nic_to_seq_v1p2_pg_l <- mkReg(0);
+        Reg#(Bit#(1)) nic_to_seq_v1p1_pg_l <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_nic_pg1 <- mkReg(0);
 
         rule do_sunny_day;
             pwr_cont_nic_pg0 <= pwr_cont_nic_en0;
             pwr_cont_nic_pg1 <= pwr_cont_nic_en1;
-            nic_to_seq_v1p5a_pg_l <= ~seq_to_nic_v1p5a_en;
-            nic_to_seq_v1p5d_pg_l <= ~seq_to_nic_v1p5d_en;
-            nic_to_seq_v1p2_pg_l <= ~seq_to_nic_v1p2_en;
-            nic_to_seq_v1p1_pg_l <= ~seq_to_nic_v1p1_en;
+            nic_to_seq_v1p5a_pg_l <= seq_to_nic_v1p5a_en;
+            nic_to_seq_v1p5d_pg_l <= seq_to_nic_v1p5d_en;
+            nic_to_seq_v1p2_pg_l <= seq_to_nic_v1p2_en;
+            nic_to_seq_v1p1_pg_l <= seq_to_nic_v1p1_en;
         endrule
 
         interface NicInputPinsRawSource tb_pins_src;
