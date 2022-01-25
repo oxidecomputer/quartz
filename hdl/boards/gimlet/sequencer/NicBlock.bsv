@@ -335,7 +335,7 @@ module mkNicInputSync(NicInputSync);
         rule do_nic_status;
             cur_nic_status <= NicStatus {
                 nic_cfp: pwr_cont_nic_cfp,
-                nic_nvrhot: pwr_cont_nic_nvrhot,
+                nic_nvrhot: ~pwr_cont_nic_nvrhot,
                 nic_v1p8_pg: pwr_cont_nic_pg1,
                 nic_v1p5_pg: nic_to_seq_v1p5d_pg & seq_to_nic_v1p5d_en,
                 nic_av1p5_pg: nic_to_seq_v1p5a_pg & seq_to_nic_v1p5a_en,
