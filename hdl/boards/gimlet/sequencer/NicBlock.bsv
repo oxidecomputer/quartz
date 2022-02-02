@@ -283,18 +283,20 @@ module mkNicInputSync(NicInputSync);
 
     typedef enum {
         IDLE = 'h00,
-        STAGE0 = 'h01,
-        STAGE0_PG = 'h02,
-        DELAY = 'h03,
-        DONE = 'h04
+        DELAY0 = 'h01,
+        STAGE0 = 'h02,
+        STAGE0_PG = 'h03,
+        DELAY = 'h04,
+        DONE = 'h05
    
     } NicStateType deriving (Eq, Bits);
 
     module mkNicBlock#(Integer one_ms_counts)(NicBlockTop);
         // Output Registers
         Integer ten_ms_counts = 10 * one_ms_counts;
+        Integer thirty_ms_counts = 30 * one_ms_counts;
         Reg#(Bit#(1)) seq_to_nic_v1p2_enet_en <- mkReg(0);
-        Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(1);
         Reg#(Bit#(1)) pwr_cont_nic_en1 <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_nic_en0 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
@@ -356,7 +358,7 @@ module mkNicInputSync(NicInputSync);
             cur_nic2_out_status <= OutStatusNic2 {
                 pwrflt: ~nic_to_sp3_pwrflt_l,
                 nic_cld_rst: ~seq_to_nic_cld_rst_l,
-                nic_comb_pg: seq_to_nic_comb_pg
+                nic_comb_pg: ~seq_to_nic_comb_pg
             };
         endrule
 
@@ -372,11 +374,24 @@ module mkNicInputSync(NicInputSync);
             seq_to_nic_v1p2_en  <= 0;
             seq_to_nic_v1p1_en  <= 0;
             seq_to_nic_ldo_v3p3_en <= 0;
-            seq_to_nic_comb_pg <= 0;
+            seq_to_nic_comb_pg <= 1;
             nic_to_sp3_pwrflt_l <= 0;
 
             if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp) ) begin
-                state <= STAGE0;
+                delay_counter <= fromInteger(one_ms_counts);
+                state <= DELAY0;
+            end
+        endrule
+
+        rule do_nic_delay0 (state == DELAY0 && dbg_en == 0);
+            if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
+                if (delay_counter > 0) begin
+                    delay_counter <= delay_counter - 1;
+                end else begin
+                    state <= STAGE0;
+                end
+            end else begin
+                state <= IDLE;
             end
         endrule
 
@@ -403,7 +418,7 @@ module mkNicInputSync(NicInputSync);
                     nic_to_seq_v1p1_pg == 1 && pwr_cont_nic_pg0 == 1) begin
                     // TODO: need clock stable PIO here too!!
                     state <= DELAY;
-                    delay_counter <= fromInteger(ten_ms_counts);
+                    delay_counter <= fromInteger(thirty_ms_counts);
                 end
             end else begin
                 state <= IDLE;
@@ -411,6 +426,7 @@ module mkNicInputSync(NicInputSync);
         endrule
 
         rule do_nic_delay (state == DELAY && dbg_en == 0);
+            seq_to_nic_comb_pg <= 0;
             if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
                 if (delay_counter > 0) begin
                     delay_counter <= delay_counter - 1;
@@ -423,7 +439,7 @@ module mkNicInputSync(NicInputSync);
         endrule
 
         rule do_nic_done (state == DONE && dbg_en == 0);
-          seq_to_nic_cld_rst_l <= 1;
+          seq_to_nic_cld_rst_l <= ~cur_dbg_nic2.nic_cld_rst;
             if (nic_en == 0 || faulted || !(cur_upstream_ok || ignore_sp)) begin
                 state <= IDLE;
             end
@@ -432,7 +448,7 @@ module mkNicInputSync(NicInputSync);
         rule do_dbg_output_pins(dbg_en == 1);
             // For now, there are no sm outputs so dbg status goes to pins.
             seq_to_nic_v1p2_enet_en <= cur_dbg_nic1.nic_v1p2_eth_en;
-            seq_to_nic_comb_pg <= cur_dbg_nic2.nic_comb_pg;
+            seq_to_nic_comb_pg <= ~cur_dbg_nic2.nic_comb_pg;
             pwr_cont_nic_en1 <= cur_dbg_nic1.nic_cont_en1;
             pwr_cont_nic_en0 <= cur_dbg_nic1.nic_cont_en0;
             seq_to_nic_cld_rst_l <= ~cur_dbg_nic2.nic_cld_rst;
@@ -494,7 +510,7 @@ module mkNicInputSync(NicInputSync);
 
     module mkTestNicPinsSource(TBTestNicPinsSource);
         Reg#(Bit#(1)) seq_to_nic_v1p2_enet_en <- mkReg(0);
-        Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(1);
         Reg#(Bit#(1)) pwr_cont_nic_en1 <- mkReg(0);
         Reg#(Bit#(1)) pwr_cont_nic_en0 <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);

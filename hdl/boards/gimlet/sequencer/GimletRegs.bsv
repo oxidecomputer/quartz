@@ -332,7 +332,7 @@ module mkGimletRegs(GimletRegIF);
             return power_control.nicpwren;
         endmethod
         method Bit#(1) dbg_en;
-            return dbgCtrl_reg.reg_ctrl_en;
+            return dbgCtrl_reg.reg_ctrl_en | dbgCtrl_reg.nic_ctrl_en;
         endmethod
         method Bool ignore_sp;
             return (dbgCtrl_reg.ignore_sp  == 1);

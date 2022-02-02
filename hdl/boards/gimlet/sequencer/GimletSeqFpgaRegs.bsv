@@ -2011,31 +2011,31 @@ endinstance
 // Register DBG_CTRL definitions
 typedef struct {
     
-        Bit#(1)            store_current;  // bit 2
+        Bit#(1)            nic_ctrl_en;  // bit 2
     
-        Bit#(1)            reg_ctrl_en  ;  // bit 1
+        Bit#(1)            reg_ctrl_en;  // bit 1
     
-        Bit#(1)            ignore_sp    ;  // bit 0
+        Bit#(1)            ignore_sp  ;  // bit 0
     
 } DbgCtrl deriving (Eq, FShow);
 // Register offsets
 Integer dbgCtrlOffset = 31;
 // Field mask definitions
-    Bit#(8) dbgCtrlStoreCurrent = 'h04;
-    Bit#(8) dbgCtrlRegCtrlEn   = 'h02;
-    Bit#(8) dbgCtrlIgnoreSp     = 'h01;
+    Bit#(8) dbgCtrlNicCtrlEn = 'h04;
+    Bit#(8) dbgCtrlRegCtrlEn = 'h02;
+    Bit#(8) dbgCtrlIgnoreSp   = 'h01;
 // Register DBG_CTRL custom type-classes
 instance Bits#(DbgCtrl, 8);
     function Bit#(8) pack (DbgCtrl r);
         Bit#(8) bts =  'h00;
-        bts[2] = r.store_current;
+        bts[2] = r.nic_ctrl_en;
         bts[1] = r.reg_ctrl_en;
         bts[0] = r.ignore_sp;
         return bts;
     endfunction: pack
     function DbgCtrl unpack (Bit#(8) b);
         let r = DbgCtrl {
-        store_current: b[2] , 
+        nic_ctrl_en: b[2] , 
         reg_ctrl_en: b[1] , 
         ignore_sp: b[0] 
         };

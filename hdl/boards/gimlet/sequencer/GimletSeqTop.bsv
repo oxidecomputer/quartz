@@ -354,7 +354,7 @@ module mkGimletTestTop(Empty);
         spiWrite(ierOffset, 'hff, controller.bfm);  // enable all interrupts
         spiBitSet(ifrOffset, ifrFantimeout, controller.bfm);  // use debug to fire an interrupt
         spiBitClear(ifrOffset, ifrFantimeout, controller.bfm);  // use bitclear to clear pending interrupt
-        delay(3000);
+        delay(30000);
         // action
         //     Vector#(8, Bit#(8)) tx =  newVector();
         //     tx[0] = unpack(zeroExtend(pack(READ)));
