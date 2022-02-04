@@ -294,6 +294,7 @@ module mkNicInputSync(NicInputSync);
     module mkNicBlock#(Integer one_ms_counts)(NicBlockTop);
         // Output Registers
         Integer ten_ms_counts = 10 * one_ms_counts;
+        Integer three_ms_counts = 3 * one_ms_counts;
         Integer thirty_ms_counts = 30 * one_ms_counts;
         Reg#(Bit#(1)) seq_to_nic_v1p2_enet_en <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_comb_pg <- mkReg(1);
@@ -378,12 +379,13 @@ module mkNicInputSync(NicInputSync);
             nic_to_sp3_pwrflt_l <= 0;
 
             if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp) ) begin
-                delay_counter <= fromInteger(one_ms_counts);
+                delay_counter <= fromInteger(three_ms_counts);
                 state <= DELAY0;
             end
         endrule
 
         rule do_nic_delay0 (state == DELAY0 && dbg_en == 0);
+            seq_to_nic_ldo_v3p3_en <= 1;
             if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
                 if (delay_counter > 0) begin
                     delay_counter <= delay_counter - 1;
@@ -405,7 +407,6 @@ module mkNicInputSync(NicInputSync);
         seq_to_nic_v1p5d_en <= 1;
         seq_to_nic_v1p2_en  <= 1;
         seq_to_nic_v1p1_en  <= 1;
-        seq_to_nic_ldo_v3p3_en <= 1;
             if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
                 state <= STAGE0_PG;
             end
