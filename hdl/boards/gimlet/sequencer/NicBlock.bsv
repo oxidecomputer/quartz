@@ -239,6 +239,7 @@ module mkNicInputSync(NicInputSync);
         method OutStatusNic2 nic2_out_status;
         method NicStateType state;
         method Action nic_en(Bit#(1) value);  // SM enable pin
+        method Action nic_go(Bit#(1) value);
         method Action dbg_en(Bit#(1) value);
         method Action ignore_sp(Bool value);
         method Action dbg_nic1(DbgOutNic1 value);
@@ -252,6 +253,7 @@ module mkNicInputSync(NicInputSync);
         method Action nic2_out_status (OutStatusNic2 value);
         method Action state (NicStateType value);
         method Bit#(1) nic_en;
+        method Bit#(1) nic_go;
         method Bit#(1) dbg_en;
         method Bool ignore_sp;
 
@@ -273,6 +275,7 @@ module mkNicInputSync(NicInputSync);
             mkConnection(source.nic1_out_status, sink.nic1_out_status);
             mkConnection(source.nic2_out_status, sink.nic2_out_status);
             mkConnection(source.nic_en, sink.nic_en);
+            mkConnection(source.nic_go, sink.nic_go);
             mkConnection(source.state, sink.state);
             mkConnection(source.dbg_nic1, sink.dbg_nic1);
             mkConnection(source.dbg_nic2, sink.dbg_nic2);
@@ -312,6 +315,7 @@ module mkNicInputSync(NicInputSync);
         Reg#(UInt#(24)) delay_counter <- mkReg(fromInteger(ten_ms_counts));
 
         Wire#(Bit#(1)) nic_en    <- mkDWire(0);
+        Wire#(Bit#(1)) nic_go    <- mkDWire(0);
         Wire#(Bool) cur_upstream_ok <- mkDWire(False);
 
         // Comb Inputs
@@ -378,7 +382,7 @@ module mkNicInputSync(NicInputSync);
             seq_to_nic_comb_pg <= 1;
             nic_to_sp3_pwrflt_l <= 0;
 
-            if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp) ) begin
+            if (nic_en == 1 && !faulted ) begin  //&& (cur_upstream_ok || ignore_sp) 
                 delay_counter <= fromInteger(three_ms_counts);
                 state <= DELAY0;
             end
@@ -386,7 +390,7 @@ module mkNicInputSync(NicInputSync);
 
         rule do_nic_delay0 (state == DELAY0 && dbg_en == 0);
             seq_to_nic_ldo_v3p3_en <= 1;
-            if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
+            if (nic_en == 1 && !faulted) begin // && (cur_upstream_ok || ignore_sp)
                 if (delay_counter > 0) begin
                     delay_counter <= delay_counter - 1;
                 end else begin
@@ -407,13 +411,13 @@ module mkNicInputSync(NicInputSync);
         seq_to_nic_v1p5d_en <= 1;
         seq_to_nic_v1p2_en  <= 1;
         seq_to_nic_v1p1_en  <= 1;
-            if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
+            if (nic_en == 1 && !faulted ) begin //&& (cur_upstream_ok || ignore_sp)
                 state <= STAGE0_PG;
             end
         endrule
 
         rule do_nic_stage0_pg (state == STAGE0_PG && dbg_en == 0);
-            if (nic_en == 1 && !faulted && cur_upstream_ok) begin
+            if (nic_en == 1 && !faulted ) begin  //&& cur_upstream_ok
                 if (pwr_cont_nic_pg1 == 1 && nic_to_seq_v1p5d_pg == 1 &&
                     nic_to_seq_v1p5a_pg == 1 && nic_to_seq_v1p2_pg == 1 &&
                     nic_to_seq_v1p1_pg == 1 && pwr_cont_nic_pg0 == 1) begin
@@ -428,7 +432,7 @@ module mkNicInputSync(NicInputSync);
 
         rule do_nic_delay (state == DELAY && dbg_en == 0);
             seq_to_nic_comb_pg <= 0;
-            if (nic_en == 1 && !faulted && (cur_upstream_ok || ignore_sp)) begin
+            if (nic_en == 1 && !faulted ) begin //&& (cur_upstream_ok || ignore_sp)
                 if (delay_counter > 0) begin
                     delay_counter <= delay_counter - 1;
                 end else begin
@@ -440,8 +444,12 @@ module mkNicInputSync(NicInputSync);
         endrule
 
         rule do_nic_done (state == DONE && dbg_en == 0);
-          seq_to_nic_cld_rst_l <= ~cur_dbg_nic2.nic_cld_rst;
-            if (nic_en == 0 || faulted || !(cur_upstream_ok || ignore_sp)) begin
+          if (nic_go == 1) begin
+            seq_to_nic_cld_rst_l <= ~cur_dbg_nic2.nic_cld_rst;
+          end else begin
+            seq_to_nic_cld_rst_l <= 0;
+          end
+            if (nic_en == 0 || faulted ) begin  //|| !(cur_upstream_ok || ignore_sp)
                 state <= IDLE;
             end
         endrule
@@ -483,6 +491,7 @@ module mkNicInputSync(NicInputSync);
             method dbg_nic1 = cur_dbg_nic1._write;
             method dbg_nic2 = cur_dbg_nic2._write;
             method nic_en = nic_en._write;
+            method nic_go = nic_go._write;
         endinterface
 
         interface NicOutputPinsRawSource out_pins;

@@ -328,8 +328,11 @@ module mkGimletRegs(GimletRegIF);
         method nic1_out_status = cur_nic1_out_status.wset;
         method nic2_out_status = cur_nic2_out_status.wset;
         method state = nic_state.wset;
-        method Bit#(1) nic_en;
+        method Bit#(1) nic_go;
             return power_control.nicpwren;
+        endmethod
+        method Bit#(1) nic_en;
+            return power_control.a0a_en;  // Enable in A0
         endmethod
         method Bit#(1) dbg_en;
             return dbgCtrl_reg.reg_ctrl_en | dbgCtrl_reg.nic_ctrl_en;
