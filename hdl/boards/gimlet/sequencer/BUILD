@@ -122,6 +122,22 @@ bluespec_library('GimletSeqTop',
     ],
     )
 
+bluespec_library('GimletSeqTopWrapper',
+    sources = [
+        'GimletSeqTopWrapper.bsv',
+    ],
+    deps = [
+        'cobalt//hdl/interfaces:ICE40',
+        ':GimletSeqTop',
+    ],
+    using = {
+        # The folling script is needed to fix the inout syntax used in the generated Verilog.
+        'bsc_flags': [
+            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+        ]
+    }
+)
+
 bluespec_sim('gimlet_sim_top',
     top = 'GimletSeqTop.bsv',
     modules = [
@@ -129,14 +145,19 @@ bluespec_sim('gimlet_sim_top',
     ],
     deps = [
         ':GimletSeqTop',
-    ],)
+    ],
+    local = {
+        'bsc_flags': ['-suppress-warnings', 'G0046']
+    }
+    )
 
 bluesim_binary('gimlet_test',
     env = 'cobalt//bluesim_default',
     top = ':gimlet_sim_top#mkGimletTestTop',
     deps = [
         ':gimlet_sim_top',
-    ])
+    ],
+    )
 
 bluesim_binary('gimlet_regs_test',
     env = 'cobalt//bluesim_default',
@@ -187,12 +208,12 @@ bluespec_verilog('ign_verilog',
     ])
 
 bluespec_verilog('seq_verilog',
-    top = 'GimletSeqTop.bsv',
+    top = 'GimletSeqTopWrapper.bsv',
     modules = [
         'mkGimletSeqTop',
     ],
     deps = [
-        ':GimletSeqTop',
+        ':GimletSeqTopWrapper',
     ],
     # This suppresses the reset sync errors at the top (and seemingly any below also)
     # In this design, that is not a problem since this is a single clock, single reset domain design.

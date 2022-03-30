@@ -1,5 +1,6 @@
 package SpiDecode;
 
+// BSV-provided
 import Clocks::*;
 import ClientServer::*;
 import Connectable::*;
@@ -9,6 +10,7 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
+// Oxide
 import RegCommon::*;
 
 interface SpiDecodeIF;
@@ -22,8 +24,22 @@ typedef struct {
     Bool done;
 } SpiRx deriving (Bits, Eq);
 
-typedef enum {CMD, ADDR1, ADDR2, DO_READ, DO_WRITE, READ_WAIT, WRITE_WAIT} State deriving (Eq, Bits);
+typedef enum {
+    CMD, 
+    ADDR1, 
+    ADDR2, 
+    DO_READ, 
+    DO_WRITE, 
+    READ_WAIT, 
+    WRITE_WAIT} State deriving (Eq, Bits);
 
+// This module provides a Client/Server interface
+// That takes byte-wise SPI payloads over its Server interface,
+// decodes the multi-byte spi protocol and issues Client transactions
+// to the register block and recieves responses from the register block.
+//
+// The SPI protocol looks like this:
+// <1byte Opcode> <1byte AddrH> <1byte AddrL> <n_bytes DATA>
 module mkSpiRegDecode(SpiDecodeIF);
     // Registers
     Reg#(State) state <- mkReg(CMD);
@@ -49,7 +65,7 @@ module mkSpiRegDecode(SpiDecodeIF);
         end
     endrule
 
-    // Store first byte which is the MSB of address
+    // Store second byte which is the MSB of address
     rule do_addr1 (state == ADDR1);
         if (spi_deselected) begin
             state <= CMD;
@@ -59,7 +75,7 @@ module mkSpiRegDecode(SpiDecodeIF);
         end
     endrule
 
-    // Store first byte which is the LSB of address
+    // Store thrid byte which is the LSB of address
     // If we're doing a read, we need to prime the pump by fetching a read
     // at this address immediately since we'll need to shift it out starting
     // at the next SPI clock cycle
@@ -93,20 +109,22 @@ module mkSpiRegDecode(SpiDecodeIF);
     endrule
 
     // When doing reads or writes, we're going to auto-increment the address
+    // Wait for the next byte to come in from the SPI block.
     rule do_wait (state == READ_WAIT || state == WRITE_WAIT);
         let next_state = operation == READ ? DO_READ : DO_WRITE;
         if (spi_deselected) begin
             state <= CMD;
         end else if (got_data) begin
             state <= next_state;
-            // We got data while waiting. If this is a read, we don't care what happens here, if this is a write
+            // We got data while waiting. If this is a read, we don't care what happens 
+            // to the data here as it is dummy data. If this is a write
             // we store the data to build the transaction.
             reg_write_data <= tagged Valid my_data;
         end
     endrule
 
-    // Do the interface to/from the shifter.
-    // This is a server interface since the shifter drives this interface
+    // The Server interface to/from the shifter.
+    // This is a server interface since the shifter drives this interface as a Client
     // Request spi_rx_structs come in, 8bit bytes go out.
     interface Server spi_byte;
         interface Put request;
@@ -166,7 +184,8 @@ module mkSpiPeripheralPinSync(SpiPeripheralSync);
     Clock clk_sys <- exposeCurrentClock();
     Reset rst_sys <- exposeCurrentReset();
     // This is an output from the FPGA so we just bypass through here, no need to delay or synchronize.
-    Wire#(Bit#(1)) cipo <- mkBypassWire();  
+    Wire#(Bit#(1)) cipo <- mkBypassWire();
+    Wire#(Bool) output_en <- mkBypassWire();
 
     SyncBitIfc#(Bit#(1)) copi_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) csn_sync <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
@@ -182,6 +201,7 @@ module mkSpiPeripheralPinSync(SpiPeripheralSync);
         method copi = copi_sync.send;
         // Output pin, always valid, shifts on appropriate sclk detected edge
         method cipo = cipo._read;
+        method output_en = output_en._read;
     endinterface
 
     interface SpiControllerPins syncd_pins;
@@ -189,6 +209,7 @@ module mkSpiPeripheralPinSync(SpiPeripheralSync);
         method sclk = sclk_sync.read; // sclk output
         method copi = copi_sync.read; // data output
         method cipo = cipo._write;
+        method output_en = output_en._write;
     endinterface
 
 endmodule
@@ -327,6 +348,8 @@ interface SpiPeripheralPins;
     method Action copi((* port = "copi" *) Bit#(1) data);   // Input data pin sampled on appropriate sclk detected edge
     (* prefix = "" *)
     method Bit#(1) cipo; // Output pin, always valid, shifts on appropriate sclk detected edge
+    (* prefix = "" *)
+    method Bool output_en; // Output Enable for CIPO, always valid
 endinterface
 
 // Physical pins interface for a SPI controller
@@ -335,6 +358,7 @@ interface SpiControllerPins;
     method Bit#(1) sclk; // sclk output
     method Bit#(1) copi; // data output
     method Action cipo(Bit#(1) data);
+    method Action output_en(Bool data);
 endinterface
 
 instance Connectable#(SpiControllerPins, SpiPeripheralPins);
@@ -343,6 +367,7 @@ instance Connectable#(SpiControllerPins, SpiPeripheralPins);
             mkConnection(cpin.sclk, ppin.sclk);
             mkConnection(cpin.cipo, ppin.cipo);
             mkConnection(cpin.copi, ppin.copi);
+            mkConnection(cpin.output_en, ppin.output_en);
         endmodule
     endinstance
 
@@ -471,8 +496,12 @@ module mkSpiPeripheralPhy(SpiPeripheralPhy);
         // Input data pin latched on appropriate sclk detected edge
         method copi = cur_copi.wset;
         // Output pin, always valid, shifts on appropriate sclk detected edge
+        //method Bit#(1) cipo if (selected);
         method Bit#(1) cipo;
             return tx_shift[8];
+        endmethod
+        method Bool output_en;
+            return selected;
         endmethod
     endinterface
 
@@ -515,6 +544,7 @@ module mkSpiTestController(SPITestController);
     Reg#(Bit#(1)) sclk_last <- mkReg(0);
     Reg#(Bit#(1)) csn <- mkReg(1);
     Reg#(Bit#(1)) cipo <- mkReg(0);
+    Reg#(Bool) output_en <- mkReg(False);
     Reg#(Bit#(8)) rem_bytes <- mkReg(0);
     Reg#(UInt#(4)) cs_cntr   <- mkReg(0);
     Reg#(ContState) state <- mkReg(IDLE);
@@ -618,6 +648,7 @@ module mkSpiTestController(SPITestController);
             return out_shifter[8];
         endmethod
         method cipo = cipo._write;
+        method output_en = output_en._write;
     endinterface
 
     interface Server bfm;

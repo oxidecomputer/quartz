@@ -11,6 +11,7 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
+// Local stuff
 import SpiDecode::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
@@ -64,20 +65,13 @@ typedef struct {
     Integer one_ms_counts;
 } GimletSeqTopParameters;
 
-// This is the top-level module for the Gimlet Sequencer FPGA.
-(* synthesize, default_clock_osc="clk50m" *)
-module mkGimletSeqTop (Top);
-    Clock cur_clk <- exposeCurrentClock();
-    Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);
-    let synth_params = GimletSeqTopParameters {one_ms_counts: 50000};    // 1ms @ 50MHz
 
-    let inner <- mkGimletInnerTop(synth_params, reset_by reset_sync);
-    return inner;
-endmodule
 
 module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     Clock cur_clk <- exposeCurrentClock();
     Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);
+
+
     // Sequencer Input synchronizers (meta-harden inputs)
     NicInputSync nic_pins <- mkNicInputSync();
     EarlyInputSyncBlock early_pins <- mkEarlySync();
@@ -102,6 +96,8 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)
     mkConnection(decode.spi_byte, phy.decoder_if);  // Output of the SPI PHY block to the SPI decoder block (client/server interface)
     mkConnection(decode.reg_con, regs.decoder_if);  // Client of SPI decoder to Server of registers block.
+
+     //mkConnection(spi_sync.syncd_pins.cipo, spi_cipo_enabled._write);
     //  NIC pins
     mkConnection(nic_pins.source, nic_block.syncd_pins);  // Synchronized pins to NIC block
     mkConnection(nic_block.reg_if, regs.nic_block); // Connect registers and NIC block
@@ -112,7 +108,6 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
     mkConnection(a1_pins.syncd_pins, a1_block.syncd_pins);
     mkConnection(a1_block.reg_if, regs.a1_block);
     // A1 -> A0 interlock
-    
     mkConnection(a1_block.a1_ok, a0_block.upstream_ok);
     mkConnection(a0_block.a0_idle, a1_block.a0_idle);
     mkConnection(a0_block.a0_ok, nic_block.upstream_ok);
@@ -148,6 +143,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (Top);
         method sclk = spi_sync.in_pins.sclk;
         method copi = spi_sync.in_pins.copi;
         method cipo = spi_sync.in_pins.cipo;
+        method output_en = spi_sync.in_pins.output_en;
     endinterface
 
     interface SeqOutputPins out_pins;
