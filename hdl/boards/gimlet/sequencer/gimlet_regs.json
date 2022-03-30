@@ -682,7 +682,7 @@
                     "sw_access": "r",
                     "se_onread": null,
                     "se_onwrite": null,
-                    "desc": "Readback from VDD_MEM_ABCD_A0 rail (PWR_CONT1_SP3_PG0)\nPower good 0 for RA229618 (U350) should be configured for \nVDD_MEM_ABCD_A0"
+                    "desc": "Readback from VDD_MEM_ABCD_A0 rail (PWR_CONT1_SP3_PG1)\nPower good 1 for RA229618 (U350) is configured for \nVDD_MEM_ABCD_A0"
                 },
                 {
                     "type": "field",
@@ -693,7 +693,7 @@
                     "sw_access": "r",
                     "se_onread": null,
                     "se_onwrite": null,
-                    "desc": "Readback from VDD_MEM_EFGH_A0 rail (PWR_CONT2_SP3_PG0)\nPower good 0 for RA229618 (U351) should be configured for \nVDD_MEM_EFGH_A0"
+                    "desc": "Readback from VDD_MEM_EFGH_A0 rail (PWR_CONT2_SP3_PG1)\nPower good 1 for RA229618 (U351) is configured for \nVDD_MEM_EFGH_A0"
                 },
                 {
                     "type": "field",
@@ -896,7 +896,7 @@
                     "sw_access": "r",
                     "se_onread": null,
                     "se_onwrite": null,
-                    "desc": "Power good 1 for RA229618 (U351) should be configured for \nSP3_VDDCR_SOC_A0 (PWR_CONT2_SP3_PG1 net)"
+                    "desc": "Power good 0 for RA229618 (U351) is configured for \nSP3_VDDCR_SOC_A0 (PWR_CONT2_SP3_PG0 net)"
                 },
                 {
                     "type": "field",
@@ -907,7 +907,7 @@
                     "sw_access": "r",
                     "se_onread": null,
                     "se_onwrite": null,
-                    "desc": "Power good 1 from RA229618 (U350) should be configured for\nSP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG1 net)"
+                    "desc": "Power good 0 from RA229618 (U350) is configured for\nSP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG0 net)"
                 }
             ]
         },
@@ -1677,14 +1677,14 @@
                 },
                 {
                     "type": "field",
-                    "inst_name": "STORE_CURRENT",
+                    "inst_name": "NIC_CTRL_EN",
                     "lsb": 2,
                     "msb": 2,
                     "reset": 0,
                     "sw_access": "rw",
                     "se_onread": null,
                     "se_onwrite": null,
-                    "desc": "Self-clearing bit that will store the current output state in the debug registers"
+                    "desc": "Nic debug control only"
                 }
             ]
         },

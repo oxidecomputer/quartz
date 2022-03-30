@@ -295,6 +295,7 @@ import GimletSeqFpgaRegs::*;
         method Action upstream_ok(Bool value);
         method Action thermtrip(Bool value);
         method Bool a0_idle;
+        method Bool a0_ok;
         interface A0Regs reg_if;
         interface A0OutputSource out_pins;
     endinterface
@@ -340,7 +341,7 @@ import GimletSeqFpgaRegs::*;
             cur_syncd_pins <= A0InPinsStruct {
                 sp3_to_seq_pwrgd_out: sp3_to_seq_pwrgd_out.read(),
                 pwr_cont_dimm_efgh_cfp: pwr_cont_dimm_efgh_cfp.read(),
-                pwr_cont1_sp3_nvrhot: pwr_cont1_sp3_nvrhot.read(),
+                pwr_cont1_sp3_nvrhot: ~pwr_cont1_sp3_nvrhot.read(),
                 pwr_cont_dimm_efgh_pg0: pwr_cont_dimm_efgh_pg0.read(),
                 pwr_cont1_sp3_cfp: pwr_cont1_sp3_cfp.read(),
                 pwr_cont2_sp3_pg1: pwr_cont2_sp3_pg1.read(),
@@ -353,16 +354,16 @@ import GimletSeqFpgaRegs::*;
                 sp3_to_sp_slp_s5: ~sp3_to_sp_slp_s5_l.read(),
                 vtt_efgh_a0_to_seq_pg: vtt_efgh_a0_to_seq_pg_l.read(),
                 pwr_cont1_sp3_pg1: pwr_cont1_sp3_pg1.read(),
-                pwr_cont2_sp3_nvrhot: pwr_cont2_sp3_nvrhot.read(),
+                pwr_cont2_sp3_nvrhot: ~pwr_cont2_sp3_nvrhot.read(),
                 pwr_cont_dimm_efgh_pg2: pwr_cont_dimm_efgh_pg2.read(),
                 pwr_cont1_sp3_pg0: pwr_cont1_sp3_pg0.read(),
                 pwr_cont_dimm_abcd_pg1: pwr_cont_dimm_abcd_pg1.read(),
                 pwr_cont2_sp3_cfp: pwr_cont2_sp3_cfp.read(),
                 seq_v1p8_sp3_vdd_pg: seq_v1p8_sp3_vdd_pg_l.read(),
                 sp3_to_seq_pwrok_v3p3: sp3_to_seq_pwrok_v3p3.read(),
-                pwr_cont_dimm_efgh_nvrhot: pwr_cont_dimm_efgh_nvrhot.read(),
+                pwr_cont_dimm_efgh_nvrhot: ~pwr_cont_dimm_efgh_nvrhot.read(),
                 sp3_to_seq_reset_v3p3: ~sp3_to_seq_reset_v3p3_l.read(),
-                pwr_cont_dimm_abcd_nvrhot: pwr_cont_dimm_abcd_nvrhot.read(),
+                pwr_cont_dimm_abcd_nvrhot: ~pwr_cont_dimm_abcd_nvrhot.read(),
                 vtt_abcd_a0_to_seq_pg: vtt_abcd_a0_to_seq_pg_l.read()
             };
         endrule
@@ -792,8 +793,11 @@ import GimletSeqFpgaRegs::*;
         method syncd_pins = cur_syncd_pins._write;
         method upstream_ok = cur_upstream_ok._write;
         method thermtrip = cur_thermtrip._write;
-         method Bool a0_idle();
+        method Bool a0_idle();
             return (state == IDLE);
+        endmethod
+        method Bool a0_ok();
+            return (state == DONE);
         endmethod
         interface A0Regs reg_if;
             method input_readbacks = cur_syncd_pins._read;

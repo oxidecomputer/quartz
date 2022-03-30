@@ -18,7 +18,7 @@ import MiscIO::*;
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
-    interface NicRegPinInputs nic_in_pins;
+    interface NicRegsReverse nic_block;
     interface EarlyRegsReverse early_block;
     interface A1RegsReverse a1_block;
     interface A0RegsReverse a0_block;
@@ -94,8 +94,9 @@ module mkGimletRegs(GimletRegIF);
 
     RWire#(A1OutStatus) cur_a1_outputs <- mkRWire();
     RWire#(A1Readbacks) cur_a1_inputs <- mkRWire();
-    RWire#((A1StateType)) a1_state <- mkRWire();
-    RWire#((A0StateType)) a0_state <- mkRWire();
+    RWire#(A1StateType) a1_state <- mkRWire();
+    RWire#(A0StateType) a0_state <- mkRWire();
+    RWire#(NicStateType) nic_state <- mkRWire();
     
     RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
     RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
@@ -322,12 +323,22 @@ module mkGimletRegs(GimletRegIF);
         endinterface
     endinterface
 
-    interface NicRegPinInputs nic_in_pins;
-        method nic_pins = cur_nic_pins.wset;
+    interface NicRegsReverse nic_block;
+        method nic_status = cur_nic_pins.wset;
         method nic1_out_status = cur_nic1_out_status.wset;
         method nic2_out_status = cur_nic2_out_status.wset;
+        method state = nic_state.wset;
+        method Bit#(1) nic_go;
+            return power_control.nicpwren;
+        endmethod
+        method Bit#(1) nic_en;
+            return power_control.a0a_en;  // Enable in A0
+        endmethod
         method Bit#(1) dbg_en;
-            return dbgCtrl_reg.reg_ctrl_en;
+            return dbgCtrl_reg.reg_ctrl_en | dbgCtrl_reg.nic_ctrl_en;
+        endmethod
+        method Bool ignore_sp;
+            return (dbgCtrl_reg.ignore_sp  == 1);
         endmethod
         method dbg_nic1 = dbg_nic1_out._read;
         method dbg_nic2 = dbg_nic2_out._read;
@@ -387,7 +398,7 @@ module mkSimpleTest(Empty);
     Reg#(NicStatus) nic_stim <- mkReg(unpack('hAA));
 
     rule do_pins;
-        dut.nic_in_pins.nic_pins(nic_stim);
+        dut.nic_block.nic_status(nic_stim);
     endrule
 
     mkAutoFSM(

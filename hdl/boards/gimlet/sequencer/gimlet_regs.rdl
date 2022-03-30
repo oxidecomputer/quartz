@@ -608,9 +608,8 @@ addrmap gimlet_seq_fpga {
             debug registers to set up any desired pre-conditions";
         } REG_CTRL_EN[1] = 0;
         field {
-            desc = "Self-clearing bit that will store the current output state in the debug registers";
-            singlepulse = true;
-        } STORE_CURRENT[1] = 0;
+            desc = "Nic debug control only";
+        } NIC_CTRL_EN[1] = 0;
     } DBG_CTRL;
 
     a1_output_type A1_DBG_OUT;
