@@ -498,11 +498,15 @@ module mkSpiPeripheralPhy(SpiPeripheralPhy);
         method copi = cur_copi.wset;
         // Output pin, always valid, shifts on appropriate sclk detected edge
         method Bit#(1) cipo;
-            return tx_shift[8];
+            if (fromMaybe(1, cur_csn.wget()) == 0) begin
+                return tx_shift[8];
+            end else begin
+                return 0;
+            end
         endmethod
         method Bool output_en;
             // output enable is active when we're selected
-            return (fromMaybe(1, cur_sclk.wget()) == 0);
+            return (fromMaybe(1, cur_csn.wget()) == 0);
         endmethod
     endinterface
 
