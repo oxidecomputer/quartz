@@ -31,7 +31,8 @@ typedef enum {
     DO_READ, 
     DO_WRITE, 
     READ_WAIT, 
-    WRITE_WAIT} State deriving (Eq, Bits);
+    WRITE_WAIT
+} State deriving (Eq, Bits);
 
 // This module provides a Client/Server interface
 // That takes byte-wise SPI payloads over its Server interface,
@@ -496,12 +497,12 @@ module mkSpiPeripheralPhy(SpiPeripheralPhy);
         // Input data pin latched on appropriate sclk detected edge
         method copi = cur_copi.wset;
         // Output pin, always valid, shifts on appropriate sclk detected edge
-        //method Bit#(1) cipo if (selected);
         method Bit#(1) cipo;
             return tx_shift[8];
         endmethod
         method Bool output_en;
-            return selected;
+            // output enable is active when we're selected
+            return (fromMaybe(1, cur_sclk.wget()) == 0);
         endmethod
     endinterface
 
