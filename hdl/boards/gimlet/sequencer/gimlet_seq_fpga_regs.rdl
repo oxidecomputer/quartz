@@ -1,4 +1,4 @@
-// Copyright 2021 Oxide Computer Company
+// Copyright 2022 Oxide Computer Company
 // This is SystemRDL description of the sw-accesible registers in the Gimlet
 // Sequencer FPGA.
 
@@ -15,34 +15,82 @@ addrmap gimlet_seq_fpga {
         default sw = r;
         
         field {
-            desc = "TBD";
-        } TBD[7:0] = 0;
+            desc = "0x1";
+        } data[7:0] =  0x01;
+
     } ID0;
     reg {
         name = "Identification 1";
         default sw = r;
         
         field {
-            desc = "TBD";
-        } TBD[7:0] = 0;
+            desc = "de";
+        } data[7:0] = 0xde;
     } ID1;
     reg {
-        name = "Identification 2";
+        name = "Version 0";
         default sw = r;
 
         field {
-            desc = "TBD";
-        } TBD[7:0] = 0;
-    } ID2;
+            desc = "version[31..24]";
+        } data[7:0] = 0;
+    } VER0;
     reg {
-        name = "Identification 3";
+        name = "Version 1";
         default sw = r;
 
         field {
-            desc = "TBD";
-        } TBD[7:0] = 0;
-    } ID3;
+            desc = "version[23..16]";
+        } data[7:0] = 0;
+    } VER1;
+    reg {
+        name = "Version 2";
+        default sw = r;
 
+        field {
+            desc = "version[15..8]";
+        } data[7:0] = 0;
+    } VER2;
+    reg {
+        name = "Version 3";
+        default sw = r;
+
+        field {
+            desc = "version[7..0]";
+        } data[7:0] = 0;
+    } VER3;
+    reg {
+        name = "ShortSHA part 0";
+        default sw = r;
+
+        field {
+            desc = "sha[31..24]";
+        } data[7:0] = 0;
+    } SHA0;
+    reg {
+        name = "ShortSHA part 1";
+        default sw = r;
+
+        field {
+            desc = "sha[23..16]";
+        } data[7:0] = 0;
+    } SHA1;
+    reg {
+        name = "ShortSHA part 2";
+        default sw = r;
+
+        field {
+            desc = "sha[15..8]";
+        } data[7:0] = 0;
+    } SHA2;
+    reg {
+        name = "ShortSHA part 3";
+        default sw = r;
+
+        field {
+            desc = "sha[7..0]";
+        } data[7:0] = 0;
+    } SHA3;
     reg {
         name = "Scratchpad";
 

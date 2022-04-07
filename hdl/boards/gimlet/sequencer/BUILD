@@ -10,19 +10,47 @@ bluespec_library('RegCommon',
         'RegCommon.bsv',
     ])
 
+bsv_fpga_version('FPGARev',
+)
+
+rdl('regs_pkg',
+    sources = [
+        'gimlet_seq_fpga_regs.rdl'
+    ]
+)
+
+bluespec_library('FPGARevBSV',
+    sources = [
+       ':FPGARev#FPGARev.bsv',
+    ],
+    deps = [
+        ':FPGARev'
+    ]
+)
+
+# bluespec_library('GimletSeqFpgaRegs',
+#     sources = [
+#         'GimletSeqFpgaRegs.bsv',
+#     ],
+#     deps = [
+#         ':RegCommon',
+#     ])
 
 bluespec_library('GimletSeqFpgaRegs',
     sources = [
-        'GimletSeqFpgaRegs.bsv',
+        ':regs_pkg#GimletSeqFpgaRegs.bsv',
     ],
     deps = [
         ':RegCommon',
+        ':regs_pkg',
     ])
+
 bluespec_library('GimletRegs',
     sources = [
         'GimletRegs.bsv',
     ],
     deps = [
+        ':FPGARevBSV',
         ':IrqBlock',
         ':RegCommon',
         ':GimletSeqFpgaRegs',
