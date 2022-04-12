@@ -5,26 +5,9 @@ bluespec_library('IrqBlock',
         'IrqBlock.bsv',
     ])
 
-bluespec_library('RegCommon',
-    sources = [
-        'RegCommon.bsv',
-    ])
-
-bsv_fpga_version('FPGARev',
-)
-
 rdl('regs_pkg',
     sources = [
         'gimlet_seq_fpga_regs.rdl'
-    ]
-)
-
-bluespec_library('FPGARevBSV',
-    sources = [
-       ':FPGARev#FPGARev.bsv',
-    ],
-    deps = [
-        ':FPGARev'
     ]
 )
 
@@ -42,7 +25,7 @@ bluespec_library('GimletRegs',
         'GimletRegs.bsv',
     ],
     deps = [
-        ':FPGARevBSV',
+        'cobalt//hdl:GitVersion',
         ':IrqBlock',
         'cobalt//hdl:RegCommon',
         ':GimletSeqFpgaRegs',

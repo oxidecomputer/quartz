@@ -10,7 +10,7 @@ import StmtFSM::*;
 // Oxide imports
 import IrqBlock::*;
 import RegCommon::*;
-import FPGARev::*;
+import git_version::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
