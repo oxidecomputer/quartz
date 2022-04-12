@@ -28,20 +28,12 @@ bluespec_library('FPGARevBSV',
     ]
 )
 
-# bluespec_library('GimletSeqFpgaRegs',
-#     sources = [
-#         'GimletSeqFpgaRegs.bsv',
-#     ],
-#     deps = [
-#         ':RegCommon',
-#     ])
-
 bluespec_library('GimletSeqFpgaRegs',
     sources = [
         ':regs_pkg#GimletSeqFpgaRegs.bsv',
     ],
     deps = [
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
         ':regs_pkg',
     ])
 
@@ -52,7 +44,7 @@ bluespec_library('GimletRegs',
     deps = [
         ':FPGARevBSV',
         ':IrqBlock',
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
         ':GimletSeqFpgaRegs',
         ':NicBlock',
         ':EarlyPowerBlock',
@@ -66,7 +58,7 @@ bluespec_library('Regs',
         'Regs.bsv',
     ],
     deps = [
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
     ])
 
 bluespec_sim('regs_sim',
@@ -96,7 +88,7 @@ bluespec_library('SpiDecode',
     #     'mkTestSpiDecode',
     # ],
     deps = [
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
     ])
 
 bluespec_library('NicBlock',
