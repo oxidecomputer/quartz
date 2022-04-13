@@ -17,7 +17,11 @@ import Vector::*;
 import PowerRail::*;
 import SidecarMainboardControllerReg::*;
 
-
+//
+// Parameters controlling various timing aspects of the sequencer. The units for
+// these delays are in "ticks". The sequencer is designed to receive these ticks
+// every 1 ms, so these delays are assumed to be in ms.
+//
 typedef struct {
     // Max time a supply has to assert PG.
     Integer power_good_timeout;
@@ -34,6 +38,10 @@ typedef struct {
     Integer por_to_pcie_delay;
 } Parameters;
 
+//
+// Default parameters for the sequencer. Given a 1 ms tick for the sequencer,
+// these values are in ms.
+//
 instance DefaultValue#(Parameters);
     defaultValue =
         Parameters {
@@ -181,6 +189,16 @@ endinterface
 // inputs until the A2 state has been reached. At this point any errors can be
 // cleared by the SP and another power up attempted.
 //
+// Notes:
+//
+// - The `tick_1ms` method is expected to be called every 1 ms and can be
+//   directly connected to an appropriate `Strobe`
+// - The `Registers` interface is implemented using ConfigRegs and can be
+//   directly exposed in a register map
+// - Calling `pcie_reset` will keep the Tofino 2 PCIe link in reset, with its
+//   I/O pins in high-Z. This is intended to be connected to the PERST signal
+//   coming from a host
+//
 module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     staticAssert(parameters.vid_valid_delay < parameters.vid_ack_timeout,
         "vid_valid_delay should be less than vid_ack_timeout");
@@ -244,7 +262,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         action
             step <= s;
             rail.set_enabled(True);
-            ticks_count_next.wset(fromInteger(parameters.power_good_timeout + 1));
+            ticks_count_next.wset(fromInteger(rail.good_timeout + 1));
         endaction;
 
     function Action disable_rail(PowerRail rail) =

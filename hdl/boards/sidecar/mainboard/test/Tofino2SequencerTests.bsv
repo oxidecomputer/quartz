@@ -1,6 +1,6 @@
-package Tofino2SequencerTests;
-
 // Copyright 2022 Oxide Computer Company
+
+package Tofino2SequencerTests;
 
 import Assert::*;
 import ConfigReg::*;
@@ -16,8 +16,13 @@ import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
 
 
+// Allow scheduling events up to 2^16 ticks in the future.
 typedef 16 DelaySize;
 
+//
+// A bench which wraps the Tofino2Sequencer and exposes a mock PDN, allowing for
+// reuse of the test infrastructure.
+//
 interface Bench;
     interface PowerRailModel#(DelaySize) vdd18;
     interface PowerRailModel#(DelaySize) vddcore;
@@ -27,23 +32,33 @@ interface Bench;
     interface PowerRailModel#(DelaySize) vdda18;
     interface Registers sequencer;
 
-    // Convenience methods.
+    // Return the bench generated "tick", allowing a test to for example
+    // `await(bench.tick)`.
     method Bool tick;
-    method UInt#(8) error();
-    method Maybe#(Bit#(4)) vid();
-    method Bool clocks_enable();
     method Action set_thermal_alert(Bool raise_alert);
 
+    //
+    // Sequencer actions, implemented by writing to the sequencer control
+    // register or exposed methods.
+    //
     method Action power_up();
     method Action power_down();
     method Action ack_vid();
     method Action pcie_reset();
 
+    // Convenience methods, decoding data in various sequencer registers.
     method Bool in_a2();
     method Bool in_a0();
     method Bool package_in_reset();
     method Bool pcie_in_reset();
     method Bool error_occured();
+
+    // Return the current value of the sequencer error register.
+    method UInt#(8) error();
+    // Return the VID value from the VID register.
+    method Maybe#(Bit#(4)) vid();
+    // Return whether or not the sequencer has enabled the clocks.
+    method Bool clocks_enable();
 
     // Asserts
     method Action assertError(Bit#(8) expected_error, String msg);
@@ -51,9 +66,12 @@ interface Bench;
 endinterface
 
 typedef struct {
+    // Power good delays (in bench "ticks") for the mock PDN.
     Integer default_power_good_delay;
     Integer vddpcie_power_good_delay;
+    // The VID bits as if strapped by Tofino.
     Bit#(3) vid;
+    // Sequencer parameters, allowing them to be tweaked for specific tests.
     Tofino2Sequencer::Parameters tofino_sequencer;
 } Parameters;
 
@@ -61,7 +79,7 @@ instance DefaultValue#(Parameters);
     defaultValue = Parameters{
         default_power_good_delay: 4,
         vddpcie_power_good_delay: 8,
-        vid: 'b110,
+        vid: 'b110, // Non-symmetric bit pattern to catch possible bit reversals.
         tofino_sequencer:
             Tofino2Sequencer::Parameters{
                 power_good_timeout: defaultValue.power_good_timeout,
@@ -179,6 +197,13 @@ module mkBench #(Parameters parameters) (Bench);
     endmethod
 endmodule
 
+//
+// mkPowerUpTest
+//
+// A test which covers the happy path when powering up a Tofino 2. The test
+// starts with the sequencer in A2, testing each major step as it transitions to
+// A0. The intended outcome is the sequencer to dwell in A0 for 50 sim ticks.
+//
 (* synthesize *)
 module mkPowerUpTest (Empty);
     Parameters parameters = defaultValue;
@@ -227,15 +252,24 @@ module mkPowerUpTest (Empty);
 
         $display("Tofino2 in A0");
 
-        // Wait another 100 cycles to make sure nothing triggers an emergency
-        // power down.
-        repeat(100) noAction;
+        // Wait another 50 ticks to make sure nothing triggers a delayed
+        // emergency power down.
+        repeat(50) await(bench.tick);
         dynamicAssert(bench.in_a0, "Expected Tofino2 still in A0");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(2 * (500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay)));
 endmodule
 
+//
+// mkPowerDownTest
+//
+// A test which covers the happy path when powering down a Tofino 2. The test
+// starts with the sequencer in A2, quickly transitions to A0, and proceeds
+// back, testing each major step as it transitions to A2. The intended outcome
+// is the sequencer to dwell go from A0 -> A2 -> A0 without errors or
+// exceptions.
+//
 (* synthesize *)
 module mkPowerDownTest (Empty);
     Parameters parameters = defaultValue;
@@ -286,6 +320,13 @@ module mkPowerDownTest (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkPowerUpAbortTest
+//
+// A test which covers a software initiated abort, by clearing the `EN` bit in
+// `TOFINO_SEQ_CTRL` while the sequencer is InPowerUp. The intended outcome is
+// the sequencer back in A2 and the error register set to UserAbort.
+//
 (* synthesize *)
 module mkPowerUpAbortTest (Empty);
     Parameters parameters = defaultValue;
@@ -305,6 +346,13 @@ module mkPowerUpAbortTest (Empty);
     endseq);
 endmodule
 
+//
+// mkPowerGoodTimeoutTest
+//
+// A test which covers a power rail not signalling power good within the
+// configured timeout period. The intended outcome is the sequencer back in A2
+// and the error register set to PowerGoodTimeout.
+//
 (* synthesize *)
 module mkPowerGoodTimeoutTest (Empty);
     Parameters parameters = defaultValue;
@@ -325,6 +373,18 @@ module mkPowerGoodTimeoutTest (Empty);
     mkTestWatchdog(500);
 endmodule
 
+//
+// mkAckVidTimeoutTest
+//
+// A test which covers software not acknowledging the VDDCORE Vout has been
+// adjusted to match the voltage level requested through the VID bits. This is
+// intended to guard against software restarting after initiating power up but
+// before adjusting VDDCORE Vout, leaving Tofino exposed to a too high voltage
+// level.
+//
+// The intended outcome is an abort of the power up sequence and the error
+// register set to AckVidTimeout.
+//
 (* synthesize *)
 module mkAckVidTimeoutTest (Empty);
     Parameters parameters = defaultValue;
@@ -346,6 +406,17 @@ module mkAckVidTimeoutTest (Empty);
     mkTestWatchdog(500);
 endmodule
 
+//
+// mkPowerDisabledDuringPowerUpTest
+//
+// A test which covers a power rail previously enabled and signalling to be good
+// suddenly to be disabled. This is intended to guard against a third party
+// (accidentally) enabling or disabling a power rail through an alternate
+// interface such as PMBus.
+//
+// The intended outcome is an abort of the power up sequence and the error
+// register set to PowerInvalidState.
+//
 (* synthesize *)
 module mkPowerDisabledDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
@@ -371,6 +442,13 @@ module mkPowerDisabledDuringPowerUpTest (Empty);
     mkTestWatchdog(500);
 endmodule
 
+//
+// mkPowerDisabledInA0Test
+//
+// A test similar to `mkPowerDisabledDuringPowerUpTest`, but the change in state
+// occuring while dwelling in A0. The intended outcome is the sequencer
+// transitioning to A2 and the error register set to PowerInvalidState.
+//
 (* synthesize *)
 module mkPowerDisabledInA0Test (Empty);
     Parameters parameters = defaultValue;
@@ -396,6 +474,13 @@ module mkPowerDisabledInA0Test (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkPowerFaultDuringPowerUpTest
+//
+// A test which covers a power rail raising its fault indicator during power up.
+// The intended outcome is an abort of the power up sequence and the error
+// register set to PowerFault.
+//
 (* synthesize *)
 module mkPowerFaultDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
@@ -417,27 +502,13 @@ module mkPowerFaultDuringPowerUpTest (Empty);
     mkTestWatchdog(500);
 endmodule
 
-(* synthesize *)
-module mkVrHotDuringPowerUpTest (Empty);
-    Parameters parameters = defaultValue;
-    Bench bench <- mkBench(parameters);
-
-    mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
-        bench.power_up();
-        // Schedule a vrhot event 10 ticks after VDDCORE has been enabled.
-        bench.vddcore.schedule_vrhot(10);
-
-        await(bench.error_occured);
-        bench.assertError(3, "Expected PowerVrHot error");
-
-        await(bench.in_a2);
-        $display("Tofino2 power up aborted");
-    endseq);
-
-    mkTestWatchdog(500);
-endmodule
-
+//
+// mkPowerFaultInA0Test
+//
+// A test which covers a power rail raising its fault indicator while in A0. The
+// intended outcome is a power down transition and the error register set to
+// PowerFault.
+//
 (* synthesize *)
 module mkPowerFaultInA0Test (Empty);
     Parameters parameters = defaultValue;
@@ -463,6 +534,49 @@ module mkPowerFaultInA0Test (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkVrHotDuringPowerUpTest
+//
+// A test which covers a power rail raising its vrhot indicator during power up.
+// The intended outcome is an abort of the power up sequence and the error
+// register set to PowerVrHot.
+//
+// Note that a voltage regulator will probably also raise its fault indicator.
+// Since VR Hot is probably a more rare occurance, the error should reflect this
+// appropriately.
+//
+(* synthesize *)
+module mkVrHotDuringPowerUpTest (Empty);
+    Parameters parameters = defaultValue;
+    Bench bench <- mkBench(parameters);
+
+    mkAutoFSM(seq
+        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        bench.power_up();
+        // Schedule a vrhot event 10 ticks after VDDCORE has been enabled.
+        bench.vddcore.schedule_vrhot(10);
+
+        await(bench.error_occured);
+        bench.assertError(3, "Expected PowerVrHot error");
+
+        await(bench.in_a2);
+        $display("Tofino2 power up aborted");
+    endseq);
+
+    mkTestWatchdog(500);
+endmodule
+
+//
+// mkVrHotDuringPowerUpTest
+//
+// A test which covers a power rail raising its vrhot indicator while in A0. The
+// intended outcome is a power down transition and the error register set to
+// PowerVrHot.
+//
+// Note that a voltage regulator will probably also raise its fault indicator.
+// Since VR Hot is probably a more rare occurance, the error should reflect this
+// appropriately.
+//
 (* synthesize *)
 module mkVrHotInA0Test (Empty);
     Parameters parameters = defaultValue;
@@ -488,6 +602,17 @@ module mkVrHotInA0Test (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkPCIeResetHeldOnPowerUpTest
+//
+// A test which covers the ability for software to keep PCIe in reset on power
+// up by setting the `PCIE_RESET` bit in `TOFINO_SEQ_CTRL`. This would be used
+// to inspect (and/or program) the PCIe configuration in EEPROM after power up,
+// but before allowing link up.
+//
+// The intended outcome is for the PCIe reset signal to remain asserted after
+// power up.
+//
 (* synthesize *)
 module mkPCIeResetHeldOnPowerUpTest (Empty);
     Parameters parameters = defaultValue;
@@ -509,6 +634,13 @@ module mkPCIeResetHeldOnPowerUpTest (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkPCIeResetBySoftwareInA0Test
+//
+// A test which covers the ability for software to keep reset PCIe by toggling
+// the `PCIE_RESET` bit in `TOFINO_SEQ_CTRL`. The intended outcome is for the
+// PCIe reset signal to follow the state of the `PCIE_RESET` bit.
+//
 (* synthesize *)
 module mkPCIeResetBySoftwareInA0Test (Empty);
     Parameters parameters = defaultValue;
@@ -539,6 +671,13 @@ module mkPCIeResetBySoftwareInA0Test (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkPCIeResetExternalInA0Test
+//
+// A test which covers the ability for the attached host to reset PCIe by
+// asserting PERST. The intended outcome is for the PCIe reset signal to follow
+// the state of `Tofino2Sequencer.pcie_reset()`.
+//
 (* synthesize *)
 module mkPCIeResetExternalInA0Test (Empty);
     Parameters parameters = defaultValue;
@@ -572,6 +711,14 @@ module mkPCIeResetExternalInA0Test (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkThermalAlertDuringPowerUpTest
+//
+// A test which covers a thermal alert occuring during power up. This could
+// happen if the heatsink does not make sufficient contact with the Tofino die.
+// The intended outcome is an abort of the power up sequence and the error
+// register set to ThermalAlert.
+//
 (* synthesize *)
 module mkThermalAlertDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
@@ -592,6 +739,14 @@ module mkThermalAlertDuringPowerUpTest (Empty);
     endseq);
 endmodule
 
+//
+// mkThermalAlertDuringPowerUpTest
+//
+// A test which covers a thermal alert occuring while dwelling in A0. This could
+// happen if a sudden increase in ambient air temperature occurs and the thermal
+// loop can not respond fast enough. The intended outcome is a power down
+// sequence and the error register set to ThermalAlert.
+//
 (* synthesize *)
 module mkThermalAlertInA0Test (Empty);
     Parameters parameters = defaultValue;

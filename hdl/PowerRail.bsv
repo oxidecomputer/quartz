@@ -7,6 +7,14 @@ import DReg::*;
 import Strobe::*;
 
 
+//
+// PowerRail
+//
+// A set of basic interfaces to an abstract power rail, implemented by a voltage
+// regulator. Unused pins can safely be left unconnected and the corresponding
+// functionality will be disabled.
+//
+
 (* always_enabled *)
 interface Pins;
     method Bool en();
@@ -24,10 +32,18 @@ interface PowerRail;
     method Bool fault();
     method Bool vrhot();
 
-    method Integer timeout();
+    // Compile time method which can be used by consuming modules to determine
+    // an appropirate enable to good timeout.
+    method Integer good_timeout();
 endinterface
 
-module mkPowerRail #(Integer timeout_) (PowerRail);
+//
+// Make `PowerRail` with the given enable to good timeout. This module expects
+// methods in the `Pins` interface to be driven every cycle. The input pins are
+// registered, so changes on a given pin are not reflected on the corresponding
+// `good`, `fault`, or `vrhot` methods until the next cycle.
+//
+module mkPowerRail #(Integer good_timeout_) (PowerRail);
     ConfigReg#(Bool) enabled_r <- mkReg(False);
     // These could be DWires, but since these are presumably latched every cycle
     // a DReg is used to avoid sending module inputs straight to outputs.
@@ -51,15 +67,26 @@ module mkPowerRail #(Integer timeout_) (PowerRail);
     method good = good_r;
     method fault = fault_r;
     method vrhot = vrhot_r;
-    method timeout = timeout_;
+    method good_timeout = good_timeout_;
 endmodule
 
+//
+// Helper functions to facilitate higher order constructs, such as iterating
+// over a `Vector` using `map` or `fold`.
+//
 function Bool enabled(PowerRail r) = r.enabled;
 function Bool good(PowerRail r) = r.good;
 function Bool fault(PowerRail r) = r.fault;
 function Bool vrhot(PowerRail r) = r.vrhot;
-function Integer timeout(PowerRail r) = r.timeout;
+function Integer good_timeout(PowerRail r) = r.good_timeout;
 
+//
+// PowerRailModel
+//
+// A set of interfaces and modules implementing a mock PowerRail. This is
+// primarily intended to be used in test benches but can be synthesized for use
+// in a board emulator running alongside the design under test.
+//
 (* always_enabled *)
 interface ModelPins;
     method Action en(Bool val);
@@ -87,7 +114,12 @@ endinstance
 interface PowerRailModel #(numeric type delay_sz);
     interface ModelPins pins;
     interface ModelState state;
+
+    // Force the enable state of the regulator, emulating for example a PMBus
+    // interface which overrides the state of the enable pin.
     method Action set_enable_override(Maybe#(Bool) en);
+    // Schedule fault or vrhot event given number of ticks or cycles after the
+    // rail is enabled.
     method Action schedule_fault(UInt#(delay_sz) delay);
     method Action schedule_vrhot(UInt#(delay_sz) delay);
     method Action clear_faults();
