@@ -17,7 +17,7 @@ bluespec_library('SidecarMainboardControllerReg',
     ],
     deps = [
         ':sidecar_mainboard_controller_registers',
-        '//hdl/boards/gimlet/sequencer:RegCommon',
+        'cobalt//hdl:RegCommon',
     ])
 
 bluespec_library('Tofino2Sequencer',
