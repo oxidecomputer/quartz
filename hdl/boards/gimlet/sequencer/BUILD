@@ -8,6 +8,11 @@ bluespec_library('IrqBlock',
 rdl('regs_pkg',
     sources = [
         'gimlet_seq_fpga_regs.rdl'
+    ],
+    outputs = [
+        'GimletSeqFpgaRegs.bsv',
+        'gimlet_regs.html',
+        'gimlet_regs.json',
     ]
 )
 
