@@ -6,7 +6,7 @@ import Clocks::*;
 import ICE40::*;
 
 import GimletSeqTop::*;
-import SpiDecode::*;
+import SPI::*;
 
 interface SpiPeripheralPinsTop;
     (* prefix = "" *)

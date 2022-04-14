@@ -67,18 +67,6 @@ bluespec_sim('gimlet_regs_sim',
         ':GimletRegs',
     ],)
 
-bluespec_library('SpiDecode',
-    sources = [
-        'SpiDecode.bsv',
-    ],
-    # modules = [
-    #     'mkTestBenchSpiPhy',
-    #     'mkTestSpiDecode',
-    # ],
-    deps = [
-        'cobalt//hdl:RegCommon',
-    ])
-
 bluespec_library('NicBlock',
     sources = [
         'NicBlock.bsv',
@@ -120,7 +108,7 @@ bluespec_library('GimletSeqTop',
         'GimletSeqTop.bsv',
     ],
     deps = [
-        ':SpiDecode',
+        'cobalt//hdl/interfaces:SPI',
         ':NicBlock',
         ':GimletRegs',
         ':EarlyPowerBlock',
@@ -174,21 +162,12 @@ bluesim_binary('gimlet_regs_test',
         ':gimlet_regs_sim',
     ])
 
-bluespec_sim('decode_sim',
-    top = 'SpiDecode.bsv',
-    modules = [
-        'mkTestBenchSpiPhy',
-    ],
-    deps = [
-        ':SpiDecode',
-    ],)
-
 bluespec_library('IgnitionletTop',
     sources = [
         'IgnitionletTop.bsv',
     ],
     deps = [
-        ':SpiDecode',
+        'cobalt//hdl/interfaces:SPI',
         ':Regs',
     ])
 
@@ -197,13 +176,6 @@ bluesim_binary('reg_test',
     top = ':regs_sim#mkTestBenchSimpleReg',
     deps = [
         ':regs_sim',
-    ])
-
-bluesim_binary('spi_phy_test',
-    env = 'cobalt//bluesim_default',
-    top = ':decode_sim#mkTestBenchSpiPhy',
-    deps = [
-        ':decode_sim',
     ])
 
 bluespec_verilog('ign_verilog',
