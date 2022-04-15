@@ -1,4 +1,8 @@
 // Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 package Tofino2Sequencer;
 
@@ -144,12 +148,14 @@ endinterface
 //
 // High level theory of operation:
 //
-// After initial reset the sequencer will be in one of four general states; A2,
-// InPowerUp, A0 or InPowerDown. InPowerUp and InPowerDown are strictly
-// transitional states to go from A2 to A0 and back and by design consist of a
-// finite number of steps. Upon properly executing the steps managed by the
-// InPowerUp and InPowerUp states the sequencer (and by extension Tofino) can
-// safely dwell indefinite in either of the A2 or A0 states.
+// Upon initial reset of the design the sequencer will transition from its
+// initial Invalid state into the A2 state. At this point the sequencer will
+// forever remain in one of four states; A2, InPowerUp, A0 or InPowerDown.
+// InPowerUp and InPowerDown are strictly transitional states to go from A2 to
+// A0 and back and by design consist of a finite number of steps. Upon properly
+// executing the steps managed by the InPowerUp and InPowerUp states, the
+// sequencer (and by extension Tofino) can safely dwell indefinite in either of
+// the A2 or A0 states.
 //
 // While in A2 the sequencer monitors fault conditions and waits for a power up
 // command through the `TOFINO_SEQ_CTRL` register. If a fault condition occurs
@@ -184,10 +190,10 @@ endinterface
 // - Disable the power rails in reverse order from InPowerUp
 //
 // These steps are implemented in `tofino2_power_down_seq` and by design this
-// sequence is both simpler and shorter than the power up sequence. Once iniated
-// it can not be interrupted and the sequencer will not consider any control
-// inputs until the A2 state has been reached. At this point any errors can be
-// cleared by the SP and another power up attempted.
+// sequence is both simpler and shorter than the power up sequence. Once
+// initiated it can not be interrupted and the sequencer will not consider any
+// control inputs until the A2 state has been reached. At this point any errors
+// can be cleared by the SP and another power up attempted.
 //
 // Notes:
 //
@@ -291,11 +297,11 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     function Bool awaiting_power_good() =
         case (step)
             AwaitVdd18PowerGood,
-            AwaitVddCorePowerGood,
-            AwaitVddPCIePowerGood,
-            AwaitVddtPowerGood,
-            AwaitVdda15PowerGood,
-            AwaitVdda18PowerGood: True;
+                AwaitVddCorePowerGood,
+                AwaitVddPCIePowerGood,
+                AwaitVddtPowerGood,
+                AwaitVdda15PowerGood,
+                AwaitVdda18PowerGood: True;
             default: False;
         endcase;
 

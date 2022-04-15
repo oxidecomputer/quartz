@@ -1,4 +1,8 @@
 // Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 package Tofino2SequencerTests;
 
@@ -567,7 +571,7 @@ module mkVrHotDuringPowerUpTest (Empty);
 endmodule
 
 //
-// mkVrHotDuringPowerUpTest
+// mkVrHotInA0Test
 //
 // A test which covers a power rail raising its vrhot indicator while in A0. The
 // intended outcome is a power down transition and the error register set to
@@ -740,7 +744,7 @@ module mkThermalAlertDuringPowerUpTest (Empty);
 endmodule
 
 //
-// mkThermalAlertDuringPowerUpTest
+// mkThermalAlertInA0Test
 //
 // A test which covers a thermal alert occuring while dwelling in A0. This could
 // happen if a sudden increase in ambient air temperature occurs and the thermal

@@ -1,3 +1,9 @@
+// Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 package PowerRail;
 
 import ConfigReg::*;
@@ -44,7 +50,7 @@ endinterface
 // `good`, `fault`, or `vrhot` methods until the next cycle.
 //
 module mkPowerRail #(Integer good_timeout_) (PowerRail);
-    ConfigReg#(Bool) enabled_r <- mkReg(False);
+    ConfigReg#(Bool) enabled_r <- mkConfigReg(False);
     // These could be DWires, but since these are presumably latched every cycle
     // a DReg is used to avoid sending module inputs straight to outputs.
     Reg#(Bool) good_r <- mkDReg(False);
