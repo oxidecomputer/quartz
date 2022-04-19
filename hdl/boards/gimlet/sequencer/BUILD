@@ -5,26 +5,34 @@ bluespec_library('IrqBlock',
         'IrqBlock.bsv',
     ])
 
-bluespec_library('RegCommon',
+rdl('regs_pkg',
     sources = [
-        'RegCommon.bsv',
-    ])
-
+        'gimlet_seq_fpga_regs.rdl'
+    ],
+    outputs = [
+        'GimletSeqFpgaRegs.bsv',
+        'gimlet_regs.html',
+        'gimlet_regs.json',
+    ]
+)
 
 bluespec_library('GimletSeqFpgaRegs',
     sources = [
-        'GimletSeqFpgaRegs.bsv',
+        ':regs_pkg#GimletSeqFpgaRegs.bsv',
     ],
     deps = [
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
+        ':regs_pkg',
     ])
+
 bluespec_library('GimletRegs',
     sources = [
         'GimletRegs.bsv',
     ],
     deps = [
+        'cobalt//hdl:GitVersion',
         ':IrqBlock',
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
         ':GimletSeqFpgaRegs',
         ':NicBlock',
         ':EarlyPowerBlock',
@@ -38,7 +46,7 @@ bluespec_library('Regs',
         'Regs.bsv',
     ],
     deps = [
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
     ])
 
 bluespec_sim('regs_sim',
@@ -58,18 +66,6 @@ bluespec_sim('gimlet_regs_sim',
     deps = [
         ':GimletRegs',
     ],)
-
-bluespec_library('SpiDecode',
-    sources = [
-        'SpiDecode.bsv',
-    ],
-    # modules = [
-    #     'mkTestBenchSpiPhy',
-    #     'mkTestSpiDecode',
-    # ],
-    deps = [
-        ':RegCommon',
-    ])
 
 bluespec_library('NicBlock',
     sources = [
@@ -112,7 +108,7 @@ bluespec_library('GimletSeqTop',
         'GimletSeqTop.bsv',
     ],
     deps = [
-        ':SpiDecode',
+        'cobalt//hdl/interfaces:SPI',
         ':NicBlock',
         ':GimletRegs',
         ':EarlyPowerBlock',
@@ -166,21 +162,12 @@ bluesim_binary('gimlet_regs_test',
         ':gimlet_regs_sim',
     ])
 
-bluespec_sim('decode_sim',
-    top = 'SpiDecode.bsv',
-    modules = [
-        'mkTestBenchSpiPhy',
-    ],
-    deps = [
-        ':SpiDecode',
-    ],)
-
 bluespec_library('IgnitionletTop',
     sources = [
         'IgnitionletTop.bsv',
     ],
     deps = [
-        ':SpiDecode',
+        'cobalt//hdl/interfaces:SPI',
         ':Regs',
     ])
 
@@ -189,13 +176,6 @@ bluesim_binary('reg_test',
     top = ':regs_sim#mkTestBenchSimpleReg',
     deps = [
         ':regs_sim',
-    ])
-
-bluesim_binary('spi_phy_test',
-    env = 'cobalt//bluesim_default',
-    top = ':decode_sim#mkTestBenchSpiPhy',
-    deps = [
-        ':decode_sim',
     ])
 
 bluespec_verilog('ign_verilog',

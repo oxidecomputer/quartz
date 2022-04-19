@@ -6,9 +6,11 @@ import Connectable::*;
 import ClientServer::*;
 import ConfigReg::*;
 import StmtFSM::*;
+
 // Oxide imports
 import IrqBlock::*;
 import RegCommon::*;
+import git_version::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
@@ -28,10 +30,6 @@ endinterface
 
 module mkGimletRegs(GimletRegIF);
     // Registers
-    ConfigReg#(Id0) id0 <- mkReg(unpack('h01));
-    ConfigReg#(Id1) id1 <- mkReg(unpack('hde));
-    ConfigReg#(Id2) id2 <- mkReg(unpack('hAA));
-    ConfigReg#(Id3) id3 <- mkReg(unpack('h55));
     ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
     ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(unpack(0)); // Debug mux control register
     // Main control registers
@@ -117,10 +115,16 @@ module mkGimletRegs(GimletRegIF);
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_read (do_read && !isValid(readdata));
         case (address)
-            fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0));
-            fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1));
-            fromInteger(id2Offset) : readdata <= tagged Valid (pack(id2));
-            fromInteger(id3Offset) : readdata <= tagged Valid (pack(id3));
+            fromInteger(id0Offset) : readdata <= tagged Valid ('h01);
+            fromInteger(id1Offset) : readdata <= tagged Valid ('hde);
+            fromInteger(ver0Offset) : readdata <= tagged Valid (version[3]);
+            fromInteger(ver1Offset) : readdata <= tagged Valid (version[2]);
+            fromInteger(ver2Offset) : readdata <= tagged Valid (version[1]);
+            fromInteger(ver3Offset) : readdata <= tagged Valid (version[0]);
+            fromInteger(sha0Offset) : readdata <= tagged Valid (sha[3]);
+            fromInteger(sha1Offset) : readdata <= tagged Valid (sha[2]);
+            fromInteger(sha2Offset) : readdata <= tagged Valid (sha[1]);
+            fromInteger(sha3Offset) : readdata <= tagged Valid (sha[0]);
             fromInteger(scrtchpadOffset) : readdata <= tagged Valid (pack(scratchpad));
             fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
             fromInteger(ifrOffset) : readdata <= tagged Valid (pack(irq_block.cause_reg));

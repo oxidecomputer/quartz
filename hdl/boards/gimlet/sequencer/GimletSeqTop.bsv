@@ -12,7 +12,7 @@ import StmtFSM::*;
 import Vector::*;
 
 // Local stuff
-import SpiDecode::*;
+import SPI::*;
 import NicBlock::*;
 import EarlyPowerBlock::*;
 import GimletRegs::*;
@@ -245,7 +245,7 @@ function Stmt spiReadUntil(
 (* synthesize *)
 module mkGimletTestTop(Empty);
     let sim_params = GimletSeqTopParameters {one_ms_counts: 500};   // Speed up sim time
-    SPITestController controller <- mkSpiTestController();
+    ModelSpiController controller <- mkModelSpiController();
     TBTestEarlyPinsSource early_pins_bfm <- mkTestEarlyPinsSource();
     TBTestA1PinsSource a1_pins_bfm <- mkTestA1PinsSource();
     TBTestA0PinsSource a0_pins_bfm <- mkTestA0PinsSource();
