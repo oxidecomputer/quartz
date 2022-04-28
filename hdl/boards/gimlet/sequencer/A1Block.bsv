@@ -19,13 +19,13 @@ import TestUtils::*;
 import GimletSeqFpgaRegs::*;
 import PowerRail::*;
 
-    interface A1Registers;
+    interface A1Regs;
         // method Action dbg_ctrl(A1DbgOut value); // Output control
         // method Action dbg_en(Bool value);    // Debug enable pin
-        method Action a1_en(Bool value);  // SM enable pin
+        interface Reg#(Bool) a1_en;  // SM enable pin
         interface ReadOnly#(A1StateType) state;
-        // interface ReadOnly#(A1OutStatus) output_readbacks;
-        // interface ReadOnly#(A1Readbacks) input_readbacks;
+        interface ReadOnly#(A1OutStatus) output_readbacks;
+        interface ReadOnly#(A1Readbacks) input_readbacks;
     endinterface
 
     // A1 block interfaces
@@ -37,46 +37,12 @@ import PowerRail::*;
         method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
     endinterface
 
-    // Interface at this block to the register block
-    interface A1Regs;
-        // Normalized pin readbacks to registers
-        method A1Readbacks input_readbacks; // Input sampling
-        method A1OutStatus output_readbacks; // Output sampling
-        method A1StateType state;
-        method Action dbg_ctrl(A1DbgOut value); // Output control
-        method Action dbg_en(Bool value);    // Debug enable pin
-        method Action a1_en(Bool value);  // SM enable pin
-    endinterface
-
-    // "Reverse" Interface at register block
-    interface A1RegsReverse;
-        // Normalized pin readbacks to registers
-        method Action input_readbacks(A1Readbacks value); // Input sampling
-        method Action output_readbacks(A1OutStatus value); // Output sampling
-        method Action state(A1StateType value);
-        method A1DbgOut dbg_ctrl; // Output control
-        method Bool dbg_en;    // Debug enable pin
-        method Bool a1_en;    // SM enable pin
-    endinterface
-
-    // Allow register block interfaces to connect
-    instance Connectable#(A1Regs, A1RegsReverse);
-        module mkConnection#(A1Regs source, A1RegsReverse sink) (Empty);
-            mkConnection(source.input_readbacks, sink.input_readbacks);
-            mkConnection(source.output_readbacks, sink.output_readbacks);
-            mkConnection(source.dbg_ctrl, sink.dbg_ctrl);
-            mkConnection(source.state, sink.state);
-            mkConnection(source.dbg_en, sink.dbg_en);
-            mkConnection(source.a1_en, sink.a1_en);
-        endmodule
-    endinstance
-
     // Interface for Block top (syncd pins in, pins out, register if)
     interface A1BlockTop;
         interface A1Pins pins;
         method Action a0_idle(Bool value);
         method Bool a1_ok;
-        interface A1Registers reg_if;
+        interface A1Regs reg_if;
     endinterface
     
     typedef enum {  // Leaving revA gimlet sequence #s here for now.
@@ -93,7 +59,8 @@ import PowerRail::*;
         Integer rsm_delay = 200 * one_ms_counts;
 
         ConfigReg#(A1StateType) state <- mkConfigReg(IDLE);
-        // ConfigReg#() output_readbacks = mkConfigReg(pack(0));
+        ConfigReg#(A1OutStatus) output_readbacks <- mkConfigRegU();
+        ConfigReg#(A1Readbacks) input_readbacks <- mkConfigRegU();
 
 
         Reg#(Bit#(1)) sp3_rsmrst_v3p3_l_ <- mkReg(0);
@@ -104,8 +71,8 @@ import PowerRail::*;
         Reg#(Bool) enable <- mkReg(False);
         Reg#(UInt#(24)) ticks_count <- mkReg(0);
         RWire#(UInt#(24)) ticks_count_next <- mkRWire();
-        PulseWire tick <- mkPulseWire();
 
+        Wire#(Bool) downstream_idle <- mkDWire(False);
         Wire#(Bool) aggregate_pg <- mkDWire(False);
         Wire#(Bool) aggregate_fault <- mkDWire(False);
 
@@ -147,6 +114,22 @@ import PowerRail::*;
         function bool_or(a, b) = a || b;
         function bool_and(a, b) = a && b;
         
+        (* fire_when_enabled *)
+        rule do_readbacks;
+            output_readbacks <= A1OutStatus {
+                rsmrst: ~sp3_rsmrst_v3p3_l_,
+                v0p9_s5_en: sp3_v0p9_s5.pins.en,
+                v1p8_s5_en: sp3_v1p8_s5.pins.en,
+                v1p5_rtc_en: sp3_v1p5_rtc.pins.en,
+                v3p3_s5_en: sp3_v3p3_s5.pins.en
+            };
+            input_readbacks <= A1Readbacks {
+                v0p9_vdd_soc_s5_pg: sp3_v0p9_s5.pg_readback,
+                v1p8_s5_pg: sp3_v1p8_s5.pg_readback,
+                v3p3_s5_pg: sp3_v3p3_s5.pg_readback,    
+                v1p5_rtc_pg: sp3_v1p5_rtc.pg_readback  
+            };
+        endrule
         
         //
         // Basic down counter -- pre-load
@@ -172,11 +155,6 @@ import PowerRail::*;
         (* fire_when_enabled *)
         rule do_fault_aggregation;
             aggregate_fault <= foldr(bool_or, False, map(PowerRail::fault, power_rails));
-        endrule
-
-        (* fire_when_enabled *)
-        rule do_enable_reg;
-            enable_last <= enable;
         endrule
 
         FSM a1_power_up_seq <- mkFSMWithPred(seq
@@ -229,11 +207,12 @@ import PowerRail::*;
 
         (* fire_when_enabled *)
         rule do_enable;
+            enable_last <= enable;
             if (faulted) begin
                 a1_power_down_seq.start();
             end else if (!enable_last && enable) begin
                 a1_power_up_seq.start();
-            end else if (enable_last && !enable) begin
+            end else if (!enable && state != IDLE && downstream_idle) begin
                 a1_power_down_seq.start();
             end
         endrule
@@ -247,12 +226,14 @@ import PowerRail::*;
         endinterface
 
         method a1_ok = ok;
+        method a0_idle = downstream_idle._write;
 
-        interface A1Registers reg_if;
+        interface A1Regs reg_if;
+            interface a1_en = enable;
             interface state = regToReadOnly(state);
-            method a1_en = enable._write; // SM enable pin
+            interface output_readbacks = regToReadOnly(output_readbacks);
+            interface input_readbacks = regToReadOnly(input_readbacks);
         endinterface
-        // interface A1Regs reg_if;
      endmodule
 
 
@@ -265,6 +246,8 @@ import PowerRail::*;
         method Bool a1_ok();
         method Action power_up();
         method Action power_down();
+        method Action a0_busy();
+        method Action a0_idle();
         method Bit#(1) seq_to_sp3_rsmrst_v3p3_l();
         method A1StateType state();
 
@@ -279,10 +262,13 @@ import PowerRail::*;
 
         A1BlockTop dut <- mkA1BlockSeq(10);
 
+        Reg#(Bool) downstream_idle <- mkReg(True);
+
         mkConnection(v3p3_s5_rail.pins, dut.pins.v3p3_s5);
         mkConnection(v1p5_rtc_rail.pins, dut.pins.v1p5_rtc);
         mkConnection(v1p8_s5_rail.pins, dut.pins.v1p8_s5);
         mkConnection(v0p9_s5_rail.pins, dut.pins.v0p9_s5);
+        mkConnection(downstream_idle, dut.a0_idle);
 
         interface PowerRailModel v3p3_s5 = v3p3_s5_rail;
         interface PowerRailModel v1p5_rtc = v1p5_rtc_rail;
@@ -290,10 +276,10 @@ import PowerRail::*;
         interface PowerRailModel v0p9_s5 = v0p9_s5_rail;
 
         method Action power_up();
-            dut.reg_if.a1_en(True);
+            dut.reg_if.a1_en <= True;
         endmethod
         method Action power_down();
-            dut.reg_if.a1_en(False);
+            dut.reg_if.a1_en <= False;
         endmethod
         method Bool a1_ok();
             return dut.a1_ok;
@@ -302,7 +288,12 @@ import PowerRail::*;
             return dut.pins.seq_to_sp3_rsmrst_v3p3_l;
         endmethod
         method state = dut.reg_if.state._read;
-    
+        method Action a0_busy();
+            downstream_idle <= False;
+        endmethod
+        method Action a0_idle();
+            downstream_idle <= True;
+        endmethod
     endmodule
 
     (* synthesize *)
@@ -338,6 +329,32 @@ import PowerRail::*;
             bench.power_down();
             delay(5);
             dynamicAssert(bench.a1_ok == False, "Expected a1_ok to de-assert");
+            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 0, "Expected RSMRST_L asserted");
+            dynamicAssert(bench.v3p3_s5.enabled == False, "Expected v3p3_s5_en de-asserted");
+            delay(200);
+        endseq);
+
+    endmodule
+
+    (* synthesize *)
+    module mkA1PowerDownA0InteractionTest(Empty);
+
+        Bench bench <- mkBench();
+
+        mkAutoFSM(seq
+            dynamicAssert(bench.a1_ok == False, "Expected sequencer in A2");
+            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 0, "Expected RSMRST_L asserted");
+            bench.power_up();
+            await(bench.a1_ok);
+            bench.a0_busy();
+            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 1, "Expected RSMRST_L de-asserted");
+            bench.power_down(); // Should not actually happen because A0 is busy
+            delay(200);
+            dynamicAssert(bench.a1_ok == True, "Expected a1_ok to still be asserted since it can't power down");
+            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 1, "Expected RSMRST_L still de-asserted");
+            bench.a0_idle();
+            delay(5);
+            dynamicAssert(bench.a1_ok == False, "Expected a1_ok to be de-asserted we can now power down");
             dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 0, "Expected RSMRST_L asserted");
             dynamicAssert(bench.v3p3_s5.enabled == False, "Expected v3p3_s5_en de-asserted");
             delay(200);

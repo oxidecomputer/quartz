@@ -20,6 +20,7 @@ interface PowerRail;
     method Bool fault();
     method Bool timedout();
     method Integer timeout();
+    method Bit#(1) pg_readback();
 endinterface
 
 module mkPowerRail #(Integer timeout_, Bool defaultEnable) (PowerRail);
@@ -79,6 +80,9 @@ module mkPowerRail #(Integer timeout_, Bool defaultEnable) (PowerRail);
     method fault = faulted_r;
     method timedout = timedout_;
     method timeout = timeout_;
+    method Bit#(1) pg_readback;
+        return (good_) ? 1 : 0;
+    endmethod
 
     
 endmodule

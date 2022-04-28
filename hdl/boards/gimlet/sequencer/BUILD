@@ -1,9 +1,9 @@
 # -*- python -*- vim:syntax=python:
 
-# bluespec_library('IrqBlock',
-#     sources = [
-#         'IrqBlock.bsv',
-#     ])
+bluespec_library('IrqBlock',
+    sources = [
+        'IrqBlock.bsv',
+    ])
 
 rdl('regs_pkg',
     sources = [
@@ -34,11 +34,11 @@ bluespec_library('GimletRegs',
         ':IrqBlock',
         'cobalt//hdl:RegCommon',
         ':GimletSeqFpgaRegs',
-        ':NicBlock',
-        ':EarlyPowerBlock',
+        # ':NicBlock',
+        # ':EarlyPowerBlock',
         ':A1Block',
-        ':A0Block',
-        ':MiscIO',
+        # ':A0Block',
+        # ':MiscIO',
     ])
 
 bluespec_library('Regs',
@@ -54,23 +54,7 @@ bluespec_library('PowerRail',
         'PowerRail.bsv',
     ],
 )
-# bluespec_sim('regs_sim',
-#     top = 'Regs.bsv',
-#     modules = [
-#         'mkTestBenchSimpleReg',
-#     ],
-#     deps = [
-#         ':Regs',
-#     ],)
 
-# bluespec_sim('gimlet_regs_sim',
-#     top = 'GimletRegs.bsv',
-#     modules = [
-#         'mkSimpleTest',
-#     ],
-#     deps = [
-#         ':GimletRegs',
-#     ],)
 
 # bluespec_library('NicBlock',
 #     sources = [
@@ -95,6 +79,7 @@ bluesim_tests('A1Tests',
         'mkA1PowerUpTest',
         'mkA1PowerDownTest',
         'mkA1MAPOTest',
+        'mkA1PowerDownA0InteractionTest',
     ],
     deps = [
         ':A1Block',
