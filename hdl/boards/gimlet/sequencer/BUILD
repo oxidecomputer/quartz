@@ -1,9 +1,9 @@
 # -*- python -*- vim:syntax=python:
 
-bluespec_library('IrqBlock',
-    sources = [
-        'IrqBlock.bsv',
-    ])
+# bluespec_library('IrqBlock',
+#     sources = [
+#         'IrqBlock.bsv',
+#     ])
 
 rdl('regs_pkg',
     sources = [
@@ -49,190 +49,201 @@ bluespec_library('Regs',
         'cobalt//hdl:RegCommon',
     ])
 
-bluespec_sim('regs_sim',
-    top = 'Regs.bsv',
-    modules = [
-        'mkTestBenchSimpleReg',
-    ],
-    deps = [
-        ':Regs',
-    ],)
-
-bluespec_sim('gimlet_regs_sim',
-    top = 'GimletRegs.bsv',
-    modules = [
-        'mkSimpleTest',
-    ],
-    deps = [
-        ':GimletRegs',
-    ],)
-
-bluespec_library('NicBlock',
+bluespec_library('PowerRail',
     sources = [
-        'NicBlock.bsv',
+        'PowerRail.bsv',
     ],
-    deps = [
-         ':GimletSeqFpgaRegs',
-    ])
+)
+# bluespec_sim('regs_sim',
+#     top = 'Regs.bsv',
+#     modules = [
+#         'mkTestBenchSimpleReg',
+#     ],
+#     deps = [
+#         ':Regs',
+#     ],)
+
+# bluespec_sim('gimlet_regs_sim',
+#     top = 'GimletRegs.bsv',
+#     modules = [
+#         'mkSimpleTest',
+#     ],
+#     deps = [
+#         ':GimletRegs',
+#     ],)
+
+# bluespec_library('NicBlock',
+#     sources = [
+#         'NicBlock.bsv',
+#     ],
+#     deps = [
+#          ':GimletSeqFpgaRegs',
+#     ])
 bluespec_library('A1Block',
     sources = [
         'A1Block.bsv',
     ],
     deps = [
          ':GimletSeqFpgaRegs',
-    ])
-bluespec_library('A0Block',
-    sources = [
-        'A0Block.bsv',
-    ],
-    deps = [
-         ':GimletSeqFpgaRegs',
-    ])
-bluespec_library('MiscIO',
-    sources = [
-        'MiscIO.bsv',
-    ],
-    deps = [
-         ':GimletSeqFpgaRegs',
-    ])
-bluespec_library('EarlyPowerBlock',
-    sources = [
-        'EarlyPowerBlock.bsv',
-    ],
-    deps = [
-         ':GimletSeqFpgaRegs',
+         ':PowerRail',
     ])
 
-bluespec_library('GimletSeqTop',
-    sources = [
-        'GimletSeqTop.bsv',
+bluesim_tests('A1Tests',
+    env = 'cobalt//bluesim_default',
+    suite = "A1Block.bsv",
+    modules = [
+        'mkA1PowerUpTest',
+        'mkA1PowerDownTest',
+        'mkA1MAPOTest',
     ],
     deps = [
-        'cobalt//hdl/interfaces:SPI',
-        ':NicBlock',
-        ':GimletRegs',
-        ':EarlyPowerBlock',
         ':A1Block',
-        ':A0Block',
-        ':MiscIO',
-    ],
-    )
-
-bluespec_library('GimletSeqTopWrapper',
-    sources = [
-        'GimletSeqTopWrapper.bsv',
-    ],
-    deps = [
-        'cobalt//hdl/interfaces:ICE40',
-        ':GimletSeqTop',
-    ],
-    using = {
-        # The folling script is needed to fix the inout syntax used in the generated Verilog.
-        'bsc_flags': [
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
-        ]
-    }
+        'cobalt//hdl:TestUtils',
+    ]
 )
+# bluespec_library('A0Block',
+#     sources = [
+#         'A0Block.bsv',
+#     ],
+#     deps = [
+#          ':GimletSeqFpgaRegs',
+#     ])
+# bluespec_library('MiscIO',
+#     sources = [
+#         'MiscIO.bsv',
+#     ],
+#     deps = [
+#          ':GimletSeqFpgaRegs',
+#     ])
+# bluespec_library('EarlyPowerBlock',
+#     sources = [
+#         'EarlyPowerBlock.bsv',
+#     ],
+#     deps = [
+#          ':GimletSeqFpgaRegs',
+#     ])
 
-bluespec_sim('gimlet_sim_top',
-    top = 'GimletSeqTop.bsv',
-    modules = [
-        'mkGimletTestTop',
-    ],
-    deps = [
-        ':GimletSeqTop',
-    ],
-    local = {
-        'bsc_flags': ['-suppress-warnings', 'G0046']
-    }
-    )
+# bluespec_library('GimletSeqTop',
+#     sources = [
+#         'GimletSeqTop.bsv',
+#     ],
+#     deps = [
+#         'cobalt//hdl/interfaces:SPI',
+#         ':NicBlock',
+#         ':GimletRegs',
+#         ':EarlyPowerBlock',
+#         ':A1Block',
+#         ':A0Block',
+#         ':MiscIO',
+#     ],
+#     )
 
-bluesim_binary('gimlet_test',
-    env = 'cobalt//bluesim_default',
-    top = ':gimlet_sim_top#mkGimletTestTop',
-    deps = [
-        ':gimlet_sim_top',
-    ],
-    )
+# bluespec_library('GimletSeqTopWrapper',
+#     sources = [
+#         'GimletSeqTopWrapper.bsv',
+#     ],
+#     deps = [
+#         'cobalt//hdl/interfaces:ICE40',
+#         ':GimletSeqTop',
+#     ],
+#     using = {
+#         # The folling script is needed to fix the inout syntax used in the generated Verilog.
+#         'bsc_flags': [
+#             '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+#         ]
+#     }
+# )
 
-bluesim_binary('gimlet_regs_test',
-    env = 'cobalt//bluesim_default',
-    top = ':gimlet_regs_sim#mkSimpleTest',
-    deps = [
-        ':gimlet_regs_sim',
-    ])
+# bluespec_sim('gimlet_sim_top',
+#     top = 'GimletSeqTop.bsv',
+#     modules = [
+#         'mkGimletTestTop',
+#     ],
+#     deps = [
+#         ':GimletSeqTop',
+#     ],
+#     local = {
+#         'bsc_flags': ['-suppress-warnings', 'G0046']
+#     }
+#     )
 
-bluespec_library('IgnitionletTop',
-    sources = [
-        'IgnitionletTop.bsv',
-    ],
-    deps = [
-        'cobalt//hdl/interfaces:SPI',
-        ':Regs',
-    ])
+# bluesim_binary('gimlet_test',
+#     env = 'cobalt//bluesim_default',
+#     top = ':gimlet_sim_top#mkGimletTestTop',
+#     deps = [
+#         ':gimlet_sim_top',
+#     ],
+#     )
 
-bluesim_binary('reg_test',
-    env = 'cobalt//bluesim_default',
-    top = ':regs_sim#mkTestBenchSimpleReg',
-    deps = [
-        ':regs_sim',
-    ])
+# bluesim_binary('gimlet_regs_test',
+#     env = 'cobalt//bluesim_default',
+#     top = ':gimlet_regs_sim#mkSimpleTest',
+#     deps = [
+#         ':gimlet_regs_sim',
+#     ])
 
-bluespec_verilog('ign_verilog',
-    top = 'IgnitionletTop.bsv',
-    modules = [
-        'mkIgnitionletTop',
-    ],
-    deps = [
-        ':IgnitionletTop',
-    ])
+# bluesim_binary('reg_test',
+#     env = 'cobalt//bluesim_default',
+#     top = ':regs_sim#mkTestBenchSimpleReg',
+#     deps = [
+#         ':regs_sim',
+#     ])
 
-bluespec_verilog('seq_verilog',
-    top = 'GimletSeqTopWrapper.bsv',
-    modules = [
-        'mkGimletSeqTop',
-    ],
-    deps = [
-        ':GimletSeqTopWrapper',
-    ],
-    # This suppresses the reset sync errors at the top (and seemingly any below also)
-    # In this design, that is not a problem since this is a single clock, single reset domain design.
-    local = {
-        'bsc_flags': ['-suppress-warnings', 'G0046']
-    }
-    )
+# bluespec_verilog('ign_verilog',
+#     top = 'IgnitionletTop.bsv',
+#     modules = [
+#         'mkIgnitionletTop',
+#     ],
+#     deps = [
+#         ':IgnitionletTop',
+#     ])
 
-yosys_design('ignitionlet_spi_yosys',
-    top_module = 'mkIgnitionletTop',
-    sources = [
-        ':ign_verilog#mkIgnitionletTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-    ],
-    deps = [
-        ':ign_verilog',
-        'cobalt//vnd/bluespec:Verilog.v',
-    ])
+# bluespec_verilog('seq_verilog',
+#     top = 'GimletSeqTopWrapper.bsv',
+#     modules = [
+#         'mkGimletSeqTop',
+#     ],
+#     deps = [
+#         ':GimletSeqTopWrapper',
+#     ],
+#     # This suppresses the reset sync errors at the top (and seemingly any below also)
+#     # In this design, that is not a problem since this is a single clock, single reset domain design.
+#     local = {
+#         'bsc_flags': ['-suppress-warnings', 'G0046']
+#     }
+#     )
 
-yosys_design('gimlet_sequencer_yosys',
-    top_module = 'mkGimletSeqTop',
-    sources = [
-        ':seq_verilog#mkGimletSeqTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-    ],
-    deps = [
-        ':seq_verilog',
-        'cobalt//vnd/bluespec:Verilog.v',
-    ])
+# yosys_design('ignitionlet_spi_yosys',
+#     top_module = 'mkIgnitionletTop',
+#     sources = [
+#         ':ign_verilog#mkIgnitionletTop',
+#         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+#     ],
+#     deps = [
+#         ':ign_verilog',
+#         'cobalt//vnd/bluespec:Verilog.v',
+#     ])
 
-nextpnr_ice40_bitstream('ignitionlet_spi',
-    env = 'ignitionlet_spi',
-    design = ':ignitionlet_spi_yosys#ignitionlet_spi_yosys.json',
-    deps = [
-        ':ignitionlet_spi_yosys',
-    ])
-nextpnr_ice40_bitstream('gimlet_sequencer',
-    env = 'gimlet_sequencer',
-    design = ':gimlet_sequencer_yosys#gimlet_sequencer_yosys.json',
-    deps = [
-        ':gimlet_sequencer_yosys',
-    ])
+# yosys_design('gimlet_sequencer_yosys',
+#     top_module = 'mkGimletSeqTop',
+#     sources = [
+#         ':seq_verilog#mkGimletSeqTop',
+#         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+#     ],
+#     deps = [
+#         ':seq_verilog',
+#         'cobalt//vnd/bluespec:Verilog.v',
+#     ])
+
+# nextpnr_ice40_bitstream('ignitionlet_spi',
+#     env = 'ignitionlet_spi',
+#     design = ':ignitionlet_spi_yosys#ignitionlet_spi_yosys.json',
+#     deps = [
+#         ':ignitionlet_spi_yosys',
+#     ])
+# nextpnr_ice40_bitstream('gimlet_sequencer',
+#     env = 'gimlet_sequencer',
+#     design = ':gimlet_sequencer_yosys#gimlet_sequencer_yosys.json',
+#     deps = [
+#         ':gimlet_sequencer_yosys',
+#     ])

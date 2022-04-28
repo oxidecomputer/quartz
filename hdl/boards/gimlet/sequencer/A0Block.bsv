@@ -401,7 +401,7 @@ import GimletSeqFpgaRegs::*;
     endmodule
 
     typedef enum {
-        IDLE,           // 0x00
+        IDLE = 'h 0x00
         PBTN,           // 0x01
         WAITSLP,        // 0x02
         GROUPB1_EN,     // 0x03
