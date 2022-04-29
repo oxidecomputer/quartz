@@ -22,11 +22,30 @@ import PowerRail::*;
     interface A1Regs;
         // method Action dbg_ctrl(A1DbgOut value); // Output control
         // method Action dbg_en(Bool value);    // Debug enable pin
-        interface Reg#(Bool) a1_en;  // SM enable pin
-        interface ReadOnly#(A1StateType) state;
-        interface ReadOnly#(A1OutStatus) output_readbacks;
-        interface ReadOnly#(A1Readbacks) input_readbacks;
+        method Action a1_en(Bool value);  // SM enable pin
+        method A1StateType state();
+        method A1OutStatus output_readbacks();
+        method A1Readbacks input_readbacks();
     endinterface
+
+    interface A1RegsReverse;
+        // method Action dbg_ctrl(A1DbgOut value); // Output control
+        // method Action dbg_en(Bool value);    // Debug enable pin
+        method Bool a1_en();  // SM enable pin
+        method Action state (A1StateType value);
+        method Action output_readbacks (A1OutStatus value);
+        method Action input_readbacks (A1Readbacks value);
+    endinterface
+
+    // Allow our output pin source to connect to our output pin sink
+    instance Connectable#(A1Regs, A1RegsReverse);
+        module mkConnection#(A1Regs source, A1RegsReverse sink) (Empty);
+            mkConnection(source.a1_en, sink.a1_en);
+            mkConnection(source.state, sink.state);
+            mkConnection(source.output_readbacks, sink.output_readbacks);
+            mkConnection(source.input_readbacks, sink.input_readbacks);
+        endmodule
+    endinstance
 
     // A1 block interfaces
     interface A1Pins;
@@ -229,10 +248,10 @@ import PowerRail::*;
         method a0_idle = downstream_idle._write;
 
         interface A1Regs reg_if;
-            interface a1_en = enable;
-            interface state = regToReadOnly(state);
-            interface output_readbacks = regToReadOnly(output_readbacks);
-            interface input_readbacks = regToReadOnly(input_readbacks);
+            method a1_en = enable._write;
+            method state = state._read;
+            method output_readbacks = output_readbacks._read;
+            method input_readbacks = input_readbacks._read;
         endinterface
      endmodule
 
@@ -276,10 +295,10 @@ import PowerRail::*;
         interface PowerRailModel v0p9_s5 = v0p9_s5_rail;
 
         method Action power_up();
-            dut.reg_if.a1_en <= True;
+            dut.reg_if.a1_en(True);
         endmethod
         method Action power_down();
-            dut.reg_if.a1_en <= False;
+            dut.reg_if.a1_en(False);
         endmethod
         method Bool a1_ok();
             return dut.a1_ok;
@@ -287,7 +306,7 @@ import PowerRail::*;
         method Bit#(1) seq_to_sp3_rsmrst_v3p3_l();
             return dut.pins.seq_to_sp3_rsmrst_v3p3_l;
         endmethod
-        method state = dut.reg_if.state._read;
+        method state = dut.reg_if.state;
         method Action a0_busy();
             downstream_idle <= False;
         endmethod

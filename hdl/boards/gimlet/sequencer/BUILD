@@ -70,6 +70,7 @@ bluespec_library('A1Block',
     deps = [
          ':GimletSeqFpgaRegs',
          ':PowerRail',
+         'cobalt//hdl:TestUtils',
     ])
 
 bluesim_tests('A1Tests',
@@ -82,8 +83,18 @@ bluesim_tests('A1Tests',
         'mkA1PowerDownA0InteractionTest',
     ],
     deps = [
-        ':A1Block',
-        'cobalt//hdl:TestUtils',
+        ':A1Block'
+    ]
+)
+bluesim_tests('TopTests',
+    env = 'cobalt//bluesim_default',
+    suite = "GimletSeqTop.bsv",
+    modules = [
+        'mkGimletTestTop',
+    ],
+    deps = [
+        ':GimletSeqTop',
+        # 'cobalt//hdl:TestUtils',
     ]
 )
 # bluespec_library('A0Block',
@@ -108,20 +119,20 @@ bluesim_tests('A1Tests',
 #          ':GimletSeqFpgaRegs',
 #     ])
 
-# bluespec_library('GimletSeqTop',
-#     sources = [
-#         'GimletSeqTop.bsv',
-#     ],
-#     deps = [
-#         'cobalt//hdl/interfaces:SPI',
-#         ':NicBlock',
-#         ':GimletRegs',
-#         ':EarlyPowerBlock',
-#         ':A1Block',
-#         ':A0Block',
-#         ':MiscIO',
-#     ],
-#     )
+bluespec_library('GimletSeqTop',
+    sources = [
+        'GimletSeqTop.bsv',
+    ],
+    deps = [
+        'cobalt//hdl/interfaces:SPI',
+        # ':NicBlock',
+        ':GimletRegs',
+        # ':EarlyPowerBlock',
+        ':A1Block',
+        # ':A0Block',
+        # ':MiscIO',
+    ],
+    )
 
 # bluespec_library('GimletSeqTopWrapper',
 #     sources = [
