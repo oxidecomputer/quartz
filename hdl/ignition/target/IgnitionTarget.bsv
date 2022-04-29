@@ -230,7 +230,7 @@ endinterface
 module mkIgnitionTargetBench #(Parameters parameters, UInt#(6) id) (IgnitionTargetBench);
     IgnitionTarget _target <- mkIgnitionTarget(parameters);
 
-    Strobe#(2) tick <- mkStrobe(1, 0);
+    Strobe#(2) tick <- mkPowerTwoStrobe(1, 0);
     Reg#(UInt#(32)) ticks_elapsed_ <- mkReg(0);
     PulseWire should_reset_ticks_elapsed <- mkPulseWire();
 

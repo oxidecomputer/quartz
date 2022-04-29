@@ -55,6 +55,7 @@ module mkIgnitionTargetIOAndResetWrapper
     // Strobe, used as a time pulse to generate timed events.
     Strobe#(24) strobe_1khz <-
         mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by initial_reset);
+    mkFreeRunningStrobe(strobe_1khz);
 
     // This null crossings is needed to convince BSC the missing reset
     // information for these output signals is acceptable.
@@ -78,10 +79,12 @@ module mkIgnitionTargetIOAndResetWrapper
         end
     endrule
 
-    // Run the strobe.
-    (* no_implicit_conditions, fire_when_enabled *)
-    rule do_tick_strobe;
-        strobe_1khz.send();
+    Strobe#(2) diff_strobe <- mkPowerTwoStrobe(1, 0, reset_by initial_reset);
+
+    rule do_diff_output;
+        aux0_tx <= pack(diff_strobe);
+        aux1_tx <= pack(diff_strobe);
+        diff_strobe.send();
     endrule
 
     method id = id_sync.send;
