@@ -48,6 +48,7 @@ bluespec_verilog('IgnitionletTargetTop',
     modules = [
         'mkIgnitionletTargetWithPowerButton',
         'mkIgnitionletTargetWithResetButton',
+        'mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators',
     ],
     deps = [
         '//hdl/ignition/target:IgnitionTarget',
@@ -90,4 +91,23 @@ nextpnr_ice40_bitstream('ignitionlet_target_reset_button',
     design = ':ignitionlet_target_reset_button_top#ignitionlet_target_reset_button_top.json',
     deps = [
         ':ignitionlet_target_reset_button_top',
+    ])
+
+yosys_design('ignitionlet_target_reset_button_aux_loopback_indicators_top',
+    top_module = 'mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators',
+    sources = [
+        ':IgnitionletTargetTop#mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators',
+        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../../vnd/cobalt/hdl/InitialReset.v',
+    ],
+    deps = [
+        ':IgnitionletTargetTop',
+        'cobalt//vnd/bluespec:Verilog.v',
+    ])
+
+nextpnr_ice40_bitstream('ignitionlet_target_reset_button_aux_loopback_indicators',
+    env = 'ignitionlet_target',
+    design = ':ignitionlet_target_reset_button_aux_loopback_indicators_top#ignitionlet_target_reset_button_aux_loopback_indicators_top.json',
+    deps = [
+        ':ignitionlet_target_reset_button_aux_loopback_indicators_top',
     ])

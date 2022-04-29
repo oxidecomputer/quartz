@@ -40,8 +40,8 @@ interface IgnitionTarget;
     (* always_enabled *) method Commands commands();
     (* always_ready *) method Action button_event(Bool pressed);
 
-    interface Transceiver aux0;
-    interface Transceiver aux1;
+    (* always_enabled *) interface Transceiver aux0;
+    (* always_enabled *) interface Transceiver aux1;
 
     // External tick used to generate internal events such as the transmission of status
     // packets.
@@ -63,6 +63,7 @@ typedef union tagged {
 typedef struct {
     ButtonBehavior button_behavior;
     Bool invert_cmd_bits;
+    Bool aux_loopback_as_cmd_bits;
 } Parameters;
 
 Parameters default_app_with_button_as_reset =
@@ -71,14 +72,16 @@ Parameters default_app_with_button_as_reset =
             tagged ResetButton {
                 min_duration: 2000, // 2s if app tick at 1KHz.
                 cool_down: 1000},   // 1s if app tick at 1KHz.
-        invert_cmd_bits: False};
+        invert_cmd_bits: False,
+        aux_loopback_as_cmd_bits: False};
 
 Parameters default_app_with_power_button =
     Parameters{
         button_behavior:
             tagged PowerButton {
                 cool_down: 50},     // 50 ms if app tick at 1KHz.
-        invert_cmd_bits: False};
+        invert_cmd_bits: False,
+        aux_loopback_as_cmd_bits: False};
 
 instance DefaultValue#(Parameters);
     defaultValue = default_app_with_button_as_reset;
@@ -89,26 +92,25 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
     Reg#(Vector#(6, Bool)) status_r <- mkRegU();
 
     // Default command bits.
-    let commands_default =
+    let system_power_enable_default =
         case (parameters.button_behavior) matches
-            tagged ResetButton .*:
-                // Powers on the system upon (power on) reset, with CMD1 showing
-                // Ignition reset status and CMD2 tracking power enabled status.
-                Commands {
-                    system_power_enable: True,
-                    cmd1: parameters.invert_cmd_bits ? False : True,
-                    cmd2: parameters.invert_cmd_bits ? False : True};
-            tagged PowerButton .*:
-                // Leaves system power off upon (power on) reset, waiting for
-                // operator button input before power on. CMD1 shows Ignition
-                // reset status and CMD2 tracks power enabled status.
-                Commands {
-                    system_power_enable: False,
-                    cmd1: parameters.invert_cmd_bits ? False : True,
-                    cmd2: parameters.invert_cmd_bits ? True : False};
+            // Powers on the system upon (power on) reset.
+            tagged ResetButton .*: True;
+            // Leaves system power off upon (power on) reset, waiting for
+            // operator button input before power on.
+            tagged PowerButton .*: False;
         endcase;
 
-    Reg#(Commands) commands_r <- mkRegA(commands_default);
+    Reg#(Bool) system_power_enable <- mkRegA(system_power_enable_default);
+    Reg#(Commands) commands_r <- mkRegA(
+        // CMD1 shows Ignition reset status and CMD2 tracks power enabled
+        // status.
+        Commands{
+            system_power_enable: system_power_enable_default,
+            cmd1: parameters.invert_cmd_bits ? False : True,
+            cmd2: parameters.invert_cmd_bits ?
+                !system_power_enable_default :
+                system_power_enable_default});
 
     Reg#(UInt#(12)) system_reset_ticks_remaining <- mkRegU();
 
@@ -116,15 +118,6 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
     PulseWire button_pressed <- mkPulseWire();
     PulseWire button_released <- mkPulseWire();
     PulseWire tick <- mkPulseWire();
-
-    // Helpers
-    function Action set_system_power_enabled(Bool enabled) =
-        action
-            commands_r <= Commands{
-                system_power_enable: enabled,
-                cmd1: commands_default.cmd1,
-                cmd2: parameters.invert_cmd_bits ? !enabled : enabled};
-        endaction;
 
     function Stmt await_system_reset_ticks_remaining_zero() =
         seq
@@ -147,7 +140,7 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
                 mkFSM(
                     seq
                         action
-                            set_system_power_enabled(False);
+                            system_power_enable <= False;
                             // This sequence changes state on a tick. In order to avoid
                             // cutting this duration short by a tick, add one.
                             system_reset_ticks_remaining <=
@@ -160,7 +153,7 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
                             await_system_reset_ticks_remaining_zero();
                         endpar
                         action
-                            set_system_power_enabled(True);
+                            system_power_enable <= True;
                             system_reset_ticks_remaining <=
                                 fromInteger(reset_button_parameters.cool_down + 1);
                         endaction
@@ -180,7 +173,7 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
                 mkFSM(
                     seq
                         action
-                            set_system_power_enabled(!commands_r.system_power_enable);
+                            system_power_enable <= !system_power_enable;
                             system_reset_ticks_remaining <=
                                 fromInteger(power_button_parameters.cool_down + 1);
                         endaction
@@ -196,6 +189,34 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
         end
     endcase
 
+    // SerDes loopback.
+    Strobe#(2) aux_loopback_tx_pulse <- mkPowerTwoStrobe(1, 0);
+    mkFreeRunningStrobe(aux_loopback_tx_pulse);
+
+    AuxLoopback aux0_loopback <- mkAuxLoopback(aux_loopback_tx_pulse);
+    AuxLoopback aux1_loopback <- mkAuxLoopback(aux_loopback_tx_pulse);
+
+    // Latch commands.
+    (* fire_when_enabled *)
+    rule do_set_commands;
+        // Select whether to use the CMDx bits as status LEDs tracking Target
+        // state or as SerDes loopback indicators, inverting the bits if
+        // requested.
+        commands_r <= (begin
+                if (parameters.aux_loopback_as_cmd_bits)
+                    Commands {
+                        system_power_enable: system_power_enable,
+                        cmd1: aux0_loopback.recovered_clk,
+                        cmd2: aux1_loopback.recovered_clk};
+                else
+                    Commands {
+                        system_power_enable: system_power_enable,
+                        cmd1: commands_r.cmd1,
+                        cmd2: parameters.invert_cmd_bits ?
+                            !system_power_enable :
+                            system_power_enable };
+            end);
+    endrule
 
     // System type can only be set once after application reset.
     method Action id(UInt#(6) val) if (system_type matches tagged Invalid);
@@ -203,7 +224,7 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
     endmethod
 
     method status = status_r._write;
-
+    method commands = commands_r;
     method Action button_event(Bool pressed);
         if (pressed)
             button_pressed.send();
@@ -211,9 +232,36 @@ module mkIgnitionTarget #(Parameters parameters) (IgnitionTarget);
             button_released.send();
     endmethod
 
-    method commands = commands_r;
-
+    interface Transceiver aux0 = aux0_loopback.txr;
+    interface Transceiver aux1 = aux1_loopback.txr;
     interface PulseWire tick_1khz = tick;
+endmodule
+
+interface AuxLoopback;
+    interface Transceiver txr;
+    method Bool recovered_clk();
+endinterface
+
+module mkAuxLoopback #(Strobe#(2) tx_pulse) (AuxLoopback);
+    Reg#(Bit#(1)) rx_sync <- mkRegU();
+    Reg#(Bool) clk <- mkRegU();
+    Strobe#(22) rx_pulse <- mkPowerTwoStrobe(1, 0);
+
+    (* fire_when_enabled *)
+    rule do_recover_clk (rx_pulse);
+        clk <= !clk;
+    endrule
+
+    interface Transceiver txr;
+        method Action rx(Bit#(1) val);
+            rx_sync <= val;
+            if (rx_sync == 1) rx_pulse.send();
+        endmethod
+
+        method tx = pack(tx_pulse);
+    endinterface
+
+    method recovered_clk = clk;
 endmodule
 
 interface IgnitionTargetBench;

@@ -15,6 +15,16 @@ module mkIgnitionletTargetWithResetButton (IgnitionletTarget);
 endmodule
 
 (* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+module mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators (IgnitionletTarget);
+    let parameters = default_app_with_button_as_reset;
+    parameters.aux_loopback_as_cmd_bits = True;
+
+    (* hide *) IgnitionletTarget _top <-
+        mkIgnitionTargetIOAndResetWrapper(parameters);
+    return _top;
+endmodule
+
+(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkIgnitionletTargetWithPowerButton (IgnitionletTarget);
     (* hide *) IgnitionletTarget _top <-
         mkIgnitionTargetIOAndResetWrapper(default_app_with_power_button);

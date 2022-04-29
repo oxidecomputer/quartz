@@ -66,6 +66,10 @@ module mkIgnitionTargetIOAndResetWrapper
     mkConnection(flt_sync.read, app.status);
     mkConnection(asIfc(strobe_1khz), asIfc(app.tick_1khz));
 
+    // Connect the diff IO to the application transceiver interfaces.
+    mkConnection(tuple2(asIfc(aux0_rx), asIfc(aux0_tx)), app.aux0);
+    mkConnection(tuple2(asIfc(aux1_rx), asIfc(aux1_tx)), app.aux1);
+
     // Filter the button input and send pressed/released events to the application.
     (* fire_when_enabled *)
     rule do_detect_button_events (strobe_1khz);
@@ -77,14 +81,6 @@ module mkIgnitionTargetIOAndResetWrapper
             // application.
             app.button_event(!btn_filter);
         end
-    endrule
-
-    Strobe#(2) diff_strobe <- mkPowerTwoStrobe(1, 0, reset_by initial_reset);
-
-    rule do_diff_output;
-        aux0_tx <= pack(diff_strobe);
-        aux1_tx <= pack(diff_strobe);
-        diff_strobe.send();
     endrule
 
     method id = id_sync.send;
@@ -104,5 +100,21 @@ module mkIgnitionTargetIOAndResetWrapper
         interface DifferentialPairTx tx = aux1_tx.pads;
     endinterface
 endmodule
+
+instance Connectable#(DifferentialInputOutput#(Bit#(1)), Transceiver);
+    module mkConnection #(DifferentialInputOutput#(Bit#(1)) pads, Transceiver txr) (Empty);
+        match {.rx_pads, .tx_pads} = pads;
+
+        (* fire_when_enabled *)
+        rule do_rx;
+            txr.rx(rx_pads);
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_tx;
+            tx_pads <= txr.tx;
+        endrule
+    endmodule
+endinstance
 
 endpackage: IgnitionTargetWrapper
