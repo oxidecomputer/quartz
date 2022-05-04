@@ -37,7 +37,7 @@ module mkGimletSeqTop (PinsTop);
     Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);
     let synth_params = GimletSeqTopParameters {one_ms_counts: 50000};    // 1ms @ 50MHz
 
-    ICE40::Output#(Bit#(1)) cipo <- mkOutput(OutputTriState);
+    ICE40::Output#(Bit#(1)) cipo <- mkOutput(OutputTriState, False /* pull-up */);
 
     let inner <- mkGimletInnerTop(synth_params, reset_by reset_sync);
 

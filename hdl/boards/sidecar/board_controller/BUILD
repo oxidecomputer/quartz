@@ -1,23 +1,11 @@
 # -*- python -*- vim:syntax=python:
-bluespec_library('RegCommon',
-    sources = [
-        '../../gimlet/sequencer/RegCommon.bsv',
-    ])
-
-bluespec_library('SpiDecode',
-    sources = [
-        '../../gimlet/sequencer/SpiDecode.bsv',
-    ],
-    deps = [
-        ':RegCommon',
-    ])
 
 bluespec_library('SidecarSeqRegs',
     sources = [
         'SidecarSeqRegs.bsv',
     ],
     deps = [
-        ':RegCommon',
+        'cobalt//hdl:RegCommon',
     ])
 
 bluespec_library('Tofino2PowerCtrlSync',
@@ -51,11 +39,11 @@ bluespec_library('SidecarCtrlTopIOWrapper',
         ':Tofino2PowerCtrl',
         ':Tofino2PowerCtrlSync',
         ':SidecarCtrlTopPhysIfs',
-        ':SpiDecode',
         ':SidecarCtrlRegs',
         ':SidecarSeqRegs',
         'cobalt//hdl:Strobe',
         'cobalt//hdl/interfaces:UART',
+        'cobalt//hdl/interfaces:SPI',
     ])
 
 bluespec_sim('tofino2_power_ctrl_top',
@@ -81,8 +69,8 @@ bluespec_library('SidecarCtrlRegs',
     ],
     deps = [
         ':SidecarSeqRegs',
-        ':RegCommon',
         'cobalt//hdl/examples:Blinky',
+        'cobalt//hdl:RegCommon',
     ])
 
 bluespec_library('SidecarCtrlTop',

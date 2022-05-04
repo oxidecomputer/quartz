@@ -229,7 +229,14 @@ nextpnr_ice40_bitstream('ignitionlet_spi',
     design = ':ignitionlet_spi_yosys#ignitionlet_spi_yosys.json',
     deps = [
         ':ignitionlet_spi_yosys',
-    ])
+    ],
+    local = {
+        # This is temporary to allow for an unconnected OE signal on the SPI peripheral.
+        'nextpnr_ice40_flags': [
+            '--pcf-allow-unconstrained',
+        ],
+    })
+
 nextpnr_ice40_bitstream('gimlet_sequencer',
     env = 'gimlet_sequencer',
     design = ':gimlet_sequencer_yosys#gimlet_sequencer_yosys.json',
