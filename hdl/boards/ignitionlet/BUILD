@@ -107,7 +107,8 @@ yosys_design('ignitionlet_target_reset_button_aux_loopback_indicators_top',
 
 nextpnr_ice40_bitstream('ignitionlet_target_reset_button_aux_loopback_indicators',
     env = 'ignitionlet_target',
-    design = ':ignitionlet_target_reset_button_aux_loopback_indicators_top#ignitionlet_target_reset_button_aux_loopback_indicators_top.json',
+    design = ':ignitionlet_target_reset_button_aux_loopback_indicators_top#' \
+                'ignitionlet_target_reset_button_aux_loopback_indicators_top.json',
     deps = [
         ':ignitionlet_target_reset_button_aux_loopback_indicators_top',
     ])
