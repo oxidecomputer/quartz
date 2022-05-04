@@ -61,6 +61,7 @@ import PowerRail::*;
             mkConnection(source.sp3_to_sp_slp_s3_l, sink.sp3_to_sp_slp_s3_l);
             mkConnection(source.sp3_to_sp_slp_s5_l, sink.sp3_to_sp_slp_s5_l);
             mkConnection(source.sp3_to_seq_pwrok_v3p3, sink.sp3_to_seq_pwrok_v3p3);
+            mkConnection(source.sp3_to_seq_reset_v3p3_l, sink.sp3_to_seq_reset_v3p3_l);
             mkConnection(source.seq_to_sp3_sys_rst_l, sink.seq_to_sp3_sys_rst_l);
             mkConnection(source.seq_to_sp3_pwr_btn_l, sink.seq_to_sp3_pwr_btn_l);
             mkConnection(source.seq_to_sp3_pwr_good, sink.seq_to_sp3_pwr_good);
@@ -179,33 +180,19 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             vtt_ef, vtt_gh);
 
     // TODO: these can be better genericised?
-    function Action enable_b1_rails(Vector#(4, PowerRail) rails, A0StateType step) =
+    function Action enable_rails(Vector#(n, PowerRail) rails, A0StateType step) =
         action
             state <= step;
-            for (int i = 0; i < 4; i=i+1)
+            for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
                 rails[i].set_enabled(True);
         endaction;
     
-    function Action disable_b1_rails(Vector#(4, PowerRail) rails, A0StateType step) =
+    function Action disable_rails(Vector#(n, PowerRail) rails, A0StateType step) =
             action
                 state <= step;
-                for (int i = 0; i < 4; i=i+1)
+                for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
                     rails[i].set_enabled(False);
             endaction;
-    
-    function Action enable_b2_rails(Vector#(6, PowerRail) rails, A0StateType step) =
-        action
-            state <= step;
-            for (int i = 0; i < 4; i=i+1)
-                rails[i].set_enabled(True);
-        endaction;
-    
-    function Action disable_b2_rails(Vector#(6, PowerRail) rails, A0StateType step) =
-        action
-            state <= step;
-            for (int i = 0; i < 4; i=i+1)
-                rails[i].set_enabled(False);
-        endaction;
 
     function Stmt delay(Integer d, A0StateType step) =
         seq
@@ -261,7 +248,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         //
         // GroupB1 enable
         //
-        enable_b1_rails(b1_rails, GROUPB1_EN);
+        enable_rails(b1_rails, GROUPB1_EN);
         // Wait for groupB1 PGs
         action
             state <= GROUPB1_PG;
@@ -270,7 +257,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         //
         // GroupB2 enable
         //
-        enable_b2_rails(b2_rails, GROUPB2_EN);
+        enable_rails(b2_rails, GROUPB2_EN);
         action
             state <= GROUPB2_PG;
         endaction
@@ -293,7 +280,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             state <= WAIT_PWROK;
         endaction
         // Wait for AMD's power OK handshake
-        await(sp3_to_seq_pwrgd_out == 1);
+        await(sp3_to_seq_pwrok_v3p3 == 1);
         // Wait for AMD's RESET_L de-assert
         action
             state <= WAIT_RESET_L;
@@ -318,8 +305,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         // Wait a bit
         delay(ten_ms, SAFE_DISABLE);
         // disable rails
-        disable_b2_rails(b2_rails, SAFE_DISABLE);
-        disable_b1_rails(b1_rails, SAFE_DISABLE);
+        disable_rails(b2_rails, SAFE_DISABLE);
+        disable_rails(b1_rails, SAFE_DISABLE);
         action
             seq_to_sp3_pwr_btn_l <= 1;           
             state <= IDLE;
@@ -335,8 +322,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             seq_to_sp3_pwr_good <= 0;
         endaction
         // disable rails
-        disable_b2_rails(b2_rails, SAFE_DISABLE);
-        disable_b1_rails(b1_rails, SAFE_DISABLE);
+        disable_rails(b2_rails, SAFE_DISABLE);
+        disable_rails(b1_rails, SAFE_DISABLE);
         action
             seq_to_sp3_pwr_btn_l <= 1;           
             state <= IDLE;
@@ -393,7 +380,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     interface A0Regs regs_if;
         method a0_en = enable._write;
         // method Action ignore_sp(Bool value);
-        // method A0StateType state();
+        method state = state._read;
     endinterface
 
 endmodule
@@ -411,6 +398,9 @@ interface Bench;
     interface PowerRailModel vtt_ef;
     interface PowerRailModel vtt_gh;
 
+    method A0StateType dut_state();
+    method Action pmbus_on();
+    method Action pmbus_off();
     method Action power_up();
     method Action power_down();
     method Action downstream_busy();
@@ -441,15 +431,23 @@ module mkBench(Bench);
     mkConnection(vtt_ef_rail.pins, dut.pins.vtt_ef);
     mkConnection(vtt_gh_rail.pins, dut.pins.vtt_gh);
     mkConnection(vpp_abcd_rail.pins, dut.pins.vpp_abcd);
+    mkConnection(vpp_efgh_rail.pins, dut.pins.vpp_efgh);
+    mkConnection(v1p8_vdd_18_rail.pins, dut.pins.v1p8_sp3);
+    mkConnection(vdd_mem_abcd_rail.pins, dut.pins.vdd_mem_abcd);
+    mkConnection(vdd_mem_efgh_rail.pins, dut.pins.vdd_mem_efgh);
+    mkConnection(v3p3_sys_rail.pins, dut.pins.v3p3_sys);
    
     Reg#(Bool) upstream_ok <- mkReg(True);
     Reg#(Bool) downstream_idle_ <- mkReg(True);
+    Reg#(Bool) pmbus_enabled <- mkReg(False);
     mkConnection(dut.a1_ok, upstream_ok);
     mkConnection(downstream_idle_, dut.hp_idle);
-    // mkConnection(vpp_efgh_rail.pins, dut.pins.vtt_cd);
-    // mkConnection(v1p8_vdd_18_rail.pins, dut.pins.vtt_ef);
-    // mkConnection(vdd_mem_abcd_rail.pins, dut.pins.vtt_gh);
-    // mkConnection(vdd_mem_efgh_rail.pins, dut.pins.vtt_gh);
+
+    Reg#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkReg(0);
+    Reg#(Bit#(1)) pwr_cont2_sp3_pg0 <- mkReg(0);
+    mkConnection(pwr_cont1_sp3_pg0, dut.pins.pwr_cont1_sp3_pg0);
+    mkConnection(pwr_cont2_sp3_pg0, dut.pins.pwr_cont2_sp3_pg0);
+   
 
 // vpp_abcd.pins;
 //         interface PowerRail::Pins vpp_efgh = vpp_efgh.pins;
@@ -472,6 +470,17 @@ module mkBench(Bench);
     interface  vtt_ef = vtt_ef_rail;
     interface  vtt_gh = vtt_gh_rail;
 
+    method A0StateType dut_state();
+        return dut.regs_if.state;
+    endmethod
+    method Action pmbus_on();
+        pwr_cont1_sp3_pg0 <= 1;
+        pwr_cont2_sp3_pg0 <= 1;
+    endmethod
+    method Action pmbus_off();
+        pwr_cont1_sp3_pg0 <= 0;
+        pwr_cont2_sp3_pg0 <= 0;
+    endmethod
     method Action power_up();
         dut.regs_if.a0_en(True);
     endmethod
@@ -617,8 +626,20 @@ module mkA0PowerUpTest(Empty);
     
     mkAutoFSM(seq
         // TODO: check pre-conditions
+        action
+            $display("Power Up");
+        endaction
         bench.power_up();
-        delay(4000);
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+        delay(300);
     endseq);
 endmodule
 
