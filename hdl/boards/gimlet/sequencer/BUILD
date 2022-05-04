@@ -86,6 +86,25 @@ bluesim_tests('A1Tests',
         ':A1Block'
     ]
 )
+bluespec_library('A0Block',
+    sources = [
+        'A0Block.bsv',
+    ],
+    deps = [
+         ':GimletSeqFpgaRegs',
+         ':PowerRail',
+         'cobalt//hdl:TestUtils',
+    ])
+bluesim_tests('A0Tests',
+    env = 'cobalt//bluesim_default',
+    suite = "A0Block.bsv",
+    modules = [
+        'mkA0PowerUpTest',
+    ],
+    deps = [
+        ':A0Block'
+    ]
+)
 bluesim_tests('TopTests',
     env = 'cobalt//bluesim_default',
     suite = "GimletSeqTop.bsv",

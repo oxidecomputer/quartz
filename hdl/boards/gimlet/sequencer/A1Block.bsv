@@ -228,10 +228,18 @@ import PowerRail::*;
         rule do_enable;
             enable_last <= enable;
             if (faulted) begin
+                // We do a standard power-down in the fault case
+                // regardless of the rest of the system state.
                 a1_power_down_seq.start();
             end else if (!enable_last && enable) begin
+                // We only want to start this on a rising edge of
+                // the enable, meaning to re-start you need to
+                // clear the enable.
                 a1_power_up_seq.start();
             end else if (!enable && state != IDLE && downstream_idle) begin
+                // Even if we clear the enable, we can't start the 
+                // power-down until the down-stream logic has finished
+                // powering off.
                 a1_power_down_seq.start();
             end
         endrule
