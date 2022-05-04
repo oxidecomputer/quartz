@@ -21,7 +21,7 @@ import SyncBits::*;
 
 
 module mkIgnitionTargetIOAndResetWrapper
-        #(IgnitionTargetParameters app_parameters) (IgnitionletTarget);
+        #(Parameters parameters) (IgnitionletTarget);
     Clock clk_50mhz <- exposeCurrentClock();
     Reset initial_reset <- InitialReset::mkInitialReset(3);
 
@@ -50,11 +50,12 @@ module mkIgnitionTargetIOAndResetWrapper
 
     // Implementation of the Ignition Target application. This module assumes inputs are
     // synchronized/filtered/debounced and Inout interfaces are resolved.
-    IgnitionTarget app <- mkIgnitionTarget(app_parameters, reset_by initial_reset);
+    IgnitionTarget app <- mkIgnitionTarget(parameters, reset_by initial_reset);
 
     // Strobe, used as a time pulse to generate timed events.
     Strobe#(24) strobe_1khz <-
         mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by initial_reset);
+    mkFreeRunningStrobe(strobe_1khz);
 
     // This null crossings is needed to convince BSC the missing reset
     // information for these output signals is acceptable.
@@ -64,6 +65,10 @@ module mkIgnitionTargetIOAndResetWrapper
     mkConnection(id_sync.read, app.id);
     mkConnection(flt_sync.read, app.status);
     mkConnection(asIfc(strobe_1khz), asIfc(app.tick_1khz));
+
+    // Connect the diff IO to the application transceiver interfaces.
+    mkConnection(tuple2(asIfc(aux0_rx), asIfc(aux0_tx)), app.aux0);
+    mkConnection(tuple2(asIfc(aux1_rx), asIfc(aux1_tx)), app.aux1);
 
     // Filter the button input and send pressed/released events to the application.
     (* fire_when_enabled *)
@@ -76,12 +81,6 @@ module mkIgnitionTargetIOAndResetWrapper
             // application.
             app.button_event(!btn_filter);
         end
-    endrule
-
-    // Run the strobe.
-    (* no_implicit_conditions, fire_when_enabled *)
-    rule do_tick_strobe;
-        strobe_1khz.send();
     endrule
 
     method id = id_sync.send;
@@ -101,5 +100,21 @@ module mkIgnitionTargetIOAndResetWrapper
         interface DifferentialPairTx tx = aux1_tx.pads;
     endinterface
 endmodule
+
+instance Connectable#(DifferentialInputOutput#(Bit#(1)), Transceiver);
+    module mkConnection #(DifferentialInputOutput#(Bit#(1)) pads, Transceiver txr) (Empty);
+        match {.rx_pads, .tx_pads} = pads;
+
+        (* fire_when_enabled *)
+        rule do_rx;
+            txr.rx(rx_pads);
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_tx;
+            tx_pads <= txr.tx;
+        endrule
+    endmodule
+endinstance
 
 endpackage: IgnitionTargetWrapper

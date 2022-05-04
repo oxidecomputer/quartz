@@ -7,17 +7,18 @@
 bluespec_verilog('IgnitionTargetTop',
     top = 'IgnitionTargetTop.bsv',
     modules = [
-        'mkIgnitionTargetGimletRevA',
+        'mkGimletRevATargetWithResetButton',
+        'mkGimletRevATargetWithPowerButton',
     ],
     deps = [
         '//hdl/ignition/target:IgnitionTarget',
         '//hdl/ignition/target:IgnitionTargetWrapper',
     ])
 
-yosys_design('ignition_target_gimlet_rev_a_top',
-    top_module = 'mkIgnitionTargetGimletRevA',
+yosys_design('gimlet_rev_a_target_reset_button_top',
+    top_module = 'mkGimletRevATargetWithResetButton',
     sources = [
-        ':IgnitionTargetTop#mkIgnitionTargetGimletRevA',
+        ':IgnitionTargetTop#mkGimletRevATargetWithResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../../vnd/cobalt/hdl/InitialReset.v',
     ],
@@ -26,9 +27,28 @@ yosys_design('ignition_target_gimlet_rev_a_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_gimlet_rev_a',
-    env = 'ignition_target_gimlet',
-    design = ':ignition_target_gimlet_rev_a_top#ignition_target_gimlet_rev_a_top.json',
+yosys_design('gimlet_rev_a_target_power_button_top',
+    top_module = 'mkGimletRevATargetWithPowerButton',
+    sources = [
+        ':IgnitionTargetTop#mkGimletRevATargetWithPowerButton',
+        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../../../vnd/cobalt/hdl/InitialReset.v',
+    ],
     deps = [
-        ':ignition_target_gimlet_rev_a_top',
+        ':IgnitionTargetTop',
+        'cobalt//vnd/bluespec:Verilog.v',
+    ])
+
+nextpnr_ice40_bitstream('gimlet_rev_a_target_reset_button',
+    env = 'ignition_target_gimlet',
+    design = ':gimlet_rev_a_target_reset_button_top#gimlet_rev_a_target_reset_button_top.json',
+    deps = [
+        ':gimlet_rev_a_target_reset_button_top',
+    ])
+
+nextpnr_ice40_bitstream('gimlet_rev_a_target_power_button',
+    env = 'ignition_target_gimlet',
+    design = ':gimlet_rev_a_target_power_button_top#gimlet_rev_a_target_power_button_top.json',
+    deps = [
+        ':gimlet_rev_a_target_power_button_top',
     ])
