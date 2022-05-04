@@ -12,9 +12,9 @@ import Tofino2PowerCtrlSync::*;
 import SidecarCtrlRegs::*;
 import SidecarSeqRegs::*;
 import SidecarCtrlTopPhysIfs::*;
-import SpiDecode::*;
 import Strobe::*;
 import UART::*;
+import SPI::*;
 
 
 (* always_enabled *)
@@ -182,17 +182,17 @@ module mkSidecarCtrlTopIOWrapper (Top);
                 pack(tofino_sequence_control.vddcore.enabled);
             method fpga_to_ldo_v0p75_tf_pcie_en =
                 pack(tofino_sequence_control.vddpcie.enabled);
-            method fpga_to_vr_tf_vddx_en        = 
+            method fpga_to_vr_tf_vddx_en        =
                 pack(tofino_sequence_control.vddt.enabled); // also enables vdda15
-            method fpga_to_vr_tf_vdda1p8_en     = 
+            method fpga_to_vr_tf_vdda1p8_en     =
                 pack(tofino_sequence_control.vdda18.enabled);
-            method fpga_to_tf_core_rst_l        = 
+            method fpga_to_tf_core_rst_l        =
                 tofino_sequence_control.core_rst_l;
-            method fpga_to_tf_pwron_rst_l       = 
+            method fpga_to_tf_pwron_rst_l       =
                 tofino_sequence_control.pwron_rst_l;
-            method fpga_to_tf_pcie_rst_l        = 
+            method fpga_to_tf_pcie_rst_l        =
                 tofino_sequence_control.pcie_rst_l;
-            method tf_pg_led                    = 
+            method tf_pg_led                    =
                 tofino_sequence_control.tofino_power_good;
             method fpga_to_tf_test_core_tap_l   = 1;
             method fpga_to_tf_test_jtsel        = 0;

@@ -5,7 +5,7 @@ import Connectable::*;
 import GetPut::*;
 // Oxide and local imports
 import Regs::*;
-import SpiDecode::*;
+import SPI::*;
 
 
 (* always_enabled *)
@@ -40,7 +40,7 @@ module mkIgnitionletTop(Top);
     mkConnection(sclk_sync, phy.pins.sclk);
     mkConnection(csn_sync, phy.pins.csn);
     // connect all the gpio pins
-    
+
     interface SpiPeripheralPins pins;
         // Inputs
         method csn = csn_sync._write;  // Bind action method to _write
