@@ -12,18 +12,18 @@ import IrqBlock::*;
 import RegCommon::*;
 import git_version::*;
 import GimletSeqFpgaRegs::*;
-// import NicBlock::*;
+import NicBlock::*;
 // import EarlyPowerBlock::*;
 import A1Block::*;
-// import A0Block::*;
+import A0Block::*;
 // import MiscIO::*;
 
 interface GimletRegIF;
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
-    // interface NicRegsReverse nic_block;
+     interface NicRegsReverse nic_block;
     // interface EarlyRegsReverse early_block;
     interface A1RegsReverse a1_block;
-    // interface A0RegsReverse a0_block;
+    interface A0RegsReverse a0_block;
     // interface MiscRegsReverse misc_block;
     method Bit#(1) seq_to_sp_interrupt;
 endinterface
@@ -92,7 +92,7 @@ module mkGimletRegs(GimletRegIF);
 
     Wire#(A1StateType) a1_state <- mkDWire(IDLE);
     // RWire#(A0StateType) a0_state <- mkRWire();
-    // RWire#(NicStateType) nic_state <- mkRWire();
+    ConfigReg#(NicStateType) nic_sm <- mkConfigRegU();
     
     // RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
     // RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
@@ -352,7 +352,7 @@ module mkGimletRegs(GimletRegIF);
     // endinterface
 
     interface A1RegsReverse a1_block;
-        method Bool a1_en ();
+        method Bool a1_en();
             return power_control.a1pwren == 1;
         endmethod
         method Action state(A1StateType value);
@@ -361,25 +361,29 @@ module mkGimletRegs(GimletRegIF);
         method output_readbacks = a1_output_readbacks._write;
         method input_readbacks = a1_inputs._write;
     endinterface
-
-
+    interface A0RegsReverse a0_block;
+        method Bool a0_en();  // SM enable pin
+            return power_control.a0a_en == 1;
+        endmethod
+        method Bool ignore_sp();
+            return dbgCtrl_reg.ignore_sp == 1;
+        endmethod 
+        method Action state (A0StateType value);
+            a0_sm <= unpack({'0, pack(value)});
+        endmethod
+    endinterface
+    interface NicRegsReverse nic_block;
+        method Bool en;
+            return power_control.nicpwren == 1;
+        endmethod
+        method Action state(NicStateType value);
+            nic_sm <= unpack({'0, pack(value)});
+        endmethod
+    endinterface
     //     // Normalized pin readbacks to registers
-    //     method input_readbacks = cur_a1_inputs.wset; // Input sampling
-    //     method output_readbacks = cur_a1_outputs.wset; // Output sampling
-    //     method state = a1_state.wset;
-    //     method A1DbgOut dbg_ctrl =  a1_dbg._read; // Output control
-    //     method Bit#(1) dbg_en;
-    //         return dbgCtrl_reg.reg_ctrl_en;
-    //     endmethod
-    //     method Bit#(1) a1_en;
-    //         return power_control.a1pwren;
-    //     endmethod
-    // endinterface
-    // interface A0RegsReverse a0_block;
-    //     // Normalized pin readbacks to registers
-    //     method input_readbacks = cur_a0_inputs.wset; // Input sampling
-    //     method output_readbacks = cur_a0_outputs.wset; // Output sampling
-    //     method dbg_ctrl = dbg_a0_outputs._read; // Output control
+    //     //method input_readbacks = cur_a0_inputs.wset; // Input sampling
+    //     //method output_readbacks = cur_a0_outputs.wset; // Output sampling
+    //     //method dbg_ctrl = dbg_a0_outputs._read; // Output control
     //     method state = a0_state.wset;
     //     method Bit#(1) dbg_en;    // Debug enable pin
     //         return dbgCtrl_reg.reg_ctrl_en;
@@ -387,7 +391,7 @@ module mkGimletRegs(GimletRegIF);
     //     method Bit#(1) ignore_sp;
     //         return dbgCtrl_reg.ignore_sp;
     //     endmethod
-    //      method Bit#(1) a0_en;
+    //      method Bool a0_en();
     //         return power_control.a0a_en;
     //     endmethod
     // endinterface

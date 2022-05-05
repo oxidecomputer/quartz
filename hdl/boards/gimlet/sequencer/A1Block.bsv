@@ -245,10 +245,10 @@ import PowerRail::*;
         endrule
 
         interface A1Pins pins;
-            interface PowerRailPins v3p3_s5 = sp3_v3p3_s5.pins;
-            interface PowerRailPins v1p5_rtc = sp3_v1p5_rtc.pins;
-            interface PowerRailPins v0p9_s5 = sp3_v0p9_s5.pins;
-            interface PowerRailPins v1p8_s5 = sp3_v1p8_s5.pins;
+            interface PowerRail::Pins v3p3_s5 = sp3_v3p3_s5.pins;
+            interface PowerRail::Pins v1p5_rtc = sp3_v1p5_rtc.pins;
+            interface PowerRail::Pins v0p9_s5 = sp3_v0p9_s5.pins;
+            interface PowerRail::Pins v1p8_s5 = sp3_v1p8_s5.pins;
             method seq_to_sp3_rsmrst_v3p3_l = sp3_rsmrst_v3p3_l_;
         endinterface
 

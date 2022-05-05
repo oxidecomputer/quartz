@@ -23,15 +23,36 @@ import PowerRail::*;
         method Action a0_en(Bool value);  // SM enable pin
         method Action ignore_sp(Bool value);
         method A0StateType state();
-        // method A1OutStatus output_readbacks();
-        // method A1Readbacks input_readbacks();
+        // method A0OutStatus output_readbacks();
+        // method A0Readbacks input_readbacks();
     endinterface
+
+    interface A0RegsReverse;
+        // method Action dbg_ctrl(A1DbgOut value); // Output control
+        // method Action dbg_en(Bool value);    // Debug enable pin
+        method Bool a0_en();  // SM enable pin
+        method Bool ignore_sp();
+        method Action state (A0StateType value);
+        // method Action output_readbacks (A0OutStatus value);
+        // method Action input_readbacks (A0Readbacks value);
+    endinterface
+
+    // Allow our output pin source to connect to our output pin sink
+    instance Connectable#(A0Regs, A0RegsReverse);
+        module mkConnection#(A0Regs source, A0RegsReverse sink) (Empty);
+            mkConnection(source.a0_en, sink.a0_en);
+            mkConnection(source.ignore_sp, sink.ignore_sp);
+            mkConnection(source.state, sink.state);
+            // mkConnection(source.output_readbacks, sink.output_readbacks);
+            // mkConnection(source.input_readbacks, sink.input_readbacks);
+        endmodule
+    endinstance
 
     interface FpgaSP3;
         // From SP3
         method Action sp3_to_seq_pwrgd_out(Bit#(1) value);
-        method Action sp3_to_sp_slp_s3_l(Bit#(1) value);
-        method Action sp3_to_sp_slp_s5_l(Bit#(1) value);
+        method Action sp3_to_seq_slp_s3_l(Bit#(1) value);
+        method Action sp3_to_seq_slp_s5_l(Bit#(1) value);
         method Action sp3_to_seq_pwrok_v3p3(Bit#(1) value);
         method Action sp3_to_seq_reset_v3p3_l(Bit#(1) value);
         method Action sp3_to_seq_thermtrip_l(Bit#(1) value);
@@ -44,8 +65,8 @@ import PowerRail::*;
     interface SP3;
         // From SP3
         method Bit#(1) sp3_to_seq_pwrgd_out();
-        method Bit#(1) sp3_to_sp_slp_s3_l();
-        method Bit#(1) sp3_to_sp_slp_s5_l();
+        method Bit#(1) sp3_to_seq_slp_s3_l();
+        method Bit#(1) sp3_to_seq_slp_s5_l();
         method Bit#(1) sp3_to_seq_pwrok_v3p3();
         method Bit#(1) sp3_to_seq_reset_v3p3_l();
         method Bit#(1) sp3_to_seq_thermtrip_l();
@@ -58,8 +79,8 @@ import PowerRail::*;
     instance Connectable#(FpgaSP3, SP3);
         module mkConnection#(FpgaSP3 source, SP3 sink) (Empty);
             mkConnection(source.sp3_to_seq_pwrgd_out, sink.sp3_to_seq_pwrgd_out);
-            mkConnection(source.sp3_to_sp_slp_s3_l, sink.sp3_to_sp_slp_s3_l);
-            mkConnection(source.sp3_to_sp_slp_s5_l, sink.sp3_to_sp_slp_s5_l);
+            mkConnection(source.sp3_to_seq_slp_s3_l, sink.sp3_to_seq_slp_s3_l);
+            mkConnection(source.sp3_to_seq_slp_s5_l, sink.sp3_to_seq_slp_s5_l);
             mkConnection(source.sp3_to_seq_pwrok_v3p3, sink.sp3_to_seq_pwrok_v3p3);
             mkConnection(source.sp3_to_seq_reset_v3p3_l, sink.sp3_to_seq_reset_v3p3_l);
             mkConnection(source.seq_to_sp3_sys_rst_l, sink.seq_to_sp3_sys_rst_l);
@@ -83,7 +104,8 @@ import PowerRail::*;
         interface PowerRail::Pins vtt_ef;
         interface PowerRail::Pins vtt_gh;
 
-        method Bit#(1) seq_to_sp3_rsmrst_v3p3_l;
+        method Bit#(1) pwr_cont1_sp3_pwrok;
+        method Bit#(1) pwr_cont2_sp3_pwrok;
         method Action pwr_cont1_sp3_pg0(Bit#(1) value);
         method Action pwr_cont2_sp3_pg0(Bit#(1) value);
     endinterface
@@ -92,7 +114,8 @@ import PowerRail::*;
         interface A0Pins pins;
         method Action hp_idle(Bool value);
         method Action a1_ok(Bool value);
-        interface A0Regs regs_if;
+        method Bool a0_idle;
+        interface A0Regs reg_if;
     endinterface
 
     typedef enum {
@@ -132,9 +155,10 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Reg#(Bool) faulted <- mkReg(False);
     Reg#(Bool) enable_last <- mkReg(False);
     Reg#(Bool) enable <- mkReg(False);
-
+    Reg#(Bool) ignore_sp <- mkReg(False);
     Reg#(Bool) downstream_idle <- mkDReg(True);
-    Reg#(Bool) upstream_idle <- mkDReg(False);
+    Reg#(Bool) upstream_ok <- mkDReg(False);
+    Reg#(Bool) regulator_pwrok <- mkReg(False);
     
     Wire#(Bool) b1_pg <- mkDWire(False);
     Wire#(Bool) b2_pg <- mkDWire(False);
@@ -160,8 +184,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     
     // Pin references
     Wire#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkDWire(0);
-    Wire#(Bit#(1)) sp3_to_sp_slp_s3_l <- mkDWire(0);
-    Wire#(Bit#(1)) sp3_to_sp_slp_s5_l <- mkDWire(0);
+    Wire#(Bit#(1)) sp3_to_seq_slp_s3_l <- mkDWire(0);
+    Wire#(Bit#(1)) sp3_to_seq_slp_s5_l <- mkDWire(0);
     Wire#(Bit#(1)) sp3_to_seq_pwrok_v3p3 <- mkDWire(0);
     Wire#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkDWire(0);
     Wire#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkDWire(0);
@@ -179,7 +203,6 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         vec(vdd_mem_abcd, vdd_mem_efgh, vtt_ab, vtt_cd,
             vtt_ef, vtt_gh);
 
-    // TODO: these can be better genericised?
     function Action enable_rails(Vector#(n, PowerRail) rails, A0StateType step) =
         action
             state <= step;
@@ -229,7 +252,6 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         c_pg <= (pwr_cont2_sp3_pg0 == 1) && (pwr_cont1_sp3_pg0 == 1);
     endrule
 
-    // TODO: deal with ignore SP!!
     FSM a0_power_up_seq <- mkFSMWithPred(seq
         // Want an initial delay
         delay(startup_delay, IDLE);
@@ -244,7 +266,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             seq_to_sp3_pwr_btn_l <= 1;
         endaction
         // Wait for slp_x_l signals to de-assert from SP3
-        await(sp3_to_sp_slp_s3_l == 1 && sp3_to_sp_slp_s5_l == 1);
+        await(ignore_sp || (sp3_to_seq_slp_s3_l == 1 && sp3_to_seq_slp_s5_l == 1));
         //
         // GroupB1 enable
         //
@@ -280,17 +302,17 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             state <= WAIT_PWROK;
         endaction
         // Wait for AMD's power OK handshake
-        await(sp3_to_seq_pwrok_v3p3 == 1);
+        await(ignore_sp || (sp3_to_seq_pwrok_v3p3 == 1));
         // Wait for AMD's RESET_L de-assert
         action
             state <= WAIT_RESET_L;
         endaction
-        await(sp3_to_seq_reset_v3p3_l == 1);
+        await(ignore_sp || (sp3_to_seq_reset_v3p3_l == 1));
         // We're done
         action
             state <= DONE;
         endaction
-    endseq, enable && !faulted && !abort && upstream_idle);
+    endseq, enable && !faulted && !abort && upstream_ok);
 
     //
     // This is normal power down sequence where we take away
@@ -311,7 +333,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             seq_to_sp3_pwr_btn_l <= 1;           
             state <= IDLE;
         endaction
-    endseq, !enable && !faulted && upstream_idle);
+    endseq, !enable && !faulted && upstream_ok);
 
     //
     // This is the faulted power down sequence with no
@@ -328,16 +350,16 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             seq_to_sp3_pwr_btn_l <= 1;           
             state <= IDLE;
         endaction
-    endseq, faulted || !upstream_idle);
+    endseq, faulted || !upstream_ok);
 
     (* fire_when_enabled *)
     rule do_enable;
         enable_last <= enable;
-        if (state != IDLE && faulted && !upstream_idle) begin
+        if (state != IDLE && faulted) begin
             // In a fault case, we're going to immediately power off
             // regardless of the rest of the system state.
             a0_fault_power_down_seq.start();
-        end else if (state == IDLE && enable && upstream_idle) begin
+        end else if (state == IDLE && enable && upstream_ok) begin
             // When we're enabled, IDLE and the previous power-stage is ok
             // we can start the normal power-up sequence
             a0_power_up_seq.start();
@@ -349,12 +371,21 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         end
     endrule
 
+    (* fire_when_enabled *)
+    rule raa_power_ok;
+        if (pack(state) >= pack(WAIT_PWROK)) begin
+            regulator_pwrok <= (sp3_to_seq_pwrok_v3p3 == 1);
+        end else begin
+            regulator_pwrok <= False;
+        end
+    endrule
+
     interface A0Pins pins;
         interface FpgaSP3 sp3;
             // From SP3
             method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out._write;
-            method sp3_to_sp_slp_s3_l = sp3_to_sp_slp_s3_l._write;
-            method sp3_to_sp_slp_s5_l = sp3_to_sp_slp_s5_l._write;
+            method sp3_to_seq_slp_s3_l = sp3_to_seq_slp_s3_l._write;
+            method sp3_to_seq_slp_s5_l = sp3_to_seq_slp_s5_l._write;
             method sp3_to_seq_pwrok_v3p3 = sp3_to_seq_pwrok_v3p3._write;
             method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._write;
             // To SP3
@@ -374,12 +405,21 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         interface PowerRail::Pins vtt_gh = vtt_gh.pins;
         method pwr_cont1_sp3_pg0 = pwr_cont1_sp3_pg0._write;
         method pwr_cont2_sp3_pg0 = pwr_cont2_sp3_pg0._write;
+        method Bit#(1) pwr_cont1_sp3_pwrok;
+            return pack(regulator_pwrok);
+        endmethod
+        method Bit#(1) pwr_cont2_sp3_pwrok;
+            return pack(regulator_pwrok);
+        endmethod
     endinterface
     method hp_idle = downstream_idle._write;
-    method a1_ok = upstream_idle._write;
-    interface A0Regs regs_if;
+    method a1_ok = upstream_ok._write;
+    method Bool a0_idle;
+        return (state == IDLE);
+    endmethod
+    interface A0Regs reg_if;
         method a0_en = enable._write;
-        // method Action ignore_sp(Bool value);
+        method ignore_sp = ignore_sp._write;
         method state = state._read;
     endinterface
 
@@ -399,6 +439,7 @@ interface Bench;
     interface PowerRailModel vtt_gh;
 
     method A0StateType dut_state();
+    method Action sp3_disable(Bool value);
     method Action pmbus_on();
     method Action pmbus_off();
     method Action power_up();
@@ -437,27 +478,18 @@ module mkBench(Bench);
     mkConnection(vdd_mem_efgh_rail.pins, dut.pins.vdd_mem_efgh);
     mkConnection(v3p3_sys_rail.pins, dut.pins.v3p3_sys);
    
+    Reg#(Bool) ignore_sp <- mkReg(False);
     Reg#(Bool) upstream_ok <- mkReg(True);
     Reg#(Bool) downstream_idle_ <- mkReg(True);
     Reg#(Bool) pmbus_enabled <- mkReg(False);
     mkConnection(dut.a1_ok, upstream_ok);
     mkConnection(downstream_idle_, dut.hp_idle);
+    mkConnection(dut.reg_if.ignore_sp, ignore_sp);
 
     Reg#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkReg(0);
     Reg#(Bit#(1)) pwr_cont2_sp3_pg0 <- mkReg(0);
     mkConnection(pwr_cont1_sp3_pg0, dut.pins.pwr_cont1_sp3_pg0);
     mkConnection(pwr_cont2_sp3_pg0, dut.pins.pwr_cont2_sp3_pg0);
-   
-
-// vpp_abcd.pins;
-//         interface PowerRail::Pins vpp_efgh = vpp_efgh.pins;
-//         interface PowerRail::Pins v3p3_sys = v3p3_sys.pins;
-//         interface PowerRail::Pins v1p8_sp3 = v1p8_vdd_18.pins;
-//         interface PowerRail::Pins vdd_mem_abcd = vdd_mem_abcd.pins;
-//         interface PowerRail::Pins vdd_mem_efgh = vdd_mem_efgh.pins;
-
-   
-
 
     interface  vpp_abcd = vpp_abcd_rail;
     interface  vpp_efgh = vpp_efgh_rail;
@@ -471,7 +503,7 @@ module mkBench(Bench);
     interface  vtt_gh = vtt_gh_rail;
 
     method A0StateType dut_state();
-        return dut.regs_if.state;
+        return dut.reg_if.state;
     endmethod
     method Action pmbus_on();
         pwr_cont1_sp3_pg0 <= 1;
@@ -482,10 +514,10 @@ module mkBench(Bench);
         pwr_cont2_sp3_pg0 <= 0;
     endmethod
     method Action power_up();
-        dut.regs_if.a0_en(True);
+        dut.reg_if.a0_en(True);
     endmethod
     method Action power_down();
-        dut.regs_if.a0_en(False);
+        dut.reg_if.a0_en(False);
     endmethod
     method Action downstream_busy();
         downstream_idle_ <= False;
@@ -493,11 +525,16 @@ module mkBench(Bench);
     method Action downstream_idle();
         downstream_idle_ <= True;
     endmethod
+    method Action sp3_disable(Bool value);
+        ignore_sp <= value;
+        sp3.disabled(value);
+    endmethod
 endmodule
 
 interface SP3Model;
     interface SP3 pins;
     method Action thermtrip(Bool value);
+    method Action disabled(Bool value);
 endinterface
 
 typedef enum {
@@ -512,11 +549,12 @@ module mkSP3Model(SP3Model);
     Reg#(UInt#(24)) ticks_count <- mkReg(0);
     RWire#(UInt#(24)) ticks_count_next <- mkRWire();
     Reg#(Bool) thermtrip_ <- mkReg(False);
+    Reg#(Bool) disabled_ <- mkReg(False);
 
     // From SP3
     Reg#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkReg(0);
-    Reg#(Bit#(1)) sp3_to_sp_slp_s3_l <- mkReg(0);
-    Reg#(Bit#(1)) sp3_to_sp_slp_s5_l <- mkReg(0);
+    Reg#(Bit#(1)) sp3_to_seq_slp_s3_l <- mkReg(0);
+    Reg#(Bit#(1)) sp3_to_seq_slp_s5_l <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_pwrok_v3p3 <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(1);
@@ -564,8 +602,8 @@ module mkSP3Model(SP3Model);
         delay(startup_delay, POWERING);
         // - De-assert SLP signals
         action
-            sp3_to_sp_slp_s5_l <= 1;
-            sp3_to_sp_slp_s3_l <= 1;
+            sp3_to_seq_slp_s5_l <= 1;
+            sp3_to_seq_slp_s3_l <= 1;
         endaction
         await(seq_to_sp3_pwr_good == 1);
         // - Wait for Power Good
@@ -580,17 +618,17 @@ module mkSP3Model(SP3Model);
             sp3_to_seq_reset_v3p3_l <= 1;
             state <= ON;
         endaction
-    endseq, !abort && run);
+    endseq, !abort && run && !disabled_);
 
     FSM sp3_power_down_seq <- mkFSMWithPred(seq
         action
-            sp3_to_sp_slp_s5_l <= 0;
-            sp3_to_sp_slp_s3_l <= 0;
+            sp3_to_seq_slp_s5_l <= 0;
+            sp3_to_seq_slp_s3_l <= 0;
             sp3_to_seq_pwrok_v3p3 <= 0;
              sp3_to_seq_reset_v3p3_l <= 0;
             state <= OFF;
         endaction
-    endseq, !abort && !run);
+    endseq, !abort && !run && !disabled_);
 
     rule do_pwr_btn ;
         last_pwr_btn_l <= seq_to_sp3_pwr_btn_l;
@@ -606,8 +644,8 @@ module mkSP3Model(SP3Model);
 
     interface SP3 pins;
         method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out._read;
-        method sp3_to_sp_slp_s3_l = sp3_to_sp_slp_s3_l._read;
-        method sp3_to_sp_slp_s5_l = sp3_to_sp_slp_s5_l._read;
+        method sp3_to_seq_slp_s3_l = sp3_to_seq_slp_s3_l._read;
+        method sp3_to_seq_slp_s5_l = sp3_to_seq_slp_s5_l._read;
         method sp3_to_seq_pwrok_v3p3 = sp3_to_seq_pwrok_v3p3._read;
         method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._read;
         method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._read;
@@ -616,8 +654,8 @@ module mkSP3Model(SP3Model);
         method seq_to_sp3_pwr_btn_l = seq_to_sp3_pwr_btn_l._write;
         method seq_to_sp3_pwr_good = seq_to_sp3_pwr_good._write;
     endinterface
-
     method thermtrip = thermtrip_._write;
+    method disabled = disabled_._write;
 endmodule
 
 (* synthesize *)
@@ -640,6 +678,55 @@ module mkA0PowerUpTest(Empty);
         endaction
         await(bench.dut_state == DONE);
         delay(300);
+    endseq);
+endmodule
+
+(* synthesize *)
+module mkA0FakeSP3Test(Empty);
+    Bench bench <- mkBench();
+    
+    mkAutoFSM(seq
+        // TODO: check pre-conditions
+        bench.sp3_disable(True);
+        action
+            $display("Power Up");
+        endaction
+        bench.power_up();
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+        delay(300);
+    endseq);
+endmodule
+
+(* synthesize *)
+module mkA0MAPOTest(Empty);
+    Bench bench <- mkBench();
+    
+    mkAutoFSM(seq
+
+        action
+            $display("Power Up");
+        endaction
+        bench.power_up();
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+        delay(300);
+        // Issue fault a power rail
+        // bench.v3p3_sys
     endseq);
 endmodule
 

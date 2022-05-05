@@ -13,12 +13,13 @@ import Vector::*;
 
 // Local stuff
 import SPI::*;
-// import NicBlock::*;
+
 // import EarlyPowerBlock::*;
 import GimletRegs::*;
 import GimletSeqFpgaRegs::*;
 import A1Block::*;
-// import A0Block::*;
+import A0Block::*;
+import NicBlock::*;
 // import MiscIO::*;
 import RegCommon::*;  // Testbench only
 import PowerRail::*;  // Testbench only
@@ -31,6 +32,7 @@ typedef struct {
 interface InnerTop;
     interface SpiPeripheralPins spi_pins;
     interface A1Pins a1_pins;
+    interface A0Pins a0_pins;
 endinterface
 
 //
@@ -38,28 +40,40 @@ endinterface
 //
 module mkGimletInnerTop #(GimletSeqTopParameters parameters) (InnerTop);
     // SPI interface
+    SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync();
     SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     SpiDecodeIF decode <- mkSpiRegDecode();
+    mkConnection(spi_sync.syncd_pins, phy.pins);
     mkConnection(decode.spi_byte, phy.decoder_if);  // Output of the SPI PHY block to the SPI decoder block (client/server interface)
    
-    // Regiser block
+    // Register block
     GimletRegIF regs <- mkGimletRegs();
     mkConnection(decode.reg_con, regs.decoder_if);  // Client of SPI decoder to Server of registers block.
     // State machine blocks
     // NicBlockTop nic_block <- mkNicBlock(parameters.one_ms_counts);
     // EarlyBlockTop early_block <- mkEarlyBlock();
+    //
+    // A1 Block
     A1BlockTop a1_block <- mkA1BlockSeq(parameters.one_ms_counts);
-    Reg#(Bool) a0_idle <- mkReg(True);
-    mkConnection(a0_idle, a1_block.a0_idle);
     mkConnection(a1_block.reg_if, regs.a1_block);
-    // A0BlockTop a0_block <- mkA0Block(parameters.one_ms_counts);
-    // MiscBlockTop misc_block <- mkMiscBlock();
-    // Connections
-    //  SPI
+    //
+    // A0 Block
+    A0BlockTop a0_block <- mkA0BlockSeq(parameters.one_ms_counts);
+    mkConnection(a0_block.reg_if, regs.a0_block);
+    mkConnection(a0_block.a0_idle, a1_block.a0_idle);
+    mkConnection(a0_block.a1_ok, a1_block.a1_ok);
 
+    // 
+    // Nic Block
+    NicBlockTop nic_block <- mkNicBlockSeq(parameters.one_ms_counts);
+    mkConnection(nic_block.reg_if, regs.nic_block);
 
-    interface spi_pins = phy.pins;
+    Reg#(Bool) hp_idle <- mkReg(True);
+    mkConnection(hp_idle, a0_block.hp_idle);
+
+    interface spi_pins = spi_sync.in_pins;
     interface a1_pins = a1_block.pins;
+    interface a0_pins = a0_block.pins;
    
 
     //  //mkConnection(spi_sync.syncd_pins.cipo, spi_cipo_enabled._write);
@@ -212,9 +226,21 @@ interface Bench;
         interface PowerRailModel v1p5_rtc;
         interface PowerRailModel v1p8_s5;
         interface PowerRailModel v0p9_s5;
+        
+        interface PowerRailModel vpp_abcd;
+        interface PowerRailModel vpp_efgh;
+        interface PowerRailModel v3p3_sys;
+        interface PowerRailModel v1p8_sp3;
+        interface PowerRailModel vdd_mem_abcd;
+        interface PowerRailModel vdd_mem_efgh;
+        interface PowerRailModel vtt_ab;
+        interface PowerRailModel vtt_cd;
+        interface PowerRailModel vtt_ef;
+        interface PowerRailModel vtt_gh;
 
         interface Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm;
-
+        method Action pmbus_on();
+        method Action pmbus_off();
         // method Bool a1_ok();
         // method Action power_up();
         // method Action power_down();
@@ -230,6 +256,14 @@ module mkBench(Bench);
     ModelSpiController controller <- mkModelSpiController();
     mkConnection(controller.pins, dut.spi_pins);
 
+    Reg#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkReg(0);
+    Reg#(Bit#(1)) pwr_cont2_sp3_pg0 <- mkReg(0);
+    mkConnection(pwr_cont1_sp3_pg0, dut.a0_pins.pwr_cont1_sp3_pg0);
+    mkConnection(pwr_cont2_sp3_pg0, dut.a0_pins.pwr_cont2_sp3_pg0);
+
+    // Fake SP3
+    SP3Model sp3 <- mkSP3Model();
+    mkConnection(dut.a0_pins.sp3, sp3.pins);
 
     // A1 Power rails
     PowerRailModel v3p3_s5_rail <- mkPowerRailModel("v3p3_s5");
@@ -241,11 +275,52 @@ module mkBench(Bench);
     mkConnection(v1p8_s5_rail.pins, dut.a1_pins.v1p8_s5);
     mkConnection(v0p9_s5_rail.pins, dut.a1_pins.v0p9_s5);
 
+    // A0 Power rails
+    PowerRailModel vpp_abcd_rail <- mkPowerRailModel("vpp_abcd");
+    PowerRailModel vpp_efgh_rail <- mkPowerRailModel("vpp_efgh");
+    PowerRailModel v3p3_sys_rail <- mkPowerRailModel("v3p3_sys");
+    PowerRailModel v1p8_sp3_rail <- mkPowerRailModel("v1p8_sp3");
+    PowerRailModel vdd_mem_abcd_rail <- mkPowerRailModel("vdd_mem_abcd");
+    PowerRailModel vdd_mem_efgh_rail <- mkPowerRailModel("vdd_mem_efgh");
+    PowerRailModel vtt_ab_rail <- mkPowerRailModel("vtt_ab");
+    PowerRailModel vtt_cd_rail <- mkPowerRailModel("vtt_cd");
+    PowerRailModel vtt_ef_rail <- mkPowerRailModel("vtt_ef");
+    PowerRailModel vtt_gh_rail <- mkPowerRailModel("vtt_gh");
+
+    mkConnection(vpp_abcd_rail.pins, dut.a0_pins.vpp_abcd);
+    mkConnection(vpp_efgh_rail.pins, dut.a0_pins.vpp_efgh);
+    mkConnection(v3p3_sys_rail.pins, dut.a0_pins.v3p3_sys);
+    mkConnection(v1p8_sp3_rail.pins, dut.a0_pins.v1p8_sp3);
+    mkConnection(vdd_mem_abcd_rail.pins, dut.a0_pins.vdd_mem_abcd);
+    mkConnection(vdd_mem_efgh_rail.pins, dut.a0_pins.vdd_mem_efgh);
+    mkConnection(vtt_ab_rail.pins, dut.a0_pins.vtt_ab);
+    mkConnection(vtt_cd_rail.pins, dut.a0_pins.vtt_cd);
+    mkConnection(vtt_ef_rail.pins, dut.a0_pins.vtt_ef);
+    mkConnection(vtt_gh_rail.pins, dut.a0_pins.vtt_gh);
+
     interface PowerRailModel v3p3_s5 = v3p3_s5_rail;
     interface PowerRailModel v1p5_rtc = v1p5_rtc_rail;
     interface PowerRailModel v1p8_s5 = v1p8_s5_rail;
     interface PowerRailModel v0p9_s5 = v0p9_s5_rail;
+    interface PowerRailModel vpp_abcd = vpp_abcd_rail;
+    interface PowerRailModel vpp_efgh = vpp_efgh_rail;
+    interface PowerRailModel v3p3_sys = v3p3_sys_rail;
+    interface PowerRailModel v1p8_sp3 = v1p8_sp3_rail;
+    interface PowerRailModel vdd_mem_abcd = vdd_mem_abcd_rail;
+    interface PowerRailModel vdd_mem_efgh = vdd_mem_efgh_rail;
+    interface PowerRailModel vtt_ab = vtt_ab_rail;
+    interface PowerRailModel vtt_cd = vtt_cd_rail;
+    interface PowerRailModel vtt_ef = vtt_ef_rail;
+    interface PowerRailModel vtt_gh = vtt_gh_rail;
     interface Server bfm = controller.bfm;
+    method Action pmbus_on();
+        pwr_cont1_sp3_pg0 <= 1;
+        pwr_cont2_sp3_pg0 <= 1;
+    endmethod
+    method Action pmbus_off();
+        pwr_cont1_sp3_pg0 <= 0;
+        pwr_cont2_sp3_pg0 <= 0;
+    endmethod
 
 endmodule
 
@@ -272,13 +347,19 @@ module mkGimletTestTop(Empty);
          action
             $display("A1 SM good!!!");
         endaction
-        // action
-        //     $display("Delay for A0 SM good...");
-        // endaction
-        // spiReadUntil(read_byte, a0smstatusOffset, 'h0c,  bench.bfm);
-        // action
-        //     $display("Design Up");
-        // endaction
+        action
+            $display("Delay for A0 SM pmbus...");
+        endaction
+        spiReadUntil(read_byte, a0smstatusOffset, 'h07,  bench.bfm);
+        delay(30);
+        action
+             $display("Enable PMBus");
+        endaction
+        bench.pmbus_on();
+        spiReadUntil(read_byte, a0smstatusOffset, 'h0c,  bench.bfm);
+        action
+             $display("Design Up");
+        endaction
         //delay(4100010); // TODO: Be smarter about a Wait for A0 SM good
         // prove that when A0 is up we can't disable A1
         //spiWrite('h09, 'h02, controller.bfm);
