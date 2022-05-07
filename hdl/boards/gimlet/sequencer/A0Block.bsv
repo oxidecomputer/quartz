@@ -23,6 +23,10 @@ import PowerRail::*;
         method Action a0_en(Bool value);  // SM enable pin
         method Action ignore_sp(Bool value);
         method A0StateType state();
+        method A0OutStatus1 status1;
+        method A0OutStatus2 status2;
+        method GroupbPg b_pgs;
+        method GroupcPg c_pgs;
         // method A0OutStatus output_readbacks();
         // method A0Readbacks input_readbacks();
     endinterface
@@ -33,6 +37,10 @@ import PowerRail::*;
         method Bool a0_en();  // SM enable pin
         method Bool ignore_sp();
         method Action state (A0StateType value);
+        method Action status1 (A0OutStatus1 value);
+        method Action status2 (A0OutStatus2 value);
+        method Action b_pgs (GroupbPg value);
+        method Action c_pgs (GroupcPg value);
         // method Action output_readbacks (A0OutStatus value);
         // method Action input_readbacks (A0Readbacks value);
     endinterface
@@ -43,8 +51,10 @@ import PowerRail::*;
             mkConnection(source.a0_en, sink.a0_en);
             mkConnection(source.ignore_sp, sink.ignore_sp);
             mkConnection(source.state, sink.state);
-            // mkConnection(source.output_readbacks, sink.output_readbacks);
-            // mkConnection(source.input_readbacks, sink.input_readbacks);
+            mkConnection(source.status1, sink.status1);
+            mkConnection(source.status2, sink.status2);
+            mkConnection(source.b_pgs, sink.b_pgs);
+            mkConnection(source.c_pgs, sink.c_pgs);
         endmodule
     endinstance
 
@@ -168,6 +178,11 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     
     Wire#(Bool) aggregate_pg <- mkDWire(False);
     Wire#(Bool) aggregate_fault <- mkDWire(False);
+
+    ConfigReg#(A0OutStatus1) status1 <- mkConfigRegU();
+    ConfigReg#(A0OutStatus2) status2 <- mkConfigRegU();
+    ConfigReg#(GroupbPg) b_pgs <- mkConfigRegU();
+    ConfigReg#(GroupcPg) c_pgs <- mkConfigRegU();
 
     // Power rails here
     // Group B1:
@@ -406,6 +421,36 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         end
     endrule
 
+    (* fire_when_enabled *)
+    rule do_readbacks;
+        status1 <= A0OutStatus1 {
+                vtt_efgh_en    : vtt_ef.pins.en,
+                vtt_abcd_en    : vtt_ab.pins.en,
+                vdd_mem_efgh_en: vdd_mem_efgh.pins.en,
+                vdd_mem_abcd_en: vdd_mem_abcd.pins.en,
+                v1p8_sp3_vdd_en: v1p8_vdd_18.pins.en,
+                v3p3_sys_en    : v3p3_sys.pins.en,
+                vpp_efgh_en    : vpp_efgh.pins.en,
+                vpp_abcd_en    : vpp_abcd.pins.en
+
+        };
+
+        b_pgs <= GroupbPg {
+                v3p3_sys_pg    : pack(v3p3_sys.good),
+                v1p8_sp3_pg    : pack(v1p8_vdd_18.good),
+                vtt_efgh_pg    : pack(vtt_ef.good && vtt_gh.good),
+                vtt_abcd_pg    : pack(vtt_ab.good && vtt_cd.good),
+                vdd_mem_efgh_pg: pack(vdd_mem_efgh.good),
+                vdd_mem_abcd_pg: pack(vdd_mem_abcd.good),
+                vpp_efgh_pg    : pack(vpp_efgh.good),
+                vpp_abcd_pg    : pack(vpp_abcd.good)
+        };
+        c_pgs <= GroupcPg{
+            vdd_vcore: pwr_cont1_sp3_pg0,
+            vddcr_soc_pg: pwr_cont2_sp3_pg0
+        };
+    endrule
+
     interface A0Pins pins;
         interface FpgaSP3 sp3;
             // From SP3
@@ -451,6 +496,10 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method a0_en = enable._write;
         method ignore_sp = ignore_sp._write;
         method state = state._read;
+        method status1 = status1._read;
+        method status2 = status2._read;
+        method b_pgs = b_pgs._read;
+        method c_pgs = c_pgs._read;
     endinterface
 
 endmodule
@@ -782,14 +831,14 @@ endmodule
 
 //
 // Group B1 rails:
-//  RevA: pwr_cont_dimm_abcd_en0 for VPP_ABCD_A0
-//        pwr_cont_dimm_efgh_en0 for VPP_EFGH_A0, 
-//        pwr_cont_dimm_abcd_en1 for V3P3_SYS_A0,  
-//        seq_to_sp3_v1p8_en for V1P8_SP3_VDD_18_A0
-//  RevB: pwr_cont_dimm_en0 for VPP_ABCD_A0
-//        pwr_cont_dimm_en1 for VPP_EFGH_A0
-//        seq_to_sp3_v1p8_en for V1P8_SP3_VDD_18_A0
-//        seq_to_v3p3_sys_en for V3P3_SYS_A0
+//  RevA: pwr_cont_dimm_abcd_en0 for VPP_ABCD_A0, FPGA pin R16
+//        pwr_cont_dimm_efgh_en0 for VPP_EFGH_A0, FPGA pin J16
+//        pwr_cont_dimm_abcd_en1 for V3P3_SYS_A0, FPGA pin L1 
+//        seq_to_sp3_v1p8_en for V1P8_SP3_VDD_18_A0, FPGA pin R15
+//  RevB: pwr_cont_dimm_en0 for VPP_ABCD_A0, FPGA pin R16
+//        pwr_cont_dimm_en1 for VPP_EFGH_A0, FPGA pin R15
+//        seq_to_sp3_v1p8_en for V1P8_SP3_VDD_18_A0, FPGA pin L1
+//        seq_to_v3p3_sys_en for V3P3_SYS_A0, FPGA pin L12
 
 //
 // Group B2 rails:

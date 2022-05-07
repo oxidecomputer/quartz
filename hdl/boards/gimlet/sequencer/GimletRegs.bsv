@@ -35,7 +35,6 @@ module mkGimletRegs(GimletRegIF);
     // Main control registers
     ConfigReg#(Pwrctrl) power_control <- mkReg(unpack(0));
     //  NIC domain signals
-    ConfigReg#(NicStatus) nic_status <- mkRegU();  // RO register for inputs
     ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
     ConfigReg#(OutStatusNic2) nic2_out_status <- mkRegU(); // RO register for outputs
     ConfigReg#(DbgOutNic1) dbg_nic1_out       <- mkReg(unpack(0));
@@ -50,15 +49,15 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
     ConfigReg#(A1smstatus) a1_sm <- mkRegU();
     // A0 registers
-    ConfigReg#(A0OutStatus1) a0_status1 <- mkReg(unpack(0)); // a0OutStatus1Offset
-    ConfigReg#(A0OutStatus2) a0_status2 <- mkReg(unpack(0)); // a0OutStatus2Offset
+    //ConfigReg#(A0OutStatus1) a0_status1 <- mkReg(unpack(0)); // a0OutStatus1Offset
+    //ConfigReg#(A0OutStatus2) a0_status2 <- mkReg(unpack(0)); // a0OutStatus2Offset
     ConfigReg#(A0DbgOut1) a0_dbg_out1 <- mkReg(unpack(0)); // a0DbgOut1Offset
     ConfigReg#(A0DbgOut2) a0_dbg_out2 <- mkReg(unpack(0)); // a0DbgOut1Offset
     ConfigReg#(AmdA0) a0_amd_rdbks <- mkReg(unpack(0)); // amdA0Offset
-    ConfigReg#(GroupbPg) a0_groupB_pg <- mkReg(unpack(0)); // groupbPgOffset
+   
     ConfigReg#(GroupbUnused) a0_groupB_unused <- mkReg(unpack(0)); //groupbUnusedOffset
     ConfigReg#(GroupbcFlts) a0_groupC_faults <-mkReg(unpack(0)); //groupbcFltsOffset
-    ConfigReg#(GroupcPg) a0_groupC_pg <- mkReg(unpack(0)); // groupcPgOffset
+    
     ConfigReg#(A0smstatus) a0_sm <- mkRegU();
     // Misc IO registers
     ConfigReg#(ClkgenOutStatus) clkgen_out_status <- mkReg(unpack(0)); // clkgenOutStatusOffset
@@ -91,6 +90,11 @@ module mkGimletRegs(GimletRegIF);
     RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
     Wire#(A1StateType) a1_state <- mkDWire(IDLE);
+    Wire#(A0OutStatus1) a0_status1 <- mkDWire(unpack(0));
+    Wire#(A0OutStatus2) a0_status2 <- mkDWire(unpack(0));
+    Wire#(GroupbPg) a0_groupB_pg <- mkDWire(unpack(0));
+    Wire#(GroupcPg) a0_groupC_pg <- mkDWire(unpack(0));
+    Wire#(NicStatus) nic_status <- mkDWire(unpack(0));
     // RWire#(A0StateType) a0_state <- mkRWire();
     ConfigReg#(NicStateType) nic_sm <- mkConfigRegU();
     
@@ -371,6 +375,10 @@ module mkGimletRegs(GimletRegIF);
         method Action state (A0StateType value);
             a0_sm <= unpack({'0, pack(value)});
         endmethod
+        method status1 = a0_status1._write;
+        method status2 = a0_status2._write;
+        method b_pgs = a0_groupB_pg._write;
+        method c_pgs = a0_groupC_pg._write;
     endinterface
     interface NicRegsReverse nic_block;
         method Bool en;
@@ -379,6 +387,7 @@ module mkGimletRegs(GimletRegIF);
         method Action state(NicStateType value);
             nic_sm <= unpack({'0, pack(value)});
         endmethod
+        method pgs = nic_status._write;
     endinterface
     //     // Normalized pin readbacks to registers
     //     //method input_readbacks = cur_a0_inputs.wset; // Input sampling

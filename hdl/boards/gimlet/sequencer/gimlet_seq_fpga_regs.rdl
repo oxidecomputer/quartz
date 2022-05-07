@@ -424,13 +424,8 @@ addrmap gimlet_seq_fpga {
             desc = "Power good for V1P8_NIC_A0HP  (PWR_CONT_NIC_PG1 net)";
         } NIC_V1P8_PG[1] = 0;
         field {
-            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, only valid after 
-            configuration (PWR_CONT_NIC_NVRHOT net)";
-        } NIC_NVRHOT[1] = 0;
-        field {
-            desc = "Catastrophic fault protection output from ISL68224 U357 driving V1P8_NIC_A0HP 
-            VOP96_NIC_VDD_A0HP (PWR_CONT_NIC_CFP)";
-        } NIC_CFP[1] = 0;
+            desc = "Power good for LDO_V3P3";
+        } NIC_3V3_PG[1] = 0;
     } NIC_STATUS;
 
     reg {
@@ -513,31 +508,29 @@ addrmap gimlet_seq_fpga {
 
     reg a0_output1_type {
         field {
-            desc = "Drives VPP_ABCD_A0 rail (PWR_CONT_DIMM_ABCD_EN0 net)";
+            desc = "GroupB1: Drives VPP_ABCD_A0 rail (pwr_cont_dimm_en0 net RevB)";
         } VPP_ABCD_EN[1] = 0;
         field {
-            desc = "Drives VPP_EFGH_A0 rail (PWR_CONT_DIMM_EFGH_EN0 net)";
+            desc = "GroupB1: Drives VPP_EFGH_A0 rail (pwr_cont_dimm_en1 net RevB)";
         } VPP_EFGH_EN[1] = 0;
         field {
-            desc = "Enables VTT_ABCD_A0 rail (SEQ_TO_VTT_ABCD_A0_EN net)";            
-        } VTT_ABCD_EN[1] = 0;
-        field {
-            desc = "Enables VTT_EFGH_A0 rail, should enable in parallel with 
-            PWR_CONT1_SP3_EN (SEQ_TO_VTT_EFGH_EN net)";
-        } VTT_EFGH_EN[1] = 0;
-        field {
-            desc = "Drives EN of ISL68224 and ISL99390 UP32,33,34 for enabling the 
-            V3P3_SYS_A0 rail (PWR_CONT_DIMM_ABCD_EN1 net)";
+            desc = "GroupB1: Enables V3P3_SYS_A0 rail (seq_to_v3p3_sys_en net RevB)";            
         } V3P3_SYS_EN[1] = 0;
         field {
-            desc = "Enable 1 for ISL68224, no defined use (PWR_CONT_DIMM_EFGH_EN1 net)";
-        } EFGH_EN1[1] = 0;
+            desc = "GroupB1: Enables V1P8_SP3_VDD_18_A0 rail (seq_to_sp3_v1p8_en net RevB)";            
+        } V1P8_SP3_VDD_EN[1] = 0;
         field {
-            desc = "EN2 of ISL68224 U352, no defined function (PWR_CONT_DIMM_ABCD_EN2 net)";
-        } ABCD_EN2[1] = 0;
+            desc = "GroupB2: Enables VDD_MEM_ABCD_A0 rail (pwr_cont1_sp3_en net RevB)";
+        } VDD_MEM_ABCD_EN[1] = 0;
         field {
-            desc = "To ISL68224 U418. No defined function (PWR_CONT_DIMM_EFGH_EN2 net)";
-        } EFGH_EN2[1] = 0;
+            desc = "GroupB2: Enables VDD_MEM_EFGH_A0 rail (pwr_cont2_sp3_en net RevB)";
+        } VDD_MEM_EFGH_EN[1] = 0;
+        field {
+            desc = "GroupB2: Enables VTT_ABCD_A0 rail (seq_to_vtt_abcd_en net RevB)";
+        } VTT_ABCD_EN[1] = 0;
+        field {
+            desc = "GroupB2: Enables VTT_EFGH_A0 rail (seq_to_vtt_efgh_en net RevB)";
+        } VTT_EFGH_EN[1] = 0;
     };
 
     reg a0_output2_type {

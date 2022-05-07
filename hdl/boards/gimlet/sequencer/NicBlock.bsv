@@ -3,6 +3,7 @@ package NicBlock;
 import Assert::*;
 import BuildVector::*;
 import Connectable::*;
+import ConfigReg::*;
 import StmtFSM::*;
 import Vector::*;
 
@@ -18,6 +19,7 @@ import PowerRail::*;
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Action en(Bool value);  // SM enable pin
         method NicStateType state();
+        method NicStatus pgs;
         // method A1OutStatus output_readbacks();
         // method A1Readbacks input_readbacks();
     endinterface
@@ -25,6 +27,7 @@ import PowerRail::*;
     interface NicRegsReverse;
         method Bool en;
         method Action state(NicStateType value);
+        method Action pgs (NicStatus value);
     endinterface
 
     // Allow our output pin source to connect to our output pin sink
@@ -32,6 +35,7 @@ import PowerRail::*;
         module mkConnection#(NicRegs source, NicRegsReverse sink) (Empty);
             mkConnection(source.en, sink.en);
             mkConnection(source.state, sink.state);
+            mkConnection(source.pgs, sink.pgs);
             // mkConnection(source.output_readbacks, sink.output_readbacks);
             // mkConnection(source.input_readbacks, sink.input_readbacks);
         endmodule
@@ -92,6 +96,8 @@ import PowerRail::*;
 
         Reg#(UInt#(24)) ticks_count <- mkReg(0);
         RWire#(UInt#(24)) ticks_count_next <- mkRWire();
+
+        ConfigReg#(NicStatus) nic_pg <- mkConfigRegU();
 
         PowerRail ldo_v3p3 <- mkPowerRail(ten_ms, False);
         PowerRail v1p5a <- mkPowerRail(ten_ms, False);
@@ -224,6 +230,7 @@ import PowerRail::*;
         interface NicRegs reg_if;
             method en = enable._write;
             method state = state._read;
+            method pgs = nic_pg._read;
         endinterface
 
     endmodule
