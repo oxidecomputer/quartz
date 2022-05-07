@@ -189,7 +189,7 @@ import PowerRail::*;
                 // We do a standard power-down in the fault case
                 // regardless of the rest of the system state.
                 nic_power_dwn_seq.start();
-            end else if (enable) begin
+            end else if (enable && state == IDLE) begin
                 // We only want to start this on a rising edge of
                 // the enable, meaning to re-start you need to
                 // clear the enable.
@@ -227,6 +227,125 @@ import PowerRail::*;
         endinterface
 
     endmodule
-        
+    
+
+
+     interface Bench;
+        interface PowerRailModel ldo_v3p3;
+        interface PowerRailModel v1p5a;
+        interface PowerRailModel v1p5d;
+        interface PowerRailModel v1p2_enet;
+        interface PowerRailModel v1p2;
+        interface PowerRailModel v1p1;
+        interface PowerRailModel v0p9_a0hp;
+
+        method Bool nic_ok();
+        method Action power_up();
+        method Action power_down();
+        method Action sp3_assert_perst();
+        method Action sp3_deassert_perst();
+        method Action a0_ok(Bool value);
+        method NicStateType state();
+        method Bit#(1) seq_to_nic_cld_rst_l();
+        method Bit#(1) seq_to_nic_perst_l();
+        method Bit#(1) nic_to_sp3_pwrflt_l();
+        method Bit#(1) seq_to_nic_comb_pg_l();
+
+    endinterface
+
+    module mkBench(Bench);
+        PowerRailModel ldo_v3p3_rail <- mkPowerRailModel("ldo_v3p3");
+        PowerRailModel v1p5a_rail <- mkPowerRailModel("v1p5a");
+        PowerRailModel v1p5d_rail <- mkPowerRailModel("v1p5d");
+        PowerRailModel v1p2_enet_rail <- mkPowerRailModel("v1p2_enet");
+        PowerRailModel v1p2_rail <- mkPowerRailModel("v1p2");
+        PowerRailModel v1p1_rail <- mkPowerRailModel("v1p1");
+        PowerRailModel v0p9_a0hp_rail <- mkPowerRailModel("v0p9_a0hp");
+
+        NicBlockTop dut <- mkNicBlockSeq(10);
+
+        Reg#(Bool) upstream_ok <- mkReg(True);
+
+        Reg#(Bit#(1)) nic_to_seq_ext_rst_l <- mkReg(1);
+        Reg#(Bit#(1)) sp3_to_seq_nic_perst_l <- mkReg(0);
+
+        mkConnection(upstream_ok, dut.a0_ok);
+        mkConnection(nic_to_seq_ext_rst_l, dut.pins.nic_to_seq_ext_rst_l);
+        mkConnection(sp3_to_seq_nic_perst_l, dut.pins.sp3_to_seq_nic_perst_l);
+
+        mkConnection(ldo_v3p3_rail.pins, dut.pins.ldo_v3p3);
+        mkConnection(v1p5a_rail.pins, dut.pins.v1p5a);
+        mkConnection(v1p5d_rail.pins, dut.pins.v1p5d);
+        mkConnection(v1p2_enet_rail.pins, dut.pins.v1p2_enet);
+        mkConnection(v1p2_rail.pins, dut.pins.v1p2);
+        mkConnection(v1p1_rail.pins, dut.pins.v1p1);
+        mkConnection(v0p9_a0hp_rail.pins, dut.pins.v0p9_a0hp);
+
+        interface PowerRailModel ldo_v3p3 = ldo_v3p3_rail;
+        interface PowerRailModel v1p5a = v1p5a_rail;
+        interface PowerRailModel v1p5d = v1p5d_rail;
+        interface PowerRailModel v1p2_enet = v1p2_enet_rail;
+        interface PowerRailModel v1p2 = v1p2_rail;
+        interface PowerRailModel v1p1 = v1p1_rail;
+        interface PowerRailModel v0p9_a0hp = v0p9_a0hp_rail;
+
+        method Bool nic_ok();
+            return dut.reg_if.state == DONE;
+        endmethod
+        method Action power_up();
+            dut.reg_if.en(True);
+        endmethod
+        method Action power_down();
+            dut.reg_if.en(True);
+        endmethod
+        method Action sp3_assert_perst();
+            sp3_to_seq_nic_perst_l <= 0;
+        endmethod
+        method Action sp3_deassert_perst();
+            sp3_to_seq_nic_perst_l <= 1;
+        endmethod
+        method Action a0_ok(Bool value);
+            upstream_ok <= value;
+        endmethod
+        method NicStateType state();
+            return dut.reg_if.state;
+        endmethod
+        method seq_to_nic_cld_rst_l = dut.pins.seq_to_nic_cld_rst_l;
+        method seq_to_nic_perst_l = dut.pins.seq_to_nic_perst_l;
+        method nic_to_sp3_pwrflt_l = dut.pins.nic_to_sp3_pwrflt_l;
+        method seq_to_nic_comb_pg_l = dut.pins.seq_to_nic_comb_pg_l;
+
+    endmodule
+
+     (* synthesize *)
+    module mkPowerUpNicTest(Empty);
+         Bench bench <- mkBench();
+
+        mkAutoFSM(seq
+            // Check pre-power conditions
+            dynamicAssert(!bench.nic_ok, "Expected Nic off");
+            dynamicAssert(bench.seq_to_nic_cld_rst_l == 0, "Expected cld rst asserted");
+            dynamicAssert(bench.seq_to_nic_perst_l == 0, "Expected perst asserted");
+            dynamicAssert(bench.seq_to_nic_comb_pg_l == 1, "Expected comb-pg de-asserted");
+            // Since power is off, SP3 perst de-assert should have no nic impact.
+            bench.sp3_deassert_perst();
+            delay(5);
+            dynamicAssert(bench.seq_to_nic_perst_l == 0, "Expected perst still asserted");
+            // now try to power up.
+            bench.sp3_assert_perst();
+            bench.power_up();
+            await(bench.state == DONE);
+            // check one representative rail
+            dynamicAssert(bench.v0p9_a0hp.enabled, "Expected v0p9 enabled");
+            dynamicAssert(bench.seq_to_nic_cld_rst_l == 1, "Expected cld rst deasserted");
+            dynamicAssert(bench.seq_to_nic_perst_l == 0, "Expected perst asserted due to SP3");
+            dynamicAssert(bench.nic_ok, "Expected Nic on");
+            bench.sp3_deassert_perst();
+            delay(5);
+            dynamicAssert(bench.seq_to_nic_perst_l == 1, "Expected perst now deasserted");
+            delay(200);
+        endseq);
+    endmodule
+
 
 endpackage

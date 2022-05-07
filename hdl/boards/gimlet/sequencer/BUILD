@@ -66,6 +66,17 @@ bluespec_library('NicBlock',
         ':PowerRail',
         'cobalt//hdl:TestUtils',
     ])
+bluesim_tests('NICTests',
+    env = 'cobalt//bluesim_default',
+    suite = "NicBlock.bsv",
+    modules = [
+        'mkPowerUpNicTest',
+    ],
+    deps = [
+        ':NicBlock'
+    ]
+)
+
 bluespec_library('A1Block',
     sources = [
         'A1Block.bsv',
@@ -104,6 +115,7 @@ bluesim_tests('A0Tests',
     modules = [
         'mkA0PowerUpTest',
         'mkA0FakeSP3Test',
+        'mkA0MAPOTest',
     ],
     deps = [
         ':A0Block'

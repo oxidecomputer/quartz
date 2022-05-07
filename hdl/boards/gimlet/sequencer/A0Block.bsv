@@ -83,6 +83,7 @@ import PowerRail::*;
             mkConnection(source.sp3_to_seq_slp_s5_l, sink.sp3_to_seq_slp_s5_l);
             mkConnection(source.sp3_to_seq_pwrok_v3p3, sink.sp3_to_seq_pwrok_v3p3);
             mkConnection(source.sp3_to_seq_reset_v3p3_l, sink.sp3_to_seq_reset_v3p3_l);
+            mkConnection(source.sp3_to_seq_thermtrip_l, sink.sp3_to_seq_thermtrip_l);
             mkConnection(source.seq_to_sp3_sys_rst_l, sink.seq_to_sp3_sys_rst_l);
             mkConnection(source.seq_to_sp3_pwr_btn_l, sink.seq_to_sp3_pwr_btn_l);
             mkConnection(source.seq_to_sp3_pwr_good, sink.seq_to_sp3_pwr_good);
@@ -115,6 +116,7 @@ import PowerRail::*;
         method Action hp_idle(Bool value);
         method Action a1_ok(Bool value);
         method Bool a0_idle;
+        method Bool a0_ok;
         interface A0Regs reg_if;
     endinterface
 
@@ -190,6 +192,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Wire#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkDWire(0);
     Wire#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkDWire(0);
     Wire#(Bit#(1)) pwr_cont2_sp3_pg0 <- mkDWire(0);
+    Wire#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkDWire(1);
 
     // Output registers
     Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);  // In practice we don't use this
@@ -250,6 +253,13 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         b1_pg <= foldr(bool_and, True, map(PowerRail::good, b1_rails));
         b2_pg <= foldr(bool_and, True, map(PowerRail::good, b2_rails));
         c_pg <= (pwr_cont2_sp3_pg0 == 1) && (pwr_cont1_sp3_pg0 == 1);
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_ps_faults;
+        aggregate_fault <= foldr(bool_or, False, map(PowerRail::fault, b1_rails)) ||
+                           foldr(bool_or, False, map(PowerRail::fault, b2_rails)) ||
+                           (!c_pg && pack(state) >=pack(DELAY_1MS));
     endrule
 
     FSM a0_power_up_seq <- mkFSMWithPred(seq
@@ -380,6 +390,22 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         end
     endrule
 
+    (* fire_when_enabled *)
+    rule do_fault_mon;
+        // Thermtrip rails only valid after V3P3_SYS_A0 is up.
+        if (v3p3_sys.good && sp3_to_seq_thermtrip_l == 0) begin
+            faulted <= True;
+        // If an enabled rail faults, set the faulted flag
+        end else if (aggregate_fault) begin
+            faulted <= True;
+        // Faulted prevents us from re-starting unless the block has
+        // been disabled, preventing failure loops without software
+        // involvement.
+        end else if (!enable) begin
+            faulted <= False;
+        end
+    endrule
+
     interface A0Pins pins;
         interface FpgaSP3 sp3;
             // From SP3
@@ -388,6 +414,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             method sp3_to_seq_slp_s5_l = sp3_to_seq_slp_s5_l._write;
             method sp3_to_seq_pwrok_v3p3 = sp3_to_seq_pwrok_v3p3._write;
             method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._write;
+            method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._write;
             // To SP3
             method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._read;
             method seq_to_sp3_pwr_btn_l = seq_to_sp3_pwr_btn_l._read;
@@ -416,6 +443,9 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     method a1_ok = upstream_ok._write;
     method Bool a0_idle;
         return (state == IDLE);
+    endmethod
+    method Bool a0_ok;
+        return (state == DONE);
     endmethod
     interface A0Regs reg_if;
         method a0_en = enable._write;
@@ -726,7 +756,27 @@ module mkA0MAPOTest(Empty);
         await(bench.dut_state == DONE);
         delay(300);
         // Issue fault a power rail
-        // bench.v3p3_sys
+        bench.v3p3_sys.force_disable(True);
+        delay(100);
+        await(bench.dut_state == IDLE);
+        delay(300);
+        // Un-fault power rail
+        bench.v3p3_sys.force_disable(False);
+        // Try to power up again without clearing enable (which clears faults).
+        bench.power_up();
+        delay(300);
+        dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+        bench.power_down();
+        delay(300);
+        dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+        bench.power_up();
+        delay(2000);
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
     endseq);
 endmodule
 

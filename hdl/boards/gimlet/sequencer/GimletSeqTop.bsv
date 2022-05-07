@@ -67,7 +67,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (InnerTop);
     // Nic Block
     NicBlockTop nic_block <- mkNicBlockSeq(parameters.one_ms_counts);
     mkConnection(nic_block.reg_if, regs.nic_block);
-
+    mkConnection(a0_block.a0_ok, nic_block.a0_ok);
     Reg#(Bool) hp_idle <- mkReg(True);
     mkConnection(hp_idle, a0_block.hp_idle);
 
