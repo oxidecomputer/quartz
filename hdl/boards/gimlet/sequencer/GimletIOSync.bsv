@@ -325,7 +325,7 @@ module mkGimletSeqTop (SeqPins);
     mkConnection(sync.syncd.vtt_ef_a0_to_seq_pg, inner.a0_pins.vtt_ef.pg);
     mkConnection(sync.syncd.vtt_gh_a0_to_seq_pg, inner.a0_pins.vtt_gh.pg);
     mkConnection(sync.syncd.pwr_cont_dimm_pg0, inner.a0_pins.vpp_abcd.pg);
-    mkConnection(sync.syncd.pwr_cont_dimm_efgh_pg0, inner.a0_pins.vpp_efgh.pg);
+    mkConnection(sync.syncd.pwr_cont_dimm_pg1, inner.a0_pins.vpp_efgh.pg);
     mkConnection(sync.syncd.pwr_cont1_sp3_pg1, inner.a0_pins.vdd_mem_abcd.pg);
     mkConnection(sync.syncd.pwr_cont2_sp3_pg1, inner.a0_pins.vdd_mem_efgh.pg);
 

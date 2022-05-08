@@ -97,6 +97,12 @@ interface Pins;
     method Bit#(1) seq_to_sp3_pwr_good();
     (* prefix = "" *)
     interface SpiPeripheralPinsTop spi_pins;
+    (* prefix = "" *)
+    method Action seq_rev_id0((* port="seq_rev_id0" *) Bit#(1) value);
+    (* prefix = "" *)
+    method Action seq_rev_id1((* port="seq_rev_id1" *) Bit#(1) value);
+    (* prefix = "" *)
+    method Action seq_rev_id2((* port="seq_rev_id2" *) Bit#(1) value);
 
 endinterface
 
