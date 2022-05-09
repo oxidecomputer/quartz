@@ -382,7 +382,7 @@ module mkGimletRegs(GimletRegIF);
     endinterface
     interface NicRegsReverse nic_block;
         method Bool en;
-            return power_control.nicpwren == 1;
+            return power_control.a0a_en == 1;
         endmethod
         method Action state(NicStateType value);
             nic_sm <= unpack({'0, pack(value)});

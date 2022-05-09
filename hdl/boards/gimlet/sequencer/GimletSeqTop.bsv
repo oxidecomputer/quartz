@@ -33,6 +33,7 @@ interface InnerTop;
     interface SpiPeripheralPins spi_pins;
     interface A1Pins a1_pins;
     interface A0Pins a0_pins;
+    interface NicPins nic_pins;
 endinterface
 
 //
@@ -74,65 +75,8 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (InnerTop);
     interface spi_pins = spi_sync.in_pins;
     interface a1_pins = a1_block.pins;
     interface a0_pins = a0_block.pins;
+    interface nic_pins = nic_block.pins;
    
-
-    //  //mkConnection(spi_sync.syncd_pins.cipo, spi_cipo_enabled._write);
-    // //  NIC pins
-    // mkConnection(nic_pins.source, nic_block.syncd_pins);  // Synchronized pins to NIC block
-    // mkConnection(nic_block.reg_if, regs.nic_block); // Connect registers and NIC block
-    // // Early block pins
-    // mkConnection(early_pins.syncd_pins, early_block.syncd_pins); // Synchronized pins to early block
-    // mkConnection(early_block.reg_if, regs.early_block); // Connect registers and early block
-    // // A1 block pins
-    // mkConnection(a1_pins.syncd_pins, a1_block.syncd_pins);
-    
-    // // A1 -> A0 interlock
-    // mkConnection(a1_block.a1_ok, a0_block.upstream_ok);
-    // mkConnection(a0_block.a0_idle, a1_block.a0_idle);
-    // mkConnection(a0_block.a0_ok, nic_block.upstream_ok);
-    // // A0 block pins
-    // mkConnection(a0_pins.syncd_pins, a0_block.syncd_pins);
-    // mkConnection(a0_block.reg_if, regs.a0_block);
-    // // Misc block pins
-    // mkConnection(misc_pins.syncd_pins, misc_block.syncd_pins);
-    // mkConnection(misc_block.reg_if, regs.misc_block);
-    // mkConnection(misc_block.thermtrip, a0_block.thermtrip);
-
-    // interface SequencerInputPins in_pins;
-    //     interface NicInputPinsRawSink nic_pins;
-    //         // Feed the nic pins into the nic pin synchronizer
-    //         method pwr_cont_nic_pg0 = nic_pins.sink.pwr_cont_nic_pg0;
-    //         method pwr_cont_nic_nvrhot = nic_pins.sink.pwr_cont_nic_nvrhot;
-    //         method pwr_cont_nic_cfp = nic_pins.sink.pwr_cont_nic_cfp;
-    //         method nic_to_seq_v1p5a_pg_l = nic_pins.sink.nic_to_seq_v1p5a_pg_l;
-    //         method nic_to_seq_v1p5d_pg_l = nic_pins.sink.nic_to_seq_v1p5d_pg_l;
-    //         method nic_to_seq_v1p2_pg_l = nic_pins.sink.nic_to_seq_v1p2_pg_l;
-    //         method nic_to_seq_v1p1_pg_l = nic_pins.sink.nic_to_seq_v1p1_pg_l;
-    //         method pwr_cont_nic_pg1 = nic_pins.sink.pwr_cont_nic_pg1;
-    //     endinterface
-    //     interface early_in_pins = early_pins.in_pins;
-    //     interface a1_pins = a1_pins.in_pins;
-    //     interface a0_pins = a0_pins.in_pins;
-    //     interface misc_pins = misc_pins.in_pins;
-    // endinterface
-
-    // interface SpiPeripheralPins spi_pins;
-    //     // Feed the spi pins into the spi pin synchronizer
-    //     method csn = spi_sync.in_pins.csn;
-    //     method sclk = spi_sync.in_pins.sclk;
-    //     method copi = spi_sync.in_pins.copi;
-    //     method cipo = spi_sync.in_pins.cipo;
-    //     method output_en = spi_sync.in_pins.output_en;
-    // endinterface
-
-    // interface SeqOutputPins out_pins;
-    //     method seq_to_sp_interrupt = regs.seq_to_sp_interrupt;
-    //     interface nic_pins = nic_block.out_pins;
-    //     interface early_pins = early_block.out_pins;
-    //     interface a1_pins = a1_block.out_pins;
-    //     interface a0_pins = a0_block.out_pins;
-    //     interface misc_pins = misc_block.out_pins;
-    // endinterface
 endmodule
 
 function Stmt spiRead(Reg#(Bit#(8)) read_data, Integer addr, Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm);

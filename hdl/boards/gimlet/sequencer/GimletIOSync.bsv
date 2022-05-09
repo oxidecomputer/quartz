@@ -11,6 +11,7 @@ import SPI::*;
 import GimletSeqTop::*;
 import A1Block::*;
 import A0Block::*;
+import NicBlock::*;
 import PowerRail::*;
 
 
@@ -60,10 +61,6 @@ interface InPins;
     (* prefix = "" *)
     method Action seq_to_clk_gpio3((* port="seq_to_clk_gpio3" *) Bit#(1) value);
     (* prefix = "" *)
-    method Action seq_to_clk_gpio8((* port="seq_to_clk_gpio8" *) Bit#(1) value);
-    (* prefix = "" *)
-    method Action seq_to_clk_gpio9((* port="seq_to_clk_gpio9" *) Bit#(1) value);
-    (* prefix = "" *)
     method Action seq_to_header_misc_i((* port="seq_to_header_misc_i" *) Bit#(1) value);
     (* prefix = "" *)
     method Action sp3_to_rsw_pwren_l_via_seq((* port="sp3_to_rsw_pwren_l_via_seq" *) Bit#(1) value);
@@ -72,7 +69,7 @@ interface InPins;
     (* prefix = "" *)
     method Action seq_to_clk_gpio1((* port="seq_to_clk_gpio1" *) Bit#(1) value);
     (* prefix = "" *)
-    method Action seq_to_clk_gpio4((* port="seq_to_clk_gpio4" *) Bit#(1) value);
+    method Action seq_to_clk_gpio4((* port="seq_to_clk_gpio4" *) Bit#(1) value);  // This toggles on a state change in the clock chip.
     (* prefix = "" *)
     method Action seq_to_header_misc_e((* port="seq_to_header_misc_e" *) Bit#(1) value);
     (* prefix = "" *)
@@ -81,8 +78,6 @@ interface InPins;
     method Action seq_to_header_misc_g((* port="seq_to_header_misc_g" *) Bit#(1) value);
     (* prefix = "" *)
     method Action seq_to_header_misc_h((* port="seq_to_header_misc_h" *) Bit#(1) value);
-    (* prefix = "" *)
-    method Action seq_to_clk_gpio5((* port="seq_to_clk_gpio5" *) Bit#(1) value);
     (* prefix = "" *)
     method Action vtt_ab_a0_to_seq_pg((* port="vtt_ab_a0_to_seq_pg" *) Bit#(1) value);
     (* prefix = "" *)
@@ -175,8 +170,6 @@ interface InPinsReversed;
     method Bit#(1) vtt_gh_a0_to_seq_pg();
     method Bit#(1) seq_to_clk_gpio2();
     method Bit#(1) seq_to_clk_gpio3();
-    method Bit#(1) seq_to_clk_gpio8();
-    method Bit#(1) seq_to_clk_gpio9();
     method Bit#(1) seq_to_header_misc_i();
     method Bit#(1) sp3_to_rsw_pwren_l_via_seq();
     method Bit#(1) pwr_cont_dimm_efgh_pg0();
@@ -186,7 +179,6 @@ interface InPinsReversed;
     method Bit#(1) seq_to_header_misc_f();
     method Bit#(1) seq_to_header_misc_g();
     method Bit#(1) seq_to_header_misc_h();
-    method Bit#(1) seq_to_clk_gpio5();
     method Bit#(1) vtt_ab_a0_to_seq_pg();
     method Bit#(1) vtt_cd_a0_to_seq_pg();
     method Bit#(1) seq_v1p8_sp3_vdd_pg();
@@ -226,6 +218,9 @@ interface InPinsReversed;
 endinterface
 
 interface OutPins;
+        method Bit#(1) seq_to_clk_gpio5(); // VSC 125MHz clk enable active high.
+        method Bit#(1) seq_to_clk_gpio8(); // T6 156.25MHz clk enable active high
+        method Bit#(1) seq_to_clk_gpio9(); // KSZ 50MHz clock enable active high
         method Bit#(1) seq_to_nic_v1p1_en();
         method Bit#(1) seq_to_nic_v1p2_enet_en();
         method Bit#(1) seq_to_nic_v1p5a_en();
@@ -329,6 +324,20 @@ module mkGimletSeqTop (SeqPins);
     mkConnection(sync.syncd.pwr_cont1_sp3_pg1, inner.a0_pins.vdd_mem_abcd.pg);
     mkConnection(sync.syncd.pwr_cont2_sp3_pg1, inner.a0_pins.vdd_mem_efgh.pg);
 
+    // Nic inptut connections
+    mkConnection(sync.syncd.nic_to_seq_v1p5d_pg, inner.nic_pins.v1p5d.pg);
+    mkConnection(sync.syncd.nic_to_seq_v1p5a_pg, inner.nic_pins.v1p5a.pg);
+    mkConnection(sync.syncd.nic_to_seq_v1p2_pg, inner.nic_pins.v1p2.pg);
+    mkConnection(sync.syncd.nic_to_seq_v1p2_enet_pg, inner.nic_pins.v1p2_enet.pg);
+    mkConnection(sync.syncd.nic_to_seq_ext_rst_l, inner.nic_pins.nic_to_seq_ext_rst_l);
+    mkConnection(sync.syncd.nic_to_seq_v1p1_pg, inner.nic_pins.v1p1.pg);
+    mkConnection(sync.syncd.sp3_to_seq_nic_perst_l, inner.nic_pins.sp3_to_seq_nic_perst_l);
+    mkConnection(sync.syncd.nic_v0p9_a0hp_pg, inner.nic_pins.v0p9_a0hp.pg);
+    
+    // this is a hack due to a revB issue where the pg doesn't actually wire to the
+    // FPGA.
+    mkConnection(inner.nic_pins.ldo_v3p3.en, inner.nic_pins.ldo_v3p3.pg);
+
     rule tristate (inner.spi_pins.output_en);
         cipo <= inner.spi_pins.cipo;
     endrule
@@ -357,8 +366,6 @@ module mkGimletSeqTop (SeqPins);
         method vtt_gh_a0_to_seq_pg = sync.pins.vtt_gh_a0_to_seq_pg;
         method seq_to_clk_gpio2 = sync.pins.seq_to_clk_gpio2;
         method seq_to_clk_gpio3 = sync.pins.seq_to_clk_gpio3;
-        method seq_to_clk_gpio8 = sync.pins.seq_to_clk_gpio8;
-        method seq_to_clk_gpio9 = sync.pins.seq_to_clk_gpio9;
         method seq_to_header_misc_i = sync.pins.seq_to_header_misc_i;
         method sp3_to_rsw_pwren_l_via_seq = sync.pins.sp3_to_rsw_pwren_l_via_seq;
         method pwr_cont_dimm_efgh_pg0 = sync.pins.pwr_cont_dimm_efgh_pg0;
@@ -368,7 +375,6 @@ module mkGimletSeqTop (SeqPins);
         method seq_to_header_misc_f = sync.pins.seq_to_header_misc_f;
         method seq_to_header_misc_g = sync.pins.seq_to_header_misc_g;
         method seq_to_header_misc_h = sync.pins.seq_to_header_misc_h;
-        method seq_to_clk_gpio5 = sync.pins.seq_to_clk_gpio5;
         method vtt_ab_a0_to_seq_pg = sync.pins.vtt_ab_a0_to_seq_pg;
         method vtt_cd_a0_to_seq_pg = sync.pins.vtt_cd_a0_to_seq_pg;
         method seq_v1p8_sp3_vdd_pg = sync.pins.seq_v1p8_sp3_vdd_pg;
@@ -407,15 +413,18 @@ module mkGimletSeqTop (SeqPins);
         method pwr_cont_dimm_cfp = sync.pins.pwr_cont_dimm_cfp;
     endinterface
     interface OutPins outputs;
-        method seq_to_nic_v1p1_en = dummy_low._read;
-        method seq_to_nic_v1p2_enet_en = dummy_low._read;
-        method seq_to_nic_v1p5a_en = dummy_low._read;
-        method seq_to_nic_ldo_v3p3_en = dummy_low._read;
-        method seq_to_nic_v1p2_en = dummy_low._read;
-        method seq_to_nic_cld_rst_l = dummy_low._read;
+        method seq_to_clk_gpio5 = dummy_high._read; // VSC 125MHz clk enable active high.
+        method seq_to_clk_gpio8 = dummy_high._read; // T6 156.25MHz clk enable active high
+        method seq_to_clk_gpio9 = dummy_high._read; // KSZ 50MHz clock enable active high
+        method seq_to_nic_v1p1_en = inner.nic_pins.v1p1.en;
+        method seq_to_nic_v1p2_enet_en = inner.nic_pins.v1p2_enet.en;
+        method seq_to_nic_v1p5a_en = inner.nic_pins.v1p5a.en;
+        method seq_to_nic_ldo_v3p3_en = inner.nic_pins.ldo_v3p3.en;
+        method seq_to_nic_v1p2_en = inner.nic_pins.v1p2.en;
+        method seq_to_nic_cld_rst_l = inner.nic_pins.seq_to_nic_cld_rst_l;
         method pwr_cont_nic_en0 = dummy_low._read;
         method pwr_cont_nic_en1 = dummy_low._read;
-        method seq_to_nic_v1p5d_en = dummy_low._read;
+        method seq_to_nic_v1p5d_en = inner.nic_pins.v1p5d.en;
         method seq_to_clk_nmr_l = dummy_high._read;
         method seq_to_clk_ntest = dummy_high._read;
         method seq_to_fan_hp_en = dummy_high._read;
@@ -423,10 +432,10 @@ module mkGimletSeqTop (SeqPins);
         method seq_proxy_sp3_to_rsw_pwren_l = dummy_low._read;
         method seq_to_sp_interrupt = dummy_low._read;
         method seq_to_led_en_l = dummy_low._read;  //TODO: blinky!
-        method seq_to_nic_v0p9_a0hp_en = dummy_low._read;
+        method seq_to_nic_v0p9_a0hp_en = inner.nic_pins.v0p9_a0hp.en;
         method pwr_cont_dimm_efgh_en0 = inner.a0_pins.vpp_efgh.en;
         method seq_to_vtt_abcd_en = inner.a0_pins.vtt_ab.en;
-        method seq_to_nic_perst_l = dummy_low._read;
+        method seq_to_nic_perst_l = inner.nic_pins.seq_to_nic_perst_l;
         method nic_to_sp3_pwrflt_l = dummy_high._read;
         method seq_to_sp3_v1p8_en = inner.a0_pins.v1p8_sp3.en;
         method seq_to_dimm_abcd_v2p5_en = dummy_high._read;
@@ -442,7 +451,7 @@ module mkGimletSeqTop (SeqPins);
         method pwr_cont2_sp3_pwrok = inner.a0_pins.pwr_cont2_sp3_pwrok;
         method pwr_cont_dimm_en1 = inner.a0_pins.vpp_efgh.en;
         method pwr_cont_dimm_en0 = inner.a0_pins.vpp_abcd.en;
-        method seq_to_nic_comb_pg_l = dummy_high._read;
+        method seq_to_nic_comb_pg_l = inner.nic_pins.seq_to_nic_comb_pg_l;
         method seq_to_sp3_pwr_good = inner.a0_pins.sp3.seq_to_sp3_pwr_good;
         method seq_to_sp3_pwr_btn_l = inner.a0_pins.sp3.seq_to_sp3_pwr_btn_l;
         method seq_to_sp3_sys_rst_l = inner.a0_pins.sp3.seq_to_sp3_sys_rst_l;
@@ -473,8 +482,6 @@ module mkInputSync(InputSync);
     SyncBitIfc#(Bit#(1)) vtt_gh_a0_to_seq_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) seq_to_clk_gpio2   <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) seq_to_clk_gpio3 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) seq_to_clk_gpio8 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) seq_to_clk_gpio9 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) seq_to_header_misc_i <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) sp3_to_rsw_pwren_l_via_seq <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) pwr_cont_dimm_efgh_pg0 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
@@ -484,7 +491,6 @@ module mkInputSync(InputSync);
     SyncBitIfc#(Bit#(1)) seq_to_header_misc_f <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) seq_to_header_misc_g <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) seq_to_header_misc_h <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
-    SyncBitIfc#(Bit#(1)) seq_to_clk_gpio5 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) vtt_ab_a0_to_seq_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) vtt_cd_a0_to_seq_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) seq_v1p8_sp3_vdd_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
@@ -540,8 +546,6 @@ module mkInputSync(InputSync);
         method vtt_gh_a0_to_seq_pg = vtt_gh_a0_to_seq_pg.send;
         method seq_to_clk_gpio2 = seq_to_clk_gpio2.send;
         method seq_to_clk_gpio3 = seq_to_clk_gpio3.send;
-        method seq_to_clk_gpio8 = seq_to_clk_gpio8.send;
-        method seq_to_clk_gpio9 = seq_to_clk_gpio9.send;
         method seq_to_header_misc_i = seq_to_header_misc_i.send;
         method sp3_to_rsw_pwren_l_via_seq = sp3_to_rsw_pwren_l_via_seq.send;
         method pwr_cont_dimm_efgh_pg0 = pwr_cont_dimm_efgh_pg0.send;
@@ -551,7 +555,6 @@ module mkInputSync(InputSync);
         method seq_to_header_misc_f = seq_to_header_misc_f.send;
         method seq_to_header_misc_g = seq_to_header_misc_g.send;
         method seq_to_header_misc_h = seq_to_header_misc_h.send;
-        method seq_to_clk_gpio5 = seq_to_clk_gpio5.send;
         method vtt_ab_a0_to_seq_pg = vtt_ab_a0_to_seq_pg.send;
         method vtt_cd_a0_to_seq_pg = vtt_cd_a0_to_seq_pg.send;
         method seq_v1p8_sp3_vdd_pg = seq_v1p8_sp3_vdd_pg.send;
@@ -607,8 +610,6 @@ module mkInputSync(InputSync);
         method vtt_gh_a0_to_seq_pg = vtt_gh_a0_to_seq_pg.read;
         method seq_to_clk_gpio2 = seq_to_clk_gpio2.read;
         method seq_to_clk_gpio3 = seq_to_clk_gpio3.read;
-        method seq_to_clk_gpio8 = seq_to_clk_gpio8.read;
-        method seq_to_clk_gpio9 = seq_to_clk_gpio9.read;
         method seq_to_header_misc_i = seq_to_header_misc_i.read;
         method sp3_to_rsw_pwren_l_via_seq = sp3_to_rsw_pwren_l_via_seq.read;
         method pwr_cont_dimm_efgh_pg0 = pwr_cont_dimm_efgh_pg0.read;
@@ -618,7 +619,6 @@ module mkInputSync(InputSync);
         method seq_to_header_misc_f = seq_to_header_misc_f.read;
         method seq_to_header_misc_g = seq_to_header_misc_g.read;
         method seq_to_header_misc_h = seq_to_header_misc_h.read;
-        method seq_to_clk_gpio5 = seq_to_clk_gpio5.read;
         method vtt_ab_a0_to_seq_pg = vtt_ab_a0_to_seq_pg.read;
         method vtt_cd_a0_to_seq_pg = vtt_cd_a0_to_seq_pg.read;
         method seq_v1p8_sp3_vdd_pg = seq_v1p8_sp3_vdd_pg.read;
