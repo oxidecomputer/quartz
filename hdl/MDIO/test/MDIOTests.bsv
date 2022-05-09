@@ -27,7 +27,6 @@ Parameters test_params = Parameters {
 // Arbitrary PHY Address
 Bit#(5) model_peripheral_addr = 5'h1D;
 
-
 // The Model will emit ModelEvents as it progresses through a transaction. This
 // function lets us quickly check that things match expectations.
 function Action check_model_event(MDIOPeripheralModel model,
