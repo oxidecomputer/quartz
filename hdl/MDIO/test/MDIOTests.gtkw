@@ -1,0 +1,46 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Fri Jul 29 01:46:23 2022
+[*]
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\MDIOTests_mkMDIOReadTest.vcd"
+[dumpfile_mtime] "Fri Jul 29 01:45:41 2022"
+[dumpfile_size] 54926
+[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\MDIO\test\MDIOTests.gtkw"
+[timestart] 0
+[size] 2558 1368
+[pos] -1 -1
+*-9.650095 5360 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] main.
+[treeopen] main.top.
+[sst_width] 314
+[signals_width] 342
+[sst_expanded] 1
+[sst_vpaned_height] 414
+@200
+-MDIO - DUT
+@25
+main.top.bench_dut_state[2:0]
+@28
+main.top.bench_dut_mdc
+main.top.bench_dut_mdio_in
+main.top.bench_dut_mdio_out
+main.top.bench_dut_mdio_out_en
+@200
+-
+-MDIO Peripheral Model
+@22
+main.top.bench_model_state[3:0]
+@c00022
+main.top.bench_model_address[4:0]
+@28
+(0)main.top.bench_model_address[4:0]
+(1)main.top.bench_model_address[4:0]
+(2)main.top.bench_model_address[4:0]
+(3)main.top.bench_model_address[4:0]
+(4)main.top.bench_model_address[4:0]
+@1401200
+-group_end
+@22
+main.top.bench_model_bit_cntr[4:0]
+[pattern_trace] 1
+[pattern_trace] 0

@@ -1,0 +1,127 @@
+// Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+//
+// Primary Address Map
+//
+
+addrmap qsfp_x32_controller {
+    name = "QSFP x32 Controller";
+    desc = "Register description of a QSFP x32 Controller FPGA";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    // Standard boilerplate stuff at beginning
+
+    reg {
+        name = "Identification 0";
+        default sw = r;
+
+        field {
+            desc = "Byte 0 of ID";
+        } ID0[7:0] = 0;
+    } ID0;
+    reg {
+        name = "Identification 1";
+        default sw = r;
+
+        field {
+            desc = "Byte 1 of ID";
+        } ID1[7:0] = 0;
+    } ID1;
+    reg {
+        name = "Identification 2";
+        default sw = r;
+
+        field {
+            desc = "Byte 2 of ID";
+        } ID2[7:0] = 0;
+    } ID2;
+    reg {
+        name = "Identification 3";
+        default sw = r;
+
+        field {
+            desc = "Byte 3 of ID";
+        } ID3[7:0] = 0;
+    } ID3;
+
+    reg {
+        name = "Checksum Scratchpad part 0";
+
+        field {
+            desc = "checksum[31..24]";
+        } DATA[7:0] = 0;
+    } CHECKSUM_SCRATCHPAD0;
+    reg {
+        name = "Checksum Scratchpad part 1";
+
+        field {
+            desc = "checksum[23..16]";
+        } DATA[7:0] = 0;
+    } CHECKSUM_SCRATCHPAD1;
+    reg {
+        name = "Checksum Scratchpad part 2";
+
+        field {
+            desc = "checksum[15..8]";
+        } DATA[7:0] = 0;
+    } CHECKSUM_SCRATCHPAD2;
+    reg {
+        name = "Checksum Scratchpad part 3";
+
+        field {
+            desc = "checksum[7..0]";
+        }DATA[7:0] = 0;
+    } CHECKSUM_SCRATCHPAD3;
+
+    reg {
+        name = " General Scratchpad";
+
+        field {
+            desc = "Scribble Register for read-write use";
+        } SCRATCHPAD[7:0] = 0;
+    } SCRATCHPAD;
+
+    //
+    // Top level stuff
+    //
+
+    reg {
+        name = "QSFP FPGA ID";
+        default sw = r;
+
+        field {
+            desc = "0 for FPGA0, 1 for FPGA1";
+        }   ID[0:0] = 0;
+    } FPGA_ID;
+
+    reg {
+        name = "LED Controller (PCA9956B) Control Bits";
+
+        field {
+            desc = "Control of OE_L (inverted at pin)";
+        } OE[1:1] = 1;
+
+        field {
+            desc = "Control of RESET_L (inverted at pin)";
+        } RESET[0:0] = 1;
+    } LED_CTRL;
+
+    //
+    // VSC8562
+    //
+
+    vsc8562 VSC8562;
+
+    //
+    // QSFP Modules
+    //
+
+    qsfp_modules_top QSFP;
+};

@@ -1,0 +1,143 @@
+// Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+//
+// VSC8562 Address Map
+//
+
+addrmap vsc8562 {
+    name = "VSC8562 Registers";
+    desc = "Registers for status and control of the VSC8562 PHY";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Status bits related to VSC8562 (valid on FPGA1 only)";
+        default sw = r;
+
+        field {
+            desc = "The VSC8562 has been brought out of reset and is ready for
+                    software control";
+        } READY[6:6] = 0;
+
+        field {
+            desc = "Value inverted to drive  FPGA1_TO_PHY_RESET_L.";
+        } RESET[5:5] = 0;
+
+        field {
+            desc = "Value of FPGA1_TO_PHY_REFCLK_EN";
+        } REFCLK_EN[4:4] = 0;
+
+        field {
+            desc = "Value of FPGA1_TO_PHY_COMA_MODE";
+        } COMA_MODE[3:3] = 0;
+
+        field {
+            desc = "Power Good of V2P5_PHY_A2";
+        } PG_V2P5[2:2] = 0;
+
+         field {
+            desc = "Power Good of  V1P0_PHY_A2";
+        } PG_V1P0[1:1] = 0;
+
+        field {
+            desc = "Enable for 1.0V PHY VR";
+        } EN_V1P0[0:0] = 0;
+    } PHY_STATUS;
+
+    reg {
+        name = "Control bits related to VSC8562  (valid on FPGA1 only)";
+
+        field {
+            desc = "Software control for the COMA_MODE pin.";
+        } COMA_MODE[1:1] = 1;
+
+        field {
+            desc = "Enable for the VSC8562 power up state machine";
+        } EN[0:0] = 1;
+    } PHY_CTRL;
+
+    // SPI <-> SMI
+    reg {
+        name = "Status bits for the SMI interface to the VSC8562 (valid on FPGA1 only)";
+        default sw = r;
+
+        field {
+            desc = "1 for active interrupt (inversion of miim_phy_to_fpga_mdint_l pin)";
+        } MDINT[1:1] = 0;
+
+        field {
+            desc = "1 if a transaction is in progress";
+        } BUSY[0:0] = 0;
+    } PHY_SMI_STATUS;
+
+    reg {
+        name = "SMI Read Data [15:8] (valid on FPGA1 only)";
+        default hw = rw;
+
+        field {
+            desc = "Upper byte of read data";
+        } DATA[7:0] = 0;
+    } PHY_SMI_RDATA_H;
+
+    reg {
+        name = "SMI Read Data [7:0] (valid on FPGA1 only)";
+        default hw = rw;
+
+        field {
+            desc = "Lower byte of read data";
+        } DATA[7:0] = 0;
+    } PHY_SMI_RDATA_L;
+
+    reg {
+        name = "SMI Write Data [15:8] (valid on FPGA1 only)";
+        default hw = rw;
+
+        field {
+            desc = "Upper byte of write data";
+        } DATA[7:0] = 0;
+    } PHY_SMI_WDATA_H;
+
+    reg {
+        name = "SMI Write Data [7:0] (valid on FPGA1 only)";
+        default hw = rw;
+
+        field {
+            desc = "Lower byte of write data";
+        } DATA[7:0] = 0;
+    } PHY_SMI_WDATA_L;
+
+    reg {
+        name = "PHY Address (valid on FPGA1 only)";
+
+        field {
+            desc = "Address for which PHY to configure";
+        } ADDR[4:0] = 0;
+    } PHY_SMI_PHY_ADDR;
+
+    reg {
+        name = "Register Address (valid on FPGA1 only)";
+
+        field {
+            desc = "Address for a register";
+        } ADDR[4:0] = 0;
+    } PHY_SMI_REG_ADDR;
+
+    reg {
+        name = "SMI control bits, these are one-shot registers and intended to
+                be written in the same transaction. (valid on FPGA1 only)";
+
+        field {
+            desc = "Write a 1 here to begin a transaction";
+        } START[1:1] = 0;
+
+        field {
+            desc = "Read = 0, Write = 1";
+        } RW[0:0] = 0;
+    } PHY_SMI_CTRL;
+};

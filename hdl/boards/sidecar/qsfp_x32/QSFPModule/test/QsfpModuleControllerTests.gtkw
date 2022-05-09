@@ -1,0 +1,128 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Wed Sep 07 17:13:50 2022
+[*]
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkQsfpModuleControllerWriteTest.vcd"
+[dumpfile_mtime] "Wed Sep 07 16:32:51 2022"
+[dumpfile_size] 114180692
+[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\boards\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
+[timestart] 0
+[size] 2558 1368
+[pos] -1 -1
+*-12.961555 21330 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] main.
+[treeopen] main.top.
+[sst_width] 494
+[signals_width] 526
+[sst_expanded] 1
+[sst_vpaned_height] 424
+@28
+main.top.bench_dut_i2c_core_bit_ctrl_scl_out
+main.top.bench_dut_i2c_core_bit_ctrl_sda_out
+main.top.bench_dut_i2c_core_bit_ctrl_sda_in
+main.top.bench_dut_i2c_core_bit_ctrl_sda_out_en
+main.top.bench_write_data_fifo.ENQ
+main.top.bench_write_data_fifo.DEQ
+@200
+-
+-DUT - QsfpModuleController
+-
+-I2CCore
+@22
+main.top.bench_dut_i2c_core_state_r[3:0]
+@24
+main.top.bench_dut_i2c_core_bit_ctrl_state[2:0]
+@28
+main.top.bench_dut_i2c_core_bit_ctrl_setup_strobe_q
+main.top.bench_dut_i2c_core_bit_ctrl_hold_strobe_q
+@200
+-FIFO: Next Command
+@28
+main.top.bench_dut_i2c_core_next_command.ENQ
+main.top.bench_dut_i2c_core_next_command.DEQ
+@200
+-FIFO: BitControl Incoming Events
+@28
+main.top.bench_dut_i2c_core_bit_ctrl_incoming_events.ENQ
+main.top.bench_dut_i2c_core_bit_ctrl_incoming_events.DEQ
+@200
+-FIFO: BitControl Outgoing Events
+@28
+main.top.bench_dut_i2c_core_bit_ctrl_outgoing_events.ENQ
+main.top.bench_dut_i2c_core_bit_ctrl_outgoing_events.DEQ
+@200
+-FIFO: RX Data
+@28
+main.top.bench_dut_i2c_core_rx_data_q.CLK
+main.top.bench_dut_i2c_core_rx_data_q.DEQ
+@22
+main.top.bench_dut_i2c_core_rx_data_q.D_IN[7:0]
+main.top.bench_dut_i2c_core_rx_data_q.D_OUT[7:0]
+@28
+main.top.bench_dut_i2c_core_rx_data_q.ENQ
+@200
+-FIFO: TX Data
+@22
+main.top.bench_dut_i2c_core_tx_data[7:0]
+@200
+-
+@28
+main.top.bench_dut_i2c_core_request_write_data_
+main.top.bench_dut_i2c_data_received
+@200
+-BRAM: Write Data Buffer
+@28
+main.top.bench_dut_write_buffer.CLKA
+@22
+main.top.bench_dut_write_buffer.ADDRA[7:0]
+main.top.bench_dut_write_buffer.DIA[7:0]
+main.top.bench_dut_write_buffer.DOA[7:0]
+@28
+main.top.bench_dut_write_buffer.ENA
+main.top.bench_dut_write_buffer.WEA
+main.top.bench_dut_write_buffer.CLKB
+@23
+main.top.bench_dut_write_buffer.ADDRB[7:0]
+@22
+main.top.bench_dut_write_buffer.DIB[7:0]
+main.top.bench_dut_write_buffer.DOB[7:0]
+@28
+main.top.bench_dut_write_buffer.ENB
+main.top.bench_dut_write_buffer.WEB
+@200
+-BRAM: Read Data Buffer
+@28
+main.top.bench_dut_read_buffer_memory.CLKA
+@22
+main.top.bench_dut_read_buffer_memory.ADDRA[7:0]
+main.top.bench_dut_read_buffer_memory.DIA[7:0]
+@28
+main.top.bench_dut_read_buffer_memory.ENA
+main.top.bench_dut_read_buffer_memory.WEA
+@22
+main.top.bench_dut_read_buffer_memory.DOA[7:0]
+@28
+main.top.bench_dut_read_buffer_memory.CLKB
+@22
+main.top.bench_dut_read_buffer_memory.ADDRB[7:0]
+main.top.bench_dut_read_buffer_memory.DIB[7:0]
+@28
+main.top.bench_dut_read_buffer_memory.ENB
+main.top.bench_dut_read_buffer_memory.WEB
+@22
+main.top.bench_dut_read_buffer_memory.DOB[7:0]
+@200
+-
+-
+-Model - I2CPeripheralModel
+-FIFO: Outgoing Events
+@28
+main.top.bench_periph_outgoing_events.CLK
+main.top.bench_periph_outgoing_events.DEQ
+main.top.bench_periph_outgoing_events.ENQ
+@22
+main.top.bench_periph_outgoing_events.D_IN[10:0]
+main.top.bench_periph_outgoing_events.D_OUT[10:0]
+main.top.bench_periph_outgoing_events.arr_0[10:0]
+[pattern_trace] 1
+[pattern_trace] 0

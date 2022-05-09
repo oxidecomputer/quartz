@@ -1,0 +1,290 @@
+// Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+//
+// QSFP Modules Top Address Map
+//
+
+regfile status {
+    default regwidth = 8;
+
+    
+};
+
+mem read_buffer {
+    mementries = 128;
+    memwidth = 8;
+};
+
+mem write_buffer {
+    mementries = 128;
+    memwidth = 8;
+};
+
+addrmap qsfp_modules_top {
+    name = "QSFP Module Top Registers";
+    desc = "Collection of status and control registers for all QSFP modules";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    //
+    // I2C
+    //
+
+    reg {
+        name = "QSFP module I2C address";
+
+        field {
+            desc = "I2C Address of QSFP module (reset: 7'b1010000)";
+        } ADDR[6:0] = 7'b1010000;
+    } I2C_BUS_ADDR;
+
+    reg {
+        name = "QSFP module register address";
+
+        field {
+            desc = "QSFP module register address";
+        } ADDR[7:0] = 0;
+    } I2C_REG_ADDR;
+
+    reg {
+        field {
+            desc = "Number of bytes to read/write in the I2C transaction. up to 128 bytes.";
+        } COUNT[7:0] = 1;
+    } I2C_NUM_BYTES;
+
+    reg {
+        name = "Ports 0 -> 7 Broadcast Control";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } I2C_BCAST_L;
+
+    reg {
+        name = "Ports 8 -> 15 Broadcast Control";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } I2C_BCAST_H;
+
+    reg {
+        name = "Control bits for I2C communication.";
+
+        field {
+            desc = "2'b00 to read, 2'b01 to write, 2'b10 to random-read.";
+        } OP[2:1] = 0;
+
+        field {
+            desc = "'1' to start next transaction.";
+        } START[0:0] = 0;
+    } I2C_CTRL;
+
+    //
+    // QSFP Module Control
+    //
+
+    reg {
+        name = "Ports 0 -> 7 Enable Control";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } CTRL_EN_L;
+
+    reg {
+        name = "Ports 8 -> 15 Enable Control";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } CTRL_EN_H;
+
+    reg {
+        name = "Ports 0 -> 7 Reset Control (logic inverted at the pin)";
+        field {} PORT7[7:7] = 1;
+        field {} PORT6[6:6] = 1;
+        field {} PORT5[5:5] = 1;
+        field {} PORT4[4:4] = 1;
+        field {} PORT3[3:3] = 1;
+        field {} PORT2[2:2] = 1;
+        field {} PORT1[1:1] = 1;
+        field {} PORT0[0:0] = 1;
+    } CTRL_RESET_L;
+
+    reg {
+        name = "Ports 8 -> 15 Reset Control (logic inverted at the pin)";
+        field {} PORT15[7:7] = 1;
+        field {} PORT14[6:6] = 1;
+        field {} PORT13[5:5] = 1;
+        field {} PORT12[4:4] = 1;
+        field {} PORT11[3:3] = 1;
+        field {} PORT10[2:2] = 1;
+        field {} PORT9[1:1] = 1;
+        field {} PORT8[0:0] = 1;
+    } CTRL_RESET_H;
+
+    reg {
+        name = "Ports 0 -> 7 LPMode/TxDis Control";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } CTRL_LPMODE_L;
+
+    reg {
+        name = "Ports 8 -> 15 LPMode/TxDis Control";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } CTRL_LPMODE_H;
+
+    //
+    // QSFP Module Status
+    //
+
+    reg {
+        name = "Ports 0 -> 7 HSC power good";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } STATUS_PG_L;
+
+    reg {
+        name = "Ports 8 -> 15 HSC power good";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } STATUS_PG_H;
+
+    reg {
+        name = "Ports 0 -> 7 HSC power good timeout";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } STATUS_PG_TIMEOUT_L;
+
+    reg {
+        name = "Ports 8 -> 15 HSC power good timeout";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } STATUS_PG_TIMEOUT_H;
+
+    reg {
+        name = "Ports 0 -> 7 ModPrsL signal for the module (logic inverted at the pin)";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } STATUS_PRESENT_L;
+
+    reg {
+        name = "Ports 8 -> 15 ModPrsL signal for the module (logic inverted at the pin)";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } STATUS_PRESENT_H;
+
+    reg {
+        name = "Ports 0 -> 7 IntL/RxLOS signal for the module (logic inverted at the pin)";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } STATUS_IRQ_L;
+
+    reg {
+        name = "Ports 8 -> 15 IntL/RxLOS signal for the module (logic inverted at the pin)";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } STATUS_IRQ_H;
+
+    external write_buffer WRITE_BUFFER;
+    external read_buffer PORT0_READ_BUFFER;
+    external read_buffer PORT1_READ_BUFFER;
+    external read_buffer PORT2_READ_BUFFER;
+    external read_buffer PORT3_READ_BUFFER;
+    external read_buffer PORT4_READ_BUFFER;
+    external read_buffer PORT5_READ_BUFFER;
+    external read_buffer PORT6_READ_BUFFER;
+    external read_buffer PORT7_READ_BUFFER;
+    external read_buffer PORT8_READ_BUFFER;
+    external read_buffer PORT9_READ_BUFFER;
+    external read_buffer PORT10_READ_BUFFER;
+    external read_buffer PORT11_READ_BUFFER;
+    external read_buffer PORT12_READ_BUFFER;
+    external read_buffer PORT13_READ_BUFFER;
+    external read_buffer PORT14_READ_BUFFER;
+    external read_buffer PORT15_READ_BUFFER;
+};
