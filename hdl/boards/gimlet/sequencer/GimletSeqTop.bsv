@@ -34,6 +34,7 @@ interface InnerTop;
     interface A1Pins a1_pins;
     interface A0Pins a0_pins;
     interface NicPins nic_pins;
+    interface RegPins reg_pins;
 endinterface
 
 //
@@ -76,6 +77,7 @@ module mkGimletInnerTop #(GimletSeqTopParameters parameters) (InnerTop);
     interface a1_pins = a1_block.pins;
     interface a0_pins = a0_block.pins;
     interface nic_pins = nic_block.pins;
+    interface reg_pins = regs.pins;
    
 endmodule
 
@@ -182,6 +184,14 @@ interface Bench;
         interface PowerRailModel vtt_ef;
         interface PowerRailModel vtt_gh;
 
+        interface PowerRailModel ldo_v3p3;
+        interface PowerRailModel v1p5a;
+        interface PowerRailModel v1p5d;
+        interface PowerRailModel v1p2_enet;
+        interface PowerRailModel v1p2;
+        interface PowerRailModel v1p1;
+        interface PowerRailModel v0p9_a0hp;
+
         interface Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm;
         method Action pmbus_on();
         method Action pmbus_off();
@@ -242,6 +252,30 @@ module mkBench(Bench);
     mkConnection(vtt_ef_rail.pins, dut.a0_pins.vtt_ef);
     mkConnection(vtt_gh_rail.pins, dut.a0_pins.vtt_gh);
 
+    // NIC rails
+    PowerRailModel ldo_v3p3_rail <- mkPowerRailModel("ldo_v3p3");
+    PowerRailModel v1p5a_rail <- mkPowerRailModel("v1p5a");
+    PowerRailModel v1p5d_rail <- mkPowerRailModel("v1p5d");
+    PowerRailModel v1p2_enet_rail <- mkPowerRailModel("v1p5d");
+    PowerRailModel v1p2_rail <- mkPowerRailModel("v1p2");
+    PowerRailModel v1p1_rail <- mkPowerRailModel("v1p1");
+    PowerRailModel v0p9_a0hp_rail <- mkPowerRailModel("v0p9_a0hp");
+
+    mkConnection(ldo_v3p3_rail.pins, dut.nic_pins.ldo_v3p3);
+    mkConnection(v1p5a_rail.pins, dut.nic_pins.v1p5a);
+    mkConnection(v1p5d_rail.pins, dut.nic_pins.v1p5d);
+    mkConnection(v1p2_enet_rail.pins, dut.nic_pins.v1p2_enet);
+    mkConnection(v1p2_rail.pins, dut.nic_pins.v1p2);
+    mkConnection(v1p1_rail.pins, dut.nic_pins.v1p1);
+    mkConnection(v0p9_a0hp_rail.pins, dut.nic_pins.v0p9_a0hp);
+
+            // method nic_to_seq_ext_rst_l = nic_to_seq_ext_rst_l._write;
+            // method sp3_to_seq_nic_perst_l = sp3_to_seq_nic_perst_l._write;
+            // method seq_to_nic_cld_rst_l = seq_to_nic_cld_rst_l._read;
+            // method seq_to_nic_perst_l = seq_to_nic_perst_l._read;
+            // method nic_to_sp3_pwrflt_l = nic_to_sp3_pwrflt_l._read;
+            // method seq_to_nic_comb_pg_l = seq_to_nic_comb_pg_l._read;
+
     interface PowerRailModel v3p3_s5 = v3p3_s5_rail;
     interface PowerRailModel v1p5_rtc = v1p5_rtc_rail;
     interface PowerRailModel v1p8_s5 = v1p8_s5_rail;
@@ -256,6 +290,15 @@ module mkBench(Bench);
     interface PowerRailModel vtt_cd = vtt_cd_rail;
     interface PowerRailModel vtt_ef = vtt_ef_rail;
     interface PowerRailModel vtt_gh = vtt_gh_rail;
+
+    interface PowerRailModel ldo_v3p3 = ldo_v3p3_rail;
+    interface PowerRailModel v1p5a = v1p5a_rail;
+    interface PowerRailModel v1p5d = v1p5d_rail;
+    interface PowerRailModel v1p2_enet = v1p2_enet_rail;
+    interface PowerRailModel v1p2 = v1p2_rail;
+    interface PowerRailModel v1p1 = v1p1_rail;
+    interface PowerRailModel v0p9_a0hp = v0p9_a0hp_rail;
+
     interface Server bfm = controller.bfm;
     method Action pmbus_on();
         pwr_cont1_sp3_pg0 <= 1;

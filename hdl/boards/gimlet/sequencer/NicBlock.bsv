@@ -18,6 +18,7 @@ import PowerRail::*;
         // method Action dbg_ctrl(A1DbgOut value); // Output control
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Action en(Bool value);  // SM enable pin
+        method Bool ok();
         method NicStateType state();
         method NicStatus pgs;
         // method A1OutStatus output_readbacks();
@@ -26,6 +27,7 @@ import PowerRail::*;
 
     interface NicRegsReverse;
         method Bool en;
+        method Action ok(Bool value);
         method Action state(NicStateType value);
         method Action pgs (NicStatus value);
     endinterface
@@ -34,6 +36,7 @@ import PowerRail::*;
     instance Connectable#(NicRegs, NicRegsReverse);
         module mkConnection#(NicRegs source, NicRegsReverse sink) (Empty);
             mkConnection(source.en, sink.en);
+            mkConnection(source.ok, sink.ok);
             mkConnection(source.state, sink.state);
             mkConnection(source.pgs, sink.pgs);
             // mkConnection(source.output_readbacks, sink.output_readbacks);
@@ -154,6 +157,7 @@ import PowerRail::*;
 
         FSM nic_power_up_seq <- mkFSMWithPred(seq
             // Enable all the rails
+            await(upstream_ok);
             enable_rails(power_rails, STAGE0);
             action
                 state <= STAGE0_PG;
@@ -168,7 +172,7 @@ import PowerRail::*;
 
         FSM nic_power_dwn_seq <- mkFSMWithPred(seq
             enable_rails(power_rails, IDLE);
-        endseq, !enable || faulted && abort);
+        endseq, !enable || faulted || abort);
 
          (* fire_when_enabled *)
         rule do_pg_aggregation;
@@ -231,6 +235,9 @@ import PowerRail::*;
             method en = enable._write;
             method state = state._read;
             method pgs = nic_pg._read;
+            method Bool ok;
+                return state == DONE;
+            endmethod 
         endinterface
 
     endmodule

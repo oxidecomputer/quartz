@@ -22,6 +22,7 @@ import PowerRail::*;
     interface A0Regs;
         method Action a0_en(Bool value);  // SM enable pin
         method Action ignore_sp(Bool value);
+        method Bool ok;
         method A0StateType state();
         method A0OutStatus1 status1;
         method A0OutStatus2 status2;
@@ -36,6 +37,7 @@ import PowerRail::*;
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Bool a0_en();  // SM enable pin
         method Bool ignore_sp();
+        method Action ok(Bool value);
         method Action state (A0StateType value);
         method Action status1 (A0OutStatus1 value);
         method Action status2 (A0OutStatus2 value);
@@ -50,6 +52,7 @@ import PowerRail::*;
         module mkConnection#(A0Regs source, A0RegsReverse sink) (Empty);
             mkConnection(source.a0_en, sink.a0_en);
             mkConnection(source.ignore_sp, sink.ignore_sp);
+            mkConnection(source.ok, sink.ok);
             mkConnection(source.state, sink.state);
             mkConnection(source.status1, sink.status1);
             mkConnection(source.status2, sink.status2);
@@ -495,6 +498,9 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     interface A0Regs reg_if;
         method a0_en = enable._write;
         method ignore_sp = ignore_sp._write;
+        method Bool ok;
+            return state == DONE;
+        endmethod
         method state = state._read;
         method status1 = status1._read;
         method status2 = status2._read;

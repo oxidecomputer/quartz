@@ -2,6 +2,7 @@ package GimletIOSync;
 
 import Clocks::*;
 import Connectable::*;
+import ConfigReg::*;
 
 // Cobalt-provided stuff
 import ICE40::*;
@@ -9,10 +10,12 @@ import SPI::*;
 
 // Local stuff
 import GimletSeqTop::*;
+import GimletSeqFpgaRegs::*;
 import A1Block::*;
 import A0Block::*;
 import NicBlock::*;
 import PowerRail::*;
+import GimletRegs::*;
 
 
 interface SpiPeripheralPinsTop;
@@ -295,6 +298,10 @@ module mkGimletSeqTop (SeqPins);
     InputSync sync <- mkInputSync();
 
     let inner <- mkGimletInnerTop(synth_params, reset_by reset_sync);
+    
+    ConfigReg#(BoardRev) brd_rev <- mkConfigRegU();
+    
+    mkConnection(brd_rev, inner.reg_pins.brd_rev);
 
     // A1 input connections
     mkConnection(sync.syncd.sp3_to_seq_rtc_v1p5_pg, inner.a1_pins.v1p5_rtc.pg);
@@ -340,6 +347,10 @@ module mkGimletSeqTop (SeqPins);
 
     rule tristate (inner.spi_pins.output_en);
         cipo <= inner.spi_pins.cipo;
+    endrule
+
+    rule do_board_rev;
+        brd_rev <= unpack({'0, sync.syncd.seq_rev_id2, sync.syncd.seq_rev_id1, sync.syncd.seq_rev_id0});
     endrule
 
     interface SpiPeripheralPinsTop spi_pins;
@@ -430,7 +441,7 @@ module mkGimletSeqTop (SeqPins);
         method seq_to_fan_hp_en = dummy_high._read;
         method seq_to_vtt_efgh_en = inner.a0_pins.vtt_ef.en;
         method seq_proxy_sp3_to_rsw_pwren_l = dummy_low._read;
-        method seq_to_sp_interrupt = dummy_low._read;
+        method seq_to_sp_interrupt = inner.reg_pins.seq_to_sp_interrupt;
         method seq_to_led_en_l = dummy_low._read;  //TODO: blinky!
         method seq_to_nic_v0p9_a0hp_en = inner.nic_pins.v0p9_a0hp.en;
         method pwr_cont_dimm_efgh_en0 = inner.a0_pins.vpp_efgh.en;

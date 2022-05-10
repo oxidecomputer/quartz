@@ -137,12 +137,12 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "A1 power OK";
         } A1PWROK[1] = 0;
+         field {
+            desc = "A0 power OK";
+        } A0PWROK[1] = 0;
         field {
             desc = "NIC power OK";
         } NICPWROK[1] = 0;
-        field {
-            desc = "A0 power OK";
-        } A0PWROK[1] = 0;
         field {
             desc = "Interrupt Pending Status";
         } INT_PEND[7:7] = 0;
@@ -200,7 +200,7 @@ addrmap gimlet_seq_fpga {
         } A1SM[7:0];
         // TODO: A1 state machine decode in here
     } A1SMSTATUS;
-        reg {
+    reg {
         name = "A0 SM Status";
         desc = "A0 'live' state machine status";
         default sw = r;
@@ -210,10 +210,27 @@ addrmap gimlet_seq_fpga {
         } A0SM[7:0];
         // TODO: A1 state machine decode in here
     } A0SMSTATUS;
+    reg {
+        name = "Nic SM Status";
+        desc = "Nic 'live' state machine status";
+        default sw = r;
+
+        field {
+            desc = "TBD";
+        } NicSM[7:0];
+        // TODO: A1 state machine decode in here
+    } NICSMSTATUS;
+    reg {
+        name = "Board Rev straps";
+        desc = "3 bits of board revision based on input straps";
+        default sw = r;
+        field {
+            desc = "0x7 or 0x0 = RevA. 0x1 = RevB";
+        } ID[2:0];
+    } BOARD_REV;
     // Readback blocks:
     // These are built as contiguous registers so that a single multi-byte read 
     // could capture all of them.
-
     // Readbacks of pins for FAN-power related things
     reg {
         name = "Pre-A1 Power Readback Register";

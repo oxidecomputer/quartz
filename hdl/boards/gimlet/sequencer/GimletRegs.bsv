@@ -18,19 +18,26 @@ import A1Block::*;
 import A0Block::*;
 // import MiscIO::*;
 
+interface RegPins;
+    method Bit#(1) seq_to_sp_interrupt;
+    method Action brd_rev(BoardRev value);
+endinterface
+
 interface GimletRegIF;
+    
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
      interface NicRegsReverse nic_block;
     // interface EarlyRegsReverse early_block;
     interface A1RegsReverse a1_block;
     interface A0RegsReverse a0_block;
     // interface MiscRegsReverse misc_block;
-    method Bit#(1) seq_to_sp_interrupt;
+    interface RegPins pins;
 endinterface
 
 module mkGimletRegs(GimletRegIF);
     // Registers
     ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
+    ConfigReg#(Status) status <- mkConfigRegU();
     ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(unpack(0)); // Debug mux control register
     // Main control registers
     ConfigReg#(Pwrctrl) power_control <- mkReg(unpack(0));
@@ -95,8 +102,14 @@ module mkGimletRegs(GimletRegIF);
     Wire#(GroupbPg) a0_groupB_pg <- mkDWire(unpack(0));
     Wire#(GroupcPg) a0_groupC_pg <- mkDWire(unpack(0));
     Wire#(NicStatus) nic_status <- mkDWire(unpack(0));
+    Wire#(Nicsmstatus) nic_state <- mkDWire(unpack(0));
+    Wire#(BoardRev) brd_rev <- mkDWire(unpack(0));
+    Wire#(Bit#(1)) a0_ok <- mkDWire(0);
+    Wire#(Bit#(1)) a1_ok <- mkDWire(0);
+    Wire#(Bit#(1)) nic_ok <- mkDWire(0);
+    Wire#(Bit#(1)) fan_ok <- mkDWire(1);
     // RWire#(A0StateType) a0_state <- mkRWire();
-    ConfigReg#(NicStateType) nic_sm <- mkConfigRegU();
+    //ConfigReg#(NicStateType) nic_sm <- mkConfigRegU();
     
     // RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
     // RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
@@ -113,6 +126,10 @@ module mkGimletRegs(GimletRegIF);
     mkConnection(irq_clr_flags, irq_block.clear);
     mkConnection(irq_cause_raw, irq_block.cause_raw);
 
+    rule do_status;
+        status <= unpack({'0, nic_ok, a0_ok, a1_ok, fan_ok});
+    endrule
+
     // SW readbacks
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_read (do_read && !isValid(readdata));
@@ -128,9 +145,11 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(sha2Offset) : readdata <= tagged Valid (sha[2]);
             fromInteger(sha3Offset) : readdata <= tagged Valid (sha[3]);
             fromInteger(scrtchpadOffset) : readdata <= tagged Valid (pack(scratchpad));
+            fromInteger(statusOffset) : readdata <= tagged Valid (pack(status));
             fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
             fromInteger(ifrOffset) : readdata <= tagged Valid (pack(irq_block.cause_reg));
             fromInteger(pwrctrlOffset): readdata <= tagged Valid (pack(power_control));
+            fromInteger(boardRevOffset): readdata <= tagged Valid (pack(brd_rev));
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
             fromInteger(outStatusNic1Offset) : readdata <= tagged Valid (pack(nic1_out_status));
@@ -149,6 +168,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(a0smstatusOffset) : readdata <= tagged Valid (pack(a0_sm));
             fromInteger(a0DbgOut1Offset) : readdata <= tagged Valid (pack(a0_dbg_out1));
             fromInteger(a0DbgOut2Offset) : readdata <= tagged Valid (pack(a0_dbg_out2));
+            fromInteger(nicsmstatusOffset) : readdata <= tagged Valid (pack(nic_state));
             fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(a0_amd_rdbks));
             fromInteger(groupbPgOffset) : readdata <= tagged Valid (pack(a0_groupB_pg));
             fromInteger(groupbUnusedOffset) : readdata <= tagged Valid (pack(a0_groupB_unused));
@@ -182,122 +202,8 @@ module mkGimletRegs(GimletRegIF);
         scratchpad <= reg_update(scratchpad, scratchpad, address, scrtchpadOffset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
         power_control <= reg_update(power_control, power_control, address, pwrctrlOffset, operation, writedata);
-        // NIC registers
-        // nic_status      <= fromMaybe(nic_status, cur_nic_pins.wget());  // Always update from pins, no writing from sw.
-        // nic1_out_status <= fromMaybe(nic1_out_status, cur_nic1_out_status.wget()); // Always update from pins, no writing from sw.
-        // nic2_out_status <= fromMaybe(nic2_out_status, cur_nic2_out_status.wget()); // Always update from pins, no writing from sw.
-        // dbg_nic1_out    <= reg_update(dbg_nic1_out, dbg_nic1_out, address, dbgOutNic1Offset, operation, writedata); // Normal sw register
-        // dbg_nic2_out    <= reg_update(dbg_nic2_out, dbg_nic2_out, address, dbgOutNic2Offset, operation, writedata); // Normal sw register
-
-        // // Early registers
-        // early_inputs    <= fromMaybe(early_inputs, cur_early_inputs.wget());
-        // early_output_rdbks <= fromMaybe(early_output_rdbks, cur_early_outputs.wget());
-        // early_ctrl      <= reg_update(early_ctrl, early_ctrl, address, earlyPowerCtrlOffset, operation, writedata);
-
-        // A1 registers
-                // a1_output_readbacks <= fromMaybe(a1_output_readbacks, cur_a1_outputs.wget());
+      
         a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
-        // a1_sm <= unpack(zeroExtend(pack(fromMaybe(?, a1_state.wget()))));
-        // // A0 registers
-        // let cur_a0_inputs_wget = fromMaybe(?, cur_a0_inputs.wget());  // This should always be a real value
-        // let cur_a0_outputs_wget = fromMaybe(?, cur_a0_outputs.wget()); // This should always be a real value
-        // // Misc registers
-        // let cur_misc_ins = fromMaybe(?, cur_misc_inputs.wget());
-        // let cur_misc_outs = fromMaybe(?, cur_misc_outputs.wget());
-        // // TODO: should really write a function to do this
-        // a0_sm <= unpack(zeroExtend(pack(fromMaybe(?, a0_state.wget()))));
-        // a0_status1 <= A0OutStatus1 {
-        //     efgh_en2: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en2,
-        //     abcd_en2: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en2,
-        //     efgh_en1: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en1,
-        //     v3p3_sys_en: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en1,
-        //     vtt_efgh_en: cur_a0_outputs_wget.seq_to_vtt_efgh_en,
-        //     vtt_abcd_en: cur_a0_outputs_wget.seq_to_vtt_abcd_a0_en,
-        //     vpp_efgh_en: cur_a0_outputs_wget.pwr_cont_dimm_efgh_en0,
-        //     vpp_abcd_en: cur_a0_outputs_wget.pwr_cont_dimm_abcd_en0
-        // };
-        // a0_status2 <= A0OutStatus2 {
-        //     pwr_good: cur_a0_outputs_wget.seq_to_sp3_pwr_good,
-        //     pwr_btn: cur_a0_outputs_wget.sp_to_sp3_pwr_btn,
-        //     cont2_en: cur_a0_outputs_wget.pwr_cont2_sp3_en,
-        //     cont1_en: cur_a0_outputs_wget.pwr_cont1_sp3_en,
-        //     v1p8_sp3_en: cur_a0_outputs_wget.seq_to_sp3_v1p8_en,
-        //     u351_pwrok: cur_a0_outputs_wget.pwr_cont2_sp3_pwrok,
-        //     u350_pwrok: cur_a0_outputs_wget.pwr_cont1_sp3_pwrok
-        // };
-        // dbg_a0_outputs <= A0OutPinsStruct {
-        //     seq_to_sp3_sys_rst: amd_dbg_out.sys_reset,
-        //     pwr_cont_dimm_abcd_en1: a0_dbg_out1.v3p3_sys_en,
-        //     pwr_cont_dimm_efgh_en0: a0_dbg_out1.vpp_efgh_en,
-        //     pwr_cont_dimm_efgh_en2: a0_dbg_out1.efgh_en2,
-        //     pwr_cont2_sp3_pwrok: a0_dbg_out2.u351_pwrok,
-        //     seq_to_sp3_v1p8_en: a0_dbg_out2.v1p8_sp3_en,
-        //     pwr_cont1_sp3_pwrok: a0_dbg_out2.u350_pwrok,
-        //     pwr_cont2_sp3_en: a0_dbg_out2.cont2_en,
-        //     pwr_cont1_sp3_en: a0_dbg_out2.cont1_en,
-        //     pwr_cont_dimm_abcd_en2: a0_dbg_out1.abcd_en2,
-        //     pwr_cont_dimm_abcd_en0: a0_dbg_out1.vpp_abcd_en,
-        //     pwr_cont_dimm_efgh_en1: a0_dbg_out1.efgh_en1,
-        //     sp_to_sp3_pwr_btn: a0_dbg_out2.pwr_btn,
-        //     seq_to_vtt_efgh_en: a0_dbg_out1.vtt_efgh_en,
-        //     seq_to_sp3_pwr_good: a0_dbg_out2.pwr_good,
-        //     seq_to_vtt_abcd_a0_en: a0_dbg_out1.vtt_efgh_en
-        // };
-        // a0_dbg_out1 <= reg_update(a0_dbg_out1, a0_dbg_out1, address, a0DbgOut1Offset, operation, writedata); // Normal sw register
-        // a0_dbg_out2 <= reg_update(a0_dbg_out2, a0_dbg_out2, address, a0DbgOut2Offset, operation, writedata); // Normal sw register
-        // a0_amd_rdbks <=  AmdA0 {
-        //     reset: cur_a0_inputs_wget.sp3_to_seq_reset_v3p3,
-        //     pwrok: cur_a0_inputs_wget.sp3_to_seq_pwrok_v3p3,
-        //     slp_s5: cur_a0_inputs_wget.sp3_to_sp_slp_s5,
-        //     slp_s3: cur_a0_inputs_wget.sp3_to_sp_slp_s3
-        // };
-
-        // a0_groupB_pg <= GroupbPg {
-        //     v3p3_sys_pg: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg1,
-        //     v1p8_sp3_pg: cur_a0_inputs_wget.seq_v1p8_sp3_vdd_pg,
-        //     vtt_efgh_pg: cur_a0_inputs_wget.vtt_efgh_a0_to_seq_pg,
-        //     vtt_abcd_pg: cur_a0_inputs_wget.vtt_abcd_a0_to_seq_pg,
-        //     vdd_mem_efgh_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg1,
-        //     vdd_mem_abcd_pg: cur_a0_inputs_wget.pwr_cont1_sp3_pg1,
-        //     vpp_efgh_pg: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg0,
-        //     vpp_abcd_pg: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg0
-        // };
-
-        // a0_groupB_unused <= GroupbUnused {
-        //     efgh_pg2: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg2,
-        //     efgh_pg1: cur_a0_inputs_wget.pwr_cont_dimm_efgh_pg1,
-        //     abcd_pg2: cur_a0_inputs_wget.pwr_cont_dimm_abcd_pg2
-        // };
-
-        // a0_groupC_faults <= GroupbcFlts {
-        //     cont2_cfp: cur_a0_inputs_wget.pwr_cont2_sp3_cfp,
-        //     cont2_nvrhot: cur_a0_inputs_wget.pwr_cont2_sp3_nvrhot,
-        //     efgh_cfp: cur_a0_inputs_wget.pwr_cont_dimm_efgh_cfp,
-        //     efgh_nvrhot: cur_a0_inputs_wget.pwr_cont_dimm_efgh_nvrhot,
-        //     abcd_cfp: cur_a0_inputs_wget.pwr_cont_dimm_abcd_cfp,
-        //     abcd_nvrhot: cur_a0_inputs_wget.pwr_cont_dimm_abcd_nvrhot,
-        //     cont1_cfp: cur_a0_inputs_wget.pwr_cont1_sp3_cfp,
-        //     cont1_nvrhot: cur_a0_inputs_wget.pwr_cont1_sp3_nvrhot
-        // };
-
-        // a0_groupC_pg <= GroupcPg {
-        //     vdd_vcore: cur_a0_inputs_wget.pwr_cont1_sp3_pg0,
-        //     vddcr_soc_pg: cur_a0_inputs_wget.pwr_cont2_sp3_pg0
-        // };
-
-        // clkgen_out_status <= ClkgenOutStatus {
-        //     seq_nmr: cur_misc_outs.clk_to_seq_nmr
-        // };
-        // clkgen_dbg_out <= reg_update(clkgen_dbg_out, clkgen_dbg_out, address, clkgenDbgOutOffset, operation, writedata); // Normal sw register
-
-        // amd_out_status <= AmdOutStatus {
-        //     sys_reset: cur_a0_outputs_wget.seq_to_sp3_sys_rst
-        // };
-        // amd_dbg_out <= reg_update(amd_dbg_out, amd_dbg_out, address, amdDbgOutOffset, operation, writedata); // Normal sw register
-        
-        // dbg_misc_outputs <= MiscOutPinsStruct {
-        //     clk_to_seq_nmr: clkgen_dbg_out.seq_nmr
-        //  };
 
     endrule
 
@@ -359,6 +265,9 @@ module mkGimletRegs(GimletRegIF);
         method Bool a1_en();
             return power_control.a1pwren == 1;
         endmethod
+        method Action ok(Bool value);
+            a1_ok <= pack(value);
+        endmethod
         method Action state(A1StateType value);
             a1_sm <= unpack({'0, pack(value)});
         endmethod
@@ -375,6 +284,9 @@ module mkGimletRegs(GimletRegIF);
         method Action state (A0StateType value);
             a0_sm <= unpack({'0, pack(value)});
         endmethod
+        method Action ok(Bool value);
+            a0_ok <= pack(value);
+        endmethod
         method status1 = a0_status1._write;
         method status2 = a0_status2._write;
         method b_pgs = a0_groupB_pg._write;
@@ -384,8 +296,11 @@ module mkGimletRegs(GimletRegIF);
         method Bool en;
             return power_control.a0a_en == 1;
         endmethod
+        method Action ok(Bool value);
+            nic_ok <= pack(value);
+        endmethod
         method Action state(NicStateType value);
-            nic_sm <= unpack({'0, pack(value)});
+            nic_state <= unpack({'0, pack(value)});
         endmethod
         method pgs = nic_status._write;
     endinterface
@@ -412,8 +327,10 @@ module mkGimletRegs(GimletRegIF);
     //         return dbgCtrl_reg.reg_ctrl_en;
     //     endmethod
     // endinterface
-
-    method seq_to_sp_interrupt = irq_block.irq_pin;
+    interface RegPins pins;
+        method seq_to_sp_interrupt = irq_block.irq_pin;
+        method brd_rev = brd_rev._write;
+    endinterface
 
 endmodule
 

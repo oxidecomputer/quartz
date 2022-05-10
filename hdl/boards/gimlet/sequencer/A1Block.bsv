@@ -23,6 +23,7 @@ import PowerRail::*;
         // method Action dbg_ctrl(A1DbgOut value); // Output control
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Action a1_en(Bool value);  // SM enable pin
+        method Bool ok();
         method A1StateType state();
         method A1OutStatus output_readbacks();
         method A1Readbacks input_readbacks();
@@ -32,6 +33,7 @@ import PowerRail::*;
         // method Action dbg_ctrl(A1DbgOut value); // Output control
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Bool a1_en();  // SM enable pin
+        method Action ok(Bool value);
         method Action state (A1StateType value);
         method Action output_readbacks (A1OutStatus value);
         method Action input_readbacks (A1Readbacks value);
@@ -41,6 +43,7 @@ import PowerRail::*;
     instance Connectable#(A1Regs, A1RegsReverse);
         module mkConnection#(A1Regs source, A1RegsReverse sink) (Empty);
             mkConnection(source.a1_en, sink.a1_en);
+            mkConnection(source.ok, sink.ok);
             mkConnection(source.state, sink.state);
             mkConnection(source.output_readbacks, sink.output_readbacks);
             mkConnection(source.input_readbacks, sink.input_readbacks);
@@ -256,6 +259,9 @@ import PowerRail::*;
         method a0_idle = downstream_idle._write;
 
         interface A1Regs reg_if;
+            method Bool ok;
+                return state == DONE;
+            endmethod
             method a1_en = enable._write;
             method state = state._read;
             method output_readbacks = output_readbacks._read;

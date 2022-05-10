@@ -155,6 +155,7 @@ bluespec_library('GimletSeqTop',
         'cobalt//hdl/interfaces:SPI',
         ':NicBlock',
         ':GimletRegs',
+        ':GimletSeqFpgaRegs',
         # ':EarlyPowerBlock',
         ':A1Block',
         ':A0Block',
@@ -177,50 +178,6 @@ bluespec_library('GimletIOSync',
         ]
     }
 )
-
-# bluespec_sim('gimlet_sim_top',
-#     top = 'GimletSeqTop.bsv',
-#     modules = [
-#         'mkGimletTestTop',
-#     ],
-#     deps = [
-#         ':GimletSeqTop',
-#     ],
-#     local = {
-#         'bsc_flags': ['-suppress-warnings', 'G0046']
-#     }
-#     )
-
-# bluesim_binary('gimlet_test',
-#     env = 'cobalt//bluesim_default',
-#     top = ':gimlet_sim_top#mkGimletTestTop',
-#     deps = [
-#         ':gimlet_sim_top',
-#     ],
-#     )
-
-# bluesim_binary('gimlet_regs_test',
-#     env = 'cobalt//bluesim_default',
-#     top = ':gimlet_regs_sim#mkSimpleTest',
-#     deps = [
-#         ':gimlet_regs_sim',
-#     ])
-
-# bluesim_binary('reg_test',
-#     env = 'cobalt//bluesim_default',
-#     top = ':regs_sim#mkTestBenchSimpleReg',
-#     deps = [
-#         ':regs_sim',
-#     ])
-
-# bluespec_verilog('ign_verilog',
-#     top = 'IgnitionletTop.bsv',
-#     modules = [
-#         'mkIgnitionletTop',
-#     ],
-#     deps = [
-#         ':IgnitionletTop',
-#     ])
 
 bluespec_verilog('seq_verilog',
     top = 'GimletIOSync.bsv',
