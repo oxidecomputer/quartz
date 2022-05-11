@@ -18,27 +18,36 @@ import PowerRail::*;
         // method Action dbg_ctrl(A1DbgOut value); // Output control
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Action en(Bool value);  // SM enable pin
+        method Action cld_rst_override(Bool value); // True = hold cld rst
+        method Action perst_override(Bool value);  // True = hold perst
         method Bool ok();
         method NicStateType state();
         method NicStatus pgs;
+        method OutStatusNic2 nic_outs;
         // method A1OutStatus output_readbacks();
         // method A1Readbacks input_readbacks();
     endinterface
 
     interface NicRegsReverse;
         method Bool en;
+        method Bool cld_rst_override;
+        method Bool perst_override;
         method Action ok(Bool value);
         method Action state(NicStateType value);
         method Action pgs (NicStatus value);
+        method Action nic_outs (OutStatusNic2 value);
     endinterface
 
     // Allow our output pin source to connect to our output pin sink
     instance Connectable#(NicRegs, NicRegsReverse);
         module mkConnection#(NicRegs source, NicRegsReverse sink) (Empty);
             mkConnection(source.en, sink.en);
+            mkConnection(source.cld_rst_override, sink.cld_rst_override);
+            mkConnection(source.perst_override, sink.perst_override);
             mkConnection(source.ok, sink.ok);
             mkConnection(source.state, sink.state);
             mkConnection(source.pgs, sink.pgs);
+            mkConnection(source.nic_outs, sink.nic_outs);
             // mkConnection(source.output_readbacks, sink.output_readbacks);
             // mkConnection(source.input_readbacks, sink.input_readbacks);
         endmodule
@@ -96,6 +105,8 @@ import PowerRail::*;
         Wire#(Bool) aggregate_fault <- mkDWire(False);
         Wire#(Bit#(1)) sp3_to_seq_nic_perst_l <- mkDWire(0);
         Wire#(Bit#(1)) nic_to_seq_ext_rst_l <- mkDWire(0);
+        Wire#(Bool) cld_rst_override <- mkDWire(False);
+        Wire#(Bool) perst_override <- mkDWire(False);
 
         Reg#(UInt#(24)) ticks_count <- mkReg(0);
         RWire#(UInt#(24)) ticks_count_next <- mkRWire();
@@ -186,8 +197,8 @@ import PowerRail::*;
 
         (* fire_when_enabled *)
         rule do_outputs;
-            seq_to_nic_cld_rst_l <= pack(state == DONE);
-            seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1);
+            seq_to_nic_cld_rst_l <= pack(state == DONE && !cld_rst_override);
+            seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && !perst_override);
             nic_to_sp3_pwrflt_l <= 1;
             seq_to_nic_comb_pg_l <= pack(state != DELAY && state != DONE);
         endrule
@@ -237,7 +248,19 @@ import PowerRail::*;
             method pgs = nic_pg._read;
             method Bool ok;
                 return state == DONE;
-            endmethod 
+            endmethod
+            method cld_rst_override = cld_rst_override._write;
+            method perst_override = perst_override._write;
+            method OutStatusNic2 nic_outs;
+                return OutStatusNic2 {
+                   sp3_perst: ~sp3_to_seq_nic_perst_l,
+                   nic_perst: ~seq_to_nic_perst_l,
+                   pwrflt: ~nic_to_sp3_pwrflt_l,
+                   nic_cld_rst: ~seq_to_nic_cld_rst_l,
+                   nic_comb_pg: ~seq_to_nic_comb_pg_l,
+                   nic_ext_rst: ~nic_to_seq_ext_rst_l
+                };
+            endmethod
         endinterface
 
     endmodule

@@ -26,7 +26,7 @@ endinterface
 interface GimletRegIF;
     
     interface Server#(RegRequest#(16, 8), RegResp#(8)) decoder_if;
-     interface NicRegsReverse nic_block;
+    interface NicRegsReverse nic_block;
     // interface EarlyRegsReverse early_block;
     interface A1RegsReverse a1_block;
     interface A0RegsReverse a0_block;
@@ -43,7 +43,7 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(Pwrctrl) power_control <- mkReg(unpack(0));
     //  NIC domain signals
     ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
-    ConfigReg#(OutStatusNic2) nic2_out_status <- mkRegU(); // RO register for outputs
+    
     ConfigReg#(DbgOutNic1) dbg_nic1_out       <- mkReg(unpack(0));
     ConfigReg#(DbgOutNic2) dbg_nic2_out       <- mkReg(unpack(0));
     // Early output signals
@@ -92,7 +92,6 @@ module mkGimletRegs(GimletRegIF);
     Wire#(RegOps) operation <- mkDWire(NOOP);
     // RWire#(NicStatus) cur_nic_pins <- mkRWire();
     RWire#(OutStatusNic1) cur_nic1_out_status <- mkRWire();
-    RWire#(OutStatusNic2) cur_nic2_out_status <- mkRWire();
     RWire#(EarlyPwrStatus) cur_early_outputs <- mkRWire();
     RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
@@ -108,6 +107,7 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bit#(1)) a1_ok <- mkDWire(0);
     Wire#(Bit#(1)) nic_ok <- mkDWire(0);
     Wire#(Bit#(1)) fan_ok <- mkDWire(1);
+    Wire#(OutStatusNic2) nic2_out_status <- mkDWire(unpack(0));
     // RWire#(A0StateType) a0_state <- mkRWire();
     //ConfigReg#(NicStateType) nic_sm <- mkConfigRegU();
     
@@ -127,7 +127,13 @@ module mkGimletRegs(GimletRegIF);
     mkConnection(irq_cause_raw, irq_block.cause_raw);
 
     rule do_status;
-        status <= unpack({'0, nic_ok, a0_ok, a1_ok, fan_ok});
+        status <= Status {
+            int_pend: 0,
+            nicpwrok: nic_ok,
+            a0pwrok: a0_ok,
+            a1pwrok: a1_ok,
+            fanpwrok: 1
+        };
     endrule
 
     // SW readbacks
@@ -296,6 +302,12 @@ module mkGimletRegs(GimletRegIF);
         method Bool en;
             return power_control.a0a_en == 1;
         endmethod
+        method Bool cld_rst_override;
+            return dbgCtrl_reg.nic_cld_rst_override == 1;
+        endmethod
+        method Bool perst_override;
+            return dbgCtrl_reg.nic_perst_override == 1;
+        endmethod
         method Action ok(Bool value);
             nic_ok <= pack(value);
         endmethod
@@ -303,6 +315,7 @@ module mkGimletRegs(GimletRegIF);
             nic_state <= unpack({'0, pack(value)});
         endmethod
         method pgs = nic_status._write;
+        method nic_outs = nic2_out_status._write;
     endinterface
     //     // Normalized pin readbacks to registers
     //     //method input_readbacks = cur_a0_inputs.wset; // Input sampling

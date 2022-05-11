@@ -129,23 +129,8 @@ bluesim_tests('TopTests',
     ],
     deps = [
         ':GimletSeqTop',
-        'cobalt//hdl:TestUtils',
     ]
 )
-# bluespec_library('MiscIO',
-#     sources = [
-#         'MiscIO.bsv',
-#     ],
-#     deps = [
-#          ':GimletSeqFpgaRegs',
-#     ])
-# bluespec_library('EarlyPowerBlock',
-#     sources = [
-#         'EarlyPowerBlock.bsv',
-#     ],
-#     deps = [
-#          ':GimletSeqFpgaRegs',
-#     ])
 
 bluespec_library('GimletSeqTop',
     sources = [
@@ -153,12 +138,14 @@ bluespec_library('GimletSeqTop',
     ],
     deps = [
         'cobalt//hdl/interfaces:SPI',
+        'cobalt//hdl:TestUtils',
         ':NicBlock',
         ':GimletRegs',
         ':GimletSeqFpgaRegs',
-        # ':EarlyPowerBlock',
+        ':PowerRail',
         ':A1Block',
         ':A0Block',
+
         # ':MiscIO',
     ],
     )

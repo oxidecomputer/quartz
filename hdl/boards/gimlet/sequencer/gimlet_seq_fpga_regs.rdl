@@ -606,6 +606,9 @@ addrmap gimlet_seq_fpga {
 
     reg nic_output2_type {
         field {
+            desc = "Input to FPGA from SP3 I/O expander (inverted)";
+        } SP3_PERST[1] = 0;
+        field {
             desc = "Becomes clock enable for clk_100M_TO_RSW (SEQ_TO_NIC_COMB_PG net)";
         } NIC_COMB_PG[1] = 0;
         field {
@@ -614,6 +617,12 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Alert SP3 of a NIC power fault (NIC_TO_SP3_PWRFLT_L inverted net)";
         } PWRFLT[1] = 0;
+        field {
+            desc = "RevB-only PERST outptut (PERST_L inverted net)";
+        } NIC_PERST[1] = 0;
+        field {
+            desc = "RevB-only nic ext rst output  ( inverted net)";
+        } NIC_EXT_RST[1] = 0;
     };
 
     reg clk_gen_output_type {
@@ -666,8 +675,11 @@ addrmap gimlet_seq_fpga {
             debug registers to set up any desired pre-conditions";
         } REG_CTRL_EN[1] = 0;
         field {
-            desc = "Nic debug control only";
-        } NIC_CTRL_EN[1] = 0;
+            desc = "Nic debug control only. Seeting will force CLD_RST assert until cleared";
+        } NIC_CLD_RST_OVERRIDE[1] = 0;
+        field {
+            desc = "Nic debug control only. Setting will force Perst_L assert until cleared";
+        } NIC_PERST_OVERRIDE[1] = 0;
     } DBG_CTRL;
 
     a1_output_type A1_DBG_OUT;
