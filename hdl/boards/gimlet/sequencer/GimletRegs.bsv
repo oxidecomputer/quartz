@@ -38,7 +38,13 @@ module mkGimletRegs(GimletRegIF);
     // Registers
     ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
     ConfigReg#(Status) status <- mkConfigRegU();
-    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(unpack(0)); // Debug mux control register
+    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(
+        DbgCtrl {
+            nic_perst_override : 0,
+            nic_cld_rst_override: 1,
+            reg_ctrl_en: 0,
+            ignore_sp: 0
+        });
     // Main control registers
     ConfigReg#(Pwrctrl) power_control <- mkReg(unpack(0));
     //  NIC domain signals
