@@ -13,11 +13,13 @@ export Tofino2Sequencer(..), mkTofino2Sequencer;
 import Assert::*;
 import BuildVector::*;
 import ConfigReg::*;
+import Connectable::*;
 import DefaultValue::*;
 import DReg::*;
 import StmtFSM::*;
 import Vector::*;
 
+import Countdown::*;
 import PowerRail::*;
 import SidecarMainboardControllerReg::*;
 
@@ -133,6 +135,9 @@ interface Tofino2Sequencer;
     method Action pcie_reset();
 endinterface
 
+// Typedef for a PowerRail with a timeout duration of up to 15 ticks.
+typedef PowerRail::PowerRail#(4) PowerRail;
+
 //
 // mkTofino2Sequencer
 //
@@ -231,8 +236,9 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
 
     // Timing state.
     PulseWire tick <- mkPulseWire();
-    Reg#(UInt#(8)) ticks_count <- mkReg(0);
-    RWire#(UInt#(8)) ticks_count_next <- mkRWire();
+    Countdown#(8) delay <- mkCountdown1();
+
+    mkConnection(asIfc(tick), asIfc(delay));
 
     // FSM state.
     ConfigReg#(State) state <- mkConfigReg(Invalid);
@@ -260,6 +266,14 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     PulseWire abort_request <- mkPulseWire();
     PulseWire pcie_reset_request <- mkPulseWire();
 
+    // Connect the timeout pulse of the power rails.
+    mkConnection(asIfc(tick), vdd18);
+    mkConnection(asIfc(tick), vddcore);
+    mkConnection(asIfc(tick), vddpcie);
+    mkConnection(asIfc(tick), vddt);
+    mkConnection(asIfc(tick), vdda15);
+    mkConnection(asIfc(tick), vdda18);
+
     //
     // Helpers, implementing the details of sequencing steps.
     //
@@ -268,7 +282,6 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         action
             step <= s;
             rail.set_enabled(True);
-            ticks_count_next.wset(fromInteger(rail.good_timeout + 1));
         endaction;
 
     function Action disable_rail(PowerRail rail) =
@@ -276,38 +289,27 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
             rail.set_enabled(False);
         endaction;
 
-    function Stmt delay(Integer d, SequencingStep s) =
+    function Stmt await_por() =
         seq
             action
-                step <= s;
-                ticks_count_next.wset(fromInteger(d + 1));
+                step <= AwaitPoR;
+                delay <= fromInteger(max(
+                    parameters.power_good_to_por_delay,
+                    parameters.clocks_enable_to_por_delay));
             endaction
-            await(ticks_count == 0);
+            await(delay);
         endseq;
 
-    function Stmt power_on_reset() =
-        seq
-            action
-                step <= AwaitVidValid;
-                tofino_resets <= Tofino2Resets{pwron: False, pcie: True};
-                ticks_count_next.wset(fromInteger(parameters.por_to_pcie_delay + 1));
-            endaction
-        endseq;
-
-    function Bool awaiting_power_good() =
-        case (step)
-            AwaitVdd18PowerGood,
-                AwaitVddCorePowerGood,
-                AwaitVddPCIePowerGood,
-                AwaitVddtPowerGood,
-                AwaitVdda15PowerGood,
-                AwaitVdda18PowerGood: True;
-            default: False;
-        endcase;
+    function Action power_on_reset() =
+        action
+            step <= AwaitVidValid;
+            tofino_resets <= Tofino2Resets{pwron: False, pcie: True};
+            delay <= fromInteger(parameters.por_to_pcie_delay + 1);
+        endaction;
 
     function Stmt await_vid_valid() =
         seq
-            await(ticks_count == fromInteger(
+            await(delay.count == fromInteger(
                 parameters.por_to_pcie_delay -
                 parameters.vid_valid_delay + 1));
             step <= AwaitVidAck;
@@ -318,7 +320,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     function Stmt await_power_up_complete() =
         seq
             step <= AwaitPowerUpComplete;
-            await(ticks_count == 0);
+            await(delay);
         endseq;
 
     //
@@ -350,10 +352,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         enable_rail(vdda18, AwaitVdda18PowerGood);
         await(vdda18.good);
         tofino_clocks_enable <= True;
-        delay(
-            max(parameters.power_good_to_por_delay,
-                parameters.clocks_enable_to_por_delay),
-            AwaitPoR);
+        await_por();
         power_on_reset();
         await_vid_valid();
         await_vid_ack();
@@ -382,25 +381,6 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
             step <= AwaitPowerUp;
         endaction
     endseq, state == InPowerDown && tick);
-
-    (* fire_when_enabled *)
-    rule do_set_ticks_count (ticks_count_next.wget matches tagged Valid .value);
-        ticks_count <= value;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_count_ticks (tick && !isValid(ticks_count_next.wget));
-        ticks_count <= satMinus(Sat_Zero, ticks_count, 1);
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_power_good_timeout (
-            state == InPowerUp &&
-            awaiting_power_good &&
-            tick &&
-            ticks_count == 0);
-        power_good_timeout <= True;
-    endrule
 
     (* fire_when_enabled *)
     rule do_detect_power_rail_in_invalid_state (state == InPowerUp || state == A0);
@@ -447,6 +427,12 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     function bool_and(a, b) = a && b;
 
     (* fire_when_enabled *)
+    rule do_power_good_timeout_aggregation (state == InPowerUp);
+        power_good_timeout <=
+            foldr(bool_or, False, map(PowerRail::good_timeout, power_rails));
+    endrule
+
+    (* fire_when_enabled *)
     rule do_fault_aggregation;
         fault <= foldr(bool_or, False, map(PowerRail::fault, power_rails));
     endrule
@@ -460,7 +446,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     rule do_vid_ack_timeout (
             state == InPowerUp &&
             step == AwaitVidAck &&
-            ticks_count ==
+            delay.count ==
                 fromInteger(
                     parameters.por_to_pcie_delay -
                     parameters.vid_ack_timeout));

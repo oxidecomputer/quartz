@@ -10,6 +10,7 @@ import ConfigReg::*;
 import Connectable::*;
 import DReg::*;
 
+import Countdown::*;
 import Strobe::*;
 
 
@@ -29,7 +30,7 @@ interface Pins;
     method Action vrhot(Bool val);
 endinterface
 
-interface PowerRail;
+interface PowerRail #(numeric type timeout_sz);
     interface Pins pins;
 
     method Bool enabled();
@@ -37,10 +38,16 @@ interface PowerRail;
     method Bool good();
     method Bool fault();
     method Bool vrhot();
+    method Bool good_timeout();
+
+    // Periodic tick used to determine if the power good timed out. This is a
+    // no-op if the power rail is not enabled or the power good signal is
+    // received, and thus can be driven contineously.
+    method Action send();
 
     // Compile time method which can be used by consuming modules to determine
-    // an appropirate enable to good timeout.
-    method Integer good_timeout();
+    // the configured timeout duration.
+    method Integer timeout_duration();
 endinterface
 
 //
@@ -49,13 +56,29 @@ endinterface
 // registered, so changes on a given pin are not reflected on the corresponding
 // `good`, `fault`, or `vrhot` methods until the next cycle.
 //
-module mkPowerRail #(Integer good_timeout_) (PowerRail);
+module mkPowerRail #(Integer timeout_duration_) (PowerRail#(timeout_sz));
     ConfigReg#(Bool) enabled_r <- mkConfigReg(False);
-    // These could be DWires, but since these are presumably latched every cycle
-    // a DReg is used to avoid sending module inputs straight to outputs.
+    RWire#(Bool) enabled_next <- mkRWire();
     Reg#(Bool) good_r <- mkDReg(False);
     Reg#(Bool) fault_r <- mkDReg(False);
     Reg#(Bool) vrhot_r <- mkDReg(False);
+
+    Countdown#(timeout_sz) timeout <- mkCountdown1();
+
+    (* fire_when_enabled *)
+    rule do_update;
+        if (enabled_next.wget matches tagged Valid .enable) begin
+            enabled_r <= enable;
+
+            if (enable)
+                timeout <= fromInteger(timeout_duration_);
+            else
+                timeout <= 0;
+        end
+        else if (enabled_r && good_r) begin
+            timeout <= 0;
+        end
+    endrule
 
     interface Pins pins;
         method en = enabled_r;
@@ -65,26 +88,40 @@ module mkPowerRail #(Integer good_timeout_) (PowerRail);
     endinterface
 
     method enabled = enabled_r;
-
-    method Action set_enabled(Bool en);
-        enabled_r <= en;
-    endmethod
-
+    method set_enabled = enabled_next.wset;
     method good = good_r;
     method fault = fault_r;
     method vrhot = vrhot_r;
-    method good_timeout = good_timeout_;
+    method good_timeout = enabled_r && timeout;
+    method Action send() if (enabled_r) = timeout.send;
+    method timeout_duration = timeout_duration_;
 endmodule
+
+instance Connectable#(PulseWire, PowerRail#(timeout_sz));
+    module mkConnection #(PulseWire w, PowerRail#(timeout_sz) r) (Empty);
+        (* fire_when_enabled *)
+        rule do_tick (w);
+            r.send();
+        endrule
+    endmodule
+endinstance
+
+instance Connectable#(Strobe#(strobe_sz), PowerRail#(timeout_sz));
+    module mkConnection #(Strobe#(strobe_sz) s, PowerRail#(timeout_sz) r) (Empty);
+        mkConnection(asPulseWire(s), r);
+    endmodule
+endinstance
 
 //
 // Helper functions to facilitate higher order constructs, such as iterating
 // over a `Vector` using `map` or `fold`.
 //
-function Bool enabled(PowerRail r) = r.enabled;
-function Bool good(PowerRail r) = r.good;
-function Bool fault(PowerRail r) = r.fault;
-function Bool vrhot(PowerRail r) = r.vrhot;
-function Integer good_timeout(PowerRail r) = r.good_timeout;
+function Bool enabled(PowerRail#(timeout_sz) r) = r.enabled;
+function Bool good(PowerRail#(timeout_sz) r) = r.good;
+function Bool fault(PowerRail#(timeout_sz) r) = r.fault;
+function Bool vrhot(PowerRail#(timeout_sz) r) = r.vrhot;
+function Bool good_timeout(PowerRail#(timeout_sz) r) = r.good_timeout;
+function Integer timeout_duration(PowerRail#(timeout_sz) r) = r.timeout_duration;
 
 //
 // PowerRailModel

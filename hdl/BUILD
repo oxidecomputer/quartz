@@ -5,5 +5,6 @@ bluespec_library('PowerRail',
         'PowerRail.bsv',
     ],
     deps = [
+        'cobalt//hdl:Countdown',
         'cobalt//hdl:Strobe',
     ])
