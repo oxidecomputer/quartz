@@ -60,7 +60,7 @@ instance DefaultValue#(Parameters);
 endinstance
 
 typedef enum {
-    Invalid                 = 0,
+    Init                    = 0,
     A2                      = 1,
     A0                      = 2,
     InPowerUp               = 3,
@@ -68,7 +68,7 @@ typedef enum {
 } State deriving (Eq, Bits, FShow);
 
 typedef enum {
-    Invalid                 = 0,
+    Init                    = 0,
     AwaitPowerUp            = 1,
     AwaitVdd18PowerGood     = 2,
     AwaitVddCorePowerGood   = 3,
@@ -241,8 +241,8 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     mkConnection(asIfc(tick), asIfc(delay));
 
     // FSM state.
-    ConfigReg#(State) state <- mkConfigReg(Invalid);
-    ConfigReg#(SequencingStep) step <- mkConfigReg(Invalid);
+    ConfigReg#(State) state <- mkConfigReg(Init);
+    ConfigReg#(SequencingStep) step <- mkConfigReg(Init);
     ConfigReg#(Error) error <- mkConfigRegU();
 
     ConfigReg#(Tofino2Resets) tofino_resets <- mkConfigRegU();
@@ -328,7 +328,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     //
 
     (* fire_when_enabled *)
-    rule do_reset_sequencer (state == Invalid);
+    rule do_reset_sequencer (state == Init);
         state <= A2;
         step <= AwaitPowerUp;
         error <= None;
@@ -455,7 +455,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
 
     (* fire_when_enabled *)
     rule do_monitor_abort_conditions (
-            state != Invalid &&
+            state != Init &&
             error == None &&
             (abort_request ||
                 power_good_timeout ||
@@ -528,7 +528,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
 
     (* fire_when_enabled *)
     rule do_clear_error (
-            state != Invalid &&
+            state != Init &&
             error != None &&
             ctrl_one_shot.clear_error == 1);
         $display("Clearing error");
@@ -581,7 +581,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     interface Registers registers;
         interface Reg ctrl;
             method _read = ctrl;
-            method Action _write(TofinoSeqCtrl next) if (state != Invalid);
+            method Action _write(TofinoSeqCtrl next) if (state != Init);
                 // Split the write in sticky/non-sticky bits.
                 ctrl <= TofinoSeqCtrl{
                     clear_error: 0,
