@@ -492,6 +492,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
             tofino2_power_up_seq.abort();
         end
 
+        ctrl.en <= 0;
         tofino2_power_down_seq.start();
     endrule
 
@@ -581,7 +582,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     interface Registers registers;
         interface Reg ctrl;
             method _read = ctrl;
-            method Action _write(TofinoSeqCtrl next) if (state != Init);
+            method Action _write(TofinoSeqCtrl next) if (!(state == Init || abort));
                 // Split the write in sticky/non-sticky bits.
                 ctrl <= TofinoSeqCtrl{
                     clear_error: 0,

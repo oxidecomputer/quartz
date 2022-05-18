@@ -776,4 +776,30 @@ module mkThermalAlertInA0Test (Empty);
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
+//
+// mkCtrlEnClearedOnFault
+//
+// When a fault occurs, the `EN` bit in the `CTRL` register should be cleared,
+// in to avoid the sequencer restarting without an explicit request to do so.
+//
+(* synthesize *)
+module mkCtrlEnClearedOnFault (Empty);
+    Parameters parameters = defaultValue;
+    Bench bench <- mkBench(parameters);
+
+    mkAutoFSM(seq
+        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        bench.power_up();
+        dynamicAssert(bench.sequencer.ctrl.en == 1, "Expected CTRL.EN set");
+
+        await(bench.error_occured);
+        dynamicAssert(bench.sequencer.ctrl.en == 0, "Expected CTRL.EN not set");
+
+        await(bench.in_a2);
+        $display("Tofino2 powered down");
+    endseq);
+
+    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+endmodule
+
 endpackage

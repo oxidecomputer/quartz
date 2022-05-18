@@ -20,6 +20,7 @@ bluesim_tests('Tofino2SequencerTests',
         'mkPCIeResetExternalInA0Test',
         'mkThermalAlertDuringPowerUpTest',
         'mkThermalAlertInA0Test',
+        'mkCtrlEnClearedOnFault',
     ],
     deps = [
         '//hdl:PowerRail',
