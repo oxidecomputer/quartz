@@ -1,0 +1,249 @@
+// Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+addrmap sidecar_mainboard_controller {
+    name = "Sidecar Mainboard Controller";
+    desc = "Register description of the Sidecar Mainboard Controller";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Identification 0";
+        default sw = r;
+
+        field {
+            desc = "Byte 0 of ID";
+        } ID0[7:0] = 0;
+    } ID0;
+    reg {
+        name = "Identification 1";
+        default sw = r;
+
+        field {
+            desc = "Byte 1 of ID";
+        } ID1[7:0] = 0;
+    } ID1;
+    reg {
+        name = "Identification 2";
+        default sw = r;
+
+        field {
+            desc = "Byte 2 of ID";
+        } ID2[7:0] = 0;
+    } ID2;
+    reg {
+        name = "Identification 3";
+        default sw = r;
+
+        field {
+            desc = "Byte 3 of ID";
+        } ID3[7:0] = 0;
+    } ID3;
+
+    reg {
+        name = "Scratchpad";
+
+        field {
+            desc = "Scribble Register for read-write use";
+        } SCRATCHPAD[7:0] = 0;
+    } SCRATCHPAD;
+
+    reg {
+        name = "Tofino Sequencer Control";
+        default sw = rw;
+        default hw = rw;
+
+        field {
+            hw = rw;
+            desc = "Set self clearing bit to clear Tofino sequencer error state";
+        } CLEAR_ERROR[1] = 0;
+        field {
+            desc = "Set bit to power up Tofino, clear bit to power down Tofino";
+        } EN[1] = 0;
+        field {
+            hw = rw;
+            desc = "Acknowledge that VDDCORE has been adjusted according to the VID";
+        } ACK_VID[1] = 0;
+        field {
+            hw = rw;
+            desc = "Keep Tofino PCIe in reset";
+        } PCIE_RESET[1] = 0;
+    } TOFINO_SEQ_CTRL;
+
+    reg {
+        name = "Tofino Sequencer State";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Tofino Sequencer State";
+        } STATE[2:0] = 0;
+    } TOFINO_SEQ_STATE;
+
+    reg {
+        name = "Tofino Sequencing Step";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Sequencing Step";
+        } STEP[7:0] = 0;
+    } TOFINO_SEQ_STEP;
+
+    reg {
+        name = "Tofino Sequencing Error";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Sequencing Error";
+        } ERROR[7:0] = 0;
+    } TOFINO_SEQ_ERROR;
+
+    reg {
+        name = "Tofino Power Enable";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "VDD 1.8V Enable";
+        } VDD_1P8_EN[1] = 0;
+        field {
+            desc = "VDD Core Enable";
+        } VDD_CORE_EN[1] = 0;
+        field {
+            desc = "VDD 0.75V PCIe Enable";
+        } VDD_PCIE_EN[1] = 0;
+        field {
+            desc = "VDD 0.9V VDDT Enable";
+        } VDD_VDDT_EN[1] = 0;
+        field {
+            desc = "VDDA 1.5V Enable";
+        } VDDA_1P5_EN[1] = 0;
+        field {
+            desc = "VDDA 1.8V Enable";
+        } VDDA_1P8_EN[1] = 0;
+    } TOFINO_POWER_ENABLE;
+
+    reg {
+        name = "Tofino Power Good";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "VDD 1.8V Power Good";
+        } VDD_1P8_PG[1] = 0;
+        field {
+            desc = "VDD Core Power Good";
+        } VDD_CORE_PG[1] = 0;
+        field {
+            desc = "VDD 0.75V PCIe Power Good";
+        } VDD_PCIE_PG[1] = 0;
+        field {
+            desc = "VDD 0.9V VDDT Power Good";
+        } VDD_VDDT_PG[1] = 0;
+        field {
+            desc = "VDDA 1.5V Power Good";
+        } VDDA_1P5_PG[1] = 0;
+        field {
+            desc = "VDDA 1.8V Power Good";
+        } VDDA_1P8_PG[1] = 0;
+    } TOFINO_POWER_GOOD;
+
+    reg {
+        name = "Tofino Power Fault";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "VDD 1.8V Fault";
+        } VDD_1P8_FAULT[1] = 0;
+        field {
+            desc = "VDD Core Fault";
+        } VDD_CORE_FAULT[1] = 0;
+        field {
+            desc = "Reserved";
+        } RESERVED1[1] = 0;
+        field {
+            desc = "VDD 0.9V VDDT Fault";
+        } VDD_VDDT_FAULT[1] = 0;
+        field {
+            desc = "VDDA 1.5V Fault";
+        } VDDA_1P5_FAULT[1] = 0;
+        field {
+            desc = "Reserved";
+        } RESERVED2[1] = 0;
+    } TOFINO_POWER_FAULT;
+
+    reg {
+        name = "Tofino Power VR Hot";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "VDD 1.8V VRHOT";
+        } VDD_1P8_VRHOT[1] = 0;
+        field {
+            desc = "VDD Core VRHOT";
+        } VDD_CORE_VRHOT[1] = 0;
+        field {
+            desc = "Reserved";
+        } RESERVED1[1] = 0;
+        field {
+            desc = "VDD 0.9V VDDT VRHOT";
+        } VDD_VDDT_VRHOT[1] = 0;
+        field {
+            desc = "VDDA 1.5V VRHOT";
+        } VDDA_1P5_VRHOT[1] = 0;
+        field {
+            desc = "VDDA 1.8V VRHOT";
+        } VDDA_1P8_VRHOT[1] = 0;
+    } TOFINO_POWER_VRHOT;
+
+    reg {
+        name = "Tofino VID Value";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "VID Value";
+        } VID[4] = 0;
+        field {
+            desc = "Reserved";
+        } RESERVED[3] = 0;
+        field {
+            desc = "VID Valid";
+        } VID_VALID[1] = 0;
+    } TOFINO_POWER_VID;
+
+    reg {
+        name = "Tofino Reset";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Tofino package is in reset";
+        } PWRON[1] = 0;
+        field {
+            desc = "PCIe link is in reset";
+        } PCIE[1] = 0;
+    } TOFINO_RESET;
+
+    reg {
+        name = "Tofino Misc";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Thermal Alert";
+        } THERMAL_ALERT[1] = 0;
+        field {
+            desc = "Clocks Enable";
+        } CLOCKS_EN[1] = 0;
+    } TOFINO_MISC;
+};
