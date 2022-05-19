@@ -236,7 +236,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
 
     // Timing state.
     PulseWire tick <- mkPulseWire();
-    Countdown#(8) delay <- mkCountdown1();
+    Countdown#(8) delay <- mkCountdownBy1();
 
     mkConnection(asIfc(tick), asIfc(delay));
 

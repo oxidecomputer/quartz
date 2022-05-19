@@ -63,7 +63,7 @@ module mkPowerRail #(Integer timeout_duration_) (PowerRail#(timeout_sz));
     Reg#(Bool) fault_r <- mkDReg(False);
     Reg#(Bool) vrhot_r <- mkDReg(False);
 
-    Countdown#(timeout_sz) timeout <- mkCountdown1();
+    Countdown#(timeout_sz) timeout <- mkCountdownBy1();
 
     (* fire_when_enabled *)
     rule do_update;
