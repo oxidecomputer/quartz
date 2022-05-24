@@ -4,19 +4,20 @@ import Clocks::*;
 import Connectable::*;
 
 import ECP5::*;
+import SPI::*;
 import Strobe::*;
 
+import IOSync::*;
 import PowerRail::*;
-import SpiDecode::*;
 import SidecarMainboardController::*;
 import Tofino2Sequencer::*;
 
 
 (* always_enabled *)
 interface SidecarMainboardEmulator;
-    (* prefix = "" *) method Action csn(Bit#(1) spi_csn);
-    (* prefix = "" *) method Action sclk(Bit#(1) spi_sclk);
-    (* prefix = "" *) method Action copi(Bit#(1) spi_copi);
+    (* prefix = "" *) method Action spi_csn(Bit#(1) spi_csn);
+    (* prefix = "" *) method Action spi_sclk(Bit#(1) spi_sclk);
+    (* prefix = "" *) method Action spi_copi(Bit#(1) spi_copi);
     method Bit#(1) spi_cipo;
     method Bit#(8) led();
 endinterface
@@ -61,24 +62,26 @@ module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
         feedback_divide: 25};
 
     ECP5PLL pll <- mkECP5PLL(pll_parameters, clk_12mhz, reset_sync);
-    Clock clk_50mhz = pll.clkos;
+    (* hide *) SidecarMainboardEmulator _emulator <-
+        mkSidecarMainboardEmulatorOnEcp5EvnWrapper(
+            clocked_by pll.clkos, // 50 MHz
+            reset_by reset_sync);
 
+    return _emulator;
+endmodule
+
+module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
     Parameters parameters = defaultValue;
-    MainboardController controller <-
-        mkMainboardController(parameters, clocked_by clk_50mhz);
+    MainboardController controller <- mkMainboardController(parameters);
 
     //
     // SPI peripheral.
     //
 
-    SyncBitIfc#(Bit#(1)) spi_csn_sync <- mkSyncBit(clk_50mhz, noReset, clk_50mhz);
-    SyncBitIfc#(Bit#(1)) spi_sclk_sync <- mkSyncBit(clk_50mhz, noReset, clk_50mhz);
-    SyncBitIfc#(Bit#(1)) spi_copi_sync <- mkSyncBit(clk_50mhz, noReset, clk_50mhz);
-    ReadOnly#(Bit#(1)) spi_cipo_sync <- mkNullCrossingWire(clk_12mhz, controller.spi_pins.cipo);
-
-    mkConnection(spi_csn_sync.read, controller.spi_pins.csn);
-    mkConnection(spi_sclk_sync.read, controller.spi_pins.sclk);
-    mkConnection(spi_copi_sync.read, controller.spi_pins.copi);
+    Reg#(Bit#(1)) csn <- mkInputSyncFor(controller.spi.csn);
+    Reg#(Bit#(1)) sclk <- mkInputSyncFor(controller.spi.sclk);
+    Reg#(Bit#(1)) copi <- mkInputSyncFor(controller.spi.copi);
+    ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(controller.spi.cipo);
 
     //
     // Timing
@@ -86,7 +89,7 @@ module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
 
     let limit_for_1khz = fromInteger(parameters.system_frequency_hz / 1000);
 
-    Strobe#(20) tick_1khz <- mkLimitStrobe(1, limit_for_1khz, 0, clocked_by clk_50mhz);
+    Strobe#(20) tick_1khz <- mkLimitStrobe(1, limit_for_1khz, 0);
     mkFreeRunningStrobe(tick_1khz);
 
     //
@@ -94,7 +97,7 @@ module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
     //
 
     function mkDefaultPowerRailModel(name) =
-        mkPowerRailModel(name, tick_1khz, 1, clocked_by clk_50mhz);
+        mkPowerRailModel(name, tick_1khz, 1);
 
     PowerRailModel#(16) vdd18 <- mkDefaultPowerRailModel("VDD18");
     PowerRailModel#(16) vddcore <- mkDefaultPowerRailModel("VDDCORE");
@@ -103,12 +106,12 @@ module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
     PowerRailModel#(16) vdda15 <- mkDefaultPowerRailModel("VDDA15");
     PowerRailModel#(16) vdda18 <- mkDefaultPowerRailModel("VDDA18");
 
-    mkConnection(vdd18.pins, controller.tofino_sequencer_pins.vdd18);
-    mkConnection(vddcore.pins, controller.tofino_sequencer_pins.vddcore);
-    mkConnection(vddpcie.pins, controller.tofino_sequencer_pins.vddpcie);
-    mkConnection(vddt.pins, controller.tofino_sequencer_pins.vddt);
-    mkConnection(vdda15.pins, controller.tofino_sequencer_pins.vdda15);
-    mkConnection(vdda18.pins, controller.tofino_sequencer_pins.vdda18);
+    mkConnection(vdd18.pins, controller.tofino.vdd18);
+    mkConnection(vddcore.pins, controller.tofino.vddcore);
+    mkConnection(vddpcie.pins, controller.tofino.vddpcie);
+    mkConnection(vddt.pins, controller.tofino.vddt);
+    mkConnection(vdda15.pins, controller.tofino.vdda15);
+    mkConnection(vdda18.pins, controller.tofino.vdda18);
 
     //
     // Tofino bits.
@@ -116,12 +119,12 @@ module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
 
     Reg#(Bit#(3)) vid <- mkReg('b110);
 
-    mkConnection(vid._read, controller.tofino_sequencer_pins.vid);
+    mkConnection(vid._read, controller.tofino.vid);
 
-    method csn = spi_csn_sync.send;
-    method sclk = spi_sclk_sync.send;
-    method copi = spi_copi_sync.send;
-    method spi_cipo = spi_cipo_sync;
+    method spi_csn = sync(csn);
+    method spi_sclk = sync(sclk);
+    method spi_copi = sync(copi);
+    method spi_cipo = cipo;
 
     method led = ~{extend(pack(controller.status))};
 endmodule

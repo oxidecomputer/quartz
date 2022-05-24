@@ -9,6 +9,7 @@ interface VSC7448Pins;
     interface PowerRail::Pins v2p5;
     method Bool clocks_enable();
     method Bool reset();
+    method Action thermal_alert(Bool alert);
 endinterface
 
 interface VSC7448Registers;

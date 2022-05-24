@@ -37,6 +37,7 @@ bluespec_library('SidecarMainboardController',
     ],
     deps = [
         ':Tofino2Sequencer',
+        '//hdl:FanModule',
         '//hdl:PowerRail',
         'cobalt//hdl:RegCommon',
         'cobalt//hdl/interfaces:SPI',
@@ -48,6 +49,7 @@ bluespec_library('SidecarMainboardControllerTop',
     ],
     deps = [
         ':SidecarMainboardController',
+        '//hdl:IOSync',
         'cobalt//hdl:SyncBits',
     ])
 

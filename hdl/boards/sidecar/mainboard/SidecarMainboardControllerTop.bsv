@@ -4,12 +4,14 @@ export SidecarMainboardControllerTop(..);
 export mkSidecarMainboardControllerTop;
 
 import Clocks::*;
+import ConfigReg::*;
 import Connectable::*;
 
-import SyncBits::*;
+import SPI::*;
+import IOSync::*;
 
+import FanModule::*;
 import PowerRail::*;
-import SpiDecode::*;
 import SidecarMainboardController::*;
 import SidecarMainboardMiscSequencers::*;
 import Tofino2Sequencer::*;
@@ -114,6 +116,26 @@ interface SidecarMainboardControllerTop;
 
     // Thermal Alert
     (* prefix = "" *) method Action mgmt_to_fpga_temp_therm_l(Bool mgmt_to_fpga_temp_therm_l);
+
+    //
+    // Fans
+    //
+
+    method Bool fpga_to_fan0_hsc_en();
+    (* prefix = "" *) method Action fan0_hsc_to_fpga_pg(Bool fan0_hsc_to_fpga_pg);
+    method Bool fpga_to_fan0_led_l();
+
+    method Bool fpga_to_fan1_hsc_en();
+    (* prefix = "" *) method Action fan1_hsc_to_fpga_pg(Bool fan1_hsc_to_fpga_pg);
+    method Bool fpga_to_fan1_led_l();
+
+    method Bool fpga_to_fan2_hsc_en();
+    (* prefix = "" *) method Action fan2_hsc_to_fpga_pg(Bool fan2_hsc_to_fpga_pg);
+    method Bool fpga_to_fan2_led_l();
+
+    method Bool fpga_to_fan3_hsc_en();
+    (* prefix = "" *) method Action fan3_hsc_to_fpga_pg(Bool fan3_hsc_to_fpga_pg);
+    method Bool fpga_to_fan3_led_l();
 endinterface
 
 (* synthesize,
@@ -122,13 +144,13 @@ endinterface
 module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     // Synchronize the default reset to the default clock.
     Clock clk_50mhz <- exposeCurrentClock();
-    Reset reset_sync <- mkAsyncResetFromCR(2, clk_50mhz);
+    Reset reset <- mkAsyncResetFromCR(2, clk_50mhz);
 
     MainboardController controller <-
-        mkMainboardController(defaultValue, reset_by reset_sync);
+        mkMainboardController(defaultValue, reset_by reset);
 
     //
-    // Sync I/O to the default clock and `reset_sync`. This roughly follows the
+    // Sync I/O to the default clock and `reset`. This roughly follows the
     // constraint file.
     //
 
@@ -136,211 +158,208 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     // SPI peripheral.
     //
 
-    SyncBitIfc#(Bit#(1)) csn_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bit#(1)) sclk_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bit#(1)) copi_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    ReadOnly#(Bit#(1)) cipo_sync <- mkNullCrossingWire(clk_50mhz, controller.spi_pins.cipo);
-
-    mkConnection(csn_sync.read, controller.spi_pins.csn);
-    mkConnection(sclk_sync.read, controller.spi_pins.sclk);
-    mkConnection(copi_sync.read, controller.spi_pins.copi);
+    Reg#(Bit#(1)) csn <- mkInputSyncFor(controller.spi.csn);
+    Reg#(Bit#(1)) sclk <- mkInputSyncFor(controller.spi.sclk);
+    Reg#(Bit#(1)) copi <- mkInputSyncFor(controller.spi.copi);
+    ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(controller.spi.cipo);
 
     //
     // Debug
     //
 
-    ReadOnly#(Bit#(1)) clk_1hz_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.status.clk_1hz);
+    ReadOnly#(Bit#(1)) clk_1hz <- mkOutputSyncFor(controller.status.clk_1hz);
 
     //
     // Clock Generator Sequencer
     //
 
-    ReadOnly#(Bool) clock_generator_reset_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.clock_generator_pins.reset);
-    ReadOnly#(Bool) clock_generator_ldo_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.clock_generator_pins.ldo.en);
-    SyncBitIfc#(Bool) clock_generator_ldo_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-
-    mkConnection(clock_generator_ldo_pg_sync.read, controller.clock_generator_pins.ldo.pg);
+    ReadOnly#(Bool) clocks_reset <- mkOutputSyncFor(controller.clocks.reset);
+    ReadOnly#(Bool) clocks_ldo_en <- mkOutputSyncFor(controller.clocks.ldo.en);
+    Reg#(Bool) clocks_ldo_pg <- mkInputSyncFor(controller.clocks.ldo.pg);
 
     //
     // Tofino Sequencer
     //
 
-    ReadOnly#(Tofino2Resets) tofino_resets_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.tofino_sequencer_pins.resets);
-    SyncBitsIfc#(Bit#(3)) vid_sync <- mkSyncBitsToCC(clk_50mhz, noReset);
+    ReadOnly#(Tofino2Resets) tofino_resets <-
+        mkOutputSyncFor(controller.tofino.resets);
+
+    Reg#(Bit#(3)) vid <- mkInputSync();
 
     (* fire_when_enabled *)
     rule do_set_vid;
-        let vid = vid_sync.read;
-
         // The VID bits are reversed on the PCB and corrected here.
-        controller.tofino_sequencer_pins.vid(
-            unpack({vid[0], vid[1], vid[2]}));
+        controller.tofino.vid(reverseBits(vid));
     endrule
 
-    SyncBitIfc#(Bool) thermal_alert_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    mkConnection(thermal_alert_sync.read, controller.tofino_sequencer_pins.thermal_alert);
+    Reg#(Bool) tofino_thermal_alert <-
+        mkInputSyncFor(controller.tofino.thermal_alert);
 
-    ReadOnly#(Bool) vdd18_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.tofino_sequencer_pins.vdd18.en);
-    SyncBitIfc#(Bool) vdd18_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) vdd18_fault_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) vdd18_vrhot_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    ReadOnly#(Bool) vdd18_en <- mkOutputSyncFor(controller.tofino.vdd18.en);
+    Reg#(Bool) vdd18_pg <- mkInputSyncFor(controller.tofino.vdd18.pg);
+    Reg#(Bool) vdd18_fault <- mkInputSyncFor(controller.tofino.vdd18.fault);
+    Reg#(Bool) vdd18_vrhot <- mkInputSyncFor(controller.tofino.vdd18.vrhot);
 
-    mkConnection(vdd18_pg_sync.read, controller.tofino_sequencer_pins.vdd18.pg);
-    mkConnection(vdd18_fault_sync.read, controller.tofino_sequencer_pins.vdd18.fault);
-    mkConnection(vdd18_vrhot_sync.read, controller.tofino_sequencer_pins.vdd18.vrhot);
+    ReadOnly#(Bool) vddcore_en <- mkOutputSyncFor(controller.tofino.vddcore.en);
+    Reg#(Bool) vddcore_pg <- mkInputSyncFor(controller.tofino.vddcore.pg);
+    Reg#(Bool) vddcore_fault <- mkInputSyncFor(controller.tofino.vddcore.fault);
+    Reg#(Bool) vddcore_vrhot <- mkInputSyncFor(controller.tofino.vddcore.vrhot);
 
-    ReadOnly#(Bool) vddcore_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.tofino_sequencer_pins.vddcore.en);
-    SyncBitIfc#(Bool) vddcore_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) vddcore_fault_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) vddcore_vrhot_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-
-    mkConnection(vddcore_pg_sync.read, controller.tofino_sequencer_pins.vddcore.pg);
-    mkConnection(vddcore_fault_sync.read, controller.tofino_sequencer_pins.vddcore.fault);
-    mkConnection(vddcore_vrhot_sync.read, controller.tofino_sequencer_pins.vddcore.vrhot);
-
-    ReadOnly#(Bool) vddpcie_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.tofino_sequencer_pins.vddpcie.en);
-    SyncBitIfc#(Bool) vddpcie_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-
-    mkConnection(vddpcie_pg_sync.read, controller.tofino_sequencer_pins.vddpcie.pg);
+    ReadOnly#(Bool) vddpcie_en <- mkOutputSyncFor(controller.tofino.vddpcie.en);
+    Reg#(Bool) vddpcie_pg <- mkInputSyncFor(controller.tofino.vddpcie.pg);
 
     // VDDx is a voltage regulator shared between the VDDt and VDDA15 rails. The
     // device signals and interface are wired up accordingly.
-    ReadOnly#(Bool) vddx_en_sync <-
-        mkNullCrossingWire(clk_50mhz,
-            controller.tofino_sequencer_pins.vddt.en ||
-            controller.tofino_sequencer_pins.vdda15.en);
-    SyncBitIfc#(Bool) vddx_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) vddx_fault_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) vddx_vrhot_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    ReadOnly#(Bool) vddx_en <-
+        mkOutputSyncFor(
+            controller.tofino.vddt.en ||
+            controller.tofino.vdda15.en);
+    Reg#(Bool) vddx_pg <- mkInputSyncFor(controller.tofino.vddt.pg);
+    Reg#(Bool) vddx_fault <- mkInputSyncFor(controller.tofino.vddt.fault);
+    Reg#(Bool) vddx_vrhot <- mkInputSyncFor(controller.tofino.vddt.vrhot);
 
-    mkConnection(vddx_pg_sync.read, controller.tofino_sequencer_pins.vddt.pg);
-    mkConnection(vddx_fault_sync.read, controller.tofino_sequencer_pins.vddt.fault);
-    mkConnection(vddx_vrhot_sync.read, controller.tofino_sequencer_pins.vddt.vrhot);
-
-    SyncBitIfc#(Bool) vdda15_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
-
-    mkConnection(vdda15_pg_sync.read, controller.tofino_sequencer_pins.vdda15.pg);
-    mkConnection(vddx_fault_sync.read, controller.tofino_sequencer_pins.vdda15.fault);
-    mkConnection(vddx_vrhot_sync.read, controller.tofino_sequencer_pins.vdda15.vrhot);
+    Reg#(Bool) vdda15_pg <- mkInputSyncFor(controller.tofino.vdda15.pg);
+    mkConnection(vddx_fault, controller.tofino.vdda15.fault);
+    mkConnection(vddx_vrhot, controller.tofino.vdda15.vrhot);
 
     // VDDA18 is colocated with VDD18, but has a discrete enable. The device
     // signals and interface are wired up accordingly.
-    ReadOnly#(Bool) vdda18_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.tofino_sequencer_pins.vdda18.en);
-    SyncBitIfc#(Bool) vdda18_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    ReadOnly#(Bool) vdda18_en <- mkOutputSyncFor(controller.tofino.vdda18.en);
+    Reg#(Bool) vdda18_pg <- mkInputSyncFor(controller.tofino.vdda18.pg);
+    mkConnection(vdd18_fault, controller.tofino.vdda18.fault);
+    mkConnection(vdd18_vrhot, controller.tofino.vdda18.vrhot);
 
-    mkConnection(vdda18_pg_sync.read, controller.tofino_sequencer_pins.vdda18.pg);
-    mkConnection(vdd18_fault_sync.read, controller.tofino_sequencer_pins.vdda18.fault);
-    mkConnection(vdd18_vrhot_sync.read, controller.tofino_sequencer_pins.vdda18.vrhot);
+    ReadOnly#(Bool) tofino_clocks_en <-
+        mkOutputSyncFor(controller.tofino.clocks_enable);
 
-    ReadOnly#(Bool) tofino_clocks_enable_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.tofino_sequencer_pins.clocks_enable);
-
-    ReadOnly#(Bool) tofino_in_a0_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.status.tofino_in_a0);
+    ReadOnly#(Bool) tofino_in_a0 <-
+        mkOutputSyncFor(controller.status.tofino_in_a0);
 
     //
     // VSC7448 Sequencer
     //
 
-    ReadOnly#(Bool) vsc7448_reset_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.vsc7448_pins.reset);
+    ReadOnly#(Bool) vsc7448_reset <- mkOutputSyncFor(controller.vsc7448.reset);
 
-    ReadOnly#(Bool) vsc7448_v1p0_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.vsc7448_pins.v1p0.en);
-    SyncBitIfc#(Bool) vsc7448_v1p0_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    ReadOnly#(Bool) vsc7448_v1p0_en <- mkOutputSyncFor(controller.vsc7448.v1p0.en);
+    Reg#(Bool) vsc7448_v1p0_pg <- mkInputSyncFor(controller.vsc7448.v1p0.pg);
 
-    ReadOnly#(Bool) vsc7448_v1p2_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.vsc7448_pins.v1p2.en);
-    SyncBitIfc#(Bool) vsc7448_v1p2_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    ReadOnly#(Bool) vsc7448_v1p2_en <- mkOutputSyncFor(controller.vsc7448.v1p2.en);
+    Reg#(Bool) vsc7448_v1p2_pg <- mkInputSyncFor(controller.vsc7448.v1p2.pg);
 
-    ReadOnly#(Bool) vsc7448_v2p5_en_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.vsc7448_pins.v2p5.en);
-    SyncBitIfc#(Bool) vsc7448_v2p5_pg_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    ReadOnly#(Bool) vsc7448_v2p5_en <- mkOutputSyncFor(controller.vsc7448.v2p5.en);
+    Reg#(Bool) vsc7448_v2p5_pg <- mkInputSyncFor(controller.vsc7448.v2p5.pg);
 
-    ReadOnly#(Bool) vsc7448_clocks_enable_sync <-
-        mkNullCrossingWire(clk_50mhz, controller.vsc7448_pins.clocks_enable);
+    ReadOnly#(Bool) vsc7448_clocks_en <-
+        mkOutputSyncFor(controller.vsc7448.clocks_enable);
 
-    SyncBitIfc#(Bool) vsc7448_thermal_alert_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+    Reg#(Bool) vsc7448_thermal_alert <-
+        mkInputSyncFor(controller.vsc7448.thermal_alert);
 
-    mkConnection(vsc7448_v1p0_pg_sync.read, controller.vsc7448_pins.v1p0.pg);
-    mkConnection(vsc7448_v1p2_pg_sync.read, controller.vsc7448_pins.v1p2.pg);
-    mkConnection(vsc7448_v2p5_pg_sync.read, controller.vsc7448_pins.v2p5.pg);
+    //
+    // Fans
+    //
+
+    ReadOnly#(Bool) fan0_en <- mkOutputSyncFor(controller.fan[0].en);
+    ReadOnly#(Bool) fan0_led <- mkOutputSyncFor(controller.fan[0].led);
+    Reg#(Bool) fan0_pg <- mkInputSyncFor(controller.fan[0].pg);
+
+    ReadOnly#(Bool) fan1_en <- mkOutputSyncFor(controller.fan[1].en);
+    ReadOnly#(Bool) fan1_led <- mkOutputSyncFor(controller.fan[1].led);
+    Reg#(Bool) fan1_pg <- mkInputSyncFor(controller.fan[1].pg);
+
+    ReadOnly#(Bool) fan2_en <- mkOutputSyncFor(controller.fan[2].en);
+    ReadOnly#(Bool) fan2_led <- mkOutputSyncFor(controller.fan[2].led);
+    Reg#(Bool) fan2_pg <- mkInputSyncFor(controller.fan[2].pg);
+
+    ReadOnly#(Bool) fan3_en <- mkOutputSyncFor(controller.fan[3].en);
+    ReadOnly#(Bool) fan3_led <- mkOutputSyncFor(controller.fan[3].led);
+    Reg#(Bool) fan3_pg <- mkInputSyncFor(controller.fan[3].pg);
 
     //
     // Interface, wiring up device signals.
     //
 
-    method spi_sp_to_fpga_cs1_l = csn_sync.send;
-    method spi_sp_to_fpga_sck = sclk_sync.send;
-    method spi_sp_to_fpga_mosi = copi_sync.send;
-    method spi_sp_to_fpga_miso_r = cipo_sync;
+    method spi_sp_to_fpga_cs1_l = sync(csn);
+    method spi_sp_to_fpga_sck = sync(sclk);
+    method spi_sp_to_fpga_mosi = sync(copi);
+    method spi_sp_to_fpga_miso_r = cipo;
 
-    method fpga_led0 = clk_1hz_sync;
-    method tf_pg_led = tofino_in_a0_sync;
+    method fpga_led0 = clk_1hz;
+    method tf_pg_led = tofino_in_a0;
 
     // Tofino pins
     method fpga_to_tf_core_rst_l = True;
-    method fpga_to_tf_pwron_rst_l = !tofino_resets_sync.pwron;
-    method fpga_to_tf_pcie_rst_l = !tofino_resets_sync.pcie;
-    method tf_to_fpga_vid = vid_sync.send;
+    method fpga_to_tf_pwron_rst_l = !tofino_resets.pwron;
+    method fpga_to_tf_pcie_rst_l = !tofino_resets.pcie;
+    method tf_to_fpga_vid = sync(vid);
 
     method fpga_to_tf_test_core_tap_l = True;
     method fpga_to_tf_test_jtsel = '0;
 
-    method fpga_to_vr_tf_vdd1p8_en = vdd18_en_sync;
-    method vr_tf_v1p8_to_fpga_vdd1p8_pg = vdd18_pg_sync.send;
-    method vr_tf_v1p8_to_fpga_fault = vdd18_fault_sync.send;
-    method Action vr_tf_v1p8_to_fpga_vr_hot_l(Bool vrhot_l) = vdd18_vrhot_sync.send(!vrhot_l);
+    method fpga_to_vr_tf_vdd1p8_en = vdd18_en;
+    method vr_tf_v1p8_to_fpga_vdd1p8_pg = sync(vdd18_pg);
+    method vr_tf_v1p8_to_fpga_fault = sync(vdd18_fault);
+    method vr_tf_v1p8_to_fpga_vr_hot_l = sync_inverted(vdd18_vrhot);
 
-    method fpga_to_vr_tf_vddcore_en = vddcore_en_sync;
-    method vr_tf_vddcore_to_fpga_pg = vddcore_pg_sync.send;
-    method vr_tf_vddcore_to_fpga_fault = vddcore_fault_sync.send;
-    method Action vr_tf_vddcore_to_fpga_vrhot_l(Bool vrhot_l) = vddcore_vrhot_sync.send(!vrhot_l);
+    method fpga_to_vr_tf_vddcore_en = vddcore_en;
+    method vr_tf_vddcore_to_fpga_pg = sync(vddcore_pg);
+    method vr_tf_vddcore_to_fpga_fault = sync(vddcore_fault);
+    method vr_tf_vddcore_to_fpga_vrhot_l = sync_inverted(vddcore_vrhot);
 
-    method fpga_to_ldo_v0p75_tf_pcie_en = vddpcie_en_sync;
-    method ldo_to_fpga_v0p75_tf_pcie_pg = vddpcie_pg_sync.send;
+    method fpga_to_ldo_v0p75_tf_pcie_en = vddpcie_en;
+    method ldo_to_fpga_v0p75_tf_pcie_pg = sync(vddpcie_pg);
 
-    method fpga_to_vr_tf_vddx_en = vddx_en_sync;
-    method vr_tf_vddx_to_fpga_vddt_pg = vddx_pg_sync.send;
-    method vr_tf_vddx_to_fpga_fault = vddx_fault_sync.send;
-    method Action vr_tf_vddx_to_fpga_vrhot_l(Bool vrhot_l) = vddx_vrhot_sync.send(!vrhot_l);
+    method fpga_to_vr_tf_vddx_en = vddx_en;
+    method vr_tf_vddx_to_fpga_vddt_pg = sync(vddx_pg);
+    method vr_tf_vddx_to_fpga_fault = sync(vddx_fault);
+    method vr_tf_vddx_to_fpga_vrhot_l = sync_inverted(vddx_vrhot);
 
-    method vr_tf_vddx_to_fpga_vdda15_pg = vdda15_pg_sync.send;
+    method vr_tf_vddx_to_fpga_vdda15_pg = sync(vdda15_pg);
 
-    method fpga_to_vr_tf_vdda1p8_en = vdda18_en_sync;
-    method vr_tf_v1p8_to_fpga_vdda1p8_pg = vdda18_pg_sync.send;
+    method fpga_to_vr_tf_vdda1p8_en = vdda18_en;
+    method vr_tf_v1p8_to_fpga_vdda1p8_pg = sync(vdda18_pg);
 
-    method Action tf_to_fpga_temp_therm_l(Bool alert_l) = thermal_alert_sync.send(!alert_l);
+    method tf_to_fpga_temp_therm_l = sync_inverted(tofino_thermal_alert);
 
     // Clock Generator pins
-    method fpga_to_smu_reset_l = !clock_generator_reset_sync;
-    method fpga_to_ldo_smu_en = clock_generator_ldo_en_sync;
-    method ldo_to_fpga_smu_pg = clock_generator_ldo_pg_sync.send;
+    method fpga_to_smu_reset_l = !clocks_reset;
+    method fpga_to_ldo_smu_en = clocks_ldo_en;
+    method ldo_to_fpga_smu_pg = sync(clocks_ldo_pg);
 
-    method fpga_to_smu_tf_clk_en_l = !tofino_clocks_enable_sync;
-    method fpga_to_smu_mgmt_clk_en_l = !vsc7448_clocks_enable_sync;
+    method fpga_to_smu_tf_clk_en_l = !tofino_clocks_en;
+    method fpga_to_smu_mgmt_clk_en_l = !vsc7448_clocks_en;
 
     // VSC7448 pins
-    method fpga_to_mgmt_reset_l = !vsc7448_reset_sync;
+    method fpga_to_mgmt_reset_l = !vsc7448_reset;
 
-    method fpga_to_vr_v1p0_mgmt_en = vsc7448_v1p0_en_sync;
-    method vr_v1p0_mgmt_to_fpga_pg = vsc7448_v1p0_pg_sync.send;
+    method fpga_to_vr_v1p0_mgmt_en = vsc7448_v1p0_en;
+    method vr_v1p0_mgmt_to_fpga_pg = sync(vsc7448_v1p0_pg);
 
-    method fpga_to_ldo_v1p2_mgmt_en = vsc7448_v1p2_en_sync;
-    method ldo_to_fpga_v1p2_mgmt_pg = vsc7448_v1p2_pg_sync.send;
+    method fpga_to_ldo_v1p2_mgmt_en = vsc7448_v1p2_en;
+    method ldo_to_fpga_v1p2_mgmt_pg = sync(vsc7448_v1p2_pg);
 
-    method fpga_to_ldo_v2p5_mgmt_en = vsc7448_v2p5_en_sync;
-    method ldo_to_fpga_v2p5_mgmt_pg = vsc7448_v2p5_pg_sync.send;
+    method fpga_to_ldo_v2p5_mgmt_en = vsc7448_v2p5_en;
+    method ldo_to_fpga_v2p5_mgmt_pg = sync(vsc7448_v2p5_pg);
 
-    method Action mgmt_to_fpga_temp_therm_l(Bool alert_l) = vsc7448_thermal_alert_sync.send(!alert_l);
+    method mgmt_to_fpga_temp_therm_l = sync_inverted(vsc7448_thermal_alert);
+
+    // Fan pins
+    method fpga_to_fan0_hsc_en = fan0_en;
+    method fan0_hsc_to_fpga_pg = sync(fan0_pg);
+    method fpga_to_fan0_led_l = fan0_led; // Not active low on Fan VPD.
+
+    method fpga_to_fan1_hsc_en = fan1_en;
+    method fan1_hsc_to_fpga_pg = sync(fan1_pg);
+    method fpga_to_fan1_led_l = fan1_led; // Not active low on Fan VPD.
+
+    method fpga_to_fan2_hsc_en = fan2_en;
+    method fan2_hsc_to_fpga_pg = sync(fan2_pg);
+    method fpga_to_fan2_led_l = fan2_led; // Not active low on Fan VPD.
+
+    method fpga_to_fan3_hsc_en = fan3_en;
+    method fan3_hsc_to_fpga_pg = sync(fan3_pg);
+    method fpga_to_fan3_led_l = fan3_led; // Not active low on Fan VPD.
 endmodule
 
 endpackage

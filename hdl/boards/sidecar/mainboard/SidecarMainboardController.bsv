@@ -9,13 +9,15 @@ import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
 import GetPut::*;
+import Vector::*;
 
+import SPI::*;
 import Strobe::*;
 
+import FanModule::*;
 import SidecarMainboardControllerReg::*;
 import SidecarMainboardControllerSpiServer::*;
 import SidecarMainboardMiscSequencers::*;
-import SpiDecode::*;
 import Tofino2Sequencer::*;
 
 
@@ -42,10 +44,11 @@ typedef struct {
 } Status deriving (Bits, Eq, FShow);
 
 interface MainboardController;
-    interface SpiPeripheralPins spi_pins;
-    interface ClockGeneratorPins clock_generator_pins;
-    interface Tofino2Sequencer::Pins tofino_sequencer_pins;
-    interface VSC7448Pins vsc7448_pins;
+    interface SpiPeripheralPins spi;
+    interface ClockGeneratorPins clocks;
+    interface Tofino2Sequencer::Pins tofino;
+    interface VSC7448Pins vsc7448;
+    interface Vector#(4, FanModule::Pins) fan;
     interface ReadOnly#(Status) status;
 endinterface
 
@@ -89,6 +92,12 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
     mkConnection(asIfc(tick_1khz), asIfc(vsc7448_sequencer.tick_1ms));
 
     //
+    // Fans
+    //
+
+    Vector#(4, FanModule) fans <- replicateM(mkFanModule());
+
+    //
     // SPI peripheral
     //
 
@@ -118,10 +127,11 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
     // Interfaces
     //
 
-    interface SpiPeripheralPins spi_pins = spi_phy.pins;
-    interface ClockGeneratorPins clock_generator_pins = clock_generator_sequencer.pins;
-    interface Tofino2Sequencer::Pins tofino_sequencer_pins = tofino_sequencer.pins;
-    interface VSC7448Pins vsc7448_pins = vsc7448_sequencer.pins;
+    interface SpiPeripheralPins spi = spi_phy.pins;
+    interface ClockGeneratorPins clocks = clock_generator_sequencer.pins;
+    interface Tofino2Sequencer::Pins tofino = tofino_sequencer.pins;
+    interface VSC7448Pins vsc7448 = vsc7448_sequencer.pins;
+    interface fan = map(FanModule::pins, fans);
     interface ReadOnly status = regToReadOnly(status_r);
 endmodule
 
