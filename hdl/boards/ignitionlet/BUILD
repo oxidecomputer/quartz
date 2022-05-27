@@ -68,7 +68,7 @@ yosys_design('ignitionlet_target_power_button_top',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_power_button',
-    env = 'ignitionlet_target',
+    env = 'ignition_target_rev_a',
     design = ':ignitionlet_target_power_button_top#ignitionlet_target_power_button_top.json',
     deps = [
         ':ignitionlet_target_power_button_top',
@@ -87,7 +87,7 @@ yosys_design('ignitionlet_target_reset_button_top',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_reset_button',
-    env = 'ignitionlet_target',
+    env = 'ignition_target_rev_a',
     design = ':ignitionlet_target_reset_button_top#ignitionlet_target_reset_button_top.json',
     deps = [
         ':ignitionlet_target_reset_button_top',
@@ -106,7 +106,7 @@ yosys_design('ignitionlet_target_reset_button_aux_loopback_indicators_top',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_reset_button_aux_loopback_indicators',
-    env = 'ignitionlet_target',
+    env = 'ignition_target_rev_a',
     design = ':ignitionlet_target_reset_button_aux_loopback_indicators_top#' \
                 'ignitionlet_target_reset_button_aux_loopback_indicators_top.json',
     deps = [
