@@ -47,14 +47,15 @@ module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
 
     // Helper which adds a rule updating the provided register if a SPI request
     // matches the given address.
-    function Rules do_spi_write(ConfigReg#(t) r, Integer address)
+    function Rules do_spi_write(Integer address, ConfigReg#(t) r)
             provisos (
                 Bits#(t, sz),
-                Add#(sz, a__, 8));
+                // Make sure the register type is <= 8 bits in width.
+                Add#(sz, x, 8));
         return (rules
                 (* fire_when_enabled *)
                 rule do_spi_write (fromInteger(address) == spi_request.address);
-                    // Make `v` and `wdata` equal length.
+                    // Make `r` and `wdata` equal length.
                     let r_bits = zeroExtend(pack(r));
                     let wdata_bits = pack(spi_request.wdata);
 
@@ -68,8 +69,8 @@ module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
     endfunction
 
     // Update registers on SPI requests.
-    addRules(do_spi_write(scratchpad, scratchpadOffset));
-    addRules(do_spi_write(tofino_sequencer.registers.ctrl, tofinoSeqCtrlOffset));
+    addRules(do_spi_write(scratchpadOffset, scratchpad));
+    addRules(do_spi_write(tofinoSeqCtrlOffset, tofino_sequencer.registers.ctrl));
 
     interface Put request = toPut(asIfc(spi_request));
     interface Put response = toGet(asIfc(spi_response));
