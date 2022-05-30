@@ -47,7 +47,7 @@ endmodule
 //
 // `mkInputSyncFor` is syntactic sugar for `mkInputSync`, connecting the
 // `_read()` method to the given action method. This allows the synchronized
-// input to be forwarded to downstream modules in a single statement, shortning
+// input to be forwarded to downstream modules in a single statement, shortening
 // this common usecase in top modules.
 //
 module mkInputSyncFor #(function Action f(bits_type val)) (Reg#(bits_type))
@@ -67,12 +67,12 @@ endmodule
 // (async) reset is synchronized in a top module, implicitly creating a new
 // reset context, before being used to reset downstream modules. Outputs from
 // these modules connected to method in the top interface would otherwise
-// righteously be flagged for crossing a reset domain.
+// correctly be flagged for crossing a reset domain.
 //
 // Note that this should only be used for output signals connecting to external
 // pins without any additional logic in the middle. In all other cases the
-// resulting behavior is like to be not what is intended and proper
-// synchronisation primitives should be used.
+// resulting behavior is likely not what is intended and proper synchronisation
+// primitives should be used.
 //
 module mkOutputSyncFor #(bits_type val) (ReadOnly#(bits_type))
         provisos (Bits#(bits_type, sz));
@@ -113,7 +113,7 @@ function (function Action f(bits_type val))
 // inverted before being synchronized.
 //
 // Performing the inversion where the synchronizer is connected to the top
-// interface method expresses the intend that the signal is inverted before
+// interface method expresses the intent that the signal is inverted before
 // being consumed by the design. In addition some synthesis tools may be able to
 // map the bit inversion on logic provided by the IO tile.
 //
