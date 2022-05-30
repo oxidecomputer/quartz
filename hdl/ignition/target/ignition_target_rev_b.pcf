@@ -1,5 +1,7 @@
 set_io clk_50mhz A43
 
+set_io --warn-no-port -pullup yes design_reset_l A12
+
 set_io --warn-no-port -pullup yes id[0] A38
 set_io --warn-no-port -pullup yes id[1] A39
 set_io --warn-no-port -pullup yes id[2] A40
@@ -22,10 +24,15 @@ set_io --warn-no-port btn A25
 
 # AUX0
 set_io --warn-no-port aux0_rx_p A4
+# _N pins of diff receivers are implicitly handled by P&R and leaving them
+# in the constraints file generates a warning. Adding as a comment for
+# completeness.
+#                     aux0_rx_n B3
 set_io --warn-no-port aux0_tx_p A2
 set_io --warn-no-port aux0_tx_n B1
 
 # AUX1
 set_io --warn-no-port aux1_rx_p B8
+#                     aux1_rx_n A10
 set_io --warn-no-port aux1_tx_p A8
 set_io --warn-no-port aux1_tx_n B5

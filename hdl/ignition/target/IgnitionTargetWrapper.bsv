@@ -23,7 +23,10 @@ import SyncBits::*;
 module mkIgnitionTargetIOAndResetWrapper
         #(Parameters parameters) (IgnitionletTarget);
     Clock clk_50mhz <- exposeCurrentClock();
-    Reset initial_reset <- InitialReset::mkInitialReset(3);
+    Reset reset_sync <- case (parameters.external_reset)
+            False: InitialReset::mkInitialReset(2);
+            True: mkAsyncResetFromCR(2, clk_50mhz);
+        endcase;
 
     // Input synchronizers to avoid meta unstable signals. These can be uninitialized since the
     // initial reset above runs for two cycles causing the uninitialized state to be ignored. Using
@@ -38,7 +41,7 @@ module mkIgnitionTargetIOAndResetWrapper
         mkSchmittRegA(False, EdgePatterns {
             negative_edge: 'b000,
             positive_edge: 'b001,
-            mask: 'b111}, reset_by initial_reset);
+            mask: 'b111}, reset_by reset_sync);
     Reg#(Bool) btn_filter_prev <- mkRegU();
 
     // Transceiver primitives.
@@ -50,11 +53,11 @@ module mkIgnitionTargetIOAndResetWrapper
 
     // Implementation of the Ignition Target application. This module assumes inputs are
     // synchronized/filtered/debounced and Inout interfaces are resolved.
-    IgnitionTarget app <- mkIgnitionTarget(parameters, reset_by initial_reset);
+    IgnitionTarget app <- mkIgnitionTarget(parameters, reset_by reset_sync);
 
     // Strobe, used as a time pulse to generate timed events.
     Strobe#(24) strobe_1khz <-
-        mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by initial_reset);
+        mkFractionalStrobe(50_000_000 / 1_000, 0, reset_by reset_sync);
     mkFreeRunningStrobe(strobe_1khz);
 
     // This null crossings is needed to convince BSC the missing reset

@@ -61,6 +61,7 @@ typedef union tagged {
 // The behavior of an IgnitionTarget application can be tweaked. This is
 // primarily useful for test benches.
 typedef struct {
+    Bool external_reset;
     ButtonBehavior button_behavior;
     Bool invert_cmd_bits;
     Bool aux_loopback_as_cmd_bits;
@@ -68,6 +69,7 @@ typedef struct {
 
 Parameters default_app_with_button_as_reset =
     Parameters{
+        external_reset: True,
         button_behavior:
             tagged ResetButton {
                 min_duration: 2000, // 2s if app tick at 1KHz.
@@ -77,6 +79,7 @@ Parameters default_app_with_button_as_reset =
 
 Parameters default_app_with_power_button =
     Parameters{
+        external_reset: True,
         button_behavior:
             tagged PowerButton {
                 cool_down: 50},     // 50 ms if app tick at 1KHz.
