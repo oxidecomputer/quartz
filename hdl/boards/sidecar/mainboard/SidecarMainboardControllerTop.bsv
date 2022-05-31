@@ -11,6 +11,7 @@ import SPI::*;
 import IOSync::*;
 
 import FanModule::*;
+import PCIeEndpointController::*;
 import PowerRail::*;
 import SidecarMainboardController::*;
 import SidecarMainboardMiscSequencers::*;
@@ -85,6 +86,11 @@ interface SidecarMainboardControllerTop;
 
     // Thermal Alert
     (* prefix = "" *) method Action tf_to_fpga_temp_therm_l(Bool tf_to_fpga_temp_therm_l);
+
+    // PCIe Endpoint
+    method Bool pcie_fpga_to_host_prsnt_l();
+    method Bool pcie_fpga_to_host_pwrflt();
+    (* prefix = "" *) method Action pcie_host_to_fpga_perst(Bool pcie_host_to_fpga_perst);
 
     //
     // Clock Management
@@ -235,6 +241,19 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     ReadOnly#(Bool) tofino_in_a0 <-
         mkOutputSyncFor(controller.status.tofino_in_a0);
 
+    // PCIe Endpoint
+    ReadOnly#(Bool) pcie_present <-
+        mkOutputSyncFor(controller.pcie_endpoint.present);
+    ReadOnly#(Bool) pcie_power_fault <-
+        mkOutputSyncFor(controller.pcie_endpoint.power_fault);
+    // TODO (arjen): The PWREN pin was repurposed to ALERT pin between Gimlet
+    // Rev A and Rev B. The Sidecar mainboard is still configured as input. Keep
+    // this disabled until an MCN has been assigned or Sidecar Mainboard Rev B
+    // is released.
+    //ReadOnly#(Bool) pcie_alert <-
+    //    mkOutputSyncFor(controller.pcie_endpoint.alert);
+    Reg#(Bool) pcie_reset <- mkInputSyncFor(controller.pcie_endpoint.reset);
+
     //
     // VSC7448 Sequencer
     //
@@ -321,6 +340,10 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     method vr_tf_v1p8_to_fpga_vdda1p8_pg = sync(vdda18_pg);
 
     method tf_to_fpga_temp_therm_l = sync_inverted(tofino_thermal_alert);
+
+    method pcie_fpga_to_host_prsnt_l = !pcie_present;
+    method pcie_fpga_to_host_pwrflt = pcie_power_fault;
+    method pcie_host_to_fpga_perst = sync_inverted(pcie_reset);
 
     // Clock Generator pins
     method fpga_to_smu_reset_l = !clocks_reset;

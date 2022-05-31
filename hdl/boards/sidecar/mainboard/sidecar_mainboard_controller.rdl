@@ -69,10 +69,6 @@ addrmap sidecar_mainboard_controller {
             hw = rw;
             desc = "Acknowledge that VDDCORE has been adjusted according to the VID";
         } ACK_VID[1] = 0;
-        field {
-            hw = rw;
-            desc = "Keep Tofino PCIe in reset";
-        } PCIE_RESET[1] = 0;
     } TOFINO_SEQ_CTRL;
 
     reg {
@@ -246,4 +242,36 @@ addrmap sidecar_mainboard_controller {
             desc = "Clocks Enable";
         } CLOCKS_EN[1] = 0;
     } TOFINO_MISC;
+
+    reg {
+        name = "PCIe Hotplug Control";
+        default sw = w;
+        default hw = r;
+
+        field {
+            desc = "Present";
+        } PRESENT[1] = 0;
+        field {
+            desc = "Power Fault";
+        } POWER_FAULT[1] = 0;
+        field {
+            desc = "Alert";
+        } ALERT[1] = 0;
+        field {
+            desc = "PCIe Reset";
+        } RESET[1] = 0;
+        field {
+            desc = "Override host PCIe Reset";
+        } OVERRIDE_HOST_RESET[1] = 0;
+    } PCIE_HOTPLUG_CTRL;
+
+    reg {
+        name = "PCIe Hotplug Status";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Host PCIe Reset";
+        } HOST_RESET[1] = 0;
+    } PCIE_HOTPLUG_STATUS;
 };

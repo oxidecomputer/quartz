@@ -610,9 +610,8 @@ endmodule
 // mkPCIeResetHeldOnPowerUpTest
 //
 // A test which covers the ability for software to keep PCIe in reset on power
-// up by setting the `PCIE_RESET` bit in `TOFINO_SEQ_CTRL`. This would be used
-// to inspect (and/or program) the PCIe configuration in EEPROM after power up,
-// but before allowing link up.
+// up. This would be used to inspect (and/or program) the PCIe configuration in
+// EEPROM after power up, but before allowing link up.
 //
 // The intended outcome is for the PCIe reset signal to remain asserted after
 // power up.
@@ -622,68 +621,47 @@ module mkPCIeResetHeldOnPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
 
+    Reg#(Bool) pcie_reset_released <- mkReg(False);
+
+    (* fire_when_enabled *)
+    rule do_pcie_reset;
+        bench.pcie_reset();
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_pcie_reset_monitor (!bench.pcie_in_reset);
+        pcie_reset_released <= True;
+    endrule
+
     mkAutoFSM(seq
         dynamicAssert(bench.in_a2, "Expected sequencer in A2");
-        bench.sequencer.ctrl.pcie_reset <= 1;
         bench.power_up();
         bench.ack_vid();
         await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
+        dynamicAssert(
+            !bench.error_occured,
+            "Expected no error during power up");
         $display("Tofino2 in A0");
 
         $display("Tofino2 PCIe reset: ", fshow(bench.pcie_in_reset));
         dynamicAssert(bench.pcie_in_reset, "Expected PCIe still in reset");
+        dynamicAssert(
+            !pcie_reset_released,
+            "Expected PCIe reset not released during power up");
     endseq);
 
     mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
 endmodule
 
 //
-// mkPCIeResetBySoftwareInA0Test
-//
-// A test which covers the ability for software to keep reset PCIe by toggling
-// the `PCIE_RESET` bit in `TOFINO_SEQ_CTRL`. The intended outcome is for the
-// PCIe reset signal to follow the state of the `PCIE_RESET` bit.
-//
-(* synthesize *)
-module mkPCIeResetBySoftwareInA0Test (Empty);
-    Parameters parameters = defaultValue;
-    Bench bench <- mkBench(parameters);
-
-    mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
-        bench.power_up();
-        bench.ack_vid();
-        await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
-
-        repeat(100) noAction;
-
-        dynamicAssert(!bench.pcie_in_reset, "Expected PCIe not in reset");
-        bench.sequencer.ctrl.pcie_reset <= 1;
-        await(bench.pcie_in_reset);
-        $display("Tofino2 PCIe reset: ", fshow(bench.pcie_in_reset));
-
-        bench.sequencer.ctrl.pcie_reset <= 0;
-        await(!bench.pcie_in_reset);
-        $display("Tofino2 PCIe reset: ", fshow(bench.pcie_in_reset));
-
-        dynamicAssert(!bench.pcie_in_reset, "Expected PCIe not in reset");
-    endseq);
-
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
-endmodule
-
-//
-// mkPCIeResetExternalInA0Test
+// mkPCIeResetInA0Test
 //
 // A test which covers the ability for the attached host to reset PCIe by
 // asserting PERST. The intended outcome is for the PCIe reset signal to follow
 // the state of `Tofino2Sequencer.pcie_reset()`.
 //
 (* synthesize *)
-module mkPCIeResetExternalInA0Test (Empty);
+module mkPCIeResetInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
 

@@ -5,6 +5,7 @@ import ConfigReg::*;
 import Connectable::*;
 import GetPut::*;
 
+import PCIeEndpointController::*;
 import RegCommon::*;
 import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
@@ -15,7 +16,9 @@ typedef RegResp#(8) SpiResponse;
 
 typedef Server#(SpiRequest, SpiResponse) SpiServer;
 
-module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
+module mkSpiServer
+        #(Tofino2Sequencer tofino_sequencer,
+            PCIeEndpointController pcie_endpoint) (SpiServer);
     Wire#(SpiRequest) spi_request <- mkDWire(SpiRequest{address: 0, wdata: 0, op: NOOP});
     Wire#(SpiResponse) spi_response <- mkWire();
 
@@ -41,6 +44,8 @@ module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
                 fromInteger(tofinoPowerVidOffset): pack(tofino_sequencer.registers.vid);
                 fromInteger(tofinoResetOffset): pack(tofino_sequencer.registers.tofino_reset);
                 fromInteger(tofinoMiscOffset): pack(tofino_sequencer.registers.misc);
+                fromInteger(pcieHotplugCtrlOffset): pack(pcie_endpoint.ctrl);
+                fromInteger(pcieHotplugStatusOffset): pack(pcie_endpoint.status);
                 default: 'hff;
             endcase};
     endrule
@@ -71,6 +76,7 @@ module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
     // Update registers on SPI requests.
     addRules(do_spi_write(scratchpadOffset, scratchpad));
     addRules(do_spi_write(tofinoSeqCtrlOffset, tofino_sequencer.registers.ctrl));
+    addRules(do_spi_write(pcieHotplugCtrlOffset, pcie_endpoint.ctrl));
 
     interface Put request = toPut(asIfc(spi_request));
     interface Put response = toGet(asIfc(spi_response));

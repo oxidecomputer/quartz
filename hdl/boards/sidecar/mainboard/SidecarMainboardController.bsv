@@ -15,6 +15,7 @@ import SPI::*;
 import Strobe::*;
 
 import FanModule::*;
+import PCIeEndpointController::*;
 import SidecarMainboardControllerReg::*;
 import SidecarMainboardControllerSpiServer::*;
 import SidecarMainboardMiscSequencers::*;
@@ -38,6 +39,7 @@ instance DefaultValue#(Parameters);
 endinstance
 
 typedef struct {
+    Bool pcie_present;
     Bool tofino_in_a0;
     Bool tofino_sequencer_running;
     Bit#(1) clk_1hz;
@@ -47,6 +49,7 @@ interface MainboardController;
     interface SpiPeripheralPins spi;
     interface ClockGeneratorPins clocks;
     interface Tofino2Sequencer::Pins tofino;
+    interface PCIeEndpointController::Pins pcie_endpoint;
     interface VSC7448Pins vsc7448;
     interface Vector#(4, FanModule::Pins) fan;
     interface ReadOnly#(Status) status;
@@ -74,13 +77,30 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
     mkConnection(asIfc(tick_1khz), asIfc(clock_generator_sequencer.tick_1ms));
 
     //
-    // Tofino 2 sequencer
+    // Tofino 2
     //
 
     Tofino2Sequencer tofino_sequencer <-
         mkTofino2Sequencer(parameters.tofino_sequencer);
+    PCIeEndpointController pcie_endpoint_ <- mkPCIeEndpointController();
 
     mkConnection(asIfc(tick_1khz), asIfc(tofino_sequencer.tick_1ms));
+
+    // Handle PCIe reset.
+    (* fire_when_enabled *)
+    rule do_pcie_reset;
+        let software_reset =
+            pcie_endpoint_.ctrl.override_host_reset == 1 &&
+            pcie_endpoint_.ctrl.reset == 1;
+
+        let host_reset =
+            pcie_endpoint_.ctrl.override_host_reset == 0 &&
+            pcie_endpoint_.status.host_reset == 1;
+
+        if (software_reset || host_reset) begin
+            tofino_sequencer.pcie_reset();
+        end
+    endrule
 
     //
     // VSC7748 sequencer
@@ -103,7 +123,10 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
 
     SpiPeripheralPhy spi_phy <- mkSpiPeripheralPhy();
     SpiDecodeIF spi_decoder <- mkSpiRegDecode();
-    SpiServer spi_server <- mkSpiServer(tofino_sequencer);
+    SpiServer spi_server <-
+        mkSpiServer(
+            tofino_sequencer,
+            pcie_endpoint_);
 
     mkConnection(spi_phy.decoder_if, spi_decoder.spi_byte);
     mkConnection(spi_decoder.reg_con, spi_server);
@@ -120,7 +143,8 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
             clk_1hz: (tick_2hz ? ~status_r.clk_1hz : status_r.clk_1hz),
             tofino_sequencer_running:
                 tofino_sequencer.registers.state.state != 0,
-            tofino_in_a0: tofino_sequencer.registers.state.state == 2};
+            tofino_in_a0: tofino_sequencer.registers.state.state == 2,
+            pcie_present: pcie_endpoint_.pins.present};
     endrule
 
     //
@@ -130,6 +154,7 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
     interface SpiPeripheralPins spi = spi_phy.pins;
     interface ClockGeneratorPins clocks = clock_generator_sequencer.pins;
     interface Tofino2Sequencer::Pins tofino = tofino_sequencer.pins;
+    interface PCIeEndpointController::Pins pcie_endpoint = pcie_endpoint_.pins;
     interface VSC7448Pins vsc7448 = vsc7448_sequencer.pins;
     interface fan = map(FanModule::pins, fans);
     interface ReadOnly status = regToReadOnly(status_r);

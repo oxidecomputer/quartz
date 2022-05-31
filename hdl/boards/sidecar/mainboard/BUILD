@@ -31,6 +31,7 @@ bluespec_library('Tofino2Sequencer',
 
 bluespec_library('SidecarMainboardController',
     sources = [
+        'PCIeEndpointController.bsv',
         'SidecarMainboardController.bsv',
         'SidecarMainboardControllerSpiServer.bsv',
         'SidecarMainboardMiscSequencers.bsv',
