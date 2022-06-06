@@ -198,7 +198,8 @@ import PowerRail::*;
         (* fire_when_enabled *)
         rule do_outputs;
             seq_to_nic_cld_rst_l <= pack(state == DONE && !cld_rst_override);
-            seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && !perst_override);
+            seq_to_nic_perst_l <= pack(state == DONE && !perst_override);
+            //seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && !perst_override);
             nic_to_sp3_pwrflt_l <= 1;
             seq_to_nic_comb_pg_l <= pack(state != DELAY && state != DONE);
         endrule

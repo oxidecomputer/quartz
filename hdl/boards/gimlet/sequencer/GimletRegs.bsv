@@ -40,7 +40,7 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(Status) status <- mkConfigRegU();
     ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(
         DbgCtrl {
-            nic_perst_override : 0,
+            nic_perst_override : 1,
             nic_cld_rst_override: 1,
             reg_ctrl_en: 0,
             ignore_sp: 0
