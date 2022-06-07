@@ -244,7 +244,7 @@ interface OutPins;
         method Bit#(1) pwr_cont_dimm_efgh_en0();
         method Bit#(1) seq_to_vtt_abcd_en();
         method Bit#(1) seq_to_nic_perst_l();
-        method Bit#(1) nic_to_sp3_pwrflt_l();
+        // method Bit#(1) nic_to_sp3_pwrflt_l();
         method Bit#(1) seq_to_sp3_v1p8_en();
         method Bit#(1) seq_to_dimm_abcd_v2p5_en();
         method Bit#(1) seq_to_v3p3_sys_en();
@@ -259,13 +259,19 @@ interface OutPins;
         method Bit#(1) pwr_cont2_sp3_pwrok();
         method Bit#(1) pwr_cont_dimm_en1();
         method Bit#(1) pwr_cont_dimm_en0();
-        method Bit#(1) seq_to_nic_comb_pg_l();
+        // method Bit#(1) seq_to_nic_comb_pg_l();
         method Bit#(1) seq_to_sp3_pwr_good();
-        method Bit#(1) seq_to_sp3_pwr_btn_l();
-        method Bit#(1) seq_to_sp3_sys_rst_l();
+        // method Bit#(1) seq_to_sp3_pwr_btn_l();
+        // method Bit#(1) seq_to_sp3_sys_rst_l();
         method Bit#(1) pwr_cont2_sp3_en();
     endinterface
 
+    interface ODPins;
+        interface Inout#(Bit#(1)) seq_to_sp3_pwr_btn_l;
+        interface Inout#(Bit#(1)) seq_to_sp3_sys_rst_l;
+        interface Inout#(Bit#(1)) seq_to_nic_comb_pg_l;
+        interface Inout#(Bit#(1)) nic_to_sp3_pwrflt_l;
+    endinterface
 (* always_enabled *)
 interface SeqPins;
     (* prefix = "" *)
@@ -274,6 +280,8 @@ interface SeqPins;
     interface InPins inputs;
     (* prefix = "" *)
     interface OutPins outputs;
+    (* prefix = "" *)
+    interface ODPins od_outputs;
     
 endinterface
 
@@ -294,6 +302,11 @@ module mkGimletSeqTop (SeqPins);
     Reg#(Bit#(1)) dummy_low <- mkReg(0);
 
     ICE40::Output#(Bit#(1)) cipo <- mkOutput(OutputTriState, False);
+    
+    ICE40::Output#(Bit#(1)) seq_to_sp3_pwr_btn_l <- mkOutput(OutputTriState, False);
+    ICE40::Output#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkOutput(OutputTriState, False);
+    ICE40::Output#(Bit#(1)) seq_to_nic_comb_pg_l <- mkOutput(OutputTriState, False);
+    ICE40::Output#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkOutput(OutputTriState, False);
 
     InputSync sync <- mkInputSync();
 
@@ -348,6 +361,19 @@ module mkGimletSeqTop (SeqPins);
     rule tristate (inner.spi_pins.output_en);
         cipo <= inner.spi_pins.cipo;
     endrule
+
+    rule comb_pg_l_tris (inner.nic_pins.seq_to_nic_comb_pg_l == 0);
+        seq_to_nic_comb_pg_l <= 0;
+    endrule
+
+    rule pwr_btn_l_tris (inner.a0_pins.sp3.seq_to_sp3_pwr_btn_l == 0);
+        seq_to_sp3_pwr_btn_l <= 0;
+    endrule
+
+    rule sys_rst_l_tris (inner.a0_pins.sp3.seq_to_sp3_sys_rst_l == 0);
+        seq_to_sp3_sys_rst_l <= 0;
+    endrule
+
 
     rule do_board_rev;
         brd_rev <= unpack({'0, sync.syncd.seq_rev_id2, sync.syncd.seq_rev_id1, sync.syncd.seq_rev_id0});
@@ -447,7 +473,6 @@ module mkGimletSeqTop (SeqPins);
         method pwr_cont_dimm_efgh_en0 = inner.a0_pins.vpp_efgh.en;
         method seq_to_vtt_abcd_en = inner.a0_pins.vtt_ab.en;
         method seq_to_nic_perst_l = inner.nic_pins.seq_to_nic_perst_l;
-        method nic_to_sp3_pwrflt_l = dummy_high._read;
         method seq_to_sp3_v1p8_en = inner.a0_pins.v1p8_sp3.en;
         method seq_to_dimm_abcd_v2p5_en = dummy_high._read;
         method seq_to_v3p3_sys_en = inner.a0_pins.v3p3_sys.en;
@@ -462,11 +487,14 @@ module mkGimletSeqTop (SeqPins);
         method pwr_cont2_sp3_pwrok = inner.a0_pins.pwr_cont2_sp3_pwrok;
         method pwr_cont_dimm_en1 = inner.a0_pins.vpp_efgh.en;
         method pwr_cont_dimm_en0 = inner.a0_pins.vpp_abcd.en;
-        method seq_to_nic_comb_pg_l = inner.nic_pins.seq_to_nic_comb_pg_l;
         method seq_to_sp3_pwr_good = inner.a0_pins.sp3.seq_to_sp3_pwr_good;
-        method seq_to_sp3_pwr_btn_l = inner.a0_pins.sp3.seq_to_sp3_pwr_btn_l;
-        method seq_to_sp3_sys_rst_l = inner.a0_pins.sp3.seq_to_sp3_sys_rst_l;
         method pwr_cont2_sp3_en = inner.a0_pins.vdd_mem_efgh.en;
+    endinterface
+    interface ODPins od_outputs;
+       interface seq_to_sp3_pwr_btn_l = seq_to_sp3_pwr_btn_l.pad;
+       interface seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l.pad;
+       interface seq_to_nic_comb_pg_l = seq_to_nic_comb_pg_l.pad;
+       interface nic_to_sp3_pwrflt_l = nic_to_sp3_pwrflt_l.pad;
     endinterface
 endmodule
 
