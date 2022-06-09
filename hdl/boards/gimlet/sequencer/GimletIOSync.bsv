@@ -374,7 +374,6 @@ module mkGimletSeqTop (SeqPins);
         seq_to_sp3_sys_rst_l <= 0;
     endrule
 
-
     rule do_board_rev;
         brd_rev <= unpack({'0, sync.syncd.seq_rev_id2, sync.syncd.seq_rev_id1, sync.syncd.seq_rev_id0});
     endrule
