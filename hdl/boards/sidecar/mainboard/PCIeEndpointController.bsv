@@ -10,9 +10,10 @@ import ConfigReg::*;
 
 import SidecarMainboardControllerReg::*;
 
+
 //
 // `PCIeEndpointController(..)` implements a minimal interface to allow software
-// control over the PCIe control signals between Gimlet and Sidecar.
+// control over the PCIe sideband signals between Gimlet and Sidecar.
 //
 
 (* always_enabled *)
@@ -23,27 +24,47 @@ interface Pins;
     method Action reset(Bool val);
 endinterface
 
-interface PCIeEndpointController;
-    interface Pins pins;
+(* always_enabled *)
+interface Registers;
     interface Reg#(PcieHotplugCtrl) ctrl;
     interface ReadOnly#(PcieHotplugStatus) status;
 endinterface
 
+interface PCIeEndpointController;
+    interface Pins pins;
+    interface Registers registers;
+    method Bool reset_peripheral();
+endinterface
+
 module mkPCIeEndpointController (PCIeEndpointController);
-    ConfigReg#(PcieHotplugCtrl) ctrl_r <- mkConfigReg(unpack('0));
-    ConfigReg#(PcieHotplugStatus) status_r <- mkConfigRegU();
+    ConfigReg#(PcieHotplugCtrl) ctrl <- mkConfigReg(unpack('0));
+    ConfigReg#(PcieHotplugStatus) status <- mkConfigRegU();
 
     interface Pins pins;
-        method present = unpack(ctrl_r.present);
-        method power_fault = unpack(ctrl_r.power_fault);
-        method alert = unpack(ctrl_r.alert);
+        method present = unpack(ctrl.present);
+        method power_fault = unpack(ctrl.power_fault);
+        method alert = unpack(ctrl.alert);
         method Action reset(Bool val);
-            status_r.host_reset <= pack(val);
+            status.host_reset <= pack(val);
         endmethod
     endinterface
 
-    interface Reg ctrl = ctrl_r;
-    interface ReadOnly status = regToReadOnly(status_r);
+    interface Registers registers;
+        interface Reg ctrl = ctrl;
+        interface ReadOnly status = regToReadOnly(status);
+    endinterface
+
+    method Bool reset_peripheral();
+        let software_reset =
+                ctrl.override_host_reset == 1 &&
+                ctrl.reset == 1;
+
+        let host_reset =
+                ctrl.override_host_reset == 0 &&
+                status.host_reset == 1;
+
+        return (software_reset || host_reset);
+    endmethod
 endmodule
 
 endpackage

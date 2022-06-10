@@ -29,15 +29,23 @@ bluespec_library('Tofino2Sequencer',
         '//hdl:PowerRail',
     ])
 
-bluespec_library('SidecarMainboardController',
+bluespec_library('PCIeEndpointController',
     sources = [
         'PCIeEndpointController.bsv',
+    ],
+    deps = [
+        ':SidecarMainboardControllerReg',
+    ])
+
+bluespec_library('SidecarMainboardController',
+    sources = [
         'SidecarMainboardController.bsv',
         'SidecarMainboardControllerSpiServer.bsv',
         'SidecarMainboardMiscSequencers.bsv',
     ],
     deps = [
         ':Tofino2Sequencer',
+        ':PCIeEndpointController',
         '//hdl:FanModule',
         '//hdl:PowerRail',
         'cobalt//hdl:RegCommon',

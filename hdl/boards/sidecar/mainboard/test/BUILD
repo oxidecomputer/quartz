@@ -1,5 +1,19 @@
 # -*- python -*- vim:syntax=python:
 
+bluesim_tests('PCIeEndpointControllerTests',
+    suite = 'PCIeEndpointControllerTests.bsv',
+    env = 'cobalt//bluesim_default',
+    modules = [
+        'mkResetHostControlTest',
+        'mkResetSoftwareControlTest',
+    ],
+    deps = [
+        '//hdl:PowerRail',
+        '//hdl/boards/sidecar/mainboard:PCIeEndpointController',
+        'cobalt//hdl:Strobe',
+        'cobalt//hdl:TestUtils',
+    ])
+
 bluesim_tests('Tofino2SequencerTests',
     suite = 'Tofino2SequencerTests.bsv',
     env = 'cobalt//bluesim_default',
