@@ -182,7 +182,7 @@ import PowerRail::*;
         endseq, enable && !faulted && !abort);
 
         FSM nic_power_dwn_seq <- mkFSMWithPred(seq
-            enable_rails(power_rails, IDLE);
+            disable_rails(power_rails, IDLE);
         endseq, !enable || faulted || abort);
 
          (* fire_when_enabled *)
@@ -246,7 +246,17 @@ import PowerRail::*;
         interface NicRegs reg_if;
             method en = enable._write;
             method state = state._read;
-            method pgs = nic_pg._read;
+            method NicStatus pgs;
+                return NicStatus {
+                    nic_3v3_pg: pack(ldo_v3p3.good),
+                    nic_v1p5d_pg: pack(v1p5d.good),
+                    nic_v1p5a_pg: pack(v1p5a.good),
+                    nic_v1p2_enet_pg: pack(v1p2_enet.good),
+                    nic_v1p1_pg: pack(v1p1.good),
+                    nic_v1p2_pg: pack(v1p2.good),
+                    nic_v0p96_pg: pack(v0p9_a0hp.good)
+                };
+            endmethod
             method Bool ok;
                 return state == DONE;
             endmethod

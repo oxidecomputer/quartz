@@ -179,16 +179,6 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "A0 Group A power enable (starts state machine)";
         } A0A_EN[1] = 0;
-        field {
-            desc = "A0 Group B power enable (starts state machine)";
-        } A0B_EN[1] = 0;
-        field {
-            desc = "A0 Group C power stages occur autonomously (assuming SMBus commands turn on the 
-            RA229618 outputs) *unless* this bit is set.";
-        } A0C_DIS[1] = 0;
-        field {
-            desc = "NIC power enable (starts state machine)";
-        } NICPWREN[1] = 0;
     } PWRCTRL;
     reg {
         name = "A1 SM Status";
@@ -421,7 +411,6 @@ addrmap gimlet_seq_fpga {
     reg {
         name = "Power Status for NIC HP supplies";
         default sw = r;
-        
         field {
             desc = "Power good for V0P96_NIC_VDD_A0HP (PWR_CONT_NIC_PG0 net)";
         } NIC_V0P96_PG[1] = 0;
@@ -431,15 +420,15 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Power good for V1P2_NIC_MDIO_A0HP  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
         } NIC_V1P2_PG[1] = 0;
+         field {
+            desc = "Power good for V1P2_NIC_ETH  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+        } NIC_V1P2_ENET_PG[1] = 0;
         field {
             desc = "Power good for V1P5_NIC_AVDD_A0HP (inverted NIC_TO_SEQ_V1P5A_PG_L net)";
-        } NIC_AV1P5_PG[1] = 0;
+        } NIC_V1P5A_PG[1] = 0;
         field {
             desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP (inverted NIC_TO_SEQ_V1P5D_PG_L net)";
-        } NIC_V1P5_PG[1] = 0;
-        field {
-            desc = "Power good for V1P8_NIC_A0HP  (PWR_CONT_NIC_PG1 net)";
-        } NIC_V1P8_PG[1] = 0;
+        } NIC_V1P5D_PG[1] = 0;
         field {
             desc = "Power good for LDO_V3P3";
         } NIC_3V3_PG[1] = 0;
