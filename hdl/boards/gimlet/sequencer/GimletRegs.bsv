@@ -108,17 +108,13 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bit#(1)) a1_ok <- mkDWire(0);
     Wire#(Bit#(1)) nic_ok <- mkDWire(0);
     Wire#(Bit#(1)) fan_ok <- mkDWire(1);
+    Wire#(Bool) nic_mapo <- mkDWire(False);
+    Wire#(Bool) a0_mapo <- mkDWire(False);
+    Wire#(Bool) a1_mapo <- mkDWire(False);
+    Wire#(Bool) thermtrip <- mkDWire(False);
+    Wire#(Bool) fanfault <- mkDWire(False);
     Wire#(OutStatusNic2) nic2_out_status <- mkDWire(unpack(0));
-    // RWire#(A0StateType) a0_state <- mkRWire();
-    //ConfigReg#(NicStateType) nic_sm <- mkConfigRegU();
-    
-    // RWire#(A0InPinsStruct) cur_a0_inputs <- mkRWire();
-    // RWire#(A0OutPinsStruct) cur_a0_outputs <- mkRWire();
-    // Wire#(A0OutPinsStruct) dbg_a0_outputs <- mkDWire(unpack(0));
 
-    // RWire#(MiscInPinsStruct) cur_misc_inputs <- mkRWire();
-    // Wire#(MiscOutPinsStruct) dbg_misc_outputs <- mkDWire(unpack(0));
-    // RWire#(MiscOutPinsStruct) cur_misc_outputs <- mkRWire();
 
     IRQBlock#(Ifr) irq_block <- mkIRQBlock();
 
@@ -129,11 +125,21 @@ module mkGimletRegs(GimletRegIF);
 
     rule do_status;
         status <= Status {
-            int_pend: 0,
+            int_pend: irq_block.irq_pin,
             nicpwrok: nic_ok,
             a0pwrok: a0_ok,
             a1pwrok: a1_ok,
             fanpwrok: 1
+        };
+    endrule
+
+    rule do_irqs;
+        irq_cause_raw <= Ifr {
+            nicmapo: pack(nic_mapo),
+            a0mapo: pack(a0_mapo),
+            a1mapo: pack(a1_mapo),
+            thermtrip: pack(thermtrip),
+            fanfault: pack(fanfault)
         };
     endrule
 
@@ -255,6 +261,7 @@ module mkGimletRegs(GimletRegIF);
         endmethod
         method output_readbacks = a1_output_readbacks._write;
         method input_readbacks = a1_inputs._write;
+        method mapo = a1_mapo._write;
     endinterface
     interface A0RegsReverse a0_block;
         method Bool a0_en();  // SM enable pin
@@ -273,6 +280,8 @@ module mkGimletRegs(GimletRegIF);
         method status2 = a0_status2._write;
         method b_pgs = a0_groupB_pg._write;
         method c_pgs = a0_groupC_pg._write;
+        method thermtrip = thermtrip._write;
+        method mapo = a0_mapo._write;
     endinterface
     interface NicRegsReverse nic_block;
         method Bool en;
@@ -298,30 +307,9 @@ module mkGimletRegs(GimletRegIF);
         endmethod
         method pgs = nic_status._write;
         method nic_outs = nic2_out_status._write;
+        method mapo = nic_mapo._write;
     endinterface
-    //     // Normalized pin readbacks to registers
-    //     //method input_readbacks = cur_a0_inputs.wset; // Input sampling
-    //     //method output_readbacks = cur_a0_outputs.wset; // Output sampling
-    //     //method dbg_ctrl = dbg_a0_outputs._read; // Output control
-    //     method state = a0_state.wset;
-    //     method Bit#(1) dbg_en;    // Debug enable pin
-    //         return dbgCtrl_reg.reg_ctrl_en;
-    //     endmethod
-    //     method Bit#(1) ignore_sp;
-    //         return dbgCtrl_reg.ignore_sp;
-    //     endmethod
-    //      method Bool a0_en();
-    //         return power_control.a0a_en;
-    //     endmethod
-    // endinterface
-    // interface MiscRegsReverse misc_block;
-    //     method input_readbacks = cur_misc_inputs.wset; // Input sampling
-    //     method output_readbacks = cur_misc_outputs.wset; // Output sampling
-    //     method dbg_ctrl = dbg_misc_outputs._read; // Output control
-    //     method Bit#(1) dbg_en;    // Debug enable pin
-    //         return dbgCtrl_reg.reg_ctrl_en;
-    //     endmethod
-    // endinterface
+
     interface RegPins pins;
         method seq_to_sp_interrupt = irq_block.irq_pin;
         method brd_rev = brd_rev._write;

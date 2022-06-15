@@ -26,6 +26,7 @@ import PowerRail::*;
         method NicStateType state();
         method NicStatus pgs;
         method OutStatusNic2 nic_outs;
+        method Bool mapo();
         // method A1OutStatus output_readbacks();
         // method A1Readbacks input_readbacks();
     endinterface
@@ -40,6 +41,7 @@ import PowerRail::*;
         method Action state(NicStateType value);
         method Action pgs (NicStatus value);
         method Action nic_outs (OutStatusNic2 value);
+        method Action mapo(Bool value);
     endinterface
 
     // Allow our output pin source to connect to our output pin sink
@@ -54,8 +56,7 @@ import PowerRail::*;
             mkConnection(source.state, sink.state);
             mkConnection(source.pgs, sink.pgs);
             mkConnection(source.nic_outs, sink.nic_outs);
-            // mkConnection(source.output_readbacks, sink.output_readbacks);
-            // mkConnection(source.input_readbacks, sink.input_readbacks);
+            mkConnection(source.mapo, sink.mapo);
         endmodule
     endinstance
 
@@ -238,6 +239,15 @@ import PowerRail::*;
             end
         endrule
 
+        (* fire_when_enabled *)
+        rule do_faulted_flag;
+            if (aggregate_fault) begin
+                faulted <= aggregate_fault;
+            end else if (!enable) begin
+                faulted <= False;
+            end
+        endrule
+
         interface NicPins pins;
             interface PowerRail::Pins ldo_v3p3 = ldo_v3p3.pins;
             interface PowerRail::Pins v1p5a = v1p5a.pins;
@@ -288,6 +298,7 @@ import PowerRail::*;
                    nic_ext_rst: ~nic_to_seq_ext_rst_l
                 };
             endmethod
+            method mapo = faulted._read;
         endinterface
 
     endmodule

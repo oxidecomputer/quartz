@@ -27,6 +27,7 @@ import PowerRail::*;
         method A1StateType state();
         method A1OutStatus output_readbacks();
         method A1Readbacks input_readbacks();
+        method Bool mapo();
     endinterface
 
     interface A1RegsReverse;
@@ -37,6 +38,7 @@ import PowerRail::*;
         method Action state (A1StateType value);
         method Action output_readbacks (A1OutStatus value);
         method Action input_readbacks (A1Readbacks value);
+        method Action mapo(Bool value);
     endinterface
 
     // Allow our output pin source to connect to our output pin sink
@@ -47,6 +49,7 @@ import PowerRail::*;
             mkConnection(source.state, sink.state);
             mkConnection(source.output_readbacks, sink.output_readbacks);
             mkConnection(source.input_readbacks, sink.input_readbacks);
+            mkConnection(source.mapo, sink.mapo);
         endmodule
     endinstance
 
@@ -264,6 +267,7 @@ import PowerRail::*;
             endmethod
             method a1_en = enable._write;
             method state = state._read;
+            method mapo = faulted._read;
             method output_readbacks = output_readbacks._read;
             method input_readbacks = input_readbacks._read;
         endinterface

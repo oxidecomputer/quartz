@@ -111,6 +111,9 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "A0 MAPO";
         } A0MAPO[1];
+        field {
+            desc = "Nic MAPO";
+        } NICMAPO[1];
     };
 
     // Set up interrupt registers using a common irq_type

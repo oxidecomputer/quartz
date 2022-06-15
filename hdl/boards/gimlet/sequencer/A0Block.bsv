@@ -28,6 +28,8 @@ import PowerRail::*;
         method A0OutStatus2 status2;
         method GroupbPg b_pgs;
         method GroupcPg c_pgs;
+        method Bool mapo;
+        method Bool thermtrip;
         // method A0OutStatus output_readbacks();
         // method A0Readbacks input_readbacks();
     endinterface
@@ -43,6 +45,8 @@ import PowerRail::*;
         method Action status2 (A0OutStatus2 value);
         method Action b_pgs (GroupbPg value);
         method Action c_pgs (GroupcPg value);
+        method Action mapo(Bool value);
+        method Action thermtrip(Bool value);
         // method Action output_readbacks (A0OutStatus value);
         // method Action input_readbacks (A0Readbacks value);
     endinterface
@@ -58,6 +62,8 @@ import PowerRail::*;
             mkConnection(source.status2, sink.status2);
             mkConnection(source.b_pgs, sink.b_pgs);
             mkConnection(source.c_pgs, sink.c_pgs);
+            mkConnection(source.mapo, sink.mapo);
+            mkConnection(source.thermtrip, sink.thermtrip);
         endmodule
     endinstance
 
@@ -282,18 +288,6 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
                          (!c_pg && pack(state) >=pack(DELAY_1MS));
 
         aggregate_fault <=  mapo_fault;
-
-        //
-        // Fault logic.
-        // If we have a supply fault, we need to latch the status of the power supplies
-        // for future fault reporting. This will only be cleared once the MAPO flag has
-        // cleared.
-        //
-        // if (!mapo && mapo_fault) begin
-
-        // end else if (!mapo) begin
-
-        // end
     endrule
 
     FSM a0_power_up_seq <- mkFSMWithPred(seq
@@ -526,6 +520,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method status2 = status2._read;
         method b_pgs = b_pgs._read;
         method c_pgs = c_pgs._read;
+        method mapo = mapo._read;
+        method thermtrip = thermal_trip._read;
     endinterface
 
 endmodule
