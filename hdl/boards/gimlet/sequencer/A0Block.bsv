@@ -168,6 +168,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Reg#(Bool)    ok <- mkReg(False);
     Reg#(Bool) abort <- mkDReg(False);
     Reg#(Bool) faulted <- mkReg(False);
+    Reg#(Bool) thermal_trip <- mkReg(False);
+    Reg#(Bool) mapo <- mkReg(False);
     Reg#(Bool) enable_last <- mkReg(False);
     Reg#(Bool) enable <- mkReg(False);
     Reg#(Bool) ignore_sp <- mkReg(False);
@@ -275,9 +277,23 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
 
     (* fire_when_enabled *)
     rule do_ps_faults;
-        aggregate_fault <= foldr(bool_or, False, map(PowerRail::fault, b1_rails)) ||
-                           foldr(bool_or, False, map(PowerRail::fault, b2_rails)) ||
-                           (!c_pg && pack(state) >=pack(DELAY_1MS));
+        let mapo_fault = foldr(bool_or, False, map(PowerRail::fault, b1_rails)) ||
+                         foldr(bool_or, False, map(PowerRail::fault, b2_rails)) ||
+                         (!c_pg && pack(state) >=pack(DELAY_1MS));
+
+        aggregate_fault <=  mapo_fault;
+
+        //
+        // Fault logic.
+        // If we have a supply fault, we need to latch the status of the power supplies
+        // for future fault reporting. This will only be cleared once the MAPO flag has
+        // cleared.
+        //
+        // if (!mapo && mapo_fault) begin
+
+        // end else if (!mapo) begin
+
+        // end
     endrule
 
     FSM a0_power_up_seq <- mkFSMWithPred(seq
@@ -413,14 +429,18 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         // Thermtrip rails only valid after V3P3_SYS_A0 is up.
         if (v3p3_sys.good && sp3_to_seq_thermtrip_l == 0) begin
             faulted <= True;
+            thermal_trip <= True;
         // If an enabled rail faults, set the faulted flag
         end else if (aggregate_fault) begin
             faulted <= True;
+            mapo <= True;
         // Faulted prevents us from re-starting unless the block has
         // been disabled, preventing failure loops without software
         // involvement.
         end else if (!enable) begin
             faulted <= False;
+            thermal_trip <= False;
+            mapo <= False;
         end
     endrule
 

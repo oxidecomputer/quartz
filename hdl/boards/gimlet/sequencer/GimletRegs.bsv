@@ -38,15 +38,10 @@ module mkGimletRegs(GimletRegIF);
     // Registers
     ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
     ConfigReg#(Status) status <- mkConfigRegU();
-    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(
-        DbgCtrl {
-            nic_perst_override : 1,
-            nic_cld_rst_override: 1,
-            reg_ctrl_en: 0,
-            ignore_sp: 0
-        });
+    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(dbgCtrlSpecReset);
     // Main control registers
-    ConfigReg#(Pwrctrl) power_control <- mkReg(unpack(0));
+    ConfigReg#(PwrCtrl) power_control <- mkReg(pwrCtrlSpecReset);
+    ConfigReg#(NicCtrl) nic_control <- mkReg(nicCtrlSpecReset);
     //  NIC domain signals
     ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
     
@@ -146,8 +141,8 @@ module mkGimletRegs(GimletRegIF);
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_read (do_read && !isValid(readdata));
         case (address)
-            fromInteger(id0Offset) : readdata <= tagged Valid ('h01);
-            fromInteger(id1Offset) : readdata <= tagged Valid ('hde);
+            fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0SpecReset));
+            fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1SpecReset));
             fromInteger(ver0Offset) : readdata <= tagged Valid (version[0]);
             fromInteger(ver1Offset) : readdata <= tagged Valid (version[1]);
             fromInteger(ver2Offset) : readdata <= tagged Valid (version[2]);
@@ -160,7 +155,8 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(statusOffset) : readdata <= tagged Valid (pack(status));
             fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
             fromInteger(ifrOffset) : readdata <= tagged Valid (pack(irq_block.cause_reg));
-            fromInteger(pwrctrlOffset): readdata <= tagged Valid (pack(power_control));
+            fromInteger(pwrCtrlOffset): readdata <= tagged Valid (pack(power_control));
+            fromInteger(nicCtrlOffset): readdata <= tagged Valid (pack(nic_control));
             fromInteger(boardRevOffset): readdata <= tagged Valid (pack(brd_rev));
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
@@ -213,7 +209,8 @@ module mkGimletRegs(GimletRegIF);
 
         scratchpad <= reg_update(scratchpad, scratchpad, address, scrtchpadOffset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
-        power_control <= reg_update(power_control, power_control, address, pwrctrlOffset, operation, writedata);
+        power_control <= reg_update(power_control, power_control, address, pwrCtrlOffset, operation, writedata);
+        nic_control <= reg_update(nic_control, nic_control, address, nicCtrlOffset, operation, writedata);
       
         a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
 
@@ -245,33 +242,6 @@ module mkGimletRegs(GimletRegIF);
             endmethod
         endinterface
     endinterface
-
-    // interface NicRegsReverse nic_block;
-    //     method nic_status = cur_nic_pins.wset;
-    //     method nic1_out_status = cur_nic1_out_status.wset;
-    //     method nic2_out_status = cur_nic2_out_status.wset;
-    //     method state = nic_state.wset;
-    //     method Bit#(1) nic_go;
-    //         return power_control.nicpwren;
-    //     endmethod
-    //     method Bit#(1) nic_en;
-    //         return power_control.a0a_en;  // Enable in A0
-    //     endmethod
-    //     method Bit#(1) dbg_en;
-    //         return dbgCtrl_reg.reg_ctrl_en | dbgCtrl_reg.nic_ctrl_en;
-    //     endmethod
-    //     method Bool ignore_sp;
-    //         return (dbgCtrl_reg.ignore_sp  == 1);
-    //     endmethod
-    //     method dbg_nic1 = dbg_nic1_out._read;
-    //     method dbg_nic2 = dbg_nic2_out._read;
-    // endinterface
-
-    // interface EarlyRegsReverse early_block;
-    //     method input_readbacks = cur_early_inputs.wset; // Input sampling
-    //     method output_readbacks = cur_early_outputs.wset; // Output sampling
-    //     method output_ctrl = early_ctrl._read;
-    // endinterface
 
     interface A1RegsReverse a1_block;
         method Bool a1_en();
@@ -308,11 +278,17 @@ module mkGimletRegs(GimletRegIF);
         method Bool en;
             return power_control.a0a_en == 1;
         endmethod
+        method Bool sw_reset;
+            return nic_control.cld_rst == 1;
+        endmethod
         method Bool cld_rst_override;
             return dbgCtrl_reg.nic_cld_rst_override == 1;
         endmethod
         method Bool perst_override;
             return dbgCtrl_reg.nic_perst_override == 1;
+        endmethod
+        method Bool perst_solo;
+            return dbgCtrl_reg.nic_perst_solo == 1;
         endmethod
         method Action ok(Bool value);
             nic_ok <= pack(value);

@@ -326,7 +326,7 @@ module mkGimletTestTop(Empty);
         // Basic read
         spiRead(read_byte, id0Offset, bench.bfm);
         // Enable A1+A0 (now interlocked), sunny day case
-        spiWrite(pwrctrlOffset, pwrctrlA1pwren | pwrctrlA0aEn,  bench.bfm);
+        spiWrite(pwrCtrlOffset, pwrCtrlA1pwren | pwrCtrlA0aEn,  bench.bfm);
         action
             $display("Delay for A1 SM good...");
         endaction
@@ -385,9 +385,9 @@ module mkGimletTestTop(Empty);
         //     };
         //     misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
         // endaction
-        // spiWrite(pwrctrlOffset, pwrctrlA1pwren,  bench.bm);
+        // spiWrite(pwrCtrlOffset, pwrCtrlA1pwren,  bench.bm);
         // delay(100);
-        // spiWrite(pwrctrlOffset, pwrctrlA0aEn | pwrctrlA1pwren, controller.bfm);
+        // spiWrite(pwrCtrlOffset, pwrCtrlA0aEn | pwrCtrlA1pwren, controller.bfm);
         // action
         //     $display("Delay for A1 SM good...");
         // endaction
@@ -400,7 +400,7 @@ module mkGimletTestTop(Empty);
         //     $display("Design Up");
         // endaction
         // delay(3000);
-        // spiWrite(pwrctrlOffset, pwrctrlNicpwren | pwrctrlA0aEn | pwrctrlA1pwren, controller.bfm);
+        // spiWrite(pwrCtrlOffset, pwrCtrlNicpwren | pwrCtrlA0aEn | pwrCtrlA1pwren, controller.bfm);
         // delay(6000);
         //  action
         //     $display("Design Up");
