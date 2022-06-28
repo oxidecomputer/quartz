@@ -1,6 +1,7 @@
 package GimletRegs;
 // BSV imports
 import DReg::*;
+import DefaultValue::*;
 import GetPut::*;
 import Connectable::*;
 import ClientServer::*;
@@ -36,12 +37,14 @@ endinterface
 
 module mkGimletRegs(GimletRegIF);
     // Registers
+    ConfigReg#(Id0) id0 <- mkReg(defaultValue);
+    ConfigReg#(Id1) id1 <- mkReg(defaultValue);
     ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
     ConfigReg#(Status) status <- mkConfigRegU();
-    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(dbgCtrlSpecReset);
+    ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(defaultValue);
     // Main control registers
-    ConfigReg#(PwrCtrl) power_control <- mkReg(pwrCtrlSpecReset);
-    ConfigReg#(NicCtrl) nic_control <- mkReg(nicCtrlSpecReset);
+    ConfigReg#(PwrCtrl) power_control <- mkReg(defaultValue);
+    ConfigReg#(NicCtrl) nic_control <- mkReg(defaultValue);
     //  NIC domain signals
     ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
     
@@ -147,8 +150,8 @@ module mkGimletRegs(GimletRegIF);
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_reg_read (do_read && !isValid(readdata));
         case (address)
-            fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0SpecReset));
-            fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1SpecReset));
+            fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0));
+            fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1));
             fromInteger(ver0Offset) : readdata <= tagged Valid (version[0]);
             fromInteger(ver1Offset) : readdata <= tagged Valid (version[1]);
             fromInteger(ver2Offset) : readdata <= tagged Valid (version[2]);
