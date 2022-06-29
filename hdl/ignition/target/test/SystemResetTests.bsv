@@ -9,10 +9,15 @@ import TestUtils::*;
 
 (* synthesize *)
 module mkSystemResetShortButtonPressTest (Empty);
-    IgnitionTargetParameters parameters = defaultValue;
     // Shorten the duration and cool down to avoid long sim times.
-    parameters.system_reset_min_duration = 4;
-    parameters.system_reset_cool_down = 2;
+    let reset_button_min_duration = 4;
+    let reset_button_cool_down = 2;
+
+    Parameters parameters = default_app_with_button_as_reset;
+    parameters.button_behavior =
+        tagged ResetButton {
+            min_duration: reset_button_min_duration,
+            cool_down: reset_button_cool_down};
 
     IgnitionTargetBench bench <- mkIgnitionTargetBench(parameters, 0);
 
@@ -36,7 +41,7 @@ module mkSystemResetShortButtonPressTest (Empty);
             // Wait for system power on and confirm the minimum reset duration.
             await(bench.system_powered_on);
             dynamicAssert(
-                bench.ticks_elapsed == fromInteger(parameters.system_reset_min_duration),
+                bench.ticks_elapsed == fromInteger(reset_button_min_duration),
                 "expected system power off for 4 ticks");
         endseq);
 
@@ -45,10 +50,15 @@ endmodule
 
 (* synthesize *)
 module mkSystemResetLongButtonPressTest (Empty);
-    IgnitionTargetParameters parameters = defaultValue;
     // Shorten the duration and cool down to avoid long sim times.
-    parameters.system_reset_min_duration = 4;
-    parameters.system_reset_cool_down = 2;
+    let reset_button_min_duration = 4;
+    let reset_button_cool_down = 2;
+
+    Parameters parameters = default_app_with_button_as_reset;
+    parameters.button_behavior =
+        tagged ResetButton {
+            min_duration: reset_button_min_duration,
+            cool_down: reset_button_cool_down};
 
     IgnitionTargetBench bench <- mkIgnitionTargetBench(parameters, 0);
 
@@ -67,7 +77,7 @@ module mkSystemResetLongButtonPressTest (Empty);
             endaction
 
             // Keep the button pressed until the minimum duration has elapsed.
-            await(bench.ticks_elapsed > fromInteger(parameters.system_reset_min_duration));
+            await(bench.ticks_elapsed > fromInteger(reset_button_min_duration));
             bench.release_button();
 
             // Expect the system to be powered on after the next tick.

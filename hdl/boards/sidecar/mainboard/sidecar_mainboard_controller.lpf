@@ -10,8 +10,10 @@ IOBUF PORT "sp_to_fpga_design_reset_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
 // SP SPI
 LOCATE COMP "spi_sp_to_fpga_cs0_l" SITE "AB2";
 IOBUF PORT "spi_sp_to_fpga_cs0_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "sp_to_fpga_spi_miso_r" SITE "AD1";
-IOBUF PORT "sp_to_fpga_spi_miso_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_to_fpga_cs1_l" SITE "AC2";
+IOBUF PORT "spi_sp_to_fpga_cs1_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_to_fpga_miso_r" SITE "AD1";
+IOBUF PORT "spi_sp_to_fpga_miso_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "spi_sp_to_fpga_sck" SITE "AD3";
 IOBUF PORT "spi_sp_to_fpga_sck" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "spi_sp_to_fpga_mosi" SITE "AF2";
@@ -96,6 +98,14 @@ IOBUF PORT "i2c_south1_sda_o_r" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 // Tofino
 
+// resets
+LOCATE COMP "fpga_to_tf_core_rst_l" SITE "A21";
+IOBUF PORT "fpga_to_tf_core_rst_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "fpga_to_tf_pwron_rst_l" SITE "A22";
+IOBUF PORT "fpga_to_tf_pwron_rst_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "fpga_to_tf_pcie_rst_l" SITE "A19";
+IOBUF PORT "fpga_to_tf_pcie_rst_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
+
 // vid - note bits 0 and 2 are swapped relative to RevA schematic
 LOCATE COMP "tf_to_fpga_vid[0]" SITE "D22";
 IOBUF PORT "tf_to_fpga_vid[0]" PULLMODE=NONE IO_TYPE=LVCMOS18;
@@ -105,22 +115,53 @@ LOCATE COMP "tf_to_fpga_vid[2]" SITE "B23";
 IOBUF PORT "tf_to_fpga_vid[2]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // vdd1p8
+LOCATE COMP "fpga_to_vr_tf_vdd1p8_en" SITE "A9";
+IOBUF PORT "fpga_to_vr_tf_vdd1p8_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vr_tf_v1p8_to_fpga_vdd1p8_pg" SITE "B16";
+IOBUF PORT "vr_tf_v1p8_to_fpga_vdd1p8_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "vr_tf_v1p8_to_fpga_fault" SITE "B6";
+IOBUF PORT "vr_tf_v1p8_to_fpga_fault" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vr_tf_v1p8_to_fpga_vr_hot_l" SITE "E16";
+IOBUF PORT "vr_tf_v1p8_to_fpga_vr_hot_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // vddcore
+LOCATE COMP "fpga_to_vr_tf_vddcore_en" SITE "C11";
+IOBUF PORT "fpga_to_vr_tf_vddcore_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vr_tf_vddcore_to_fpga_pg" SITE "A17";
+IOBUF PORT "vr_tf_vddcore_to_fpga_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "vr_tf_vddcore_to_fpga_fault" SITE "A11";
 IOBUF PORT "vr_tf_vddcore_to_fpga_fault" PULLMODE=NONE IO_TYPE=LVCMOS33;
-
-// vddt
+LOCATE COMP "vr_tf_vddcore_to_fpga_vrhot_l" SITE "A16";
+IOBUF PORT "vr_tf_vddcore_to_fpga_vrhot_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // vddpcie
+LOCATE COMP "fpga_to_ldo_v0p75_tf_pcie_en" SITE "E13";
+IOBUF PORT "fpga_to_ldo_v0p75_tf_pcie_en" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "ldo_to_fpga_v0p75_tf_pcie_pg" SITE "E14";
+IOBUF PORT "ldo_to_fpga_v0p75_tf_pcie_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
+
+// vddt
+LOCATE COMP "fpga_to_vr_tf_vddx_en" SITE "D10";
+IOBUF PORT "fpga_to_vr_tf_vddx_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vr_tf_vddx_to_fpga_vddt_pg" SITE "C13";
+IOBUF PORT "vr_tf_vddx_to_fpga_vddt_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "vr_tf_vddx_to_fpga_fault" SITE "E10";
+IOBUF PORT "vr_tf_vddx_to_fpga_fault" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vr_tf_vddx_to_fpga_vrhot_l" SITE "D16";
+IOBUF PORT "vr_tf_vddx_to_fpga_vrhot_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // vdda1p5
+LOCATE COMP "vr_tf_vddx_to_fpga_vdda15_pg" SITE "C14";
+IOBUF PORT "vr_tf_vddx_to_fpga_vdda15_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // vdda1p8
+LOCATE COMP "fpga_to_vr_tf_vdda1p8_en" SITE "B8";
+IOBUF PORT "fpga_to_vr_tf_vdda1p8_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vr_tf_v1p8_to_fpga_vdda1p8_pg" SITE "C16";
+IOBUF PORT "vr_tf_v1p8_to_fpga_vdda1p8_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
+
 
 // misc
-
-
 LOCATE COMP "tf_pg_led" SITE "A13";
 IOBUF PORT "tf_pg_led" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_tf_sda_o_r" SITE "A14";
@@ -129,36 +170,10 @@ LOCATE COMP "i2c_fpga_to_tf_sda" SITE "A15";
 IOBUF PORT "i2c_fpga_to_tf_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_tf_scl" SITE "C19";
 IOBUF PORT "i2c_fpga_to_tf_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
-LOCATE COMP "vr_tf_vddcore_to_fpga_vrhot_l" SITE "A16";
-IOBUF PORT "vr_tf_vddcore_to_fpga_vrhot_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "vr_tf_vddcore_to_fpga_pg" SITE "A17";
-IOBUF PORT "vr_tf_vddcore_to_fpga_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "fpga_to_tf_core_rst_l" SITE "A21";
-IOBUF PORT "fpga_to_tf_core_rst_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "fpga_to_tf_pwron_rst_l" SITE "A22";
-IOBUF PORT "fpga_to_tf_pwron_rst_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
-
-LOCATE COMP "fpga_to_vr_tf_vdd1p8_en" SITE "A9";
-IOBUF PORT "fpga_to_vr_tf_vdd1p8_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_vr_tf_vdda1p8_en" SITE "B8";
-IOBUF PORT "fpga_to_vr_tf_vdda1p8_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "vr_tf_v1p8_to_fpga_vdd1p8_pg" SITE "B16";
-IOBUF PORT "vr_tf_v1p8_to_fpga_vdd1p8_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "tf_to_fpga_irq[3]" SITE "B17";
 IOBUF PORT "tf_to_fpga_irq[3]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_test_core_tap_l" SITE "B21";
 IOBUF PORT "fpga_to_tf_test_core_tap_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
-
-LOCATE COMP "vr_tf_v1p8_to_fpga_fault" SITE "B6";
-IOBUF PORT "vr_tf_v1p8_to_fpga_fault" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_vr_tf_vddcore_en" SITE "C11";
-IOBUF PORT "fpga_to_vr_tf_vddcore_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "vr_tf_vddx_to_fpga_vddt_pg" SITE "C13";
-IOBUF PORT "vr_tf_vddx_to_fpga_vddt_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "vr_tf_vddx_to_fpga_vdda15_pg" SITE "C14";
-IOBUF PORT "vr_tf_vddx_to_fpga_vdda15_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "vr_tf_v1p8_to_fpga_vdda1p8_pg" SITE "C16";
-IOBUF PORT "vr_tf_v1p8_to_fpga_vdda1p8_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "tf_to_fpga_irq[2]" SITE "C17";
 IOBUF PORT "tf_to_fpga_irq[2]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "tf_to_fpga_irq[1]" SITE "C18";
@@ -167,10 +182,6 @@ LOCATE COMP "fpga_to_tf_test_jtsel[3]" SITE "C21";
 IOBUF PORT "fpga_to_tf_test_jtsel[3]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_test_jtsel[0]" SITE "C22";
 IOBUF PORT "fpga_to_tf_test_jtsel[0]" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "fpga_to_vr_tf_vddx_en" SITE "D10";
-IOBUF PORT "fpga_to_vr_tf_vddx_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "vr_tf_vddx_to_fpga_vrhot" SITE "D16";
-IOBUF PORT "vr_tf_vddx_to_fpga_vrhot" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "tf_to_fpga_irq[0]" SITE "D18";
 IOBUF PORT "tf_to_fpga_irq[0]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "i2c_tf_to_fpga_1_sda" SITE "D17";
@@ -183,23 +194,12 @@ LOCATE COMP "i2c_tf_to_fpga_0_sda" SITE "E19";
 IOBUF PORT "i2c_tf_to_fpga_0_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_test_jtsel[2]" SITE "D21";
 IOBUF PORT "fpga_to_tf_test_jtsel[2]" PULLMODE=NONE IO_TYPE=LVCMOS18;
-
 LOCATE COMP "tf_to_fpga_temp_therm_l" SITE "D6";
 IOBUF PORT "tf_to_fpga_temp_therm_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "vr_tf_vddx_to_fpga_fault" SITE "E10";
-IOBUF PORT "vr_tf_vddx_to_fpga_fault" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_ldo_v0p75_tf_pcie_en" SITE "E13";
-IOBUF PORT "fpga_to_ldo_v0p75_tf_pcie_en" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "ldo_to_fpga_v0p75_tf_pcie_pg" SITE "E14";
-IOBUF PORT "ldo_to_fpga_v0p75_tf_pcie_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "vr_tf_v1p8_to_fpga_vr_hot_l" SITE "E16";
-IOBUF PORT "vr_tf_v1p8_to_fpga_vr_hot_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_test_jtsel[1]" SITE "E21";
 IOBUF PORT "fpga_to_tf_test_jtsel[1]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_spi_wp_l" SITE "A18";
 IOBUF PORT "fpga_to_tf_spi_wp_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
-LOCATE COMP "fpga_to_tf_pcie_rst_l" SITE "A19";
-IOBUF PORT "fpga_to_tf_pcie_rst_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // I2C (unwired)
 
