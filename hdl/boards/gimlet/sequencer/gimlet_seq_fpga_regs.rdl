@@ -22,13 +22,13 @@ addrmap gimlet_seq_fpga {
     reg {
         name = "Identification 1";
         default sw = r;
-        
+         
         field {
             desc = "de";
         } data[7:0] = 0xde;
     } ID1;
     reg {
-        name = "Version 0";
+        name = "Version 0"; 
         default sw = r;
 
         field {
@@ -86,7 +86,6 @@ addrmap gimlet_seq_fpga {
     reg {
         name = "ShortSHA part 3";
         default sw = r;
-
         field {
             desc = "sha[7..0]";
         } data[7:0] = 0;
@@ -101,24 +100,20 @@ addrmap gimlet_seq_fpga {
 
     reg irq_type {
         field {
-            desc = "Fan Power Timeout";
-        } FANTIMEOUT[1];
-        field {
-            desc = "Fan Power Fault";
+            desc = "Fan Fault";
         } FANFAULT[1];
         field {
-            desc = "A1 Power-up Timeout";
-        } A1TIMEOUT[1];
+            desc = "Thermtrip";
+        } THERMTRIP[1];
         field {
-            desc = "A1 Fault";
-        } A1FAULT[1];
+            desc = "A1 MAPO";
+        } A1MAPO[1];
         field {
-            desc = "A0 Power-up Timeout";
-        } A0TIMEOUT[1];
+            desc = "A0 MAPO";
+        } A0MAPO[1];
         field {
-            desc = "A0 Fault";
-        } A0FAULT[1];
-
+            desc = "Nic MAPO";
+        } NICMAPO[1];
     };
 
     // Set up interrupt registers using a common irq_type
@@ -137,12 +132,12 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "A1 power OK";
         } A1PWROK[1] = 0;
+         field {
+            desc = "A0 power OK";
+        } A0PWROK[1] = 0;
         field {
             desc = "NIC power OK";
         } NICPWROK[1] = 0;
-        field {
-            desc = "A0 power OK";
-        } A0PWROK[1] = 0;
         field {
             desc = "Interrupt Pending Status";
         } INT_PEND[7:7] = 0;
@@ -172,24 +167,23 @@ addrmap gimlet_seq_fpga {
     early_power EARLY_POWER_CTRL;
     EARLY_POWER_CTRL->name = "Early Power Control Register";
     
-    reg { 
+    reg {
+        name = "Power Sequence Control";
         field {
             desc = "A1 power enable (starts state machine)";
         } A1PWREN[1] = 0;
         field {
-            desc = "A0 Group A power enable (starts state machine)";
+            desc = "A0 Group power enable (starts state machine)";
         } A0A_EN[1] = 0;
+    } PWR_CTRL;
+    reg {
+        name = "T6 NIC Control";
         field {
-            desc = "A0 Group B power enable (starts state machine)";
-        } A0B_EN[1] = 0;
-        field {
-            desc = "A0 Group C power stages occur autonomously (assuming SMBus commands turn on the 
-            RA229618 outputs) *unless* this bit is set.";
-        } A0C_DIS[1] = 0;
-        field {
-            desc = "NIC power enable (starts state machine)";
-        } NICPWREN[1] = 0;
-    } PWRCTRL;
+            desc = "NIC CLD_RST control. Controls CLD_RST_N (inverted). Defaults to reset asserted to be
+            cleared by software when SP3 hotplug indicates enable";
+        } CLD_RST[1] = 1;
+
+    } NIC_CTRL;
     reg {
         name = "A1 SM Status";
         desc = "A1 'live' state machine status";
@@ -200,7 +194,7 @@ addrmap gimlet_seq_fpga {
         } A1SM[7:0];
         // TODO: A1 state machine decode in here
     } A1SMSTATUS;
-        reg {
+    reg {
         name = "A0 SM Status";
         desc = "A0 'live' state machine status";
         default sw = r;
@@ -210,10 +204,27 @@ addrmap gimlet_seq_fpga {
         } A0SM[7:0];
         // TODO: A1 state machine decode in here
     } A0SMSTATUS;
+    reg {
+        name = "Nic SM Status";
+        desc = "Nic 'live' state machine status";
+        default sw = r;
+
+        field {
+            desc = "TBD";
+        } NicSM[7:0];
+        // TODO: A1 state machine decode in here
+    } NICSMSTATUS;
+    reg {
+        name = "Board Rev straps";
+        desc = "3 bits of board revision based on input straps";
+        default sw = r;
+        field {
+            desc = "0x7 or 0x0 = RevA. 0x1 = RevB";
+        } ID[2:0];
+    } BOARD_REV;
     // Readback blocks:
     // These are built as contiguous registers so that a single multi-byte read 
     // could capture all of them.
-
     // Readbacks of pins for FAN-power related things
     reg {
         name = "Pre-A1 Power Readback Register";
@@ -404,7 +415,6 @@ addrmap gimlet_seq_fpga {
     reg {
         name = "Power Status for NIC HP supplies";
         default sw = r;
-        
         field {
             desc = "Power good for V0P96_NIC_VDD_A0HP (PWR_CONT_NIC_PG0 net)";
         } NIC_V0P96_PG[1] = 0;
@@ -414,23 +424,18 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Power good for V1P2_NIC_MDIO_A0HP  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
         } NIC_V1P2_PG[1] = 0;
+         field {
+            desc = "Power good for V1P2_NIC_ETH  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+        } NIC_V1P2_ENET_PG[1] = 0;
         field {
             desc = "Power good for V1P5_NIC_AVDD_A0HP (inverted NIC_TO_SEQ_V1P5A_PG_L net)";
-        } NIC_AV1P5_PG[1] = 0;
+        } NIC_V1P5A_PG[1] = 0;
         field {
             desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP (inverted NIC_TO_SEQ_V1P5D_PG_L net)";
-        } NIC_V1P5_PG[1] = 0;
+        } NIC_V1P5D_PG[1] = 0;
         field {
-            desc = "Power good for V1P8_NIC_A0HP  (PWR_CONT_NIC_PG1 net)";
-        } NIC_V1P8_PG[1] = 0;
-        field {
-            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, only valid after 
-            configuration (PWR_CONT_NIC_NVRHOT net)";
-        } NIC_NVRHOT[1] = 0;
-        field {
-            desc = "Catastrophic fault protection output from ISL68224 U357 driving V1P8_NIC_A0HP 
-            VOP96_NIC_VDD_A0HP (PWR_CONT_NIC_CFP)";
-        } NIC_CFP[1] = 0;
+            desc = "Power good for LDO_V3P3";
+        } NIC_3V3_PG[1] = 0;
     } NIC_STATUS;
 
     reg {
@@ -513,31 +518,29 @@ addrmap gimlet_seq_fpga {
 
     reg a0_output1_type {
         field {
-            desc = "Drives VPP_ABCD_A0 rail (PWR_CONT_DIMM_ABCD_EN0 net)";
+            desc = "GroupB1: Drives VPP_ABCD_A0 rail (pwr_cont_dimm_en0 net RevB)";
         } VPP_ABCD_EN[1] = 0;
         field {
-            desc = "Drives VPP_EFGH_A0 rail (PWR_CONT_DIMM_EFGH_EN0 net)";
+            desc = "GroupB1: Drives VPP_EFGH_A0 rail (pwr_cont_dimm_en1 net RevB)";
         } VPP_EFGH_EN[1] = 0;
         field {
-            desc = "Enables VTT_ABCD_A0 rail (SEQ_TO_VTT_ABCD_A0_EN net)";            
-        } VTT_ABCD_EN[1] = 0;
-        field {
-            desc = "Enables VTT_EFGH_A0 rail, should enable in parallel with 
-            PWR_CONT1_SP3_EN (SEQ_TO_VTT_EFGH_EN net)";
-        } VTT_EFGH_EN[1] = 0;
-        field {
-            desc = "Drives EN of ISL68224 and ISL99390 UP32,33,34 for enabling the 
-            V3P3_SYS_A0 rail (PWR_CONT_DIMM_ABCD_EN1 net)";
+            desc = "GroupB1: Enables V3P3_SYS_A0 rail (seq_to_v3p3_sys_en net RevB)";            
         } V3P3_SYS_EN[1] = 0;
         field {
-            desc = "Enable 1 for ISL68224, no defined use (PWR_CONT_DIMM_EFGH_EN1 net)";
-        } EFGH_EN1[1] = 0;
+            desc = "GroupB1: Enables V1P8_SP3_VDD_18_A0 rail (seq_to_sp3_v1p8_en net RevB)";            
+        } V1P8_SP3_VDD_EN[1] = 0;
         field {
-            desc = "EN2 of ISL68224 U352, no defined function (PWR_CONT_DIMM_ABCD_EN2 net)";
-        } ABCD_EN2[1] = 0;
+            desc = "GroupB2: Enables VDD_MEM_ABCD_A0 rail (pwr_cont1_sp3_en net RevB)";
+        } VDD_MEM_ABCD_EN[1] = 0;
         field {
-            desc = "To ISL68224 U418. No defined function (PWR_CONT_DIMM_EFGH_EN2 net)";
-        } EFGH_EN2[1] = 0;
+            desc = "GroupB2: Enables VDD_MEM_EFGH_A0 rail (pwr_cont2_sp3_en net RevB)";
+        } VDD_MEM_EFGH_EN[1] = 0;
+        field {
+            desc = "GroupB2: Enables VTT_ABCD_A0 rail (seq_to_vtt_abcd_en net RevB)";
+        } VTT_ABCD_EN[1] = 0;
+        field {
+            desc = "GroupB2: Enables VTT_EFGH_A0 rail (seq_to_vtt_efgh_en net RevB)";
+        } VTT_EFGH_EN[1] = 0;
     };
 
     reg a0_output2_type {
@@ -564,7 +567,7 @@ addrmap gimlet_seq_fpga {
         } PWR_BTN[1] = 0;
         field {
             desc = "This is asserted to CPU, 1ms before asserting. Set when A0 rails are good. (SEQ_TO_SP3_PWR_GOOD net)";
-        } PWR_GOOD[1] = 0;
+        } PWR_GOOD[1] = 0; 
     };
 
     reg nic_output1_type {
@@ -596,6 +599,9 @@ addrmap gimlet_seq_fpga {
 
     reg nic_output2_type {
         field {
+            desc = "Input to FPGA from SP3 I/O expander (inverted)";
+        } SP3_PERST[1] = 0;
+        field {
             desc = "Becomes clock enable for clk_100M_TO_RSW (SEQ_TO_NIC_COMB_PG net)";
         } NIC_COMB_PG[1] = 0;
         field {
@@ -604,6 +610,12 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Alert SP3 of a NIC power fault (NIC_TO_SP3_PWRFLT_L inverted net)";
         } PWRFLT[1] = 0;
+        field {
+            desc = "RevB-only PERST outptut (PERST_L inverted net)";
+        } NIC_PERST[1] = 0;
+        field {
+            desc = "RevB-only nic ext rst output  ( inverted net)";
+        } NIC_EXT_RST[1] = 0;
     };
 
     reg clk_gen_output_type {
@@ -648,7 +660,7 @@ addrmap gimlet_seq_fpga {
             desc = "Debug ONLY. Setting this allows the A0 state machine to ingore SP3 handshakes.
             This is potentially useful for power bringup but should not be used when a CPU is actually
             installed";
-        } ignore_sp[1] = 0;
+        } ignore_sp[1] = 0; 
         field {
             desc = "Debug enable bit. Setting this flips a mux on FPGA output pins to
             be controlled by the following debug registers. If state maintence or pre-conditions
@@ -656,8 +668,17 @@ addrmap gimlet_seq_fpga {
             debug registers to set up any desired pre-conditions";
         } REG_CTRL_EN[1] = 0;
         field {
-            desc = "Nic debug control only";
-        } NIC_CTRL_EN[1] = 0;
+            desc = "Nic debug control only. Seeting will force CLD_RST assert until cleared. When cleared,
+            CLD_RST will normally be controlled by state machine and NIC Control register";
+        } NIC_CLD_RST_OVERRIDE[1] = 0;
+        field {
+            desc = "Nic debug control only. Setting will force Perst_L assert until cleared. When
+            cleared, PERST will normally be controlled by SP3 I/O expander. Set next bit PERST_FORCE_SOLO to
+            ignore all SP3 control and have this register directly control I/O regardless of SP3's PERST state";
+        } NIC_PERST_OVERRIDE[1] = 0;
+        field {
+            desc = "Nic debug control only. Make PERST ignore any SP3 I/O and drive directly from previous bit";
+        } NIC_PERST_SOLO[1] = 0;
     } DBG_CTRL;
 
     a1_output_type A1_DBG_OUT;
