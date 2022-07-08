@@ -39,7 +39,11 @@ module mkGimletRegs(GimletRegIF);
     // Registers
     ConfigReg#(Id0) id0 <- mkReg(defaultValue);
     ConfigReg#(Id1) id1 <- mkReg(defaultValue);
-    ConfigReg#(Scrtchpad) scratchpad <- mkReg(unpack('h0));
+    ConfigReg#(Scrtchpad) scratchpad <- mkReg(defaultValue);
+    ConfigReg#(Cs0) fpga_cs0 <- mkReg(defaultValue);
+    ConfigReg#(Cs1) fpga_cs1 <- mkReg(defaultValue);
+    ConfigReg#(Cs2) fpga_cs2 <- mkReg(defaultValue);
+    ConfigReg#(Cs3) fpga_cs3 <- mkReg(defaultValue);
     ConfigReg#(Status) status <- mkConfigRegU();
     ConfigReg#(DbgCtrl) dbgCtrl_reg <- mkReg(defaultValue);
     // Main control registers
@@ -160,6 +164,10 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(sha1Offset) : readdata <= tagged Valid (sha[1]);
             fromInteger(sha2Offset) : readdata <= tagged Valid (sha[2]);
             fromInteger(sha3Offset) : readdata <= tagged Valid (sha[3]);
+            fromInteger(cs0Offset) : readdata <= tagged Valid (pack(fpga_cs0));
+            fromInteger(cs1Offset) : readdata <= tagged Valid (pack(fpga_cs1));
+            fromInteger(cs2Offset) : readdata <= tagged Valid (pack(fpga_cs2));
+            fromInteger(cs3Offset) : readdata <= tagged Valid (pack(fpga_cs3));
             fromInteger(scrtchpadOffset) : readdata <= tagged Valid (pack(scratchpad));
             fromInteger(statusOffset) : readdata <= tagged Valid (pack(status));
             fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
@@ -217,6 +225,10 @@ module mkGimletRegs(GimletRegIF);
         end
 
         scratchpad <= reg_update(scratchpad, scratchpad, address, scrtchpadOffset, operation, writedata);
+        fpga_cs0 <= reg_update(fpga_cs0, fpga_cs0, address, cs0Offset, operation, writedata);
+        fpga_cs1 <= reg_update(fpga_cs1, fpga_cs1, address, cs1Offset, operation, writedata);
+        fpga_cs2 <= reg_update(fpga_cs2, fpga_cs2, address, cs2Offset, operation, writedata);
+        fpga_cs3 <= reg_update(fpga_cs3, fpga_cs3, address, cs3Offset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
         power_control <= reg_update(power_control, power_control, address, pwrCtrlOffset, operation, writedata);
         nic_control <= reg_update(nic_control, nic_control, address, nicCtrlOffset, operation, writedata);

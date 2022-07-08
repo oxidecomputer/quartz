@@ -91,6 +91,30 @@ addrmap gimlet_seq_fpga {
         } data[7:0] = 0;
     } SHA3;
     reg {
+        name = "FPGA Checksum0";
+        field {
+            desc = "Scribble Register for read-write use";
+        } CS0[7:0] = 0;
+    } CS0;
+    reg {
+        name = "FPGA Checksum1";
+        field {
+            desc = "Scribble Register for read-write use";
+        } CS1[7:0] = 0;
+    } CS1;
+    reg {
+        name = "FPGA Checksum2";
+        field {
+            desc = "Scribble Register for read-write use";
+        } CS2[7:0] = 0;
+    } CS2;
+    reg {
+        name = "FPGA Checksum3";
+        field {
+            desc = "Scribble Register for read-write use";
+        } CS3[7:0] = 0;
+    } CS3;
+    reg {
         name = "Scratchpad";
 
         field {

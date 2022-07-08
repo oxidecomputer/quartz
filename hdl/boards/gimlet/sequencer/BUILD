@@ -116,6 +116,7 @@ bluesim_tests('A0Tests',
         'mkA0PowerUpTest',
         'mkA0FakeSP3Test',
         'mkA0MAPOTest',
+        'mkA0ThermtripTest'
     ],
     deps = [
         ':A0Block'
@@ -126,6 +127,7 @@ bluesim_tests('TopTests',
     suite = "GimletSeqTop.bsv",
     modules = [
         'mkGimletTestTop',
+        'mkGimletThermtripTop',
     ],
     deps = [
         ':GimletSeqTop',

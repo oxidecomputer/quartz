@@ -195,6 +195,7 @@ interface Bench;
         interface Server#(Vector#(4, Bit#(8)),Vector#(4, Bit#(8))) bfm;
         method Action pmbus_on();
         method Action pmbus_off();
+        method Action thermtrip();
         // method Bool a1_ok();
         // method Action power_up();
         // method Action power_down();
@@ -308,6 +309,9 @@ module mkBench(Bench);
         pwr_cont1_sp3_pg0 <= 0;
         pwr_cont2_sp3_pg0 <= 0;
     endmethod
+    method Action thermtrip();
+        sp3.thermtrip(True);
+    endmethod
 
 endmodule
 
@@ -347,94 +351,63 @@ module mkGimletTestTop(Empty);
         action
              $display("Design Up");
         endaction
-        //delay(4100010); // TODO: Be smarter about a Wait for A0 SM good
-        // prove that when A0 is up we can't disable A1
-        //spiWrite('h09, 'h02, controller.bfm);
-        // action
-        //     $display("Test thermal trip");
-        //     let thermtrip_set_pins = MiscInPinsRawStruct {
-        //         sp3_to_seq_thermtrip_l: 0,
-        //         sp3_to_seq_fsr_req_l: 1,
-        //         seq_to_clk_gpio3: 0,
-        //         seq_to_clk_gpio9: 0,
-        //         seq_to_clk_gpio8: 0,
-        //         seq_to_clk_gpio2: 0,
-        //         seq_to_clk_gpio1: 0,
-        //         seq_to_clk_gpio5: 0,
-        //         seq_to_clk_gpio4: 0
-        //     };
-        //     misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
-        // endaction
-        // spiReadUntil(read_byte, a0smstatusOffset, 'h00, controller.bfm);
-        // action
-        //     $display("Design Faulted A0 off.");
-        //     $display("Attempting restart.");
-        // endaction
-        // action
-        //     // Reset therm-trip pin
-        //     let thermtrip_set_pins = MiscInPinsRawStruct {
-        //         sp3_to_seq_thermtrip_l: 1,
-        //         sp3_to_seq_fsr_req_l: 1,
-        //         seq_to_clk_gpio3: 0,
-        //         seq_to_clk_gpio9: 0,
-        //         seq_to_clk_gpio8: 0,
-        //         seq_to_clk_gpio2: 0,
-        //         seq_to_clk_gpio1: 0,
-        //         seq_to_clk_gpio5: 0,
-        //         seq_to_clk_gpio4: 0
-        //     };
-        //     misc_pins_bfm.bfm.request.put(thermtrip_set_pins);
-        // endaction
-        // spiWrite(pwrCtrlOffset, pwrCtrlA1pwren,  bench.bm);
-        // delay(100);
-        // spiWrite(pwrCtrlOffset, pwrCtrlA0aEn | pwrCtrlA1pwren, controller.bfm);
-        // action
-        //     $display("Delay for A1 SM good...");
-        // endaction
-        // spiReadUntil(read_byte, a1smstatusOffset, 'h05, controller.bfm);
-        // action
-        //     $display("Delay for A0 SM good...");
-        // endaction
-        // spiReadUntil(read_byte, a0smstatusOffset, 'h0c, controller.bfm);
-        // action
-        //     $display("Design Up");
-        // endaction
-        // delay(3000);
-        // spiWrite(pwrCtrlOffset, pwrCtrlNicpwren | pwrCtrlA0aEn | pwrCtrlA1pwren, controller.bfm);
-        // delay(6000);
-        //  action
-        //     $display("Design Up");
-        // endaction
-        // // Make interrupts go
-        // spiWrite(ierOffset, 'hff, controller.bfm);  // enable all interrupts
-        // spiBitSet(ifrOffset, ifrFantimeout, controller.bfm);  // use debug to fire an interrupt
-        // spiBitClear(ifrOffset, ifrFantimeout, controller.bfm);  // use bitclear to clear pending interrupt
-        delay(30000);
-        // action
-        //     Vector#(8, Bit#(8)) tx =  newVector();
-        //     tx[0] = unpack(zeroExtend(pack(READ)));
-        //     tx[1] = unpack('h00);
-        //     tx[2] = unpack('h09);
-        //     tx[3] = unpack('h00);
-        //     tx[4] = unpack('h00);
-        //     tx[5] = unpack('h00);
-        //     tx[6] = unpack('h00);
-        //     tx[7] = unpack('h00);
-        //     controller.bfm.request.put(tx);
-        // endaction
-        // action
-        //     let rx <- controller.bfm.response.get();
-        //     $display(rx[0]);
-        //     $display(rx[1]);
-        //     $display(rx[2]);
-        //     $display(rx[3]);
-        //     $display(rx[4]);
-        //     $display(rx[5]);
-        //     $display(rx[6]);
-        //     $display(rx[7]);
-        // endaction
-        // TODO: enable A0, sunny day case.
-        // TODO: wait for pmbus state
+       
+    endseq
+    );
+
+endmodule
+
+(* synthesize *)
+module mkGimletThermtripTop(Empty);
+    
+    Bench bench <- mkBench();
+
+    // Sim book-keeping stuff
+    Reg#(Bit#(8)) read_byte <- mkReg(0);
+
+    //HLIST
+    //
+    mkAutoFSM(
+    seq
+        // Basic read
+        spiRead(read_byte, id0Offset, bench.bfm);
+        // Enable A1+A0 (now interlocked), sunny day case
+        spiWrite(pwrCtrlOffset, pwrCtrlA1pwren | pwrCtrlA0aEn,  bench.bfm);
+        action
+            $display("Delay for A1 SM good...");
+        endaction
+        spiReadUntil(read_byte, a1smstatusOffset, 'h05,  bench.bfm);
+         action
+            $display("A1 SM good!!!");
+        endaction
+        action
+            $display("Delay for A0 SM pmbus...");
+        endaction
+        spiReadUntil(read_byte, a0smstatusOffset, 'h07,  bench.bfm);
+        delay(30);
+        action
+             $display("Enable PMBus");
+        endaction
+        bench.pmbus_on();
+        spiReadUntil(read_byte, a0smstatusOffset, 'h0c,  bench.bfm);
+        action
+             $display("Design Up");
+        endaction
+
+        // Thermtrip
+        bench.thermtrip();
+        delay(30);
+        spiReadUntil(read_byte, ifrOffset, 'h02,  bench.bfm);
+        action
+            $display("Thermtrip");
+        endaction
+        spiBitClear(ifrOffset, ifrThermtrip, bench.bfm);
+        delay(30);
+        spiReadUntil(read_byte, ifrOffset, 'h00,  bench.bfm);
+        action
+            $display("Thermtrip clear");
+        endaction
+
     endseq
     );
 

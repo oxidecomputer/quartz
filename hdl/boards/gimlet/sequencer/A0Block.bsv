@@ -541,6 +541,7 @@ interface Bench;
 
     method A0StateType dut_state();
     method Action sp3_disable(Bool value);
+    method Action sp3_thermtrip();
     method Action pmbus_on();
     method Action pmbus_off();
     method Action power_up();
@@ -630,6 +631,9 @@ module mkBench(Bench);
         ignore_sp <= value;
         sp3.disabled(value);
     endmethod
+    method Action sp3_thermtrip();
+        sp3.thermtrip(True);
+    endmethod
 endmodule
 
 interface SP3Model;
@@ -687,6 +691,10 @@ module mkSP3Model(SP3Model);
         ticks_count <= satMinus(Sat_Zero, ticks_count, 1);
     endrule
 
+    rule do_thermtrip;
+        sp3_to_seq_thermtrip_l <= pack(!thermtrip_);
+    endrule
+
      function Stmt delay(Integer d, SP3ModelStateType step) =
         seq
             action
@@ -726,8 +734,9 @@ module mkSP3Model(SP3Model);
             sp3_to_seq_slp_s5_l <= 0;
             sp3_to_seq_slp_s3_l <= 0;
             sp3_to_seq_pwrok_v3p3 <= 0;
-             sp3_to_seq_reset_v3p3_l <= 0;
+            sp3_to_seq_reset_v3p3_l <= 0;
             state <= OFF;
+            thermtrip_ <= False;
         endaction
     endseq, !abort && !run && !disabled_);
 
@@ -837,6 +846,50 @@ module mkA0MAPOTest(Empty);
         bench.power_up();
         delay(300);
         dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+        bench.power_down();
+        delay(300);
+        dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+        bench.power_up();
+        delay(2000);
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+    endseq);
+endmodule
+
+(* synthesize *)
+module mkA0ThermtripTest(Empty);
+    Bench bench <- mkBench();
+    
+    mkAutoFSM(seq
+
+        action
+            $display("Power Up");
+        endaction
+        bench.power_up();
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+        delay(300);
+        // Issue thermtrip
+        bench.sp3_thermtrip();
+        delay(100);
+        await(bench.dut_state == IDLE);
+        delay(300);
+        // Try to power up again without clearing enable (which clears faults).
+        bench.power_up();
+        delay(300);
+        dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+        // Now clear the faults so we can actually power up.
         bench.power_down();
         delay(300);
         dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");

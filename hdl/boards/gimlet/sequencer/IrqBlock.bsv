@@ -29,7 +29,7 @@ module mkIRQBlock (IRQBlock#(type_t))
         Bits#(type_t, s), 
         Bitwise#(type_t)
     );
-    Reg#(type_t) cause_raw_last <- mkReg(unpack(0));
+    Reg#(type_t) cause_pins_last <- mkReg(unpack(0));
     Reg#(type_t) cause <- mkReg(unpack(0));
     Reg#(Bit#(1))irq <- mkReg(0);
     // Combo stuff
@@ -39,16 +39,21 @@ module mkIRQBlock (IRQBlock#(type_t))
     Wire#(type_t) cur_clear <- mkDWire(unpack(0));
 
     rule do_irq_management;
-        let rising_raw_causes = cur_cause_raw & (~cause_raw_last);  // Get rising edges on causes
+        // Sample the inputs for next cycle
+        cause_pins_last <= cur_cause_raw;
+        // If cur_dbg or new inputs are rising wrt last inputs we have rising edges
+        let rising_raw_causes = cur_cause_raw & (~cause_pins_last);  // Get rising edges on causes
         let final_rising = rising_raw_causes | cur_dbg;  // Allow software to cause a rising edge regardless of input pin state
+        // rising edges get stored as the cause register
+        
         // Don't allow a clear this cycle to clear any interrupts that would be triggered
         // this cycle (so we don't accidentally drop an interrupt) by masking off any bits that will be triggered
         // this cycle from the clear mask
-        let clear_mask = cur_clear & (~final_rising);
+        let clear_mask = cur_clear & (~final_rising);    
+        
         // keep any sticky bits, set any new bis and clear any cleared bits.
         let new_cause =  (cause | final_rising) & (~clear_mask);
         cause <= new_cause;
-        cause_raw_last <= cause;
         irq <= reduceOr(pack(new_cause & cur_enables));
     endrule
     
