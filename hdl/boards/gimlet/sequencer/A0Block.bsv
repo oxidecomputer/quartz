@@ -24,8 +24,8 @@ import PowerRail::*;
         method Action ignore_sp(Bool value);
         method Bool ok;
         method A0StateType state();
-        method A0OutStatus1 status1;
-        method A0OutStatus2 status2;
+        method A0Output1Type status1;
+        method A0Output2Type status2;
         method GroupbPg b_pgs;
         method GroupcPg c_pgs;
         method Bool mapo;
@@ -41,8 +41,8 @@ import PowerRail::*;
         method Bool ignore_sp();
         method Action ok(Bool value);
         method Action state (A0StateType value);
-        method Action status1 (A0OutStatus1 value);
-        method Action status2 (A0OutStatus2 value);
+        method Action status1 (A0Output1Type value);
+        method Action status2 (A0Output2Type value);
         method Action b_pgs (GroupbPg value);
         method Action c_pgs (GroupcPg value);
         method Action mapo(Bool value);
@@ -190,8 +190,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Wire#(Bool) aggregate_pg <- mkDWire(False);
     Wire#(Bool) aggregate_fault <- mkDWire(False);
 
-    ConfigReg#(A0OutStatus1) status1 <- mkConfigRegU();
-    ConfigReg#(A0OutStatus2) status2 <- mkConfigRegU();
+    ConfigReg#(A0Output1Type) status1 <- mkConfigRegU();
+    ConfigReg#(A0Output2Type) status2 <- mkConfigRegU();
     ConfigReg#(GroupbPg) b_pgs <- mkConfigRegU();
     ConfigReg#(GroupcPg) c_pgs <- mkConfigRegU();
 
@@ -440,7 +440,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
 
     (* fire_when_enabled *)
     rule do_readbacks;
-        status1 <= A0OutStatus1 {
+        status1 <= A0Output1Type {
                 vtt_efgh_en    : vtt_ef.pins.en,
                 vtt_abcd_en    : vtt_ab.pins.en,
                 vdd_mem_efgh_en: vdd_mem_efgh.pins.en,

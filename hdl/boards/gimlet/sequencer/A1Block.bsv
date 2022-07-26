@@ -25,7 +25,7 @@ import PowerRail::*;
         method Action a1_en(Bool value);  // SM enable pin
         method Bool ok();
         method A1StateType state();
-        method A1OutStatus output_readbacks();
+        method A1OutputType output_readbacks();
         method A1Readbacks input_readbacks();
         method Bool mapo();
     endinterface
@@ -36,7 +36,7 @@ import PowerRail::*;
         method Bool a1_en();  // SM enable pin
         method Action ok(Bool value);
         method Action state (A1StateType value);
-        method Action output_readbacks (A1OutStatus value);
+        method Action output_readbacks (A1OutputType value);
         method Action input_readbacks (A1Readbacks value);
         method Action mapo(Bool value);
     endinterface
@@ -84,7 +84,7 @@ import PowerRail::*;
         Integer rsm_delay = 200 * one_ms_counts;
 
         ConfigReg#(A1StateType) state <- mkConfigReg(IDLE);
-        ConfigReg#(A1OutStatus) output_readbacks <- mkConfigRegU();
+        ConfigReg#(A1OutputType) output_readbacks <- mkConfigRegU();
         ConfigReg#(A1Readbacks) input_readbacks <- mkConfigRegU();
 
 
@@ -141,7 +141,7 @@ import PowerRail::*;
         
         (* fire_when_enabled *)
         rule do_readbacks;
-            output_readbacks <= A1OutStatus {
+            output_readbacks <= A1OutputType {
                 rsmrst: ~sp3_rsmrst_v3p3_l_,
                 v0p9_s5_en: sp3_v0p9_s5.pins.en,
                 v1p8_s5_en: sp3_v1p8_s5.pins.en,

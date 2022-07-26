@@ -25,7 +25,7 @@ import PowerRail::*;
         method Bool ok();
         method NicStateType state();
         method NicStatus pgs;
-        method OutStatusNic2 nic_outs;
+        method NicOutput2Type nic_outs;
         method Bool mapo();
         // method A1OutStatus output_readbacks();
         // method A1Readbacks input_readbacks();
@@ -40,7 +40,7 @@ import PowerRail::*;
         method Action ok(Bool value);
         method Action state(NicStateType value);
         method Action pgs (NicStatus value);
-        method Action nic_outs (OutStatusNic2 value);
+        method Action nic_outs (NicOutput2Type value);
         method Action mapo(Bool value);
     endinterface
 
@@ -288,8 +288,8 @@ import PowerRail::*;
             method cld_rst_override = cld_rst_override._write;
             method perst_override = perst_override._write;
             method perst_solo = perst_solo._write;
-            method OutStatusNic2 nic_outs;
-                return OutStatusNic2 {
+            method NicOutput2Type nic_outs;
+                return NicOutput2Type {
                    sp3_perst: ~sp3_to_seq_nic_perst_l,
                    nic_perst: ~seq_to_nic_perst_l,
                    pwrflt: ~nic_to_sp3_pwrflt_l,

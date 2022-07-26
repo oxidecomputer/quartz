@@ -50,42 +50,42 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(PwrCtrl) power_control <- mkReg(defaultValue);
     ConfigReg#(NicCtrl) nic_control <- mkReg(defaultValue);
     //  NIC domain signals
-    ConfigReg#(OutStatusNic1) nic1_out_status <- mkRegU(); // RO register for outputs
+    ConfigReg#(NicOutput1Type) nic1_out_status <- mkRegU(); // RO register for outputs
     
-    ConfigReg#(DbgOutNic1) dbg_nic1_out       <- mkReg(unpack(0));
-    ConfigReg#(DbgOutNic2) dbg_nic2_out       <- mkReg(unpack(0));
+    ConfigReg#(NicOutput1Type) dbg_nic1_out       <- mkReg(unpack(0));
+    ConfigReg#(NicOutput2Type) dbg_nic2_out       <- mkReg(unpack(0));
     // Early output signals
-    ConfigReg#(EarlyPwrStatus) early_output_rdbks  <- mkRegU();
+    ConfigReg#(EarlyPower) early_output_rdbks  <- mkRegU();
     ConfigReg#(EarlyRbks) early_inputs  <- mkRegU();
-    ConfigReg#(EarlyPowerCtrl) early_ctrl  <- mkReg(unpack('h06));  // want to force the 2V5 on due to level translator issue on gimlet.
+    ConfigReg#(EarlyPower) early_ctrl  <- mkReg(unpack('h06));  // want to force the 2V5 on due to level translator issue on gimlet.
     // A1 registers
-    ConfigReg#(A1DbgOut) a1_dbg <- mkReg(unpack(0));
-    ConfigReg#(A1OutStatus) a1_output_readbacks <- mkRegU();
+    ConfigReg#(A1OutputType) a1_dbg <- mkReg(unpack(0));
+    ConfigReg#(A1OutputType) a1_output_readbacks <- mkRegU();
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
     ConfigReg#(A1smstatus) a1_sm <- mkRegU();
     // A0 registers
     //ConfigReg#(A0OutStatus1) a0_status1 <- mkReg(unpack(0)); // a0OutStatus1Offset
     //ConfigReg#(A0OutStatus2) a0_status2 <- mkReg(unpack(0)); // a0OutStatus2Offset
-    ConfigReg#(A0DbgOut1) a0_dbg_out1 <- mkReg(unpack(0)); // a0DbgOut1Offset
-    ConfigReg#(A0DbgOut2) a0_dbg_out2 <- mkReg(unpack(0)); // a0DbgOut1Offset
+    ConfigReg#(A0Output1Type) a0_dbg_out1 <- mkReg(unpack(0)); // a0DbgOut1Offset
+    ConfigReg#(A0Output2Type) a0_dbg_out2 <- mkReg(unpack(0)); // a0DbgOut1Offset
     ConfigReg#(AmdA0) a0_amd_rdbks <- mkReg(unpack(0)); // amdA0Offset
    
     ConfigReg#(GroupbUnused) a0_groupB_unused <- mkReg(unpack(0)); //groupbUnusedOffset
     ConfigReg#(GroupbcFlts) a0_groupC_faults <-mkReg(unpack(0)); //groupbcFltsOffset
     
-    ConfigReg#(A0smstatus) a0_sm <- mkRegU();
+    ConfigReg#(A0smstatus) a0_sm <- mkConfigRegU();
     // Misc IO registers
-    ConfigReg#(ClkgenOutStatus) clkgen_out_status <- mkReg(unpack(0)); // clkgenOutStatusOffset
-    ConfigReg#(ClkgenDbgOut) clkgen_dbg_out <- mkReg(unpack(0)); // clkgenDbgOutOffset
+    ConfigReg#(ClkgenStatus) clkgen_out_status <- mkReg(unpack(0)); // clkgenOutStatusOffset
+    ConfigReg#(ClkGenOutputType) clkgen_dbg_out <- mkReg(unpack(0)); // clkgenDbgOutOffset
 
-    ConfigReg#(AmdOutStatus) amd_out_status <- mkReg(unpack(0)); // amdOutStatusOffset
-    ConfigReg#(AmdDbgOut) amd_dbg_out <- mkReg(unpack(0)); // amdDbgOutOffset
+    ConfigReg#(AmdOutputType) amd_out_status <- mkReg(unpack(0)); // amdOutStatusOffset
+    ConfigReg#(AmdOutputType) amd_dbg_out <- mkReg(unpack(0)); // amdDbgOutOffset
 
-    ConfigReg#(Ifr) irq_en_reg <- mkReg(unpack(0));
-    ConfigReg#(Ifr) irq_cause_reg <- mkReg(unpack(0));
-    ConfigReg#(Ifr) irq_dbg_flags <- mkDReg(unpack(0));
-    ConfigReg#(Ifr) irq_clr_flags <- mkDReg(unpack(0));
-    ConfigReg#(Ifr) irq_cause_raw <- mkDReg(unpack(0));
+    ConfigReg#(IrqType) irq_en_reg <- mkReg(unpack(0));
+    ConfigReg#(IrqType) irq_cause_reg <- mkReg(unpack(0));
+    ConfigReg#(IrqType) irq_dbg_flags <- mkDReg(unpack(0));
+    ConfigReg#(IrqType) irq_clr_flags <- mkDReg(unpack(0));
+    ConfigReg#(IrqType) irq_cause_raw <- mkDReg(unpack(0));
 
     PulseWire do_read <- mkPulseWire();
     PulseWire do_write <- mkPulseWire();
@@ -99,13 +99,13 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bit#(16)) address <- mkDWire(0);
     Wire#(RegOps) operation <- mkDWire(NOOP);
     // RWire#(NicStatus) cur_nic_pins <- mkRWire();
-    RWire#(OutStatusNic1) cur_nic1_out_status <- mkRWire();
-    RWire#(EarlyPwrStatus) cur_early_outputs <- mkRWire();
+    RWire#(NicOutput1Type) cur_nic1_out_status <- mkRWire();
+    RWire#(EarlyPower) cur_early_outputs <- mkRWire();
     RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
     Wire#(A1StateType) a1_state <- mkDWire(IDLE);
-    Wire#(A0OutStatus1) a0_status1 <- mkDWire(unpack(0));
-    Wire#(A0OutStatus2) a0_status2 <- mkDWire(unpack(0));
+    Wire#(A0Output1Type) a0_status1 <- mkDWire(unpack(0));
+    Wire#(A0Output2Type) a0_status2 <- mkDWire(unpack(0));
     Wire#(GroupbPg) a0_groupB_pg <- mkDWire(unpack(0));
     Wire#(GroupcPg) a0_groupC_pg <- mkDWire(unpack(0));
     Wire#(NicStatus) nic_status <- mkDWire(unpack(0));
@@ -120,10 +120,10 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bool) a1_mapo <- mkDWire(False);
     Wire#(Bool) thermtrip <- mkDWire(False);
     Wire#(Bool) fanfault <- mkDWire(False);
-    Wire#(OutStatusNic2) nic2_out_status <- mkDWire(unpack(0));
+    Wire#(NicOutput2Type) nic2_out_status <- mkDWire(unpack(0));
+    Wire#(NicCtrl) nic_ctrl_next <- mkDWire(defaultValue);
 
-
-    IRQBlock#(Ifr) irq_block <- mkIRQBlock();
+    IRQBlock#(IrqType) irq_block <- mkIRQBlock();
 
     mkConnection(irq_en_reg, irq_block.enables);
     mkConnection(irq_dbg_flags, irq_block.debug);
@@ -141,7 +141,7 @@ module mkGimletRegs(GimletRegIF);
     endrule
 
     rule do_irqs;
-        irq_cause_raw <= Ifr {
+        irq_cause_raw <= IrqType {
             nicmapo: pack(nic_mapo),
             a0mapo: pack(a0_mapo),
             a1mapo: pack(a1_mapo),
@@ -231,7 +231,14 @@ module mkGimletRegs(GimletRegIF);
         fpga_cs3 <= reg_update(fpga_cs3, fpga_cs3, address, cs3Offset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
         power_control <= reg_update(power_control, power_control, address, pwrCtrlOffset, operation, writedata);
-        nic_control <= reg_update(nic_control, nic_control, address, nicCtrlOffset, operation, writedata);
+        
+        // This is a super ugly hack to synthesize a write of the reset value when A0_ok goes bad
+        // There has to be a better way of doing this!!!
+        if (a0_ok == 1) begin
+            nic_control <= reg_update(nic_control, nic_control, address, nicCtrlOffset, operation, writedata);
+        end else begin
+            nic_control <= reg_update(nic_control, nic_control, fromInteger(nicCtrlOffset), nicCtrlOffset, WRITE, pack(nic_ctrl_next));
+        end
       
         a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
 
