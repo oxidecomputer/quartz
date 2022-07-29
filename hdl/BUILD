@@ -1,5 +1,10 @@
 # -*- python -*- vim:syntax=python:
 
+bluespec_library('Common',
+    sources = [
+        'Common.bsv',
+    ])
+
 bluespec_library('FanModule',
     sources = [
         'FanModule.bsv',
