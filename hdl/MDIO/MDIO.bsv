@@ -17,7 +17,7 @@ import Vector::*;
 
 import Strobe::*;
 
-import Common::*;
+import CommonInterfaces::*;
 
 // Parameters used to configure various things within the block
 // system_frequency_hz      - main clock domain for the design

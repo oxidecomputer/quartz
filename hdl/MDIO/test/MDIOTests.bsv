@@ -13,7 +13,7 @@ import GetPut::*;
 import FIFO::*;
 import StmtFSM::*;
 
-import Common::*;
+import CommonInterfaces::*;
 
 import MDIO::*;
 import MDIOPeripheralModel::*;

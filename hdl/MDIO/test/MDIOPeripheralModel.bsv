@@ -14,7 +14,7 @@ import FIFO::*;
 import GetPut::*;
 import Vector::*;
 
-import Common::*;
+import CommonInterfaces::*;
 import MDIO::*;
 
 // The model will emit these ModelEvents over the course of a transaction so a

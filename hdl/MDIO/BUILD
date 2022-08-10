@@ -5,7 +5,7 @@ bluespec_library('MDIO',
         'MDIO.bsv'
     ],
     deps = [
-        '//hdl:Common',
+        '//hdl:CommonInterfaces',
         'cobalt//hdl:Strobe',
     ])
 
@@ -14,7 +14,7 @@ bluespec_library('MDIOPeripheralModel',
         'test/MDIOPeripheralModel.bsv',
     ],
     deps = [
-        '//hdl:Common',
+        '//hdl:CommonInterfaces',
         ':MDIO',
     ])
 
@@ -27,7 +27,7 @@ bluesim_tests('MDIOTests',
         'mkMDIOIgnoreWrongPhyAddrTest',
     ],
     deps = [
-        '//hdl:Common',
+        '//hdl:CommonInterfaces',
         ':MDIO',
         ':MDIOPeripheralModel',
     ])
