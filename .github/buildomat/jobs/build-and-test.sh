@@ -5,7 +5,7 @@
 #: target = "ubuntu-20.04"
 #:
 #: output_rules = [
-#:     "/work/oxidecomputer/quartz/build/latest/*",
+#:     "/work/oxidecomputer/quartz/build/latest/**/*",
 #: ]
 
 set -o errexit
