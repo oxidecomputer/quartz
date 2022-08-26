@@ -4,6 +4,9 @@
 #: variety = "basic"
 #: target = "ubuntu-20.04"
 #:
+#: output_rules = [
+#:     "/work/oxidecomputer/quartz/build/latest/*",
+#: ]
 
 set -o errexit
 set -o pipefail
@@ -58,6 +61,7 @@ tar zxf bsc-2022.01-ubuntu*
 
 #
 # Now do bsc contrib (not part of the binary release)
+# This works but takes a non-zero amount of time, so it is commented out because we don't currently depend on it
 #
 # git clone --recursive https://github.com/B-Lang-org/bsc-contrib.git
 # pushd bsc-contrib
@@ -93,5 +97,8 @@ pushd build
 #
 # Do the build
 #
-banner FPGA build
-ptime -m ./cobble build -v latest/hdl/boards/gimlet/sequencer/gimlet_sequencer.bit
+banner FPGA Builds
+
+# Get all bit files and build them
+./cobble list | grep .bit | while read line; do ./cobble build -v "$line"; done
+
