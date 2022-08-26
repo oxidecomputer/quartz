@@ -38,6 +38,7 @@ git submodule sync
 git submodule update --init --recursive
 
 pfexec apt -y update
+pfexec apt -y install make
 
 #
 # Install yosys from pre-built toolchain as specified
@@ -48,12 +49,23 @@ wget -q $YOSYS_TOOLCHAIN
 tar xf oss-cad-suite-linux-x64*
 
 #
-# Install pre-built bsv toolchain as specified
+# Install pre-built bsv toolchain as specified and add bsc/bin folder to path
 #
 banner Bluespec Install
 BSV_TOOLCHAIN="https://github.com/B-Lang-org/bsc/releases/download/2022.01/bsc-2022.01-ubuntu-20.04.tar.gz"
 wget -q $BSV_TOOLCHAIN
 tar xf bsc-2022.01-ubuntu*
+
+# Add bsc to the path since make for contrib is going to need it
+PATH=$PATH:/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/
+
+#
+# Now do bsc contrib (not part of the binary release)
+#
+git clone --recursive https://github.com/B-Lang-org/bsc-contrib.git
+pushd bsc-contrib
+make PREFIX=/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/
+popd
 
 #
 # Do cobalt setup (python packages required)
