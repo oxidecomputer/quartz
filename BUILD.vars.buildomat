@@ -1,0 +1,14 @@
+[bluespec]
+prefix = "/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04"
+bin = "/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/bsc"
+libdir = "/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/lib/"
+
+[yosys]
+bin = "/work/oxidecomputer/quartz/oss-cad-suite-linux-x64-20220825/bin/yosys"
+libdir = "/work/oxidecomputer/quartz/oss-cad-suite-linux-x64-20220825/share/yosys"
+
+[nextpnr]
+ecp5 = "/work/oxidecomputer/quartz/oss-cad-suite-linux-x64-20220825//bin/nextpnr-ecp5"
+ecp5_pack = "/work/oxidecomputer/quartz/oss-cad-suite-linux-x64-20220825/bin/ecppack"
+ice40 = "/work/oxidecomputer/quartz/oss-cad-suite-linux-x64-20220825/bin/nextpnr-ice40"
+ice40_pack = "/work/oxidecomputer/quartz/oss-cad-suite-linux-x64-20220825/bin/icepack"

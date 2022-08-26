@@ -38,20 +38,52 @@ git submodule sync
 git submodule update --init --recursive
 
 pfexec apt -y update
-pfexec apt -y install docker.io
-pfexec chown "$LOGNAME" "/var/run/docker.sock"
 
-banner cobalt
+#
+# Install yosys from pre-built toolchain as specified
+#
+banner Yosys Install
+YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-08-25/oss-cad-suite-linux-x64-20220825.tgz"
+wget $YOSYS_TOOLCHAIN
+tar xf oss-cad-suite-linux-x64*
+
+#
+# Install pre-built bsv toolchain as specified
+#
+banner Bluespec Install
+BSV_TOOLCHAIN="https://github.com/B-Lang-org/bsc/releases/download/2022.01/bsc-2022.01-ubuntu-20.04.tar.gz"
+wget $BSV_TOOLCHAIN
+tar xf bsc-2022.01-ubuntu*
+
+#
+# Do cobalt setup (python packages required)
+# 
+banner cobalt Setup
 pushd vnd/cobalt
 #
-# Build the cobalt docker image.  This takes a while, and produces a vast
-# quantity of console output that we do not generally want to look at, so we
-# build with the quiet flag.  This image could probably be built and published
-# in the cobalt repository itself, and just _consumed_ here.
+# Install cobalt-related python stuff, ninja + other 3rd party things
 #
-ptime -m docker build -q -t cobalt .
+pfexec apt -y install pip3
+pip3 install ninja
+pip3 install -r requirements.txt
 popd
 
-banner hey presto
-ptime -m docker run -i cobalt \
-    find /opt/bluespec/bin /opt/fpga-toolchain/bin -type f -ls
+#
+# Prep for build by setting up the BUILD.vars that cobble needs
+# then making a build directory and initializing cobble
+# 
+cp BUILD.vars.buildomat BUILD.vars
+
+mkdir build
+pushd build
+
+#
+# Initialize cobalt
+#
+./vnd/cobalt/vnd/cobble/cobble init .. --reinit
+
+#
+# Do the build
+#
+banner FPGA build
+ptime -m ./cobble build -v latest/hdl/boards/gimlet/sequencer/gimlet_sequencer.bit
