@@ -44,7 +44,7 @@ pfexec apt -y update
 #
 banner Yosys Install
 YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-08-25/oss-cad-suite-linux-x64-20220825.tgz"
-wget $YOSYS_TOOLCHAIN
+wget -q $YOSYS_TOOLCHAIN
 tar xf oss-cad-suite-linux-x64*
 
 #
@@ -52,7 +52,7 @@ tar xf oss-cad-suite-linux-x64*
 #
 banner Bluespec Install
 BSV_TOOLCHAIN="https://github.com/B-Lang-org/bsc/releases/download/2022.01/bsc-2022.01-ubuntu-20.04.tar.gz"
-wget $BSV_TOOLCHAIN
+wget -q $BSV_TOOLCHAIN
 tar xf bsc-2022.01-ubuntu*
 
 #
@@ -63,7 +63,7 @@ pushd vnd/cobalt
 #
 # Install cobalt-related python stuff, ninja + other 3rd party things
 #
-pfexec apt -y install pip3
+pfexec apt -y install python3-pip
 pip3 install ninja
 pip3 install -r requirements.txt
 popd
