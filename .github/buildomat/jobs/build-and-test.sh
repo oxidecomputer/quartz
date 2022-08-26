@@ -64,9 +64,6 @@ ls -alh bsc-2022.01-ubuntu-20.04/
 git clone --recursive https://github.com/B-Lang-org/bsc-contrib.git
 pushd bsc-contrib
 make PREFIX=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04 BSC=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04/bin/bsc
-
-/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04/bin/bsc
-/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/bsc
 popd
 
 #
