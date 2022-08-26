@@ -46,7 +46,7 @@ pfexec apt -y install make
 banner Yosys Install
 YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-08-25/oss-cad-suite-linux-x64-20220825.tgz"
 wget -q $YOSYS_TOOLCHAIN
-tar xf oss-cad-suite-linux-x64*
+tar xvf oss-cad-suite-linux-x64*
 
 #
 # Install pre-built bsv toolchain as specified and add bsc/bin folder to path
@@ -54,8 +54,10 @@ tar xf oss-cad-suite-linux-x64*
 banner Bluespec Install
 BSV_TOOLCHAIN="https://github.com/B-Lang-org/bsc/releases/download/2022.01/bsc-2022.01-ubuntu-20.04.tar.gz"
 wget -q $BSV_TOOLCHAIN
-tar xf bsc-2022.01-ubuntu*
+tar xvf bsc-2022.01-ubuntu*
 
+pwd
+ls bsc-2022.01-ubuntu*
 #
 # Now do bsc contrib (not part of the binary release)
 #
