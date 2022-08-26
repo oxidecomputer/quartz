@@ -63,8 +63,7 @@ pushd vnd/cobalt
 #
 # Install cobalt-related python stuff, ninja + other 3rd party things
 #
-pfexec apt -y install python3-pip
-pip3 install ninja
+pfexec apt -y install python3-pip ninja-build
 pip3 install -r requirements.txt
 popd
 
