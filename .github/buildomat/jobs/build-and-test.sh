@@ -46,7 +46,7 @@ pfexec apt -y install make
 banner Yosys Install
 YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-08-25/oss-cad-suite-linux-x64-20220825.tgz"
 wget -q $YOSYS_TOOLCHAIN
-tar xvf oss-cad-suite-linux-x64*
+tar zxf oss-cad-suite-linux-x64*
 
 #
 # Install pre-built bsv toolchain as specified and add bsc/bin folder to path
@@ -54,16 +54,19 @@ tar xvf oss-cad-suite-linux-x64*
 banner Bluespec Install
 BSV_TOOLCHAIN="https://github.com/B-Lang-org/bsc/releases/download/2022.01/bsc-2022.01-ubuntu-20.04.tar.gz"
 wget -q $BSV_TOOLCHAIN
-tar xvf bsc-2022.01-ubuntu*
+tar zxf bsc-2022.01-ubuntu*
 
 pwd
-ls bsc-2022.01-ubuntu*
+ls -alh bsc-2022.01-ubuntu-20.04/
 #
 # Now do bsc contrib (not part of the binary release)
 #
 git clone --recursive https://github.com/B-Lang-org/bsc-contrib.git
 pushd bsc-contrib
-make PREFIX=/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/ BSC=/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/bsc
+make PREFIX=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04 BSC=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04/bin/bsc
+
+/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04/bin/bsc
+/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/bsc
 popd
 
 #
