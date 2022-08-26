@@ -56,15 +56,13 @@ BSV_TOOLCHAIN="https://github.com/B-Lang-org/bsc/releases/download/2022.01/bsc-2
 wget -q $BSV_TOOLCHAIN
 tar zxf bsc-2022.01-ubuntu*
 
-pwd
-ls -alh bsc-2022.01-ubuntu-20.04/
 #
 # Now do bsc contrib (not part of the binary release)
 #
-git clone --recursive https://github.com/B-Lang-org/bsc-contrib.git
-pushd bsc-contrib
-make PREFIX=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04 BSC=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04/bin/bsc
-popd
+# git clone --recursive https://github.com/B-Lang-org/bsc-contrib.git
+# pushd bsc-contrib
+# make PREFIX=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04 BSC=/work/oxidecomputer/quartz/bsc-2022.01-ubuntu-20.04/bin/bsc
+# popd
 
 #
 # Do cobalt setup (python packages required)
