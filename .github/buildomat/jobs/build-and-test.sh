@@ -57,7 +57,7 @@ wget -q $BSV_TOOLCHAIN
 tar xf bsc-2022.01-ubuntu*
 
 # Add bsc to the path since make for contrib is going to need it
-PATH=$PATH:/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/
+export PATH=$PATH:/work/oxidecomputer/quartz/bsc-2002.01-ubuntu-20.04/bin/
 
 #
 # Now do bsc contrib (not part of the binary release)
