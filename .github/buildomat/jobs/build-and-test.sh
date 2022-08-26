@@ -80,7 +80,7 @@ pushd build
 #
 # Initialize cobalt
 #
-./vnd/cobalt/vnd/cobble/cobble init .. --reinit
+../vnd/cobalt/vnd/cobble/cobble init .. --reinit
 
 #
 # Do the build
