@@ -213,7 +213,7 @@ import PowerRail::*;
             if (perst_solo) begin
                 seq_to_nic_perst_l <= pack(state == DONE && !perst_override);
             end else begin
-                seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && !perst_override);
+                seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && !perst_override && !sw_reset);
             end
             nic_to_sp3_pwrflt_l <= 1;
             seq_to_nic_comb_pg_l <= pack(state != DELAY && state != DONE);
