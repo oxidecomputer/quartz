@@ -137,6 +137,12 @@ module mkMDIO #(Parameters parameters) (MDIO);
         next_command    <= tagged Valid next_command_q.first;
     endrule
 
+    (* fire_when_enabled *)
+    rule do_idle_bus(state == Idle);
+        mdio_out_en     <= 1;
+        mdio_out        <= 1;
+    endrule
+
     // A future improvement to make would be to dynamically control preamble
     // length for each transaction since there is inconsistency about what
     // devices want. The standard is 32-bits (!) of preamble, but the VSC8562
@@ -146,8 +152,6 @@ module mkMDIO #(Parameters parameters) (MDIO);
     rule do_idle(state == Idle && valid_command);
         let cmd     = fromMaybe(?, next_command);
         cur_command <= cmd;
-        mdio_out_en <= 1;
-        mdio_out    <= 1;
         bit_cntr    <= 0;
         buffer      <= reverse(unpack({ 2'b11, // 2-bit preamble for VSC8562
                                 2'b01, // SFD
@@ -205,7 +209,6 @@ module mkMDIO #(Parameters parameters) (MDIO);
         if (bit_cntr < 16) begin
             mdio_out        <= buffer[bit_cntr];
         end else begin
-            mdio_out_en     <= 0;
             next_command    <= tagged Invalid;
             state           <= Idle;
             next_command_q.deq();
