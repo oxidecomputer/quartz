@@ -144,41 +144,41 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
         end else if (spi_request.address == fromInteger(qsfpI2cRegAddrOffset)) begin
             ret_byte = pack(qsfp_top.i2c_reg_addr);
         end else if (spi_request.address == fromInteger(qsfpI2cNumBytesOffset)) begin
-            ret_byte = pack(qsfp_top.i2c_bcast_l);
-        end else if (spi_request.address == fromInteger(qsfpI2cBcastHOffset)) begin
             ret_byte = pack(qsfp_top.i2c_num_bytes);
-        end else if (spi_request.address == fromInteger(qsfpI2cBcastLOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpI2cBcastHOffset)) begin
             ret_byte = pack(qsfp_top.i2c_bcast_h);
+        end else if (spi_request.address == fromInteger(qsfpI2cBcastLOffset)) begin
+            ret_byte = pack(qsfp_top.i2c_bcast_l);
         end else if (spi_request.address == fromInteger(qsfpI2cCtrlOffset)) begin
-            ret_byte = pack(qsfp_top.mod_en_l);
-        end else if (spi_request.address == fromInteger(qsfpCtrlEnHOffset)) begin
             ret_byte = pack(qsfp_top.i2c_ctrl);
-        end else if (spi_request.address == fromInteger(qsfpCtrlEnLOffset)) begin
-            ret_byte = pack(qsfp_top.mod_reset_l);
-        end else if (spi_request.address == fromInteger(qsfpCtrlResetHOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpCtrlEnHOffset)) begin
             ret_byte = pack(qsfp_top.mod_en_h);
-        end else if (spi_request.address == fromInteger(qsfpCtrlResetLOffset)) begin
-            ret_byte = pack(qsfp_top.mod_lpmode_l);
-        end else if (spi_request.address == fromInteger(qsfpCtrlLpmodeHOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpCtrlEnLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_en_l);
+        end else if (spi_request.address == fromInteger(qsfpCtrlResetHOffset)) begin
             ret_byte = pack(qsfp_top.mod_reset_h);
-        end else if (spi_request.address == fromInteger(qsfpCtrlLpmodeLOffset)) begin
-            ret_byte = pack(qsfp_top.mod_pg_l);
-        end else if (spi_request.address == fromInteger(qsfpStatusPgHOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpCtrlResetLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_reset_l);
+        end else if (spi_request.address == fromInteger(qsfpCtrlLpmodeHOffset)) begin
             ret_byte = pack(qsfp_top.mod_lpmode_h);
-        end else if (spi_request.address == fromInteger(qsfpStatusPgLOffset)) begin
-            ret_byte = pack(qsfp_top.mod_pg_timeout_l);
-        end else if (spi_request.address == fromInteger(qsfpStatusPgTimeoutHOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpCtrlLpmodeLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_lpmode_l);
+        end else if (spi_request.address == fromInteger(qsfpStatusPgHOffset)) begin
             ret_byte = pack(qsfp_top.mod_pg_h);
-        end else if (spi_request.address == fromInteger(qsfpStatusPgTimeoutLOffset)) begin
-            ret_byte = pack(qsfp_top.mod_present_l);
-        end else if (spi_request.address == fromInteger(qsfpStatusPresentHOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpStatusPgLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_pg_l);
+        end else if (spi_request.address == fromInteger(qsfpStatusPgTimeoutHOffset)) begin
             ret_byte = pack(qsfp_top.mod_pg_timeout_h);
-        end else if (spi_request.address == fromInteger(qsfpStatusPresentLOffset)) begin
-            ret_byte = pack(qsfp_top.mod_irq_l);
-        end else if (spi_request.address == fromInteger(qsfpStatusIrqHOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpStatusPgTimeoutLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_pg_timeout_l);
+        end else if (spi_request.address == fromInteger(qsfpStatusPresentHOffset)) begin
             ret_byte = pack(qsfp_top.mod_present_h);
-        end else if (spi_request.address == fromInteger(qsfpStatusIrqLOffset)) begin
+        end else if (spi_request.address == fromInteger(qsfpStatusPresentLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_present_l);
+        end else if (spi_request.address == fromInteger(qsfpStatusIrqHOffset)) begin
             ret_byte = pack(qsfp_top.mod_irq_h);
+        end else if (spi_request.address == fromInteger(qsfpStatusIrqLOffset)) begin
+            ret_byte = pack(qsfp_top.mod_irq_l);
         end else if (isBetween(spi_request.address, qsfpPort0ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[0]);
         end else if (isBetween(spi_request.address, qsfpPort1ReadBufferOffset, readBufferNumEntries)) begin
