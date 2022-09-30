@@ -141,10 +141,10 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // the address at the start of a new read operation.
     (* fire_when_enabled *)
     rule do_read_buffer_write_addr;
-        if (new_i2c_command || read_buffer_write_addr == 127) begin
+        if (new_i2c_command || read_buffer_write_addr == 128) begin
             read_buffer_write_addr  <= 0;
         end else if (i2c_data_received) begin
-            if (read_buffer_write_addr < 127) begin
+            if (read_buffer_write_addr < 128) begin
                 read_buffer_write_addr    <= read_buffer_write_addr + 1;
             end else begin
                 read_buffer_write_addr    <= 0;
@@ -181,7 +181,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         if (new_i2c_command) begin
             write_buffer_read_addr    <= 0;
         end else if (i2c_core.request_write_data) begin
-            if (write_buffer_read_addr < 127) begin
+            if (write_buffer_read_addr < 128) begin
                 write_buffer_read_addr    <= write_buffer_read_addr + 1;
             end else begin
                 write_buffer_read_addr    <= 0;
