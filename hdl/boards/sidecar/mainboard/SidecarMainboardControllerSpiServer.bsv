@@ -5,6 +5,7 @@ import ConfigReg::*;
 import Connectable::*;
 import GetPut::*;
 
+import PCIeEndpointController::*;
 import RegCommon::*;
 import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
@@ -15,7 +16,9 @@ typedef RegResp#(8) SpiResponse;
 
 typedef Server#(SpiRequest, SpiResponse) SpiServer;
 
-module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
+module mkSpiServer
+        #(Tofino2Sequencer::Registers tofino,
+            PCIeEndpointController::Registers pcie) (SpiServer);
     Wire#(SpiRequest) spi_request <- mkDWire(SpiRequest{address: 0, wdata: 0, op: NOOP});
     Wire#(SpiResponse) spi_response <- mkWire();
 
@@ -30,17 +33,19 @@ module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
                 fromInteger(id2Offset): 'haa;
                 fromInteger(id3Offset): 'h55;
                 fromInteger(scratchpadOffset): pack(scratchpad);
-                fromInteger(tofinoSeqCtrlOffset): pack(tofino_sequencer.registers.ctrl);
-                fromInteger(tofinoSeqStateOffset): pack(tofino_sequencer.registers.state);
-                fromInteger(tofinoSeqStepOffset): pack(tofino_sequencer.registers.step);
-                fromInteger(tofinoSeqErrorOffset): pack(tofino_sequencer.registers.error);
-                fromInteger(tofinoPowerEnableOffset): pack(tofino_sequencer.registers.power_enable);
-                fromInteger(tofinoPowerGoodOffset): pack(tofino_sequencer.registers.power_good);
-                fromInteger(tofinoPowerFaultOffset): pack(tofino_sequencer.registers.power_fault);
-                fromInteger(tofinoPowerVrhotOffset): pack(tofino_sequencer.registers.power_vrhot);
-                fromInteger(tofinoPowerVidOffset): pack(tofino_sequencer.registers.vid);
-                fromInteger(tofinoResetOffset): pack(tofino_sequencer.registers.tofino_reset);
-                fromInteger(tofinoMiscOffset): pack(tofino_sequencer.registers.misc);
+                fromInteger(tofinoSeqCtrlOffset): pack(tofino.ctrl);
+                fromInteger(tofinoSeqStateOffset): pack(tofino.state);
+                fromInteger(tofinoSeqStepOffset): pack(tofino.step);
+                fromInteger(tofinoSeqErrorOffset): pack(tofino.error);
+                fromInteger(tofinoPowerEnableOffset): pack(tofino.power_enable);
+                fromInteger(tofinoPowerGoodOffset): pack(tofino.power_good);
+                fromInteger(tofinoPowerFaultOffset): pack(tofino.power_fault);
+                fromInteger(tofinoPowerVrhotOffset): pack(tofino.power_vrhot);
+                fromInteger(tofinoPowerVidOffset): pack(tofino.vid);
+                fromInteger(tofinoResetOffset): pack(tofino.tofino_reset);
+                fromInteger(tofinoMiscOffset): pack(tofino.misc);
+                fromInteger(pcieHotplugCtrlOffset): pack(pcie.ctrl);
+                fromInteger(pcieHotplugStatusOffset): pack(pcie.status);
                 default: 'hff;
             endcase};
     endrule
@@ -70,7 +75,8 @@ module mkSpiServer #(Tofino2Sequencer tofino_sequencer) (SpiServer);
 
     // Update registers on SPI requests.
     addRules(do_spi_write(scratchpadOffset, scratchpad));
-    addRules(do_spi_write(tofinoSeqCtrlOffset, tofino_sequencer.registers.ctrl));
+    addRules(do_spi_write(tofinoSeqCtrlOffset, tofino.ctrl));
+    addRules(do_spi_write(pcieHotplugCtrlOffset, pcie.ctrl));
 
     interface Put request = toPut(asIfc(spi_request));
     interface Put response = toGet(asIfc(spi_response));

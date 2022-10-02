@@ -10,6 +10,7 @@ import Strobe::*;
 import IOSync::*;
 import PowerRail::*;
 import SidecarMainboardController::*;
+import SidecarMainboardControllerSpiServer::*;
 import Tofino2Sequencer::*;
 
 
@@ -78,10 +79,20 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
     // SPI peripheral.
     //
 
-    Reg#(Bit#(1)) csn <- mkInputSyncFor(controller.spi.csn);
-    Reg#(Bit#(1)) sclk <- mkInputSyncFor(controller.spi.sclk);
-    Reg#(Bit#(1)) copi <- mkInputSyncFor(controller.spi.copi);
-    ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(controller.spi.cipo);
+    SpiPeripheralPhy spi_phy <- mkSpiPeripheralPhy();
+    SpiDecodeIF spi_decoder <- mkSpiRegDecode();
+    SpiServer spi_server <-
+        mkSpiServer(
+            controller.registers.tofino,
+            controller.registers.pcie);
+
+    Reg#(Bit#(1)) csn <- mkInputSyncFor(spi_phy.pins.csn);
+    Reg#(Bit#(1)) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
+    Reg#(Bit#(1)) copi <- mkInputSyncFor(spi_phy.pins.copi);
+    ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(spi_phy.pins.cipo);
+
+    mkConnection(spi_phy.decoder_if, spi_decoder.spi_byte);
+    mkConnection(spi_decoder.reg_con, spi_server);
 
     //
     // Timing
@@ -106,12 +117,12 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
     PowerRailModel#(16) vdda15 <- mkDefaultPowerRailModel("VDDA15");
     PowerRailModel#(16) vdda18 <- mkDefaultPowerRailModel("VDDA18");
 
-    mkConnection(vdd18.pins, controller.tofino.vdd18);
-    mkConnection(vddcore.pins, controller.tofino.vddcore);
-    mkConnection(vddpcie.pins, controller.tofino.vddpcie);
-    mkConnection(vddt.pins, controller.tofino.vddt);
-    mkConnection(vdda15.pins, controller.tofino.vdda15);
-    mkConnection(vdda18.pins, controller.tofino.vdda18);
+    mkConnection(vdd18.pins, controller.pins.tofino.vdd18);
+    mkConnection(vddcore.pins, controller.pins.tofino.vddcore);
+    mkConnection(vddpcie.pins, controller.pins.tofino.vddpcie);
+    mkConnection(vddt.pins, controller.pins.tofino.vddt);
+    mkConnection(vdda15.pins, controller.pins.tofino.vdda15);
+    mkConnection(vdda18.pins, controller.pins.tofino.vdda18);
 
     //
     // Tofino bits.
@@ -119,7 +130,7 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
 
     Reg#(Bit#(3)) vid <- mkReg('b110);
 
-    mkConnection(vid._read, controller.tofino.vid);
+    mkConnection(vid._read, controller.pins.tofino.vid);
 
     method spi_csn = sync(csn);
     method spi_sclk = sync(sclk);

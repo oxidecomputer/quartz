@@ -548,7 +548,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     rule do_pcie_reset (state == A0 && !abort);
         tofino_resets <= Tofino2Resets{
             pwron: tofino_resets.pwron, // Sticky while in A0.
-            pcie: unpack(ctrl.pcie_reset) || pcie_reset_request};
+            pcie: pcie_reset_request};
     endrule
 
     //
@@ -587,14 +587,12 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
                 ctrl <= TofinoSeqCtrl{
                     clear_error: 0,
                     en: next.en,
-                    ack_vid: 0,
-                    pcie_reset: next.pcie_reset};
+                    ack_vid: 0};
 
                 ctrl_one_shot <= TofinoSeqCtrl{
                     clear_error: next.clear_error,
                     en: 0,
-                    ack_vid: next.ack_vid,
-                    pcie_reset: 0};
+                    ack_vid: next.ack_vid};
             endmethod
         endinterface
 

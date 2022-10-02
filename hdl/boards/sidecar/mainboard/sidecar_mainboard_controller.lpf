@@ -203,15 +203,15 @@ IOBUF PORT "fpga_to_tf_spi_wp_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // I2C (unwired)
 
-// PCIe (unwired)
+// PCIe
 LOCATE COMP "pcie_fpga_to_host_prsnt_l" SITE "A2";
-IOBUF PORT "pcie_fpga_to_host_prsnt_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "pcie_fpga_to_host_prsnt_l" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_fpga_to_host_pwrflt" SITE "A3";
 IOBUF PORT "pcie_fpga_to_host_pwrflt" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_smbdat" SITE "A4";
-IOBUF PORT "pcie_host_to_fpga_smbdat" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "pcie_host_to_fpga_smbdat" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_smbclk" SITE "B4";
-IOBUF PORT "pcie_host_to_fpga_smbclk" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "pcie_host_to_fpga_smbclk" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_perst" SITE "C5";
 IOBUF PORT "pcie_host_to_fpga_perst" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_pwren" SITE "D5";
