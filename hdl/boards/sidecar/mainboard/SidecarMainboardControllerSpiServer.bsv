@@ -118,8 +118,7 @@ module mkSpiServer #(
     //
 
     ConfigReg#(Scratchpad) scratchpad <- mkConfigReg(unpack('0));
-    Vector#(4, ConfigReg#(Bit#(8))) checksum <-
-        replicateM(mkWriteOnceReg(mkConfigReg(0)));
+    Vector#(4, ConfigReg#(Bit#(8))) checksum <- replicateM(mkWriteOnceConfigReg(0));
 
     (* fire_when_enabled *)
     rule do_page0_read (read_page(0));
