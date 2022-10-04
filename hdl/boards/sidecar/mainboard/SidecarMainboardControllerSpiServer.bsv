@@ -124,9 +124,17 @@ module mkSpiServer #(
     rule do_page0_read (read_page(0));
         let reader =
             case (page_request.Valid.address)
-                // ID
-                fromOffset(id0Offset): read(8'h01);
-                fromOffset(id1Offset): read(8'hde);
+                // ID, see RDL for the (default) values.
+                fromOffset(id0Offset): read(Id0'(defaultValue));
+                fromOffset(id1Offset): read(Id1'(defaultValue));
+                fromOffset(id2Offset): read(Id2'(defaultValue));
+                fromOffset(id3Offset): read(Id3'(defaultValue));
+
+                // Checksum
+                fromOffset(cs0Offset): read(checksum[0]);
+                fromOffset(cs1Offset): read(checksum[1]);
+                fromOffset(cs2Offset): read(checksum[2]);
+                fromOffset(cs3Offset): read(checksum[3]);
 
                 // Version
                 fromOffset(version0Offset): read(version[0]);
@@ -139,12 +147,6 @@ module mkSpiServer #(
                 fromOffset(sha1Offset): read(sha[1]);
                 fromOffset(sha2Offset): read(sha[2]);
                 fromOffset(sha3Offset): read(sha[3]);
-
-                // Checksum
-                fromOffset(cs0Offset): read(checksum[0]);
-                fromOffset(cs1Offset): read(checksum[1]);
-                fromOffset(cs2Offset): read(checksum[2]);
-                fromOffset(cs3Offset): read(checksum[3]);
 
                 // Scratchpad
                 fromOffset(scratchpadOffset): read(scratchpad);

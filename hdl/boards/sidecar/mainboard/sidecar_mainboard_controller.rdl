@@ -18,7 +18,7 @@ addrmap sidecar_mainboard_controller {
 
         field {
             desc = "Byte 0 of ID";
-        } ID0[7:0] = 0;
+        } ID0[7:0] = 0x01;
     } ID0;
     reg {
         name = "Identification 1";
@@ -26,8 +26,49 @@ addrmap sidecar_mainboard_controller {
 
         field {
             desc = "Byte 1 of ID";
-        } ID1[7:0] = 0;
+        } ID1[7:0] = 0xde;
     } ID1;
+    reg {
+        name = "Identification 2";
+        default sw = r;
+
+        field {
+            desc = "Byte 2 of ID";
+        } ID2[7:0] = 0x5b;
+    } ID2;
+    reg {
+        name = "Identification 3";
+        default sw = r;
+
+        field {
+            desc = "Byte 3 of ID";
+        } ID3[7:0] = 0xae;
+    } ID3;
+
+    reg {
+        name = "Checksum 0";
+        field {
+            desc = "checksum[31..24]";
+        } CS0[7:0] = 0;
+    } CS0;
+    reg {
+        name = "Checksum 1";
+        field {
+            desc = "checksum[23..16]";
+        } CS1[7:0] = 0;
+    } CS1;
+    reg {
+        name = "Checksum 2";
+        field {
+            desc = "checksum[15..8]";
+        } CS2[7:0] = 0;
+    } CS2;
+    reg {
+        name = "Checksum 3";
+        field {
+            desc = "checksum[7..0]";
+        } CS3[7:0] = 0;
+    } CS3;
 
     reg {
         name = "Version 0";
@@ -95,31 +136,6 @@ addrmap sidecar_mainboard_controller {
     } SHA3;
 
     reg {
-        name = "Checksum 0";
-        field {
-            desc = "checksum[31..24]";
-        } CS0[7:0] = 0;
-    } CS0;
-    reg {
-        name = "Checksum 1";
-        field {
-            desc = "checksum[23..16]";
-        } CS1[7:0] = 0;
-    } CS1;
-    reg {
-        name = "Checksum 2";
-        field {
-            desc = "checksum[15..8]";
-        } CS2[7:0] = 0;
-    } CS2;
-    reg {
-        name = "Checksum 3";
-        field {
-            desc = "checksum[7..0]";
-        } CS3[7:0] = 0;
-    } CS3;
-
-    reg {
         name = "Scratchpad";
 
         field {
@@ -143,7 +159,7 @@ addrmap sidecar_mainboard_controller {
             hw = rw;
             desc = "Acknowledge that VDDCORE has been adjusted according to the VID";
         } ACK_VID[1] = 0;
-    } TOFINO_SEQ_CTRL @0x100;
+    } TOFINO_SEQ_CTRL @ 0x100;
 
     reg {
         name = "Tofino Sequencer State";
