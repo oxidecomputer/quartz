@@ -48,7 +48,9 @@ bluespec_library('SidecarMainboardController',
         ':PCIeEndpointController',
         '//hdl:FanModule',
         '//hdl:PowerRail',
+        'cobalt//hdl:GitVersion',
         'cobalt//hdl:RegCommon',
+        'cobalt//hdl:WriteOnceReg',
         'cobalt//hdl/interfaces:SPI',
     ])
 
