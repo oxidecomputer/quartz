@@ -154,9 +154,6 @@ interface SidecarMainboardControllerTop;
     (* prefix = "" *) method Action front_io_hsc_to_fpga_pg(Bool front_io_hsc_to_fpga_pg);
 endinterface
 
-(* synthesize,
-    default_clock_osc = "clk_50m_fpga_refclk",
-    default_reset="sp_to_fpga_design_reset_l" *)
 module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     // Synchronize the default reset to the default clock.
     Clock clk_50mhz <- exposeCurrentClock();
@@ -413,6 +410,235 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     // Front IO
     method fpga_to_front_io_hsc_en = front_io_en;
     method front_io_hsc_to_fpga_pg = sync(front_io_pg);
+endmodule
+
+(* synthesize,
+    default_clock_osc = "clk_50m_fpga_refclk",
+    default_reset="sp_to_fpga_design_reset_l" *)
+module mkSidecarMainboardControllerRevB (SidecarMainboardControllerTop);
+    (* hide *) SidecarMainboardControllerTop _top <- mkSidecarMainboardControllerTop();
+    return _top;
+endmodule
+
+//
+// Rev A top
+//
+// Rev A differs from rev B by a few pins. Rev A boards should be phased out
+// soon, so for now a separate interface and module are used for rev A. This can
+// be removed as soon as rev A boards are deprecated.
+//
+
+(* always_enabled *)
+interface SidecarMainboardControllerTopRevA;
+    //
+    // SPI peripheral
+    //
+
+    (* prefix = "" *) method Action spi_sp_to_fpga_cs1_l(Bit#(1) spi_sp_to_fpga_cs1_l);
+    (* prefix = "" *) method Action spi_sp_to_fpga_sck(Bit#(1) spi_sp_to_fpga_sck);
+    (* prefix = "" *) method Action spi_sp_to_fpga_mosi(Bit#(1) spi_sp_to_fpga_mosi);
+    method Bit#(1) spi_sp_to_fpga_miso_r();
+
+    //
+    // Debug
+    //
+
+    method Bit#(1) fpga_led0();
+
+    //
+    // Tofino
+    //
+
+    method Bool fpga_to_tf_core_rst_l();
+    method Bool fpga_to_tf_pwron_rst_l();
+    method Bool fpga_to_tf_pcie_rst_l();
+    (* prefix = "" *) method Action tf_to_fpga_vid(Bit#(3) tf_to_fpga_vid);
+
+    // Test (currently unused)
+    method Bool fpga_to_tf_test_core_tap_l();
+    method Bit#(4) fpga_to_tf_test_jtsel();
+
+    //
+    // Tofino PDN
+    //
+
+    // V1P8
+    method Bool fpga_to_vr_tf_vdd1p8_en();
+    (* prefix = "" *) method Action vr_tf_v1p8_to_fpga_vdd1p8_pg(Bool vr_tf_v1p8_to_fpga_vdd1p8_pg);
+    (* prefix = "" *) method Action vr_tf_v1p8_to_fpga_fault(Bool vr_tf_v1p8_to_fpga_fault);
+    (* prefix = "" *) method Action vr_tf_v1p8_to_fpga_vr_hot_l(Bool vr_tf_v1p8_to_fpga_vr_hot_l);
+
+    // VDDCORE
+    method Bool fpga_to_vr_tf_vddcore_en();
+    (* prefix = "" *) method Action vr_tf_vddcore_to_fpga_pg(Bool vr_tf_vddcore_to_fpga_pg);
+    (* prefix = "" *) method Action vr_tf_vddcore_to_fpga_fault(Bool vr_tf_vddcore_to_fpga_fault);
+    (* prefix = "" *) method Action vr_tf_vddcore_to_fpga_vrhot_l(Bool vr_tf_vddcore_to_fpga_vrhot_l);
+
+    // VDDPCIE
+    method Bool fpga_to_ldo_v0p75_tf_pcie_en();
+    (* prefix = "" *) method Action ldo_to_fpga_v0p75_tf_pcie_pg(Bool ldo_to_fpga_v0p75_tf_pcie_pg);
+
+    // VDDt
+    method Bool fpga_to_vr_tf_vddx_en();
+    (* prefix = "" *) method Action vr_tf_vddx_to_fpga_vddt_pg(Bool vr_tf_vddx_to_fpga_vddt_pg);
+    (* prefix = "" *) method Action vr_tf_vddx_to_fpga_fault(Bool vr_tf_vddx_to_fpga_fault);
+    (* prefix = "" *) method Action vr_tf_vddx_to_fpga_vrhot_l(Bool vr_tf_vddx_to_fpga_vrhot_l);
+
+    // VDDA1P5
+    (* prefix = "" *) method Action vr_tf_vddx_to_fpga_vdda15_pg(Bool vr_tf_vddx_to_fpga_vdda15_pg);
+
+    // VDDA1P8
+    method Bool fpga_to_vr_tf_vdda1p8_en();
+    (* prefix = "" *) method Action vr_tf_v1p8_to_fpga_vdda1p8_pg(Bool vr_tf_v1p8_to_fpga_vdda1p8_pg);
+
+    // Power Indicator
+    method Bool tf_pg_led();
+
+    // Thermal Alert
+    (* prefix = "" *) method Action tf_to_fpga_temp_therm_l(Bool tf_to_fpga_temp_therm_l);
+
+    // PCIe Endpoint
+    method Bool pcie_fpga_to_host_prsnt_l();
+    method Bool pcie_fpga_to_host_pwrflt();
+    (* prefix = "" *) method Action pcie_host_to_fpga_perst(Bool pcie_host_to_fpga_perst);
+
+    //
+    // Clock Management
+    //
+
+    method Bool fpga_to_smu_reset_l();
+    method Bool fpga_to_ldo_smu_en();
+    (* prefix = "" *) method Action ldo_to_fpga_smu_pg(Bool ldo_to_fpga_smu_pg);
+
+    method Bool fpga_to_smu_tf_clk_en_l();
+    method Bool fpga_to_smu_mgmt_clk_en_l();
+
+    //
+    // VSC7448 (Management Network)
+    //
+
+    method Bool fpga_to_mgmt_reset_l();
+
+    // 1.0V regulator
+    method Bool fpga_to_vr_v1p0_mgmt_en();
+    (* prefix = "" *) method Action vr_v1p0_mgmt_to_fpga_pg(Bool vr_v1p0_mgmt_to_fpga_pg);
+
+    // 1.2V/2.5V LDOs
+    method Bool fpga_to_ldo_v1p2_mgmt_en();
+    (* prefix = "" *) method Action ldo_to_fpga_v1p2_mgmt_pg(Bool ldo_to_fpga_v1p2_mgmt_pg);
+
+    method Bool fpga_to_ldo_v2p5_mgmt_en();
+    (* prefix = "" *) method Action ldo_to_fpga_v2p5_mgmt_pg(Bool ldo_to_fpga_v2p5_mgmt_pg);
+
+    // Thermal Alert
+    (* prefix = "" *) method Action mgmt_to_fpga_temp_therm_l(Bool mgmt_to_fpga_temp_therm_l);
+
+    //
+    // Fans
+    //
+
+    method Bool fpga_to_fan0_hsc_en();
+    (* prefix = "" *) method Action fan0_hsc_to_fpga_pg(Bool fan0_hsc_to_fpga_pg);
+    method Bool fpga_to_fan0_led_l();
+
+    method Bool fpga_to_fan1_hsc_en();
+    (* prefix = "" *) method Action fan1_hsc_to_fpga_pg(Bool fan1_hsc_to_fpga_pg);
+    method Bool fpga_to_fan1_led_l();
+
+    method Bool fpga_to_fan2_hsc_en();
+    (* prefix = "" *) method Action fan2_hsc_to_fpga_pg(Bool fan2_hsc_to_fpga_pg);
+    method Bool fpga_to_fan2_led_l();
+
+    method Bool fpga_to_fan3_hsc_en();
+    (* prefix = "" *) method Action fan3_hsc_to_fpga_pg(Bool fan3_hsc_to_fpga_pg);
+    method Bool fpga_to_fan3_led_l();
+
+    //
+    // Front IO
+    //
+
+    method Bool fpga_to_front_io_hsc_en();
+    (* prefix = "" *) method Action front_io_hsc_to_fpga_pg(Bool front_io_hsc_to_fpga_pg);
+endinterface
+
+(* synthesize,
+    default_clock_osc = "clk_50m_fpga_refclk",
+    default_reset="sp_to_fpga_design_reset_l" *)
+module mkSidecarMainboardControllerRevA (SidecarMainboardControllerTopRevA);
+    (* hide *) SidecarMainboardControllerTop _top <- mkSidecarMainboardControllerTop();
+
+    method spi_sp_to_fpga_cs1_l = _top.spi_sp_to_fpga_cs1_l;
+    method spi_sp_to_fpga_sck = _top.spi_sp_to_fpga_sck;
+    method spi_sp_to_fpga_mosi = _top.spi_sp_to_fpga_mosi;
+    method spi_sp_to_fpga_miso_r = _top.spi_sp_to_fpga_miso_r;
+
+    method fpga_led0 = _top.fpga_led0;
+    method tf_pg_led = _top.tf_pg_led;
+
+    method fpga_to_tf_core_rst_l = _top.fpga_to_tf_core_rst_l;
+    method fpga_to_tf_pwron_rst_l = _top.fpga_to_tf_pwron_rst_l;
+    method fpga_to_tf_pcie_rst_l = _top.fpga_to_tf_pcie_rst_l;
+    method tf_to_fpga_vid = _top.tf_to_fpga_vid;
+    method fpga_to_tf_test_core_tap_l = _top.fpga_to_tf_test_core_tap_l;
+    method fpga_to_tf_test_jtsel = _top.fpga_to_tf_test_jtsel;
+
+    method fpga_to_vr_tf_vdd1p8_en = _top.fpga_to_vr_tf_vdd1p8_en;
+    method vr_tf_v1p8_to_fpga_vdd1p8_pg = _top.vr_tf_v1p8_to_fpga_vdd1p8_pg;
+    method vr_tf_v1p8_to_fpga_fault = _top.vr_tf_v1p8_to_fpga_fault;
+    method vr_tf_v1p8_to_fpga_vr_hot_l = _top.vr_tf_v1p8_to_fpga_vr_hot_l;
+    method fpga_to_vr_tf_vddcore_en = _top.fpga_to_vr_tf_vddcore_en;
+    method vr_tf_vddcore_to_fpga_pg = _top.vr_tf_vddcore_to_fpga_pg;
+    method vr_tf_vddcore_to_fpga_fault = _top.vr_tf_vddcore_to_fpga_fault;
+    method vr_tf_vddcore_to_fpga_vrhot_l = _top.vr_tf_vddcore_to_fpga_vrhot_l;
+    method fpga_to_ldo_v0p75_tf_pcie_en = _top.fpga_to_ldo_v0p75_tf_pcie_en;
+    method ldo_to_fpga_v0p75_tf_pcie_pg = _top.ldo_to_fpga_v0p75_tf_pcie_pg;
+    method fpga_to_vr_tf_vddx_en = _top.fpga_to_vr_tf_vddx_en;
+    method vr_tf_vddx_to_fpga_vddt_pg = _top.vr_tf_vddx_to_fpga_vddt_pg;
+    method vr_tf_vddx_to_fpga_fault = _top.vr_tf_vddx_to_fpga_fault;
+    method vr_tf_vddx_to_fpga_vrhot_l = _top.vr_tf_vddx_to_fpga_vrhot_l;
+    method vr_tf_vddx_to_fpga_vdda15_pg = _top.vr_tf_vddx_to_fpga_vdda15_pg;
+    method fpga_to_vr_tf_vdda1p8_en = _top.fpga_to_vr_tf_vdda1p8_en;
+    method vr_tf_v1p8_to_fpga_vdda1p8_pg = _top.vr_tf_v1p8_to_fpga_vdda1p8_pg;
+
+    method tf_to_fpga_temp_therm_l = _top.tf_to_fpga_temp_therm_l;
+
+    method pcie_fpga_to_host_prsnt_l = _top.pcie_fpga_to_host_prsnt_l;
+    method pcie_fpga_to_host_pwrflt = _top.pcie_fpga_to_host_pwrflt;
+    method pcie_host_to_fpga_perst = _top.pcie_host_to_fpga_perst;
+
+    method fpga_to_smu_reset_l = _top.fpga_to_smu_reset_l;
+    method fpga_to_ldo_smu_en = _top.fpga_to_ldo_smu_en;
+    method ldo_to_fpga_smu_pg = _top.ldo_to_fpga_smu_pg;
+    method fpga_to_smu_tf_clk_en_l = _top.fpga_to_smu_tf_clk_en_l;
+    method fpga_to_smu_mgmt_clk_en_l = _top.fpga_to_smu_mgmt_clk_en_l;
+
+    method fpga_to_mgmt_reset_l = _top.fpga_to_mgmt_reset_l;
+    method fpga_to_vr_v1p0_mgmt_en = _top.fpga_to_vr_v1p0_mgmt_en;
+    method vr_v1p0_mgmt_to_fpga_pg = _top.vr_v1p0_mgmt_to_fpga_pg;
+    method fpga_to_ldo_v1p2_mgmt_en = _top.fpga_to_ldo_v1p2_mgmt_en;
+    method ldo_to_fpga_v1p2_mgmt_pg = _top.ldo_to_fpga_v1p2_mgmt_pg;
+    method fpga_to_ldo_v2p5_mgmt_en = _top.fpga_to_ldo_v2p5_mgmt_en;
+    method ldo_to_fpga_v2p5_mgmt_pg = _top.ldo_to_fpga_v2p5_mgmt_pg;
+    method mgmt_to_fpga_temp_therm_l = _top.mgmt_to_fpga_temp_therm_l;
+
+    method fpga_to_fan0_hsc_en = _top.fpga_to_fan0_hsc_en;
+    method fan0_hsc_to_fpga_pg = _top.fan0_hsc_to_fpga_pg;
+    method fpga_to_fan0_led_l = _top.fpga_to_fan0_led_l;
+
+    method fpga_to_fan1_hsc_en = _top.fpga_to_fan1_hsc_en;
+    method fan1_hsc_to_fpga_pg = _top.fan1_hsc_to_fpga_pg;
+    method fpga_to_fan1_led_l = _top.fpga_to_fan1_led_l;
+
+    method fpga_to_fan2_hsc_en = _top.fpga_to_fan2_hsc_en;
+    method fan2_hsc_to_fpga_pg = _top.fan2_hsc_to_fpga_pg;
+    method fpga_to_fan2_led_l = _top.fpga_to_fan2_led_l;
+
+    method fpga_to_fan3_hsc_en = _top.fpga_to_fan3_hsc_en;
+    method fan3_hsc_to_fpga_pg = _top.fan3_hsc_to_fpga_pg;
+    method fpga_to_fan3_led_l = _top.fpga_to_fan3_led_l;
+
+    method fpga_to_front_io_hsc_en = _top.fpga_to_front_io_hsc_en;
+    method front_io_hsc_to_fpga_pg = _top.front_io_hsc_to_fpga_pg;
 endmodule
 
 endpackage
