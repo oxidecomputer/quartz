@@ -124,6 +124,8 @@ interface SidecarMainboardControllerTop;
     // Thermal Alert
     (* prefix = "" *) method Action mgmt_to_fpga_temp_therm_l(Bool mgmt_to_fpga_temp_therm_l);
 
+    method Bool fpga_to_phy4_reset_l();
+
     //
     // Fans
     //
@@ -375,6 +377,8 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     method ldo_to_fpga_v2p5_mgmt_pg = sync(vsc7448_v2p5_pg);
 
     method mgmt_to_fpga_temp_therm_l = sync_inverted(vsc7448_thermal_alert);
+
+    method Bool fpga_to_phy4_reset_l = !vsc7448_reset;
 
     // Fan pins
     method fpga_to_fan0_hsc_en = fan0_en;
