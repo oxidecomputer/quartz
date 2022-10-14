@@ -145,6 +145,13 @@ interface SidecarMainboardControllerTop;
     method Bool fpga_to_fan3_hsc_en();
     (* prefix = "" *) method Action fan3_hsc_to_fpga_pg(Bool fan3_hsc_to_fpga_pg);
     method Bool fpga_to_fan3_led_l();
+
+    //
+    // Front IO
+    //
+
+    method Bool fpga_to_front_io_hsc_en();
+    (* prefix = "" *) method Action front_io_hsc_to_fpga_pg(Bool front_io_hsc_to_fpga_pg);
 endinterface
 
 (* synthesize,
@@ -307,6 +314,12 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     Reg#(Bool) fan3_pg <- mkInputSyncFor(controller.pins.fans[3].pg);
 
     //
+    // Front IO
+    //
+    Reg#(Bool) front_io_en <- mkReg(True);
+    Reg#(Bool) front_io_pg <- mkRegU();
+
+    //
     // Interface, wiring up device signals.
     //
 
@@ -396,6 +409,10 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     method fpga_to_fan3_hsc_en = fan3_en;
     method fan3_hsc_to_fpga_pg = sync(fan3_pg);
     method fpga_to_fan3_led_l = fan3_led; // Not active low on Fan VPD.
+
+    // Front IO
+    method fpga_to_front_io_hsc_en = front_io_en;
+    method front_io_hsc_to_fpga_pg = sync(front_io_pg);
 endmodule
 
 endpackage
