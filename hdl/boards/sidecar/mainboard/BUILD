@@ -84,9 +84,28 @@ yosys_design('sidecar_mainboard_controller_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ecp5_bitstream('sidecar_mainboard_controller',
+nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_a',
     env = 'sidecar_mainboard_controller',
     design = ':sidecar_mainboard_controller_top#sidecar_mainboard_controller_top.json',
     deps = [
         ':sidecar_mainboard_controller_top',
-    ])
+    ],
+    local = {
+        'nextpnr_constraints': ROOT + '/hdl/boards/sidecar/mainboard/sidecar_mainboard_controller_rev_a.lpf',
+        'nextpnr_ecp5_flags': [
+            '--um-45k',
+        ],
+    })
+
+nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_b',
+    env = 'sidecar_mainboard_controller',
+    design = ':sidecar_mainboard_controller_top#sidecar_mainboard_controller_top.json',
+    deps = [
+        ':sidecar_mainboard_controller_top',
+    ],
+    local = {
+        'nextpnr_constraints': ROOT + '/hdl/boards/sidecar/mainboard/sidecar_mainboard_controller_rev_b.lpf',
+        'nextpnr_ecp5_flags': [
+            '--45k',
+        ],
+    })
