@@ -47,6 +47,8 @@ LOCATE COMP "ldo_to_fpga_v2p5_mgmt_pg" SITE "D14";
 IOBUF PORT "ldo_to_fpga_v2p5_mgmt_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "mgmt_to_fpga_temp_therm_l" SITE "E6";
 IOBUF PORT "mgmt_to_fpga_temp_therm_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_phy4_reset_l" SITE "J4";
+IOBUF PORT "fpga_to_phy4_reset_l" PULLMODE=NONE IO_TYPE=LVCMOS25;
 
 // Fans
 LOCATE COMP "fpga_to_fan1_led_l" SITE "A8";
