@@ -254,7 +254,7 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
             end
 
             {AwaitCommand, tagged Stop}: begin
-                if (scl_fedge) begin
+                if (sda_transition_strobe) begin
                     sda_out_en  <= 1;
                     sda_out     <= 0;
                     state       <= TransmitStop;
