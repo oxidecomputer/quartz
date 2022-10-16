@@ -31,7 +31,7 @@ instance DefaultValue #(Command);
         op: Read,
         i2c_addr: 7'h7f,
         reg_addr: 8'hff,
-        num_bytes: 8'h000
+        num_bytes: 8'h00
     };
 endinstance
 

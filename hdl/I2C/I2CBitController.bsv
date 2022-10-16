@@ -80,7 +80,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     Reg#(Bit#(1))   scl_out_en      <- mkReg(1);
     Wire#(Bit#(1))  scl_in          <- mkWire();
     Reg#(Bit#(1))   scl_out_next    <- mkReg(1);
-    Reg#(Bit#(1))   scl_out_dly     <- mkReg(1);
     PulseWire       scl_redge       <- mkPulseWire();
     PulseWire       scl_fedge       <- mkPulseWire();
 
@@ -111,22 +110,27 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     endrule
 
     (* fire_when_enabled *)
-    rule do_scl_toggle(scl_toggle_strobe || hold_strobe);
-        scl_out_next    <= ~scl_out;
-        scl_out_dly     <= scl_out_next;
+    rule do_scl_reset(!scl_active);
+        scl_out_next    <= 1;
+        scl_out         <= 1;
+    endrule
 
-        if (scl_out_next == 1 && scl_out == 0) begin
+    (* fire_when_enabled *)
+    rule do_scl_toggle((scl_toggle_strobe || hold_strobe) && scl_active);
+        scl_out_next    <= ~scl_out;
+
+        if (~scl_out == 1 && scl_out == 0) begin
             scl_redge.send();
         end
 
-        if (scl_out_next == 0 && scl_out == 1) begin
+        if (~scl_out == 0 && scl_out == 1) begin
             scl_fedge.send();
         end
     endrule
 
     (* fire_when_enabled *)
-    rule do_align_scl_to_sda(!scl_toggle_strobe && !hold_strobe);
-        scl_out         <= scl_out_dly;
+    rule do_align_scl_to_sda(!scl_toggle_strobe && !hold_strobe && scl_active);
+        scl_out         <= scl_out_next;
     endrule
 
     (* fire_when_enabled *)
