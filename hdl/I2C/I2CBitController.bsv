@@ -45,10 +45,18 @@ interface I2CBitController;
     method Action clear();
 endinterface
 
+//
 // I2C Bit Controller
 // This initial implementation is very rigid and naive, be some details:
-// START condition to first rising edge of SCL is 1/2 SCL period
-// SDA switches to next value at falling edge of SCL
+// - START condition to first rising edge of SCL is 1/2 SCL period
+// - SDA switches to next value sda_transition_strobe counts after the falling
+// edge of SCL
+// - SDA and SCL are the inversion of their output enable signals given the open
+// drain nature of an I2C bus.
+// OUT_EN = 1, OUT = 0 drives the bus low
+// OUT_EN = 0, OUT = 1 puts the tristate in high impedance, letting the bus
+// pull-ups pull the bus high
+//
 module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBitController);
     // generate strobe to toggle scl at a desired period
     // ex: 50MHz / 100KHz / 2 = 250
@@ -64,27 +72,30 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     // dependent functionality.
     // For standard mode (100KHz) the minimum setup time is 4.7us and hold time
     // is 4 us. For fast mode (400KHz), both of these fall to 0.6us.
+    // TODO: parameterize this
     Strobe#(8) setup_strobe <- mkLimitStrobe(1, 250, 0);
     Strobe#(8) hold_strobe <- mkLimitStrobe(1, 250, 0);
     Reg#(Bool) setup_done   <- mkReg(False);
 
     // Delays the transition of SDA after the falling edge of SCL
     // Aside from START/STOP, SDA should not change while SCL is high
-    Strobe#(3) sda_transition_strobe <- mkLimitStrobe(1, 7, 0);
+    // There is a note in the specification that the transition should happen
+    // at least 300ns after the SCL falling edge.
+    // Hardcoded to 20 counts of 20ns, so a 400ns delay
+    // TODO: parameterize this
+    Strobe#(5) sda_transition_strobe <- mkLimitStrobe(1, 20, 0);
 
     // Buffers for Events
     FIFO#(Event) incoming_events    <- mkFIFO1();
     FIFO#(Event) outgoing_events    <- mkFIFO1();
 
-    Reg#(Bit#(1))   scl_out         <- mkReg(1);
-    Reg#(Bit#(1))   scl_out_en      <- mkReg(1);
+    Reg#(Bit#(1))   scl_out_en      <- mkReg(0);
+    Reg#(Bit#(1))   scl_out_en_next <- mkReg(0);
     Wire#(Bit#(1))  scl_in          <- mkWire();
-    Reg#(Bit#(1))   scl_out_next    <- mkReg(1);
     PulseWire       scl_redge       <- mkPulseWire();
     PulseWire       scl_fedge       <- mkPulseWire();
 
-    Reg#(Bit#(1))   sda_out         <- mkReg(1);
-    Reg#(Bit#(1))   sda_out_en      <- mkReg(1);
+    Reg#(Bit#(1))   sda_out_en      <- mkReg(0);
     Wire#(Bit#(1))  sda_in          <- mkWire();
     Reg#(Bool)      sda_changed     <- mkReg(False);
 
@@ -95,12 +106,12 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     Reg#(Bool) ack_sending      <- mkReg(False);
 
     (* fire_when_enabled *)
-    rule do_setup_delay((state == TransmitStart || state == TransmitStop) && scl_out == 1 && sda_out == 1);
+    rule do_setup_delay((state == TransmitStart || state == TransmitStop) && scl_out_en == 0 && sda_out_en == 0);
         setup_strobe.send();
     endrule
 
     (* fire_when_enabled *)
-    rule do_hold_delay((state == TransmitStart || state == TransmitStop) && scl_out == 1 && sda_out == 0);
+    rule do_hold_delay((state == TransmitStart || state == TransmitStop) && scl_out_en == 0 && sda_out_en == 1);
         hold_strobe.send();
     endrule
 
@@ -111,26 +122,26 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
     (* fire_when_enabled *)
     rule do_scl_reset(!scl_active);
-        scl_out_next    <= 1;
-        scl_out         <= 1;
+        scl_out_en      <= 0;
+        scl_out_en_next <= 0;
     endrule
 
     (* fire_when_enabled *)
     rule do_scl_toggle((scl_toggle_strobe || hold_strobe) && scl_active);
-        scl_out_next    <= ~scl_out;
+        scl_out_en_next    <= ~scl_out_en;
 
-        if (~scl_out == 1 && scl_out == 0) begin
+        if (~scl_out_en == 0 && scl_out_en == 1) begin
             scl_redge.send();
         end
 
-        if (~scl_out == 0 && scl_out == 1) begin
+        if (~scl_out_en == 1 && scl_out_en == 0) begin
             scl_fedge.send();
         end
     endrule
 
     (* fire_when_enabled *)
     rule do_align_scl_to_sda(!scl_toggle_strobe && !hold_strobe && scl_active);
-        scl_out         <= scl_out_next;
+        scl_out_en <= scl_out_en_next;
     endrule
 
     (* fire_when_enabled *)
@@ -156,15 +167,13 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
         case (tuple2(state, e)) matches
 
             {AwaitStart, tagged Start}: begin
-                sda_out_en  <= 1;
-                sda_out     <= 1;
+                sda_out_en  <= 0;
                 state       <= TransmitStart;
                 incoming_events.deq();
             end
 
             {TransmitStart, .*}: begin
-                sda_out_en  <= 1;
-                sda_out     <= pack(!setup_done);
+                sda_out_en  <= pack(setup_done);
 
                 if (scl_redge) begin
                     scl_active  <= False;
@@ -178,7 +187,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
             end
 
             {AwaitCommand, tagged Write .byte_}: begin
-                sda_out_en  <= 1;
                 shift_bits  <= map(tagged Valid, unpack(byte_));
                 state       <= TransmitByte;
             end
@@ -187,8 +195,9 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
                 if (sda_transition_strobe) begin
                     case (last(shift_bits)) matches
                         tagged Valid .bit_: begin
-                            sda_out <= bit_;
-                            shift_bits <= shiftOutFromN(tagged Invalid, shift_bits, 1);
+                            // sda_out <= bit_;
+                            sda_out_en  <= ~bit_;
+                            shift_bits  <= shiftOutFromN(tagged Invalid, shift_bits, 1);
                         end
 
                         tagged Invalid: begin
@@ -199,7 +208,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
             end
 
             {ReceiveAck, .*}: begin
-                sda_out     <= 0;
 
                 if (scl_redge) begin
                     state       <= AwaitCommand;
@@ -241,8 +249,7 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
             {TransmitAck, .*}: begin
                 if (sda_transition_strobe && !ack_sending) begin
-                    sda_out_en  <= 1;
-                    sda_out     <= pack(read_finished);
+                    sda_out_en  <= ~pack(read_finished);
                     ack_sending <= True;
                 end
 
@@ -256,7 +263,7 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
             {AwaitCommand, tagged Stop}: begin
                 if (sda_transition_strobe) begin
                     sda_out_en  <= 1;
-                    sda_out     <= 0;
+                    // sda_out     <= 0;
                     state       <= TransmitStop;
                 end
             end
@@ -267,15 +274,16 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
                 end
 
                 if (hold_strobe) begin
-                    sda_out     <= 1;
-                    state   <= AwaitStart;
+                    // sda_out     <= 1;
+                    sda_out_en  <= 0;
+                    state       <= AwaitStart;
                     incoming_events.deq();
                 end
             end
 
             {AwaitCommand, tagged Start}: begin
                 if (scl_fedge) begin
-                    sda_out <= 1;
+                    // sda_out <= 1;
                     state   <= TransmitStart;
                     incoming_events.deq();
                 end
@@ -285,12 +293,12 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
     interface Pins pins;
         interface Tristate scl;
-            method out      = scl_out;
+            method out      = ~scl_out_en;
             method out_en   = scl_out_en;
             method in       = scl_in._write;
         endinterface
         interface Tristate sda;
-            method out      = sda_out;
+            method out      = ~sda_out_en;
             method out_en   = sda_out_en;
             method in       = sda_in._write;
         endinterface

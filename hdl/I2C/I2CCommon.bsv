@@ -32,7 +32,7 @@ typedef struct {
 
 instance DefaultValue #(I2CTestParams);
     defaultValue = I2CTestParams {
-        core_clk_freq: 4000,
+        core_clk_freq: 50_000,
         scl_freq: 100,
         peripheral_addr: 7'b1010110
     };
