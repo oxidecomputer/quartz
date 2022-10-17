@@ -79,11 +79,7 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
     // Delays the transition of SDA after the falling edge of SCL
     // Aside from START/STOP, SDA should not change while SCL is high
-    // There is a note in the specification that the transition should happen
-    // at least 300ns after the SCL falling edge.
-    // Hardcoded to 20 counts of 20ns, so a 400ns delay
-    // TODO: parameterize this
-    Strobe#(5) sda_transition_strobe <- mkLimitStrobe(1, 20, 0);
+    Strobe#(3) sda_transition_strobe <- mkLimitStrobe(1, 7, 0);
 
     // Buffers for Events
     FIFO#(Event) incoming_events    <- mkFIFO1();
