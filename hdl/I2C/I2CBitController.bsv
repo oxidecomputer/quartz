@@ -191,7 +191,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
                 if (sda_transition_strobe) begin
                     case (last(shift_bits)) matches
                         tagged Valid .bit_: begin
-                            // sda_out <= bit_;
                             sda_out_en  <= ~bit_;
                             shift_bits  <= shiftOutFromN(tagged Invalid, shift_bits, 1);
                         end
@@ -259,7 +258,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
             {AwaitCommand, tagged Stop}: begin
                 if (sda_transition_strobe) begin
                     sda_out_en  <= 1;
-                    // sda_out     <= 0;
                     state       <= TransmitStop;
                 end
             end
@@ -270,7 +268,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
                 end
 
                 if (hold_strobe) begin
-                    // sda_out     <= 1;
                     sda_out_en  <= 0;
                     state       <= AwaitStart;
                     incoming_events.deq();
