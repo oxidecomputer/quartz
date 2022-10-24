@@ -6,7 +6,7 @@
 
 package VSC8562;
 
-export Parameters(..), Pins(..), Tristate(..), Registers(..);
+export Parameters(..), Pins(..), Registers(..);
 export VSC8562(..), mkVSC8562;
 
 import Assert::*;
@@ -16,20 +16,20 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
+import Bidirection::*;
 import PowerRail::*;
 import MDIO::*;
 
-import CommonInterfaces::*;
 import CommonFunctions::*;
 import QsfpX32ControllerRegsPkg::*;
 
 // Parameters used to configure various things within the block
 // system_frequency_hz      - main clock domain for the design
-// mdc_frequency_hz         - MDC frequency for the SMI interface, max of 
+// mdc_frequency_hz         - MDC frequency for the SMI interface, max of
 //                            12.5MHz per section 3.14 of the VSC8562 datasheet,
 //                            but has shown spotty behavior at speeds 8MHz+.
 //              see https://github.com/oxidecomputer/hardware-qsfp-x32/issues/22
-// power_good_timeout_ms    - how long to wait for PG on the PHY rails before 
+// power_good_timeout_ms    - how long to wait for PG on the PHY rails before
 //                            aborting
 // refclk_en_to_stable_ms   - time from refclk enable to a stable output
 // reset_release_to_ready_ms- time from reset release to the SMI being ready

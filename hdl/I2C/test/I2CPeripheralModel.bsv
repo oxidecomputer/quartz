@@ -17,7 +17,7 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 
 import I2CCommon::*;
 
@@ -293,7 +293,7 @@ instance Connectable#(Pins, I2CPeripheralModel);
     module mkConnection #(Pins pins, I2CPeripheralModel model) (Empty);
         mkConnection(pins.scl.out, model.scl_i);
         mkConnection(pins.sda.out, model.sda_i);
-        mkConnection(pins.sda.out_en, model.sda_i_en);
+        mkConnection(pack(pins.sda.out_en), model.sda_i_en);
         mkConnection(pins.sda.in, model.sda_o);
     endmodule
 endinstance

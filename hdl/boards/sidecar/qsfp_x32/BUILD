@@ -30,7 +30,7 @@ bluespec_library('VSC8562',
     deps = [
         'cobalt//hdl:Strobe',
         '//hdl:CommonFunctions',
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
         ':QsfpX32ControllerRegsPkg',
         '//hdl:PowerRail',
         '//hdl/MDIO:MDIO',
@@ -53,7 +53,7 @@ bluespec_library('QsfpModuleController',
         '//hdl/I2C:I2CCore',
         '//hdl:PowerRail',
         '//hdl:CommonFunctions',
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
         ':QsfpX32ControllerRegsPkg',
     ])
 
@@ -66,7 +66,7 @@ bluespec_library('QsfpModulesTop',
         '//hdl/I2C:I2CCore',
         '//hdl:PowerRail',
         '//hdl:CommonFunctions',
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
         ':QsfpModuleController',
         ':QsfpX32ControllerRegsPkg',
     ])
@@ -102,7 +102,7 @@ bluespec_library('QsfpX32ControllerTop',
         'QsfpX32ControllerTop.bsv',
     ],
     deps = [
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
         ':QsfpX32Controller',
         '//hdl:IOSync',
         '//hdl/I2C:I2CCore',
@@ -115,7 +115,7 @@ bluespec_library('QsfpX32ControllerTop',
         ]
     })
 
-bluespec_verilog('QsfpX32ControllerTopV', 
+bluespec_verilog('QsfpX32ControllerTopV',
     top = 'QsfpX32ControllerTop.bsv',
     modules = [
         'mkQsfpX32ControllerTop',

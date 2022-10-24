@@ -16,7 +16,7 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 import Strobe::*;
 
 import I2CCommon::*;
@@ -290,14 +290,14 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     endrule
 
     interface Pins pins;
-        interface Tristate scl;
+        interface Bidirection scl;
             method out      = ~scl_out_en;
-            method out_en   = scl_out_en;
+            method out_en   = unpack(scl_out_en);
             method in       = scl_in._write;
         endinterface
-        interface Tristate sda;
+        interface Bidirection sda;
             method out      = ~sda_out_en;
-            method out_en   = sda_out_en;
+            method out_en   = unpack(sda_out_en);
             method in       = sda_in._write;
         endinterface
     endinterface

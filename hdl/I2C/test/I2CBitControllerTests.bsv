@@ -12,7 +12,7 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 
 import I2CBitController::*;
 import I2CCommon::*;
@@ -49,7 +49,7 @@ I2CTestParams test_params = defaultValue;
 
 function Action check_peripheral_event(I2CPeripheralModel peripheral,
                                         ModelEvent expected,
-                                        String message) = 
+                                        String message) =
     action
         let e <- peripheral.receive.get();
         dynamicAssert (e == expected, message);
@@ -57,7 +57,7 @@ function Action check_peripheral_event(I2CPeripheralModel peripheral,
 
 function Action check_controller_event(I2CBitController controller,
                                 Event expected,
-                                String message) = 
+                                String message) =
     action
         let e <- controller.receive.get();
         dynamicAssert (e == expected, message);
@@ -75,14 +75,11 @@ module mkBench (Bench);
     I2CBitController dut <- mkI2CBitController(test_params.core_clk_freq, test_params.scl_freq);
     I2CPeripheralModel periph <- mkI2CPeripheralModel(test_params.peripheral_addr);
 
-    mkConnection(dut.pins.scl.out, periph.scl_i);
-    mkConnection(dut.pins.sda.out, periph.sda_i);
-    mkConnection(dut.pins.sda.out_en, periph.sda_i_en);
-    mkConnection(dut.pins.sda.in, periph.sda_o);
+    mkConnection(dut.pins, periph);
 
     Reg#(Command) command_r                     <- mkReg(defaultValue);
     Reg#(Vector#(3,Bit#(8))) prev_written_bytes <- mkReg(replicate(0));
-    Reg#(UInt#(2)) bytes_done                 <- mkReg(0);
+    Reg#(UInt#(2)) bytes_done                   <- mkReg(0);
     Reg#(Bool) is_last_byte                     <- mkReg(False);
 
     FSM write_seq <- mkFSMWithPred(seq

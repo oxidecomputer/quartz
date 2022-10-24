@@ -24,7 +24,7 @@ bluespec_library('I2CCommon',
         'I2CCommon.bsv',
     ],
     deps = [
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
     ])
 
 bluespec_library('I2CBitController',
@@ -43,7 +43,7 @@ bluespec_library('I2CCore',
     deps = [
         ':I2CCommon',
         ':I2CBitController',
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
     ])
 
 bluespec_library('I2CPeripheralModel',
@@ -68,7 +68,7 @@ bluesim_tests('I2CBitControllerTests',
         ':I2CBitController',
         ':I2CCommon',
         ':I2CPeripheralModel',
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
     ])
 
 bluesim_tests('I2CCoreTests',
@@ -86,5 +86,5 @@ bluesim_tests('I2CCoreTests',
         ':I2CCommon',
         ':I2CCore',
         ':I2CPeripheralModel',
-        '//hdl:CommonInterfaces',
+        '//hdl:Bidirection',
     ])

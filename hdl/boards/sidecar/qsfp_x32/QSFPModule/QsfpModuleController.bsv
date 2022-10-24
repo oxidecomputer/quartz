@@ -24,7 +24,7 @@ import I2CCommon::*;
 import I2CCore::*;
 import PowerRail::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 import CommonFunctions::*;
 import QsfpX32ControllerRegsPkg::*;
 
@@ -66,8 +66,8 @@ endinterface
 
 interface Pins;
     interface PowerRail::Pins hsc;
-    interface Tristate scl;
-    interface Tristate sda;
+    interface Bidirection#(Bit#(1)) scl;
+    interface Bidirection#(Bit#(1)) sda;
     method Bit#(1) lpmode;
     method Bit#(1) reset_;
     method Action irq(Bit#(1) val);
@@ -215,8 +215,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Physical module pins
     interface Pins pins;
         interface PowerRail::Pins hsc = hot_swap.pins;
-        interface Tristate scl = i2c_core.pins.scl;
-        interface Tristate sda = i2c_core.pins.sda;
+        interface Bidirection scl = i2c_core.pins.scl;
+        interface Bidirection sda = i2c_core.pins.sda;
 
         method lpmode   = lpmode_;
         method reset_   = reset__;
