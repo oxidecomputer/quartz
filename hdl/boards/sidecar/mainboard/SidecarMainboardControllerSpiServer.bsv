@@ -20,6 +20,7 @@ import WriteOnceReg::*;
 import PCIeEndpointController::*;
 import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
+import TofinoDebugPort::*;
 
 
 typedef struct {
@@ -38,10 +39,11 @@ endinstance
 
 module mkSpiServer #(
         Tofino2Sequencer::Registers tofino,
+        TofinoDebugPort::Registers tofino_debug_port,
         PCIeEndpointController::Registers pcie)
             (SpiServer)
         provisos (
-            NumAlias#(2, n_pages));
+            NumAlias#(3, n_pages));
     Wire#(SpiRequest) in <- mkWire();
     Wire#(SpiResponse) out <- mkWire();
 
@@ -165,11 +167,11 @@ module mkSpiServer #(
         let request = page_request.Valid;
 
         case (request.address)
-            fromOffset(cs0Offset): write(request.op, checksum[0], request.wdata);
-            fromOffset(cs1Offset): write(request.op, checksum[1], request.wdata);
-            fromOffset(cs2Offset): write(request.op, checksum[2], request.wdata);
-            fromOffset(cs3Offset): write(request.op, checksum[3], request.wdata);
-            fromOffset(scratchpadOffset): write(request.op, scratchpad, request.wdata);
+            fromOffset(cs0Offset): update(request.op, checksum[0], request.wdata);
+            fromOffset(cs1Offset): update(request.op, checksum[1], request.wdata);
+            fromOffset(cs2Offset): update(request.op, checksum[2], request.wdata);
+            fromOffset(cs3Offset): update(request.op, checksum[3], request.wdata);
+            fromOffset(scratchpadOffset): update(request.op, scratchpad, request.wdata);
         endcase
     endrule
 
@@ -212,8 +214,39 @@ module mkSpiServer #(
         let request = page_request.Valid;
 
         case (request.address)
-            fromOffset(tofinoSeqCtrlOffset): write(request.op, tofino.ctrl, request.wdata);
-            fromOffset(pcieHotplugCtrlOffset): write(request.op, pcie.ctrl, request.wdata);
+            fromOffset(tofinoSeqCtrlOffset): update(request.op, tofino.ctrl, request.wdata);
+            fromOffset(pcieHotplugCtrlOffset): update(request.op, pcie.ctrl, request.wdata);
+        endcase
+    endrule
+
+    //
+    // Page 2, Tofino Debug Port
+    //
+
+    (* fire_when_enabled *)
+    rule do_page2_read (read_page(2));
+        let reader =
+            case (page_request.Valid.address)
+                fromOffset(tofinoDebugPortStateOffset): read(tofino_debug_port.state);
+                fromOffset(tofinoDebugPortBufferOffset): read_volatile(tofino_debug_port.buffer);
+                default: read(8'hff);
+            endcase;
+
+        let data <- reader;
+        page_responses[2] <= data;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_page2_write (write_page(2));
+        // If this rule is enabled it is safe to assume the contents of the
+        // page_request register is valid.
+        let request = page_request.Valid;
+
+        case (request.address)
+            fromOffset(tofinoDebugPortStateOffset):
+                update(request.op, tofino_debug_port.state, request.wdata);
+            fromOffset(tofinoDebugPortBufferOffset):
+                write(WRITE, tofino_debug_port.buffer._write, request.wdata);
         endcase
     endrule
 
@@ -236,21 +269,23 @@ endfunction
 
 // Turn the read of a register into an ActionValue.
 function ActionValue#(SpiResponse) read(t v)
-        provisos (Bits#(t, 8)) =
-    actionvalue
+        provisos (Bits#(t, 8));
+    return actionvalue
         return SpiResponse {readdata: pack(v)};
     endactionvalue;
+endfunction
 
 function ActionValue#(SpiResponse) read_volatile(ActionValue#(t) av)
-        provisos (Bits#(t, 8)) =
-    actionvalue
+        provisos (Bits#(t, 8));
+    return actionvalue
         let v <- av;
         return SpiResponse {readdata: pack(v)};
     endactionvalue;
+endfunction
 
-function Action write(RegOps op, Reg#(t) r, Bit#(8) data)
-        provisos (Bits#(t, 8)) =
-    action
+function Action update(RegOps op, Reg#(t) r, Bit#(8) data)
+        provisos (Bits#(t, 8));
+    return action
         let r_ = zeroExtend(pack(r));
 
         case (op)
@@ -259,5 +294,13 @@ function Action write(RegOps op, Reg#(t) r, Bit#(8) data)
             BITCLEAR: r <= unpack(truncate(r_ & ~data));
         endcase
     endaction;
+endfunction
+
+function Action write(RegOps op, function Action f(t val), Bit#(8) data)
+        provisos (Bits#(t, 8));
+    return action
+        if (op == WRITE) f(unpack(truncate(data)));
+    endaction;
+endfunction
 
 endpackage

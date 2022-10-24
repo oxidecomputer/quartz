@@ -22,12 +22,15 @@ import PCIeEndpointController::*;
 import SidecarMainboardControllerReg::*;
 import SidecarMainboardMiscSequencers::*;
 import Tofino2Sequencer::*;
+import TofinoDebugPort::*;
 
 
 typedef struct {
     Integer system_frequency_hz;
     Integer clock_generator_power_good_timeout;
     Integer vsc7448_power_good_timeout;
+    Bit#(7) tofino_i2c_address;
+    Integer tofino_i2c_frequency_hz;
     Tofino2Sequencer::Parameters tofino_sequencer;
 } Parameters;
 
@@ -37,6 +40,8 @@ instance DefaultValue#(Parameters);
             system_frequency_hz: 50_000_000,
             clock_generator_power_good_timeout: 10,
             vsc7448_power_good_timeout: 10,
+            tofino_i2c_address: 7'b1011_011, // 5Bh
+            tofino_i2c_frequency_hz: 100_000,
             tofino_sequencer: defaultValue};
 endinstance
 
@@ -50,6 +55,7 @@ typedef struct {
 interface Pins;
     interface ClockGeneratorPins clocks;
     interface Tofino2Sequencer::Pins tofino;
+    interface I2CCommon::Pins tofino_debug_port;
     interface PCIeEndpointController::Pins pcie;
     interface VSC7448Pins vsc7448;
     interface Vector#(4, FanModule::Pins) fans;
@@ -57,6 +63,7 @@ endinterface
 
 interface Registers;
     interface Tofino2Sequencer::Registers tofino;
+    interface TofinoDebugPort::Registers tofino_debug_port;
     interface PCIeEndpointController::Registers pcie;
 endinterface
 
@@ -105,6 +112,12 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
         tofino_sequencer.pcie_reset();
     endrule
 
+    TofinoDebugPort tofino_debug_port <-
+        mkTofinoDebugPort(
+            parameters.system_frequency_hz,
+            parameters.tofino_i2c_frequency_hz,
+            parameters.tofino_i2c_address);
+
     //
     // VSC7748 sequencer
     //
@@ -143,6 +156,7 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
     interface Pins pins;
         interface ClockGeneratorPins clocks = clock_generator_sequencer.pins;
         interface Tofino2Sequencer::Pins tofino = tofino_sequencer.pins;
+        interface TofinoDebugPort::Pins tofino_debug_port = tofino_debug_port.pins;
         interface VSC7448Pins vsc7448 = vsc7448_sequencer.pins;
         interface PCIeEndpointController::Pins pcie = pcie_endpoint.pins;
         interface fans = map(FanModule::pins, fans);
@@ -150,6 +164,7 @@ module mkMainboardController #(Parameters parameters) (MainboardController);
 
     interface Registers registers;
         interface Tofino2Sequencer::Registers tofino = tofino_sequencer.registers;
+        interface TofinoDebugPort::Registers tofino_debug_port = tofino_debug_port.registers;
         interface PCIeEndpointController::Registers pcie = pcie_endpoint.registers;
     endinterface
 
