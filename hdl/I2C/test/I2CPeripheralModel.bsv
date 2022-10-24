@@ -17,7 +17,10 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
+import CommonInterfaces::*;
+
 import I2CCommon::*;
+
 
 interface I2CPeripheralModel;
     method Action scl_i(Bit#(1) scl_i_next);
@@ -285,5 +288,14 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
 
     interface Get receive = toGet(outgoing_events);
 endmodule
+
+instance Connectable#(Pins, I2CPeripheralModel);
+    module mkConnection #(Pins pins, I2CPeripheralModel model) (Empty);
+        mkConnection(pins.scl.out, model.scl_i);
+        mkConnection(pins.sda.out, model.sda_i);
+        mkConnection(pins.sda.out_en, model.sda_i_en);
+        mkConnection(pins.sda.in, model.sda_o);
+    endmodule
+endinstance
 
 endpackage: I2CPeripheralModel

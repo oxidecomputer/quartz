@@ -24,7 +24,7 @@ I2CTestParams test_params = defaultValue;
 
 function Action check_peripheral_event(I2CPeripheralModel peripheral,
                                         ModelEvent expected,
-                                        String message) = 
+                                        String message) =
     action
         let e <- peripheral.receive.get();
         $display("(model) Actual:   ", fshow(e));
@@ -50,10 +50,7 @@ module mkBench (Bench);
     I2CCore dut                 <- mkI2CCore(test_params.core_clk_freq, test_params.scl_freq);
     I2CPeripheralModel periph   <- mkI2CPeripheralModel(test_params.peripheral_addr);
 
-    mkConnection(dut.pins.scl.out, periph.scl_i);
-    mkConnection(dut.pins.sda.out, periph.sda_i);
-    mkConnection(dut.pins.sda.out_en, periph.sda_i_en);
-    mkConnection(dut.pins.sda.in, periph.sda_o);
+    mkConnection(dut.pins, periph);
 
     Reg#(Bit#(8)) data_idx         <- mkReg(0);
 
@@ -63,9 +60,14 @@ module mkBench (Bench);
 
     // TODO: This should become a RAM that I can dynamically read/write to so I
     // can read values I expect to have written without relying on bytes_done
-    rule do_fill_write_data_fifo(dut.request_write_data);
-        dut.write_data.put(data_idx + 1);
-        data_idx    <= data_idx + 1;
+    (* fire_when_enabled *)
+    rule do_offer_send_data;
+        dut.send_data.offer(data_idx);
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_next_send_data_byte (dut.send_data.accepted);
+        data_idx <= data_idx + 1;
     endrule
 
     FSM write_seq <- mkFSMWithPred(seq

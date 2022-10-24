@@ -180,7 +180,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_reg_write_buffer_read_addr;
         if (new_i2c_command) begin
             write_buffer_read_addr    <= 0;
-        end else if (i2c_core.request_write_data) begin
+        end else if (i2c_core.send_data.accepted) begin
             if (write_buffer_read_addr < 128) begin
                 write_buffer_read_addr    <= write_buffer_read_addr + 1;
             end else begin
@@ -198,7 +198,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // PortB responds with the requested data, passing it back to I2C via write_buffer_write_data
     (* fire_when_enabled *)
     rule do_write_buffer_portb_read;
-        i2c_core.write_data.put(write_buffer.b.read());
+        i2c_core.send_data.offer(write_buffer.b.read());
     endrule
 
     // Registers for SPI peripheral
