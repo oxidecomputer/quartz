@@ -137,9 +137,6 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
             end
 
             tagged Nack: begin
-                // TODO: a NACK on the address/op byte is an error case
-                // and should be handled as such. For now, just abandon the
-                // transaction until we have some sort of reporting/retry
                 state_r <= Stop;
                 error_r <= tagged Valid AddressNack;
             end
@@ -173,9 +170,6 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
             end
 
             tagged Nack: begin
-                // TODO: a NACK on the address/op byte is an error case
-                // and should be handled as such. For now, just abandon the
-                // transaction until we have some sort of reporting/retry
                 state_r <= Stop;
                 error_r <= tagged Valid ByteNack;
             end

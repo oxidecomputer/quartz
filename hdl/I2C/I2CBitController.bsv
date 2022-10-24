@@ -6,6 +6,11 @@
 
 package I2CBitController;
 
+export Pins(..);
+export Event(..);
+export I2CBitController(..);
+export mkI2CBitController;
+
 import FIFO::*;
 import GetPut::*;
 import StmtFSM::*;
@@ -229,7 +234,7 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
                 case (last(shift_bits)) matches
                     tagged Valid .bit_: begin
                         state   <= TransmitAck;
-                        outgoing_events.enq(tagged ReadData pack(map(bit_from_maybe, shift_bits))); 
+                        outgoing_events.enq(tagged ReadData pack(map(bit_from_maybe, shift_bits)));
                     end
                 endcase
 
