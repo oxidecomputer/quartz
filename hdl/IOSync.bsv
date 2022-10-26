@@ -10,12 +10,17 @@ export mkInputSync;
 export mkInputSyncFor;
 export mkOutputSyncFor;
 export mkOutputSyncRegFor;
-export sync, sync_inverted;
+export mkBidirectionSyncFor;
+export sync;
+export sync_inverted;
 
 import Clocks::*;
 import ConfigReg::*;
 import Connectable::*;
+import TriState::*;
 import Vector::*;
+
+import Bidirection::*;
 
 
 //
@@ -97,6 +102,23 @@ module mkOutputSyncRegFor #(bits_type val) (ReadOnly#(bits_type))
     (* hide *) CrossingReg#(bits_type) _sync <- mkNullCrossingReg(c, val);
 
     method _read = _sync._read;
+endmodule
+
+//
+// `mkBidirectionSyncFor` is a wrapper providing input/output synchronization
+// for a `Bidirection` value. The wrapper exposes the `Bidirection` as an
+// `Inout` which can be connected directly to the top of a design.
+//
+module mkBidirectionSyncFor #(Bidirection#(bit_type) bidir) (Inout#(bit_type))
+        provisos (Bits#(bit_type, sz));
+    ReadOnly#(Bool) out_en <- mkOutputSyncFor(bidir.out_en);
+    ReadOnly#(bit_type) out <- mkOutputSyncFor(bidir.out);
+    Reg#(bit_type) in <- mkInputSyncFor(bidir.in);
+
+    TriState#(bit_type) pad <- mkTriState(out_en, out);
+    mkConnection(pad, sync(in));
+
+    return pad.io;
 endmodule
 
 //

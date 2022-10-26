@@ -13,7 +13,8 @@ import GetPut::*;
 import FIFO::*;
 import StmtFSM::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
+
 import I2CCommon::*;
 import I2CCore::*;
 import I2CPeripheralModel::*;
@@ -30,7 +31,7 @@ QsfpModuleController::Parameters qsfp_test_params =
 
 function Action check_peripheral_event(I2CPeripheralModel peripheral,
                                         ModelEvent expected,
-                                        String message) = 
+                                        String message) =
     action
         let e <- peripheral.receive.get();
         $display("(model) Actual:   ", fshow(e));
@@ -49,7 +50,7 @@ module mkBench (Bench);
 
     mkConnection(dut.pins.scl.out, periph.scl_i);
     mkConnection(dut.pins.sda.out, periph.sda_i);
-    mkConnection(dut.pins.sda.out_en, periph.sda_i_en);
+    mkConnection(pack(dut.pins.sda.out_en), periph.sda_i_en);
     mkConnection(dut.pins.sda.in, periph.sda_o);
 
     // A fifo of dummy data for the DUT to pull from

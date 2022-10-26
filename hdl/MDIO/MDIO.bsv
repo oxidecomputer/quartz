@@ -17,7 +17,7 @@ import Vector::*;
 
 import Strobe::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 
 // Parameters used to configure various things within the block
 // system_frequency_hz      - main clock domain for the design
@@ -61,7 +61,7 @@ instance DefaultValue#(Command);
 endinstance
 
 interface Pins;
-    interface Tristate mdio;
+    interface Bidirection#(Bit#(1)) mdio;
     method Bit#(1) mdc;
 endinterface
 
@@ -74,7 +74,7 @@ endinterface
 
 module mkMDIO #(Parameters parameters) (MDIO);
     // MDC toggle counter
-    Integer mdc_half_period_count = 
+    Integer mdc_half_period_count =
         parameters.system_frequency_hz / parameters.mdc_frequency_hz / 2;
     Strobe#(10) mdc_toggle_strobe    <-
         mkFractionalStrobe(mdc_half_period_count, 0);
@@ -237,9 +237,9 @@ module mkMDIO #(Parameters parameters) (MDIO);
     interface Pins pins;
         method mdc          = mdc;
 
-        interface Tristate mdio;
+        interface Bidirection mdio;
             method out      = mdio_out;
-            method out_en   = mdio_out_en;
+            method out_en   = unpack(mdio_out_en);
             method in       = mdio_in._write;
         endinterface
     endinterface

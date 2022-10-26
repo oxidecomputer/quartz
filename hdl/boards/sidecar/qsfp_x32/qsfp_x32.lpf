@@ -89,17 +89,17 @@ IOBUF PORT "qsfp_to_fpga_irq_l_0" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_0" SITE "W23";
 IOBUF PORT "qsfp_to_fpga_present_l_0" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_0" SITE "V21";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_0" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_0" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_0" SITE "W22";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_0" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_0" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P1, FPGA1: P9
 LOCATE COMP "qsfp_to_fpga_irq_l_1" SITE "K24";
 IOBUF PORT "qsfp_to_fpga_irq_l_1" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_1" SITE "K25";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_1" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_1" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_1" SITE "L24";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_1" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_1" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_lpmode_1" SITE "M24";
 IOBUF PORT "fpga_to_qsfp_lpmode_1" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_reset_l_1" SITE "N26";
@@ -113,11 +113,11 @@ IOBUF PORT "fpga_to_qsfp_en_1" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
 # FPGA0: P2, FPGA1: P10
 LOCATE COMP "i2c_fpga_to_qsfp_scl_2" SITE "H25";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_2" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_2" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_2" SITE "H26";
 IOBUF PORT "qsfp_to_fpga_irq_l_2" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_2" SITE "J26";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_2" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_2" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_lpmode_2" SITE "K26";
 IOBUF PORT "fpga_to_qsfp_lpmode_2" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_reset_l_2" SITE "L25";
@@ -141,11 +141,11 @@ IOBUF PORT "qsfp_to_fpga_pg_3" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_3" SITE "D26";
 IOBUF PORT "qsfp_to_fpga_present_l_3" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_3" SITE "E23";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_3" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_3" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_3" SITE "K21";
 IOBUF PORT "qsfp_to_fpga_irq_l_3" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_3" SITE "J21";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_3" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_3" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P4, FPGA1: P12
 LOCATE COMP "fpga_to_qsfp_en_4" SITE "E21";
@@ -161,9 +161,9 @@ IOBUF PORT "qsfp_to_fpga_irq_l_4" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_4" SITE "C22";
 IOBUF PORT "qsfp_to_fpga_present_l_4" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_4" SITE "A17";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_4" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_4" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_4" SITE "D17";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_4" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_4" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P5, FPGA1: P13
 LOCATE COMP "fpga_to_qsfp_en_5" SITE "A15";
@@ -171,7 +171,7 @@ IOBUF PORT "fpga_to_qsfp_en_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_pg_5" SITE "B16";
 IOBUF PORT "qsfp_to_fpga_pg_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_5" SITE "C13";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_5" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_5" SITE "B13";
 IOBUF PORT "qsfp_to_fpga_irq_l_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_5" SITE "A16";
@@ -179,7 +179,7 @@ IOBUF PORT "qsfp_to_fpga_present_l_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_reset_l_5" SITE "D16";
 IOBUF PORT "fpga_to_qsfp_reset_l_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_5" SITE "E14";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_5" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_lpmode_5" SITE "E16";
 IOBUF PORT "fpga_to_qsfp_lpmode_5" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
@@ -197,9 +197,9 @@ IOBUF PORT "qsfp_to_fpga_present_l_6" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_6" SITE "R6";
 IOBUF PORT "qsfp_to_fpga_irq_l_6" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_6" SITE "U3";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_6" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_6" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_6" SITE "U4";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_6" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_6" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P7, FPGA1: P15
 LOCATE COMP "fpga_to_qsfp_reset_l_7" SITE "P3";
@@ -213,11 +213,11 @@ IOBUF PORT "fpga_to_qsfp_en_7" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_lpmode_7" SITE "T5";
 IOBUF PORT "fpga_to_qsfp_lpmode_7" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_7" SITE "V1";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_7" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_7" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_7" SITE "W5";
 IOBUF PORT "qsfp_to_fpga_irq_l_7" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_7" SITE "W6";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_7" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_7" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P16, FPGA1: P24
 LOCATE COMP "fpga_to_qsfp_reset_l_8" SITE "P25";
@@ -233,9 +233,9 @@ IOBUF PORT "qsfp_to_fpga_present_l_8" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_8" SITE "W24";
 IOBUF PORT "qsfp_to_fpga_irq_l_8" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_8" SITE "W25";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_8" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_8" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_8" SITE "W26";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_8" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_8" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P17, FPGA1: P25
 LOCATE COMP "fpga_to_qsfp_reset_l_9" SITE "H24";
@@ -247,9 +247,9 @@ IOBUF PORT "fpga_to_qsfp_en_9" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_pg_9" SITE "P23";
 IOBUF PORT "qsfp_to_fpga_pg_9" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_9" SITE "P24";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_9" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_9" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_9" SITE "R21";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_9" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_9" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_9" SITE "R24";
 IOBUF PORT "qsfp_to_fpga_present_l_9" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_9" SITE "T24";
@@ -269,15 +269,15 @@ IOBUF PORT "qsfp_to_fpga_present_l_10" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_10" SITE "F26";
 IOBUF PORT "qsfp_to_fpga_irq_l_10" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_10" SITE "K22";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_10" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_10" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_10" SITE "L22";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_10" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_10" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P19, FPGA1: P27
 LOCATE COMP "qsfp_to_fpga_irq_l_11" SITE "C24";
 IOBUF PORT "qsfp_to_fpga_irq_l_11" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_11" SITE "B24";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_11" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_11" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_lpmode_11" SITE "F22";
 IOBUF PORT "fpga_to_qsfp_lpmode_11" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_pg_11" SITE "F24";
@@ -289,7 +289,7 @@ IOBUF PORT "fpga_to_qsfp_en_11" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_11" SITE "H23";
 IOBUF PORT "qsfp_to_fpga_present_l_11" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_11" SITE "J23";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_11" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_11" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P20, FPGA1: P28
 LOCATE COMP "qsfp_to_fpga_irq_l_12" SITE "A19";
@@ -299,13 +299,13 @@ IOBUF PORT "fpga_to_qsfp_en_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_pg_12" SITE "B17";
 IOBUF PORT "qsfp_to_fpga_pg_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_12" SITE "C19";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_12" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_lpmode_12" SITE "C21";
 IOBUF PORT "fpga_to_qsfp_lpmode_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_12" SITE "D18";
 IOBUF PORT "qsfp_to_fpga_present_l_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_12" SITE "D19";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_12" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_reset_l_12" SITE "E17";
 IOBUF PORT "fpga_to_qsfp_reset_l_12" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
@@ -321,19 +321,19 @@ IOBUF PORT "fpga_to_qsfp_lpmode_13" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_en_13" SITE "D14";
 IOBUF PORT "fpga_to_qsfp_en_13" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_13" SITE "D21";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_13" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_13" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_reset_l_13" SITE "E13";
 IOBUF PORT "fpga_to_qsfp_reset_l_13" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_13" SITE "E19";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_13" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_13" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 # FPGA0: P22, FPGA1: P30
 LOCATE COMP "i2c_fpga_to_qsfp_scl_14" SITE "K1";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_14" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_14" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_14" SITE "L2";
 IOBUF PORT "qsfp_to_fpga_irq_l_14" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_14" SITE "M1";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_14" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_14" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_reset_l_14" SITE "N1";
 IOBUF PORT "fpga_to_qsfp_reset_l_14" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_pg_14" SITE "N3";
@@ -349,11 +349,11 @@ IOBUF PORT "fpga_to_qsfp_lpmode_14" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_irq_l_15" SITE "P1";
 IOBUF PORT "qsfp_to_fpga_irq_l_15" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_sda_15" SITE "T1";
-IOBUF PORT "i2c_fpga_to_qsfp_sda_15" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_sda_15" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_pg_15" SITE "U1";
 IOBUF PORT "qsfp_to_fpga_pg_15" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_fpga_to_qsfp_scl_15" SITE "U2";
-IOBUF PORT "i2c_fpga_to_qsfp_scl_15" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "i2c_fpga_to_qsfp_scl_15" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "qsfp_to_fpga_present_l_15" SITE "U6";
 IOBUF PORT "qsfp_to_fpga_present_l_15" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_qsfp_en_15" SITE "V4";

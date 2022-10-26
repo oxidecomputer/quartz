@@ -17,7 +17,10 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
+import Bidirection::*;
+
 import I2CCommon::*;
+
 
 interface I2CPeripheralModel;
     method Action scl_i(Bit#(1) scl_i_next);
@@ -66,7 +69,6 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
     // ModelEvent buffers
     FIFO#(ModelEvent) outgoing_events    <- mkFIFO1();
 
-    Wire#(Bit#(1)) sda          <- mkWire();
     Reg#(Bit#(1)) sda_out       <- mkReg(1);
     Reg#(Bit#(1)) sda_in_en     <- mkReg(1);
     Reg#(Bit#(1)) sda_in        <- mkReg(1);
@@ -105,21 +107,12 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
     endrule
 
     (* fire_when_enabled *)
-    rule do_simulated_sda_state;
-        if (sda_in_en == 1) begin
-            sda <= sda_in;
-        end else begin
-            sda <= sda_out;
-        end
-    endrule
-
-    (* fire_when_enabled *)
     rule do_detect_sda_edges;
-        sda_prev <= sda;
+        sda_prev <= sda_in;
 
-        if (sda == 1 && sda_prev == 0) begin
+        if (sda_in == 1 && sda_prev == 0) begin
             sda_redge.send();
-        end else if (sda == 0 && sda_prev == 1) begin
+        end else if (sda_in == 0 && sda_prev == 1) begin
             sda_fedge.send();
         end
     endrule
@@ -295,5 +288,14 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
 
     interface Get receive = toGet(outgoing_events);
 endmodule
+
+instance Connectable#(Pins, I2CPeripheralModel);
+    module mkConnection #(Pins pins, I2CPeripheralModel model) (Empty);
+        mkConnection(pins.scl.out, model.scl_i);
+        mkConnection(pins.sda.out, model.sda_i);
+        mkConnection(pack(pins.sda.out_en), model.sda_i_en);
+        mkConnection(pins.sda.in, model.sda_o);
+    endmodule
+endinstance
 
 endpackage: I2CPeripheralModel

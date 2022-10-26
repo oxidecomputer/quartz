@@ -24,7 +24,7 @@ import I2CCommon::*;
 import I2CCore::*;
 import PowerRail::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 import CommonFunctions::*;
 import QsfpX32ControllerRegsPkg::*;
 
@@ -66,8 +66,8 @@ endinterface
 
 interface Pins;
     interface PowerRail::Pins hsc;
-    interface Tristate scl;
-    interface Tristate sda;
+    interface Bidirection#(Bit#(1)) scl;
+    interface Bidirection#(Bit#(1)) sda;
     method Bit#(1) lpmode;
     method Bit#(1) reset_;
     method Action irq(Bit#(1) val);
@@ -180,7 +180,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_reg_write_buffer_read_addr;
         if (new_i2c_command) begin
             write_buffer_read_addr    <= 0;
-        end else if (i2c_core.request_write_data) begin
+        end else if (i2c_core.send_data.accepted) begin
             if (write_buffer_read_addr < 128) begin
                 write_buffer_read_addr    <= write_buffer_read_addr + 1;
             end else begin
@@ -198,7 +198,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // PortB responds with the requested data, passing it back to I2C via write_buffer_write_data
     (* fire_when_enabled *)
     rule do_write_buffer_portb_read;
-        i2c_core.write_data.put(write_buffer.b.read());
+        i2c_core.send_data.offer(write_buffer.b.read());
     endrule
 
     // Registers for SPI peripheral
@@ -215,8 +215,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Physical module pins
     interface Pins pins;
         interface PowerRail::Pins hsc = hot_swap.pins;
-        interface Tristate scl = i2c_core.pins.scl;
-        interface Tristate sda = i2c_core.pins.sda;
+        interface Bidirection scl = i2c_core.pins.scl;
+        interface Bidirection sda = i2c_core.pins.sda;
 
         method lpmode   = lpmode_;
         method reset_   = reset__;

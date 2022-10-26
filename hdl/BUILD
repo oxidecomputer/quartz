@@ -1,8 +1,8 @@
 # -*- python -*- vim:syntax=python:
 
-bluespec_library('CommonInterfaces',
+bluespec_library('Bidirection',
     sources = [
-        'CommonInterfaces.bsv',
+        'Bidirection.bsv',
     ])
 
 bluespec_library('CommonFunctions',
@@ -18,6 +18,9 @@ bluespec_library('FanModule',
 bluespec_library('IOSync',
     sources = [
         'IOSync.bsv',
+    ],
+    deps = [
+        ':Bidirection',
     ])
 
 bluespec_library('PowerRail',

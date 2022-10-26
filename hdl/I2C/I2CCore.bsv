@@ -6,12 +6,22 @@
 
 package I2CCore;
 
+export Operation(..);
+export Command(..);
+export Error(..);
+export Pins(..);
+export I2CCore(..);
+export mkI2CCore;
+
+import DefaultValue::*;
+import DReg::*;
 import FIFO::*;
 import GetPut::*;
 import StmtFSM::*;
 
 import I2CCommon::*;
 import I2CBitController::*;
+
 
 typedef enum {
     Read = 0,
@@ -31,7 +41,7 @@ instance DefaultValue #(Command);
         op: Read,
         i2c_addr: 7'h7f,
         reg_addr: 8'hff,
-        num_bytes: 8'h000
+        num_bytes: 8'h00
     };
 endinstance
 
@@ -48,12 +58,21 @@ typedef enum {
     Done = 9
 } State deriving (Eq, Bits, FShow);
 
+typedef enum {
+    AddressNack = 0,
+    ByteNack = 1
+} Error deriving (Bits, Eq, FShow);
+
+instance DefaultValue#(Error);
+    defaultValue = AddressNack;
+endinstance
+
 interface I2CCore;
     interface Pins pins;
     interface Put#(Command) send_command;
-    interface Put#(Bit#(8)) write_data;
-    interface PulseWire request_write_data;
+    interface PutS#(Bit#(8)) send_data;
     interface Get#(Bit#(8)) received_data;
+    method Maybe#(Error) error();
 endinterface
 
 module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
@@ -67,11 +86,12 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     Reg#(Maybe#(Command)) cur_command   <- mkReg(tagged Invalid);
     Reg#(Bit#(8)) tx_data               <- mkReg(0);
     Reg#(State) state_r                 <- mkReg(Idle);
+    Reg#(Maybe#(Error)) error_r         <- mkDReg(tagged Invalid);
     Wire#(Bool) valid_command           <- mkWire();
     Reg#(UInt#(8)) bytes_done           <- mkReg(0);
     Reg#(Bool) in_random_read           <- mkReg(False);
 
-    PulseWire request_write_data_   <- mkPulseWire;
+    PulseWire next_send_data           <- mkPulseWire;
 
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_valid_command;
@@ -117,10 +137,8 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
             end
 
             tagged Nack: begin
-                // TODO: a NACK on the address/op byte is an error case
-                // and should be handled as such. For now, just abandon the
-                // transaction until we have some sort of reporting/retry
-                state_r     <= Stop;
+                state_r <= Stop;
+                error_r <= tagged Valid AddressNack;
             end
         endcase
     endrule
@@ -128,8 +146,8 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     (* fire_when_enabled *)
     rule do_writing (state_r == Writing && valid_command);
         bit_ctrl.send.put(tagged Write tx_data);
-        request_write_data_.send();
-        state_r     <= AwaitWriteAck;
+        next_send_data.send();
+        state_r <= AwaitWriteAck;
     endrule
 
     (* fire_when_enabled *)
@@ -152,10 +170,8 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
             end
 
             tagged Nack: begin
-                // TODO: a NACK on the address/op byte is an error case
-                // and should be handled as such. For now, just abandon the
-                // transaction until we have some sort of reporting/retry
-                state_r     <= Stop;
+                state_r <= Stop;
+                error_r <= tagged Valid ByteNack;
             end
         endcase
     endrule
@@ -206,12 +222,14 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
         method put = next_command.enq;
     endinterface
 
-    interface Put write_data;
-        method put = tx_data._write;
+    interface PutS send_data;
+        method offer = tx_data._write;
+        method accepted = next_send_data;
     endinterface
-    interface request_write_data    = request_write_data_;
 
     interface Get received_data = toGet(rx_data_q);
+
+    method error = error_r;
 endmodule
 
 endpackage: I2CCore

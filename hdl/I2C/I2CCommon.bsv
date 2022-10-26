@@ -4,22 +4,20 @@
 
 package I2CCommon;
 
-import BuildVector::*;
 import DefaultValue::*;
 import Vector::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 
 interface Pins;
-    interface Tristate scl;
-    interface Tristate sda;
+    interface Bidirection#(Bit#(1)) scl;
+    interface Bidirection#(Bit#(1)) sda;
 endinterface
 
 // Using a Vector of Maybe#(Bit#(1)) is a convenient way to not have to track
 // where we are in the shift in/out of a byte, but is a little expensive...
 typedef Vector#(8, Maybe#(Bit#(1))) ShiftBits;
-ShiftBits shift_bits_reset = vec(tagged Invalid, tagged Invalid, tagged Invalid, tagged Invalid,
-                            tagged Invalid, tagged Invalid, tagged Invalid, tagged Invalid);
+ShiftBits shift_bits_reset = replicate(tagged Invalid);
 // Creating a variant fromMaybe to for use with map() on the ShiftBits type
 function Bit#(1) bit_from_maybe(Maybe#(Bit#(1)) b) = fromMaybe(0, b);
 
@@ -32,7 +30,7 @@ typedef struct {
 
 instance DefaultValue #(I2CTestParams);
     defaultValue = I2CTestParams {
-        core_clk_freq: 4000,
+        core_clk_freq: 50_000,
         scl_freq: 100,
         peripheral_addr: 7'b1010110
     };

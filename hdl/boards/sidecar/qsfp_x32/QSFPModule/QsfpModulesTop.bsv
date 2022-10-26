@@ -14,8 +14,8 @@ import DReg::*;
 import GetPut::*;
 import Vector::*;
 
+import Bidirection::*;
 import CommonFunctions::*;
-import CommonInterfaces::*;
 import I2CCore::*;
 
 import QsfpModuleController::*;
