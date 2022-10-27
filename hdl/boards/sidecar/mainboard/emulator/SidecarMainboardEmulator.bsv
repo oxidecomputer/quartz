@@ -1,12 +1,16 @@
 package SidecarMainboardEmulator;
 
+import BuildVector::*;
 import Clocks::*;
 import Connectable::*;
+import TriState::*;
+import Vector::*;
 
 import ECP5::*;
 import SPI::*;
 import Strobe::*;
 
+import I2CCommon::*;
 import IOSync::*;
 import PowerRail::*;
 import SidecarMainboardController::*;
@@ -84,6 +88,7 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
     SpiServer spi_server <-
         mkSpiServer(
             controller.registers.tofino,
+            controller.registers.tofino_debug_port,
             controller.registers.pcie);
 
     Reg#(Bit#(1)) csn <- mkInputSyncFor(spi_phy.pins.csn);

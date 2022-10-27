@@ -6,9 +6,11 @@ export mkSidecarMainboardControllerTop;
 import Clocks::*;
 import ConfigReg::*;
 import Connectable::*;
+import TriState::*;
 
-import SPI::*;
+import Bidirection::*;
 import IOSync::*;
+import SPI::*;
 
 import FanModule::*;
 import PCIeEndpointController::*;
@@ -17,6 +19,7 @@ import SidecarMainboardController::*;
 import SidecarMainboardControllerSpiServer::*;
 import SidecarMainboardMiscSequencers::*;
 import Tofino2Sequencer::*;
+import TofinoDebugPort::*;
 
 
 (* always_enabled *)
@@ -35,6 +38,8 @@ interface SidecarMainboardControllerTop;
     //
 
     method Bit#(1) fpga_led0();
+    method Bit#(1) fpga_debug0();
+    method Bit#(1) fpga_debug1();
 
     //
     // Tofino
@@ -88,7 +93,17 @@ interface SidecarMainboardControllerTop;
     // Thermal Alert
     (* prefix = "" *) method Action tf_to_fpga_temp_therm_l(Bool tf_to_fpga_temp_therm_l);
 
+    //
+    // Tofino Debug Port
+    //
+
+    interface Inout#(Bit#(1)) i2c_fpga_to_tf_scl;
+    interface Inout#(Bit#(1)) i2c_fpga_to_tf_sda;
+
+    //
     // PCIe Endpoint
+    //
+
     method Bool pcie_fpga_to_host_prsnt_l();
     method Bool pcie_fpga_to_host_pwrflt();
     (* prefix = "" *) method Action pcie_host_to_fpga_perst(Bool pcie_host_to_fpga_perst);
@@ -176,6 +191,7 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     SpiServer spi_server <-
         mkSpiServer(
             controller.registers.tofino,
+            controller.registers.tofino_debug_port,
             controller.registers.pcie,
             reset_by reset_sync);
 
@@ -259,7 +275,19 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     ReadOnly#(Bool) tofino_in_a0 <-
         mkOutputSyncFor(controller.status.tofino_in_a0);
 
+    //
+    // Tofino Debug Port
+    //
+
+    Inout#(Bit#(1)) tofino_debug_port_scl <-
+        mkBidirectionSyncFor(controller.pins.tofino_debug_port.scl);
+    Inout#(Bit#(1)) tofino_debug_port_sda <-
+        mkBidirectionSyncFor(controller.pins.tofino_debug_port.sda);
+
+    //
     // PCIe Endpoint
+    //
+
     ReadOnly#(Bool) pcie_present <- mkOutputSyncFor(controller.pins.pcie.present);
     ReadOnly#(Bool) pcie_power_fault <- mkOutputSyncFor(controller.pins.pcie.power_fault);
     // TODO (arjen): The PWREN pin was repurposed to ALERT pin between Gimlet
@@ -326,6 +354,9 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     method spi_sp_to_fpga_miso_r = cipo;
 
     method fpga_led0 = clk_1hz;
+    method fpga_debug0 = 0;
+    method fpga_debug1 = 0;
+
     method tf_pg_led = tofino_in_a0;
 
     // Tofino pins
@@ -361,6 +392,9 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     method vr_tf_v1p8_to_fpga_vdda1p8_pg = sync(vdda18_pg);
 
     method tf_to_fpga_temp_therm_l = sync_inverted(tofino_thermal_alert);
+
+    interface Inout i2c_fpga_to_tf_scl = tofino_debug_port_scl;
+    interface Inout i2c_fpga_to_tf_sda = tofino_debug_port_sda;
 
     method pcie_fpga_to_host_prsnt_l = !pcie_present;
     method pcie_fpga_to_host_pwrflt = pcie_power_fault;
@@ -497,7 +531,18 @@ interface SidecarMainboardControllerTopRevA;
     // Thermal Alert
     (* prefix = "" *) method Action tf_to_fpga_temp_therm_l(Bool tf_to_fpga_temp_therm_l);
 
+
+    //
+    // Tofino Debug Port
+    //
+
+    interface Inout#(Bit#(1)) i2c_fpga_to_tf_scl;
+    interface Inout#(Bit#(1)) i2c_fpga_to_tf_sda;
+
+    //
     // PCIe Endpoint
+    //
+
     method Bool pcie_fpga_to_host_prsnt_l();
     method Bool pcie_fpga_to_host_pwrflt();
     (* prefix = "" *) method Action pcie_host_to_fpga_perst(Bool pcie_host_to_fpga_perst);
@@ -601,6 +646,9 @@ module mkSidecarMainboardControllerRevA (SidecarMainboardControllerTopRevA);
     method vr_tf_v1p8_to_fpga_vdda1p8_pg = _top.vr_tf_v1p8_to_fpga_vdda1p8_pg;
 
     method tf_to_fpga_temp_therm_l = _top.tf_to_fpga_temp_therm_l;
+
+    method i2c_fpga_to_tf_scl = _top.i2c_fpga_to_tf_scl;
+    method i2c_fpga_to_tf_sda = _top.i2c_fpga_to_tf_sda;
 
     method pcie_fpga_to_host_prsnt_l = _top.pcie_fpga_to_host_prsnt_l;
     method pcie_fpga_to_host_pwrflt = _top.pcie_fpga_to_host_pwrflt;

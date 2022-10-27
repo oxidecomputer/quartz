@@ -14,6 +14,23 @@ bluesim_tests('PCIeEndpointControllerTests',
         'cobalt//hdl:TestUtils',
     ])
 
+bluesim_tests('TofinoDebugPortTests',
+    suite = 'TofinoDebugPortTests.bsv',
+    env = 'cobalt//bluesim_default',
+    modules = [
+        'mkClearSendBufferTest',
+        'mkAbortRequestOnAddressNackTest',
+        'mkLocalReadTest',
+        'mkLocalWriteTest',
+        'mkDirectReadTest',
+        'mkDirectWriteTest',
+    ],
+    deps = [
+        '//hdl/boards/sidecar/mainboard:TofinoDebugPort',
+        '//hdl/I2C:I2CPeripheralModel',
+        'cobalt//hdl:TestUtils',
+    ])
+
 bluesim_tests('Tofino2SequencerTests',
     suite = 'Tofino2SequencerTests.bsv',
     env = 'cobalt//bluesim_default',

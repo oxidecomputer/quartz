@@ -20,6 +20,16 @@ bluespec_library('SidecarMainboardControllerReg',
         'cobalt//hdl:RegCommon',
     ])
 
+bluespec_library('TofinoDebugPort',
+    sources = [
+        'TofinoDebugPort.bsv',
+    ],
+    deps = [
+        ':SidecarMainboardControllerReg',
+        '//hdl:CommonFunctions',
+        '//hdl/I2C:I2CCore',
+    ])
+
 bluespec_library('Tofino2Sequencer',
     sources = [
         'Tofino2Sequencer.bsv',
@@ -44,8 +54,9 @@ bluespec_library('SidecarMainboardController',
         'SidecarMainboardMiscSequencers.bsv',
     ],
     deps = [
-        ':Tofino2Sequencer',
         ':PCIeEndpointController',
+        ':Tofino2Sequencer',
+        ':TofinoDebugPort',
         '//hdl:FanModule',
         '//hdl:PowerRail',
         'cobalt//hdl:GitVersion',
@@ -62,7 +73,14 @@ bluespec_library('SidecarMainboardControllerTop',
         ':SidecarMainboardController',
         '//hdl:IOSync',
         'cobalt//hdl:SyncBits',
-    ])
+    ],
+    using = {
+        # The folling script is needed to fix the inout syntax used in the generated Verilog.
+        # For additonal context, see https://github.com/B-Lang-org/bsc/issues/327#issuecomment-786182555
+        'bsc_flags': [
+            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+        ]
+    })
 
 bluespec_verilog('mkSidecarMainboardControllerTop',
     top = 'SidecarMainboardControllerTop.bsv',

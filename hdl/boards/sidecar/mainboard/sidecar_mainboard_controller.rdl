@@ -364,4 +364,42 @@ addrmap sidecar_mainboard_controller {
             desc = "Host PCIe Reset";
         } HOST_RESET[1] = 0;
     } PCIE_HOTPLUG_STATUS;
+
+    reg {
+        name = "Tofino Debug Port Data";
+        default sw = rw;
+        default hw = rw;
+
+        field {
+            desc = "Send/receive buffer read/write port";
+        } DATA [7:0] = 0;
+    } TOFINO_DEBUG_PORT_BUFFER @ 0x200;
+
+    reg {
+        name = "Tofino Debug Port Status";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Send buffer empty";
+        } SEND_BUFFER_EMPTY[1] = 0;
+        field {
+            desc = "Send buffer full";
+        } SEND_BUFFER_FULL[1] = 0;
+        field {
+            desc = "Receive buffer empty";
+        } RECEIVE_BUFFER_EMPTY[1] = 0;
+        field {
+            desc = "Receive buffer full";
+        } RECEIVE_BUFFER_FULL[1] = 0;
+        field {
+            desc = "Flag indicating the port is busy processing requests";
+        } REQUEST_IN_PROGRESS[1] = 0;
+        field {
+            desc = "Flag indicating an I2C error occured";
+        } ERROR_VALID[1] = 0;
+        field {
+            desc = "Field indicating the type of I2C error occured";
+        } ERROR_DETAILS[1] = 0;
+    } TOFINO_DEBUG_PORT_STATE;
 };
