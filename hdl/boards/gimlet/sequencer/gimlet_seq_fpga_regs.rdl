@@ -596,14 +596,11 @@ addrmap gimlet_seq_fpga {
 
     reg nic_output1_type {
         field {
+            desc = "Enable (U565), V0P96_NIC_VDD_A0HP rail (SEQ_TO_NIC_V0P9_A0HP_EN net)";
+        } NIC_V0P9_A0_EN[1] = 0;
+        field {
             desc = "Turns on V1P2_NIC_ENET_A0HP, no readback (SEQ_TO_NIC_V1P2_ENET_EN net)";
         } NIC_V1P2_ETH_EN[1] = 0;
-        field {
-            desc = "EN0 for ISL68224 (U357), V0P96_NIC_VDD_A0HP rail (PWR_CONT_NIC_EN0 net)";
-        } NIC_CONT_EN0[1] = 0;
-        field {
-            desc = "EN1 for ISL68224 (U357), V1P8_NIC_A0HP rail (PWR_CONT_NIC_EN1 ent)  ";
-        } NIC_CONT_EN1[1] = 0;
         field {
             desc = "En for V1P5_NIC_AVDD_A0HP rail (SEQ_TO_NIC_V1P5A_EN net)";
         } NIC_V1P5A_EN[1] = 0;
@@ -618,7 +615,7 @@ addrmap gimlet_seq_fpga {
         } NIC_V1P1_EN[1] = 0;
         field {
             desc = "Enables V3PV_NIC_A0HP rail (SEQ_TO_NIC_LDO_V3P3_EN net)";
-        } NIC_V3P3[1] = 0;
+        } NIC_V3P3_EN[1] = 0;
     };
 
     reg nic_output2_type {

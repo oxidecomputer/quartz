@@ -50,7 +50,6 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(PwrCtrl) power_control <- mkReg(defaultValue);
     ConfigReg#(NicCtrl) nic_control <- mkReg(defaultValue);
     //  NIC domain signals
-    ConfigReg#(NicOutput1Type) nic1_out_status <- mkRegU(); // RO register for outputs
     
     ConfigReg#(NicOutput1Type) dbg_nic1_out       <- mkReg(unpack(0));
     ConfigReg#(NicOutput2Type) dbg_nic2_out       <- mkReg(unpack(0));
@@ -99,7 +98,6 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bit#(16)) address <- mkDWire(0);
     Wire#(RegOps) operation <- mkDWire(NOOP);
     // RWire#(NicStatus) cur_nic_pins <- mkRWire();
-    RWire#(NicOutput1Type) cur_nic1_out_status <- mkRWire();
     RWire#(EarlyPower) cur_early_outputs <- mkRWire();
     RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
@@ -121,6 +119,7 @@ module mkGimletRegs(GimletRegIF);
     Wire#(Bool) thermtrip <- mkDWire(False);
     Wire#(Bool) fanfault <- mkDWire(False);
     Wire#(NicOutput2Type) nic2_out_status <- mkDWire(unpack(0));
+    Wire#(NicOutput1Type) nic1_out_status <- mkDWire(unpack(0));
     Wire#(NicCtrl) nic_ctrl_next <- mkDWire(defaultValue);
 
     IRQBlock#(IrqType) irq_block <- mkIRQBlock();
@@ -329,6 +328,7 @@ module mkGimletRegs(GimletRegIF);
         endmethod
         method pgs = nic_status._write;
         method nic_outs = nic2_out_status._write;
+        method nic_ens = nic1_out_status._write;
         method mapo = nic_mapo._write;
     endinterface
 

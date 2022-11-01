@@ -25,6 +25,7 @@ import PowerRail::*;
         method Bool ok();
         method NicStateType state();
         method NicStatus pgs;
+        method NicOutput1Type nic_ens;
         method NicOutput2Type nic_outs;
         method Bool mapo();
         // method A1OutStatus output_readbacks();
@@ -40,6 +41,7 @@ import PowerRail::*;
         method Action ok(Bool value);
         method Action state(NicStateType value);
         method Action pgs (NicStatus value);
+        method Action nic_ens (NicOutput1Type value);
         method Action nic_outs (NicOutput2Type value);
         method Action mapo(Bool value);
     endinterface
@@ -288,6 +290,17 @@ import PowerRail::*;
             method cld_rst_override = cld_rst_override._write;
             method perst_override = perst_override._write;
             method perst_solo = perst_solo._write;
+            method NicOutput1Type nic_ens;
+                return NicOutput1Type {
+                    nic_v0p9_a0_en: pack(v0p9_a0hp.enabled),
+                    nic_v1p2_eth_en: pack(v1p2.enabled),
+                    nic_v1p5a_en: pack(v1p5a.enabled),
+                    nic_v1p5d_en: pack(v1p5d.enabled),
+                    nic_v1p2_en: pack(v1p2.enabled),
+                    nic_v1p1_en: pack(v1p1.enabled),
+                    nic_v3p3_en: pack(ldo_v3p3.enabled)
+                };
+            endmethod
             method NicOutput2Type nic_outs;
                 return NicOutput2Type {
                    sp3_perst: ~sp3_to_seq_nic_perst_l,
