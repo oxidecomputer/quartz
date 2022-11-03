@@ -116,7 +116,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Control signals
     Wire#(Bit#(1)) enable_  <- mkWire();
     Reg#(Bit#(1)) reset__   <- mkReg(0);
-    Reg#(Bit#(1)) lpmode_   <- mkReg(0);
+    Reg#(Bit#(1)) lpmode_   <- mkReg(1);
 
     Wire#(Bit#(8)) read_buffer_read_addr        <- mkDWire(8'h00);
     ConfigReg#(Bit#(8)) read_buffer_read_data   <- mkConfigReg(8'h00);
