@@ -42,6 +42,16 @@ interface Registers;
     interface Reg#(I2cBcastL) i2c_bcast_l;
     interface Reg#(I2cBcastH) i2c_bcast_h;
     interface Reg#(I2cCtrl) i2c_ctrl;
+    interface ReadOnly#(I2cBusyL) i2c_busy_l;
+    interface ReadOnly#(I2cBusyH) i2c_busy_h;
+    interface ReadOnly#(I2cError0) i2c_error0;
+    interface ReadOnly#(I2cError1) i2c_error1;
+    interface ReadOnly#(I2cError2) i2c_error2;
+    interface ReadOnly#(I2cError3) i2c_error3;
+    interface ReadOnly#(I2cError4) i2c_error4;
+    interface ReadOnly#(I2cError5) i2c_error5;
+    interface ReadOnly#(I2cError6) i2c_error6;
+    interface ReadOnly#(I2cError7) i2c_error7;
     interface Reg#(CtrlEnL) mod_en_l;
     interface Reg#(CtrlEnH) mod_en_h;
     interface Reg#(CtrlResetL) mod_reset_l;
@@ -91,6 +101,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Reg#(Bool) issue_write          <- mkDReg(False);
 
     Vector#(16, Bool) i2c_broadcast_enabled = unpack({unpack(pack(i2c_bcast_h)), unpack(pack(i2c_bcast_l))});
+    Vector#(16, Reg#(Bit#(4))) i2c_errors_r <- replicateM(mkReg(0));
 
     // Vectorize all the low speed module signals
     Vector#(16, Bit#(1)) enable_bits = unpack({pack(mod_en_h), pack(mod_en_l)});
@@ -100,6 +111,10 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Vector#(16, Bit#(1)) pg_timeout_bits;
     Vector#(16, Bit#(1)) present_bits;
     Vector#(16, Bit#(1)) irq_bits;
+
+    // Vectorize I2C status signals
+    Vector#(16, Bit#(1)) i2c_busys;
+    Vector#(16, Bit#(4)) i2c_errors;
 
     for (int i = 0; i < 16; i = i + 1) begin
         // map registers into modules
@@ -112,6 +127,8 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         pg_timeout_bits[i]  = qsfp_ports[i].pg_timeout;
         present_bits[i]     = qsfp_ports[i].present;
         irq_bits[i]         = qsfp_ports[i].irq;
+        i2c_busys[i]        = qsfp_ports[i].i2c_busy;
+        i2c_errors[i]       = i2c_errors_r[i];
     end
 
     // Only do I2C transactions if they are enabled for the given port.
@@ -128,6 +145,23 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         for (int i = 0; i < 16; i = i + 1) begin
             if (i2c_broadcast_enabled[i]) begin
                 qsfp_ports[i].i2c_command.put(next_command);
+            end
+        end
+    endrule
+
+    // Since the error register is somewhat derived at this layer it needs to
+    // be registered for persistence. It will also stay present until the next
+    // I2C transaction starts on the port.
+    (* fire_when_enabled *)
+    rule do_i2c_error_regs;
+        for (int i = 0; i < 16; i = i + 1) begin
+            if (i2c_ctrl.start == 1 && i2c_broadcast_enabled[i]) begin
+                i2c_errors_r[i] <= 0;
+            end else if (isValid(qsfp_ports[i].i2c_error)) begin
+                // The I2CCore::Error enum packs down to a single bit currently, but
+                // a 3-bit wide field is reserved for it.
+                let error_type = {2'b00, pack(fromMaybe(?, qsfp_ports[i].i2c_error))};
+                i2c_errors_r[i] <= {1'b1, error_type};
             end
         end
     endrule
@@ -152,6 +186,16 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         interface Reg i2c_bcast_l = i2c_bcast_l;
         interface Reg i2c_bcast_h = i2c_bcast_h;
         interface Reg i2c_ctrl = i2c_ctrl;
+        interface ReadOnly i2c_busy_l = valueToReadOnly(unpack(pack(i2c_busys)[7:0]));
+        interface ReadOnly i2c_busy_h = valueToReadOnly(unpack(pack(i2c_busys)[15:8]));
+        interface ReadOnly i2c_error0 = valueToReadOnly(unpack({unpack(i2c_errors[15]), unpack(i2c_errors[14])}));
+        interface ReadOnly i2c_error1 = valueToReadOnly(unpack({unpack(i2c_errors[13]), unpack(i2c_errors[12])}));
+        interface ReadOnly i2c_error2 = valueToReadOnly(unpack({unpack(i2c_errors[11]), unpack(i2c_errors[10])}));
+        interface ReadOnly i2c_error3 = valueToReadOnly(unpack({unpack(i2c_errors[9]), unpack(i2c_errors[8])}));
+        interface ReadOnly i2c_error4 = valueToReadOnly(unpack({unpack(i2c_errors[7]), unpack(i2c_errors[6])}));
+        interface ReadOnly i2c_error5 = valueToReadOnly(unpack({unpack(i2c_errors[5]), unpack(i2c_errors[4])}));
+        interface ReadOnly i2c_error6 = valueToReadOnly(unpack({unpack(i2c_errors[3]), unpack(i2c_errors[2])}));
+        interface ReadOnly i2c_error7 = valueToReadOnly(unpack({unpack(i2c_errors[1]), unpack(i2c_errors[0])}));
         interface Reg mod_en_l = mod_en_l;
         interface Reg mod_en_h = mod_en_h;
         interface Reg mod_reset_l = mod_reset_l;

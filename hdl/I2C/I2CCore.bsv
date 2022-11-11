@@ -72,7 +72,8 @@ interface I2CCore;
     interface Put#(Command) send_command;
     interface PutS#(Bit#(8)) send_data;
     interface Get#(Bit#(8)) received_data;
-    method Maybe#(Error) error();
+    method Maybe#(Error) error;
+    method Bool busy;
 endinterface
 
 module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
@@ -230,6 +231,7 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     interface Get received_data = toGet(rx_data_q);
 
     method error = error_r;
+    method busy = state_r != Idle;
 endmodule
 
 endpackage: I2CCore
