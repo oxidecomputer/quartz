@@ -149,6 +149,26 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.i2c_bcast_h);
         end else if (spi_request.address == fromInteger(qsfpI2cBcastLOffset)) begin
             ret_byte = pack(qsfp_top.i2c_bcast_l);
+        end else if (spi_request.address == fromInteger(qsfpI2cBusyHOffset)) begin
+            ret_byte = pack(qsfp_top.i2c_busy_h);
+        end else if (spi_request.address == fromInteger(qsfpI2cBusyLOffset)) begin
+            ret_byte = pack(qsfp_top.i2c_busy_l);
+        end else if (spi_request.address == fromInteger(qsfpI2cError0Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error0);
+        end else if (spi_request.address == fromInteger(qsfpI2cError1Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error1);
+        end else if (spi_request.address == fromInteger(qsfpI2cError2Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error2);
+        end else if (spi_request.address == fromInteger(qsfpI2cError3Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error3);
+        end else if (spi_request.address == fromInteger(qsfpI2cError4Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error4);
+        end else if (spi_request.address == fromInteger(qsfpI2cError5Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error5);
+        end else if (spi_request.address == fromInteger(qsfpI2cError6Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error6);
+        end else if (spi_request.address == fromInteger(qsfpI2cError7Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_error7);
         end else if (spi_request.address == fromInteger(qsfpI2cCtrlOffset)) begin
             ret_byte = pack(qsfp_top.i2c_ctrl);
         end else if (spi_request.address == fromInteger(qsfpCtrlEnHOffset)) begin

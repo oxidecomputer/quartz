@@ -86,6 +86,8 @@ interface QsfpModuleController;
     method Bit#(1) pg_timeout;
     method Bit#(1) present;
     method Bit#(1) irq;
+    method Maybe#(I2CCore::Error) i2c_error;
+    method Bit#(1) i2c_busy;
 endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
@@ -246,6 +248,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method pg_timeout   = pack(hot_swap.good_timeout);
     method present      = present_;
     method irq          = irq_;
+
+    method i2c_busy     = pack(i2c_core.busy);
+    method i2c_error    = i2c_core.error;
 
 endmodule
 
