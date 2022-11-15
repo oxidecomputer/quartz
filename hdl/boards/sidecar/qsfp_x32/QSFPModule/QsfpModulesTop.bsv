@@ -44,14 +44,22 @@ interface Registers;
     interface Reg#(I2cCtrl) i2c_ctrl;
     interface ReadOnly#(I2cBusyL) i2c_busy_l;
     interface ReadOnly#(I2cBusyH) i2c_busy_h;
-    interface ReadOnly#(I2cError01) i2c_error_0_1;
-    interface ReadOnly#(I2cError23) i2c_error_2_3;
-    interface ReadOnly#(I2cError45) i2c_error_4_5;
-    interface ReadOnly#(I2cError67) i2c_error_6_7;
-    interface ReadOnly#(I2cError89) i2c_error_8_9;
-    interface ReadOnly#(I2cError1011) i2c_error_10_11;
-    interface ReadOnly#(I2cError1213) i2c_error_12_13;
-    interface ReadOnly#(I2cError1415) i2c_error_14_15;
+    interface ReadOnly#(I2cStatusPort0) i2c_status_port0;
+    interface ReadOnly#(I2cStatusPort1) i2c_status_port1;
+    interface ReadOnly#(I2cStatusPort2) i2c_status_port2;
+    interface ReadOnly#(I2cStatusPort3) i2c_status_port3;
+    interface ReadOnly#(I2cStatusPort4) i2c_status_port4;
+    interface ReadOnly#(I2cStatusPort5) i2c_status_port5;
+    interface ReadOnly#(I2cStatusPort6) i2c_status_port6;
+    interface ReadOnly#(I2cStatusPort7) i2c_status_port7;
+    interface ReadOnly#(I2cStatusPort8) i2c_status_port8;
+    interface ReadOnly#(I2cStatusPort9) i2c_status_port9;
+    interface ReadOnly#(I2cStatusPort10) i2c_status_port10;
+    interface ReadOnly#(I2cStatusPort11) i2c_status_port11;
+    interface ReadOnly#(I2cStatusPort12) i2c_status_port12;
+    interface ReadOnly#(I2cStatusPort13) i2c_status_port13;
+    interface ReadOnly#(I2cStatusPort14) i2c_status_port14;
+    interface ReadOnly#(I2cStatusPort15) i2c_status_port15;
     interface Reg#(CtrlEnL) mod_en_l;
     interface Reg#(CtrlEnH) mod_en_h;
     interface Reg#(CtrlResetL) mod_reset_l;
@@ -114,7 +122,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
 
     // Vectorize I2C status signals
     Vector#(16, Bit#(1)) i2c_busys;
-    Vector#(16, Bit#(4)) i2c_errors;
+    Vector#(16, Bit#(8)) i2c_status;
 
     for (int i = 0; i < 16; i = i + 1) begin
         // map registers into modules
@@ -128,7 +136,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         present_bits[i]     = qsfp_ports[i].present;
         irq_bits[i]         = qsfp_ports[i].irq;
         i2c_busys[i]        = qsfp_ports[i].i2c_busy;
-        i2c_errors[i]       = i2c_errors_r[i];
+        i2c_status[i]       = {3'h0, qsfp_ports[i].i2c_busy, i2c_errors_r[i]};
     end
 
     // Only do I2C transactions if they are enabled for the given port.
@@ -188,14 +196,22 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         interface Reg i2c_ctrl = i2c_ctrl;
         interface ReadOnly i2c_busy_l = valueToReadOnly(unpack(pack(i2c_busys)[7:0]));
         interface ReadOnly i2c_busy_h = valueToReadOnly(unpack(pack(i2c_busys)[15:8]));
-        interface ReadOnly i2c_error_14_15 = valueToReadOnly(unpack({unpack(i2c_errors[15]), unpack(i2c_errors[14])}));
-        interface ReadOnly i2c_error_12_13 = valueToReadOnly(unpack({unpack(i2c_errors[13]), unpack(i2c_errors[12])}));
-        interface ReadOnly i2c_error_10_11 = valueToReadOnly(unpack({unpack(i2c_errors[11]), unpack(i2c_errors[10])}));
-        interface ReadOnly i2c_error_8_9 = valueToReadOnly(unpack({unpack(i2c_errors[9]), unpack(i2c_errors[8])}));
-        interface ReadOnly i2c_error_6_7 = valueToReadOnly(unpack({unpack(i2c_errors[7]), unpack(i2c_errors[6])}));
-        interface ReadOnly i2c_error_4_5 = valueToReadOnly(unpack({unpack(i2c_errors[5]), unpack(i2c_errors[4])}));
-        interface ReadOnly i2c_error_2_3 = valueToReadOnly(unpack({unpack(i2c_errors[3]), unpack(i2c_errors[2])}));
-        interface ReadOnly i2c_error_0_1 = valueToReadOnly(unpack({unpack(i2c_errors[1]), unpack(i2c_errors[0])}));
+        interface ReadOnly i2c_status_port0 = valueToReadOnly(unpack(i2c_status[0]));
+        interface ReadOnly i2c_status_port1 = valueToReadOnly(unpack(i2c_status[1]));
+        interface ReadOnly i2c_status_port2 = valueToReadOnly(unpack(i2c_status[2]));
+        interface ReadOnly i2c_status_port3 = valueToReadOnly(unpack(i2c_status[3]));
+        interface ReadOnly i2c_status_port4 = valueToReadOnly(unpack(i2c_status[4]));
+        interface ReadOnly i2c_status_port5 = valueToReadOnly(unpack(i2c_status[5]));
+        interface ReadOnly i2c_status_port6 = valueToReadOnly(unpack(i2c_status[6]));
+        interface ReadOnly i2c_status_port7 = valueToReadOnly(unpack(i2c_status[7]));
+        interface ReadOnly i2c_status_port8 = valueToReadOnly(unpack(i2c_status[8]));
+        interface ReadOnly i2c_status_port9 = valueToReadOnly(unpack(i2c_status[9]));
+        interface ReadOnly i2c_status_port10 = valueToReadOnly(unpack(i2c_status[10]));
+        interface ReadOnly i2c_status_port11 = valueToReadOnly(unpack(i2c_status[11]));
+        interface ReadOnly i2c_status_port12 = valueToReadOnly(unpack(i2c_status[12]));
+        interface ReadOnly i2c_status_port13 = valueToReadOnly(unpack(i2c_status[13]));
+        interface ReadOnly i2c_status_port14 = valueToReadOnly(unpack(i2c_status[14]));
+        interface ReadOnly i2c_status_port15 = valueToReadOnly(unpack(i2c_status[15]));
         interface Reg mod_en_l = mod_en_l;
         interface Reg mod_en_h = mod_en_h;
         interface Reg mod_reset_l = mod_reset_l;
