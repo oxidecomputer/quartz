@@ -8,29 +8,13 @@
 // QSFP Modules Top Address Map
 //
 
-regfile status {
-    default regwidth = 8;
-
-    
-};
-
-mem read_buffer {
-    mementries = 128;
-    memwidth = 8;
-};
-
-mem write_buffer {
-    mementries = 128;
-    memwidth = 8;
-};
-
 addrmap qsfp_modules_top {
     name = "QSFP Module Top Registers";
     desc = "Collection of status and control registers for all QSFP modules";
 
     default regwidth = 8;
     default sw = rw;
-    default hw = r;
+    default hw = rw;
 
     //
     // I2C
@@ -120,229 +104,6 @@ addrmap qsfp_modules_top {
         field {} PORT0[0:0] = 0;
     } I2C_BUSY_L;
 
-    reg {
-        name = "Port 0 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT0;
-
-    reg {
-        name = "Port 1 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT1;
-
-    reg {
-        name = "Port 2 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT2;
-
-    reg {
-        name = "Port 3 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT3;
-
-    reg {
-        name = "Port 4 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT4;
-
-    reg {
-        name = "Port 5 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT5;
-
-    reg {
-        name = "Port 6 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT6;
-
-    reg {
-        name = "Port 7 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT7;
-
-    reg {
-        name = "Port 8 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT8;
-
-    reg {
-        name = "Port 9 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT9;
-
-    reg {
-        name = "Port 10 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT10;
-
-    reg {
-        name = "Port 11 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT11;
-
-    reg {
-        name = "Port 12 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT12;
-
-    reg {
-        name = "Port 13 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT13;
-
-    reg {
-        name = "Port 14 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT14;
-
-    reg {
-        name = "Port 15 I2C core status information";
-        default sw = r;
-        field {
-            desc = "'1' if the bus is busy.";
-        } BUSY[4:4] = 0;
-        field {
-            desc = "'1' if there was an error on the most recent transaction done by this port.";
-        } ERROR[3:3] = 0;
-        field {
-            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
-        } ERROR_TYPE[2:0] = 0;
-    } I2C_STATUS_PORT15;
     //
     // QSFP Module Control
     //
@@ -527,21 +288,82 @@ addrmap qsfp_modules_top {
         field {} PORT0[0:0] = 0;
     } STATUS_IRQ_L;
 
+    //
+    // I2C Write and Read Buffers
+    // Status register colocated with the read buffer so we can grab the status
+    // and all the bits in the same transaction.
+    //
+
+    reg port_i2c_status {
+        default sw = r;
+        field {
+            desc = "'1' if the bus is busy.";
+        } BUSY[4:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } ERROR_TYPE[2:0] = 0;
+    };
+
+    mem read_buffer {
+        mementries = 128;
+        memwidth = 8;
+    };
+
+    mem write_buffer {
+        mementries = 128;
+        memwidth = 8;
+    };
+
+    port_i2c_status PORT0_I2C_STATUS @0x007F;
+    external read_buffer PORT0_READ_BUFFER @0x0080;
+
+    port_i2c_status PORT1_I2C_STATUS @0x017F;
+    external read_buffer PORT1_READ_BUFFER @0x0180;
+
+    port_i2c_status PORT2_I2C_STATUS @0x027F;
+    external read_buffer PORT2_READ_BUFFER @0x0280;
+
+    port_i2c_status PORT3_I2C_STATUS @0x037F;
+    external read_buffer PORT3_READ_BUFFER @0x0380;
+
+    port_i2c_status PORT4_I2C_STATUS @0x047F;
+    external read_buffer PORT4_READ_BUFFER @0x0480;
+
+    port_i2c_status PORT5_I2C_STATUS @0x057F;
+    external read_buffer PORT5_READ_BUFFER @0x0580;
+
+    port_i2c_status PORT6_I2C_STATUS @0x067F;
+    external read_buffer PORT6_READ_BUFFER @0x0680;
+
+    port_i2c_status PORT7_I2C_STATUS @0x077F;
+    external read_buffer PORT7_READ_BUFFER @0x0780;
+
+    port_i2c_status PORT8_I2C_STATUS @0x087F;
+    external read_buffer PORT8_READ_BUFFER @0x0880;
+
+    port_i2c_status PORT9_I2C_STATUS @0x097F;
+    external read_buffer PORT9_READ_BUFFER @0x0980;
+
+    port_i2c_status PORT10_I2C_STATUS @0x0A7F;
+    external read_buffer PORT10_READ_BUFFER @0x0A80;
+
+    port_i2c_status PORT11_I2C_STATUS @0x0B7F;
+    external read_buffer PORT11_READ_BUFFER @0x0B80;
+
+    port_i2c_status PORT12_I2C_STATUS @0x0C7F;
+    external read_buffer PORT12_READ_BUFFER @0x0C80;
+
+    port_i2c_status PORT13_I2C_STATUS @0x0D7F;
+    external read_buffer PORT13_READ_BUFFER @0x0D80;
+
+    port_i2c_status PORT14_I2C_STATUS @0x0E7F;
+    external read_buffer PORT14_READ_BUFFER @0x0E80;
+
+    port_i2c_status PORT15_I2C_STATUS @0x0F7F;
+    external read_buffer PORT15_READ_BUFFER @0x0F80;
+
     external write_buffer WRITE_BUFFER;
-    external read_buffer PORT0_READ_BUFFER;
-    external read_buffer PORT1_READ_BUFFER;
-    external read_buffer PORT2_READ_BUFFER;
-    external read_buffer PORT3_READ_BUFFER;
-    external read_buffer PORT4_READ_BUFFER;
-    external read_buffer PORT5_READ_BUFFER;
-    external read_buffer PORT6_READ_BUFFER;
-    external read_buffer PORT7_READ_BUFFER;
-    external read_buffer PORT8_READ_BUFFER;
-    external read_buffer PORT9_READ_BUFFER;
-    external read_buffer PORT10_READ_BUFFER;
-    external read_buffer PORT11_READ_BUFFER;
-    external read_buffer PORT12_READ_BUFFER;
-    external read_buffer PORT13_READ_BUFFER;
-    external read_buffer PORT14_READ_BUFFER;
-    external read_buffer PORT15_READ_BUFFER;
 };

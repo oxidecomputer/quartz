@@ -153,38 +153,6 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.i2c_busy_h);
         end else if (spi_request.address == fromInteger(qsfpI2cBusyLOffset)) begin
             ret_byte = pack(qsfp_top.i2c_busy_l);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort0Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port0);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort1Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port1);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort2Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port2);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort3Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port3);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort4Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port4);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort5Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port5);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort6Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port6);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort7Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port7);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort8Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port8);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort9Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port9);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort10Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port10);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort11Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port11);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort12Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port12);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort13Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port13);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort14Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port14);
-        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort15Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_status_port15);
         end else if (spi_request.address == fromInteger(qsfpI2cCtrlOffset)) begin
             ret_byte = pack(qsfp_top.i2c_ctrl);
         end else if (spi_request.address == fromInteger(qsfpCtrlEnHOffset)) begin
@@ -215,36 +183,68 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.mod_irq_h);
         end else if (spi_request.address == fromInteger(qsfpStatusIrqLOffset)) begin
             ret_byte = pack(qsfp_top.mod_irq_l);
+        end else if (spi_request.address == fromInteger(qsfpPort0I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port0_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort0ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[0]);
+        end else if (spi_request.address == fromInteger(qsfpPort1I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port1_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort1ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[1]);
+        end else if (spi_request.address == fromInteger(qsfpPort2I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port2_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort2ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[2]);
+        end else if (spi_request.address == fromInteger(qsfpPort3I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port3_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort3ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[3]);
+        end else if (spi_request.address == fromInteger(qsfpPort4I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port4_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort4ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[4]);
+        end else if (spi_request.address == fromInteger(qsfpPort5I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port5_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort5ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[5]);
+        end else if (spi_request.address == fromInteger(qsfpPort6I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port6_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort6ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[6]);
+        end else if (spi_request.address == fromInteger(qsfpPort7I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port7_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort7ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[7]);
+        end else if (spi_request.address == fromInteger(qsfpPort8I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port8_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort8ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[8]);
+        end else if (spi_request.address == fromInteger(qsfpPort9I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port9_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort9ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[9]);
+        end else if (spi_request.address == fromInteger(qsfpPort10I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port10_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort10ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[10]);
+        end else if (spi_request.address == fromInteger(qsfpPort11I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port11_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort11ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[11]);
+        end else if (spi_request.address == fromInteger(qsfpPort12I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port12_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort12ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[12]);
+        end else if (spi_request.address == fromInteger(qsfpPort13I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port13_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort13ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[13]);
+        end else if (spi_request.address == fromInteger(qsfpPort14I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port14_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort14ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[14]);
+        end else if (spi_request.address == fromInteger(qsfpPort15I2cStatusOffset)) begin
+            ret_byte = pack(qsfp_top.port15_i2c_status);
         end else if (isBetween(spi_request.address, qsfpPort15ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[15]);
         end else begin
