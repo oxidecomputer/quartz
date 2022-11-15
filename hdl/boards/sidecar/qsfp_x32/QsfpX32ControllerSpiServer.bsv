@@ -153,22 +153,38 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.i2c_busy_h);
         end else if (spi_request.address == fromInteger(qsfpI2cBusyLOffset)) begin
             ret_byte = pack(qsfp_top.i2c_busy_l);
-        end else if (spi_request.address == fromInteger(qsfpI2cError01Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_0_1);
-        end else if (spi_request.address == fromInteger(qsfpI2cError23Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_2_3);
-        end else if (spi_request.address == fromInteger(qsfpI2cError45Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_4_5);
-        end else if (spi_request.address == fromInteger(qsfpI2cError67Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_6_7);
-        end else if (spi_request.address == fromInteger(qsfpI2cError89Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_8_9);
-        end else if (spi_request.address == fromInteger(qsfpI2cError1011Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_10_11);
-        end else if (spi_request.address == fromInteger(qsfpI2cError1213Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_12_13);
-        end else if (spi_request.address == fromInteger(qsfpI2cError1415Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_error_14_15);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort0Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port0);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort1Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port1);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort2Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port2);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort3Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port3);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort4Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port4);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort5Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port5);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort6Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port6);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort7Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port7);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort8Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port8);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort9Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port9);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort10Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port10);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort11Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port11);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort12Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port12);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort13Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port13);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort14Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port14);
+        end else if (spi_request.address == fromInteger(qsfpI2cStatusPort15Offset)) begin
+            ret_byte = pack(qsfp_top.i2c_status_port15);
         end else if (spi_request.address == fromInteger(qsfpI2cCtrlOffset)) begin
             ret_byte = pack(qsfp_top.i2c_ctrl);
         end else if (spi_request.address == fromInteger(qsfpCtrlEnHOffset)) begin
