@@ -104,6 +104,142 @@ addrmap qsfp_modules_top {
         field {} PORT0[0:0] = 0;
     } I2C_BUSY_L;
 
+    reg {
+        default sw = r;
+        name = "Ports 0/1 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT1_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT1_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT0_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT0_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_0_1;
+
+    reg {
+        default sw = r;
+        name = "Ports 2/3 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT3_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT3_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT2_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT2_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_2_3;
+
+    reg {
+        default sw = r;
+        name = "Ports 4/5 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT5_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT5_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT4_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT4_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_4_5;
+
+    reg {
+        default sw = r;
+        name = "Ports 6/7 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT7_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT7_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT6_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT6_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_6_7;
+
+    reg {
+        default sw = r;
+        name = "Ports 8/9 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT9_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT9_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT8_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT8_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_8_9;
+
+    reg {
+        default sw = r;
+        name = "Ports 10/11 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT11_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT11_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT10_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT10_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_10_11;
+
+    reg {
+        default sw = r;
+        name = "Ports 12/13 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT13_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT13_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT12_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT12_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_12_13;
+
+    reg {
+        default sw = r;
+        name = "Ports 14/15 I2C core error status";
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT15_ERROR[7:7] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT15_ERROR_TYPE[6:4] = 0;
+        field {
+            desc = "'1' if there was an error on the most recent transaction done by this port.";
+        } PORT14_ERROR[3:3] = 0;
+        field {
+            desc = "Valid if ERROR is set. 3'b000 for AddressNack, 3'b001 for ByteNack.";
+        } PORT14_ERROR_TYPE[2:0] = 0;
+    } I2C_ERROR_14_15;
+
     //
     // QSFP Module Control
     //
