@@ -8,6 +8,7 @@ package QsfpModuleController;
 
 export Parameters(..), RamWrite(..), Pins(..), Registers(..);
 export get_pins, get_registers, get_read_addr, get_read_data, get_i2c_status;
+export get_i2c_error;
 export QsfpModuleController(..), mkQsfpModuleController;
 
 import BRAM::*;
@@ -281,6 +282,7 @@ function Pins get_pins(QsfpModuleController m) = m.pins;
 function Registers get_registers(QsfpModuleController m) = m.registers;
 function Wire#(Bit#(8)) get_read_addr(QsfpModuleController m) = m.registers.read_buffer_addr;
 function ReadOnly#(Bit#(8)) get_read_data(QsfpModuleController m) = m.registers.read_buffer_byte;
+function ReadOnly#(Bit#(4)) get_i2c_error(QsfpModuleController m) = valueToReadOnly({m.registers.i2c_status.error, m.registers.i2c_status.error_type});
 function ReadOnly#(PortI2cStatus) get_i2c_status(QsfpModuleController m) = m.registers.i2c_status;
 
 endpackage: QsfpModuleController
