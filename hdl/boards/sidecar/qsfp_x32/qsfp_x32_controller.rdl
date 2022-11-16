@@ -106,7 +106,7 @@ addrmap qsfp_x32_controller {
 
         field {
             desc = "Control of OE_L (inverted at pin)";
-        } OE[1:1] = 1;
+        } OE[1:1] = 0;
 
         field {
             desc = "Control of RESET_L (inverted at pin)";
