@@ -11,6 +11,7 @@ import DefaultValue::*;
 import Vector::*;
 
 import Blinky::*;
+import CommonFunctions::*;
 import PowerRail::*;
 import SPI::*;
 import Strobe::*;
@@ -58,18 +59,17 @@ module mkQsfpX32Controller #(Parameters parameters) (QsfpX32Controller);
     // PHY
     //
     VSC8562 vsc8562_phy     <- mkVSC8562(defaultValue);
-    mkConnection(asIfc(tick_1khz), asIfc(vsc8562_phy.tick_1ms));
+    mkConnection(vsc8562_phy.tick_1ms, tick_1khz._read);
 
     //
     // QSFP Ports
     //
-
-    QsfpModulesTop qsfp_top   <- mkQsfpModulesTop(defaultValue);
+    QsfpModulesTop qsfp_top <- mkQsfpModulesTop(defaultValue);
+    mkConnection(qsfp_top.tick_1ms, tick_1khz._read);
 
     //
     // SPI Peripheral
     //
-
     SpiPeripheralPhy spi_phy    <- mkSpiPeripheralPhy();
     SpiDecodeIF spi_decoder     <- mkSpiRegDecode();
     SpiServer spi_server        <-

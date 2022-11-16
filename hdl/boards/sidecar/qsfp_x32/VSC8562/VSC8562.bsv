@@ -88,7 +88,7 @@ endinterface
 interface VSC8562;
     interface Pins pins;
     interface Registers registers;
-    interface PulseWire tick_1ms;
+    method Action tick_1ms(Bool val);
 endinterface
 
 // mkVSC8562
@@ -151,7 +151,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     // external to this module, there is not really a way to tell how long until
     // the next 1 ms pulse occurs (could be next clock cycle, could be 1 ms),
     // but given how nothing here is that fine grained this is OK
-    PulseWire tick_1ms_         <- mkPulseWire();
+    Wire#(Bool) tick_1ms_       <- mkWire();
     Reg#(UInt#(7)) ms_cntr      <- mkReg(0);
     PulseWire reset_ms_cntr     <- mkPulseWire();
 
@@ -277,7 +277,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
         method mdint        = mdint._write;
     endinterface
 
-    interface PulseWire tick_1ms = tick_1ms_;
+    method tick_1ms = tick_1ms_._write;
 endmodule
 
 endpackage: VSC8562
