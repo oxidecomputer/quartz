@@ -44,22 +44,6 @@ interface Registers;
     interface Reg#(I2cCtrl) i2c_ctrl;
     interface ReadOnly#(I2cBusyL) i2c_busy_l;
     interface ReadOnly#(I2cBusyH) i2c_busy_h;
-    interface ReadOnly#(PortI2cStatus) port0_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port1_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port2_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port3_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port4_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port5_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port6_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port7_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port8_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port9_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port10_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port11_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port12_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port13_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port14_i2c_status;
-    interface ReadOnly#(PortI2cStatus) port15_i2c_status;
     interface Reg#(CtrlEnL) mod_en_l;
     interface Reg#(CtrlEnH) mod_en_h;
     interface Reg#(CtrlResetL) mod_reset_l;
@@ -76,6 +60,7 @@ interface Registers;
     interface ReadOnly#(StatusIrqH) mod_irq_h;
     interface Reg#(Bit#(8)) mod_write_addr;
     interface Reg#(Bit#(8)) mod_write_data;
+    interface Vector#(16, ReadOnly#(PortI2cStatus)) mod_i2c_statuses;
     interface Vector#(16, Wire#(Bit#(8))) mod_read_addrs;
     interface Vector#(16, ReadOnly#(Bit#(8))) mod_read_buffers;
 endinterface
@@ -122,7 +107,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
 
     // Vectorize I2C status signals
     Vector#(16, Bit#(1)) i2c_busys;
-    Vector#(16, Bit#(8)) i2c_status;
+    // Vector#(16, Bit#(8)) i2c_status;
 
     for (int i = 0; i < 16; i = i + 1) begin
         // map registers into modules
@@ -136,7 +121,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         present_bits[i]     = qsfp_ports[i].present;
         irq_bits[i]         = qsfp_ports[i].irq;
         i2c_busys[i]        = qsfp_ports[i].i2c_busy;
-        i2c_status[i]       = {3'h0, qsfp_ports[i].i2c_busy, i2c_errors_r[i]};
+        // i2c_status[i]       = {3'h0, qsfp_ports[i].i2c_busy, i2c_errors_r[i]};
     end
 
     // Only do I2C transactions if they are enabled for the given port.
@@ -153,23 +138,6 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         for (int i = 0; i < 16; i = i + 1) begin
             if (i2c_broadcast_enabled[i]) begin
                 qsfp_ports[i].i2c_command.put(next_command);
-            end
-        end
-    endrule
-
-    // Since the error register is somewhat derived at this layer it needs to
-    // be registered for persistence. It will also stay present until the next
-    // I2C transaction starts on the port.
-    (* fire_when_enabled *)
-    rule do_i2c_error_regs;
-        for (int i = 0; i < 16; i = i + 1) begin
-            if (i2c_ctrl.start == 1 && i2c_broadcast_enabled[i]) begin
-                i2c_errors_r[i] <= 0;
-            end else if (isValid(qsfp_ports[i].i2c_error)) begin
-                // The I2CCore::Error enum packs down to a single bit currently, but
-                // a 3-bit wide field is reserved for it.
-                let error_type = {2'b00, pack(fromMaybe(?, qsfp_ports[i].i2c_error))};
-                i2c_errors_r[i] <= {1'b1, error_type};
             end
         end
     endrule
@@ -196,22 +164,6 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         interface Reg i2c_ctrl = i2c_ctrl;
         interface ReadOnly i2c_busy_l = valueToReadOnly(unpack(pack(i2c_busys)[7:0]));
         interface ReadOnly i2c_busy_h = valueToReadOnly(unpack(pack(i2c_busys)[15:8]));
-        interface ReadOnly port0_i2c_status = valueToReadOnly(unpack(i2c_status[0]));
-        interface ReadOnly port1_i2c_status = valueToReadOnly(unpack(i2c_status[1]));
-        interface ReadOnly port2_i2c_status = valueToReadOnly(unpack(i2c_status[2]));
-        interface ReadOnly port3_i2c_status = valueToReadOnly(unpack(i2c_status[3]));
-        interface ReadOnly port4_i2c_status = valueToReadOnly(unpack(i2c_status[4]));
-        interface ReadOnly port5_i2c_status = valueToReadOnly(unpack(i2c_status[5]));
-        interface ReadOnly port6_i2c_status = valueToReadOnly(unpack(i2c_status[6]));
-        interface ReadOnly port7_i2c_status = valueToReadOnly(unpack(i2c_status[7]));
-        interface ReadOnly port8_i2c_status = valueToReadOnly(unpack(i2c_status[8]));
-        interface ReadOnly port9_i2c_status = valueToReadOnly(unpack(i2c_status[9]));
-        interface ReadOnly port10_i2c_status = valueToReadOnly(unpack(i2c_status[10]));
-        interface ReadOnly port11_i2c_status = valueToReadOnly(unpack(i2c_status[11]));
-        interface ReadOnly port12_i2c_status = valueToReadOnly(unpack(i2c_status[12]));
-        interface ReadOnly port13_i2c_status = valueToReadOnly(unpack(i2c_status[13]));
-        interface ReadOnly port14_i2c_status = valueToReadOnly(unpack(i2c_status[14]));
-        interface ReadOnly port15_i2c_status = valueToReadOnly(unpack(i2c_status[15]));
         interface Reg mod_en_l = mod_en_l;
         interface Reg mod_en_h = mod_en_h;
         interface Reg mod_reset_l = mod_reset_l;
@@ -228,6 +180,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         interface ReadOnly mod_irq_h = valueToReadOnly(unpack(pack(irq_bits)[15:8]));
         interface mod_read_addrs = map(QsfpModuleController::get_read_addr, qsfp_ports);
         interface mod_read_buffers = map(QsfpModuleController::get_read_data, qsfp_ports);
+        interface mod_i2c_statuses = map(QsfpModuleController::get_i2c_status, qsfp_ports);
 
         // addr and data are written in the same cycle in the SpiServer anyway,
         // so arbitrarily choose to pulse issue_write here versus in mod_write_data

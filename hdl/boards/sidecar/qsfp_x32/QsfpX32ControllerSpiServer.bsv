@@ -184,67 +184,67 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
         end else if (spi_request.address == fromInteger(qsfpStatusIrqLOffset)) begin
             ret_byte = pack(qsfp_top.mod_irq_l);
         end else if (spi_request.address == fromInteger(qsfpPort0I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port0_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[0]);
         end else if (isBetween(spi_request.address, qsfpPort0ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[0]);
         end else if (spi_request.address == fromInteger(qsfpPort1I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port1_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[1]);
         end else if (isBetween(spi_request.address, qsfpPort1ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[1]);
         end else if (spi_request.address == fromInteger(qsfpPort2I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port2_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[2]);
         end else if (isBetween(spi_request.address, qsfpPort2ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[2]);
         end else if (spi_request.address == fromInteger(qsfpPort3I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port3_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[3]);
         end else if (isBetween(spi_request.address, qsfpPort3ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[3]);
         end else if (spi_request.address == fromInteger(qsfpPort4I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port4_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[4]);
         end else if (isBetween(spi_request.address, qsfpPort4ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[4]);
         end else if (spi_request.address == fromInteger(qsfpPort5I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port5_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[5]);
         end else if (isBetween(spi_request.address, qsfpPort5ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[5]);
         end else if (spi_request.address == fromInteger(qsfpPort6I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port6_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[6]);
         end else if (isBetween(spi_request.address, qsfpPort6ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[6]);
         end else if (spi_request.address == fromInteger(qsfpPort7I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port7_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[7]);
         end else if (isBetween(spi_request.address, qsfpPort7ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[7]);
         end else if (spi_request.address == fromInteger(qsfpPort8I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port8_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[8]);
         end else if (isBetween(spi_request.address, qsfpPort8ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[8]);
         end else if (spi_request.address == fromInteger(qsfpPort9I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port9_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[9]);
         end else if (isBetween(spi_request.address, qsfpPort9ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[9]);
         end else if (spi_request.address == fromInteger(qsfpPort10I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port10_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[10]);
         end else if (isBetween(spi_request.address, qsfpPort10ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[10]);
         end else if (spi_request.address == fromInteger(qsfpPort11I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port11_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[11]);
         end else if (isBetween(spi_request.address, qsfpPort11ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[11]);
         end else if (spi_request.address == fromInteger(qsfpPort12I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port12_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[12]);
         end else if (isBetween(spi_request.address, qsfpPort12ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[12]);
         end else if (spi_request.address == fromInteger(qsfpPort13I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port13_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[13]);
         end else if (isBetween(spi_request.address, qsfpPort13ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[13]);
         end else if (spi_request.address == fromInteger(qsfpPort14I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port14_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[14]);
         end else if (isBetween(spi_request.address, qsfpPort14ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[14]);
         end else if (spi_request.address == fromInteger(qsfpPort15I2cStatusOffset)) begin
-            ret_byte = pack(qsfp_top.port15_i2c_status);
+            ret_byte = pack(qsfp_top.mod_i2c_statuses[15]);
         end else if (isBetween(spi_request.address, qsfpPort15ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[15]);
         end else begin
