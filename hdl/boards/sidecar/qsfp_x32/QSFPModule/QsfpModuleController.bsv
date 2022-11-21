@@ -7,8 +7,7 @@
 package QsfpModuleController;
 
 export Parameters(..), RamWrite(..), Pins(..), Registers(..);
-export get_pins, get_registers, get_read_addr, get_read_data, get_i2c_status;
-export get_i2c_error;
+export get_pins, get_registers, get_read_addr, get_read_data, get_status;
 export QsfpModuleController(..), mkQsfpModuleController;
 
 import BRAM::*;
@@ -43,6 +42,15 @@ instance DefaultValue#(Parameters);
     };
 endinstance
 
+typedef enum {
+    NoError = 0,
+    NoModule = 1,
+    NoPower = 2,
+    PowerFault = 3,
+    I2cAddressNack = 4,
+    I2cByteNack = 5
+} PortError deriving (Bits, Eq, FShow);
+
 typedef struct {
     Bit#(8) data;
     Bit#(8) address;
@@ -60,7 +68,7 @@ function BRAMRequest#(Bit#(8), Bit#(8)) makeRequest(Bool write,
 endfunction
 
 interface Registers;
-    interface ReadOnly#(PortI2cStatus) i2c_status;
+    interface ReadOnly#(PortStatus) port_status;
     // not in RDL, this is sideband BRAM access
     interface Wire#(Bit#(8)) read_buffer_addr;
     interface ReadOnly#(Bit#(8)) read_buffer_byte;
@@ -88,7 +96,6 @@ interface QsfpModuleController;
     method Bit#(1) pg_timeout;
     method Bit#(1) present;
     method Bit#(1) irq;
-    method Bit#(1) i2c_busy;
 endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
@@ -98,22 +105,24 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     I2CCore i2c_core    <-
         mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
 
-    // Block RAM to store I2C transaction data
+    // Block RAM configuration to store I2C transaction data
+    // While only 128 bytes are needed, they are sized to 256 so the tools will
+    // automatically synthesize them to BRAM not LUTRAM.
     BRAM_Configure read_bram_cfg = BRAM_Configure {
-        memorySize: 128,                // 128 bytes
+        memorySize: 256,                // 256 bytes
         latency: 1,                     // address on read is registered
         outFIFODepth: 3,                // latency + 2 for optimal pipeline
         loadFormat: tagged None,        // no load file used
         allowWriteResponseBypass: False // pipeline write response
     };
+    Integer bramSize = 256;
+    Bool hasOutputRegister = False;
 
     // The read_buffer stores data read back from the module
     // The write_buffer stores data to be written to the module
     // portA for writes, portB for reads on both BRAMs
     BRAM2Port#(Bit#(8), Bit#(8)) read_buffer  <- mkBRAM2Server(read_bram_cfg);
 
-    Integer bramSize = 128;
-    Bool hasOutputRegister = False;
     BRAM_DUAL_PORT#(Bit#(8), Bit#(8)) write_buffer <- mkBRAMCore2(bramSize, hasOutputRegister);
 
     // Control signals
@@ -127,6 +136,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(Bit#(8)) read_buffer_write_addr        <- mkReg(0);
     PulseWire new_i2c_command                   <- mkPulseWire();
     PulseWire i2c_data_received                 <- mkPulseWire();
+    Reg#(Bool) i2c_attempt                     <- mkDReg(False);
+    Reg#(I2CCore::Command) next_i2c_command    <- mkReg(defaultValue);
 
     Reg#(Bit#(8)) write_buffer_read_addr    <- mkReg(0);
     PulseWire read_from_write_buffer        <- mkPulseWire();
@@ -137,8 +148,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(Bit#(1)) present_  <- mkReg(0);
 
     // I2C status register
-    Reg#(Bool) i2c_error                <- mkReg(False);
-    Reg#(I2CCore::Error) i2c_error_type <- mkReg(defaultValue);
+    Reg#(PortStatus) status <- mkReg(defaultValue);
+    Reg#(PortError) error   <- mkReg(NoError);
 
     (* fire_when_enabled *)
     rule do_ctrl_hsc;
@@ -212,25 +223,38 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // be registered for persistence. It will also stay present until the next
     // I2C transaction starts on the port.
     (* fire_when_enabled *)
-    rule do_i2c_error;
-        if (new_i2c_command) begin
-            i2c_error       <= False;
-            i2c_error_type  <= defaultValue;
+    rule do_i2c;
+        if (i2c_attempt && present_ != 1) begin
+            error   <= NoModule;
+        end else if (i2c_attempt && !hot_swap.enabled()) begin
+            error   <= NoPower;
+        end else if (i2c_attempt && hot_swap.good_timeout()) begin
+            error   <= PowerFault;
+        end else if (i2c_attempt) begin
+            new_i2c_command.send();
+            error   <= NoError;
+            i2c_core.send_command.put(next_i2c_command);
         end else if (isValid(i2c_core.error)) begin
-            i2c_error       <= True;
-            i2c_error_type  <= fromMaybe(defaultValue, i2c_core.error);
+            let err = fromMaybe(?, i2c_core.error);
+            if (err == AddressNack) begin
+                error   <= I2cAddressNack;
+            end else if (err == ByteNack) begin
+                error   <= I2cByteNack;
+            end 
         end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_status;
+        status <= PortStatus {
+            busy: pack(i2c_core.busy()),
+            error: {0, pack(error)}
+        };
     endrule
 
     // Registers for SPI peripheral
     interface Registers registers;
-        interface ReadOnly i2c_status = valueToReadOnly(PortI2cStatus {
-            busy: pack(i2c_core.busy()),
-            error: pack(i2c_error),
-            // The I2CCore::Error enum packs down to a single bit currently, but
-            // a 3-bit wide field is reserved for it.
-            error_type: {0, pack(i2c_error_type)}
-        });
+        interface ReadOnly port_status = regToReadOnly(status);
         interface Wire read_buffer_addr;
             method _read = read_buffer_read_addr;
             method Action _write(Bit#(8) address);
@@ -254,8 +278,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     interface Put i2c_command;
         method Action put(new_command);
-            new_i2c_command.send();
-            i2c_core.send_command.put(new_command);
+            i2c_attempt         <= True;
+            next_i2c_command    <= new_command;
         endmethod
     endinterface
 
@@ -274,15 +298,12 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method pg_timeout   = pack(hot_swap.good_timeout);
     method present      = present_;
     method irq          = irq_;
-
-    method i2c_busy     = pack(i2c_core.busy);
 endmodule
 
 function Pins get_pins(QsfpModuleController m) = m.pins;
 function Registers get_registers(QsfpModuleController m) = m.registers;
 function Wire#(Bit#(8)) get_read_addr(QsfpModuleController m) = m.registers.read_buffer_addr;
 function ReadOnly#(Bit#(8)) get_read_data(QsfpModuleController m) = m.registers.read_buffer_byte;
-function ReadOnly#(Bit#(4)) get_i2c_error(QsfpModuleController m) = valueToReadOnly({m.registers.i2c_status.error, m.registers.i2c_status.error_type});
-function ReadOnly#(PortI2cStatus) get_i2c_status(QsfpModuleController m) = m.registers.i2c_status;
+function ReadOnly#(PortStatus) get_status(QsfpModuleController m) = m.registers.port_status;
 
 endpackage: QsfpModuleController

@@ -770,10 +770,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
                         1'b0,   // Bit 6, J31 pin 9
                         1'b0,   // Bit 5, J31 pin 8
                         1'b0,   // Bit 4, J31 pin 7
-                        qsfp1_sda,   // Bit 3, J31 pin 4
-                        qsfp1_scl,   // Bit 2, J31 pin 3
-                        qsfp0_sda,   // Bit 1, J31 pin 2
-                        qsfp0_scl};  // Bit 0, J31 pin 1
+                        1'b0,   // Bit 3, J31 pin 4
+                        1'b0,   // Bit 2, J31 pin 3
+                        1'b0,   // Bit 1, J31 pin 2
+                        1'b0};  // Bit 0, J31 pin 1
 endmodule
 
 endpackage: QsfpX32ControllerTop
