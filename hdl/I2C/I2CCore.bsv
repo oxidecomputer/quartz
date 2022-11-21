@@ -63,10 +63,6 @@ typedef enum {
     ByteNack = 1
 } Error deriving (Bits, Eq, FShow);
 
-instance DefaultValue#(Error);
-    defaultValue = AddressNack;
-endinstance
-
 interface I2CCore;
     interface Pins pins;
     interface Put#(Command) send_command;
@@ -87,7 +83,7 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     Reg#(Maybe#(Command)) cur_command   <- mkReg(tagged Invalid);
     Reg#(Bit#(8)) tx_data               <- mkReg(0);
     Reg#(State) state_r                 <- mkReg(Idle);
-    Reg#(Maybe#(Error)) error_r         <- mkDReg(tagged Invalid);
+    Reg#(Maybe#(Error)) error_r         <- mkReg(tagged Invalid);
     Wire#(Bool) valid_command           <- mkWire();
     Reg#(UInt#(8)) bytes_done           <- mkReg(0);
     Reg#(Bool) in_random_read           <- mkReg(False);
@@ -102,6 +98,7 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     (* fire_when_enabled *)
     rule do_register_command(state_r == Idle && !valid_command);
         cur_command <= tagged Valid next_command.first;
+        error_r     <= tagged Invalid;
         state_r <= SendStart;
     endrule
 
