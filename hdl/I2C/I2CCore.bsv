@@ -22,7 +22,6 @@ import StmtFSM::*;
 import I2CCommon::*;
 import I2CBitController::*;
 
-
 typedef enum {
     Read = 0,
     Write = 1,
@@ -62,6 +61,10 @@ typedef enum {
     AddressNack = 0,
     ByteNack = 1
 } Error deriving (Bits, Eq, FShow);
+
+instance DefaultValue#(Error);
+    defaultValue = AddressNack;
+endinstance
 
 interface I2CCore;
     interface Pins pins;
