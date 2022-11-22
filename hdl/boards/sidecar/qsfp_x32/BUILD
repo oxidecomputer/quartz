@@ -135,7 +135,21 @@ yosys_design('qsfp_x32_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ecp5_bitstream('qsfp_x32',
+# Rev A uses a LFE45UM device and requires a different device ID. This target
+# can be removed once rev A boards have been phased out.
+nextpnr_ecp5_bitstream('qsfp_x32_rev_a',
+    env = 'qsfp_x32',
+    design = ':qsfp_x32_top#qsfp_x32_top.json',
+    deps = [
+        ':qsfp_x32_top',
+    ],
+    local = {
+        'nextpnr_ecp5_flags': [
+            '--um-45k',
+        ]
+    })
+
+nextpnr_ecp5_bitstream('qsfp_x32_rev_b',
     env = 'qsfp_x32',
     design = ':qsfp_x32_top#qsfp_x32_top.json',
     deps = [
