@@ -23,7 +23,7 @@ IOBUF PORT "spi_main_to_fpga_mosi" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "pmbus_v3p3_qsfp_to_fpga_alert" SITE "B3";
 IOBUF PORT "pmbus_v3p3_qsfp_to_fpga_alert" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "vr_v3p3_qsfp_to_fpga_pg" SITE "C1";
-IOBUF PORT "vr_v3p3_qsfp_to_fpga_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "vr_v3p3_qsfp_to_fpga_pg" PULLMODE=UP OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_vr_v3p3_qsfp_en" SITE "C2";
 IOBUF PORT "fpga_to_vr_v3p3_qsfp_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
