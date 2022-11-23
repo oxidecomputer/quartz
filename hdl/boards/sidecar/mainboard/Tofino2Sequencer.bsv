@@ -6,9 +6,15 @@
 
 package Tofino2Sequencer;
 
-export Parameters(..), State(..), SequencingStep(..), Error(..);
-export Tofino2Resets(..), Pins(..), Registers(..);
-export Tofino2Sequencer(..), mkTofino2Sequencer;
+export Parameters(..);
+export State(..);
+export Step(..);
+export Error(..);
+export Tofino2Resets(..);
+export Pins(..);
+export Registers(..);
+export Tofino2Sequencer(..);
+export mkTofino2Sequencer;
 
 import Assert::*;
 import BuildVector::*;
@@ -29,8 +35,6 @@ import SidecarMainboardControllerReg::*;
 // every 1 ms, so these delays are assumed to be in ms.
 //
 typedef struct {
-    // Max time a supply has to assert PG.
-    Integer power_good_timeout;
     // Min time to wait after PG of VDDA18 and the release of pwron reset.
     Integer power_good_to_por_delay;
     // Min time to wait after clocks are enabled and the release of pwron reset.
@@ -51,7 +55,6 @@ typedef struct {
 instance DefaultValue#(Parameters);
     defaultValue =
         Parameters {
-            power_good_timeout: 10,
             power_good_to_por_delay: 10,
             clocks_enable_to_por_delay: 10,
             vid_valid_delay: 15,
@@ -82,15 +85,15 @@ typedef enum {
     AwaitPowerUpComplete    = 11,
     AwaitPowerDown          = 12,
     AwaitPowerDownComplete  = 13
-} SequencingStep deriving (Eq, Bits, FShow);
+} Step deriving (Eq, Bits, FShow);
 
 typedef enum {
     None                    = 0,
     PowerGoodTimeout        = 1,
     PowerFault              = 2,
     PowerVrHot              = 3,
-    PowerInvalidState       = 4,
-    UserAbort               = 5,
+    PowerAbort              = 4,
+    SoftwareAbort           = 5,
     VidAckTimeout           = 6,
     ThermalAlert            = 7
 } Error deriving (Eq, Bits, FShow);
@@ -100,10 +103,14 @@ interface Registers;
     interface ReadOnly#(TofinoSeqState) state;
     interface ReadOnly#(TofinoSeqStep) step;
     interface ReadOnly#(TofinoSeqError) error;
-    interface ReadOnly#(TofinoPowerEnable) power_enable;
-    interface ReadOnly#(TofinoPowerGood) power_good;
-    interface ReadOnly#(TofinoPowerFault) power_fault;
-    interface ReadOnly#(TofinoPowerVrhot) power_vrhot;
+    interface ReadOnly#(TofinoSeqErrorState) error_state;
+    interface ReadOnly#(TofinoSeqErrorStep) error_step;
+    interface ReadOnly#(PowerRailState) vdd18;
+    interface ReadOnly#(PowerRailState) vddcore;
+    interface ReadOnly#(PowerRailState) vddpcie;
+    interface ReadOnly#(PowerRailState) vddt;
+    interface ReadOnly#(PowerRailState) vdda15;
+    interface ReadOnly#(PowerRailState) vdda18;
     interface ReadOnly#(TofinoPowerVid) vid;
     interface ReadOnly#(TofinoReset) tofino_reset;
     interface ReadOnly#(TofinoMisc) misc;
@@ -135,8 +142,14 @@ interface Tofino2Sequencer;
     method Action pcie_reset();
 endinterface
 
-// Typedef for a PowerRail with a timeout duration of up to 15 ticks.
-typedef PowerRail::PowerRail#(4) PowerRail;
+// Typedef for a PowerRail with a timeout duration of 25 ticks. At an expected
+// tick rate of 1 kHz this results in a 25ms timeout.
+//
+// The rails driven by this sequencer have an order requirement but no maximum
+// time between rails being turned on, so this timeout does not need to be
+// aggressive. The measured time from EN high to PG high for these power rails
+// is 5-10ms, so a timeout of 25ms seems like a safe limit.
+typedef PowerRail::PowerRail#(25) PowerRail;
 
 //
 // mkTofino2Sequencer
@@ -147,15 +160,15 @@ typedef PowerRail::PowerRail#(4) PowerRail;
 // of an external thermal sensor, various PDN components and the SP, maintain a
 // safe operating envelop for Tofino 2. It does so by monitoring temperature and
 // power related fault signals and maintaining the required timing constraints
-// as various events happen. In practice in most cases it will quickly shut down
-// Tofino and its power rails as to reduce the risk of permanent damage to the
-// device.
+// as various events happen. In the event of operating conditions outside of the
+// set envelope the sequencer will quickly shut down Tofino and its power rails
+// as to reduce the risk of permanent damage to the device.
 //
 // High level theory of operation:
 //
-// Upon initial reset of the design the sequencer will transition from its
-// initial Invalid state into the A2 state. At this point the sequencer will
-// forever remain in one of four states; A2, InPowerUp, A0 or InPowerDown.
+// Upon initial reset of the design the sequencer will transition from its Init
+// state into the A2 state. From here the sequencer can transition to A0 through
+// the InPowerUp state and from A0 back to A2 through the InPowerDown state.
 // InPowerUp and InPowerDown are strictly transitional states to go from A2 to
 // A0 and back and by design consist of a finite number of steps. Upon properly
 // executing the steps managed by the InPowerUp and InPowerUp states, the
@@ -172,6 +185,13 @@ typedef PowerRail::PowerRail#(4) PowerRail;
 // transitioning to InPowerDown if such events occur. If no faults occur a power
 // down can be requested by clearing the `EN` bit in `TOFINO_SEQ_CTRL`.
 //
+// If a fault occurs the `error`, `error_state` and `error_step` registers
+// contain the details of what the sequencer was executing when it was
+// interrupted. Once such an event occurs the `CLEAR_ERROR` bit in the
+// `TOFINO_SEQ_CTRL` register needs to be set in order to clear this state. When
+// this bit is set the sequencer is forced into the Init state, clearing the
+// error and power rail state, and will transition into A2 on the next cycle.
+//
 // While in InPowerUp the sequencer executes a series of steps to transition
 // from A2 to A0:
 //
@@ -185,8 +205,8 @@ typedef PowerRail::PowerRail#(4) PowerRail;
 //
 // These steps are implemented in the `tofino2_power_up_seq` FSM. If a fault
 // occurs during the execution of this sequence, such as the power good signal
-// of a power rail not going high with the set time, the sequence is aborted and
-// the sequencer immediately transitions to InPowerDown.
+// of a power rail not going high within the set time, the sequence is aborted
+// and the sequencer immediately transitions to InPowerDown.
 //
 // Finally the InPowerDown state executes a series of steps to safely get back
 // into the A2 state:
@@ -216,21 +236,19 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     staticAssert(parameters.vid_ack_timeout < parameters.por_to_pcie_delay,
         "vid_ack_timeout should be less than por_to_pcie_delay");
 
-    staticAssert(parameters.power_good_to_por_delay > 1, "PG2POR should be > 1ms");
+    staticAssert(parameters.power_good_to_por_delay > 1, "PG2POR should be >1ms");
     staticAssert(parameters.vid_ack_timeout < 200,
-        "vid_ack_timeout > 200ms, risking damage to Tofino2 in fault situation");
+        "vid_ack_timeout >200ms, risking damage to Tofino2 in fault situation");
     staticAssert(parameters.por_to_pcie_delay > 200,
-        "POR2PCIe delay should be > 200ms");
+        "POR2PCIe delay should be >200ms");
 
-    PowerRail vdd18 <- mkPowerRail(parameters.power_good_timeout);
-    PowerRail vddcore <- mkPowerRail(parameters.power_good_timeout);
-    PowerRail vddpcie <- mkPowerRail(parameters.power_good_timeout);
-    PowerRail vddt <- mkPowerRail(parameters.power_good_timeout);
-    PowerRail vdda15 <- mkPowerRail(parameters.power_good_timeout);
-    PowerRail vdda18 <- mkPowerRail(parameters.power_good_timeout);
+    PowerRail vdd18 <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail vddcore <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail vddpcie <- mkPowerRailDisableOnAbort();
+    PowerRail vddt <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail vdda15 <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail vdda18 <- mkPowerRailLeaveEnabledOnAbort();
 
-    // Add power rails to a vector for easy aggreation of enabled, good, fault
-    // and vrhot signals.
     Vector#(6, PowerRail) power_rails =
         vec(vdd18, vddcore, vddpcie, vddt, vdda15, vdda18);
 
@@ -242,29 +260,35 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
 
     // FSM state.
     ConfigReg#(State) state <- mkConfigReg(Init);
-    ConfigReg#(SequencingStep) step <- mkConfigReg(Init);
+    ConfigReg#(Step) step <- mkConfigReg(Init);
     ConfigReg#(Error) error <- mkConfigRegU();
+    // Copies of the state and step registers which get set when an error occurs
+    // so software can analyze these events.
+    ConfigReg#(State) error_state <- mkConfigRegU();
+    ConfigReg#(Step) error_step <- mkConfigRegU();
 
     ConfigReg#(Tofino2Resets) tofino_resets <- mkConfigRegU();
     ConfigReg#(Bool) tofino_clocks_enable <- mkConfigRegU();
     ConfigReg#(Maybe#(UInt#(4))) tofino_vid <- mkConfigRegU();
 
-    // Abort flags
+    // Abort events.
     Reg#(Bool) thermal_alert <- mkDReg(False);
     Reg#(Bool) power_good_timeout <- mkDReg(False);
-    Reg#(Bool) power_rail_invalid_state <- mkDReg(False);
-    Reg#(Bool) fault <- mkDReg(False);
-    Reg#(Bool) vrhot <- mkDReg(False);
-    Reg#(Bool) abort <- mkDReg(False);
+    Reg#(Bool) power_abort <- mkDReg(False);
+    Reg#(Bool) power_fault <- mkDReg(False);
+    Reg#(Bool) power_vrhot <- mkDReg(False);
     Reg#(Bool) vid_ack_timeout <- mkDReg(False);
+    Reg#(Bool) abort <- mkDReg(False);
 
     // Control state
     ConfigReg#(TofinoSeqCtrl) ctrl <- mkConfigRegU(); // Reset during init.
     ConfigReg#(TofinoSeqCtrl) ctrl_one_shot <- mkDReg(unpack('0));
 
     // PulseWires used to signal/chain rules within in the same cycle.
-    PulseWire abort_request <- mkPulseWire();
+    PulseWire software_abort_request <- mkPulseWire();
     PulseWire pcie_reset_request <- mkPulseWire();
+    PulseWire start_power_up <- mkPulseWire();
+    PulseWire start_power_down <- mkPulseWire();
 
     // Connect the timeout pulse of the power rails.
     mkConnection(asIfc(tick), vdd18);
@@ -278,16 +302,20 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     // Helpers, implementing the details of sequencing steps.
     //
 
-    function Action enable_rail(PowerRail rail, SequencingStep s) =
-        action
-            step <= s;
-            rail.set_enabled(True);
-        endaction;
-
-    function Action disable_rail(PowerRail rail) =
-        action
-            rail.set_enabled(False);
-        endaction;
+    function Stmt enable_rail(PowerRail rail, Step s) =
+        seq
+            // Set the enable pin and the sequencing step.
+            action
+                rail.set_enable(True);
+                step <= s;
+            endaction
+            // Monitor the rail state for a power good timeout.
+            while (!PowerRail::enabled(rail)) action
+                if (PowerRail::timeout(rail)) begin
+                    power_good_timeout <= True;
+                end
+            endaction
+        endseq;
 
     function Stmt await_por() =
         seq
@@ -303,7 +331,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     function Action power_on_reset() =
         action
             step <= AwaitVidValid;
-            tofino_resets <= Tofino2Resets{pwron: False, pcie: True};
+            tofino_resets <= Tofino2Resets {pwron: False, pcie: True};
             delay <= fromInteger(parameters.por_to_pcie_delay + 1);
         endaction;
 
@@ -332,7 +360,17 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         state <= A2;
         step <= AwaitPowerUp;
         error <= None;
-        ctrl <= unpack('0);
+        error_state <= Init;
+        error_step <= Init;
+        ctrl <= defaultValue;
+
+        // Make sure all power rails are disabled and any faults are cleared.
+        vdd18.clear();
+        vddcore.clear();
+        vddpcie.clear();
+        vddt.clear();
+        vdda15.clear();
+        vdda18.clear();
 
         tofino_resets <= Tofino2Resets{pwron: True, pcie: True};
         tofino_vid <= tagged Invalid;
@@ -340,27 +378,18 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
 
     FSM tofino2_power_up_seq <- mkFSMWithPred(seq
         enable_rail(vdd18, AwaitVdd18PowerGood);
-        await(vdd18.good);
         enable_rail(vddcore, AwaitVddCorePowerGood);
-        await(vddcore.good);
         enable_rail(vddpcie, AwaitVddPCIePowerGood);
-        await(vddpcie.good);
         enable_rail(vddt, AwaitVddtPowerGood);
-        await(vddt.good);
         enable_rail(vdda15, AwaitVdda15PowerGood);
-        await(vdda15.good);
         enable_rail(vdda18, AwaitVdda18PowerGood);
-        await(vdda18.good);
         tofino_clocks_enable <= True;
         await_por();
         power_on_reset();
         await_vid_valid();
         await_vid_ack();
         await_power_up_complete();
-        action
-            state <= A0;
-            step <= AwaitPowerDown;
-        endaction
+        step <= AwaitPowerDown;
     endseq, state == InPowerUp && !abort);
 
     FSM tofino2_power_down_seq <- mkFSMWithPred(seq
@@ -370,180 +399,155 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
             tofino_vid <= tagged Invalid;
             step <= AwaitPowerDownComplete;
         endaction
-        disable_rail(vdda18);
-        disable_rail(vdda15);
-        disable_rail(vddt);
-        disable_rail(vddpcie);
-        disable_rail(vddcore);
-        disable_rail(vdd18);
-        action
-            state <= A2;
-            step <= AwaitPowerUp;
-        endaction
+        // Disable the power rails. For any rails still disabled this is a
+        // no-op. If a rail experienced a power good timeout the enable pin is
+        // low but the state will remain in `Timeout`. For any rails with state
+        // `Aborted` the enable pin will remain unchanged (in order to avoid a
+        // reset and discarding the fault information) and the state will remain
+        // unchanged.
+        vdda18.set_enable(False);
+        vdda15.set_enable(False);
+        vddt.set_enable(False);
+        vddpcie.set_enable(False);
+        vddcore.set_enable(False);
+        vdd18.set_enable(False);
+        step <= AwaitPowerUp;
     endseq, state == InPowerDown && tick);
 
     (* fire_when_enabled *)
-    rule do_detect_power_rail_in_invalid_state (state == InPowerUp || state == A0);
-        // The intend of this rule is to detect any discrepencies between the
-        // enable/power good state of each power rail. Once a power rail has
-        // been enabled it is expected to be in transition during its sequencing
-        // step. Once pas that sequencing step its power good signal should
-        // match the enable signal.
-
-        let rails_expected_good = map(PowerRail::enabled, power_rails);
-        let rails_good = map(PowerRail::good, power_rails);
-        let rails_in_transition =
-            case (step)
-                AwaitVdd18PowerGood:    vec(True, False, False, False, False, False);
-                AwaitVddCorePowerGood:  vec(False, True, False, False, False, False);
-                AwaitVddPCIePowerGood:  vec(False, False, True, False, False, False);
-                AwaitVddtPowerGood:     vec(False, False, False, True, False, False);
-                AwaitVdda15PowerGood:   vec(False, False, False, False, True, False);
-                AwaitVdda18PowerGood:   vec(False, False, False, False, False, True);
-                default:                vec(False, False, False, False, False, False);
-            endcase;
-
-        // For each rail, generate a (expected_good, is_good, in_transition) tuple.
-        let rails_states = zip3(rails_expected_good, rails_good, rails_in_transition);
-
-        function determine_rail_state_as_expected(rail_state, previous_rails_as_expected);
-            match {.expected_good, .is_good, .in_transition} = rail_state;
-            return previous_rails_as_expected &&
-                    (in_transition || (expected_good == is_good));
-        endfunction
-
-        // Fold the rails_states vector, determining if for each rail their
-        // enabled and good signals are as expected. If the result of this
-        // action is False it means a rail not intended to be enabled has its
-        // power good signal high, or a rail which marked as enabled and is
-        // supposed to signal power good does not. Both these situations may
-        // occur if for example an entity other than the sequencer can
-        // enable/disable power rails, say through PMBus.
-        power_rail_invalid_state <=
-            !foldr(determine_rail_state_as_expected, True, rails_states);
-    endrule
-
-    function bool_or(a, b) = a || b;
-    function bool_and(a, b) = a && b;
-
-    (* fire_when_enabled *)
-    rule do_power_good_timeout_aggregation (state == InPowerUp);
-        power_good_timeout <=
-            foldr(bool_or, False, map(PowerRail::good_timeout, power_rails));
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_fault_aggregation;
-        fault <= foldr(bool_or, False, map(PowerRail::fault, power_rails));
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_vrhot_aggregation;
-        vrhot <= foldr(bool_or, False, map(PowerRail::vrhot, power_rails));
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_vid_ack_timeout (
-            state == InPowerUp &&
-            step == AwaitVidAck &&
-            delay.count ==
-                fromInteger(
-                    parameters.por_to_pcie_delay -
-                    parameters.vid_ack_timeout));
-        vid_ack_timeout <= True;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_monitor_abort_conditions (
-            state != Init &&
+    rule do_monitor_fault_conditions (
             error == None &&
-            (abort_request ||
+            (state == InPowerUp || state == A0));
+        // Determine if the given condition occured for any of the power rails.
+        // Note that these event flags are registered and not acted upon until
+        // the next cycle.
+        power_abort <= any(PowerRail::aborted, power_rails);
+        power_fault <= any(PowerRail::fault, power_rails);
+        power_vrhot <= any(PowerRail::vrhot, power_rails);
+
+        // Generate VID ack timout when appropriate. This is done by monitoring
+        // the PoR to PCIe delay counter which is running during the AwaitVidAck
+        // step for the given limit. The static asserts at the beginning of this
+        // module assure that this limit is valid.
+        let vid_ack_timeout_count = fromInteger(
+            parameters.por_to_pcie_delay - parameters.vid_ack_timeout);
+
+        if (step == AwaitVidAck && delay.count == vid_ack_timeout_count) begin
+            vid_ack_timeout <= True;
+        end
+
+        // Monitor all fault flags and initiate an abort if one goes high.
+        if (thermal_alert ||
+                power_vrhot ||
+                power_fault ||
+                power_abort ||
                 power_good_timeout ||
-                power_rail_invalid_state ||
-                fault ||
-                vrhot ||
                 vid_ack_timeout ||
-                thermal_alert));
-        abort <= True;
+                software_abort_request) begin
+            // Raise the abort flag and trigger a power down.
+            abort <= True;
 
-        if (thermal_alert) begin
-            error <= ThermalAlert;
-        end else if (vrhot) begin
-            error <= PowerVrHot;
-        end else if (fault) begin
-            error <= PowerFault;
-        end else if (power_rail_invalid_state) begin
-            error <= PowerInvalidState;
-        end else if (power_good_timeout) begin
-            error <= PowerGoodTimeout;
-        end else if (vid_ack_timeout) begin
-            error <= VidAckTimeout;
-        end else if (abort_request) begin
-            error <= UserAbort;
+            // Save the sequencer state and step when the error was detected.
+            error_state <= state;
+            error_step <= step;
+
+            // Some of these events could happen simultaneously. Report these in
+            // the order of least likely to happen/most interesting to report.
+            if (thermal_alert) begin
+                error <= ThermalAlert;
+            end else if (power_vrhot) begin
+                error <= PowerVrHot;
+            end else if (power_fault) begin
+                error <= PowerFault;
+            end else if (power_abort) begin
+                error <= PowerAbort;
+            end else if (power_good_timeout) begin
+                error <= PowerGoodTimeout;
+            end else if (vid_ack_timeout) begin
+                error <= VidAckTimeout;
+            end else if (software_abort_request) begin
+                error <= SoftwareAbort;
+            end
         end
     endrule
 
     (* fire_when_enabled *)
-    rule do_abort ((state == InPowerUp || state == A0) && abort);
-        $display("Tofino2 in power down");
-        state <= InPowerDown;
+    rule do_sequence (state != Init);
+        // Power down if an abort is requested by the fault monitor.
+        if ((state == InPowerUp || state == A0) && abort) begin
+            $display(
+                fshow(error), " during ",
+                fshow(error_state), " ", fshow(error_step));
+            $display("Tofino2 in power down");
+            state <= InPowerDown;
 
-        if (state == InPowerUp) begin
-            tofino2_power_up_seq.abort();
+            if (state == InPowerUp) begin
+                tofino2_power_up_seq.abort();
+            end
+
+            start_power_down.send();
         end
 
-        ctrl.en <= 0;
-        tofino2_power_down_seq.start();
+        // Handle control events while in A2.
+        else if (state == A2) begin
+            if (error == None && ctrl.en == 1) begin
+                $display("Tofino2 in power up");
+                state <= InPowerUp;
+                start_power_up.send();
+            end
+
+            else if (error != None && ctrl_one_shot.clear_error == 1) begin
+                $display("Clearing error");
+                state <= Init;
+            end
+        end
+
+        // Handle control events while in power up.
+        else if (state == InPowerUp) begin
+            if (ctrl.en == 0) begin
+                $display("Power up abort requested");
+                software_abort_request.send();
+            end
+
+            else if (tofino2_power_up_seq.done) begin
+                $display("Tofino2 in A0");
+                state <= A0;
+            end
+
+            // Display VID ack when simulating.
+            if (ctrl_one_shot.ack_vid == 1) begin
+                $display("VID ack");
+            end
+        end
+
+        // Handle power down request while in A0.
+        else if (state == A0 && ctrl.en == 0) begin
+            $display("Tofino2 in power down");
+            state <= InPowerDown;
+            start_power_down.send();
+        end
+
+        // Handle power down complete.
+        else if (state == InPowerDown && tofino2_power_down_seq.done) begin
+            $display("Tofino2 in A2");
+            state <= A2;
+        end
     endrule
 
-    //
-    // Actions as a result of CTRL writes.
-    //
-
+    // The sequence `start` methods are blocking. Running them as part of the
+    // `do_sequence` rule would cause a scheduling loop and block the rule from
+    // running. Call these in separate rules, triggered using pulse wires.
     (* fire_when_enabled *)
-    rule do_power_up (
-            !abort &&
-            state == A2 &&
-            error == None &&
-            ctrl.en == 1);
-        $display("Tofino2 in power up");
-        state <= InPowerUp;
+    rule do_start_power_up (start_power_up);
         tofino2_power_up_seq.start();
     endrule
 
     (* fire_when_enabled *)
-    rule do_power_down (
-            !abort &&
-            state == A0 &&
-            ctrl.en == 0);
-        $display("Tofino2 in power down");
-        state <= InPowerDown;
+    rule do_start_power_down (start_power_down);
         tofino2_power_down_seq.start();
     endrule
 
-    (* fire_when_enabled *)
-    rule do_abort_request (state == InPowerUp && ctrl.en == 0);
-        $display("Power up abort requested");
-        abort_request.send();
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_clear_error (
-            state != Init &&
-            error != None &&
-            ctrl_one_shot.clear_error == 1);
-        $display("Clearing error");
-        error <= None;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_acknowledge_vid (
-            !abort &&
-            state == InPowerUp &&
-            ctrl_one_shot.ack_vid == 1);
-        $display("VID acknowledged");
-    endrule
-
+    // Allow the external control over PERST while Tofino is in A0.
     (* fire_when_enabled *)
     rule do_pcie_reset (state == A0 && !abort);
         tofino_resets <= Tofino2Resets{
@@ -571,12 +575,12 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         method clocks_enable = tofino_clocks_enable;
         method thermal_alert = thermal_alert._write;
 
-        interface PowerRailPins vdd18 = vdd18.pins;
-        interface PowerRailPins vddcore = vddcore.pins;
-        interface PowerRailPins vddpcie = vddpcie.pins;
-        interface PowerRailPins vddt = vddt.pins;
-        interface PowerRailPins vdda15 = vdda15.pins;
-        interface PowerRailPins vdda18 = vdda18.pins;
+        interface PowerRail::Pins vdd18 = vdd18.pins;
+        interface PowerRail::Pins vddcore = vddcore.pins;
+        interface PowerRail::Pins vddpcie = vddpcie.pins;
+        interface PowerRail::Pins vddt = vddt.pins;
+        interface PowerRail::Pins vdda15 = vdda15.pins;
+        interface PowerRail::Pins vdda18 = vdda18.pins;
     endinterface
 
     interface Registers registers;
@@ -599,10 +603,17 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         interface ReadOnly state = castToReadOnly(state);
         interface ReadOnly step = castToReadOnly(step);
         interface ReadOnly error = castToReadOnly(error);
-        interface ReadOnly power_enable = mapPowerRailsToReg(PowerRail::enabled);
-        interface ReadOnly power_good = mapPowerRailsToReg(PowerRail::good);
-        interface ReadOnly power_fault = mapPowerRailsToReg(PowerRail::fault);
-        interface ReadOnly power_vrhot = mapPowerRailsToReg(PowerRail::vrhot);
+        interface ReadOnly error_state = castToReadOnly(error_state);
+        interface ReadOnly error_step = castToReadOnly(error_step);
+
+        // Power rail state.
+        interface ReadOnly vdd18 = powerRailToReadOnly(vdd18);
+        interface ReadOnly vddcore = powerRailToReadOnly(vddcore);
+        interface ReadOnly vddpcie = powerRailToReadOnly(vddpcie);
+        interface ReadOnly vddt = powerRailToReadOnly(vddt);
+        interface ReadOnly vdda15 = powerRailToReadOnly(vdda15);
+        interface ReadOnly vdda18 = powerRailToReadOnly(vdda18);
+
         interface ReadOnly vid =
             valueToReadOnly(TofinoPowerVid{
                 vid_valid: pack(isValid(tofino_vid)),
@@ -636,6 +647,19 @@ function ReadOnly#(v) castToReadOnly(t val)
     return (
         interface ReadOnly
             method _read = unpack(zeroExtend(pack(val)));
+        endinterface);
+endfunction
+
+function ReadOnly#(PowerRailState) powerRailToReadOnly(PowerRail rail);
+    return (
+        interface ReadOnly
+            method _read =
+                PowerRailState {
+                    enable: pack(rail.pin_state.enable),
+                    good: pack(rail.pin_state.good),
+                    fault: pack(rail.pin_state.fault),
+                    vrhot: pack(rail.pin_state.vrhot),
+                    state: extend(pack(rail.state))};
         endinterface);
 endfunction
 

@@ -31,14 +31,12 @@ import QsfpX32ControllerRegsPkg::*;
 typedef struct {
     Integer system_frequency_hz;
     Integer i2c_frequency_hz;
-    Integer power_good_timeout_ms;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
-        i2c_frequency_hz: 100_000,
-        power_good_timeout_ms: 10
+        i2c_frequency_hz: 100_000
     };
 endinstance
 
@@ -100,7 +98,7 @@ endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Power Rail control for the hot swap controller
-    PowerRail#(4) hot_swap  <- mkPowerRail(parameters.power_good_timeout_ms);
+    PowerRail#(10) hot_swap  <- mkPowerRailDisableOnAbort();
 
     I2CCore i2c_core    <-
         mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
@@ -153,7 +151,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     (* fire_when_enabled *)
     rule do_ctrl_hsc;
-        hot_swap.set_enabled(enable_ == 1);
+        hot_swap.set_enable(enable_ == 1);
     endrule
 
     // The buffer data is only considered valid for the transaction, so reset
@@ -226,7 +224,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_i2c;
         if (i2c_attempt && present_ != 1) begin
             error   <= NoModule;
-        end else if (i2c_attempt && !hot_swap.enabled()) begin
+        end else if (i2c_attempt && !PowerRail::enabled(hot_swap)) begin
             error   <= NoPower;
         end else if (i2c_attempt && hot_swap.good_timeout()) begin
             error   <= PowerFault;
@@ -240,7 +238,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
                 error   <= I2cAddressNack;
             end else if (err == ByteNack) begin
                 error   <= I2cByteNack;
-            end 
+            end
         end
     endrule
 
@@ -294,8 +292,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method lpmode   = lpmode_._write;
     method reset_   = reset__._write;
 
-    method pg           = pack(hot_swap.good);
-    method pg_timeout   = pack(hot_swap.good_timeout);
+    method pg           = pack(PowerRail::good(hot_swap));
+    method pg_timeout   = pack(hot_swap.good_timeout());
     method present      = present_;
     method irq          = irq_;
 endmodule

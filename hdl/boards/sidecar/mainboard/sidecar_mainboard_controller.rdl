@@ -4,6 +4,28 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+reg power_rail_state {
+    regwidth = 8;
+    default sw = r;
+    default hw = w;
+
+    field {
+        desc = "Flag indicating the power rail is enabled";
+    } ENABLE[1] = 0;
+    field {
+        desc = "Flag indicating the power rail is operating nominally";
+    } GOOD[1] = 0;
+    field {
+        desc = "Flag indicating the power rail experienced a fault";
+    } FAULT[1] = 0;
+    field {
+        desc = "Flag indicating the voltage regulator is experiencing a high temperature";
+    } VRHOT[1] = 0;
+    field {
+        desc = "State of the power rail according to the sequencer";
+    } STATE[7:4] = 0;
+};
+
 addrmap sidecar_mainboard_controller {
     name = "Sidecar Mainboard Controller";
     desc = "Register description of the Sidecar Mainboard Controller";
@@ -178,7 +200,7 @@ addrmap sidecar_mainboard_controller {
 
         field {
             desc = "Sequencing Step";
-        } STEP[7:0] = 0;
+        } STEP[3:0] = 0;
     } TOFINO_SEQ_STEP;
 
     reg {
@@ -188,108 +210,46 @@ addrmap sidecar_mainboard_controller {
 
         field {
             desc = "Sequencing Error";
-        } ERROR[7:0] = 0;
+        } ERROR[2:0] = 0;
     } TOFINO_SEQ_ERROR;
 
     reg {
-        name = "Tofino Power Enable";
+        name = "Tofino Sequencer Error State";
         default sw = r;
         default hw = w;
 
         field {
-            desc = "VDD 1.8V Enable";
-        } VDD_1P8_EN[1] = 0;
-        field {
-            desc = "VDD Core Enable";
-        } VDD_CORE_EN[1] = 0;
-        field {
-            desc = "VDD 0.75V PCIe Enable";
-        } VDD_PCIE_EN[1] = 0;
-        field {
-            desc = "VDD 0.9V VDDT Enable";
-        } VDD_VDDT_EN[1] = 0;
-        field {
-            desc = "VDDA 1.5V Enable";
-        } VDDA_1P5_EN[1] = 0;
-        field {
-            desc = "VDDA 1.8V Enable";
-        } VDDA_1P8_EN[1] = 0;
-    } TOFINO_POWER_ENABLE;
+            desc = "Sequencer state when error occured";
+        } STATE[2:0] = 0;
+    } TOFINO_SEQ_ERROR_STATE;
 
     reg {
-        name = "Tofino Power Good";
+        name = "Tofino Sequencing Error Step";
         default sw = r;
         default hw = w;
 
         field {
-            desc = "VDD 1.8V Power Good";
-        } VDD_1P8_PG[1] = 0;
-        field {
-            desc = "VDD Core Power Good";
-        } VDD_CORE_PG[1] = 0;
-        field {
-            desc = "VDD 0.75V PCIe Power Good";
-        } VDD_PCIE_PG[1] = 0;
-        field {
-            desc = "VDD 0.9V VDDT Power Good";
-        } VDD_VDDT_PG[1] = 0;
-        field {
-            desc = "VDDA 1.5V Power Good";
-        } VDDA_1P5_PG[1] = 0;
-        field {
-            desc = "VDDA 1.8V Power Good";
-        } VDDA_1P8_PG[1] = 0;
-    } TOFINO_POWER_GOOD;
+            desc = "Sequencing step when error occured";
+        } STEP[3:0] = 0;
+    } TOFINO_SEQ_ERROR_STEP;
 
-    reg {
-        name = "Tofino Power Fault";
-        default sw = r;
-        default hw = w;
+    power_rail_state TOFINO_POWER_VDD18_STATE;
+    TOFINO_POWER_VDD18_STATE->name = "VDD18 State";
 
-        field {
-            desc = "VDD 1.8V Fault";
-        } VDD_1P8_FAULT[1] = 0;
-        field {
-            desc = "VDD Core Fault";
-        } VDD_CORE_FAULT[1] = 0;
-        field {
-            desc = "Reserved";
-        } RESERVED1[1] = 0;
-        field {
-            desc = "VDD 0.9V VDDT Fault";
-        } VDD_VDDT_FAULT[1] = 0;
-        field {
-            desc = "VDDA 1.5V Fault";
-        } VDDA_1P5_FAULT[1] = 0;
-        field {
-            desc = "Reserved";
-        } RESERVED2[1] = 0;
-    } TOFINO_POWER_FAULT;
+    power_rail_state TOFINO_POWER_VDDCORE_STATE;
+    TOFINO_POWER_VDDCORE_STATE->name = "VDDCORE State";
 
-    reg {
-        name = "Tofino Power VR Hot";
-        default sw = r;
-        default hw = w;
+    power_rail_state TOFINO_POWER_VDDPCIE_STATE;
+    TOFINO_POWER_VDDPCIE_STATE->name = "VDDPCIE State";
 
-        field {
-            desc = "VDD 1.8V VRHOT";
-        } VDD_1P8_VRHOT[1] = 0;
-        field {
-            desc = "VDD Core VRHOT";
-        } VDD_CORE_VRHOT[1] = 0;
-        field {
-            desc = "Reserved";
-        } RESERVED1[1] = 0;
-        field {
-            desc = "VDD 0.9V VDDT VRHOT";
-        } VDD_VDDT_VRHOT[1] = 0;
-        field {
-            desc = "VDDA 1.5V VRHOT";
-        } VDDA_1P5_VRHOT[1] = 0;
-        field {
-            desc = "VDDA 1.8V VRHOT";
-        } VDDA_1P8_VRHOT[1] = 0;
-    } TOFINO_POWER_VRHOT;
+    power_rail_state TOFINO_POWER_VDDT_STATE;
+    TOFINO_POWER_VDDT_STATE->name = "VDDT State";
+
+    power_rail_state TOFINO_POWER_VDDA15_STATE;
+    TOFINO_POWER_VDDA15_STATE->name = "VDDA15 State";
+
+    power_rail_state TOFINO_POWER_VDDA18_STATE;
+    TOFINO_POWER_VDDA18_STATE->name = "VDDA18 State";
 
     reg {
         name = "Tofino VID Value";
@@ -316,7 +276,7 @@ addrmap sidecar_mainboard_controller {
             desc = "Tofino package is in reset";
         } PWRON[1] = 0;
         field {
-            desc = "PCIe link is in reset";
+            desc = "Tofino PCIe link is in reset";
         } PCIE[1] = 0;
     } TOFINO_RESET;
 
