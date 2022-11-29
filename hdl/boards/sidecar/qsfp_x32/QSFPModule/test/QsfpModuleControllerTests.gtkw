@@ -1,24 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Wed Sep 07 17:13:50 2022
+[*] Tue Nov 29 13:49:45 2022
 [*]
-[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkQsfpModuleControllerWriteTest.vcd"
-[dumpfile_mtime] "Wed Sep 07 16:32:51 2022"
-[dumpfile_size] 114180692
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkQsfpModuleControllerReadTest.vcd"
+[dumpfile_mtime] "Mon Nov 28 23:06:01 2022"
+[dumpfile_size] 7995538
 [savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\boards\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
 [timestart] 0
-[size] 2558 1368
+[size] 2551 1360
 [pos] -1 -1
-*-12.961555 21330 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-18.091068 1290 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] main.
 [treeopen] main.top.
-[sst_width] 494
+[sst_width] 446
 [signals_width] 526
 [sst_expanded] 1
 [sst_vpaned_height] 424
 @28
-main.top.bench_dut_i2c_core_bit_ctrl_scl_out
-main.top.bench_dut_i2c_core_bit_ctrl_sda_out
 main.top.bench_dut_i2c_core_bit_ctrl_sda_in
 main.top.bench_dut_i2c_core_bit_ctrl_sda_out_en
 main.top.bench_write_data_fifo.ENQ
@@ -27,7 +25,15 @@ main.top.bench_write_data_fifo.DEQ
 -
 -DUT - QsfpModuleController
 -
+@28
+main.top.bench_dut_i2c_attempt
+main.top.bench_dut_i2c_attempt_1
+@25
+main.top.bench_dut_error[2:0]
+@200
 -I2CCore
+@28
+main.top.bench_dut_i2c_core_error_r[1:0]
 @22
 main.top.bench_dut_i2c_core_state_r[3:0]
 @24
@@ -67,7 +73,6 @@ main.top.bench_dut_i2c_core_tx_data[7:0]
 @200
 -
 @28
-main.top.bench_dut_i2c_core_request_write_data_
 main.top.bench_dut_i2c_data_received
 @200
 -BRAM: Write Data Buffer
@@ -81,9 +86,8 @@ main.top.bench_dut_write_buffer.DOA[7:0]
 main.top.bench_dut_write_buffer.ENA
 main.top.bench_dut_write_buffer.WEA
 main.top.bench_dut_write_buffer.CLKB
-@23
-main.top.bench_dut_write_buffer.ADDRB[7:0]
 @22
+main.top.bench_dut_write_buffer.ADDRB[7:0]
 main.top.bench_dut_write_buffer.DIB[7:0]
 main.top.bench_dut_write_buffer.DOB[7:0]
 @28
