@@ -53,6 +53,14 @@ module mkBench (Bench);
     mkConnection(pack(dut.pins.sda.out_en), periph.sda_i_en);
     mkConnection(dut.pins.sda.in, periph.sda_o);
 
+    Reg#(Bit#(1)) enable_r  <- mkReg(1);
+    Reg#(Bit#(1)) reset_r   <- mkReg(0);
+    Reg#(Bit#(1)) present_r <- mkReg(1);
+
+    mkConnection(dut.pins.present, present_r);
+    mkConnection(dut.enable, enable_r);
+    mkConnection(dut.reset_, reset_r);
+
     // A fifo of dummy data for the DUT to pull from
     FIFO#(RamWrite) write_data_fifo  <- mkSizedFIFO(128);
     Reg#(UInt#(8)) fifo_idx         <- mkReg(0);

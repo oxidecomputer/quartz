@@ -115,7 +115,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         loadFormat: tagged None,        // no load file used
         allowWriteResponseBypass: False // pipeline write response
     };
-    Integer bramSize = 256;
+    Integer bramSize = 128;
     Bool hasOutputRegister = False;
 
     // The read_buffer stores data read back from the module
