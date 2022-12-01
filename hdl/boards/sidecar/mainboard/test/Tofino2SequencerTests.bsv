@@ -91,7 +91,8 @@ instance DefaultValue#(Parameters);
         vddpcie_power_good_delay: 8,
         vid: 'b110, // Non-symmetric bit pattern to catch possible bit reversals.
         sequencer:
-            Tofino2Sequencer::Parameters{
+            Tofino2Sequencer::Parameters {
+                power_good_timeout: defaultValue.power_good_timeout,
                 power_good_to_por_delay: defaultValue.power_good_to_por_delay,
                 clocks_enable_to_por_delay: defaultValue.clocks_enable_to_por_delay,
                 vid_valid_delay: defaultValue.vid_valid_delay,

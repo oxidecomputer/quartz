@@ -31,12 +31,14 @@ import QsfpX32ControllerRegsPkg::*;
 typedef struct {
     Integer system_frequency_hz;
     Integer i2c_frequency_hz;
+    Integer power_good_timeout_ms;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
-        i2c_frequency_hz: 100_000
+        i2c_frequency_hz: 100_000,
+        power_good_timeout_ms: 10
     };
 endinstance
 
@@ -98,7 +100,7 @@ endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Power Rail control for the hot swap controller
-    PowerRail#(10) hot_swap  <- mkPowerRailDisableOnAbort();
+    PowerRail#(4) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
 
     I2CCore i2c_core    <-
         mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
@@ -224,9 +226,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_i2c;
         if (i2c_attempt && present_ != 1) begin
             error   <= NoModule;
-        end else if (i2c_attempt && !PowerRail::enabled(hot_swap)) begin
+        end else if (i2c_attempt && !hot_swap.enabled) begin
             error   <= NoPower;
-        end else if (i2c_attempt && hot_swap.good_timeout()) begin
+        end else if (i2c_attempt && hot_swap.timed_out) begin
             error   <= PowerFault;
         end else if (i2c_attempt) begin
             new_i2c_command.send();
@@ -292,8 +294,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method lpmode   = lpmode_._write;
     method reset_   = reset__._write;
 
-    method pg           = pack(PowerRail::good(hot_swap));
-    method pg_timeout   = pack(hot_swap.good_timeout());
+    method pg           = pack(hot_swap.enabled);
+    method pg_timeout   = pack(hot_swap.timed_out);
     method present      = present_;
     method irq          = irq_;
 endmodule

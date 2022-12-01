@@ -26,9 +26,9 @@ module mkVSC7448Sequencer #(Integer power_good_timeout) (VSC7448Sequencer);
     // emulates current behavior.
     //
     // TODO (arjen): Implement proper MAPO for Monorail.
-    PowerRail#(10) v1p0 <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail#(10) v1p2 <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail#(10) v2p5 <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail#(4) v1p0 <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
+    PowerRail#(4) v1p2 <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
+    PowerRail#(4) v2p5 <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
 
     Reg#(Bool) clocks_enabled <-mkReg(True);
     Reg#(Bool) in_reset <- mkReg(True);
@@ -44,7 +44,7 @@ module mkVSC7448Sequencer #(Integer power_good_timeout) (VSC7448Sequencer);
 
     (* fire_when_enabled *)
     rule do_release_reset (tick);
-        in_reset <= !(v1p0.pin_state.good && v1p2.pin_state.good && v2p5.pin_state.good);
+        in_reset <= !(v1p0.enabled && v1p2.enabled && v2p5.enabled);
     endrule
 
     interface VSC7448Pins pins;
@@ -74,7 +74,7 @@ interface ClockGeneratorSequencer;
 endinterface
 
 module mkClockGeneratorSequencer #(Integer power_good_timeout) (ClockGeneratorSequencer);
-    PowerRail#(10) ldo <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail#(4) ldo <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
     Reg#(Bool) in_reset <- mkReg(True);
     PulseWire tick <- mkPulseWire();
 
@@ -85,7 +85,7 @@ module mkClockGeneratorSequencer #(Integer power_good_timeout) (ClockGeneratorSe
 
     (* fire_when_enabled *)
     rule do_release_reset (tick);
-        in_reset <= !ldo.pin_state.good;
+        in_reset <= !ldo.enabled;
     endrule
 
     interface ClockGeneratorPins pins;

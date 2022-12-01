@@ -25,7 +25,8 @@ I2CTestParams i2c_test_params = defaultValue;
 QsfpModuleController::Parameters qsfp_test_params =
     QsfpModuleController::Parameters {
         system_frequency_hz: i2c_test_params.core_clk_freq,
-        i2c_frequency_hz: i2c_test_params.scl_freq
+        i2c_frequency_hz: i2c_test_params.scl_freq,
+        power_good_timeout_ms: 10
     };
 
 function Action check_peripheral_event(I2CPeripheralModel peripheral,

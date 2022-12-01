@@ -36,6 +36,7 @@ import QsfpX32ControllerRegsPkg::*;
 typedef struct {
     Integer system_frequency_hz;
     Integer mdc_frequency_hz;
+    Integer power_good_timeout_ms;
     Integer refclk_en_to_stable_ms;
     Integer reset_release_to_ready_ms;
 } Parameters;
@@ -44,6 +45,7 @@ instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
         mdc_frequency_hz: 3_000_000,
+        power_good_timeout_ms: 10,
         refclk_en_to_stable_ms: 5,
         reset_release_to_ready_ms: 120
     };
@@ -112,8 +114,10 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     staticAssert(parameters.mdc_frequency_hz <= 12_500_000,
         "Maximum MDC frequency is 12.5 MHz");
 
-    PowerRail#(10) v1p0 <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail#(10) v2p5 <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail#(4) v1p0 <-
+        mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout_ms);
+    PowerRail#(4) v2p5 <-
+        mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout_ms);
 
     // Serial Management Interface (see section 3.14 of datasheet)
     MDIO smi <- mkMDIO(MDIO::Parameters{
@@ -164,9 +168,9 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     FSM vsc8562_power_on_seq <- mkFSMWithPred(seq
             coma_mode_hw    <= True;
             v1p0.set_enable(True);
-            await(PowerRail::enabled(v1p0));
+            await(v1p0.enabled);
             v2p5.set_enable(True);
-            await(PowerRail::enabled(v2p5));
+            await(v2p5.enabled);
             refclk_en       <= 1;
             await(ms_cntr == fromInteger(parameters.refclk_en_to_stable_ms + 1));
             reset_ms_cntr.send();

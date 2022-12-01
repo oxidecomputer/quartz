@@ -34,7 +34,7 @@ endinterface
 typedef enum {
     Disabled = 0,
     RampingUp = 1,
-    Timeout = 2,
+    TimedOut = 2,
     Aborted = 3,
     Enabled = 4
 } State deriving (Bits, Eq, FShow);
@@ -50,7 +50,7 @@ instance DefaultValue#(State);
     defaultValue = Disabled;
 endinstance
 
-interface PowerRail #(numeric type timeout_ticks);
+interface PowerRail #(numeric type timeout_sz);
     interface Pins pins;
 
     // Read the decoded state of the power rail based on the state of the pins
@@ -69,7 +69,14 @@ interface PowerRail #(numeric type timeout_ticks);
     // received, and thus can be driven contineously.
     method Action send();
 
-    // Single cycle event indicating a power good timeout occured.
+    // State query methods. This is syntactic sugar over the `state` method.
+    method Bool disabled();
+    method Bool ramping_up();
+    method Bool timed_out();
+    method Bool aborted();
+    method Bool enabled();
+
+    // Strobe indicating a power good timeout occured.
     method Bool good_timeout();
 
     // Compile time method which can be used by consuming modules to determine
@@ -78,9 +85,11 @@ interface PowerRail #(numeric type timeout_ticks);
 endinterface
 
 //
-// Make `PowerRail` with the given enable to good timeout. This module expects
-// methods in the `Pins` interface to be synchronized to the current clock and
-// driven every cycle.
+// Make `PowerRail` with the given enable to good timeout. A value of zero
+// disables the timeout and allows a power rail to be in ramp up indefinite.
+//
+// This module expects methods in the `Pins` interface to be synchronized to the
+// current clock and driven every cycle.
 //
 // The module assumes a voltage regulator to deassert the good signal when it
 // experiences a fault and output regulation can not be maintained. Depending on
@@ -95,13 +104,16 @@ endinterface
 // probably be configured not to automatically restart and instead let this be
 // handled by the sequencer.
 //
-module mkPowerRail #(Bool disable_on_abort) (PowerRail#(timeout_ticks));
+module mkPowerRail #(
+        Bool disable_on_abort,
+        Integer timeout_ticks)
+            (PowerRail#(timeout_sz));
     // State of the rail enable pin.
-    ConfigReg#(Bool) enabled <- mkConfigReg(False);
+    ConfigReg#(Bool) enabled_r <- mkConfigReg(False);
     // State of the power rail, derived from the state of the pins.
     ConfigReg#(State) state_r <- mkConfigReg(defaultValue);
     // Countdown used to detect a power good timeout.
-    Countdown#(TLog#(timeout_ticks)) timeout <- mkCountdownBy1();
+    Countdown#(timeout_sz) timeout <- mkCountdownBy1();
 
     // Pin State.
     Wire#(Bool) good <- mkDWire(False);
@@ -117,7 +129,7 @@ module mkPowerRail #(Bool disable_on_abort) (PowerRail#(timeout_ticks));
     (* fire_when_enabled *)
     rule do_update;
         if (clear_w) begin
-            enabled <= False;
+            enabled_r <= False;
             state_r <= Disabled;
         end
 
@@ -128,7 +140,7 @@ module mkPowerRail #(Bool disable_on_abort) (PowerRail#(timeout_ticks));
         // and automatically discard recorded fault information.
         else if (state_r == Enabled && !good) begin
             if (disable_on_abort) begin
-                enabled <= False;
+                enabled_r <= False;
             end
 
             state_r <= Aborted;
@@ -137,8 +149,8 @@ module mkPowerRail #(Bool disable_on_abort) (PowerRail#(timeout_ticks));
         // If a timeout occurs during ramp up, disable the rail and wait for an
         // explicit clear.
         else if (state_r == RampingUp && timeout) begin
-            enabled <= False;
-            state_r <= Timeout;
+            enabled_r <= False;
+            state_r <= TimedOut;
         end
 
         // Set rail enabled if the good signal is observed before a timeout
@@ -151,18 +163,18 @@ module mkPowerRail #(Bool disable_on_abort) (PowerRail#(timeout_ticks));
         // Turn the power rail on/off when requested. The timeout event may
         // still fire in the future but is ignored.
         else if ((state_r == Enabled || state_r == RampingUp) && stop) begin
-            enabled <= False;
+            enabled_r <= False;
             state_r <= Disabled;
         end
-        else if (!enabled && start) begin
-            enabled <= True;
+        else if (!enabled_r && start) begin
+            enabled_r <= True;
             state_r <= RampingUp;
-            timeout <= fromInteger(valueOf(timeout_ticks));
+            timeout <= fromInteger(timeout_ticks);
         end
     endrule
 
     interface Pins pins;
-        method en = enabled;
+        method en = enabled_r;
         method pg = good._write;
         method fault = fault._write;
         method vrhot = vrhot._write;
@@ -171,30 +183,41 @@ module mkPowerRail #(Bool disable_on_abort) (PowerRail#(timeout_ticks));
     method state = state_r;
     method pin_state =
         PinState {
-            enable: enabled,
+            enable: enabled_r,
             good: good,
             fault: fault,
             vrhot: vrhot};
+
     method set_enable = enabled_request.wset;
     method clear = clear_w.send;
     method Action send() = timeout.send;
+
+    method Bool disabled = (state_r == Disabled);
+    method Bool ramping_up = (state_r == RampingUp);
+    method Bool timed_out = (state_r == TimedOut);
+    method Bool aborted = (state_r == Aborted);
+    method Bool enabled = (state_r == Enabled);
+
     method Bool good_timeout = (state_r == RampingUp && timeout);
-    method timeout_duration = fromInteger(valueOf(timeout_ticks));
+
+    method timeout_duration = timeout_ticks;
 endmodule
 
 // A `PowerRail` which is disabled when an abort condition occurs. This is
 // intended for use when the voltage regulator would normally automatically
 // restart the rail when the fault condition occurs, allowing for explicit
 // control over fault analysis and sequencing.
-function module#(PowerRail#(timeout_ticks)) mkPowerRailDisableOnAbort =
-    mkPowerRail(True);
+function module#(PowerRail#(timeout_sz))
+    mkPowerRailDisableOnAbort(Integer timemout_ticks) =
+        mkPowerRail(True, timemout_ticks);
 
 // A `PowerRail` which stays enabled when an abort condition occurs. On some
 // regulators this keeps fault information available for analysis. This is
 // intended to be used when the voltage regulator does not automatically restart
 // the power rail once the fault condition clears.
-function module#(PowerRail#(timeout_ticks)) mkPowerRailLeaveEnabledOnAbort =
-    mkPowerRail(False);
+function module#(PowerRail#(timeout_sz))
+    mkPowerRailLeaveEnabledOnAbort(Integer timemout_ticks) =
+        mkPowerRail(False, timemout_ticks);
 
 instance Connectable#(PulseWire, PowerRail#(timeout_sz));
     module mkConnection #(PulseWire w, PowerRail#(timeout_sz) r) (Empty);
@@ -215,11 +238,12 @@ endinstance
 // Helper functions to facilitate higher order constructs, such as iterating
 // over a `Vector` using `map`.
 //
-function Bool disabled(PowerRail#(timeout) r) = r.state == Disabled;
-function Bool ramping_up(PowerRail#(timeout) r) = r.state == RampingUp;
-function Bool timeout(PowerRail#(timeout) r) = r.state == Timeout;
-function Bool aborted(PowerRail#(timeout) r) = r.state == Aborted;
-function Bool enabled(PowerRail#(timeout) r) = r.state == Enabled;
+function Bool disabled(PowerRail#(timeout_sz) r) = r.disabled;
+function Bool ramping_up(PowerRail#(timeout_sz) r) = r.ramping_up;
+function Bool timed_out(PowerRail#(timeout_sz) r) = r.timed_out;
+function Bool aborted(PowerRail#(timeout_sz) r) = r.aborted;
+function Bool enabled(PowerRail#(timeout_sz) r) = r.enabled;
+function Bool good_timeout(PowerRail#(timeout_sz) r) = r.good_timeout;
 
 function Bool enable(PowerRail#(timeout) r) = r.pin_state.enable;
 function Bool good(PowerRail#(timeout) r) = r.pin_state.good;

@@ -35,6 +35,8 @@ import SidecarMainboardControllerReg::*;
 // every 1 ms, so these delays are assumed to be in ms.
 //
 typedef struct {
+    // Max time a supply has to assert PG.
+    Integer power_good_timeout;
     // Min time to wait after PG of VDDA18 and the release of pwron reset.
     Integer power_good_to_por_delay;
     // Min time to wait after clocks are enabled and the release of pwron reset.
@@ -55,6 +57,12 @@ typedef struct {
 instance DefaultValue#(Parameters);
     defaultValue =
         Parameters {
+            // The rails driven by this sequencer have an order requirement but
+            // no maximum time between rails being turned on, so this timeout
+            // does not need to be aggressive. The measured time from EN high to
+            // PG high for these power rails is 5-10ms, so a timeout of 25ms
+            // seems like a safe limit.
+            power_good_timeout: 24,
             power_good_to_por_delay: 10,
             clocks_enable_to_por_delay: 10,
             vid_valid_delay: 15,
@@ -142,14 +150,8 @@ interface Tofino2Sequencer;
     method Action pcie_reset();
 endinterface
 
-// Typedef for a PowerRail with a timeout duration of 25 ticks. At an expected
-// tick rate of 1 kHz this results in a 25ms timeout.
-//
-// The rails driven by this sequencer have an order requirement but no maximum
-// time between rails being turned on, so this timeout does not need to be
-// aggressive. The measured time from EN high to PG high for these power rails
-// is 5-10ms, so a timeout of 25ms seems like a safe limit.
-typedef PowerRail::PowerRail#(25) PowerRail;
+// Typedef for a PowerRail with a timeout duration of up to 32 ticks.
+typedef PowerRail::PowerRail#(TLog#(32)) PowerRail;
 
 //
 // mkTofino2Sequencer
@@ -242,12 +244,12 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     staticAssert(parameters.por_to_pcie_delay > 200,
         "POR2PCIe delay should be >200ms");
 
-    PowerRail vdd18 <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail vddcore <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail vddpcie <- mkPowerRailDisableOnAbort();
-    PowerRail vddt <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail vdda15 <- mkPowerRailLeaveEnabledOnAbort();
-    PowerRail vdda18 <- mkPowerRailLeaveEnabledOnAbort();
+    PowerRail vdd18 <- mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout);
+    PowerRail vddcore <- mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout);
+    PowerRail vddpcie <- mkPowerRailDisableOnAbort(parameters.power_good_timeout);
+    PowerRail vddt <- mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout);
+    PowerRail vdda15 <- mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout);
+    PowerRail vdda18 <- mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout);
 
     Vector#(6, PowerRail) power_rails =
         vec(vdd18, vddcore, vddpcie, vddt, vdda15, vdda18);
@@ -310,8 +312,8 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
                 step <= s;
             endaction
             // Monitor the rail state for a power good timeout.
-            while (!PowerRail::enabled(rail)) action
-                if (PowerRail::timeout(rail)) begin
+            while (!rail.enabled) action
+                if (rail.timed_out) begin
                     power_good_timeout <= True;
                 end
             endaction
