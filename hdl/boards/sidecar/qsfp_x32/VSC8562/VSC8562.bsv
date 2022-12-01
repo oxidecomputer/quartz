@@ -156,10 +156,17 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(Bit#(16)) read_data_r  <- mkReg(0);
 
     // VSC8562 power-on sequence
+    // On the physical board, the V2P5 regulator enable is wired to the power
+    // good of the V1P0 regulator. This means that v2p5.set_enable(True) does
+    // not actually do anything physically on the board, but it does modify the
+    // internal state of the v2p5 PowerRail instance so it will start to monitor
+    // the V2P5 power good signal.
     FSM vsc8562_power_on_seq <- mkFSMWithPred(seq
             coma_mode_hw    <= True;
             v1p0.set_enable(True);
-            await(PowerRail::enabled(v1p0) && PowerRail::enabled(v2p5));
+            await(PowerRail::enabled(v1p0));
+            v2p5.set_enable(True);
+            await(PowerRail::enabled(v2p5));
             refclk_en       <= 1;
             await(ms_cntr == fromInteger(parameters.refclk_en_to_stable_ms + 1));
             reset_ms_cntr.send();
