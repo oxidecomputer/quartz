@@ -22,9 +22,13 @@ interface VSC7448Sequencer;
 endinterface
 
 module mkVSC7448Sequencer #(Integer power_good_timeout) (VSC7448Sequencer);
-    PowerRail#(4) v1p0 <- mkPowerRail(power_good_timeout);
-    PowerRail#(4) v1p2 <- mkPowerRail(power_good_timeout);
-    PowerRail#(4) v2p5 <- mkPowerRail(power_good_timeout);
+    // Leaving the rails enabled on abort is not actually what we want, but it
+    // emulates current behavior.
+    //
+    // TODO (arjen): Implement proper MAPO for Monorail.
+    PowerRail#(4) v1p0 <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
+    PowerRail#(4) v1p2 <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
+    PowerRail#(4) v2p5 <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
 
     Reg#(Bool) clocks_enabled <-mkReg(True);
     Reg#(Bool) in_reset <- mkReg(True);
@@ -33,14 +37,14 @@ module mkVSC7448Sequencer #(Integer power_good_timeout) (VSC7448Sequencer);
 
     (* fire_when_enabled *)
     rule do_power_enable;
-        v1p0.set_enabled(True);
-        v1p2.set_enabled(True);
-        v2p5.set_enabled(True);
+        v1p0.set_enable(True);
+        v1p2.set_enable(True);
+        v2p5.set_enable(True);
     endrule
 
     (* fire_when_enabled *)
     rule do_release_reset (tick);
-        in_reset <= !(v1p0.good && v1p2.good && v2p5.good);
+        in_reset <= !(v1p0.enabled && v1p2.enabled && v2p5.enabled);
     endrule
 
     interface VSC7448Pins pins;
@@ -70,18 +74,18 @@ interface ClockGeneratorSequencer;
 endinterface
 
 module mkClockGeneratorSequencer #(Integer power_good_timeout) (ClockGeneratorSequencer);
-    PowerRail#(4) ldo <- mkPowerRail(power_good_timeout);
+    PowerRail#(4) ldo <- mkPowerRailLeaveEnabledOnAbort(power_good_timeout);
     Reg#(Bool) in_reset <- mkReg(True);
     PulseWire tick <- mkPulseWire();
 
     (* fire_when_enabled *)
     rule do_power_enable;
-        ldo.set_enabled(True);
+        ldo.set_enable(True);
     endrule
 
     (* fire_when_enabled *)
     rule do_release_reset (tick);
-        in_reset <= !ldo.good;
+        in_reset <= !ldo.enabled;
     endrule
 
     interface ClockGeneratorPins pins;

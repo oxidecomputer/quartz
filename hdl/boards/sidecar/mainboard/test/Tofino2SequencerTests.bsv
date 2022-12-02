@@ -20,20 +20,20 @@ import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
 
 
-// Allow scheduling events up to 2^16 ticks in the future.
-typedef 16 DelaySize;
+// Allow scheduling events up to 32 ticks in the future.
+typedef TLog#(32) MaxEventDelay;
 
 //
 // A bench which wraps the Tofino2Sequencer and exposes a mock PDN, allowing for
 // reuse of the test infrastructure.
 //
 interface Bench;
-    interface PowerRailModel#(DelaySize) vdd18;
-    interface PowerRailModel#(DelaySize) vddcore;
-    interface PowerRailModel#(DelaySize) vddpcie;
-    interface PowerRailModel#(DelaySize) vddt;
-    interface PowerRailModel#(DelaySize) vdda15;
-    interface PowerRailModel#(DelaySize) vdda18;
+    interface PowerRailModel#(MaxEventDelay) vdd18;
+    interface PowerRailModel#(MaxEventDelay) vddcore;
+    interface PowerRailModel#(MaxEventDelay) vddpcie;
+    interface PowerRailModel#(MaxEventDelay) vddt;
+    interface PowerRailModel#(MaxEventDelay) vdda15;
+    interface PowerRailModel#(MaxEventDelay) vdda18;
     interface Registers sequencer;
 
     // Return the bench generated "tick", allowing a test to for example
@@ -49,6 +49,7 @@ interface Bench;
     method Action power_down();
     method Action ack_vid();
     method Action pcie_reset();
+    method Action clear_error();
 
     // Convenience methods, decoding data in various sequencer registers.
     method Bool in_a2();
@@ -58,15 +59,20 @@ interface Bench;
     method Bool error_occured();
 
     // Return the current value of the sequencer error register.
-    method UInt#(8) error();
+    method Error error();
     // Return the VID value from the VID register.
     method Maybe#(Bit#(4)) vid();
     // Return whether or not the sequencer has enabled the clocks.
     method Bool clocks_enable();
 
     // Asserts
-    method Action assertError(Bit#(8) expected_error, String msg);
-    method Action assertPowerEnable(Bit#(8) expected_enabled, String msg);
+    method Action assert_abort(State state, Step step, Error error, String msg);
+    method Action assert_power_rail_enable_summary_eq(
+        Bit#(6) expected_summary,
+        String msg);
+
+    // Await helpers.
+    method Action await_sequencer_state(State s);
 endinterface
 
 typedef struct {
@@ -76,16 +82,16 @@ typedef struct {
     // The VID bits as if strapped by Tofino.
     Bit#(3) vid;
     // Sequencer parameters, allowing them to be tweaked for specific tests.
-    Tofino2Sequencer::Parameters tofino_sequencer;
+    Tofino2Sequencer::Parameters sequencer;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters{
-        default_power_good_delay: 4,
+        default_power_good_delay: 10,
         vddpcie_power_good_delay: 8,
         vid: 'b110, // Non-symmetric bit pattern to catch possible bit reversals.
-        tofino_sequencer:
-            Tofino2Sequencer::Parameters{
+        sequencer:
+            Tofino2Sequencer::Parameters {
                 power_good_timeout: defaultValue.power_good_timeout,
                 power_good_to_por_delay: defaultValue.power_good_to_por_delay,
                 clocks_enable_to_por_delay: defaultValue.clocks_enable_to_por_delay,
@@ -93,6 +99,20 @@ instance DefaultValue#(Parameters);
                 vid_ack_timeout: 50,
                 por_to_pcie_delay: 201}};
 endinstance
+
+// Compute a reasonable timeout (in number of simulation cycles) for a test
+// watchdog to complete the power up sequence based on the given bench
+// configuration.
+function Integer power_up_test_timeout(Parameters p) =
+    (6 * p.default_power_good_delay +
+    p.sequencer.power_good_to_por_delay +
+    p.sequencer.por_to_pcie_delay +
+    10) * 4;
+
+// Compute a reasonable timeout (in number of simulation cycles) for a test
+// watchdog to complete the power down sequence based on the given bench
+// configuration.
+Integer power_down_test_timeout = 10 * 4;
 
 module mkBench #(Parameters parameters) (Bench);
     // Reduce the time of the 1 kHz tick to 1/4th sim time. This provides a
@@ -107,21 +127,20 @@ module mkBench #(Parameters parameters) (Bench);
             tick_1khz,
             parameters.default_power_good_delay);
 
-    PowerRailModel#(DelaySize) vdd18_rail <- mkDefaultPowerRailModel("VDD18");
-    PowerRailModel#(DelaySize) vddcore_rail <- mkDefaultPowerRailModel("VDDCORE");
-    PowerRailModel#(DelaySize) vddpcie_rail <-
+    PowerRailModel#(MaxEventDelay) vdd18_rail <- mkDefaultPowerRailModel("VDD18");
+    PowerRailModel#(MaxEventDelay) vddcore_rail <- mkDefaultPowerRailModel("VDDCORE");
+    PowerRailModel#(MaxEventDelay) vddpcie_rail <-
         mkPowerRailModel(
             "VDDPCIe",
             tick_1khz,
             parameters.vddpcie_power_good_delay);
-    PowerRailModel#(DelaySize) vddt_rail <- mkDefaultPowerRailModel("VDDt");
-    PowerRailModel#(DelaySize) vdda15_rail <- mkDefaultPowerRailModel("VDDA15");
-    PowerRailModel#(DelaySize) vdda18_rail <- mkDefaultPowerRailModel("VDDA18");
+    PowerRailModel#(MaxEventDelay) vddt_rail <- mkDefaultPowerRailModel("VDDt");
+    PowerRailModel#(MaxEventDelay) vdda15_rail <- mkDefaultPowerRailModel("VDDA15");
+    PowerRailModel#(MaxEventDelay) vdda18_rail <- mkDefaultPowerRailModel("VDDA18");
 
     ConfigReg#(Bool) thermal_alert <- mkConfigReg(False);
 
-    Tofino2Sequencer dut <-
-        mkTofino2Sequencer(parameters.tofino_sequencer);
+    Tofino2Sequencer dut <- mkTofino2Sequencer(parameters.sequencer);
 
     (* fire_when_enabled *)
     rule do_set_vid;
@@ -138,6 +157,24 @@ module mkBench #(Parameters parameters) (Bench);
 
     mkConnection(thermal_alert._read, dut.pins.thermal_alert);
 
+    // Bit vectors containing a summary of the enable and good signals of the
+    // power rail status registers.
+    Bit#(6) power_rail_enable_summary = {
+        dut.registers.vdda18.enable,
+        dut.registers.vdda15.enable,
+        dut.registers.vddt.enable,
+        dut.registers.vddpcie.enable,
+        dut.registers.vddcore.enable,
+        dut.registers.vdd18.enable};
+
+    Bit#(6) power_rail_good_summary = {
+        dut.registers.vdda18.good,
+        dut.registers.vdda15.good,
+        dut.registers.vddt.good,
+        dut.registers.vddpcie.good,
+        dut.registers.vddcore.good,
+        dut.registers.vdd18.good};
+
     interface PowerRailModel vdd18 = vdd18_rail;
     interface PowerRailModel vddcore = vddcore_rail;
     interface PowerRailModel vddpcie = vddpcie_rail;
@@ -147,24 +184,22 @@ module mkBench #(Parameters parameters) (Bench);
     interface Registers sequencer = dut.registers;
 
     method Action power_up() if (dut.registers.ctrl.en == 0);
-        let ctrl = dut.registers.ctrl;
-        ctrl.en = 1;
-        dut.registers.ctrl <= ctrl;
+        dut.registers.ctrl.en <= 1;
     endmethod
 
     method Action power_down() if (dut.registers.ctrl.en == 1);
-        let ctrl = dut.registers.ctrl;
-        ctrl.en = 0;
-        dut.registers.ctrl <= ctrl;
+        dut.registers.ctrl.en <= 0;
     endmethod
 
     method Action ack_vid() if (dut.registers.vid.vid_valid == 1);
-        let ctrl = dut.registers.ctrl;
-        ctrl.ack_vid = 1;
-        dut.registers.ctrl <= ctrl;
+        dut.registers.ctrl.ack_vid <= 1;
     endmethod
 
     method Action pcie_reset = dut.pcie_reset;
+
+    method Action clear_error();
+        dut.registers.ctrl.clear_error <= 1;
+    endmethod
 
     method tick = tick_1khz;
     method error = unpack(dut.registers.error.error);
@@ -183,22 +218,32 @@ module mkBench #(Parameters parameters) (Bench);
     method pcie_in_reset() = (dut.registers.tofino_reset.pcie == 1);
     method error_occured = (dut.registers.error.error != 0);
 
-    method Action assertError(Bit#(8) expected_error, String msg);
+    method Action assert_abort(
+            State expected_state,
+            Step expected_step,
+            Error expected_error,
+            String msg);
         action
-            Error e = unpack(truncate(pack(dut.registers.error.error)));
-            $display("\tError: %d, ", dut.registers.error.error, fshow(e));
-            dynamicAssert(dut.registers.error.error == expected_error, msg);
+            Error error = unpack(dut.registers.error.error);
+            State state = unpack(dut.registers.error_state.state);
+            Step step = unpack(dut.registers.error_step.step);
+            assert_eq(state, expected_state, msg);
+            assert_eq(step, expected_step, msg);
+            assert_eq(error, expected_error, msg);
         endaction
     endmethod
 
-    method Action assertPowerEnable(Bit#(8) expected_enable, String msg);
+    method Action assert_power_rail_enable_summary_eq(
+            Bit#(6) expected_summary,
+            String msg);
         action
-            $display("\tPower EN: 0x%02x", pack(dut.registers.power_enable));
-            dynamicAssert(
-                pack(dut.registers.power_enable) == expected_enable,
-                msg);
+            $display("\tPower Rail EN: 0b%06b", power_rail_enable_summary);
+            assert_eq(power_rail_enable_summary, expected_summary, msg);
         endaction
     endmethod
+
+    method Action await_sequencer_state(State s) =
+        await(unpack(dut.registers.state.state) == s);
 endmodule
 
 //
@@ -216,53 +261,51 @@ module mkPowerUpTest (Empty);
     Bit#(4) expected_vid = {1, parameters.vid};
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
-        bench.assertPowerEnable('h00, "Expected no power rails enabled");
-        dynamicAssert(bench.sequencer.tofino_reset.pwron == 1, "Expected package in reset");
-        dynamicAssert(bench.sequencer.tofino_reset.pcie == 1, "Expected PCIe in reset");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
+        bench.assert_power_rail_enable_summary_eq('h00, "Expected no power rails enabled");
+        assert_set(bench.sequencer.tofino_reset.pwron, "Expected package in reset");
+        assert_set(bench.sequencer.tofino_reset.pcie, "Expected PCIe in reset");
         bench.power_up();
 
         // Expect power rails to be enabled in order
         await(bench.vdd18.state.enabled);
-        bench.assertPowerEnable('h01, "Expected VDD18 enabled");
+        bench.assert_power_rail_enable_summary_eq('h01, "Expected VDD18 enabled");
         await(bench.vddcore.state.enabled);
-        bench.assertPowerEnable('h03, "Expected VDD18, VDDCORE enabled");
+        bench.assert_power_rail_enable_summary_eq('h03, "Expected VDD18, VDDCORE enabled");
         await(bench.vddpcie.state.enabled);
-        bench.assertPowerEnable('h07, "Expected VDD18, VDDCORE, VDDPCIE enabled");
+        bench.assert_power_rail_enable_summary_eq('h07, "Expected VDD18, VDDCORE, VDDPCIE enabled");
         await(bench.vddt.state.enabled);
-        bench.assertPowerEnable('h0f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt enabled");
+        bench.assert_power_rail_enable_summary_eq('h0f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt enabled");
         await(bench.vdda15.state.enabled);
-        bench.assertPowerEnable('h1f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt, VDDA15 enabled");
+        bench.assert_power_rail_enable_summary_eq('h1f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt, VDDA15 enabled");
         await(bench.vdda18.state.enabled);
-        bench.assertPowerEnable('h3f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt, VDDA15, VDDA18 enabled");
+        bench.assert_power_rail_enable_summary_eq('h3f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt, VDDA15, VDDA18 enabled");
 
         // Wait for clocks to be enabled
         await(bench.clocks_enable);
 
         // Wait for PoR
         await(bench.sequencer.tofino_reset.pwron == 0);
-        dynamicAssert(bench.sequencer.tofino_reset.pcie == 1, "Expected PCIe still in reset");
+        assert_set(bench.sequencer.tofino_reset.pcie, "Expected PCIe still in reset");
 
         // Expect the VID to become valid
         await(isValid(bench.vid));
         $display("\tVID: ", fshow(bench.vid));
-        dynamicAssert(fromMaybe(0, bench.vid) == expected_vid, "Unexpected VID");
+        assert_eq(fromMaybe(0, bench.vid), expected_vid, "Unexpected VID");
 
         bench.ack_vid();
         await(bench.in_a0);
 
         $display("Tofino2 PCIe reset: ", fshow(bench.pcie_in_reset));
-        dynamicAssert(!bench.pcie_in_reset, "Expected PCIe out of reset");
-
-        $display("Tofino2 in A0");
+        assert_false(bench.pcie_in_reset, "Expected PCIe out of reset");
 
         // Wait another 50 ticks to make sure nothing triggers a delayed
         // emergency power down.
         repeat(50) await(bench.tick);
-        dynamicAssert(bench.in_a0, "Expected Tofino2 still in A0");
+        assert_true(bench.in_a0, "Expected Tofino2 still in A0");
     endseq);
 
-    mkTestWatchdog(2 * (500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay)));
+    mkTestWatchdog(2 * power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -280,16 +323,15 @@ module mkPowerDownTest (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
+
         await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
+        assert_false(bench.error_occured, "Expected no error during power up");
+        bench.assert_power_rail_enable_summary_eq('h3f, "Expected all power rails enabled");
 
-        bench.assertPowerEnable('h3f, "Expected all power rails enabled");
         bench.power_down();
-
         // Expect the VID to have become invalid.
         await(!isValid(bench.vid));
         $display("\tVID: ", fshow(bench.vid));
@@ -297,57 +339,57 @@ module mkPowerDownTest (Empty);
         // Expect resets to be asserted and clocks to be disabled.
         await(bench.pcie_in_reset || bench.package_in_reset);
         action
-            dynamicAssert(bench.package_in_reset, "Expected package in reset");
-            dynamicAssert(bench.pcie_in_reset, "Expected PCIe in reset");
-            dynamicAssert(!bench.clocks_enable, "Expected clocks disabled");
+            assert_true(bench.package_in_reset, "Expected package in reset");
+            assert_true(bench.pcie_in_reset, "Expected PCIe in reset");
+            assert_true(!bench.clocks_enable, "Expected clocks disabled");
         endaction
 
         // Expect power rails to be disabled in reverse.
         await(!bench.vdda18.state.enabled);
-        bench.assertPowerEnable('h1f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt, VDDA15 enabled");
+        bench.assert_power_rail_enable_summary_eq('h1f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt, VDDA15 enabled");
         await(!bench.vdda15.state.enabled);
-        bench.assertPowerEnable('h0f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt enabled");
+        bench.assert_power_rail_enable_summary_eq('h0f, "Expected VDD18, VDDCORE, VDDPCIE, VDDt enabled");
         await(!bench.vddt.state.enabled);
-        bench.assertPowerEnable('h07, "Expected VDD18, VDDCORE, VDDPCIE enabled");
+        bench.assert_power_rail_enable_summary_eq('h07, "Expected VDD18, VDDCORE, VDDPCIE enabled");
         await(!bench.vddpcie.state.enabled);
-        bench.assertPowerEnable('h03, "Expected VDD18, VDDCORE enabled");
+        bench.assert_power_rail_enable_summary_eq('h03, "Expected VDD18, VDDCORE enabled");
         await(!bench.vddcore.state.enabled);
-        bench.assertPowerEnable('h01, "Expected VDD18 enabled");
+        bench.assert_power_rail_enable_summary_eq('h01, "Expected VDD18 enabled");
         await(!bench.vdd18.state.enabled);
-        bench.assertPowerEnable('h00, "Expected no power rails enabled");
+        bench.assert_power_rail_enable_summary_eq('h00, "Expected no power rails enabled");
 
-        await(bench.tick);
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
-        $display("Tofino2 in A2");
+        repeat(2) await(bench.tick);
+        assert_true(bench.in_a2, "Expected sequencer in A2");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(power_up_test_timeout(parameters) + power_down_test_timeout);
 endmodule
 
 //
-// mkPowerUpAbortTest
+// mkSoftwareAbortDuringPowerUpTest
 //
 // A test which covers a software initiated abort, by clearing the `EN` bit in
 // `TOFINO_SEQ_CTRL` while the sequencer is InPowerUp. The intended outcome is
-// the sequencer back in A2 and the error register set to UserAbort.
+// the sequencer back in A2 and the error register set to SoftwareAbort.
 //
 (* synthesize *)
-module mkPowerUpAbortTest (Empty);
+module mkSoftwareAbortDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         await(bench.vdd18.state.enabled);
 
         bench.power_down();
-        await(bench.error_occured);
-        bench.assertError(5, "Expected UserAbort error");
 
+        await(bench.error_occured);
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVdd18PowerGood, SoftwareAbort, "Unexpected abort");
     endseq);
+
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -360,21 +402,20 @@ endmodule
 (* synthesize *)
 module mkPowerGoodTimeoutTest (Empty);
     Parameters parameters = defaultValue;
-    parameters.vddpcie_power_good_delay = 12;
+    // Extend the EN to PG delay past timemout limit.
+    parameters.vddpcie_power_good_delay = 30;
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
 
         await(bench.error_occured);
-        bench.assertError(1, "Expected PowerGoodTimeout error");
-
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVddPCIePowerGood, PowerGoodTimeout, "Unexpected abort");
     endseq);
 
-    mkTestWatchdog(500);
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -395,31 +436,27 @@ module mkAckVidTimeoutTest (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
 
-        await(!bench.in_a2);
-        $display("Await AckVidTimeout");
         await(bench.error_occured);
-        bench.assertError(6, "Expected AckVidTimeout error");
-
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVidAck, VidAckTimeout, "Unexpected abort");
     endseq);
 
-    mkTestWatchdog(500);
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
 // mkPowerDisabledDuringPowerUpTest
 //
-// A test which covers a power rail previously enabled and signalling to be good
+// A test which covers a power rail previously enabled and signaling to be good
 // suddenly to be disabled. This is intended to guard against a third party
 // (accidentally) enabling or disabling a power rail through an alternate
 // interface such as PMBus.
 //
 // The intended outcome is an abort of the power up sequence and the error
-// register set to PowerInvalidState.
+// register set to PowerAbort.
 //
 (* synthesize *)
 module mkPowerDisabledDuringPowerUpTest (Empty);
@@ -427,7 +464,7 @@ module mkPowerDisabledDuringPowerUpTest (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
 
         await(bench.vddpcie.state.good);
@@ -437,13 +474,12 @@ module mkPowerDisabledDuringPowerUpTest (Empty);
         bench.vddcore.set_enable_override(tagged Valid False);
 
         await(bench.error_occured);
-        bench.assertError(4, "Expected PowerInvalidState error");
-
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVddtPowerGood, PowerAbort, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h02, "Expected VDDCORE still enabled");
     endseq);
 
-    mkTestWatchdog(500);
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -451,7 +487,7 @@ endmodule
 //
 // A test similar to `mkPowerDisabledDuringPowerUpTest`, but the change in state
 // occuring while dwelling in A0. The intended outcome is the sequencer
-// transitioning to A2 and the error register set to PowerInvalidState.
+// transitioning to A2 and the error register set to PowerAbort.
 //
 (* synthesize *)
 module mkPowerDisabledInA0Test (Empty);
@@ -459,23 +495,22 @@ module mkPowerDisabledInA0Test (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
+
         await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
+        assert_false(bench.error_occured, "Expected no error during power up");
 
         bench.vddcore.set_enable_override(tagged Valid False);
 
         await(bench.error_occured);
-        bench.assertError(4, "Expected PowerInvalidState error");
-
         await(bench.in_a2);
-        $display("Tofino2 powered down");
+        bench.assert_abort(A0, AwaitPowerDown, PowerAbort, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h02, "Expected VDDCORE still enabled");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(power_up_test_timeout(parameters) + power_down_test_timeout);
 endmodule
 
 //
@@ -491,19 +526,23 @@ module mkPowerFaultDuringPowerUpTest (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
+
         // Schedule a fault 10 ticks after VDDCORE has been enabled.
+        await(bench.vddcore.state.enabled);
         bench.vddcore.schedule_fault(10);
 
         await(bench.error_occured);
-        bench.assertError(2, "Expected PowerFault error");
+        assert_power_rail_state_eq(bench.sequencer.vddcore, Aborted, "Expected VDDCORE aborted");
 
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVddPCIePowerGood, PowerFault, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h02, "Expected VDDCORE still enabled");
+        assert_set(bench.sequencer.vddcore.fault, "Expected VDDCORE fault set");
     endseq);
 
-    mkTestWatchdog(500);
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -519,23 +558,28 @@ module mkPowerFaultInA0Test (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
-        await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
 
-        bench.vddcore.schedule_fault(10);
+        await(bench.in_a0);
+        assert_false(bench.error_occured, "Expected no error during power up");
+
+        bench.vddcore.schedule_fault(3);
 
         await(bench.error_occured);
-        bench.assertError(2, "Expected PowerFault");
+        assert_power_rail_state_eq(bench.sequencer.vddcore, Aborted, "Expected VDDCORE aborted");
 
         await(bench.in_a2);
-        $display("Tofino2 powered down");
+        bench.assert_abort(A0, AwaitPowerDown, PowerFault, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h02, "Expected VDDCORE still enabled");
+        assert_set(bench.sequencer.vddcore.fault, "Expected VDDCORE fault set");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(
+        power_up_test_timeout(parameters) +
+        power_down_test_timeout +
+        10);
 endmodule
 
 //
@@ -555,19 +599,21 @@ module mkVrHotDuringPowerUpTest (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
+
         // Schedule a vrhot event 10 ticks after VDDCORE has been enabled.
+        await(bench.vddcore.state.enabled);
         bench.vddcore.schedule_vrhot(10);
 
         await(bench.error_occured);
-        bench.assertError(3, "Expected PowerVrHot error");
-
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVddPCIePowerGood, PowerVrHot, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h02, "Expected VDDCORE still enabled");
+        assert_set(bench.sequencer.vddcore.vrhot, "Expected VDDCORE vrhot set");
     endseq);
 
-    mkTestWatchdog(500);
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -587,23 +633,27 @@ module mkVrHotInA0Test (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
-        await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
 
-        bench.vddcore.schedule_vrhot(10);
+        await(bench.in_a0);
+        assert_false(bench.error_occured, "Expected no error during power up");
+
+        // Schedule a vrhot event in 3 ticks.
+        bench.vddcore.schedule_vrhot(3);
 
         await(bench.error_occured);
-        bench.assertError(3, "Expected PowerVrHot");
-
         await(bench.in_a2);
-        $display("Tofino2 powered down");
+        bench.assert_abort(A0, AwaitPowerDown, PowerVrHot, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h02, "Expected VDDCORE still enabled");
+        assert_set(bench.sequencer.vddcore.vrhot, "Expected VDDCORE vrhot set");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(
+        power_up_test_timeout(parameters) +
+        power_down_test_timeout +
+        10);
 endmodule
 
 //
@@ -634,23 +684,21 @@ module mkPCIeResetHeldOnPowerUpTest (Empty);
     endrule
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
+
         await(bench.in_a0);
-        dynamicAssert(
-            !bench.error_occured,
-            "Expected no error during power up");
-        $display("Tofino2 in A0");
+        assert_false(bench.error_occured, "Expected no error during power up");
 
         $display("Tofino2 PCIe reset: ", fshow(bench.pcie_in_reset));
-        dynamicAssert(bench.pcie_in_reset, "Expected PCIe still in reset");
-        dynamicAssert(
-            !pcie_reset_released,
+        assert_true(bench.pcie_in_reset, "Expected PCIe still in reset");
+        assert_false(
+            pcie_reset_released,
             "Expected PCIe reset not released during power up");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -670,15 +718,15 @@ module mkPCIeResetInA0Test (Empty);
     endseq);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
+
         await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
+        assert_false(bench.error_occured, "Expected no error during power up");
 
         repeat(10) noAction;
-        dynamicAssert(!bench.pcie_in_reset, "Expected PCIe not in reset");
+        assert_false(bench.pcie_in_reset, "Expected PCIe not in reset");
 
         pcie_reset.start();
         await(bench.pcie_in_reset);
@@ -687,10 +735,12 @@ module mkPCIeResetInA0Test (Empty);
         await(!bench.pcie_in_reset);
         $display("Tofino2 PCIe reset: ", fshow(bench.pcie_in_reset));
 
-        dynamicAssert(!bench.pcie_in_reset, "Expected PCIe not in reset");
+        assert_false(bench.pcie_in_reset, "Expected PCIe not in reset");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(
+        power_up_test_timeout(parameters) +
+        power_down_test_timeout);
 endmodule
 
 //
@@ -707,18 +757,18 @@ module mkThermalAlertDuringPowerUpTest (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         await(bench.vdd18.state.enabled);
 
         bench.set_thermal_alert(True);
 
         await(bench.error_occured);
-        bench.assertError(7, "Expected ThermalAlert error");
-
         await(bench.in_a2);
-        $display("Tofino2 power up aborted");
+        bench.assert_abort(InPowerUp, AwaitVdd18PowerGood, ThermalAlert, "Unexpected abort");
     endseq);
+
+    mkTestWatchdog(power_up_test_timeout(parameters));
 endmodule
 
 //
@@ -735,49 +785,139 @@ module mkThermalAlertInA0Test (Empty);
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
         bench.ack_vid();
+
         await(bench.in_a0);
-        dynamicAssert(!bench.error_occured, "Expected no error during power up");
-        $display("Tofino2 in A0");
+        assert_false(bench.error_occured, "Expected no error during power up");
 
         bench.set_thermal_alert(True);
 
         await(bench.error_occured);
-        bench.assertError(7, "Expected ThermalAlert error");
-
         await(bench.in_a2);
-        $display("Tofino2 powered down");
+        bench.assert_abort(A0, AwaitPowerDown, ThermalAlert, "Unexpected abort");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(power_up_test_timeout(parameters) + power_down_test_timeout);
 endmodule
 
 //
-// mkCtrlEnClearedOnFault
+// mkCtrlEnUnsetAfterClearError
 //
-// When a fault occurs, the `EN` bit in the `CTRL` register should be cleared,
-// in to avoid the sequencer restarting without an explicit request to do so.
+// When a fault occurs, the `EN` bit in the `CTRL` register should be ignored
+// until the error is cleared. Upon clearing the error the bit should be unset
+// to avoid the sequencer restarting without an explicit request to do so.
 //
 (* synthesize *)
-module mkCtrlEnClearedOnFault (Empty);
+module mkCtrlEnNotSetAfterClearError (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
 
     mkAutoFSM(seq
-        dynamicAssert(bench.in_a2, "Expected sequencer in A2");
+        assert_true(bench.in_a2, "Expected sequencer in A2");
         bench.power_up();
-        dynamicAssert(bench.sequencer.ctrl.en == 1, "Expected CTRL.EN set");
+        assert_set(bench.sequencer.ctrl.en, "Expected CTRL.EN set");
 
+        // The VID is not acknowledged causing a VID Ack timeout after some
+        // number of ticks.
         await(bench.error_occured);
-        dynamicAssert(bench.sequencer.ctrl.en == 0, "Expected CTRL.EN not set");
-
         await(bench.in_a2);
-        $display("Tofino2 powered down");
+        assert_set(bench.sequencer.ctrl.en, "Expected CTRL.EN set");
+
+        await(bench.tick);
+
+        // Clearing the error forces the sequencer through the Init state. Wait
+        // for this to complete and test the CTRL.EN bit.
+        bench.clear_error();
+        bench.await_sequencer_state(Init);
+        bench.await_sequencer_state(A2);
+        assert_not_set(bench.sequencer.ctrl.en, "Expected CTRL.EN not set");
     endseq);
 
-    mkTestWatchdog(500 + (4 * parameters.tofino_sequencer.por_to_pcie_delay));
+    mkTestWatchdog(power_up_test_timeout(parameters) + power_down_test_timeout);
 endmodule
+
+//
+// mkVddPcieDisabledOnFaultDuringPowerUpTest
+//
+// The voltage regulator used to implement VDDPCIE may restart the rail after a
+// fault condition clears. This regulator has no way for software to analyze the
+// fault state so the sequencer should disable the rail when a fault occurs to
+// avoid it restarting out of sequence after the power down sequence.
+//
+// The intended outcome is an abort of the power up sequence, the error
+// register set to PowerAbort, and the vddpcie EN pin low.
+//
+(* synthesize *)
+module mkVddPcieDisabledOnFaultDuringPowerUpTest (Empty);
+    Parameters parameters = defaultValue;
+    Bench bench <- mkBench(parameters);
+
+    mkAutoFSM(seq
+        assert_true(bench.in_a2, "Expected sequencer in A2");
+        bench.power_up();
+
+        await(bench.vddpcie.state.good);
+
+        // Simulate a fault by forcing a shutdown of VDDPCIE, causing the good
+        // signal to go low. This regulator does not have a seperate fault pin.
+        bench.vddpcie.set_enable_override(tagged Valid False);
+
+        await(bench.error_occured);
+        assert_power_rail_state_eq(bench.sequencer.vddpcie, Aborted, "Expected VDDPCIE aborted");
+
+        await(bench.in_a2);
+        bench.assert_abort(InPowerUp, AwaitVddtPowerGood, PowerAbort, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h00, "Expected no power rails enabled");
+    endseq);
+
+    mkTestWatchdog(power_up_test_timeout(parameters));
+endmodule
+
+//
+// mkVddPcieDisabledOnFaultInA0Test
+//
+// The voltage regulator used to implement VDDPCIE may restart the rail after a
+// fault condition clears. This regulator has no way for software to analyze the
+// fault state so the sequencer should disable the rail when a fault occurs to
+// avoid it restarting out of sequence after the power down sequence.
+//
+// The intended outcome is an abort of the power up sequence, the error
+// register set to PowerAbort, and the VDDPCIE EN pin low.
+//
+(* synthesize *)
+module mkVddPcieDisabledOnFaultInA0Test (Empty);
+    Parameters parameters = defaultValue;
+    Bench bench <- mkBench(parameters);
+
+    mkAutoFSM(seq
+        assert_true(bench.in_a2, "Expected sequencer in A2");
+        bench.power_up();
+        bench.ack_vid();
+
+        await(bench.in_a0);
+        assert_false(bench.error_occured, "Expected no error during power up");
+
+        // Simulate a fault by forcing a shutdown of VDDPCIE, causing the good
+        // signal to go low. This regulator does not have a seperate fault pin.
+        bench.vddpcie.set_enable_override(tagged Valid False);
+
+        await(bench.error_occured);
+        assert_power_rail_state_eq(bench.sequencer.vddpcie, Aborted, "Expected VDDPCIE aborted");
+
+        await(bench.in_a2);
+        bench.assert_abort(A0, AwaitPowerDown, PowerAbort, "Unexpected abort");
+        bench.assert_power_rail_enable_summary_eq('h00, "Expected no power rails enabled");
+    endseq);
+
+    mkTestWatchdog(power_up_test_timeout(parameters) + power_down_test_timeout);
+endmodule
+
+function Action assert_power_rail_state_eq(
+        PowerRailState rail,
+        PowerRail::State expected_state,
+        String msg) =
+    assert_eq(unpack(truncate(rail.state)), expected_state, msg);
 
 endpackage

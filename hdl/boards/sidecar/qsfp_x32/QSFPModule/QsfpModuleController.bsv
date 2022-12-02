@@ -100,7 +100,7 @@ endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Power Rail control for the hot swap controller
-    PowerRail#(4) hot_swap  <- mkPowerRail(parameters.power_good_timeout_ms);
+    PowerRail#(4) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
 
     I2CCore i2c_core    <-
         mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
@@ -153,7 +153,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     (* fire_when_enabled *)
     rule do_ctrl_hsc;
-        hot_swap.set_enabled(enable_ == 1);
+        hot_swap.set_enable(enable_ == 1);
     endrule
 
     // The buffer data is only considered valid for the transaction, so reset
@@ -226,9 +226,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_i2c;
         if (i2c_attempt && present_ != 1) begin
             error   <= NoModule;
-        end else if (i2c_attempt && !hot_swap.enabled()) begin
+        end else if (i2c_attempt && !hot_swap.enabled) begin
             error   <= NoPower;
-        end else if (i2c_attempt && hot_swap.good_timeout()) begin
+        end else if (i2c_attempt && hot_swap.timed_out) begin
             error   <= PowerFault;
         end else if (i2c_attempt) begin
             new_i2c_command.send();
@@ -240,7 +240,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
                 error   <= I2cAddressNack;
             end else if (err == ByteNack) begin
                 error   <= I2cByteNack;
-            end 
+            end
         end
     endrule
 
@@ -294,8 +294,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method lpmode   = lpmode_._write;
     method reset_   = reset__._write;
 
-    method pg           = pack(hot_swap.good);
-    method pg_timeout   = pack(hot_swap.good_timeout);
+    method pg           = pack(hot_swap.enabled);
+    method pg_timeout   = pack(hot_swap.timed_out);
     method present      = present_;
     method irq          = irq_;
 endmodule

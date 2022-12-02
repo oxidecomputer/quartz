@@ -102,7 +102,6 @@ endinterface
 //  1. Drive coma_mode high
 //  2. Enable 1.0V VR (whose PG signal cascades to the EN pin on the 2.5V VR)
 //      - Wait for PG from both 1.0V and 2.5V VRs
-//      - PGs are not asserted before power_good_timeout_ms elapses
 //      - TODO: as it stands the sequencing FSM will just hang here if PG does
 //          not go high for both rails, requiring the clear/set of PHY_CTRL.EN
 //  3. Drive refclk_en high, wait for it to stabilize
@@ -115,8 +114,10 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     staticAssert(parameters.mdc_frequency_hz <= 12_500_000,
         "Maximum MDC frequency is 12.5 MHz");
 
-    PowerRail#(4) v1p0 <- mkPowerRail(parameters.power_good_timeout_ms);
-    PowerRail#(4) v2p5 <- mkPowerRail(parameters.power_good_timeout_ms);
+    PowerRail#(4) v1p0 <-
+        mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout_ms);
+    PowerRail#(4) v2p5 <-
+        mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout_ms);
 
     // Serial Management Interface (see section 3.14 of datasheet)
     MDIO smi <- mkMDIO(MDIO::Parameters{
@@ -159,10 +160,17 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(Bit#(16)) read_data_r  <- mkReg(0);
 
     // VSC8562 power-on sequence
+    // On the physical board, the V2P5 regulator enable is wired to the power
+    // good of the V1P0 regulator. This means that v2p5.set_enable(True) does
+    // not actually do anything physically on the board, but it does modify the
+    // internal state of the v2p5 PowerRail instance so it will start to monitor
+    // the V2P5 power good signal.
     FSM vsc8562_power_on_seq <- mkFSMWithPred(seq
             coma_mode_hw    <= True;
-            v1p0.set_enabled(True);
-            await(v1p0.good && v2p5.good);
+            v1p0.set_enable(True);
+            await(v1p0.enabled);
+            v2p5.set_enable(True);
+            await(v2p5.enabled);
             refclk_en       <= 1;
             await(ms_cntr == fromInteger(parameters.refclk_en_to_stable_ms + 1));
             reset_ms_cntr.send();
@@ -179,7 +187,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             reset_          <= 1;
             refclk_en       <= 0;
             coma_mode_hw    <= False;
-            v1p0.set_enabled(False);
+            v1p0.set_enable(False);
         endseq, phy_ctrl.en == 0);
 
     // This allows hardware to override COMA_MODE control during initial
@@ -235,9 +243,9 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     interface Registers registers;
         interface ReadOnly phy_status   = valueToReadOnly(
             PhyStatus{
-                en_v1p0: pack(v1p0.enabled()),
-                pg_v1p0: pack(v1p0.good()),
-                pg_v2p5: pack(v2p5.good()),
+                en_v1p0: pack(v1p0.pin_state.enable),
+                pg_v1p0: pack(v1p0.pin_state.good),
+                pg_v2p5: pack(v2p5.pin_state.good),
                 coma_mode: coma_mode,
                 refclk_en: refclk_en,
                 reset: ~reset_,

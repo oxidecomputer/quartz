@@ -188,10 +188,14 @@ module mkSpiServer #(
                 fromOffset(tofinoSeqStateOffset): read(tofino.state);
                 fromOffset(tofinoSeqStepOffset): read(tofino.step);
                 fromOffset(tofinoSeqErrorOffset): read(tofino.error);
-                fromOffset(tofinoPowerEnableOffset): read(tofino.power_enable);
-                fromOffset(tofinoPowerGoodOffset): read(tofino.power_good);
-                fromOffset(tofinoPowerFaultOffset): read(tofino.power_fault);
-                fromOffset(tofinoPowerVrhotOffset): read(tofino.power_vrhot);
+                fromOffset(tofinoSeqErrorStateOffset): read(tofino.error_state);
+                fromOffset(tofinoSeqErrorStepOffset): read(tofino.error_step);
+                fromOffset(tofinoPowerVdd18StateOffset): read(tofino.vdd18);
+                fromOffset(tofinoPowerVddcoreStateOffset): read(tofino.vddcore);
+                fromOffset(tofinoPowerVddpcieStateOffset): read(tofino.vddpcie);
+                fromOffset(tofinoPowerVddtStateOffset): read(tofino.vddt);
+                fromOffset(tofinoPowerVdda15StateOffset): read(tofino.vdda15);
+                fromOffset(tofinoPowerVdda18StateOffset): read(tofino.vdda18);
                 fromOffset(tofinoPowerVidOffset): read(tofino.vid);
                 fromOffset(tofinoResetOffset): read(tofino.tofino_reset);
                 fromOffset(tofinoMiscOffset): read(tofino.misc);
