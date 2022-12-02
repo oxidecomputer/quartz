@@ -44,7 +44,10 @@ module mkVSC7448Sequencer #(Integer power_good_timeout) (VSC7448Sequencer);
 
     (* fire_when_enabled *)
     rule do_release_reset (tick);
-        in_reset <= !(v1p0.enabled && v1p2.enabled && v2p5.enabled);
+        in_reset <=
+            !(v1p0.pin_state.good &&
+            v1p2.pin_state.good &&
+            v2p5.pin_state.good);
     endrule
 
     interface VSC7448Pins pins;
@@ -85,7 +88,7 @@ module mkClockGeneratorSequencer #(Integer power_good_timeout) (ClockGeneratorSe
 
     (* fire_when_enabled *)
     rule do_release_reset (tick);
-        in_reset <= !ldo.enabled;
+        in_reset <= !ldo.pin_state.good;
     endrule
 
     interface ClockGeneratorPins pins;
