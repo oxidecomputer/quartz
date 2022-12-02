@@ -62,7 +62,7 @@ instance DefaultValue#(Parameters);
             // does not need to be aggressive. The measured time from EN high to
             // PG high for these power rails is 5-10ms, so a timeout of 25ms
             // seems like a safe limit.
-            power_good_timeout: 24,
+            power_good_timeout: 25,
             power_good_to_por_delay: 10,
             clocks_enable_to_por_delay: 10,
             vid_valid_delay: 15,
