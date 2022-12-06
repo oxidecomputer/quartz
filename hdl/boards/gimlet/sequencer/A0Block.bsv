@@ -179,7 +179,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Reg#(Bool) enable_last <- mkReg(False);
     Reg#(Bool) enable <- mkReg(False);
     Reg#(Bool) ignore_sp <- mkReg(False);
-    Reg#(Bool) downstream_idle <- mkDReg(True);
+    Reg#(Bool) downstream_idle <- mkReg(True);
     Reg#(Bool) upstream_ok <- mkDReg(False);
     Reg#(Bool) regulator_pwrok <- mkReg(False);
     
@@ -239,9 +239,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
                 rails[i].set_enabled(True);
         endaction;
     
-    function Action disable_rails(Vector#(n, PowerRail) rails, A0StateType step) =
+    function Action disable_rails(Vector#(n, PowerRail) rails) =
             action
-                state <= step;
                 for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
                     rails[i].set_enabled(False);
             endaction;
@@ -285,128 +284,155 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     rule do_ps_faults;
         let mapo_fault = foldr(bool_or, False, map(PowerRail::fault, b1_rails)) ||
                          foldr(bool_or, False, map(PowerRail::fault, b2_rails)) ||
-                         (!c_pg && pack(state) >=pack(DELAY_1MS));
+                         (!c_pg && pack(state) >=pack(DELAY_1MS) && pack(state) <=pack(DONE));  // Allow group C to drop in SAFE_DISABLE
 
         aggregate_fault <=  mapo_fault;
     endrule
 
-    FSM a0_power_up_seq <- mkFSMWithPred(seq
-        // Want an initial delay
-        delay(startup_delay, IDLE);
-        // Assert PWR_BTN_L (timing rules = 15ms minimum, per AMD 55441
-        action
-            state <= PBTN;
-            seq_to_sp3_pwr_btn_l <= 0;
-        endaction
-        delay(pbtn_low_ms, WAITSLP);
-        // De-assert PWR_BTN
-        action
+    // Now writing this stupid state machine for the 3rd time
+    // in yet a different format.
+    // 1 rule per state => Long and annoying
+    // mkFSMWithPred  (x3!) => Not flexible enough
+    // Now 1 sm per rule => Still ugly but familiar.  This works becasue all the state is internal
+    // and we don't have implicit conditions holding us off.
+    (* fire_when_enabled, no_implicit_conditions *)
+    rule do_sm;
+        if (!faulted) begin
+            case (state)
+                IDLE: begin
+                    if (enable&& upstream_ok) begin
+                        state <= PBTN;
+                        seq_to_sp3_pwr_btn_l <= 0;
+                        ticks_count_next.wset(fromInteger(pbtn_low_ms + 1));
+                    end else begin
+                        disable_rails(b2_rails);
+                        disable_rails(b1_rails);
+                        seq_to_sp3_pwr_btn_l <= 1;
+                        seq_to_sp3_pwr_good <= 0;
+                        ticks_count_next.wset(fromInteger(0));
+                    end
+                end
+                PBTN: begin  // PBTN is low here for pbtn_low_ms time
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (ticks_count == 0) begin
+                        seq_to_sp3_pwr_btn_l <= 1;
+                        state <= WAITSLP;
+                    end
+                end
+                WAITSLP: begin  // Wait for slp_x_l signals to de-assert from SP3
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (ignore_sp || (sp3_to_seq_slp_s3_l == 1 && sp3_to_seq_slp_s5_l == 1)) begin
+                        state <= GROUPB1_EN;
+                    end
+                end
+                //
+                // GroupB1 enable
+                //
+                GROUPB1_EN: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else begin
+                        enable_rails(b1_rails, GROUPB1_PG);
+                    end
+                end
+                GROUPB1_PG: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (b1_pg) begin
+                        state <= GROUPB2_EN;
+                    end
+                end
+                //
+                // GroupB2 enable
+                //
+                GROUPB2_EN: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else begin
+                        enable_rails(b2_rails, GROUPB2_PG);
+                    end
+                end
+                GROUPB2_PG: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (b2_pg) begin
+                        state <= GROUPC_PG;
+                    end
+                end
+                GROUPC_PG: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (c_pg) begin
+                        ticks_count_next.wset(fromInteger(one_ms_counts + 1));
+                        state <= DELAY_1MS;
+                    end
+                end
+                // Delay 1 ms before asserting PowerGood to AMD
+                DELAY_1MS: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (ticks_count == 0) begin
+                        state <= ASSERT_PG;
+                        seq_to_sp3_pwr_good <= 1;
+                    end
+                end
+                // Assert PowerGood to AMD
+                ASSERT_PG: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else begin
+                        state <= WAIT_PWROK;
+                    end
+                end
+                // Wait for AMD's power OK handshake
+                WAIT_PWROK: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (ignore_sp || (sp3_to_seq_pwrok_v3p3 == 1)) begin
+                        state <= WAIT_RESET_L;
+                    end
+                end
+                WAIT_RESET_L: begin
+                    if (!enable) begin
+                        state <= IDLE;
+                    end else if (ignore_sp || (sp3_to_seq_reset_v3p3_l == 1)) begin
+                        state <= DONE;
+                    end
+                end
+                DONE: begin
+                    if (!enable) begin
+                        state <= SAFE_DISABLE;
+                        seq_to_sp3_pwr_good <= 0;
+                        ticks_count_next.wset(fromInteger(two_ms + 1));
+                    end
+                end
+                SAFE_DISABLE: begin
+                    if (ticks_count == 0 && downstream_idle) begin
+                        disable_rails(b2_rails);
+                        disable_rails(b1_rails);
+                        seq_to_sp3_pwr_btn_l <= 1;
+                        seq_to_sp3_pwr_good <= 0;
+                        state <= IDLE;
+                    end
+                end
+            endcase
+        end else if (faulted) begin  // Faulted case
+            disable_rails(b2_rails);
+            disable_rails(b1_rails);
             seq_to_sp3_pwr_btn_l <= 1;
-        endaction
-        // Wait for slp_x_l signals to de-assert from SP3
-        await(ignore_sp || (sp3_to_seq_slp_s3_l == 1 && sp3_to_seq_slp_s5_l == 1));
-        //
-        // GroupB1 enable
-        //
-        enable_rails(b1_rails, GROUPB1_EN);
-        // Wait for groupB1 PGs
-        action
-            state <= GROUPB1_PG;
-        endaction
-        await(b1_pg);
-        //
-        // GroupB2 enable
-        //
-        enable_rails(b2_rails, GROUPB2_EN);
-        action
-            state <= GROUPB2_PG;
-        endaction
-        await(b2_pg);
-        //
-        // GroupC PGs (SMBus enabled so we just wait)
-        //
-        action
-            state <= GROUPC_PG;
-        endaction
-        await(c_pg);
-        // Delay 1 ms before asserting PG
-        delay(one_ms_counts, DELAY_1MS);
-        // Assert PowerGood to AMD
-        action
-            state <= ASSERT_PG;
-            seq_to_sp3_pwr_good <= 1;
-        endaction
-        action
-            state <= WAIT_PWROK;
-        endaction
-        // Wait for AMD's power OK handshake
-        await(ignore_sp || (sp3_to_seq_pwrok_v3p3 == 1));
-        // Wait for AMD's RESET_L de-assert
-        action
-            state <= WAIT_RESET_L;
-        endaction
-        await(ignore_sp || (sp3_to_seq_reset_v3p3_l == 1));
-        // We're done
-        action
-            state <= DONE;
-        endaction
-    endseq, enable && !faulted && !abort && upstream_ok);
-
-    //
-    // This is normal power down sequence where we take away
-    // PWR_GOOD and delay before taking away the rails from
-    // the AMD
-    //
-    FSM a0_normal_power_down_seq <- mkFSMWithPred(seq
-        // TODO: can we skip this if we're already off?
-        action
             seq_to_sp3_pwr_good <= 0;
-        endaction
-        // Wait a bit
-        delay(ten_ms, SAFE_DISABLE);
-        // disable rails
-        disable_rails(b2_rails, SAFE_DISABLE);
-        disable_rails(b1_rails, SAFE_DISABLE);
-        action
-            seq_to_sp3_pwr_btn_l <= 1;           
             state <= IDLE;
-        endaction
-    endseq, !enable && !faulted && upstream_ok);
+            ticks_count_next.wset(fromInteger(0));
+        end
 
-    //
-    // This is the faulted power down sequence with no
-    // delays, just immediate power off.
-    //
-    FSM a0_fault_power_down_seq <- mkFSMWithPred(seq
-        action
-            seq_to_sp3_pwr_good <= 0;
-        endaction
-        // disable rails
-        disable_rails(b2_rails, SAFE_DISABLE);
-        disable_rails(b1_rails, SAFE_DISABLE);
-        action
-            seq_to_sp3_pwr_btn_l <= 1;           
-            state <= IDLE;
-        endaction
-    endseq, faulted || !upstream_ok);
+
+    endrule
 
     (* fire_when_enabled *)
     rule do_enable;
         enable_last <= enable;
-        if (state != IDLE && faulted) begin
-            // In a fault case, we're going to immediately power off
-            // regardless of the rest of the system state.
-            a0_fault_power_down_seq.start();
-        end else if (state == IDLE && enable && upstream_ok) begin
-            // When we're enabled, IDLE and the previous power-stage is ok
-            // we can start the normal power-up sequence
-            a0_power_up_seq.start();
-        end else if (!enable && state != IDLE && downstream_idle) begin
-            // Even if we clear the enable, we can't start the
-            // power-down until the down-stream logic has finished
-            // powering off.
-            a0_fault_power_down_seq.start();
-        end
     endrule
 
     (* fire_when_enabled *)
@@ -540,6 +566,7 @@ interface Bench;
     interface PowerRailModel vtt_gh;
 
     method A0StateType dut_state();
+    method Bool mapo();
     method Action sp3_disable(Bool value);
     method Action sp3_thermtrip();
     method Action pmbus_on();
@@ -548,6 +575,8 @@ interface Bench;
     method Action power_down();
     method Action downstream_busy();
     method Action downstream_idle();
+    method Action make_upstream_ok();
+    method Action make_upstream_not_ok();
 
 endinterface
 
@@ -582,10 +611,8 @@ module mkBench(Bench);
    
     Reg#(Bool) ignore_sp <- mkReg(False);
     Reg#(Bool) upstream_ok <- mkReg(True);
-    Reg#(Bool) downstream_idle_ <- mkReg(True);
     Reg#(Bool) pmbus_enabled <- mkReg(False);
     mkConnection(dut.a1_ok, upstream_ok);
-    mkConnection(downstream_idle_, dut.hp_idle);
     mkConnection(dut.reg_if.ignore_sp, ignore_sp);
 
     Reg#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkReg(0);
@@ -607,6 +634,9 @@ module mkBench(Bench);
     method A0StateType dut_state();
         return dut.reg_if.state;
     endmethod
+    method Bool mapo();
+        return dut.reg_if.mapo();
+    endmethod
     method Action pmbus_on();
         pwr_cont1_sp3_pg0 <= 1;
         pwr_cont2_sp3_pg0 <= 1;
@@ -621,11 +651,17 @@ module mkBench(Bench);
     method Action power_down();
         dut.reg_if.a0_en(False);
     endmethod
+    method Action make_upstream_ok();
+        upstream_ok <= True;
+    endmethod
+    method Action make_upstream_not_ok();
+        upstream_ok <= False;
+    endmethod
     method Action downstream_busy();
-        downstream_idle_ <= False;
+        dut.hp_idle(False);
     endmethod
     method Action downstream_idle();
-        downstream_idle_ <= True;
+        dut.hp_idle(True);
     endmethod
     method Action sp3_disable(Bool value);
         ignore_sp <= value;
@@ -792,6 +828,67 @@ module mkA0PowerUpTest(Empty);
 endmodule
 
 (* synthesize *)
+module mkA0PowerErrorsTest(Empty);
+    Bench bench <- mkBench();
+    
+    mkAutoFSM(seq
+        // Failed power up due to upstream not ok
+        bench.make_upstream_not_ok();
+        action
+            $display("Don't Power Up, upstream unhappy");
+        endaction
+        bench.power_up();
+        delay(300);
+        dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+
+        // Normal power up
+        bench.make_upstream_ok();
+        action
+            $display("Power Up, upstream happy");
+        endaction
+        bench.power_up();
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+
+        // Delayed power-down due to down-stream busy
+        bench.downstream_busy();
+        delay(10);
+        bench.power_down();
+        bench.pmbus_off();
+        delay(2000);
+        dynamicAssert(bench.dut_state == SAFE_DISABLE, "State was not SAFE_DISABLE");
+        bench.downstream_idle();
+        delay(10);
+        dynamicAssert(bench.dut_state == IDLE, "State was not IDLE");
+        delay(300);
+
+        // Normal power up
+        action
+            $display("Power Up #2, upstream happy");
+        endaction
+        bench.power_up();
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+            $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+        
+
+    endseq);
+endmodule
+
+(* synthesize *)
 module mkA0FakeSP3Test(Empty);
     Bench bench <- mkBench();
     
@@ -839,9 +936,11 @@ module mkA0MAPOTest(Empty);
         bench.v3p3_sys.force_disable(True);
         delay(100);
         await(bench.dut_state == IDLE);
+        dynamicAssert(bench.mapo(), "Did not set MAPO");
         delay(300);
         // Un-fault power rail
         bench.v3p3_sys.force_disable(False);
+        delay(10);
         // Try to power up again without clearing enable (which clears faults).
         bench.power_up();
         delay(300);
@@ -859,6 +958,38 @@ module mkA0MAPOTest(Empty);
         await(bench.dut_state == DONE);
     endseq);
 endmodule
+
+(* synthesize *)
+module mkA0DebugBrokenTest(Empty);
+    Bench bench <- mkBench();
+    
+    mkAutoFSM(seq
+
+        action
+            $display("Power Up");
+        endaction
+        bench.power_up();
+        action
+            $display("Waiting groupC");
+        endaction
+        await(bench.dut_state == GROUPC_PG);
+        bench.pmbus_on();
+        action
+        $display("Waiting Done");
+        endaction
+        await(bench.dut_state == DONE);
+        delay(300);
+        // bench.pmbus_off();
+        // delay(5);
+        bench.power_down();
+        action
+            $display("Waiting IDLE");
+        endaction
+        // await(bench.dut_state == IDLE);
+        delay(1200);
+    endseq);
+endmodule
+
 
 (* synthesize *)
 module mkA0ThermtripTest(Empty);

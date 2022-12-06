@@ -116,7 +116,9 @@ bluesim_tests('A0Tests',
         'mkA0PowerUpTest',
         'mkA0FakeSP3Test',
         'mkA0MAPOTest',
-        'mkA0ThermtripTest'
+        'mkA0ThermtripTest',
+        'mkA0DebugBrokenTest',
+        'mkA0PowerErrorsTest'
     ],
     deps = [
         ':A0Block'
@@ -126,8 +128,8 @@ bluesim_tests('TopTests',
     env = 'cobalt//bluesim_default',
     suite = "GimletSeqTop.bsv",
     modules = [
-        'mkGimletTestTop',
-        'mkGimletThermtripTop',
+        'mkGimletTopTest',
+        'mkGimletThermtripTopTest',
     ],
     deps = [
         ':GimletSeqTop',

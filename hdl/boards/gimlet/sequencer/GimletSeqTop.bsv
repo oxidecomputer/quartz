@@ -316,7 +316,7 @@ module mkBench(Bench);
 endmodule
 
 (* synthesize *)
-module mkGimletTestTop(Empty);
+module mkGimletTopTest(Empty);
     
     Bench bench <- mkBench();
 
@@ -358,7 +358,7 @@ module mkGimletTestTop(Empty);
 endmodule
 
 (* synthesize *)
-module mkGimletThermtripTop(Empty);
+module mkGimletThermtripTopTest(Empty);
     
     Bench bench <- mkBench();
 
