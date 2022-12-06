@@ -14,7 +14,7 @@ import FIFO::*;
 import GetPut::*;
 import Vector::*;
 
-import CommonInterfaces::*;
+import Bidirection::*;
 import MDIO::*;
 
 // The model will emit these ModelEvents over the course of a transaction so a
@@ -47,11 +47,11 @@ typedef enum {
 
 interface MDIOPeripheralPins;
     method Action mdc (Bit#(1) mdc);
-    interface Tristate mdio;
+    interface Bidirection#(Bit#(1)) mdio;
 endinterface
 
 interface MDIOPeripheralModel;
-    method Action mdio_ctrl_out_en(Bit#(1) mdio_ctrl_out_en);
+    method Action mdio_ctrl_out_en(Bool mdio_ctrl_out_en);
     interface MDIOPeripheralPins pins;
     interface Get#(ModelEvent) events;
 endinterface
@@ -67,7 +67,7 @@ module mkMDIOPeripheralModel #(Bit#(5) phy_address) (MDIOPeripheralModel);
     Reg#(Bit#(1)) mdio_out      <- mkReg(1);
     Reg#(Bit#(1)) mdio_out_en   <- mkReg(0);
     Reg#(Bit#(1)) mdio_in       <- mkReg(1);
-    Wire#(Bit#(1)) ctrl_out_en  <- mkWire();
+    Wire#(Bool) ctrl_out_en  <- mkWire();
 
     Reg#(Bit#(1)) mdc_prev      <- mkReg(1);
 
@@ -243,11 +243,11 @@ module mkMDIOPeripheralModel #(Bit#(5) phy_address) (MDIOPeripheralModel);
     interface MDIOPeripheralPins pins;
         method mdc  = mdc._write;
 
-        interface Tristate mdio;
+        interface Bidirection mdio;
             method Bit#(1) out();
-                return mdio_out & ~ctrl_out_en;
+                return mdio_out & pack(!ctrl_out_en);
             endmethod
-            method out_en   = mdio_out_en;
+            method out_en   = unpack(mdio_out_en);
             method in       = mdio_in._write;
         endinterface
     endinterface
