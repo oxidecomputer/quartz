@@ -507,6 +507,67 @@ module mkResetFromA0Test (Empty);
     endseq);
 endmodule
 
+// mkA0ToA2Test
+//
+// This test verifies that we will transition from A0 -> A2 if the target state
+// should change.
+(* synthesize *)
+module mkA0ToA2Test (Empty);
+Bench bench <- mkBench();
+    Reg#(UInt#(11)) delay_counter <- mkReg(0);
+
+    mkAutoFSM(seq
+        delay(5);
+        a4_to_a3(bench);
+        a3_to_a2(bench, A0, delay_counter, True);
+        a2_to_a0(bench, delay_counter);
+
+        bench.dut_registers.port_control <= PortControl {
+            power_state: pack(A2),
+            reset: 0,
+            clear_fault: 0};
+        while (delay_counter <= lpmode_on_delay_ms) seq
+            await(bench.tick_1ms);
+            delay_counter <= delay_counter + 1;
+        endseq
+        delay(input_to_state_change_prop_dly);
+        a2_assertions(bench);
+    endseq);
+endmodule
+
+// mkA0ToA3Test
+//
+// This test verifies that we will transition from A0 -> A2 -> A3 if the target
+// state should change.
+(* synthesize *)
+module mkA0ToA3Test (Empty);
+Bench bench <- mkBench();
+    Reg#(UInt#(11)) delay_counter <- mkReg(0);
+
+    mkAutoFSM(seq
+        delay(5);
+        a4_to_a3(bench);
+        a3_to_a2(bench, A0, delay_counter, True);
+        a2_to_a0(bench, delay_counter);
+
+        bench.dut_registers.port_control <= PortControl {
+            power_state: pack(A3),
+            reset: 0,
+            clear_fault: 0};
+        while (delay_counter <= lpmode_on_delay_ms) seq
+            await(bench.tick_1ms);
+            delay_counter <= delay_counter + 1;
+        endseq
+        delay(1);
+        a2_assertions(bench);
+        // when the controller disables power, remove power good
+        await(!bench.dut_state.enable);
+        bench.set_hsc_pg(False);
+        delay(input_to_state_change_prop_dly);
+        a3_assertions(bench);
+    endseq);
+endmodule
+
 // mkModuleRemovalTest
 //
 // This test verifies that the removal of a module will result in the controller

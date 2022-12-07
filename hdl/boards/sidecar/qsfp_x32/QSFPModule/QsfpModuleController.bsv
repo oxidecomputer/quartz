@@ -371,6 +371,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
         if (reset_requested) begin
             sequence_state  <= AwaitReset;
+        end else if (target_power_state == A3) begin
+            sequence_state  <= ModulePresent;
         end else if (target_power_state == A0) begin
             sequence_state  <= AwaitLpModeOff;
         end
@@ -426,7 +428,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_high_power_mode (sequence_state == HighPowerMode && (present_ && !isValid(fault)));
         current_power_state <= A0;
 
-        if (reset_requested) begin
+        if (reset_requested || target_power_state != A0) begin
             sequence_state <= AwaitLpModeOn;
         end
     endrule
