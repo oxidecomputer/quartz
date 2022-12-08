@@ -45,7 +45,7 @@ instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
         mdc_frequency_hz: 3_000_000,
-        power_good_timeout_ms: 10,
+        power_good_timeout_ms: 0, // TODO: determine what this should be
         refclk_en_to_stable_ms: 5,
         reset_release_to_ready_ms: 120
     };
@@ -88,7 +88,7 @@ endinterface
 interface VSC8562;
     interface Pins pins;
     interface Registers registers;
-    interface PulseWire tick_1ms;
+    method Action tick_1ms(Bool val);
 endinterface
 
 // mkVSC8562
@@ -114,9 +114,9 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     staticAssert(parameters.mdc_frequency_hz <= 12_500_000,
         "Maximum MDC frequency is 12.5 MHz");
 
-    PowerRail#(4) v1p0 <-
+    PowerRail#(5) v1p0 <-
         mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout_ms);
-    PowerRail#(4) v2p5 <-
+    PowerRail#(5) v2p5 <-
         mkPowerRailLeaveEnabledOnAbort(parameters.power_good_timeout_ms);
 
     // Serial Management Interface (see section 3.14 of datasheet)
@@ -151,7 +151,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     // external to this module, there is not really a way to tell how long until
     // the next 1 ms pulse occurs (could be next clock cycle, could be 1 ms),
     // but given how nothing here is that fine grained this is OK
-    PulseWire tick_1ms_         <- mkPulseWire();
+    Wire#(Bool) tick_1ms_       <- mkWire();
     Reg#(UInt#(7)) ms_cntr      <- mkReg(0);
     PulseWire reset_ms_cntr     <- mkPulseWire();
 
@@ -159,18 +159,26 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(Bool) smi_busy         <- mkReg(False);
     Reg#(Bit#(16)) read_data_r  <- mkReg(0);
 
+    // The hot swaps expected a tick to correspond with its timeout
+    (* fire_when_enabled *)
+    rule do_hot_swap_tick (tick_1ms_);
+        v1p0.send();
+        v2p5.send();
+    endrule
+
     // VSC8562 power-on sequence
     // On the physical board, the V2P5 regulator enable is wired to the power
     // good of the V1P0 regulator. This means that v2p5.set_enable(True) does
     // not actually do anything physically on the board, but it does modify the
     // internal state of the v2p5 PowerRail instance so it will start to monitor
     // the V2P5 power good signal.
+    // TODO: verify timeout duration and await on the PowerRails' enabled method
     FSM vsc8562_power_on_seq <- mkFSMWithPred(seq
             coma_mode_hw    <= True;
             v1p0.set_enable(True);
-            await(v1p0.enabled);
+            await(v1p0.pin_state.enable && v1p0.pin_state.good);
             v2p5.set_enable(True);
-            await(v2p5.enabled);
+            await(v2p5.pin_state.enable && v2p5.pin_state.good);
             refclk_en       <= 1;
             await(ms_cntr == fromInteger(parameters.refclk_en_to_stable_ms + 1));
             reset_ms_cntr.send();
@@ -277,7 +285,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
         method mdint        = mdint._write;
     endinterface
 
-    interface PulseWire tick_1ms = tick_1ms_;
+    method tick_1ms = tick_1ms_._write;
 endmodule
 
 endpackage: VSC8562

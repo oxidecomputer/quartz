@@ -6,6 +6,7 @@
 
 package QsfpModulesTop;
 
+// BSV
 import BRAM::*;
 import ConfigReg::*;
 import Connectable::*;
@@ -14,9 +15,13 @@ import DReg::*;
 import GetPut::*;
 import Vector::*;
 
+// Quartz
 import Bidirection::*;
 import CommonFunctions::*;
 import I2CCore::*;
+
+// Cobalt
+import Strobe::*;
 
 import QsfpModuleController::*;
 import QsfpX32ControllerRegsPkg::*;
@@ -45,20 +50,23 @@ interface Registers;
     interface ReadOnly#(I2cBusyL) i2c_busy_l;
     interface ReadOnly#(I2cBusyH) i2c_busy_h;
     interface Vector#(16, ReadOnly#(PortStatus)) mod_statuses;
-    interface Reg#(CtrlEnL) mod_en_l;
-    interface Reg#(CtrlEnH) mod_en_h;
-    interface Reg#(CtrlResetL) mod_reset_l;
-    interface Reg#(CtrlResetH) mod_reset_h;
-    interface Reg#(CtrlLpmodeL) mod_lpmode_l;
-    interface Reg#(CtrlLpmodeH) mod_lpmode_h;
+    interface Vector#(16, Reg#(PortControl)) mod_controls;
+    interface ReadOnly#(CtrlEnL) mod_en_l;
+    interface ReadOnly#(CtrlEnH) mod_en_h;
+    interface ReadOnly#(CtrlResetL) mod_reset_l;
+    interface ReadOnly#(CtrlResetH) mod_reset_h;
+    interface ReadOnly#(CtrlLpmodeL) mod_lpmode_l;
+    interface ReadOnly#(CtrlLpmodeH) mod_lpmode_h;
     interface ReadOnly#(StatusPgL) mod_pg_l;
     interface ReadOnly#(StatusPgH) mod_pg_h;
-    interface ReadOnly#(StatusPgTimeoutL) mod_pg_timeout_l;
-    interface ReadOnly#(StatusPgTimeoutH) mod_pg_timeout_h;
     interface ReadOnly#(StatusPresentL) mod_present_l;
     interface ReadOnly#(StatusPresentH) mod_present_h;
     interface ReadOnly#(StatusIrqL) mod_irq_l;
     interface ReadOnly#(StatusIrqH) mod_irq_h;
+    interface ReadOnly#(StatusPgTimeoutL) mod_pg_timeout_l;
+    interface ReadOnly#(StatusPgTimeoutH) mod_pg_timeout_h;
+    interface ReadOnly#(StatusPgLostL) mod_pg_lost_l;
+    interface ReadOnly#(StatusPgLostH) mod_pg_lost_h;
     interface Reg#(Bit#(8)) mod_write_addr;
     interface Reg#(Bit#(8)) mod_write_data;
     interface Vector#(16, Wire#(Bit#(8))) mod_read_addrs;
@@ -68,12 +76,19 @@ endinterface
 interface QsfpModulesTop;
     interface Registers registers;
     interface Vector#(16, QsfpModuleController::Pins) module_pins;
+    method Action tick_1ms(Bool val);
 endinterface
 
 module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
 
+    // Vector of all the ports this FPGA will control
     Vector#(16, QsfpModuleController) qsfp_ports <-
         replicateM(mkQsfpModuleController(defaultValue));
+
+    // The modules want a 1 microsecond pulse for reset timing
+    Strobe#(6) tick_1mhz <-
+        mkLimitStrobe(1, parameters.system_frequency_hz / 1_000_000, 0);
+    mkFreeRunningStrobe(tick_1mhz);
 
     Reg#(I2cBusAddr) i2c_bus_addr   <- mkReg(defaultValue);
     Reg#(I2cRegAddr) i2c_reg_addr   <- mkReg(defaultValue);
@@ -81,43 +96,48 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Reg#(I2cBcastL) i2c_bcast_l     <- mkReg(defaultValue);
     Reg#(I2cBcastH) i2c_bcast_h     <- mkReg(defaultValue);
     Reg#(I2cCtrl) i2c_ctrl          <- mkDReg(defaultValue);
-    Reg#(CtrlEnL) mod_en_l          <- mkReg(defaultValue);
-    Reg#(CtrlEnH) mod_en_h          <- mkReg(defaultValue);
-    Reg#(CtrlResetL) mod_reset_l    <- mkReg(defaultValue);
-    Reg#(CtrlResetH) mod_reset_h    <- mkReg(defaultValue);
-    Reg#(CtrlLpmodeL) mod_lpmode_l  <- mkReg(defaultValue);
-    Reg#(CtrlLpmodeH) mod_lpmode_h  <- mkReg(defaultValue);
 
     // opting to register these since there will be a lot of fan out
-    ConfigReg#(Bit#(8)) mod_write_addr    <- mkConfigReg(0);
-    ConfigReg#(Bit#(8)) mod_write_data    <- mkConfigReg(0);
-    Reg#(Bool) issue_write          <- mkDReg(False);
+    ConfigReg#(Bit#(8)) mod_write_addr  <- mkConfigReg(0);
+    ConfigReg#(Bit#(8)) mod_write_data  <- mkConfigReg(0);
+    Reg#(Bool) issue_write              <- mkDReg(False);
 
     Vector#(16, Bool) i2c_broadcast_enabled = unpack({unpack(pack(i2c_bcast_h)), unpack(pack(i2c_bcast_l))});
 
     // Vectorize all the low speed module signals
-    Vector#(16, Bit#(1)) enable_bits = unpack({pack(mod_en_h), pack(mod_en_l)});
-    Vector#(16, Bit#(1)) reset_bits = unpack({pack(mod_reset_h), pack(mod_reset_l)});
-    Vector#(16, Bit#(1)) lpmode_bits = unpack({pack(mod_lpmode_h), pack(mod_lpmode_l)});
+    Vector#(16, Bit#(1)) enable_bits;
+    Vector#(16, Bit#(1)) reset_bits;
+    Vector#(16, Bit#(1)) lpmode_bits;
     Vector#(16, Bit#(1)) pg_bits;
-    Vector#(16, Bit#(1)) pg_timeout_bits;
     Vector#(16, Bit#(1)) present_bits;
     Vector#(16, Bit#(1)) irq_bits;
+    Vector#(16, Bit#(1)) pg_timeout_bits;
+    Vector#(16, Bit#(1)) pg_lost_bits;
 
     // Vectorize I2C status signals
     Vector#(16, Bit#(1)) i2c_busys;
 
-    for (int i = 0; i < 16; i = i + 1) begin
-        // map registers into modules
-        mkConnection(qsfp_ports[i].enable, enable_bits[i]);
-        mkConnection(qsfp_ports[i].reset_, reset_bits[i]);
-        mkConnection(qsfp_ports[i].lpmode, lpmode_bits[i]);
+    Wire#(Bool) tick_1ms_       <- mkWire();
 
-        // map modules into registers
-        pg_bits[i]          = qsfp_ports[i].pg;
-        pg_timeout_bits[i]  = qsfp_ports[i].pg_timeout;
-        present_bits[i]     = qsfp_ports[i].present;
-        irq_bits[i]         = qsfp_ports[i].irq;
+    // map modules into registers
+    for (int i = 0; i < 16; i = i + 1) begin
+        // pin state
+        enable_bits[i]      = pack(qsfp_ports[i].pin_state.enable);
+        reset_bits[i]       = pack(qsfp_ports[i].pin_state.reset_);
+        lpmode_bits[i]      = pack(qsfp_ports[i].pin_state.lpmode);
+        pg_bits[i]          = pack(qsfp_ports[i].pin_state.pg);
+        present_bits[i]     = pack(qsfp_ports[i].pin_state.present);
+        irq_bits[i]         = pack(qsfp_ports[i].pin_state.irq);
+
+        // fault state
+        pg_timeout_bits[i]  = pack(qsfp_ports[i].pg_timeout);
+        pg_lost_bits[i]     = pack(qsfp_ports[i].pg_lost);
+
+        // tick fan out
+        mkConnection(qsfp_ports[i].tick_1ms, tick_1ms_);
+        mkConnection(qsfp_ports[i].tick_1us, tick_1mhz._read);
+
+        // other state
         i2c_busys[i]        = qsfp_ports[i].registers.port_status.busy;
     end
 
@@ -157,24 +177,28 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         interface Reg i2c_reg_addr = i2c_reg_addr;
         interface Reg i2c_num_bytes = i2c_num_bytes;
         interface Reg i2c_bcast_l = i2c_bcast_l;
-        interface Reg i2c_bcast_h = i2c_bcast_h;interface Reg i2c_ctrl = i2c_ctrl;
+        interface Reg i2c_bcast_h = i2c_bcast_h;
+        interface Reg i2c_ctrl = i2c_ctrl;
         interface ReadOnly i2c_busy_l = valueToReadOnly(unpack(pack(i2c_busys)[7:0]));
         interface ReadOnly i2c_busy_h = valueToReadOnly(unpack(pack(i2c_busys)[15:8]));
         interface mod_statuses = map(QsfpModuleController::get_status, qsfp_ports);
-        interface Reg mod_en_l = mod_en_l;
-        interface Reg mod_en_h = mod_en_h;
-        interface Reg mod_reset_l = mod_reset_l;
-        interface Reg mod_reset_h = mod_reset_h;
-        interface Reg mod_lpmode_l = mod_lpmode_l;
-        interface Reg mod_lpmode_h = mod_lpmode_h;
+        interface mod_controls = map(QsfpModuleController::get_control, qsfp_ports);
+        interface ReadOnly mod_en_l = valueToReadOnly(unpack(pack(enable_bits)[7:0]));
+        interface ReadOnly mod_en_h = valueToReadOnly(unpack(pack(enable_bits)[15:8]));
+        interface ReadOnly mod_reset_l = valueToReadOnly(unpack(pack(reset_bits)[7:0]));
+        interface ReadOnly mod_reset_h = valueToReadOnly(unpack(pack(reset_bits)[15:8]));
+        interface ReadOnly mod_lpmode_l = valueToReadOnly(unpack(pack(lpmode_bits)[7:0]));
+        interface ReadOnly mod_lpmode_h = valueToReadOnly(unpack(pack(lpmode_bits)[15:8]));
         interface ReadOnly mod_pg_l = valueToReadOnly(unpack(pack(pg_bits)[7:0]));
         interface ReadOnly mod_pg_h = valueToReadOnly(unpack(pack(pg_bits)[15:8]));
-        interface ReadOnly mod_pg_timeout_l = valueToReadOnly(unpack(pack(pg_timeout_bits)[7:0]));
-        interface ReadOnly mod_pg_timeout_h = valueToReadOnly(unpack(pack(pg_timeout_bits)[15:8]));
         interface ReadOnly mod_present_l = valueToReadOnly(unpack(pack(present_bits)[7:0]));
         interface ReadOnly mod_present_h = valueToReadOnly(unpack(pack(present_bits)[15:8]));
         interface ReadOnly mod_irq_l = valueToReadOnly(unpack(pack(irq_bits)[7:0]));
         interface ReadOnly mod_irq_h = valueToReadOnly(unpack(pack(irq_bits)[15:8]));
+        interface ReadOnly mod_pg_timeout_l = valueToReadOnly(unpack(pack(pg_timeout_bits)[7:0]));
+        interface ReadOnly mod_pg_timeout_h = valueToReadOnly(unpack(pack(pg_timeout_bits)[15:8]));
+        interface ReadOnly mod_pg_lost_l = valueToReadOnly(unpack(pack(pg_lost_bits)[7:0]));
+        interface ReadOnly mod_pg_lost_h = valueToReadOnly(unpack(pack(pg_lost_bits)[15:8]));
         interface mod_read_addrs = map(QsfpModuleController::get_read_addr, qsfp_ports);
         interface mod_read_buffers = map(QsfpModuleController::get_read_data, qsfp_ports);
 
@@ -191,6 +215,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     endinterface
 
     interface module_pins = map(QsfpModuleController::get_pins, qsfp_ports);
+    method tick_1ms = tick_1ms_._write;
 endmodule
 
 endpackage: QsfpModulesTop

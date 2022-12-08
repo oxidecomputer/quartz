@@ -66,7 +66,7 @@ interface PowerRail #(numeric type timeout_sz);
 
     // Periodic tick used to determine if the power good timed out. This is a
     // no-op if the power rail is not enabled or the power good signal is
-    // received, and thus can be driven contineously.
+    // received, and thus can be driven continuously.
     method Action send();
 
     // State query methods. This is syntactic sugar over the `state` method.

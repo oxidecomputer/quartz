@@ -107,6 +107,9 @@ addrmap qsfp_modules_top {
     reg port_status {
         default sw = r;
         field {
+            desc =  "0x0 = A4, 0x1 = A3, 0x2 = A2, 0x3 = A0, 0x4 = Fault";
+        } POWER_STATE[7:5] = 0;
+        field {
             desc = "'1' if the bus is busy.";
         } BUSY[4:4] = 0;
         field {
@@ -131,12 +134,42 @@ addrmap qsfp_modules_top {
     port_status STATUS_PORT14;
     port_status STATUS_PORT15;
 
+    reg port_control {
+        field {
+            desc = "0x0 = A4, 0x1 = A3, 0x2 = A2, 0x3 = A0";
+        } POWER_STATE[7:5] = 0x1;
+        field {
+            desc = "Setting this bit will reset the port. The module will make sure it is in A2 before doing the reset. This bit auto-clears.";
+        } RESET[1:1] = 0;
+        field {
+            desc ="Setting this bit will clear a fault state. This bit auto-clears.";
+        } CLEAR_FAULT[0:0] = 0;
+    };
+
+    port_control CONTROL_PORT0;
+    port_control CONTROL_PORT1;
+    port_control CONTROL_PORT2;
+    port_control CONTROL_PORT3;
+    port_control CONTROL_PORT4;
+    port_control CONTROL_PORT5;
+    port_control CONTROL_PORT6;
+    port_control CONTROL_PORT7;
+    port_control CONTROL_PORT8;
+    port_control CONTROL_PORT9;
+    port_control CONTROL_PORT10;
+    port_control CONTROL_PORT11;
+    port_control CONTROL_PORT12;
+    port_control CONTROL_PORT13;
+    port_control CONTROL_PORT14;
+    port_control CONTROL_PORT15;
+
     //
     // QSFP Module Control
     //
 
     reg {
-        name = "Ports 8 -> 15 Enable Control";
+        name = "Ports 8 -> 15 HSC Enable Control";
+        default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
         field {} PORT13[5:5] = 0;
@@ -148,7 +181,8 @@ addrmap qsfp_modules_top {
     } CTRL_EN_H;
 
     reg {
-        name = "Ports 0 -> 7 Enable Control";
+        name = "Ports 0 -> 7 HSC Enable Control";
+        default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
         field {} PORT5[5:5] = 0;
@@ -160,7 +194,8 @@ addrmap qsfp_modules_top {
     } CTRL_EN_L;
 
     reg {
-        name = "Ports 8 -> 15 Reset Control (logic inverted at the pin)";
+        name = "Ports 8 -> 15 ResetL Control (logic inverted at the pin)";
+        default sw = r;
         field {} PORT15[7:7] = 1;
         field {} PORT14[6:6] = 1;
         field {} PORT13[5:5] = 1;
@@ -172,7 +207,8 @@ addrmap qsfp_modules_top {
     } CTRL_RESET_H;
 
     reg {
-        name = "Ports 0 -> 7 Reset Control (logic inverted at the pin)";
+        name = "Ports 0 -> 7 ResetL Control (logic inverted at the pin)";
+        default sw = r;
         field {} PORT7[7:7] = 1;
         field {} PORT6[6:6] = 1;
         field {} PORT5[5:5] = 1;
@@ -185,6 +221,7 @@ addrmap qsfp_modules_top {
 
     reg {
         name = "Ports 8 -> 15 LPMode/TxDis Control";
+        default sw = r;
         field {} PORT15[7:7] = 1;
         field {} PORT14[6:6] = 1;
         field {} PORT13[5:5] = 1;
@@ -197,6 +234,7 @@ addrmap qsfp_modules_top {
 
     reg {
         name = "Ports 0 -> 7 LPMode/TxDis Control";
+        default sw = r;
         field {} PORT7[7:7] = 1;
         field {} PORT6[6:6] = 1;
         field {} PORT5[5:5] = 1;
@@ -236,32 +274,6 @@ addrmap qsfp_modules_top {
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
     } STATUS_PG_L;
-
-    reg {
-        name = "Ports 8 -> 15 HSC power good timeout";
-        default sw = r;
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } STATUS_PG_TIMEOUT_H;
-
-    reg {
-        name = "Ports 0 -> 7 HSC power good timeout";
-        default sw = r;
-        field {} PORT7[7:7] = 0;
-        field {} PORT6[6:6] = 0;
-        field {} PORT5[5:5] = 0;
-        field {} PORT4[4:4] = 0;
-        field {} PORT3[3:3] = 0;
-        field {} PORT2[2:2] = 0;
-        field {} PORT1[1:1] = 0;
-        field {} PORT0[0:0] = 0;
-    } STATUS_PG_TIMEOUT_L;
 
     reg {
         name = "Ports 8 -> 15 ModPrsL signal for the module (logic inverted at the pin)";
@@ -314,6 +326,58 @@ addrmap qsfp_modules_top {
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
     } STATUS_IRQ_L;
+
+    reg {
+        name = "Ports 8 -> 15 HSC power good timeout";
+        default sw = r;
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } STATUS_PG_TIMEOUT_H;
+
+    reg {
+        name = "Ports 0 -> 7 HSC power good timeout";
+        default sw = r;
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } STATUS_PG_TIMEOUT_L;
+
+        reg {
+        name = "Ports 8 -> 15 HSC power good lost after successful enable";
+        default sw = r;
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } STATUS_PG_LOST_H;
+
+    reg {
+        name = "Ports 0 -> 7 HSC power good lost after successful enable";
+        default sw = r;
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } STATUS_PG_LOST_L;
 
     //
     // I2C Write and Read Buffers
