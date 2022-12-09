@@ -31,7 +31,7 @@ export get_control;
 export init_delay_ms;
 export lpmode_on_delay_ms;
 export lpmode_off_delay_ms;
-export reset_delay_us;
+export resetldelay_us;
 
 // BSV
 import BRAM::*;
@@ -84,40 +84,11 @@ typedef enum {
     PgLost = 1 // module power rail unexpectedly lost pg
 } PowerFault deriving (Bits, Eq, FShow);
 
-// High-level power states we can be steady-state in
-typedef enum {
-    A4 = 0, // module not present
-    A3 = 1, // module inserted
-    A2 = 2, // module powered in low-power mode with reset deasserted
-    A0 = 3, // module in high-power mode
-    Fault = 4 // module experience a fault
-} PowerState deriving (Eq, Bits, FShow);
-
-// Internal sequence states which handle the various steps when executing
-// sequencing
-typedef enum {
-    NoModule = 0,
-    ModulePresent = 1,
-    AwaitPowerGood = 2,
-    AwaitInitReset = 3,
-    LowPowerMode = 4,
-    AwaitLpModeOff = 5,
-    HighPowerMode = 6,
-    AwaitLpModeOn = 7,
-    AwaitReset = 8
-} SequenceState deriving (Eq, Bits, FShow);
-
 // A data/address pair to do a BRAM write
 typedef struct {
     Bit#(8) data;
     Bit#(8) address;
 } RamWrite deriving (Eq, Bits, FShow);
-
-// Control Timing information from section 8.1 of SFF-8679
-UInt#(11) init_delay_ms = 2000; // t_init, t_serial, t_data, t_reset. 2 seconds!
-UInt#(11) lpmode_on_delay_ms = 100; // ton_LPMode
-UInt#(11) lpmode_off_delay_ms = 300; // toff_LPMode
-UInt#(11) reset_delay_us = 10; // t_reset_init
 
 // helper function to do BRAM accesses
 function BRAMRequest#(Bit#(8), Bit#(8)) makeRequest(Bool write,
@@ -143,18 +114,18 @@ interface Pins;
     interface Bidirection#(Bit#(1)) scl;
     interface Bidirection#(Bit#(1)) sda;
     method Bit#(1) lpmode;
-    method Bit#(1) reset_;
-    method Action irq(Bit#(1) val);
-    method Action present(Bit#(1) val);
+    method Bit#(1) resetl;
+    method Action intl(Bit#(1) val);
+    method Action modprsl(Bit#(1) val);
 endinterface
 
 typedef struct{
     Bool enable;
-    Bool lpmode;
-    Bool reset_;
     Bool pg;
-    Bool present;
-    Bool irq;
+    Bool lpmode;
+    Bool resetl;
+    Bool modprsl;
+    Bool intl;
 } PinState deriving (Eq, Bits, FShow);
 
 interface QsfpModuleController;
@@ -228,10 +199,10 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(I2CCore::Command) next_i2c_command     <- mkReg(defaultValue);
 
     // Pin registers, named with _ to avoid collisions at the interface
-    Reg#(Bool) reset__   <- mkReg(True);
+    Reg#(Bool) resetl_   <- mkReg(True);
     Reg#(Bool) lpmode_   <- mkReg(False);
-    Reg#(Bool) irq_      <- mkReg(False);
-    Reg#(Bool) present_  <- mkReg(False);
+    Reg#(Bool) intl_      <- mkReg(False);
+    Reg#(Bool) modprsl_  <- mkReg(False);
 
     // Status
     Reg#(PortError) error   <- mkReg(NoError);
@@ -243,7 +214,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Wire#(PowerState) target_power_state        <- mkWire();
     Reg#(PortControl) control                   <- mkReg(defaultValue);
     Reg#(PortControl) control_one_shot          <- mkDReg(defaultValue);
-    ConfigReg#(Bool) reset_requested            <- mkConfigReg(False);
+    ConfigReg#(Bool) resetlrequested            <- mkConfigReg(False);
 
     // Delay
     Wire#(Bool) tick_1ms_           <- mkWire();
@@ -287,9 +258,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Ignore reset request if we are already in the middle of a reset
     (* fire_when_enabled *)
-    rule do_reset_request (control_one_shot.reset == 1 && 
+    rule do_resetlrequest (control_one_shot.reset == 1 && 
                             sequence_state != AwaitReset);
-        reset_requested <= True;
+        resetlrequested <= True;
     endrule
 
     // A4 Power State
@@ -299,13 +270,13 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // because software cannot order a module to be removed, and therefore it
     // should be considered an invalid state.
     (* fire_when_enabled *)
-    rule do_no_module (sequence_state == NoModule || !present_);
+    rule do_no_module (sequence_state == NoModule || !modprsl_);
         hot_swap.set_enable(False);
-        reset__ <= True;
+        resetl_ <= True;
         lpmode_ <= False;
         current_power_state <= A4;
 
-        if (present_) begin
+        if (modprsl_) begin
             sequence_state <= ModulePresent;
         end else begin
             sequence_state <= NoModule;
@@ -317,12 +288,12 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // This is where the controller will sit if a fault were to occur or until
     // a target state of A2 or A0 is written in.
     (* fire_when_enabled *)
-    rule do_module_present ((sequence_state == ModulePresent && present_) ||
-                            (present_ &&
+    rule do_module_modprsl ((sequence_state == ModulePresent && modprsl_) ||
+                            (modprsl_ &&
                             isValid(fault) &&
                             sequence_state != NoModule));
         hot_swap.set_enable(False);
-        reset__ <= True;
+        resetl_ <= True;
         lpmode_ <= False;
 
         if (isValid(fault)) begin
@@ -340,7 +311,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Enable the hot swap controller, moving forward once power good is seen
     (* fire_when_enabled *)
-    rule do_await_power_good (sequence_state == AwaitPowerGood && (present_ && !isValid(fault)));
+    rule do_await_power_good (sequence_state == AwaitPowerGood && (modprsl_ && !isValid(fault)));
         if (hot_swap.enabled()) begin
             lpmode_ <= True;
             sequence_state <= AwaitInitReset;
@@ -351,8 +322,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Release reset and wait out the mammoth initial reset time
     (* fire_when_enabled *)
-    rule do_await_init_reset (sequence_state == AwaitInitReset && (present_ && !isValid(fault)));
-        reset__ <= False;
+    rule do_await_init_reset (sequence_state == AwaitInitReset && (modprsl_ && !isValid(fault)));
+        resetl_ <= False;
         if (delay_counter > init_delay_ms) begin
             delay_counter  <= 0;
             sequence_state  <= LowPowerMode;
@@ -366,10 +337,10 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // This is another primary state where I2C communicate can occur while the
     // module remains in low-power mode.
     (* fire_when_enabled *)
-    rule do_low_power_mode (sequence_state == LowPowerMode && (present_ && !isValid(fault)));
+    rule do_low_power_mode (sequence_state == LowPowerMode && (modprsl_ && !isValid(fault)));
         current_power_state <= A2;
 
-        if (reset_requested) begin
+        if (resetlrequested) begin
             sequence_state  <= AwaitReset;
         end else if (target_power_state == A3) begin
             sequence_state  <= ModulePresent;
@@ -380,14 +351,14 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Ensure that reset is asserted for at least the specified duration
     (* fire_when_enabled *)
-    rule do_await_reset (sequence_state == AwaitReset && (present_ && !isValid(fault)));
-        if (delay_counter > reset_delay_us) begin
+    rule do_await_reset (sequence_state == AwaitReset && (modprsl_ && !isValid(fault)));
+        if (delay_counter > resetldelay_us) begin
             delay_counter <= 0;
-            reset__ <= False;
-            reset_requested <= False;
+            resetl_ <= False;
+            resetlrequested <= False;
             sequence_state <= LowPowerMode;
         end else begin
-            reset__ <= True;
+            resetl_ <= True;
             if (tick_1us_) begin
                 delay_counter <= delay_counter + 1;
             end
@@ -397,7 +368,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Wait the amount of time specified to enter high-power mode before
     // advertising that the module is in high-power mode.
     (* fire_when_enabled *)
-    rule do_await_lp_mode_off (sequence_state == AwaitLpModeOff && (present_ && !isValid(fault)));
+    rule do_await_lp_mode_off (sequence_state == AwaitLpModeOff && (modprsl_ && !isValid(fault)));
         lpmode_ <= False;
         if (delay_counter > lpmode_off_delay_ms) begin
             delay_counter <= 0;
@@ -410,7 +381,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Wait the amount of time specified to leave high-power mode before
     // advertising that the module is back in low-power mode.
     (* fire_when_enabled *)
-    rule do_await_lp_mode_on (sequence_state == AwaitLpModeOn && (present_ && !isValid(fault)));
+    rule do_await_lp_mode_on (sequence_state == AwaitLpModeOn && (modprsl_ && !isValid(fault)));
         lpmode_ <= True;
         if (delay_counter > lpmode_on_delay_ms) begin
             delay_counter <= 0;
@@ -425,10 +396,10 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // The controller will spend most of the time in this state as this is where
     // normal operation will occur.
     (* fire_when_enabled *)
-    rule do_high_power_mode (sequence_state == HighPowerMode && (present_ && !isValid(fault)));
+    rule do_high_power_mode (sequence_state == HighPowerMode && (modprsl_ && !isValid(fault)));
         current_power_state <= A0;
 
-        if (reset_requested || target_power_state != A0) begin
+        if (resetlrequested || target_power_state != A0) begin
             sequence_state <= AwaitLpModeOn;
         end
     endrule
@@ -497,11 +468,11 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     endrule
 
     // Since the error register is somewhat derived at this layer it needs to
-    // be registered for persistence. It will also stay present until the next
+    // be registered for persistence. It will also stay modprsl until the next
     // I2C transaction starts on the port.
     (* fire_when_enabled *)
     rule do_i2c;
-        if (i2c_attempt && !present_) begin
+        if (i2c_attempt && !modprsl_) begin
             error   <= NoModule;
         end else if (i2c_attempt && !hot_swap.enabled) begin
             error   <= NoPower;
@@ -558,12 +529,12 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         interface Bidirection sda = i2c_core.pins.sda;
 
         method lpmode = pack(lpmode_);
-        method reset_ = pack(reset__);
-        method Action irq(Bit#(1) v);
-            irq_ <= unpack(v);
+        method resetl = pack(resetl_);
+        method Action intl(Bit#(1) v);
+            intl_ <= unpack(v);
         endmethod
-        method Action present(Bit#(1) v);
-            present_ <= unpack(v);
+        method Action modprsl(Bit#(1) v);
+            modprsl_ <= unpack(v);
         endmethod
     endinterface
 
@@ -585,10 +556,10 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method PinState pin_state = PinState {
         enable: hot_swap.pin_state.enable,
         lpmode: lpmode_,
-        reset_: reset__,
+        resetl: resetl_,
         pg: hot_swap.pin_state.good,
-        present: present_,
-        irq: irq_};
+        modprsl: modprsl_,
+        intl: intl_};
     method pg_timeout = isValid(fault) && fromMaybe(?, fault) == PgTimeout;
     method pg_lost = isValid(fault) && fromMaybe(?, fault) == PgLost;
     method tick_1ms = tick_1ms_._write;
