@@ -15,9 +15,7 @@ export Parameters(..);
 export RamWrite(..);
 export Pins(..);
 export Registers(..);
-export PowerState(..);
 export PortError(..);
-export PinState(..);
 
 // functions for doing mapping
 export get_pins;
@@ -26,12 +24,6 @@ export get_read_addr;
 export get_read_data;
 export get_status;
 export get_control;
-
-// constants for delay timing
-export init_delay_ms;
-export lpmode_on_delay_ms;
-export lpmode_off_delay_ms;
-export resetldelay_us;
 
 // BSV
 import BRAM::*;
@@ -78,12 +70,6 @@ typedef enum {
     I2cByteNack = 5
 } PortError deriving (Bits, Eq, FShow);
 
-// Types of power errors that could occur
-typedef enum {
-    PgTimeout = 0, // module power rail did not enable in time
-    PgLost = 1 // module power rail unexpectedly lost pg
-} PowerFault deriving (Bits, Eq, FShow);
-
 // A data/address pair to do a BRAM write
 typedef struct {
     Bit#(8) data;
@@ -119,24 +105,23 @@ interface Pins;
     method Action modprsl(Bit#(1) val);
 endinterface
 
-typedef struct{
-    Bool enable;
-    Bool pg;
-    Bool lpmode;
-    Bool resetl;
-    Bool modprsl;
-    Bool intl;
-} PinState deriving (Eq, Bits, FShow);
-
 interface QsfpModuleController;
     // Physical FPGA pins for the controller
     interface Pins pins;
 
-    // A way to expose signal state that will be vectorized into registers
-    // with other controllers' state by a top level controller module
-    method PinState pin_state;
+    // Inputs from module fed back out to register for readback
+    method Bool modprsl;
+    method Bool intl;
 
-    // Other useful state from the controller
+    // Software controlled module pins
+    method Action resetl(Bit#(1) val);
+    method Action lpmode(Bit#(1) val);
+
+    // Software controlled hot swap controller power enable
+    method Action power_en(Bit#(1) val);
+
+    // Power fault state from the controller
+    method Bool pg;
     method Bool pg_timeout;
     method Bool pg_lost;
 
@@ -151,7 +136,6 @@ interface QsfpModuleController;
 
     // ticks for internal delay counters
     method Action tick_1ms(Bool val);
-    method Action tick_1us(Bool val);
 endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
@@ -198,28 +182,24 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(Bool) i2c_attempt                      <- mkDReg(False);
     Reg#(I2CCore::Command) next_i2c_command     <- mkReg(defaultValue);
 
-    // Pin registers, named with _ to avoid collisions at the interface
-    Reg#(Bool) resetl_   <- mkReg(True);
-    Reg#(Bool) lpmode_   <- mkReg(False);
-    Reg#(Bool) intl_      <- mkReg(False);
-    Reg#(Bool) modprsl_  <- mkReg(False);
+    // Internal pin signals, named with _ to avoid collisions at the interface
+    Reg#(Bit#(1)) resetl_  <- mkRegU();
+    Reg#(Bit#(1)) lpmode_  <- mkRegU();
+    Reg#(Bool) intl_    <- mkReg(False);
+    Reg#(Bool) modprsl_ <- mkReg(False);
+
+    Wire#(Bit#(1)) power_en_    <- mkWire();
 
     // Status
-    Reg#(PortError) error   <- mkReg(NoError);
-    Reg#(Maybe#(PowerFault)) fault <- mkReg(tagged Invalid);
+    Reg#(PortError) error           <- mkReg(NoError);
+    PulseWire clear_fault           <- mkPulseWire();
 
-    // Control
-    Reg#(SequenceState) sequence_state          <- mkReg(NoModule);
-    ConfigReg#(PowerState) current_power_state  <- mkConfigReg(A4);
-    Wire#(PowerState) target_power_state        <- mkWire();
-    Reg#(PortControl) control                   <- mkReg(defaultValue);
-    Reg#(PortControl) control_one_shot          <- mkDReg(defaultValue);
-    ConfigReg#(Bool) resetlrequested            <- mkConfigReg(False);
+    // Control - unused currently
+    Reg#(PortControl) control   <- mkReg(defaultValue);
 
     // Delay
     Wire#(Bool) tick_1ms_           <- mkWire();
-    Wire#(Bool) tick_1us_           <- mkWire();
-    Reg#(UInt#(11)) delay_counter  <- mkReg(0);
+    Reg#(UInt#(11)) delay_counter   <- mkReg(0);
 
     // The hot swap expected a tick to correspond with its timeout
     (* fire_when_enabled *)
@@ -227,181 +207,20 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         hot_swap.send();
     endrule
 
-    // Capture a fault if one was to occur
     (* fire_when_enabled *)
-    rule do_fault (!isValid(fault));
-        if (hot_swap.timed_out) begin
-            fault <= tagged Valid PgTimeout;
-        end else if (hot_swap.aborted) begin
-            fault <= tagged Valid PgLost;
-        end
+    rule do_remove_power (modprsl_);
+        hot_swap.set_enable(False);
     endrule
 
-    // Clear a captured fault. Note that we have to be in the Fault state for
-    // this to happen. Depending on exactly what happens, it may take several
-    // cycles to get back to A3 and formally Fault. In practice that should not
-    // matter, but in simulation it may.
     (* fire_when_enabled *)
-    rule do_fault_clear (isValid(fault) && 
-                        current_power_state == Fault &&
-                        control_one_shot.clear_fault == 1);
-        fault <= tagged Invalid;
+    rule do_detect_presence (!modprsl_);
+        hot_swap.set_enable(power_en_ == 1);
+    endrule
+
+    // Clear a hot swap controller fault
+    (* fire_when_enabled *)
+    rule do_fault_clear (clear_fault);
         hot_swap.clear();
-    endrule
-
-    // This is just a wire that makes it more clear what the intent of the
-    // control.power_state field is.
-    (* fire_when_enabled *)
-    rule do_drive_target_state;
-        target_power_state <= unpack(control.power_state);
-    endrule
-
-    // Ignore reset request if we are already in the middle of a reset
-    (* fire_when_enabled *)
-    rule do_resetlrequest (control_one_shot.reset == 1 && 
-                            sequence_state != AwaitReset);
-        resetlrequested <= True;
-    endrule
-
-    // A4 Power State
-    //
-    // Transition from A4 -> A3 regardless of the value of desired_state. While
-    // it could theoretically be set to A4, in practice this is meaningless
-    // because software cannot order a module to be removed, and therefore it
-    // should be considered an invalid state.
-    (* fire_when_enabled *)
-    rule do_no_module (sequence_state == NoModule || !modprsl_);
-        hot_swap.set_enable(False);
-        resetl_ <= True;
-        lpmode_ <= False;
-        current_power_state <= A4;
-
-        if (modprsl_) begin
-            sequence_state <= ModulePresent;
-        end else begin
-            sequence_state <= NoModule;
-        end
-    endrule
-
-    // A3 Power State
-    //
-    // This is where the controller will sit if a fault were to occur or until
-    // a target state of A2 or A0 is written in.
-    (* fire_when_enabled *)
-    rule do_module_modprsl ((sequence_state == ModulePresent && modprsl_) ||
-                            (modprsl_ &&
-                            isValid(fault) &&
-                            sequence_state != NoModule));
-        hot_swap.set_enable(False);
-        resetl_ <= True;
-        lpmode_ <= False;
-
-        if (isValid(fault)) begin
-            current_power_state <= Fault;
-        end else begin
-            current_power_state <= A3;
-        end
-
-        if (!isValid(fault) && (target_power_state == A2 || target_power_state == A0)) begin
-            sequence_state <= AwaitPowerGood;
-        end else begin
-            sequence_state <= ModulePresent;
-        end
-    endrule
-
-    // Enable the hot swap controller, moving forward once power good is seen
-    (* fire_when_enabled *)
-    rule do_await_power_good (sequence_state == AwaitPowerGood && (modprsl_ && !isValid(fault)));
-        if (hot_swap.enabled()) begin
-            lpmode_ <= True;
-            sequence_state <= AwaitInitReset;
-        end else if (!hot_swap.ramping_up()) begin
-            hot_swap.set_enable(True);
-        end
-    endrule
-
-    // Release reset and wait out the mammoth initial reset time
-    (* fire_when_enabled *)
-    rule do_await_init_reset (sequence_state == AwaitInitReset && (modprsl_ && !isValid(fault)));
-        resetl_ <= False;
-        if (delay_counter > init_delay_ms) begin
-            delay_counter  <= 0;
-            sequence_state  <= LowPowerMode;
-        end else if (tick_1ms_) begin
-            delay_counter  <= delay_counter + 1;
-        end
-    endrule
-
-    // Power State A2
-    //
-    // This is another primary state where I2C communicate can occur while the
-    // module remains in low-power mode.
-    (* fire_when_enabled *)
-    rule do_low_power_mode (sequence_state == LowPowerMode && (modprsl_ && !isValid(fault)));
-        current_power_state <= A2;
-
-        if (resetlrequested) begin
-            sequence_state  <= AwaitReset;
-        end else if (target_power_state == A3) begin
-            sequence_state  <= ModulePresent;
-        end else if (target_power_state == A0) begin
-            sequence_state  <= AwaitLpModeOff;
-        end
-    endrule
-
-    // Ensure that reset is asserted for at least the specified duration
-    (* fire_when_enabled *)
-    rule do_await_reset (sequence_state == AwaitReset && (modprsl_ && !isValid(fault)));
-        if (delay_counter > resetldelay_us) begin
-            delay_counter <= 0;
-            resetl_ <= False;
-            resetlrequested <= False;
-            sequence_state <= LowPowerMode;
-        end else begin
-            resetl_ <= True;
-            if (tick_1us_) begin
-                delay_counter <= delay_counter + 1;
-            end
-        end
-    endrule
-
-    // Wait the amount of time specified to enter high-power mode before
-    // advertising that the module is in high-power mode.
-    (* fire_when_enabled *)
-    rule do_await_lp_mode_off (sequence_state == AwaitLpModeOff && (modprsl_ && !isValid(fault)));
-        lpmode_ <= False;
-        if (delay_counter > lpmode_off_delay_ms) begin
-            delay_counter <= 0;
-            sequence_state <= HighPowerMode;
-        end else if (tick_1ms_) begin
-            delay_counter <= delay_counter + 1;
-        end
-    endrule
-
-    // Wait the amount of time specified to leave high-power mode before
-    // advertising that the module is back in low-power mode.
-    (* fire_when_enabled *)
-    rule do_await_lp_mode_on (sequence_state == AwaitLpModeOn && (modprsl_ && !isValid(fault)));
-        lpmode_ <= True;
-        if (delay_counter > lpmode_on_delay_ms) begin
-            delay_counter <= 0;
-            sequence_state <= LowPowerMode;
-        end else if (tick_1ms_) begin
-            delay_counter <= delay_counter + 1;
-        end
-    endrule
-
-    // Power State A0
-    //
-    // The controller will spend most of the time in this state as this is where
-    // normal operation will occur.
-    (* fire_when_enabled *)
-    rule do_high_power_mode (sequence_state == HighPowerMode && (modprsl_ && !isValid(fault)));
-        current_power_state <= A0;
-
-        if (resetlrequested || target_power_state != A0) begin
-            sequence_state <= AwaitLpModeOn;
-        end
     endrule
 
     // The buffer data is only considered valid for the transaction, so reset
@@ -423,17 +242,25 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     (* fire_when_enabled *)
     rule do_read_buffer_porta_write;
         let wdata   <- i2c_core.received_data.get();
-        read_buffer.portA.request.put(makeRequest(True, read_buffer_write_addr, wdata));
+        read_buffer
+            .portA
+            .request
+            .put(makeRequest(True, read_buffer_write_addr, wdata));
         i2c_data_received.send();
     endrule
 
-    // SPI interface changes read_buffer_read_addr, making a read request via PortB
+    // SPI interface changes read_buffer_read_addr, making a read request via
+    //PortB
     (* fire_when_enabled *)
     rule do_read_buffer_portb_write;
-        read_buffer.portB.request.put(makeRequest(False, read_buffer_read_addr, 8'h00));
+        read_buffer
+            .portB
+            .request
+            .put(makeRequest(False, read_buffer_read_addr, 8'h00));
     endrule
 
-    // PortB responds with the requested data, passing it back to SPI via read_buffer_read_data
+    // PortB responds with the requested data, passing it back to SPI via
+    //read_buffer_read_data
     (* fire_when_enabled *)
     rule do_read_buffer_portb_read;
         let rdata   <- read_buffer.portB.response.get();
@@ -455,13 +282,15 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         end
     endrule
 
-    // I2C interface changes write_buffer_read_addr, making a read request via PortB
+    // I2C interface changes write_buffer_read_addr, making a read request via
+    // PortB
     (* fire_when_enabled *)
     rule do_write_buffer_portb_write;
         write_buffer.b.put(False, write_buffer_read_addr, 8'h00);
     endrule
 
-    // PortB responds with the requested data, passing it back to I2C via write_buffer_write_data
+    // PortB responds with the requested data, passing it back to I2C via
+    // write_buffer_write_data
     (* fire_when_enabled *)
     rule do_write_buffer_portb_read;
         i2c_core.send_data.offer(write_buffer.b.read());
@@ -476,7 +305,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             error   <= NoModule;
         end else if (i2c_attempt && !hot_swap.enabled) begin
             error   <= NoPower;
-        end else if (i2c_attempt && isValid(fault)) begin
+        end else if (i2c_attempt &&
+            (hot_swap.timed_out || hot_swap.aborted)) begin
             error   <= PowerFault;
         end else if (i2c_attempt) begin
             new_i2c_command.send();
@@ -495,22 +325,13 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Registers for SPI peripheral
     interface Registers registers;
         interface ReadOnly port_status = valueToReadOnly(PortStatus {
-            power_state: {pack(current_power_state)},
             busy: pack(i2c_core.busy()),
             error: {0, pack(error)}
         });
         interface Reg port_control;
             method _read = control;
-            method Action _write(PortControl next);
-                control <= PortControl {
-                    power_state: next.power_state,
-                    reset: 0,
-                    clear_fault: 0};
-
-                control_one_shot <= PortControl {
-                    power_state: 0,
-                    reset: next.reset,
-                    clear_fault: next.clear_fault};
+            method Action _write(PortControl _);
+                clear_fault.send();
             endmethod
         endinterface
         interface Wire read_buffer_addr;
@@ -519,7 +340,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
                 read_buffer_read_addr   <= address;
             endmethod
         endinterface
-        interface ReadOnly read_buffer_byte = valueToReadOnly(read_buffer_read_data);
+        interface ReadOnly read_buffer_byte =
+            valueToReadOnly(read_buffer_read_data);
     endinterface
 
     // Physical module pins
@@ -553,24 +375,29 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         endmethod
     endinterface
 
-    method PinState pin_state = PinState {
-        enable: hot_swap.pin_state.enable,
-        lpmode: lpmode_,
-        resetl: resetl_,
-        pg: hot_swap.pin_state.good,
-        modprsl: modprsl_,
-        intl: intl_};
-    method pg_timeout = isValid(fault) && fromMaybe(?, fault) == PgTimeout;
-    method pg_lost = isValid(fault) && fromMaybe(?, fault) == PgLost;
+    method resetl   = resetl_._write;
+    method lpmode   = lpmode_._write;
+    method modprsl  = modprsl_;
+    method intl     = intl_;
+
+    method power_en     = power_en_._write;
+    method pg           = hot_swap.pin_state.good;
+    method pg_timeout   = hot_swap.timed_out;
+    method pg_lost      = hot_swap.aborted;
+
     method tick_1ms = tick_1ms_._write;
-    method tick_1us = tick_1us_._write;
+
 endmodule
 
 function Pins get_pins(QsfpModuleController m) = m.pins;
 function Registers get_registers(QsfpModuleController m) = m.registers;
-function Wire#(Bit#(8)) get_read_addr(QsfpModuleController m) = m.registers.read_buffer_addr;
-function ReadOnly#(Bit#(8)) get_read_data(QsfpModuleController m) = m.registers.read_buffer_byte;
-function ReadOnly#(PortStatus) get_status(QsfpModuleController m) = m.registers.port_status;
-function Reg#(PortControl) get_control(QsfpModuleController m) = m.registers.port_control;
+function Wire#(Bit#(8)) get_read_addr(QsfpModuleController m) =
+    m.registers.read_buffer_addr;
+function ReadOnly#(Bit#(8)) get_read_data(QsfpModuleController m) =
+    m.registers.read_buffer_byte;
+function ReadOnly#(PortStatus) get_status(QsfpModuleController m) =
+    m.registers.port_status;
+function Reg#(PortControl) get_control(QsfpModuleController m) =
+    m.registers.port_control;
 
 endpackage: QsfpModuleController

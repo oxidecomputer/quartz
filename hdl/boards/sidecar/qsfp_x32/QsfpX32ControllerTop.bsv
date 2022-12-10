@@ -551,7 +551,7 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
 
     ReadOnly#(Bit#(1)) phy_coma_mode    <- mkOutputSyncFor(controller.vsc8562.coma_mode);
     ReadOnly#(Bit#(1)) phy_refclk_en    <- mkOutputSyncFor(controller.vsc8562.refclk_en);
-    ReadOnly#(Bit#(1)) phy_reset_       <- mkOutputSyncFor(controller.vsc8562.resetl);
+    ReadOnly#(Bit#(1)) phy_reset_       <- mkOutputSyncFor(controller.vsc8562.reset_);
 
     ReadOnly#(Bit#(1)) phy_mdc          <- mkOutputSyncFor(controller.vsc8562.smi.mdc);
     InputReg#(Bit#(1), 2) phy_mdint             <- mkInputSyncFor(controller.vsc8562.mdint);
