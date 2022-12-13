@@ -28,20 +28,20 @@ interface Receiver#(numeric type n, type message_t);
 endinterface
 
 typedef enum {
-    ResetOrFetchCharacter = 0,
-    Decode,
-    Parse,
-    Receive
+    Resetting = 0,
+    Fetching,
+    Decoding,
+    Parsing,
+    Receiving
 } Phase deriving (Bits, Eq, FShow);
 
 instance DefaultValue#(Phase);
-    defaultValue = ResetOrFetchCharacter;
+    defaultValue = Resetting;
 endinstance
 
 typedef struct {
     Reg#(Phase) phase;
     // Receiver state for the channel.
-    Reg#(Bool) reset_receiver;
     Reg#(Bool) aligned;
     Reg#(Bool) locked;
     Reg#(Bool) polarity_inverted;
@@ -77,9 +77,9 @@ module mkReceiver
 
     // Allocate state for each channel.
     for (Integer i = 0; i < valueOf(n); i = i + 1) begin
-        channels[i].phase <- mkReg(ResetOrFetchCharacter);
+        channels[i].phase <- mkReg(Resetting);
 
-        channels[i].reset_receiver <- mkReg(True);
+        //channels[i].reset_receiver <- mkReg(True);
         channels[i].aligned <- mkConfigRegU();
         channels[i].locked <- mkConfigRegU();
         channels[i].polarity_inverted <- mkConfigRegU();
@@ -137,14 +137,13 @@ module mkReceiver
         (* fire_when_enabled *)
         rule do_reset_channel (
                 reset_or_fetch_select == fromInteger(i) &&
-                channels[i].phase == ResetOrFetchCharacter &&
-                channels[i].reset_receiver);
+                channels[i].phase == Resetting);
             // Discard the current character, keeping the timing as if a decode
-            // step occured. But remain in the ResetOrFetchCharacter phase
-            // initiating the start up sequence on the next character.
+            // step occured.
             channels[i].character_accepted.send();
 
-            channels[i].reset_receiver <= False;
+            channels[i].phase <= Fetching;
+
             channels[i].aligned <= False;
             channels[i].locked <= False;
             channels[i].polarity_inverted <= False;
@@ -161,9 +160,8 @@ module mkReceiver
         (* fire_when_enabled *)
         rule do_fetch_channel_character (
                 reset_or_fetch_select == fromInteger(i) &&
-                channels[i].phase == ResetOrFetchCharacter &&
-                !channels[i].reset_receiver);
-            channels[i].phase <= Decode;
+                channels[i].phase == Fetching);
+            channels[i].phase <= Decoding;
             channels[i].character_accepted.send();
 
             // Prep data needed by the shared rules to decode the received
@@ -179,10 +177,10 @@ module mkReceiver
         (* fire_when_enabled *)
         rule do_channel_decode (
                 decode_input.first.channel_select == fromInteger(i) &&
-                channels[i].phase == Decode &&
+                channels[i].phase == Decoding &&
                 decode_done &&
                 !parse_value);
-            channels[i].phase <= Parse;
+            channels[i].phase <= Parsing;
             parser_state <= channels[i].parser_state;
             crc.set(channels[i].running_checksum);
 
@@ -197,11 +195,11 @@ module mkReceiver
         (* fire_when_enabled *)
         rule do_channel_parse (
                 decode_result.first.channel_select == fromInteger(i) &&
-                channels[i].phase == Parse &&
+                channels[i].phase == Parsing &&
                 parse_value);
             let character_valid = decode_result.first.character_valid;
 
-            channels[i].phase <= Receive;
+            channels[i].phase <= Receiving;
 
             // Write back running disparity from the shared pipeline.
             channels[i].rd <= decode_result.first.rd;
@@ -220,9 +218,9 @@ module mkReceiver
         (* fire_when_enabled *)
         rule do_channel_receive (
                 decode_result.first.channel_select == fromInteger(i) &&
-                channels[i].phase == Receive &&
+                channels[i].phase == Receiving &&
                 !parse_value);
-            channels[i].phase <= ResetOrFetchCharacter;
+            Bool reset_receiver = False;
 
             // Write back the updated checksum for the channel.
             channels[i].running_checksum <= crc.value;
@@ -337,7 +335,7 @@ module mkReceiver
             // link should be locked.
             if (countElem(known_invalid, channels[i].character_valid_history) > 2 ||
                     channels[i].idle_set_valid_history == all_idle_sets_invalid) begin
-                channels[i].reset_receiver <= True;
+                reset_receiver = True;
             end
             else if (channels[i].aligned &&
                     channels[i].character_valid_history == all_characters_valid &&
@@ -348,6 +346,11 @@ module mkReceiver
             // Discard the shared parse state, allowing the next channel to
             // continue receiving a character.
             decode_result.deq();
+
+            // Based on the outcome of the character valid history and idle set
+            // checks either reset the receiver or continue waiting for the next
+            // character.
+            channels[i].phase <= reset_receiver ? Resetting : Fetching;
         endrule
     end
 

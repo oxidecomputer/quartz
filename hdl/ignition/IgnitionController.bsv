@@ -95,7 +95,7 @@ module mkController #(Parameters parameters) (Controller);
     //
     // External pulse used to generate timed events.
     //
-    PulseWire tick <- mkPulseWire();
+    Reg#(Bool) tick <- mkDReg(False);
 
     Reg#(LinkStatus) link_status <- mkRegU();
     Wire#(Message) rx <- mkWire();
@@ -345,7 +345,12 @@ module mkController #(Parameters parameters) (Controller);
         endmethod
     endinterface
 
-    interface PulseWire tick_1khz = tick;
+    interface PulseWire tick_1khz;
+        method _read = tick;
+        method Action send();
+            tick <= True;
+        endmethod
+    endinterface
 
     method debug = Debug {
         receiver_locked: link_status.receiver_locked,
