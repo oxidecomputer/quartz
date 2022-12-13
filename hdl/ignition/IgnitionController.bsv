@@ -5,12 +5,14 @@ export ReadVolatile(..);
 export LinkEventCounterRegisters(..);
 export Registers(..);
 export Interrupts(..);
-export Debug(..);
+export Status(..);
 export Controller(..);
 
 export mkController;
 export registers;
 export transceiver_client;
+export register_pages;
+export target_present;
 
 // Interrupt helpers.
 export interrupts_none;
@@ -21,6 +23,7 @@ import DefaultValue::*;
 import DReg::*;
 import GetPut::*;
 import FIFO::*;
+import Vector::*;
 
 import Countdown::*;
 import SchmittReg::*;
@@ -80,14 +83,14 @@ endinterface
 typedef struct {
     Bool target_present;
     Bool receiver_locked;
-} Debug deriving (Bits);
+} Status deriving (Bits);
 
 interface Controller;
     interface TransceiverClient txr;
     interface Registers registers;
     interface Reg#(Interrupts) interrupts;
     interface PulseWire tick_1khz;
-    (* always_enabled *) method Debug debug();
+    (* always_enabled *) method Status status();
 endinterface
 
 (* synthesize *)
@@ -352,7 +355,7 @@ module mkController #(Parameters parameters) (Controller);
         endmethod
     endinterface
 
-    method debug = Debug {
+    method status = Status {
         receiver_locked: link_status.receiver_locked,
         target_present: target_present};
 endmodule
@@ -450,6 +453,12 @@ function LinkEventCounterRegisters
     endinterface);
 
 function Registers registers(Controller c) = c.registers;
+
+function Vector#(n, Registers) register_pages(Vector#(n, Controller) controllers) =
+    map(registers, controllers);
+
 function TransceiverClient transceiver_client(Controller c) = c.txr;
+
+function Bool target_present(Controller c) = c.status.target_present;
 
 endpackage

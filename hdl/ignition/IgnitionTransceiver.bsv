@@ -10,6 +10,7 @@ export TaggedMessage(..);
 export TargetTransceiver(..);
 export TargetTransceiverClient(..);
 export mkTargetTransceiver;
+export toSerialIOs;
 
 export Loopback(..);
 export mkLoopback;
@@ -230,6 +231,10 @@ endinstance
 instance ToSerialIO#(Transceiver);
     function SerialIO toSerialIO(Transceiver txr) = txr.serial;
 endinstance
+
+function Vector#(2, SerialIO) toSerialIOs(TargetTransceiver txr) =
+    vec(tuple2(txr.to_link, txr.from_link[0]),
+        tuple2(txr.to_link, txr.from_link[1]));
 
 interface Loopback;
     (* always_enabled *) method Bit#(1) _read();

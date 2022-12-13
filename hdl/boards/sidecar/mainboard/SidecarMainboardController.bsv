@@ -7,9 +7,6 @@ export Status(..);
 export MainboardController(..);
 export mkMainboardController;
 
-export IgnitionRegisterPages(..);
-export IgnitionTransceiverClients(..);
-
 import DReg::*;
 import ClientServer::*;
 import ConfigReg::*;
@@ -62,9 +59,6 @@ typedef struct {
     Bit#(1) clk_1hz;
 } Status deriving (Bits, Eq, FShow);
 
-typedef Vector#(n, IgnitionController::Registers) IgnitionRegisterPages#(numeric type n);
-typedef Vector#(n, IgnitionTransceiver::TransceiverClient) IgnitionTransceiverClients#(numeric type n);
-
 interface Pins #(numeric type n_ignition_controllers);
     interface ClockGeneratorPins clocks;
     interface PCIeEndpointController::Pins pcie;
@@ -75,7 +69,6 @@ interface Pins #(numeric type n_ignition_controllers);
 endinterface
 
 interface Registers #(numeric type n_ignition_controllers);
-    interface IgnitionRegisterPages#(n_ignition_controllers) ignition_pages;
     interface PCIeEndpointController::Registers pcie;
     interface Tofino2Sequencer::Registers tofino;
     interface TofinoDebugPort::Registers tofino_debug_port;
@@ -84,7 +77,7 @@ endinterface
 interface MainboardController #(numeric type n_ignition_controllers);
     interface Pins#(n_ignition_controllers) pins;
     interface Registers#(n_ignition_controllers) registers;
-    interface IgnitionTransceiverClients#(n_ignition_controllers) ignition_txrs;
+    interface Vector#(n_ignition_controllers, Controller) ignition_controllers;
     interface ReadOnly#(Status) status;
 endinterface
 
@@ -156,18 +149,13 @@ module mkMainboardController #(Parameters parameters)
     //
 
     Vector#(n_ignition_controllers, IgnitionController::Controller)
-        ignition_controllers <- replicateM(mkController(defaultValue));
+        ignition_controllers_ <- replicateM(mkController(defaultValue));
 
     // Connect each Controller to the global tick.
     function mk_tick_connection(controller) =
         mkConnection(asIfc(tick_1khz), asIfc(controller.tick_1khz));
 
-    mapM(mk_tick_connection, ignition_controllers);
-
-    // Collect the register pages for all controllers.
-    let ignition_pages = map(registers, ignition_controllers);
-    // Collect the transceiver clients for all controllers.
-    let ignition_txr_clients = map(transceiver_client, ignition_controllers);
+    mapM(mk_tick_connection, ignition_controllers_);
 
     //
     // Debug status
@@ -177,15 +165,16 @@ module mkMainboardController #(Parameters parameters)
 
     (* fire_when_enabled *)
     rule do_set_status;
-        status_r <= Status{
+        status_r <= Status {
             clk_1hz: (tick_2hz ? ~status_r.clk_1hz : status_r.clk_1hz),
             tofino_sequencer_running:
                 tofino_sequencer.registers.state.state != 0,
             tofino_in_a0: tofino_sequencer.registers.state.state == 2,
             pcie_present: pcie_endpoint.pins.present,
-            ext_ignition_receiver_locked: False,
+            ext_ignition_receiver_locked:
+                ignition_controllers_[2].status.receiver_locked,
             ext_ignition_target_present:
-                ignition_controllers[2].debug.target_present};
+                ignition_controllers_[2].status.target_present};
     endrule
 
     //
@@ -202,13 +191,12 @@ module mkMainboardController #(Parameters parameters)
     endinterface
 
     interface Registers registers;
-        interface IgnitionRegisterPages ignition_pages = ignition_pages;
         interface PCIeEndpointController::Registers pcie = pcie_endpoint.registers;
         interface Tofino2Sequencer::Registers tofino = tofino_sequencer.registers;
         interface TofinoDebugPort::Registers tofino_debug_port = tofino_debug_port.registers;
     endinterface
 
-    interface IgnitionTransceiverClients ignition_txrs = ignition_txr_clients;
+    interface Vector ignition_controllers = ignition_controllers_;
     interface ReadOnly status = regToReadOnly(status_r);
 endmodule
 

@@ -44,7 +44,7 @@ module mkSpiServer #(
         Tofino2Sequencer::Registers tofino,
         TofinoDebugPort::Registers tofino_debug_port,
         PCIeEndpointController::Registers pcie,
-        IgnitionRegisterPages#(n_ignition_controllers) ignition_pages)
+        Vector#(n_ignition_controllers, IgnitionController::Registers) ignition_pages)
             (SpiServer)
                 provisos (
                     Add#(n_ignition_controllers, 4, n_pages),

@@ -3,6 +3,7 @@ package SidecarMainboardControllerTop;
 export SidecarMainboardControllerTop(..);
 export mkSidecarMainboardControllerTop;
 
+import BuildVector::*;
 import Clocks::*;
 import ConfigReg::*;
 import Connectable::*;
@@ -18,6 +19,7 @@ import SPI::*;
 import Strobe::*;
 
 import FanModule::*;
+import IgnitionController::*;
 import IgnitionTransceiver::*;
 import PCIeEndpointController::*;
 import PowerRail::*;
@@ -179,110 +181,131 @@ interface SidecarMainboardControllerTop;
     //
 
     (* prefix = "" *) method Action s0_rsw_aux_p(Bit#(1) s0_rsw_aux_p);
-    method Bit#(1) rsw_s0_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s0_aux_dc_p;
 
     (* prefix = "" *) method Action s1_rsw_aux_p(Bit#(1) s1_rsw_aux_p);
-    method Bit#(1) rsw_s1_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s1_aux_dc_p;
 
     (* prefix = "" *) method Action s2_rsw_aux_p(Bit#(1) s2_rsw_aux_p);
-    method Bit#(1) rsw_s2_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s2_aux_dc_p;
 
     (* prefix = "" *) method Action s3_rsw_aux_p(Bit#(1) s3_rsw_aux_p);
-    method Bit#(1) rsw_s3_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s3_aux_dc_p;
 
     (* prefix = "" *) method Action s4_rsw_aux_p(Bit#(1) s4_rsw_aux_p);
-    method Bit#(1) rsw_s4_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s4_aux_dc_p;
 
     (* prefix = "" *) method Action s5_rsw_aux_p(Bit#(1) s5_rsw_aux_p);
-    method Bit#(1) rsw_s5_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s5_aux_dc_p;
 
     (* prefix = "" *) method Action s6_rsw_aux_p(Bit#(1) s6_rsw_aux_p);
-    method Bit#(1) rsw_s6_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s6_aux_dc_p;
 
     (* prefix = "" *) method Action s7_rsw_aux_p(Bit#(1) s7_rsw_aux_p);
-    method Bit#(1) rsw_s7_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s7_aux_dc_p;
 
     (* prefix = "" *) method Action s8_rsw_aux_p(Bit#(1) s8_rsw_aux_p);
-    method Bit#(1) rsw_s8_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s8_aux_dc_p;
 
     (* prefix = "" *) method Action s9_rsw_aux_p(Bit#(1) s9_rsw_aux_p);
-    method Bit#(1) rsw_s9_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s9_aux_dc_p;
 
     (* prefix = "" *) method Action s10_rsw_aux_p(Bit#(1) s10_rsw_aux_p);
-    method Bit#(1) rsw_s10_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s10_aux_dc_p;
 
     (* prefix = "" *) method Action s11_rsw_aux_p(Bit#(1) s11_rsw_aux_p);
-    method Bit#(1) rsw_s11_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s11_aux_dc_p;
 
     (* prefix = "" *) method Action s12_rsw_aux_p(Bit#(1) s12_rsw_aux_p);
-    method Bit#(1) rsw_s12_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s12_aux_dc_p;
 
     (* prefix = "" *) method Action s13_rsw_aux_p(Bit#(1) s13_rsw_aux_p);
-    method Bit#(1) rsw_s13_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s13_aux_dc_p;
 
     (* prefix = "" *) method Action s14_rsw_aux_p(Bit#(1) s14_rsw_aux_p);
-    method Bit#(1) rsw_s14_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s14_aux_dc_p;
 
     (* prefix = "" *) method Action s15_rsw_aux_p(Bit#(1) s15_rsw_aux_p);
-    method Bit#(1) rsw_s15_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s15_aux_dc_p;
 
     (* prefix = "" *) method Action s16_rsw_aux_p(Bit#(1) s16_rsw_aux_p);
-    method Bit#(1) rsw_s16_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s16_aux_dc_p;
 
     (* prefix = "" *) method Action s17_rsw_aux_p(Bit#(1) s17_rsw_aux_p);
-    method Bit#(1) rsw_s17_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s17_aux_dc_p;
 
     (* prefix = "" *) method Action s18_rsw_aux_p(Bit#(1) s18_rsw_aux_p);
-    method Bit#(1) rsw_s18_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s18_aux_dc_p;
 
     (* prefix = "" *) method Action s19_rsw_aux_p(Bit#(1) s19_rsw_aux_p);
-    method Bit#(1) rsw_s19_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s19_aux_dc_p;
 
     (* prefix = "" *) method Action s20_rsw_aux_p(Bit#(1) s20_rsw_aux_p);
-    method Bit#(1) rsw_s20_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s20_aux_dc_p;
 
     (* prefix = "" *) method Action s21_rsw_aux_p(Bit#(1) s21_rsw_aux_p);
-    method Bit#(1) rsw_s21_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s21_aux_dc_p;
 
     (* prefix = "" *) method Action s22_rsw_aux_p(Bit#(1) s22_rsw_aux_p);
-    method Bit#(1) rsw_s22_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s22_aux_dc_p;
 
     (* prefix = "" *) method Action s23_rsw_aux_p(Bit#(1) s23_rsw_aux_p);
-    method Bit#(1) rsw_s23_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s23_aux_dc_p;
 
     (* prefix = "" *) method Action s24_rsw_aux_p(Bit#(1) s24_rsw_aux_p);
-    method Bit#(1) rsw_s24_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s24_aux_dc_p;
 
     (* prefix = "" *) method Action s25_rsw_aux_p(Bit#(1) s25_rsw_aux_p);
-    method Bit#(1) rsw_s25_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s25_aux_dc_p;
 
     (* prefix = "" *) method Action s26_rsw_aux_p(Bit#(1) s26_rsw_aux_p);
-    method Bit#(1) rsw_s26_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s26_aux_dc_p;
 
     (* prefix = "" *) method Action s27_rsw_aux_p(Bit#(1) s27_rsw_aux_p);
-    method Bit#(1) rsw_s27_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s27_aux_dc_p;
 
     (* prefix = "" *) method Action s28_rsw_aux_p(Bit#(1) s28_rsw_aux_p);
-    method Bit#(1) rsw_s28_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s28_aux_dc_p;
 
     (* prefix = "" *) method Action s29_rsw_aux_p(Bit#(1) s29_rsw_aux_p);
-    method Bit#(1) rsw_s29_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s29_aux_dc_p;
 
     (* prefix = "" *) method Action s30_rsw_aux_p(Bit#(1) s30_rsw_aux_p);
-    method Bit#(1) rsw_s30_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s30_aux_dc_p;
 
     (* prefix = "" *) method Action s31_rsw_aux_p(Bit#(1) s31_rsw_aux_p);
-    method Bit#(1) rsw_s31_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s31_aux_dc_p;
 
     (* prefix = "" *) method Action ignition_psc0_to_ctrl_p(Bit#(1) ignition_psc0_to_ctrl_p);
-    method Bit#(1) ignition_ctrl_to_psc0_dc_p();
+    interface Inout#(Bit#(1)) ignition_ctrl_to_psc0_dc_p;
 
     (* prefix = "" *) method Action ignition_psc1_to_ctrl_p(Bit#(1) ignition_psc1_to_ctrl_p);
-    method Bit#(1) ignition_ctrl_to_psc1_dc_p();
+    interface Inout#(Bit#(1)) ignition_ctrl_to_psc1_dc_p;
 
     (* prefix = "" *) method Action ignition_rsw_b_to_ctrl_p(Bit#(1) ignition_rsw_b_to_ctrl_p);
-    method Bit#(1) ignition_ctrl_to_rsw_b_dc_p();
+    interface Inout#(Bit#(1)) ignition_ctrl_to_rsw_b_dc_p;
 endinterface
+
+// A convenience swapper which
+typedef SerialIOAdapterTxInout#(5) IgnitionIO;
+
+module mkIgnitionIOs #(
+        Integer bank_id,
+        Vector#(n, IgnitionController::Controller) controllers)
+            (Vector#(n, IgnitionIO));
+    Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, fromInteger(bank_id % 5));
+
+    Vector#(n, Transceiver) txrs <- mkTransceivers();
+    Vector#(n, IgnitionIO) io_adapters <- zipWithM(
+        mkSerialIOAdapterTxInout(tx_strobe),
+        map(target_present, controllers),
+        map(toSerialIO, txrs));
+
+    mkFreeRunningStrobe(tx_strobe);
+    zipWithM(mkConnection, map(transceiver_client, controllers), txrs);
+
+    return io_adapters;
+endmodule
 
 module mkSidecarMainboardControllerTop
         (SidecarMainboardControllerTop)
@@ -311,8 +334,8 @@ module mkSidecarMainboardControllerTop
             controller.registers.tofino,
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
-            controller.registers.ignition_pages,
-            reset_by reset_sync);
+            register_pages(controller.ignition_controllers),
+                reset_by reset_sync);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
     InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
@@ -469,45 +492,6 @@ module mkSidecarMainboardControllerTop
     // Ignition
     //
 
-    // Generate five TX strobes, each with a different phase offset (0, 1, 2, 3,
-    // 4). This allows the controller tranmitters to assigned to these TX
-    // strobes and not have all links generate bit edges on same clock cycle.
-    function mk_ignition_tx_strobe(phase_offset) =
-        mkLimitStrobe(1, 5, fromInteger(phase_offset), reset_by reset_sync);
-
-    Vector#(5, Strobe#(3)) ignition_tx_strobe <-
-        mapM(mk_ignition_tx_strobe, genVector);
-
-    // Make the TX strobes free-running.
-    mapM(mkFreeRunningStrobe, ignition_tx_strobe);
-
-    // Allocate a Transceivers for the Controllers. Because multiple receiver
-    // channels share a decode and parser path it is desirable to map these on
-    // device pins which are close together.
-    Vector#(8, Transceiver) ignition_txrs_bank2 <- mkTransceivers(reset_by reset_sync);
-    Vector#(6, Transceiver) ignition_txrs_bank3_0 <- mkTransceivers(reset_by reset_sync);
-    Vector#(6, Transceiver) ignition_txrs_bank3_1 <- mkTransceivers(reset_by reset_sync);
-    Vector#(6, Transceiver) ignition_txrs_bank6_0 <- mkTransceivers(reset_by reset_sync);
-    Vector#(6, Transceiver) ignition_txrs_bank6_1 <- mkTransceivers(reset_by reset_sync);
-    Vector#(3, Transceiver) ignition_txrs_bank7 <- mkTransceivers(reset_by reset_sync);
-
-    // Allocate IO adapters for each Transceiver.
-    function mk_ignition_io_adapter(i, serialio) =
-        mkSerialIOAdapter(ignition_tx_strobe[i], serialio, reset_by reset_sync);
-
-    Vector#(8, SerialIOAdapter#(5)) ignition_io_bank2 <-
-        mapM(mk_ignition_io_adapter(0), map(toSerialIO, ignition_txrs_bank2));
-    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank3_0 <-
-        mapM(mk_ignition_io_adapter(1), map(toSerialIO, ignition_txrs_bank3_0));
-    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank3_1 <-
-        mapM(mk_ignition_io_adapter(1), map(toSerialIO, ignition_txrs_bank3_1));
-    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank6_0 <-
-        mapM(mk_ignition_io_adapter(1), map(toSerialIO, ignition_txrs_bank6_0));
-    Vector#(6, SerialIOAdapter#(5)) ignition_io_bank6_1 <-
-        mapM(mk_ignition_io_adapter(2), map(toSerialIO, ignition_txrs_bank6_1));
-    Vector#(3, SerialIOAdapter#(5)) ignition_io_bank7 <-
-        mapM(mk_ignition_io_adapter(3), map(toSerialIO, ignition_txrs_bank7));
-
     // Connect Transceivers to their Clients. This is done in a specific order
     // to maintain a logical channel order in the register interface. See
     // further down in this module how the transceiver channels map to device
@@ -515,45 +499,73 @@ module mkSidecarMainboardControllerTop
     //
     // Cubbies
     //
-    mkConnection(controller.ignition_txrs[0], ignition_txrs_bank3_1[1]);
-    mkConnection(controller.ignition_txrs[1], ignition_txrs_bank3_1[0]);
-    mkConnection(controller.ignition_txrs[2], ignition_txrs_bank3_1[5]);
-    mkConnection(controller.ignition_txrs[3], ignition_txrs_bank3_1[4]);
-    mkConnection(controller.ignition_txrs[4], ignition_txrs_bank3_0[4]);
-    mkConnection(controller.ignition_txrs[5], ignition_txrs_bank3_1[3]);
-    mkConnection(controller.ignition_txrs[6], ignition_txrs_bank3_1[2]);
-    mkConnection(controller.ignition_txrs[7], ignition_txrs_bank3_0[5]);
-    mkConnection(controller.ignition_txrs[8], ignition_txrs_bank3_0[3]);
-    mkConnection(controller.ignition_txrs[9], ignition_txrs_bank2[6]);
-    mkConnection(controller.ignition_txrs[10], ignition_txrs_bank2[5]);
-    mkConnection(controller.ignition_txrs[11], ignition_txrs_bank2[4]);
-    mkConnection(controller.ignition_txrs[12], ignition_txrs_bank2[3]);
-    mkConnection(controller.ignition_txrs[13], ignition_txrs_bank2[2]);
-    mkConnection(controller.ignition_txrs[14], ignition_txrs_bank2[1]);
-    mkConnection(controller.ignition_txrs[15], ignition_txrs_bank2[0]);
-    mkConnection(controller.ignition_txrs[16], ignition_txrs_bank3_0[2]);
-    mkConnection(controller.ignition_txrs[17], ignition_txrs_bank3_0[1]);
-    mkConnection(controller.ignition_txrs[18], ignition_txrs_bank3_0[0]);
-    mkConnection(controller.ignition_txrs[19], ignition_txrs_bank2[7]);
-    mkConnection(controller.ignition_txrs[20], ignition_txrs_bank6_0[0]);
-    mkConnection(controller.ignition_txrs[21], ignition_txrs_bank6_0[1]);
-    mkConnection(controller.ignition_txrs[22], ignition_txrs_bank6_0[2]);
-    mkConnection(controller.ignition_txrs[23], ignition_txrs_bank6_0[3]);
-    mkConnection(controller.ignition_txrs[24], ignition_txrs_bank6_0[4]);
-    mkConnection(controller.ignition_txrs[25], ignition_txrs_bank6_0[5]);
-    mkConnection(controller.ignition_txrs[26], ignition_txrs_bank6_1[3]);
-    mkConnection(controller.ignition_txrs[27], ignition_txrs_bank6_1[2]);
-    mkConnection(controller.ignition_txrs[28], ignition_txrs_bank6_1[4]);
-    mkConnection(controller.ignition_txrs[29], ignition_txrs_bank6_1[5]);
-    mkConnection(controller.ignition_txrs[30], ignition_txrs_bank6_1[0]);
-    mkConnection(controller.ignition_txrs[31], ignition_txrs_bank6_1[1]);
-
+    Vector#(8, IgnitionController::Controller)
+        ignition_bank2 = vec(
+            controller.ignition_controllers[15],
+            controller.ignition_controllers[14],
+            controller.ignition_controllers[13],
+            controller.ignition_controllers[12],
+            controller.ignition_controllers[11],
+            controller.ignition_controllers[10],
+            controller.ignition_controllers[9],
+            controller.ignition_controllers[19]);
+    Vector#(6, IgnitionController::Controller)
+        ignition_bank3_0 = vec(
+            controller.ignition_controllers[18],
+            controller.ignition_controllers[17],
+            controller.ignition_controllers[16],
+            controller.ignition_controllers[8],
+            controller.ignition_controllers[4],
+            controller.ignition_controllers[7]);
+    Vector#(6, IgnitionController::Controller)
+        ignition_bank3_1 = vec(
+            controller.ignition_controllers[1],
+            controller.ignition_controllers[0],
+            controller.ignition_controllers[6],
+            controller.ignition_controllers[5],
+            controller.ignition_controllers[3],
+            controller.ignition_controllers[2]);
+    Vector#(6, IgnitionController::Controller)
+        ignition_bank6_0 = vec(
+            controller.ignition_controllers[20],
+            controller.ignition_controllers[21],
+            controller.ignition_controllers[22],
+            controller.ignition_controllers[23],
+            controller.ignition_controllers[24],
+            controller.ignition_controllers[25]);
+    Vector#(6, IgnitionController::Controller)
+        ignition_bank6_1 = vec(
+            controller.ignition_controllers[30],
+            controller.ignition_controllers[31],
+            controller.ignition_controllers[27],
+            controller.ignition_controllers[26],
+            controller.ignition_controllers[28],
+            controller.ignition_controllers[29]);
     //
     // PSC 0/1, Sidecar B
     //
-    mkConnection(controller.ignition_txrs[32], ignition_txrs_bank7[0]);
-    mkConnection(controller.ignition_txrs[33], ignition_txrs_bank7[1]);
-    mkConnection(controller.ignition_txrs[34], ignition_txrs_bank7[2]);
+    Vector#(3, IgnitionController::Controller)
+        ignition_bank7 = vec(
+            controller.ignition_controllers[32],
+            controller.ignition_controllers[33],
+            controller.ignition_controllers[34]);
+
+    // Allocate the Transceivers and IO adapters for the banks of Controllers.
+    // The bank id passed to `mkIgnitionIOs(..)` is used to derive a TX strobe
+    // with different phase offsets to reduce the effect of all transmitters
+    // switching at the same time.
+    Vector#(8, IgnitionIO) ignition_io_bank2 <-
+        mkIgnitionIOs(0, ignition_bank2, reset_by reset_sync);
+    Vector#(6, IgnitionIO) ignition_io_bank3_0 <-
+        mkIgnitionIOs(1, ignition_bank3_0, reset_by reset_sync);
+    Vector#(6, IgnitionIO) ignition_io_bank3_1 <-
+        mkIgnitionIOs(2, ignition_bank3_1, reset_by reset_sync);
+    Vector#(6, IgnitionIO) ignition_io_bank6_0 <-
+        mkIgnitionIOs(3, ignition_bank6_0, reset_by reset_sync);
+    Vector#(6, IgnitionIO) ignition_io_bank6_1 <-
+        mkIgnitionIOs(4, ignition_bank6_1, reset_by reset_sync);
+    Vector#(3, IgnitionIO) ignition_io_bank7 <-
+        mkIgnitionIOs(5, ignition_bank7, reset_by reset_sync);
 
     //
     // Interface, wiring up device signals.
@@ -660,8 +672,8 @@ module mkSidecarMainboardControllerTop
     //
     // Groups of Ignition SerDes pins are mapped on specific Transceivers in
     // order to try and reduce routing latency and placement pressure. IO tiles
-    // in the ECP5 family seem to be placed in a single row at the "top" of the
-    // die and linear distance is used as a proxy to bundle the IO pins.
+    // in the ECP5 family seem to be placed in a single row at the north side of
+    // the die and linear distance is used as a proxy to bundle the IO pins.
     //
     // Please do not change the grouping/assignment order unless data shows that
     // the change improves placement of the design.
@@ -992,109 +1004,109 @@ interface SidecarMainboardControllerTopRevA;
     //
 
     (* prefix = "" *) method Action s0_rsw_aux_p(Bit#(1) s0_rsw_aux_p);
-    method Bit#(1) rsw_s0_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s0_aux_dc_p;
 
     (* prefix = "" *) method Action s1_rsw_aux_p(Bit#(1) s1_rsw_aux_p);
-    method Bit#(1) rsw_s1_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s1_aux_dc_p;
 
     (* prefix = "" *) method Action s2_rsw_aux_p(Bit#(1) s2_rsw_aux_p);
-    method Bit#(1) rsw_s2_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s2_aux_dc_p;
 
     (* prefix = "" *) method Action s3_rsw_aux_p(Bit#(1) s3_rsw_aux_p);
-    method Bit#(1) rsw_s3_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s3_aux_dc_p;
 
     (* prefix = "" *) method Action s4_rsw_aux_p(Bit#(1) s4_rsw_aux_p);
-    method Bit#(1) rsw_s4_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s4_aux_dc_p;
 
     (* prefix = "" *) method Action s5_rsw_aux_p(Bit#(1) s5_rsw_aux_p);
-    method Bit#(1) rsw_s5_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s5_aux_dc_p;
 
     (* prefix = "" *) method Action s6_rsw_aux_p(Bit#(1) s6_rsw_aux_p);
-    method Bit#(1) rsw_s6_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s6_aux_dc_p;
 
     (* prefix = "" *) method Action s7_rsw_aux_p(Bit#(1) s7_rsw_aux_p);
-    method Bit#(1) rsw_s7_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s7_aux_dc_p;
 
     (* prefix = "" *) method Action s8_rsw_aux_p(Bit#(1) s8_rsw_aux_p);
-    method Bit#(1) rsw_s8_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s8_aux_dc_p;
 
     (* prefix = "" *) method Action s9_rsw_aux_p(Bit#(1) s9_rsw_aux_p);
-    method Bit#(1) rsw_s9_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s9_aux_dc_p;
 
     (* prefix = "" *) method Action s10_rsw_aux_p(Bit#(1) s10_rsw_aux_p);
-    method Bit#(1) rsw_s10_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s10_aux_dc_p;
 
     (* prefix = "" *) method Action s11_rsw_aux_p(Bit#(1) s11_rsw_aux_p);
-    method Bit#(1) rsw_s11_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s11_aux_dc_p;
 
     (* prefix = "" *) method Action s12_rsw_aux_p(Bit#(1) s12_rsw_aux_p);
-    method Bit#(1) rsw_s12_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s12_aux_dc_p;
 
     (* prefix = "" *) method Action s13_rsw_aux_p(Bit#(1) s13_rsw_aux_p);
-    method Bit#(1) rsw_s13_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s13_aux_dc_p;
 
     (* prefix = "" *) method Action s14_rsw_aux_p(Bit#(1) s14_rsw_aux_p);
-    method Bit#(1) rsw_s14_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s14_aux_dc_p;
 
     (* prefix = "" *) method Action s15_rsw_aux_p(Bit#(1) s15_rsw_aux_p);
-    method Bit#(1) rsw_s15_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s15_aux_dc_p;
 
     (* prefix = "" *) method Action s16_rsw_aux_p(Bit#(1) s16_rsw_aux_p);
-    method Bit#(1) rsw_s16_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s16_aux_dc_p;
 
     (* prefix = "" *) method Action s17_rsw_aux_p(Bit#(1) s17_rsw_aux_p);
-    method Bit#(1) rsw_s17_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s17_aux_dc_p;
 
     (* prefix = "" *) method Action s18_rsw_aux_p(Bit#(1) s18_rsw_aux_p);
-    method Bit#(1) rsw_s18_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s18_aux_dc_p;
 
     (* prefix = "" *) method Action s19_rsw_aux_p(Bit#(1) s19_rsw_aux_p);
-    method Bit#(1) rsw_s19_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s19_aux_dc_p;
 
     (* prefix = "" *) method Action s20_rsw_aux_p(Bit#(1) s20_rsw_aux_p);
-    method Bit#(1) rsw_s20_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s20_aux_dc_p;
 
     (* prefix = "" *) method Action s21_rsw_aux_p(Bit#(1) s21_rsw_aux_p);
-    method Bit#(1) rsw_s21_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s21_aux_dc_p;
 
     (* prefix = "" *) method Action s22_rsw_aux_p(Bit#(1) s22_rsw_aux_p);
-    method Bit#(1) rsw_s22_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s22_aux_dc_p;
 
     (* prefix = "" *) method Action s23_rsw_aux_p(Bit#(1) s23_rsw_aux_p);
-    method Bit#(1) rsw_s23_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s23_aux_dc_p;
 
     (* prefix = "" *) method Action s24_rsw_aux_p(Bit#(1) s24_rsw_aux_p);
-    method Bit#(1) rsw_s24_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s24_aux_dc_p;
 
     (* prefix = "" *) method Action s25_rsw_aux_p(Bit#(1) s25_rsw_aux_p);
-    method Bit#(1) rsw_s25_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s25_aux_dc_p;
 
     (* prefix = "" *) method Action s26_rsw_aux_p(Bit#(1) s26_rsw_aux_p);
-    method Bit#(1) rsw_s26_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s26_aux_dc_p;
 
     (* prefix = "" *) method Action s27_rsw_aux_p(Bit#(1) s27_rsw_aux_p);
-    method Bit#(1) rsw_s27_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s27_aux_dc_p;
 
     (* prefix = "" *) method Action s28_rsw_aux_p(Bit#(1) s28_rsw_aux_p);
-    method Bit#(1) rsw_s28_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s28_aux_dc_p;
 
     (* prefix = "" *) method Action s29_rsw_aux_p(Bit#(1) s29_rsw_aux_p);
-    method Bit#(1) rsw_s29_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s29_aux_dc_p;
 
     (* prefix = "" *) method Action s30_rsw_aux_p(Bit#(1) s30_rsw_aux_p);
-    method Bit#(1) rsw_s30_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s30_aux_dc_p;
 
     (* prefix = "" *) method Action s31_rsw_aux_p(Bit#(1) s31_rsw_aux_p);
-    method Bit#(1) rsw_s31_aux_dc_p();
+    interface Inout#(Bit#(1)) rsw_s31_aux_dc_p;
 
     (* prefix = "" *) method Action ignition_psc0_to_ctrl_p(Bit#(1) ignition_psc0_to_ctrl_p);
-    method Bit#(1) ignition_ctrl_to_psc0_dc_p();
+    interface Inout#(Bit#(1)) ignition_ctrl_to_psc0_dc_p;
 
     (* prefix = "" *) method Action ignition_psc1_to_ctrl_p(Bit#(1) ignition_psc1_to_ctrl_p);
-    method Bit#(1) ignition_ctrl_to_psc1_dc_p();
+    interface Inout#(Bit#(1)) ignition_ctrl_to_psc1_dc_p;
 
     (* prefix = "" *) method Action ignition_rsw_b_to_ctrl_p(Bit#(1) ignition_rsw_b_to_ctrl_p);
-    method Bit#(1) ignition_ctrl_to_rsw_b_dc_p();
+    interface Inout#(Bit#(1)) ignition_ctrl_to_rsw_b_dc_p;
 endinterface
 
 (* default_clock_osc = "clk_50m_fpga_refclk",
