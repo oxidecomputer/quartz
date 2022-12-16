@@ -301,7 +301,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // I2C transaction starts on the port.
     (* fire_when_enabled *)
     rule do_i2c;
-        if (i2c_attempt && !modprsl_) begin
+        if (i2c_attempt && modprsl_) begin
             error   <= NoModule;
         end else if (i2c_attempt && !hot_swap.enabled) begin
             error   <= NoPower;

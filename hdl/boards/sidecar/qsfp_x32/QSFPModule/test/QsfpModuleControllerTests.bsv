@@ -43,24 +43,14 @@ function Action check_peripheral_event(I2CPeripheralModel peripheral,
         assert_eq(e, expected, message);
     endaction;
 
-// Between registers in the Bench and within the module, it takes 4 cycles for
-// a change in input to show changes in output.
-UInt#(3) input_to_state_change_prop_dly = 4;
-
 // The Bench is what is accessed in the unit tests themselves. All interaction
 // with the DUT is done through this interface.
 interface Bench;
-    // Expose the SPI register interface
-    interface Registers dut_registers;
-
-    // Expose some internal state to run assertions against
-    method PinState dut_state;
-    method Bool dut_pg_timeout;
-    method Bool dut_pg_lost;
-
-    // Set inputs to the controller
-    method Action set_presence (Bool v);
-    method Action set_hsc_pg (Bool v);
+    // QSFP module low speed pins
+    method Bit#(1) lpmode;
+    method Bit#(1) resetl;
+    method Action intl(Bit#(1) v);
+    method Action modprsl(Bit#(1) v);
 
     // Handle starting the next I2C transaction
     method Action command (Command cmd);
@@ -68,10 +58,9 @@ interface Bench;
     // A way to expose if the I2C read/write is finished
     method Bool i2c_busy();
 
-    // Expose the ticks to the tests themselves so they can wait as needed
-    // TODO: integrate those waits into the bench, removing them from tests?
-    method Bool tick_1ms();
-    method Bool tick_1us();
+    // Control of the hot swap power good pin
+    method Action power_en(Bit#(1) v);
+    method Action hsc_pg(Bit#(1) v);
 endinterface
 
 module mkBench (Bench);
@@ -79,27 +68,24 @@ module mkBench (Bench);
     // Instantiate a single controller as our DUT
     QsfpModuleController controller <- mkQsfpModuleController(qsfp_test_params);
 
-    // The test clock is already accelerated by 1000x and we create a few ticks
-    // with that in mind here. While named according to their intended use in a
-    // real design, these do not reflect actual timings here as they are just
-    // used to accelerate actions and reduce simulation time.
+    // Some registers for inputs, defaulted to 1 as they'd be pulled up
+    Reg#(Bit#(1)) intl_r    <- mkReg(1);
+    Reg#(Bit#(1)) modprsl_r <- mkReg(1);
+    mkConnection(controller.pins.intl, intl_r);
+    mkConnection(controller.pins.modprsl, modprsl_r);
+
+    // Hot swap
+    Reg#(Bit#(1)) power_en_r  <- mkReg(1);
+    Reg#(Bool) hsc_pg_r     <- mkReg(False);
+    mkConnection(controller.power_en, power_en_r);
+    mkConnection(controller.pins.hsc.pg, hsc_pg_r);
+
     Strobe#(16) tick_1khz   <-
         mkLimitStrobe(1, qsfp_test_params.system_frequency_hz / 1000, 0);
     mkFreeRunningStrobe(tick_1khz);
     mkConnection(tick_1khz._read, controller.tick_1ms);
 
-    Strobe#(6) tick_1mhz   <-
-        mkLimitStrobe(1, qsfp_test_params.system_frequency_hz / 10000, 0);
-    mkFreeRunningStrobe(tick_1mhz);
-    mkConnection(tick_1mhz._read, controller.tick_1us);
-
-    // Registers for inputs expected by the controller
-    Reg#(Bool) module_presence <- mkReg(False);
-    Reg#(Bool) module_hsc_pg <- mkReg(False);
-    mkConnection(controller.pins.present, pack(module_presence));
-    mkConnection(controller.pins.hsc.pg, module_hsc_pg);
-
-    // Istantiate a simple I2C model to act as the faux module target
+    // Instantiate a simple I2C model to act as the faux module target
     I2CPeripheralModel periph   <- mkI2CPeripheralModel(i2c_test_params.peripheral_addr);
     mkConnection(controller.pins.scl.out, periph.scl_i);
     mkConnection(controller.pins.sda.out, periph.sda_i);
@@ -169,12 +155,6 @@ module mkBench (Bench);
     endseq, command_r.op == Read);
 
     method i2c_busy = !write_seq.done() || !read_seq.done() || new_command;
-    method tick_1ms = tick_1khz._read;
-    method tick_1us = tick_1mhz._read;
-    method dut_state = controller.pin_state;
-    method dut_registers = controller.registers;
-    method dut_pg_timeout = controller.pg_timeout;
-    method dut_pg_lost = controller.pg_lost;
 
     method Action command(Command cmd) if (write_seq.done() && read_seq.done());
         command_r   <= cmd;
@@ -187,14 +167,31 @@ module mkBench (Bench);
         end
     endmethod
 
-    method Action set_presence(Bool v);
-        module_presence <= v;
+    method lpmode = controller.pins.lpmode;
+    method resetl = controller.pins.resetl;
+    method Action intl(Bit#(1) v);
+        intl_r <= v;
+    endmethod
+    method Action modprsl(Bit#(1) v);
+        modprsl_r <= v;
     endmethod
 
-    method Action set_hsc_pg(Bool v);
-        module_hsc_pg <= v;
+    method Action power_en(Bit#(1) v);
+        power_en_r <= v;
+    endmethod
+    method Action hsc_pg(Bit#(1) v);
+        hsc_pg_r <= unpack(v);
     endmethod
 endmodule
+
+function Stmt insert_and_power_module(Bench bench);
+    return (seq
+        bench.modprsl(0);
+        delay(5);
+        bench.hsc_pg(1);
+        delay(5);
+    endseq);
+endfunction
 
 // mkI2CReadTest
 //
@@ -212,8 +209,7 @@ module mkI2CReadTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        a4_to_a3(bench);
-        a3_to_a2(bench, A2, delay_counter, True);
+        insert_and_power_module(bench);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
         delay(5);
@@ -236,8 +232,7 @@ module mkI2CWriteTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        a4_to_a3(bench);
-        a3_to_a2(bench, A2, delay_counter, True);
+        insert_and_power_module(bench);
         bench.command(write_cmd);
         await(!bench.i2c_busy());
         delay(5);
