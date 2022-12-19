@@ -52,6 +52,9 @@ interface Bench;
     method Action intl(Bit#(1) v);
     method Action modprsl(Bit#(1) v);
 
+    // The SPI register interface for the controller
+    interface Registers registers;
+
     // Handle starting the next I2C transaction
     method Action command (Command cmd);
 
@@ -61,6 +64,9 @@ interface Bench;
     // Control of the hot swap power good pin
     method Action power_en(Bit#(1) v);
     method Action hsc_pg(Bit#(1) v);
+    method Bool hsc_en;
+    method Bool hsc_pg_timeout;
+    method Bool hsc_pg_lost;
 endinterface
 
 module mkBench (Bench);
@@ -154,6 +160,8 @@ module mkBench (Bench);
         bytes_done  <= 0;
     endseq, command_r.op == Read);
 
+    interface registers = controller.registers;
+
     method i2c_busy = !write_seq.done() || !read_seq.done() || new_command;
 
     method Action command(Command cmd) if (write_seq.done() && read_seq.done());
@@ -182,23 +190,137 @@ module mkBench (Bench);
     method Action hsc_pg(Bit#(1) v);
         hsc_pg_r <= unpack(v);
     endmethod
+
+    method hsc_en = controller.pins.hsc.en;
+    method hsc_pg_timeout = controller.pg_timeout;
+    method hsc_pg_lost = controller.pg_lost;
 endmodule
 
 function Stmt insert_and_power_module(Bench bench);
     return (seq
+        // insert a module, which tells the controller to enable power
+        assert_false(bench.hsc_en(),
+            "Hot swap should not be enabled when module is not present");
         bench.modprsl(0);
         delay(5);
+        assert_true(bench.hsc_en(),
+            "Hot swap should be enabled when module is present");
+        // after some delay, give the controller power good
         bench.hsc_pg(1);
         delay(5);
     endseq);
 endfunction
+
+// mkNoModuleTest
+//
+// This test checks proper behavior when no module is present. This should also
+// result in a NoModule error if I2C communication is attempted.
+(* synthesize *)
+module mkNoModuleTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        delay(5);
+        assert_false(bench.hsc_en(),
+            "Hot swap should not be enabled when module is not present");
+        bench.command(Command {
+                op: Read,
+                i2c_addr: i2c_test_params.peripheral_addr,
+                reg_addr: 8'h00,
+                num_bytes: 1
+            });
+        delay(2);
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NoModule,
+            "NoModule error should be present when attempting to communicate with a device which is not present.");
+        delay(5);
+    endseq);
+endmodule
+
+// mkNoPowerTest
+//
+// This test checks that a NoPower error occurs when the hot swap's power good
+// has not asserted within the timeout threshold and I2C communication is
+// attempted.
+(* synthesize *)
+module mkNoPowerTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        delay(5);
+        bench.modprsl(0);
+        await(bench.hsc_en());
+        bench.command(Command {
+                op: Read,
+                i2c_addr: i2c_test_params.peripheral_addr,
+                reg_addr: 8'h00,
+                num_bytes: 1
+            });
+        delay(2);
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NoPower,
+            "NoPower error should be present when attempting to communicate before the hot swap is stable.");
+        delay(5);
+    endseq);
+endmodule
+
+// mkPowerGoodTimeoutTest
+//
+// This test checks that a PowerFault error occurs when the hot swap has timed
+// out and I2C communication is attempted.
+(* synthesize *)
+module mkPowerGoodTimeoutTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        delay(5);
+        bench.modprsl(0);
+        await(bench.hsc_pg_timeout());
+        bench.command(Command {
+                op: Read,
+                i2c_addr: i2c_test_params.peripheral_addr,
+                reg_addr: 8'h00,
+                num_bytes: 1
+            });
+        delay(2);
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            PowerFault,
+            "PowerFault error should be present when attempting to communicate after the hot swap has timed out");
+        delay(5);
+    endseq);
+endmodule
+
+// mkPowerGoodLostTest
+//
+// This test checks that a PowerFault error occurs when the hot swap has aborted
+// and I2C communication is attempted.
+(* synthesize *)
+module mkPowerGoodLostTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        delay(5);
+        insert_and_power_module(bench);
+        bench.hsc_pg(0);
+        bench.command(Command {
+                op: Read,
+                i2c_addr: i2c_test_params.peripheral_addr,
+                reg_addr: 8'h00,
+                num_bytes: 1
+            });
+        delay(2);
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            PowerFault,
+            "PowerFault error should be present when attempting to communicate after the hot swap has aborted");
+        delay(5);
+    endseq);
+endmodule
 
 // mkI2CReadTest
 //
 // This test reads an entire page (128 bytes) of module memory.
 module mkI2CReadTest (Empty);
     Bench bench <- mkBench();
-    Reg#(UInt#(11)) delay_counter <- mkReg(0);
 
     Command read_cmd = Command {
         op: Read,
@@ -221,7 +343,6 @@ endmodule
 // This test writes an entire page (128 bytes) of module memory.
 module mkI2CWriteTest (Empty);
     Bench bench <- mkBench();
-    Reg#(UInt#(11)) delay_counter <- mkReg(0);
 
     Command write_cmd = Command {
         op: Write,

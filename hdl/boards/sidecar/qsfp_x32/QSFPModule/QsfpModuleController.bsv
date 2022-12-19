@@ -213,7 +213,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     endrule
 
     (* fire_when_enabled *)
-    rule do_detect_presence (!modprsl_);
+    rule do_detect_presence (!modprsl_ && hot_swap.disabled());
         hot_swap.set_enable(power_en_ == 1);
     endrule
 
@@ -303,11 +303,11 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_i2c;
         if (i2c_attempt && modprsl_) begin
             error   <= NoModule;
-        end else if (i2c_attempt && !hot_swap.enabled) begin
-            error   <= NoPower;
         end else if (i2c_attempt &&
             (hot_swap.timed_out || hot_swap.aborted)) begin
             error   <= PowerFault;
+        end else if (i2c_attempt && !hot_swap.enabled) begin
+            error   <= NoPower;
         end else if (i2c_attempt) begin
             new_i2c_command.send();
             error   <= NoError;
