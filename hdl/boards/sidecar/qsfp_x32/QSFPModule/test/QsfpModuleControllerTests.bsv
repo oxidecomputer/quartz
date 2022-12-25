@@ -362,7 +362,6 @@ endfunction
 // mkPowerStateA4Test
 //
 // This test verifies assertions when a module is in A4.
-(* synthesize *)
 module mkPowerStateA4Test (Empty);
     Bench bench <- mkBench();
 
@@ -376,7 +375,6 @@ endmodule
 // mkPowerStateA3Test
 //
 // This test verifies assertions when a module is taken to A3.
-(* synthesize *)
 module mkPowerStateA3Test (Empty);
     Bench bench <- mkBench();
 
@@ -390,7 +388,6 @@ endmodule
 // mkPowerStateA2Test
 //
 // This test verifies assertions when a module is taken to A2 successfully.
-(* synthesize *)
 module mkPowerStateA2Test (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -406,7 +403,6 @@ endmodule
 // mkPowerStateA0Test
 //
 // This test verifies assertions when a module is taken to A0.
-(* synthesize *)
 module mkPowerStateA0Test (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -424,7 +420,6 @@ endmodule
 //
 // This test verifies assertions when a module is taken to A2 but a power fault
 // occurs, including recovering from it by setting the clear_fault bit.
-(* synthesize *)
 module mkPowerStateA2PgTimeoutTest (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -441,7 +436,6 @@ endmodule
 //
 // This test verifies that setting the reset bit will reset the module from the
 // A2 state.
-(* synthesize *)
 module mkResetFromA2Test (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -473,7 +467,6 @@ endmodule
 // A0 state. The controller will first place the module into low-power mode for
 // the required time and then formally transition from A0 -> A2 where the reset
 // will be performed.
-(* synthesize *)
 module mkResetFromA0Test (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -511,7 +504,6 @@ endmodule
 //
 // This test verifies that we will transition from A0 -> A2 if the target state
 // should change.
-(* synthesize *)
 module mkA0ToA2Test (Empty);
 Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -539,7 +531,6 @@ endmodule
 //
 // This test verifies that we will transition from A0 -> A2 -> A3 if the target
 // state should change.
-(* synthesize *)
 module mkA0ToA3Test (Empty);
 Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -572,7 +563,6 @@ endmodule
 //
 // This test verifies that the removal of a module will result in the controller
 // unwinding the module sequencing and end up in the A4 state.
-(* synthesize *)
 module mkModuleRemovalTest (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -598,7 +588,6 @@ endmodule
 //
 // This test verifies that if power was to disappear during operation that the
 // correct Fault state is reached and able to be cleared.
-(* synthesize *)
 module mkModulePowerLostTest (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -641,7 +630,6 @@ endmodule
 // mkI2CReadTest
 //
 // This test reads an entire page (128 bytes) of module memory.
-(* synthesize *)
 module mkI2CReadTest (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);
@@ -666,7 +654,6 @@ endmodule
 // mkI2CWriteTest
 //
 // This test writes an entire page (128 bytes) of module memory.
-(* synthesize *)
 module mkI2CWriteTest (Empty);
     Bench bench <- mkBench();
     Reg#(UInt#(11)) delay_counter <- mkReg(0);

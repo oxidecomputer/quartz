@@ -47,7 +47,7 @@ pfexec apt -y install make
 # Install yosys from pre-built toolchain as specified
 #
 banner Yosys Install
-YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-08-25/oss-cad-suite-linux-x64-20220825.tgz"
+YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-12-22/oss-cad-suite-linux-x64-20221222.tgz"
 wget -q $YOSYS_TOOLCHAIN
 tar zxf oss-cad-suite-linux-x64*
 
@@ -70,7 +70,7 @@ tar zxf bsc-2022.01-ubuntu*
 
 #
 # Do cobalt setup (python packages required)
-# 
+#
 banner cobalt Setup
 pushd vnd/cobalt
 #
@@ -83,7 +83,7 @@ popd
 #
 # Prep for build by setting up the BUILD.vars that cobble needs
 # then making a build directory and initializing cobble
-# 
+#
 cp BUILD.vars.buildomat BUILD.vars
 
 mkdir build
@@ -101,4 +101,3 @@ banner FPGA Builds
 
 # Get all bit files and build them
 ./cobble list | grep .bit | while read line; do ./cobble build -v "$line"; done
-

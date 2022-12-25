@@ -214,7 +214,6 @@ module mkBench (Bench);
     method Action clear = dut.clear;
 endmodule
 
-(* synthesize *)
 module mkI2CBitControlOneByteWriteTest (Empty);
     Bench bench <- mkBench();
 
@@ -234,7 +233,6 @@ module mkI2CBitControlOneByteWriteTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CBitControlSequentialWriteTest (Empty);
     Bench bench <- mkBench();
 
@@ -254,7 +252,6 @@ module mkI2CBitControlSequentialWriteTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CBitControlOneByteReadTest (Empty);
     Bench bench <- mkBench();
 
@@ -283,7 +280,6 @@ module mkI2CBitControlOneByteReadTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CBitControlSequentialReadTest (Empty);
     Bench bench <- mkBench();
 
@@ -321,7 +317,6 @@ module mkI2CBitControlSequentialReadTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CBitControlRandomReadTest (Empty);
     Bench bench <- mkBench();
 

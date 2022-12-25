@@ -27,8 +27,7 @@ interface SidecarMainboardEmulator;
     method Bit#(8) led();
 endinterface
 
-(* synthesize,
-    default_clock_osc = "clk_12mhz",
+(* default_clock_osc = "clk_12mhz",
     default_reset = "design_reset_l" *)
 module mkSidecarMainboardEmulatorOnEcp5Evn (SidecarMainboardEmulator);
     // Synchronize the default reset to the default clock.

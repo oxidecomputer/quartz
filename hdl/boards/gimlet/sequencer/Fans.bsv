@@ -108,7 +108,6 @@ module mkFansBlock(FansBlockIfc);
 
 endmodule
 
-(* synthesize *)
 module mkFansBlockSimpleTest(Empty);
     FansBlockIfc fans <- mkFansBlock();
     Reg#(UInt#(4)) cntr <- mkReg(0);

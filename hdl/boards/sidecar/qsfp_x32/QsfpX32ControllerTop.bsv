@@ -227,8 +227,7 @@ endinterface
 
 function Inout#(Bit#(1)) inout_from_tristate(TriState#(Bit#(1)) tristate) = tristate.io;
 
-(*  synthesize,
-    default_clock_osc="clk_50m_fpga",
+(* default_clock_osc="clk_50m_fpga",
     default_reset="gpio_to_fpga_design_reset_l" *)
 module mkQsfpX32ControllerTop (QsfpControllerTop);
     // Synchronize the default reset to the default clock

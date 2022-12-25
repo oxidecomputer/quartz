@@ -253,7 +253,6 @@ endmodule
 // starts with the sequencer in A2, testing each major step as it transitions to
 // A0. The intended outcome is the sequencer to dwell in A0 for 50 sim ticks.
 //
-(* synthesize *)
 module mkPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -317,7 +316,6 @@ endmodule
 // is the sequencer to dwell go from A0 -> A2 -> A0 without errors or
 // exceptions.
 //
-(* synthesize *)
 module mkPowerDownTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -372,7 +370,6 @@ endmodule
 // `TOFINO_SEQ_CTRL` while the sequencer is InPowerUp. The intended outcome is
 // the sequencer back in A2 and the error register set to SoftwareAbort.
 //
-(* synthesize *)
 module mkSoftwareAbortDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -399,7 +396,6 @@ endmodule
 // configured timeout period. The intended outcome is the sequencer back in A2
 // and the error register set to PowerGoodTimeout.
 //
-(* synthesize *)
 module mkPowerGoodTimeoutTest (Empty);
     Parameters parameters = defaultValue;
     // Extend the EN to PG delay past timemout limit.
@@ -430,7 +426,6 @@ endmodule
 // The intended outcome is an abort of the power up sequence and the error
 // register set to AckVidTimeout.
 //
-(* synthesize *)
 module mkAckVidTimeoutTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -458,7 +453,6 @@ endmodule
 // The intended outcome is an abort of the power up sequence and the error
 // register set to PowerAbort.
 //
-(* synthesize *)
 module mkPowerDisabledDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -489,7 +483,6 @@ endmodule
 // occuring while dwelling in A0. The intended outcome is the sequencer
 // transitioning to A2 and the error register set to PowerAbort.
 //
-(* synthesize *)
 module mkPowerDisabledInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -520,7 +513,6 @@ endmodule
 // The intended outcome is an abort of the power up sequence and the error
 // register set to PowerFault.
 //
-(* synthesize *)
 module mkPowerFaultDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -552,7 +544,6 @@ endmodule
 // intended outcome is a power down transition and the error register set to
 // PowerFault.
 //
-(* synthesize *)
 module mkPowerFaultInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -593,7 +584,6 @@ endmodule
 // Since VR Hot is probably a more rare occurance, the error should reflect this
 // appropriately.
 //
-(* synthesize *)
 module mkVrHotDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -627,7 +617,6 @@ endmodule
 // Since VR Hot is probably a more rare occurance, the error should reflect this
 // appropriately.
 //
-(* synthesize *)
 module mkVrHotInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -666,7 +655,6 @@ endmodule
 // The intended outcome is for the PCIe reset signal to remain asserted after
 // power up.
 //
-(* synthesize *)
 module mkPCIeResetHeldOnPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -708,7 +696,6 @@ endmodule
 // asserting PERST. The intended outcome is for the PCIe reset signal to follow
 // the state of `Tofino2Sequencer.pcie_reset()`.
 //
-(* synthesize *)
 module mkPCIeResetInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -751,7 +738,6 @@ endmodule
 // The intended outcome is an abort of the power up sequence and the error
 // register set to ThermalAlert.
 //
-(* synthesize *)
 module mkThermalAlertDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -779,7 +765,6 @@ endmodule
 // loop can not respond fast enough. The intended outcome is a power down
 // sequence and the error register set to ThermalAlert.
 //
-(* synthesize *)
 module mkThermalAlertInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -809,7 +794,6 @@ endmodule
 // until the error is cleared. Upon clearing the error the bit should be unset
 // to avoid the sequencer restarting without an explicit request to do so.
 //
-(* synthesize *)
 module mkCtrlEnNotSetAfterClearError (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -849,7 +833,6 @@ endmodule
 // The intended outcome is an abort of the power up sequence, the error
 // register set to PowerAbort, and the vddpcie EN pin low.
 //
-(* synthesize *)
 module mkVddPcieDisabledOnFaultDuringPowerUpTest (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);
@@ -886,7 +869,6 @@ endmodule
 // The intended outcome is an abort of the power up sequence, the error
 // register set to PowerAbort, and the VDDPCIE EN pin low.
 //
-(* synthesize *)
 module mkVddPcieDisabledOnFaultInA0Test (Empty);
     Parameters parameters = defaultValue;
     Bench bench <- mkBench(parameters);

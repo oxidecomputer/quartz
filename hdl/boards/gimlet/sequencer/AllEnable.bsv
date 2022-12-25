@@ -106,7 +106,7 @@ interface Pins;
 
 endinterface
 
-(* synthesize, default_clock_osc="clk50m" *)
+(* default_clock_osc="clk50m" *)
 module mkGimletPowerSeqTop (Pins);
 
     Reg#(Bit#(1)) high_reg <- mkReg(1);

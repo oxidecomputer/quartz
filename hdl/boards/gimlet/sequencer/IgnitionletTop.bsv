@@ -17,7 +17,7 @@ interface Top;
     method Bit#(1) led2();
 endinterface
 
-(* synthesize, default_clock_osc="clk_50mhz" *)
+(* default_clock_osc="clk_50mhz" *)
 module mkIgnitionletTop(Top);
     SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     SpiDecodeIF decode <- mkSpiRegDecode();

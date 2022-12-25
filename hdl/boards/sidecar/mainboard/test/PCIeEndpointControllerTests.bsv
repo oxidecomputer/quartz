@@ -11,7 +11,6 @@ import SidecarMainboardControllerReg::*;
 
 // This test demonstrates host control over PERST for a downstream peripheral
 // when the `override_host_reset` flag is not set in the `ctrl` register.
-(* synthesize *)
 module mkResetHostControlTest (Empty);
     PCIeEndpointController endpoint <- mkPCIeEndpointController();
     Reg#(Bool) reset_from_host <- mkReg(True);
@@ -54,7 +53,6 @@ endmodule
 // This test demonstrates software control over PERST for a downstream
 // peripheral when the `override_host_reset` flag is not set in the `ctrl`
 // register.
-(* synthesize *)
 module mkResetSoftwareControlTest (Empty);
     PCIeEndpointController endpoint <- mkPCIeEndpointController();
     Reg#(Bool) reset_from_host <- mkReg(True);

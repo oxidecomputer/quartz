@@ -804,7 +804,6 @@ module mkSP3Model(SP3Model);
     method disabled = disabled_._write;
 endmodule
 
-(* synthesize *)
 module mkA0PowerUpTest(Empty);
     Bench bench <- mkBench();
     
@@ -827,7 +826,6 @@ module mkA0PowerUpTest(Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkA0PowerErrorsTest(Empty);
     Bench bench <- mkBench();
     
@@ -888,7 +886,6 @@ module mkA0PowerErrorsTest(Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkA0FakeSP3Test(Empty);
     Bench bench <- mkBench();
     
@@ -912,7 +909,6 @@ module mkA0FakeSP3Test(Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkA0MAPOTest(Empty);
     Bench bench <- mkBench();
     
@@ -959,7 +955,6 @@ module mkA0MAPOTest(Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkA0DebugBrokenTest(Empty);
     Bench bench <- mkBench();
     
@@ -991,7 +986,6 @@ module mkA0DebugBrokenTest(Empty);
 endmodule
 
 
-(* synthesize *)
 module mkA0ThermtripTest(Empty);
     Bench bench <- mkBench();
     

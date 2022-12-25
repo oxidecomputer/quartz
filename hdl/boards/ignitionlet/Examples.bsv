@@ -10,7 +10,7 @@ import Blinky::*;
 import Board::*;
 
 
-(* synthesize, default_clock_osc = "clk_50mhz", default_reset = "rst_nc" *)
+(* default_clock_osc = "clk_50mhz", default_reset = "rst_nc" *)
 module mkSequencerBlinky (IgnitionletSequencer);
     Wire#(Bit#(6)) io1_next <- mkWire();
     Wire#(Bit#(6)) io2_next <- mkWire();

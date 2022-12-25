@@ -7,7 +7,6 @@ import IgnitionTarget::*;
 import TestUtils::*;
 
 
-(* synthesize *)
 module mkSystemResetShortButtonPressTest (Empty);
     // Shorten the duration and cool down to avoid long sim times.
     let reset_button_min_duration = 4;
@@ -48,7 +47,6 @@ module mkSystemResetShortButtonPressTest (Empty);
     mkTestWatchdog(25);
 endmodule
 
-(* synthesize *)
 module mkSystemResetLongButtonPressTest (Empty);
     // Shorten the duration and cool down to avoid long sim times.
     let reset_button_min_duration = 4;

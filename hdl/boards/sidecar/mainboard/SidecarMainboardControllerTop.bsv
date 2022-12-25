@@ -446,8 +446,7 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     method front_io_hsc_to_fpga_pg = sync(front_io_pg);
 endmodule
 
-(* synthesize,
-    default_clock_osc = "clk_50m_fpga_refclk",
+(* default_clock_osc = "clk_50m_fpga_refclk",
     default_reset="sp_to_fpga_design_reset_l" *)
 module mkSidecarMainboardControllerRevB (SidecarMainboardControllerTop);
     (* hide *) SidecarMainboardControllerTop _top <- mkSidecarMainboardControllerTop();
@@ -606,8 +605,7 @@ interface SidecarMainboardControllerTopRevA;
     (* prefix = "" *) method Action front_io_hsc_to_fpga_pg(Bool front_io_hsc_to_fpga_pg);
 endinterface
 
-(* synthesize,
-    default_clock_osc = "clk_50m_fpga_refclk",
+(* default_clock_osc = "clk_50m_fpga_refclk",
     default_reset="sp_to_fpga_design_reset_l" *)
 module mkSidecarMainboardControllerRevA (SidecarMainboardControllerTopRevA);
     (* hide *) SidecarMainboardControllerTop _top <- mkSidecarMainboardControllerTop();

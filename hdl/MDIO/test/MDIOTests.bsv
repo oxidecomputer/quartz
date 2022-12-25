@@ -101,7 +101,6 @@ module mkBench(Bench);
     endmethod
 endmodule
 
-(* synthesize *)
 module mkMDIOReadTest (Empty);
     Bench bench <- mkBench();
 
@@ -120,7 +119,6 @@ module mkMDIOReadTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkMDIOWriteTest (Empty);
     Bench bench <- mkBench();
 
@@ -147,7 +145,6 @@ module mkMDIOWriteTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkMDIOIgnoreWrongPhyAddrTest (Empty);
     Bench bench <- mkBench();
 

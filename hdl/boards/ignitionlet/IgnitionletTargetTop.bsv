@@ -7,7 +7,7 @@ import IgnitionTarget::*;
 import IgnitionTargetWrapper::*;
 
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkIgnitionletTargetWithResetButton (IgnitionletTarget);
     let parameters = default_app_with_button_as_reset;
     parameters.external_reset = False;
@@ -17,7 +17,7 @@ module mkIgnitionletTargetWithResetButton (IgnitionletTarget);
     return _top;
 endmodule
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators (IgnitionletTarget);
     let parameters = default_app_with_button_as_reset;
     parameters.external_reset = False;
@@ -28,7 +28,7 @@ module mkIgnitionletTargetWithResetButtonAndAuxLoopbackIndicators (IgnitionletTa
     return _top;
 endmodule
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkIgnitionletTargetWithPowerButton (IgnitionletTarget);
     let parameters = default_app_with_power_button;
     parameters.external_reset = False;

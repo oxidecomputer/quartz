@@ -255,7 +255,7 @@ interface PinsTop;
 endinterface
 
 //This is the top-level module for the Gimlet Sequencer FPGA.
-(* synthesize, default_clock_osc="clk50m" *)
+(* default_clock_osc="clk50m" *)
 module mkGimletSeqTop (PinsTop);
     Clock cur_clk <- exposeCurrentClock();
     Reset reset_sync <- mkAsyncResetFromCR(2, cur_clk);

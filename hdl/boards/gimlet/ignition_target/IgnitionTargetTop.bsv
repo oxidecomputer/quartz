@@ -7,7 +7,7 @@ import IgnitionTarget::*;
 import IgnitionTargetWrapper::*;
 
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkGimletRevATargetWithResetButton (IgnitionletTarget);
     Parameters parameters = default_app_with_button_as_reset;
     parameters.external_reset = False;
@@ -18,7 +18,7 @@ module mkGimletRevATargetWithResetButton (IgnitionletTarget);
     return _top;
 endmodule
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkGimletRevATargetWithPowerButton (IgnitionletTarget);
     Parameters parameters = default_app_with_power_button;
     parameters.external_reset = False;
@@ -29,8 +29,7 @@ module mkGimletRevATargetWithPowerButton (IgnitionletTarget);
     return _top;
 endmodule
 
-(* synthesize,
-    default_clock_osc = "clk_50mhz",
+(* default_clock_osc = "clk_50mhz",
     default_reset = "design_reset_l" *)
 module mkGimletRevBTargetWithResetButton (IgnitionletTarget);
     Parameters parameters = default_app_with_button_as_reset;
@@ -41,8 +40,7 @@ module mkGimletRevBTargetWithResetButton (IgnitionletTarget);
     return _top;
 endmodule
 
-(* synthesize,
-    default_clock_osc = "clk_50mhz",
+(* default_clock_osc = "clk_50mhz",
     default_reset = "design_reset_l" *)
 module mkGimletRevBTargetWithPowerButton (IgnitionletTarget);
     Parameters parameters = default_app_with_power_button;

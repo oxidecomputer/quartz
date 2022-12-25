@@ -94,7 +94,7 @@ import PowerRail::*;
         STAGE0_PG = 'h03,
         DELAY = 'h04,
         DONE = 'h05
-   
+
     } NicStateType deriving (Eq, Bits);
 
     module mkNicBlockSeq#(Integer one_ms_counts)(NicBlockTop);
@@ -133,16 +133,16 @@ import PowerRail::*;
         PowerRail v1p1 <- mkPowerRail(ten_ms, False);
         PowerRail v0p9_a0hp <- mkPowerRail(ten_ms, False);
 
-        Vector#(7, PowerRail) power_rails = 
+        Vector#(7, PowerRail) power_rails =
             vec(ldo_v3p3, v1p5a, v1p5d, v1p2_enet, v1p2, v1p1, v0p9_a0hp);
-        
+
         function Action enable_rails(Vector#(n, PowerRail) rails, NicStateType step) =
         action
             state <= step;
             for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
                 rails[i].set_enabled(True);
         endaction;
-    
+
         function Action disable_rails(Vector#(n, PowerRail) rails, NicStateType step) =
                 action
                     state <= step;
@@ -169,7 +169,7 @@ import PowerRail::*;
         rule do_set_ticks_count (ticks_count_next.wget matches tagged Valid .value);
             ticks_count <= value;
         endrule
-    
+
         //
         // Basic down counter -- counts
         //
@@ -235,7 +235,7 @@ import PowerRail::*;
                 // clear the enable.
                 nic_power_up_seq.start();
             end else if (!enable && state != IDLE) begin
-                // Even if we clear the enable, we can't start the 
+                // Even if we clear the enable, we can't start the
                 // power-down until the down-stream logic has finished
                 // powering off.
                 nic_power_dwn_seq.start();
@@ -316,7 +316,7 @@ import PowerRail::*;
         endinterface
 
     endmodule
-    
+
 
 
      interface Bench;
@@ -406,7 +406,6 @@ import PowerRail::*;
 
     endmodule
 
-     (* synthesize *)
     module mkPowerUpNicTest(Empty);
          Bench bench <- mkBench();
 
@@ -435,6 +434,5 @@ import PowerRail::*;
             delay(200);
         endseq);
     endmodule
-
 
 endpackage

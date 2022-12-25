@@ -118,7 +118,6 @@ module mkRegResponder(RegIF);
     endmethod
 endmodule
 
-(* synthesize *)
 module mkTestBenchSimpleReg(Empty);
     RegIF regs <- mkRegResponder();
 

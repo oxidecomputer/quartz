@@ -52,7 +52,6 @@ bluespec_library('Regs',
 bluespec_library('PowerRail',
     sources = [
         'PowerRail.bsv',
-         'cobalt//hdl:TestUtils',
     ],
 )
 

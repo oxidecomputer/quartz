@@ -17,7 +17,6 @@ Bit#(7) incorrect_address = 7'b0;
 function Bit#(8) local_read(Bit#(5) i) = {pack(LocalRead), i};
 function Bit#(8) local_write(Bit#(5) i) = {pack(LocalWrite), i};
 
-(* synthesize *)
 module mkClearSendBufferTest (Empty);
     TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 100, tofino_address);
     I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
@@ -38,7 +37,6 @@ module mkClearSendBufferTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkAbortRequestOnAddressNackTest (Empty);
     TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 100, tofino_address);
     I2CPeripheralModel tofino <- mkI2CPeripheralModel(incorrect_address);
@@ -70,7 +68,6 @@ module mkAbortRequestOnAddressNackTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkLocalWriteTest (Empty);
     TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 100, tofino_address);
     I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
@@ -113,7 +110,6 @@ module mkLocalWriteTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkLocalReadTest (Empty);
     TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 100, tofino_address);
     I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
@@ -163,7 +159,6 @@ module mkLocalReadTest (Empty);
     mkTestWatchdog(20000);
 endmodule
 
-(* synthesize *)
 module mkDirectWriteTest (Empty);
     TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 100, tofino_address);
     I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
@@ -221,7 +216,6 @@ module mkDirectWriteTest (Empty);
     mkTestWatchdog(20000);
 endmodule
 
-(* synthesize *)
 module mkDirectReadTest (Empty);
     TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 100, tofino_address);
     I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);

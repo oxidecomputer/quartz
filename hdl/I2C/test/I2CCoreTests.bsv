@@ -148,7 +148,6 @@ module mkBench (Bench);
     endmethod
 endmodule
 
-(* synthesize *)
 module mkI2CCoreOneByteWriteTest (Empty);
     Bench bench <- mkBench();
 
@@ -167,7 +166,6 @@ module mkI2CCoreOneByteWriteTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CCoreOneByteReadTest (Empty);
     Bench bench <- mkBench();
 
@@ -186,7 +184,6 @@ module mkI2CCoreOneByteReadTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CCoreSequentialWriteTest (Empty);
     Bench bench <- mkBench();
 
@@ -205,7 +202,6 @@ module mkI2CCoreSequentialWriteTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CCoreSequentialReadTest (Empty);
     Bench bench <- mkBench();
 
@@ -224,7 +220,6 @@ module mkI2CCoreSequentialReadTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkI2CCoreRandomReadTest (Empty);
     Bench bench <- mkBench();
 

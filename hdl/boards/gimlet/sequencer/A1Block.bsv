@@ -69,7 +69,7 @@ import PowerRail::*;
         method Bool a1_ok;
         interface A1Regs reg_if;
     endinterface
-    
+
     typedef enum {  // Leaving revA gimlet sequence #s here for now.
         IDLE = 'h0,
         ENABLE = 'h1,
@@ -109,9 +109,9 @@ import PowerRail::*;
         PowerRail sp3_v1p8_s5 <- mkPowerRail(ten_ms, False);
 
         // Add power rails to a vector for easy aggregation
-        Vector#(4, PowerRail) power_rails = 
+        Vector#(4, PowerRail) power_rails =
             vec(sp3_v3p3_s5, sp3_v1p5_rtc, sp3_v0p9_s5, sp3_v1p8_s5);
-        
+
 
         function Action enable_rails(Vector#(4, PowerRail) rails, A1StateType step) =
             action
@@ -126,7 +126,7 @@ import PowerRail::*;
                 for (int i = 0; i < 4; i=i+1)
                     rails[i].set_enabled(False);
             endaction;
-        
+
         function Stmt delay(Integer d, A1StateType step) =
             seq
                 action
@@ -138,7 +138,7 @@ import PowerRail::*;
 
         function bool_or(a, b) = a || b;
         function bool_and(a, b) = a && b;
-        
+
         (* fire_when_enabled *)
         rule do_readbacks;
             output_readbacks <= A1OutputType {
@@ -151,11 +151,11 @@ import PowerRail::*;
             input_readbacks <= A1Readbacks {
                 v0p9_vdd_soc_s5_pg: sp3_v0p9_s5.pg_readback,
                 v1p8_s5_pg: sp3_v1p8_s5.pg_readback,
-                v3p3_s5_pg: sp3_v3p3_s5.pg_readback,    
-                v1p5_rtc_pg: sp3_v1p5_rtc.pg_readback  
+                v3p3_s5_pg: sp3_v3p3_s5.pg_readback,
+                v1p5_rtc_pg: sp3_v1p5_rtc.pg_readback
             };
         endrule
-        
+
         //
         // Basic down counter -- pre-load
         //
@@ -198,7 +198,7 @@ import PowerRail::*;
                 ok <= True;
                 sp3_rsmrst_v3p3_l_ <= 1;
             endaction
-            
+
         endseq, enable && !faulted && !abort);
 
         FSM a1_power_down_seq <- mkFSMWithPred(seq
@@ -243,7 +243,7 @@ import PowerRail::*;
                 // clear the enable.
                 a1_power_up_seq.start();
             end else if (!enable && state != IDLE && downstream_idle) begin
-                // Even if we clear the enable, we can't start the 
+                // Even if we clear the enable, we can't start the
                 // power-down until the down-stream logic has finished
                 // powering off.
                 a1_power_down_seq.start();
@@ -333,7 +333,6 @@ import PowerRail::*;
         endmethod
     endmodule
 
-    (* synthesize *)
     module mkA1PowerUpTest(Empty);
 
         Bench bench <- mkBench();
@@ -352,7 +351,6 @@ import PowerRail::*;
 
     endmodule
 
-    (* synthesize *)
     module mkA1PowerDownTest(Empty);
 
         Bench bench <- mkBench();
@@ -373,7 +371,6 @@ import PowerRail::*;
 
     endmodule
 
-    (* synthesize *)
     module mkA1PowerDownA0InteractionTest(Empty);
 
         Bench bench <- mkBench();
@@ -399,7 +396,6 @@ import PowerRail::*;
 
     endmodule
 
-    (* synthesize *)
     module mkA1MAPOTest(Empty);
 
         Bench bench <- mkBench();
