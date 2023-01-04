@@ -100,4 +100,4 @@ pushd build
 banner FPGA Builds
 
 # Get all bit files and build them
-./cobble list | grep .bit | while read line; do ./cobble build -v "$line"; done
+./cobble build -v "//.*#bitstream"
