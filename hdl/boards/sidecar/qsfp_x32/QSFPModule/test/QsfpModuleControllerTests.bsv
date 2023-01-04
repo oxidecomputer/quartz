@@ -215,7 +215,6 @@ endfunction
 //
 // This test checks proper behavior when no module is present. This should also
 // result in a NoModule error if I2C communication is attempted.
-(* synthesize *)
 module mkNoModuleTest (Empty);
     Bench bench <- mkBench();
 
@@ -242,7 +241,6 @@ endmodule
 // This test checks that a NoPower error occurs when the hot swap's power good
 // has not asserted within the timeout threshold and I2C communication is
 // attempted.
-(* synthesize *)
 module mkNoPowerTest (Empty);
     Bench bench <- mkBench();
 
@@ -268,7 +266,6 @@ endmodule
 //
 // This test checks that a PowerFault error occurs when the hot swap has timed
 // out and I2C communication is attempted.
-(* synthesize *)
 module mkPowerGoodTimeoutTest (Empty);
     Bench bench <- mkBench();
 
@@ -294,7 +291,6 @@ endmodule
 //
 // This test checks that a PowerFault error occurs when the hot swap has aborted
 // and I2C communication is attempted.
-(* synthesize *)
 module mkPowerGoodLostTest (Empty);
     Bench bench <- mkBench();
 
