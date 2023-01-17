@@ -5,7 +5,7 @@ bluespec_library('MDIO',
         'MDIO.bsv'
     ],
     deps = [
-        '//hdl:Bidirection',
+        'cobalt//hdl:Bidirection',
         'cobalt//hdl:Strobe',
     ])
 
@@ -14,7 +14,6 @@ bluespec_library('MDIOPeripheralModel',
         'test/MDIOPeripheralModel.bsv',
     ],
     deps = [
-        '//hdl:Bidirection',
         ':MDIO',
     ])
 
@@ -27,7 +26,6 @@ bluesim_tests('MDIOTests',
         'mkMDIOIgnoreWrongPhyAddrTest',
     ],
     deps = [
-        '//hdl:Bidirection',
         ':MDIO',
         ':MDIOPeripheralModel',
     ])

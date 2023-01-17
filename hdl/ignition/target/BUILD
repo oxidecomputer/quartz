@@ -16,9 +16,9 @@ bluespec_library('IgnitionTargetWrapper',
     deps = [
         ':IgnitionTarget',
         'cobalt//hdl:InitialReset',
+        'cobalt//hdl:IOSync',
         'cobalt//hdl:SchmittReg',
         'cobalt//hdl:Strobe',
-        'cobalt//hdl:SyncBits',
         'cobalt//hdl/interfaces:ICE40',
     ],
     local = {

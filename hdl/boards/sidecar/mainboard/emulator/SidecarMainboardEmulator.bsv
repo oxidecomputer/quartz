@@ -90,9 +90,9 @@ module mkSidecarMainboardEmulatorOnEcp5EvnWrapper (SidecarMainboardEmulator);
             controller.registers.tofino_debug_port,
             controller.registers.pcie);
 
-    Reg#(Bit#(1)) csn <- mkInputSyncFor(spi_phy.pins.csn);
-    Reg#(Bit#(1)) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
-    Reg#(Bit#(1)) copi <- mkInputSyncFor(spi_phy.pins.copi);
+    InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
+    InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
+    InputReg#(Bit#(1), 2) copi <- mkInputSyncFor(spi_phy.pins.copi);
     ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(spi_phy.pins.cipo);
 
     mkConnection(spi_phy.decoder_if, spi_decoder.spi_byte);

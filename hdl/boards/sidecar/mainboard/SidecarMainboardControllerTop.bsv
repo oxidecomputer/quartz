@@ -195,9 +195,9 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
             controller.registers.pcie,
             reset_by reset_sync);
 
-    Reg#(Bit#(1)) csn <- mkInputSyncFor(spi_phy.pins.csn);
-    Reg#(Bit#(1)) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
-    Reg#(Bit#(1)) copi <- mkInputSyncFor(spi_phy.pins.copi);
+    InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
+    InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
+    InputReg#(Bit#(1), 2) copi <- mkInputSyncFor(spi_phy.pins.copi);
     ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(spi_phy.pins.cipo);
 
     mkConnection(spi_phy.decoder_if, spi_decoder.spi_byte);
@@ -215,7 +215,7 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
 
     ReadOnly#(Bool) clocks_reset <- mkOutputSyncFor(controller.pins.clocks.reset);
     ReadOnly#(Bool) clocks_ldo_en <- mkOutputSyncFor(controller.pins.clocks.ldo.en);
-    Reg#(Bool) clocks_ldo_pg <- mkInputSyncFor(controller.pins.clocks.ldo.pg);
+    InputReg#(Bool, 2) clocks_ldo_pg <- mkInputSyncFor(controller.pins.clocks.ldo.pg);
 
     //
     // Tofino Sequencer
@@ -224,7 +224,7 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     ReadOnly#(Tofino2Resets) tofino_resets <-
         mkOutputSyncFor(controller.pins.tofino.resets);
 
-    Reg#(Bit#(3)) vid <- mkInputSync();
+    InputReg#(Bit#(3), 2) vid <- mkInputSync();
 
     (* fire_when_enabled *)
     rule do_set_vid;
@@ -232,21 +232,21 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
         controller.pins.tofino.vid(reverseBits(vid));
     endrule
 
-    Reg#(Bool) tofino_thermal_alert <-
+    InputReg#(Bool, 2) tofino_thermal_alert <-
         mkInputSyncFor(controller.pins.tofino.thermal_alert);
 
     ReadOnly#(Bool) vdd18_en <- mkOutputSyncFor(controller.pins.tofino.vdd18.en);
-    Reg#(Bool) vdd18_pg <- mkInputSyncFor(controller.pins.tofino.vdd18.pg);
-    Reg#(Bool) vdd18_fault <- mkInputSyncFor(controller.pins.tofino.vdd18.fault);
-    Reg#(Bool) vdd18_vrhot <- mkInputSyncFor(controller.pins.tofino.vdd18.vrhot);
+    InputReg#(Bool, 2) vdd18_pg <- mkInputSyncFor(controller.pins.tofino.vdd18.pg);
+    InputReg#(Bool, 2) vdd18_fault <- mkInputSyncFor(controller.pins.tofino.vdd18.fault);
+    InputReg#(Bool, 2) vdd18_vrhot <- mkInputSyncFor(controller.pins.tofino.vdd18.vrhot);
 
     ReadOnly#(Bool) vddcore_en <- mkOutputSyncFor(controller.pins.tofino.vddcore.en);
-    Reg#(Bool) vddcore_pg <- mkInputSyncFor(controller.pins.tofino.vddcore.pg);
-    Reg#(Bool) vddcore_fault <- mkInputSyncFor(controller.pins.tofino.vddcore.fault);
-    Reg#(Bool) vddcore_vrhot <- mkInputSyncFor(controller.pins.tofino.vddcore.vrhot);
+    InputReg#(Bool, 2) vddcore_pg <- mkInputSyncFor(controller.pins.tofino.vddcore.pg);
+    InputReg#(Bool, 2) vddcore_fault <- mkInputSyncFor(controller.pins.tofino.vddcore.fault);
+    InputReg#(Bool, 2) vddcore_vrhot <- mkInputSyncFor(controller.pins.tofino.vddcore.vrhot);
 
     ReadOnly#(Bool) vddpcie_en <- mkOutputSyncFor(controller.pins.tofino.vddpcie.en);
-    Reg#(Bool) vddpcie_pg <- mkInputSyncFor(controller.pins.tofino.vddpcie.pg);
+    InputReg#(Bool, 2) vddpcie_pg <- mkInputSyncFor(controller.pins.tofino.vddpcie.pg);
 
     // VDDx is a voltage regulator shared between the VDDt and VDDA15 rails. The
     // device signals and interface are wired up accordingly.
@@ -254,18 +254,18 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
         mkOutputSyncFor(
             controller.pins.tofino.vddt.en ||
             controller.pins.tofino.vdda15.en);
-    Reg#(Bool) vddx_pg <- mkInputSyncFor(controller.pins.tofino.vddt.pg);
-    Reg#(Bool) vddx_fault <- mkInputSyncFor(controller.pins.tofino.vddt.fault);
-    Reg#(Bool) vddx_vrhot <- mkInputSyncFor(controller.pins.tofino.vddt.vrhot);
+    InputReg#(Bool, 2) vddx_pg <- mkInputSyncFor(controller.pins.tofino.vddt.pg);
+    InputReg#(Bool, 2) vddx_fault <- mkInputSyncFor(controller.pins.tofino.vddt.fault);
+    InputReg#(Bool, 2) vddx_vrhot <- mkInputSyncFor(controller.pins.tofino.vddt.vrhot);
 
-    Reg#(Bool) vdda15_pg <- mkInputSyncFor(controller.pins.tofino.vdda15.pg);
+    InputReg#(Bool, 2) vdda15_pg <- mkInputSyncFor(controller.pins.tofino.vdda15.pg);
     mkConnection(vddx_fault, controller.pins.tofino.vdda15.fault);
     mkConnection(vddx_vrhot, controller.pins.tofino.vdda15.vrhot);
 
     // VDDA18 is colocated with VDD18, but has a discrete enable. The device
     // signals and interface are wired up accordingly.
     ReadOnly#(Bool) vdda18_en <- mkOutputSyncFor(controller.pins.tofino.vdda18.en);
-    Reg#(Bool) vdda18_pg <- mkInputSyncFor(controller.pins.tofino.vdda18.pg);
+    InputReg#(Bool, 2) vdda18_pg <- mkInputSyncFor(controller.pins.tofino.vdda18.pg);
     mkConnection(vdd18_fault, controller.pins.tofino.vdda18.fault);
     mkConnection(vdd18_vrhot, controller.pins.tofino.vdda18.vrhot);
 
@@ -280,9 +280,9 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     //
 
     Inout#(Bit#(1)) tofino_debug_port_scl <-
-        mkBidirectionSyncFor(controller.pins.tofino_debug_port.scl);
+        mkBidirectionRegSyncFor(controller.pins.tofino_debug_port.scl);
     Inout#(Bit#(1)) tofino_debug_port_sda <-
-        mkBidirectionSyncFor(controller.pins.tofino_debug_port.sda);
+        mkBidirectionRegSyncFor(controller.pins.tofino_debug_port.sda);
 
     //
     // PCIe Endpoint
@@ -295,7 +295,7 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     // this disabled until an MCN has been assigned or Sidecar Mainboard Rev B
     // is released.
     //ReadOnly#(Bool) pcie_alert <- mkOutputSyncFor(controller.pins.pcie.alert);
-    Reg#(Bool) pcie_reset <- mkInputSyncFor(controller.pins.pcie.reset);
+    InputReg#(Bool, 2) pcie_reset <- mkInputSyncFor(controller.pins.pcie.reset);
 
     //
     // VSC7448 Sequencer
@@ -304,18 +304,18 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
     ReadOnly#(Bool) vsc7448_reset <- mkOutputSyncFor(controller.pins.vsc7448.reset);
 
     ReadOnly#(Bool) vsc7448_v1p0_en <- mkOutputSyncFor(controller.pins.vsc7448.v1p0.en);
-    Reg#(Bool) vsc7448_v1p0_pg <- mkInputSyncFor(controller.pins.vsc7448.v1p0.pg);
+    InputReg#(Bool, 2) vsc7448_v1p0_pg <- mkInputSyncFor(controller.pins.vsc7448.v1p0.pg);
 
     ReadOnly#(Bool) vsc7448_v1p2_en <- mkOutputSyncFor(controller.pins.vsc7448.v1p2.en);
-    Reg#(Bool) vsc7448_v1p2_pg <- mkInputSyncFor(controller.pins.vsc7448.v1p2.pg);
+    InputReg#(Bool, 2) vsc7448_v1p2_pg <- mkInputSyncFor(controller.pins.vsc7448.v1p2.pg);
 
     ReadOnly#(Bool) vsc7448_v2p5_en <- mkOutputSyncFor(controller.pins.vsc7448.v2p5.en);
-    Reg#(Bool) vsc7448_v2p5_pg <- mkInputSyncFor(controller.pins.vsc7448.v2p5.pg);
+    InputReg#(Bool, 2) vsc7448_v2p5_pg <- mkInputSyncFor(controller.pins.vsc7448.v2p5.pg);
 
     ReadOnly#(Bool) vsc7448_clocks_en <-
         mkOutputSyncFor(controller.pins.vsc7448.clocks_enable);
 
-    Reg#(Bool) vsc7448_thermal_alert <-
+    InputReg#(Bool, 2) vsc7448_thermal_alert <-
         mkInputSyncFor(controller.pins.vsc7448.thermal_alert);
 
     //
@@ -324,25 +324,25 @@ module mkSidecarMainboardControllerTop (SidecarMainboardControllerTop);
 
     ReadOnly#(Bool) fan0_en <- mkOutputSyncFor(controller.pins.fans[0].en);
     ReadOnly#(Bool) fan0_led <- mkOutputSyncFor(controller.pins.fans[0].led);
-    Reg#(Bool) fan0_pg <- mkInputSyncFor(controller.pins.fans[0].pg);
+    InputReg#(Bool, 2) fan0_pg <- mkInputSyncFor(controller.pins.fans[0].pg);
 
     ReadOnly#(Bool) fan1_en <- mkOutputSyncFor(controller.pins.fans[1].en);
     ReadOnly#(Bool) fan1_led <- mkOutputSyncFor(controller.pins.fans[1].led);
-    Reg#(Bool) fan1_pg <- mkInputSyncFor(controller.pins.fans[1].pg);
+    InputReg#(Bool, 2) fan1_pg <- mkInputSyncFor(controller.pins.fans[1].pg);
 
     ReadOnly#(Bool) fan2_en <- mkOutputSyncFor(controller.pins.fans[2].en);
     ReadOnly#(Bool) fan2_led <- mkOutputSyncFor(controller.pins.fans[2].led);
-    Reg#(Bool) fan2_pg <- mkInputSyncFor(controller.pins.fans[2].pg);
+    InputReg#(Bool, 2) fan2_pg <- mkInputSyncFor(controller.pins.fans[2].pg);
 
     ReadOnly#(Bool) fan3_en <- mkOutputSyncFor(controller.pins.fans[3].en);
     ReadOnly#(Bool) fan3_led <- mkOutputSyncFor(controller.pins.fans[3].led);
-    Reg#(Bool) fan3_pg <- mkInputSyncFor(controller.pins.fans[3].pg);
+    InputReg#(Bool, 2) fan3_pg <- mkInputSyncFor(controller.pins.fans[3].pg);
 
     //
     // Front IO
     //
     Reg#(Bool) front_io_en <- mkReg(True);
-    Reg#(Bool) front_io_pg <- mkRegU();
+    InputReg#(Bool, 2) front_io_pg <- mkInputSync();
 
     //
     // Interface, wiring up device signals.
