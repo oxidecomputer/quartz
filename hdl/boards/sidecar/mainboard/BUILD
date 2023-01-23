@@ -71,8 +71,7 @@ bluespec_library('SidecarMainboardControllerTop',
     ],
     deps = [
         ':SidecarMainboardController',
-        '//hdl:IOSync',
-        'cobalt//hdl:SyncBits',
+        'cobalt//hdl:IOSync',
     ],
     using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.

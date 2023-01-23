@@ -11,14 +11,14 @@ import Clocks::*;
 import Connectable::*;
 import Vector::*;
 
-import Board::*;
-import IgnitionTarget::*;
-import InitialReset::*;
 import ICE40::*;
+import InitialReset::*;
+import IOSync::*;
 import SchmittReg::*;
 import Strobe::*;
-import SyncBits::*;
 
+import Board::*;
+import IgnitionTarget::*;
 
 module mkIgnitionTargetIOAndResetWrapper
         #(Parameters parameters) (IgnitionletTarget);
@@ -32,9 +32,14 @@ module mkIgnitionTargetIOAndResetWrapper
     // initial reset above runs for two cycles causing the uninitialized state to be ignored. Using
     // the uninitialized variant removes the complaint from BSC about reset information being lost
     // because no reset is present in the module boundary.
-    SyncBitsIfc#(UInt#(6)) id_sync <- mkSyncBitsToCC(clk_50mhz, noReset);
-    SyncBitsIfc#(Vector#(6, Bool)) flt_sync <- mkSyncBitsToCC(clk_50mhz, noReset);
-    SyncBitIfc#(Bool) btn_sync <- mkSyncBitToCC(clk_50mhz, noReset);
+
+    // ID is expected to be held stable before the application leaves reset. Use
+    // only a single set of registers for the input.
+    InputReg#(UInt#(6), 1) id_sync <- mkInputSync();
+    InputReg#(Vector#(6, Bool), 2) flt_sync <- mkInputSync();
+    // Button is filtered using a SchmittReg below, which acts as the second
+    // ff of the synchronizer.
+    InputReg#(Bool, 1) btn_sync <- mkInputSync();
 
     // Button filter/debounce.
     SchmittReg#(3, Bool) btn_filter <-
@@ -65,8 +70,8 @@ module mkIgnitionTargetIOAndResetWrapper
     ReadOnly#(Commands) commands_sync <-
         mkNullCrossingWire(clk_50mhz, app.commands);
 
-    mkConnection(id_sync.read, app.id);
-    mkConnection(flt_sync.read, app.status);
+    mkConnection(id_sync, app.id);
+    mkConnection(flt_sync, app.status);
     mkConnection(asIfc(strobe_1khz), asIfc(app.tick_1khz));
 
     // Connect the diff IO to the application transceiver interfaces.
@@ -77,7 +82,7 @@ module mkIgnitionTargetIOAndResetWrapper
     (* fire_when_enabled *)
     rule do_detect_button_events (strobe_1khz);
         btn_filter_prev <= btn_filter;
-        btn_filter <= btn_sync.read;
+        btn_filter <= btn_sync;
 
         if (btn_filter != btn_filter_prev) begin
             // The button is negative asserted, so invert when notifying the
@@ -86,9 +91,9 @@ module mkIgnitionTargetIOAndResetWrapper
         end
     endrule
 
-    method id = id_sync.send;
-    method flt = flt_sync.send;
-    method btn = btn_sync.send;
+    method id = sync(id_sync);
+    method flt = sync(flt_sync);
+    method btn = sync(btn_sync);
     method system_power_enable = commands_sync.system_power_enable;
     method cmd1 = commands_sync.cmd1;
     method cmd2 = commands_sync.cmd2;

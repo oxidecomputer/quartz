@@ -28,12 +28,12 @@ bluespec_library('VSC8562',
         'VSC8562/VSC8562.bsv',
     ],
     deps = [
-        'cobalt//hdl:Strobe',
-        '//hdl:CommonFunctions',
-        '//hdl:Bidirection',
         ':QsfpX32ControllerRegsPkg',
+        '//hdl:CommonFunctions',
         '//hdl:PowerRail',
         '//hdl/MDIO:MDIO',
+        'cobalt//hdl:Bidirection',
+        'cobalt//hdl:Strobe',
     ])
 
 bluespec_library('QsfpX32ControllerTopRegs',
@@ -50,11 +50,11 @@ bluespec_library('QsfpModuleController',
         'QSFPModule/QsfpModuleController.bsv',
     ],
     deps = [
-        '//hdl/I2C:I2CCore',
-        '//hdl:PowerRail',
-        '//hdl:CommonFunctions',
-        '//hdl:Bidirection',
         ':QsfpX32ControllerRegsPkg',
+        '//hdl:CommonFunctions',
+        '//hdl:PowerRail',
+        '//hdl/I2C:I2CCore',
+        'cobalt//hdl:Bidirection',
     ])
 
 
@@ -63,12 +63,11 @@ bluespec_library('QsfpModulesTop',
         'QSFPModule/QsfpModulesTop.bsv',
     ],
     deps = [
-        '//hdl/I2C:I2CCore',
-        '//hdl:PowerRail',
-        '//hdl:CommonFunctions',
-        '//hdl:Bidirection',
         ':QsfpModuleController',
         ':QsfpX32ControllerRegsPkg',
+        '//hdl:CommonFunctions',
+        '//hdl:PowerRail',
+        '//hdl/I2C:I2CCore',
     ])
 
 bluespec_library('QsfpX32ControllerSpiServer',
@@ -102,11 +101,10 @@ bluespec_library('QsfpX32ControllerTop',
         'QsfpX32ControllerTop.bsv',
     ],
     deps = [
-        'cobalt//hdl:Strobe',
-        '//hdl:Bidirection',
-        '//hdl:IOSync',
-        '//hdl/I2C:I2CCore',
         ':QsfpX32Controller',
+        '//hdl/I2C:I2CCore',
+        'cobalt//hdl:IOSync',
+        'cobalt//hdl:Strobe',
     ],
     using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.
