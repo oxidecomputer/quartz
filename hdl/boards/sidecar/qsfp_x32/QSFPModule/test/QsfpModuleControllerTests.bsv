@@ -262,6 +262,36 @@ module mkNoPowerTest (Empty);
     endseq);
 endmodule
 
+// mkRemovePowerEnableTest
+//
+// This test checks that power gets disabled when the power enable bit is set
+// low. This test covers a bug that existed the first time this module was
+// implemented.
+module mkRemovePowerEnableTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        delay(5);
+        insert_and_power_module(bench);
+        await(bench.hsc_en());
+        bench.command(Command {
+                op: Read,
+                i2c_addr: i2c_test_params.peripheral_addr,
+                reg_addr: 8'h00,
+                num_bytes: 1
+            });
+        delay(2);
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NoError,
+            "NoPower should be present when attempting to communicate when the hot swap is stable.");
+        bench.power_en(0);
+        delay(2);
+        bench.hsc_pg(0);
+        assert_eq(bench.hsc_en(), False, "Expect hot swap to no longer be enabled.");
+        delay(5);
+    endseq);
+endmodule
+
 // mkPowerGoodTimeoutTest
 //
 // This test checks that a PowerFault error occurs when the hot swap has timed

@@ -208,13 +208,12 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     endrule
 
     (* fire_when_enabled *)
-    rule do_remove_power (modprsl_);
-        hot_swap.set_enable(False);
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_detect_presence (!modprsl_ && hot_swap.disabled());
-        hot_swap.set_enable(power_en_ == 1);
+    rule do_power_control;
+        if (modprsl_ || (hot_swap.timed_out() || hot_swap.aborted())) begin
+            hot_swap.set_enable(False);
+        end else if (!modprsl_) begin
+            hot_swap.set_enable(power_en_ == 1);
+        end
     endrule
 
     // Clear a hot swap controller fault

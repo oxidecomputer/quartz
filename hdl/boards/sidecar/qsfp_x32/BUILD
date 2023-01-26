@@ -161,6 +161,7 @@ bluesim_tests('QsfpModuleControllerTests',
     modules = [
         'mkNoModuleTest',
         'mkNoPowerTest',
+        'mkRemovePowerEnableTest',
         'mkPowerGoodTimeoutTest',
         'mkPowerGoodLostTest',
         'mkI2CReadTest',
