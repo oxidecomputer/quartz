@@ -43,18 +43,6 @@ addrmap qsfp_modules_top {
     } I2C_NUM_BYTES;
 
     reg {
-        name = "Ports 8 -> 15 Broadcast Control";
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } I2C_BCAST_H;
-
-    reg {
         name = "Ports 0 -> 7 Broadcast Control";
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -64,7 +52,19 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } I2C_BCAST_L;
+    } I2C_BCAST0;
+
+    reg {
+        name = "Ports 8 -> 15 Broadcast Control";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } I2C_BCAST1;
 
     reg {
         name = "Control bits for I2C communication.";
@@ -80,19 +80,6 @@ addrmap qsfp_modules_top {
 
     reg {
         default sw = r;
-        name = "Ports 8 -> 15 I2C core status. '1' is busy.";
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } I2C_BUSY_H;
-
-    reg {
-        default sw = r;
         name = "Ports 0 -> 7 I2C core status. '1' is busy.";
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -102,13 +89,23 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } I2C_BUSY_L;
+    } I2C_BUSY0;
+
+    reg {
+        default sw = r;
+        name = "Ports 8 -> 15 I2C core status. '1' is busy.";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } I2C_BUSY1;
 
     reg port_status {
         default sw = r;
-        field {
-            desc =  "0x0 = A4, 0x1 = A3, 0x2 = A2, 0x3 = A0, 0x4 = Fault";
-        } POWER_STATE[7:5] = 0;
         field {
             desc = "'1' if the bus is busy.";
         } BUSY[4:4] = 0;
@@ -136,12 +133,6 @@ addrmap qsfp_modules_top {
 
     reg port_control {
         field {
-            desc = "0x0 = A4, 0x1 = A3, 0x2 = A2, 0x3 = A0";
-        } POWER_STATE[7:5] = 0x1;
-        field {
-            desc = "Setting this bit will reset the port. The module will make sure it is in A2 before doing the reset. This bit auto-clears.";
-        } RESET[1:1] = 0;
-        field {
             desc ="Setting this bit will clear a fault state. This bit auto-clears.";
         } CLEAR_FAULT[0:0] = 0;
     };
@@ -163,51 +154,8 @@ addrmap qsfp_modules_top {
     port_control CONTROL_PORT14;
     port_control CONTROL_PORT15;
 
-    //
-    // QSFP Module Control
-    //
-
     reg {
-        name = "Ports 8 -> 15 HSC Enable Control";
-        default sw = r;
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } CTRL_EN_H;
-
-    reg {
-        name = "Ports 0 -> 7 HSC Enable Control";
-        default sw = r;
-        field {} PORT7[7:7] = 0;
-        field {} PORT6[6:6] = 0;
-        field {} PORT5[5:5] = 0;
-        field {} PORT4[4:4] = 0;
-        field {} PORT3[3:3] = 0;
-        field {} PORT2[2:2] = 0;
-        field {} PORT1[1:1] = 0;
-        field {} PORT0[0:0] = 0;
-    } CTRL_EN_L;
-
-    reg {
-        name = "Ports 8 -> 15 ResetL Control (logic inverted at the pin)";
-        default sw = r;
-        field {} PORT15[7:7] = 1;
-        field {} PORT14[6:6] = 1;
-        field {} PORT13[5:5] = 1;
-        field {} PORT12[4:4] = 1;
-        field {} PORT11[3:3] = 1;
-        field {} PORT10[2:2] = 1;
-        field {} PORT9[1:1] = 1;
-        field {} PORT8[0:0] = 1;
-    } CTRL_RESET_H;
-
-    reg {
-        name = "Ports 0 -> 7 ResetL Control (logic inverted at the pin)";
+        name = "Ports 0 -> 7 HSC Enable. Clear bit to remove module power.";
         default sw = r;
         field {} PORT7[7:7] = 1;
         field {} PORT6[6:6] = 1;
@@ -217,10 +165,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 1;
         field {} PORT1[1:1] = 1;
         field {} PORT0[0:0] = 1;
-    } CTRL_RESET_L;
+    } POWER_EN0;
 
     reg {
-        name = "Ports 8 -> 15 LPMode/TxDis Control";
+        name = "Ports 8 -> 15 HSC Enable. Clear bit to remove module power.";
         default sw = r;
         field {} PORT15[7:7] = 1;
         field {} PORT14[6:6] = 1;
@@ -230,37 +178,7 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 1;
         field {} PORT9[1:1] = 1;
         field {} PORT8[0:0] = 1;
-    } CTRL_LPMODE_H;
-
-    reg {
-        name = "Ports 0 -> 7 LPMode/TxDis Control";
-        default sw = r;
-        field {} PORT7[7:7] = 1;
-        field {} PORT6[6:6] = 1;
-        field {} PORT5[5:5] = 1;
-        field {} PORT4[4:4] = 1;
-        field {} PORT3[3:3] = 1;
-        field {} PORT2[2:2] = 1;
-        field {} PORT1[1:1] = 1;
-        field {} PORT0[0:0] = 1;
-    } CTRL_LPMODE_L;
-
-    //
-    // QSFP Module Status
-    //
-
-    reg {
-        name = "Ports 8 -> 15 HSC power good";
-        default sw = r;
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } STATUS_PG_H;
+    } POWER_EN1;
 
     reg {
         name = "Ports 0 -> 7 HSC power good";
@@ -273,10 +191,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } STATUS_PG_L;
+    } POWER_GOOD0;
 
     reg {
-        name = "Ports 8 -> 15 ModPrsL signal for the module (logic inverted at the pin)";
+        name = "Ports 8 -> 15 HSC power good";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -286,10 +204,10 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } STATUS_PRESENT_H;
+    } POWER_GOOD1;
 
     reg {
-        name = "Ports 0 -> 7 ModPrsL signal for the module (logic inverted at the pin)";
+        name = "Ports 0 -> 7 HSC power good not asserted within period after enabled";
         default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -299,10 +217,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } STATUS_PRESENT_L;
+    } POWER_GOOD_TIMEOUT0;
 
     reg {
-        name = "Ports 8 -> 15 IntL/RxLOS signal for the module (logic inverted at the pin)";
+        name = "Ports 8 -> 15 HSC power good not asserted within period after enabled";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -312,59 +230,7 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } STATUS_IRQ_H;
-
-    reg {
-        name = "Ports 0 -> 7 IntL/RxLOS signal for the module (logic inverted at the pin)";
-        default sw = r;
-        field {} PORT7[7:7] = 0;
-        field {} PORT6[6:6] = 0;
-        field {} PORT5[5:5] = 0;
-        field {} PORT4[4:4] = 0;
-        field {} PORT3[3:3] = 0;
-        field {} PORT2[2:2] = 0;
-        field {} PORT1[1:1] = 0;
-        field {} PORT0[0:0] = 0;
-    } STATUS_IRQ_L;
-
-    reg {
-        name = "Ports 8 -> 15 HSC power good timeout";
-        default sw = r;
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } STATUS_PG_TIMEOUT_H;
-
-    reg {
-        name = "Ports 0 -> 7 HSC power good timeout";
-        default sw = r;
-        field {} PORT7[7:7] = 0;
-        field {} PORT6[6:6] = 0;
-        field {} PORT5[5:5] = 0;
-        field {} PORT4[4:4] = 0;
-        field {} PORT3[3:3] = 0;
-        field {} PORT2[2:2] = 0;
-        field {} PORT1[1:1] = 0;
-        field {} PORT0[0:0] = 0;
-    } STATUS_PG_TIMEOUT_L;
-
-        reg {
-        name = "Ports 8 -> 15 HSC power good lost after successful enable";
-        default sw = r;
-        field {} PORT15[7:7] = 0;
-        field {} PORT14[6:6] = 0;
-        field {} PORT13[5:5] = 0;
-        field {} PORT12[4:4] = 0;
-        field {} PORT11[3:3] = 0;
-        field {} PORT10[2:2] = 0;
-        field {} PORT9[1:1] = 0;
-        field {} PORT8[0:0] = 0;
-    } STATUS_PG_LOST_H;
+    } POWER_GOOD_TIMEOUT1;
 
     reg {
         name = "Ports 0 -> 7 HSC power good lost after successful enable";
@@ -377,7 +243,120 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } STATUS_PG_LOST_L;
+    } POWER_GOOD_LOST0;
+
+    reg {
+        name = "Ports 8 -> 15 HSC power good lost after successful enable";
+        default sw = r;
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } POWER_GOOD_LOST1;
+
+    reg {
+        name = "Ports 0 -> 7 Module ResetL";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } MOD_RESETL0;
+
+    reg {
+        name = "Ports 8 -> 15 Module ResetL";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } MOD_RESETL1;
+
+    reg {
+        name = "Ports 0 -> 7 Module LPMode/TxDis";
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } MOD_LPMODE0;
+
+    reg {
+        name = "Ports 8 -> 15 Module LPMode/TxDis";
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } MOD_LPMODE1;
+
+    reg {
+        name = "Ports 0 -> 7 Module ModPrsL";
+        default sw = r;
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } MOD_MODPRSL0;
+
+    reg {
+        name = "Ports 8 -> 15 Module ModPrsL";
+        default sw = r;
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } MOD_MODPRSL1;
+
+    reg {
+        name = "Ports 0 -> 7 Module IntL/RxLOS";
+        default sw = r;
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } MOD_INTL0;
+
+    reg {
+        name = "Ports 8 -> 15 Module IntL/RxLOS";
+        default sw = r;
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } MOD_INTL1;
 
     //
     // I2C Write and Read Buffers
