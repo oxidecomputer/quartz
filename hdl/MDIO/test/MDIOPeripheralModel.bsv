@@ -225,7 +225,7 @@ module mkMDIOPeripheralModel #(Bit#(5) phy_address) (MDIOPeripheralModel);
     rule do_transmit_read (state == TransmitRead && mdc_redge);
         if (bit_cntr < 16) begin
             bit_cntr    <= bit_cntr + 1;
-            mdio_out    <= data[bit_cntr];
+            mdio_out    <= data[15 - bit_cntr];
         end else begin
             state       <= Preamble;
             outgoing_event.enq(tagged TransmittedReadData pack(data));

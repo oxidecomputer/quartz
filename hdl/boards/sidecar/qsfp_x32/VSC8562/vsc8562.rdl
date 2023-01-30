@@ -21,6 +21,11 @@ addrmap vsc8562 {
         default sw = r;
 
         field {
+            desc = "Either the V1P0 or V2P5 rail has failed to come up. V1P0 is
+                    first in the sequence, its PG is the EN for V2P5.";
+        } PG_TIMED_OUT[7:7] = 0;
+
+        field {
             desc = "The VSC8562 has been brought out of reset and is ready for
                     software control";
         } READY[6:6] = 0;
@@ -54,6 +59,12 @@ addrmap vsc8562 {
         name = "Control bits related to VSC8562  (valid on FPGA1 only)";
 
         field {
+            desc = "Setting this bit to 1 will clear the timed out state of the
+                    V1P0 and V2P5 rail controllers, allowing PHY power
+                    sequencing to be attempted again.";
+        } CLEAR_POWER_FAULT[2:2] = 0;
+
+        field {
             desc = "Software control for the COMA_MODE pin.";
         } COMA_MODE[1:1] = 1;
 
@@ -64,11 +75,13 @@ addrmap vsc8562 {
 
     // SPI <-> SMI
     reg {
-        name = "Status bits for the SMI interface to the VSC8562 (valid on FPGA1 only)";
+        name = "Status bits for the SMI interface to the VSC8562 (valid on
+                FPGA1 only)";
         default sw = r;
 
         field {
-            desc = "1 for active interrupt (inversion of miim_phy_to_fpga_mdint_l pin)";
+            desc = "1 for active interrupt (inversion of
+                    miim_phy_to_fpga_mdint_l pin)";
         } MDINT[1:1] = 0;
 
         field {
@@ -77,31 +90,22 @@ addrmap vsc8562 {
     } PHY_SMI_STATUS;
 
     reg {
-        name = "SMI Read Data [15:8] (valid on FPGA1 only)";
-        default hw = rw;
-
-        field {
-            desc = "Upper byte of read data";
-        } DATA[7:0] = 0;
-    } PHY_SMI_RDATA_H;
-
-    reg {
         name = "SMI Read Data [7:0] (valid on FPGA1 only)";
         default hw = rw;
 
         field {
             desc = "Lower byte of read data";
         } DATA[7:0] = 0;
-    } PHY_SMI_RDATA_L;
+    } PHY_SMI_RDATA0;
 
     reg {
-        name = "SMI Write Data [15:8] (valid on FPGA1 only)";
+        name = "SMI Read Data [15:8] (valid on FPGA1 only)";
         default hw = rw;
 
         field {
-            desc = "Upper byte of write data";
+            desc = "Upper byte of read data";
         } DATA[7:0] = 0;
-    } PHY_SMI_WDATA_H;
+    } PHY_SMI_RDATA1;
 
     reg {
         name = "SMI Write Data [7:0] (valid on FPGA1 only)";
@@ -110,7 +114,16 @@ addrmap vsc8562 {
         field {
             desc = "Lower byte of write data";
         } DATA[7:0] = 0;
-    } PHY_SMI_WDATA_L;
+    } PHY_SMI_WDATA0;
+
+    reg {
+        name = "SMI Write Data [15:8] (valid on FPGA1 only)";
+        default hw = rw;
+
+        field {
+            desc = "Upper byte of write data";
+        } DATA[7:0] = 0;
+    } PHY_SMI_WDATA1;
 
     reg {
         name = "PHY Address (valid on FPGA1 only)";

@@ -84,6 +84,10 @@ module mkBench(Bench);
 
             if (command_r.read) seq
                 check_model_event(model, tagged TransmittedReadData last_written, "Expected Read Opcode");
+                action
+                    let read_data <- dut.read_data.get();
+                    dynamicAssert(read_data == last_written, "Read data should match what was written");
+                endaction
             endseq else seq
                 check_model_event(model, tagged ReceivedWriteData command_r.write_data, "Expected received Write Data to match what was sent");
                 last_written    <= command_r.write_data;
