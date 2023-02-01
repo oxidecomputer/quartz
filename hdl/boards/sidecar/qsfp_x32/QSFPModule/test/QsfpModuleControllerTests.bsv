@@ -13,7 +13,6 @@ import GetPut::*;
 import FIFO::*;
 import StmtFSM::*;
 
-
 import Bidirection::*;
 import CommonFunctions::*;
 import I2CCommon::*;

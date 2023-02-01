@@ -114,6 +114,8 @@ bluespec_library('QsfpX32ControllerTop',
         ]
     })
 
+# Bitstreams
+
 bluespec_verilog('QsfpX32ControllerTopV',
     top = 'QsfpX32ControllerTop.bsv',
     modules = [
@@ -155,6 +157,8 @@ nextpnr_ecp5_bitstream('qsfp_x32_rev_b',
         ':qsfp_x32_top',
     ])
 
+# Tests
+
 bluesim_tests('QsfpModuleControllerTests',
     env = 'cobalt//bluesim_default',
     suite = 'QSFPModule/test/QsfpModuleControllerTests.bsv',
@@ -177,4 +181,25 @@ bluesim_tests('QsfpModuleControllerTests',
         '//hdl:PowerRail',
         ':QsfpModuleController',
         ':QsfpX32ControllerRegsPkg',
+    ])
+
+bluesim_tests('VSC8562Tests',
+    env = 'cobalt//bluesim_default',
+    suite = 'VSC8562/test/VSC8562Tests.bsv',
+    modules = [
+        'mkPowerOnByDefaultTest',
+        'mkComaModeTest',
+        'mkPowerDownTest',
+        'mkPowerGoodTimeoutTest',
+        'mkSmiTest',
+        'mkMdintTest',
+    ],
+    deps = [
+        'cobalt//hdl:Bidirection',
+        'cobalt//hdl:Strobe',
+        'cobalt//hdl:TestUtils',
+        '//hdl:PowerRail',
+        '//hdl/MDIO:MDIO',
+        '//hdl/MDIO:MDIOPeripheralModel',
+        ':VSC8562'
     ])

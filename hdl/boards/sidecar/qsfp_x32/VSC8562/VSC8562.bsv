@@ -45,7 +45,7 @@ instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
         mdc_frequency_hz: 3_000_000,
-        power_good_timeout_ms: 0, // TODO: determine what this should be
+        power_good_timeout_ms: 10,
         refclk_en_to_stable_ms: 5,
         reset_release_to_ready_ms: 120
     };
@@ -66,10 +66,10 @@ interface Registers;
     interface ReadOnly#(PhyStatus) phy_status;
     interface Reg#(PhyCtrl) phy_ctrl;
     interface ReadOnly#(PhySmiStatus) phy_smi_status;
-    interface Reg#(PhySmiRdataH) phy_smi_rdata_h;
-    interface Reg#(PhySmiRdataL) phy_smi_rdata_l;
-    interface Reg#(PhySmiWdataH) phy_smi_wdata_h;
-    interface Reg#(PhySmiWdataL) phy_smi_wdata_l;
+    interface Reg#(PhySmiRdata1) phy_smi_rdata1;
+    interface Reg#(PhySmiRdata0) phy_smi_rdata0;
+    interface Reg#(PhySmiWdata1) phy_smi_wdata1;
+    interface Reg#(PhySmiWdata0) phy_smi_wdata0;
     interface Reg#(PhySmiPhyAddr) phy_smi_phy_addr;
     interface Reg#(PhySmiRegAddr) phy_smi_reg_addr;
     interface Reg#(PhySmiCtrl) phy_smi_ctrl;
@@ -127,10 +127,10 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
 
     // SPI register interface
     Reg#(PhyCtrl) phy_ctrl              <- mkReg(defaultValue);
-    Reg#(PhySmiRdataH) smi_rdata_h      <- mkReg(defaultValue);
-    Reg#(PhySmiRdataL) smi_rdata_l      <- mkReg(defaultValue);
-    Reg#(PhySmiWdataH) smi_wdata_h      <- mkReg(defaultValue);
-    Reg#(PhySmiWdataL) smi_wdata_l      <- mkReg(defaultValue);
+    Reg#(PhySmiRdata1) smi_rdata1      <- mkReg(defaultValue);
+    Reg#(PhySmiRdata0) smi_rdata0      <- mkReg(defaultValue);
+    Reg#(PhySmiWdata1) smi_wdata1      <- mkReg(defaultValue);
+    Reg#(PhySmiWdata0) smi_wdata0      <- mkReg(defaultValue);
     Reg#(PhySmiPhyAddr) smi_phy_addr    <- mkReg(defaultValue);
     Reg#(PhySmiRegAddr) smi_reg_addr    <- mkReg(defaultValue);
     Reg#(PhySmiCtrl) smi_ctrl           <- mkDReg(defaultValue);
@@ -155,15 +155,30 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(UInt#(7)) ms_cntr      <- mkReg(0);
     PulseWire reset_ms_cntr     <- mkPulseWire();
 
-    Reg#(Bool) coma_mode_hw     <- mkReg(True);
+    Reg#(Bool) coma_mode_hw     <- mkReg(False);
     Reg#(Bool) smi_busy         <- mkReg(False);
     Reg#(Bit#(16)) read_data_r  <- mkReg(0);
+    Wire#(Bool) pg_timed_out    <- mkWire();
+    PulseWire clear_fault       <- mkPulseWire();
 
     // The hot swaps expected a tick to correspond with its timeout
     (* fire_when_enabled *)
     rule do_hot_swap_tick (tick_1ms_);
         v1p0.send();
         v2p5.send();
+    endrule
+
+    // Combine the timed_out information from both PowerRails as a control bit
+    (* fire_when_enabled *)
+    rule do_pg_timed_out;
+        pg_timed_out    <= v1p0.timed_out() || v2p5.timed_out();
+    endrule
+
+    // Clear the power supply controller's timed_out fault
+    (* fire_when_enabled *)
+    rule do_clear_fault (clear_fault);
+        v1p0.clear();
+        v2p5.clear();
     endrule
 
     // VSC8562 power-on sequence
@@ -185,34 +200,39 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             reset_          <= 0;
             await(ms_cntr == fromInteger(parameters.reset_release_to_ready_ms + 1));
             reset_ms_cntr.send();
-            coma_mode_hw    <= False;   // relinquish COMA_MODE control to SW
-            phy_ready       <= True;
-        endseq, phy_ctrl.en == 1);
+            // relinquish COMA_MODE control to SW
+            action
+                coma_mode_hw    <= False;
+                phy_ready       <= True;
+            endaction
+        endseq, phy_ctrl.en == 1 && !pg_timed_out);
 
     // VSC8562 power down sequence (no special requirements noted in datasheet)
     FSM vsc8562_power_down_seq <- mkFSMWithPred(seq
-            phy_ready       <= False;
+            action
+                coma_mode_hw    <= False;
+                phy_ready       <= False;
+            endaction
             reset_          <= 1;
             refclk_en       <= 0;
-            coma_mode_hw    <= False;
             v1p0.set_enable(False);
-        endseq, phy_ctrl.en == 0);
+        endseq, phy_ctrl.en == 0 || pg_timed_out);
 
     // This allows hardware to override COMA_MODE control during initial
     // power-on sequencing and then hand it over to software control after
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_coma_mode_comb;
-        coma_mode   <= pack(coma_mode_hw ||
-                            (unpack(phy_ctrl.coma_mode) && phy_ready));
+        coma_mode   <= pack((coma_mode_hw ||
+                            (unpack(phy_ctrl.coma_mode) && phy_ready)));
     endrule
 
     (* fire_when_enabled *)
-    rule do_power_up_vsc8562(phy_ctrl.en == 1 && !phy_ready);
+    rule do_power_up_vsc8562(phy_ctrl.en == 1 && !phy_ready && !pg_timed_out);
         vsc8562_power_on_seq.start();
     endrule
 
     (* fire_when_enabled *)
-    rule do_power_down_vsc8562(phy_ctrl.en == 0);
+    rule do_power_down_vsc8562(phy_ctrl.en == 0 || pg_timed_out);
         vsc8562_power_on_seq.abort();
         vsc8562_power_down_seq.start();
     endrule
@@ -237,15 +257,15 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             read: unpack(~smi_ctrl.rw),
             phy_addr: smi_phy_addr.addr,
             reg_addr: smi_reg_addr.addr,
-            write_data: {smi_wdata_h.data, smi_wdata_l.data}
+            write_data: {smi_wdata1.data, smi_wdata0.data}
         });
     endrule
 
     (* fire_when_enabled *)
     rule do_handle_smi_read_data (phy_ready);
         let read_data       <- smi.read_data.get();
-        smi_rdata_h.data    <= read_data[15:8];
-        smi_rdata_l.data    <= read_data[7:0];
+        smi_rdata1.data    <= read_data[15:8];
+        smi_rdata0.data    <= read_data[7:0];
     endrule
 
     interface Registers registers;
@@ -257,18 +277,31 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
                 coma_mode: coma_mode,
                 refclk_en: refclk_en,
                 reset: ~reset_,
-                ready: pack(phy_ready)
+                ready: pack(phy_ready),
+                pg_timed_out: pack(pg_timed_out)
             });
-        interface Reg phy_ctrl          = phy_ctrl;
+        interface Reg phy_ctrl;
+            method _read = phy_ctrl;
+            method Action _write(PhyCtrl next);
+                phy_ctrl <= PhyCtrl {
+                    en: next.en,
+                    coma_mode: next.coma_mode,
+                    clear_power_fault: 0
+                };
+                if (next.clear_power_fault == 1) begin
+                    clear_fault.send();
+                end
+            endmethod
+        endinterface
         interface ReadOnly phy_smi_status   = valueToReadOnly(
             PhySmiStatus{
                 busy: pack(smi_busy),
                 mdint: mdint
             });
-        interface Reg phy_smi_rdata_h       = smi_rdata_h;
-        interface Reg phy_smi_rdata_l       = smi_rdata_l;
-        interface Reg phy_smi_wdata_h       = smi_wdata_h;
-        interface Reg phy_smi_wdata_l       = smi_wdata_l;
+        interface Reg phy_smi_rdata1       = smi_rdata1;
+        interface Reg phy_smi_rdata0       = smi_rdata0;
+        interface Reg phy_smi_wdata1       = smi_wdata1;
+        interface Reg phy_smi_wdata0       = smi_wdata0;
         interface Reg phy_smi_phy_addr      = smi_phy_addr;
         interface Reg phy_smi_reg_addr      = smi_reg_addr;
         interface Reg phy_smi_ctrl          = smi_ctrl;

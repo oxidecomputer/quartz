@@ -1,0 +1,97 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Wed Feb 01 20:00:14 2023
+[*]
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\VSC8562Tests_mkSmiTest.vcd"
+[dumpfile_mtime] "Wed Feb 01 00:25:44 2023"
+[dumpfile_size] 286073
+[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\boards\sidecar\qsfp_x32\VSC8562\test\VSC8562Tests.gtkw"
+[timestart] 73704
+[size] 2551 1360
+[pos] -1 -1
+*-6.113186 74280 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] main.
+[treeopen] main.top.
+[sst_width] 446
+[signals_width] 338
+[sst_expanded] 1
+[sst_vpaned_height] 411
+@200
+-VSC8562 Test Bench
+@28
+main.top.bench_v1p0_pg_r
+main.top.bench_v2p5_pg_r
+@200
+-
+-VSC8562 Block
+@28
+main.top.bench_dut_refclk_en
+main.top.bench_dut_reset_
+main.top.bench_dut_coma_mode_hw
+main.top.bench_dut_pg_timed_out
+main.top.bench_dut_reset_ms_cntr
+@22
+main.top.bench_dut_ms_cntr[6:0]
+@200
+-Registers
+@28
+main.top.bench_dut_phy_ctrl[7:0]
+main.top.bench_dut_phy_ready
+main.top.bench_dut_coma_mode
+main.top.bench_dut_smi_ctrl[7:0]
+main.top.bench_dut_smi_busy
+@22
+main.top.bench_dut_smi_wdata_h[7:0]
+main.top.bench_dut_smi_wdata_l[7:0]
+main.top.bench_dut_smi_rdata_h[7:0]
+main.top.bench_dut_smi_rdata_l[7:0]
+@200
+-SMI (MDIO)
+@22
+main.top.bench_dut_smi_read_data_q.D_OUT[15:0]
+@28
+main.top.bench_dut_smi_read_data_q.ENQ
+main.top.bench_dut_smi_read_data_q.DEQ
+@200
+-
+-V1P0 Supply
+@28
+main.top.bench_dut_v1p0_clear_w
+main.top.bench_dut_v1p0_enabled_r
+main.top.bench_dut_v1p0_fault
+main.top.bench_dut_v1p0_good
+@200
+-
+-V2P5 Supply
+@28
+main.top.bench_dut_v2p5_clear_w
+main.top.bench_dut_v2p5_enabled_r
+main.top.bench_dut_v2p5_fault
+main.top.bench_dut_v2p5_good
+@200
+-
+-MDIO Model
+-Pins
+@28
+main.top.bench_model_mdc
+main.top.bench_model_mdio_in
+main.top.bench_model_mdio_out
+main.top.bench_model_ctrl_out_en
+main.top.bench_model_mdio_out_en
+@200
+-Control
+@28
+main.top.bench_model_is_read
+main.top.bench_model_mdc_redge
+main.top.bench_model_mdc_fedge
+@200
+-State
+@24
+main.top.bench_model_state[3:0]
+@22
+main.top.bench_model_bit_cntr[4:0]
+main.top.bench_model_address[4:0]
+main.top.bench_model_peripheral_address[4:0]
+main.top.bench_model_data[15:0]
+[pattern_trace] 1
+[pattern_trace] 0
