@@ -26,6 +26,7 @@ import PowerRail::*;
         method A0StateType state();
         method A0Output1Type status1;
         method A0Output2Type status2;
+        method AmdA0 amd_status;
         method GroupbPg b_pgs;
         method GroupcPg c_pgs;
         method Bool mapo;
@@ -43,6 +44,7 @@ import PowerRail::*;
         method Action state (A0StateType value);
         method Action status1 (A0Output1Type value);
         method Action status2 (A0Output2Type value);
+        method Action amd_status (AmdA0 value);
         method Action b_pgs (GroupbPg value);
         method Action c_pgs (GroupcPg value);
         method Action mapo(Bool value);
@@ -60,6 +62,7 @@ import PowerRail::*;
             mkConnection(source.state, sink.state);
             mkConnection(source.status1, sink.status1);
             mkConnection(source.status2, sink.status2);
+            mkConnection(source.amd_status, sink.amd_status);
             mkConnection(source.b_pgs, sink.b_pgs);
             mkConnection(source.c_pgs, sink.c_pgs);
             mkConnection(source.mapo, sink.mapo);
@@ -192,6 +195,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
 
     ConfigReg#(A0Output1Type) status1 <- mkConfigRegU();
     ConfigReg#(A0Output2Type) status2 <- mkConfigRegU();
+    ConfigReg#(AmdA0) amd_status <- mkConfigRegU();
     ConfigReg#(GroupbPg) b_pgs <- mkConfigRegU();
     ConfigReg#(GroupcPg) c_pgs <- mkConfigRegU();
 
@@ -492,6 +496,12 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             vdd_vcore: pwr_cont1_sp3_pg0,
             vddcr_soc_pg: pwr_cont2_sp3_pg0
         };
+        amd_status <= AmdA0 {
+            reset : ~sp3_to_seq_reset_v3p3_l,
+            pwrok : sp3_to_seq_pwrok_v3p3,
+            slp_s5: ~sp3_to_seq_slp_s5_l,
+            slp_s3: ~sp3_to_seq_slp_s3_l 
+        };
     endrule
 
     interface A0Pins pins;
@@ -544,6 +554,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method state = state._read;
         method status1 = status1._read;
         method status2 = status2._read;
+        method amd_status = amd_status._read;
         method b_pgs = b_pgs._read;
         method c_pgs = c_pgs._read;
         method mapo = mapo._read;

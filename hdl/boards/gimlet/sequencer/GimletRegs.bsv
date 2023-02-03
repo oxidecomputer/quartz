@@ -63,11 +63,8 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
     ConfigReg#(A1smstatus) a1_sm <- mkRegU();
     // A0 registers
-    //ConfigReg#(A0OutStatus1) a0_status1 <- mkReg(unpack(0)); // a0OutStatus1Offset
-    //ConfigReg#(A0OutStatus2) a0_status2 <- mkReg(unpack(0)); // a0OutStatus2Offset
     ConfigReg#(A0Output1Type) a0_dbg_out1 <- mkReg(unpack(0)); // a0DbgOut1Offset
     ConfigReg#(A0Output2Type) a0_dbg_out2 <- mkReg(unpack(0)); // a0DbgOut1Offset
-    ConfigReg#(AmdA0) a0_amd_rdbks <- mkReg(unpack(0)); // amdA0Offset
    
     ConfigReg#(GroupbUnused) a0_groupB_unused <- mkReg(unpack(0)); //groupbUnusedOffset
     ConfigReg#(GroupbcFlts) a0_groupC_faults <-mkReg(unpack(0)); //groupbcFltsOffset
@@ -104,6 +101,7 @@ module mkGimletRegs(GimletRegIF);
     Wire#(A1StateType) a1_state <- mkDWire(IDLE);
     Wire#(A0Output1Type) a0_status1 <- mkDWire(unpack(0));
     Wire#(A0Output2Type) a0_status2 <- mkDWire(unpack(0));
+    Wire#(AmdA0) amd_status <- mkDWire(unpack(0));
     Wire#(GroupbPg) a0_groupB_pg <- mkDWire(unpack(0));
     Wire#(GroupcPg) a0_groupC_pg <- mkDWire(unpack(0));
     Wire#(NicStatus) nic_status <- mkDWire(unpack(0));
@@ -193,7 +191,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(a0DbgOut1Offset) : readdata <= tagged Valid (pack(a0_dbg_out1));
             fromInteger(a0DbgOut2Offset) : readdata <= tagged Valid (pack(a0_dbg_out2));
             fromInteger(nicsmstatusOffset) : readdata <= tagged Valid (pack(nic_state));
-            fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(a0_amd_rdbks));
+            fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(amd_status));
             fromInteger(groupbPgOffset) : readdata <= tagged Valid (pack(a0_groupB_pg));
             fromInteger(groupbUnusedOffset) : readdata <= tagged Valid (pack(a0_groupB_unused));
             fromInteger(groupbcFltsOffset) : readdata <= tagged Valid (pack(a0_groupC_faults));
@@ -299,6 +297,7 @@ module mkGimletRegs(GimletRegIF);
         endmethod
         method status1 = a0_status1._write;
         method status2 = a0_status2._write;
+        method amd_status = amd_status._write;
         method b_pgs = a0_groupB_pg._write;
         method c_pgs = a0_groupC_pg._write;
         method thermtrip = thermtrip._write;
