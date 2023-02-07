@@ -153,9 +153,9 @@ bluespec_library('GimletSeqTop',
     ],
     )
 
-bluespec_library('GimletIOSync',
+bluespec_library('GimletTopIOSync',
     sources = [
-        'GimletIOSync.bsv',
+        'GimletTopIOSync.bsv',
     ],
     deps = [
         'cobalt//hdl/interfaces:ICE40',
@@ -170,12 +170,12 @@ bluespec_library('GimletIOSync',
 )
 
 bluespec_verilog('seq_verilog',
-    top = 'GimletIOSync.bsv',
+    top = 'GimletTopIOSync.bsv',
     modules = [
         'mkGimletSeqTop',
     ],
     deps = [
-        ':GimletIOSync',
+        ':GimletTopIOSync',
     ],
     # This suppresses the reset sync errors at the top (and seemingly any below also)
     # In this design, that is not a problem since this is a single clock, single reset domain design.

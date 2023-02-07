@@ -26,9 +26,11 @@ import PowerRail::*;
         method A0StateType state();
         method A0Output1Type status1;
         method A0Output2Type status2;
-        method AmdA0 amd_status;
+        method AmdA0 amd_a0;
+        method AmdStatus amd_status;
         method GroupbPg b_pgs;
         method GroupcPg c_pgs;
+        method GroupbcFlts bc_flts;
         method Bool mapo;
         method Bool thermtrip;
         // method A0OutStatus output_readbacks();
@@ -44,9 +46,11 @@ import PowerRail::*;
         method Action state (A0StateType value);
         method Action status1 (A0Output1Type value);
         method Action status2 (A0Output2Type value);
-        method Action amd_status (AmdA0 value);
+        method Action amd_status (AmdStatus value);
+        method Action amd_a0 (AmdA0 value);
         method Action b_pgs (GroupbPg value);
         method Action c_pgs (GroupcPg value);
+        method Action bc_flts (GroupbcFlts value);
         method Action mapo(Bool value);
         method Action thermtrip(Bool value);
         // method Action output_readbacks (A0OutStatus value);
@@ -63,8 +67,10 @@ import PowerRail::*;
             mkConnection(source.status1, sink.status1);
             mkConnection(source.status2, sink.status2);
             mkConnection(source.amd_status, sink.amd_status);
+            mkConnection(source.amd_a0, sink.amd_a0);
             mkConnection(source.b_pgs, sink.b_pgs);
             mkConnection(source.c_pgs, sink.c_pgs);
+            mkConnection(source.bc_flts, sink.bc_flts);
             mkConnection(source.mapo, sink.mapo);
             mkConnection(source.thermtrip, sink.thermtrip);
         endmodule
@@ -78,6 +84,7 @@ import PowerRail::*;
         method Action sp3_to_seq_pwrok_v3p3(Bit#(1) value);
         method Action sp3_to_seq_reset_v3p3_l(Bit#(1) value);
         method Action sp3_to_seq_thermtrip_l(Bit#(1) value);
+        method Action sp3_to_seq_fsr_req_l(Bit#(1) value);
         // To SP3
         method Bit#(1) seq_to_sp3_sys_rst_l();
         method Bit#(1) seq_to_sp3_pwr_btn_l();
@@ -92,6 +99,7 @@ import PowerRail::*;
         method Bit#(1) sp3_to_seq_pwrok_v3p3();
         method Bit#(1) sp3_to_seq_reset_v3p3_l();
         method Bit#(1) sp3_to_seq_thermtrip_l();
+        method Bit#(1) sp3_to_seq_fsr_req_l();
         // To SP3
         method Action seq_to_sp3_sys_rst_l(Bit#(1) value);
         method Action seq_to_sp3_pwr_btn_l(Bit#(1) value);
@@ -106,6 +114,7 @@ import PowerRail::*;
             mkConnection(source.sp3_to_seq_pwrok_v3p3, sink.sp3_to_seq_pwrok_v3p3);
             mkConnection(source.sp3_to_seq_reset_v3p3_l, sink.sp3_to_seq_reset_v3p3_l);
             mkConnection(source.sp3_to_seq_thermtrip_l, sink.sp3_to_seq_thermtrip_l);
+            mkConnection(source.sp3_to_seq_fsr_req_l, sink.sp3_to_seq_fsr_req_l);
             mkConnection(source.seq_to_sp3_sys_rst_l, sink.seq_to_sp3_sys_rst_l);
             mkConnection(source.seq_to_sp3_pwr_btn_l, sink.seq_to_sp3_pwr_btn_l);
             mkConnection(source.seq_to_sp3_pwr_good, sink.seq_to_sp3_pwr_good);
@@ -127,10 +136,15 @@ import PowerRail::*;
         interface PowerRail::Pins vtt_ef;
         interface PowerRail::Pins vtt_gh;
 
-        method Bit#(1) pwr_cont1_sp3_pwrok;
-        method Bit#(1) pwr_cont2_sp3_pwrok;
+        method Action pwr_cont1_sp3_cfp(Bit#(1) value);
+        method Action pwr_cont1_sp3_nvrhot(Bit#(1) value);
+        method Action pwr_cont2_sp3_cfp(Bit#(1) value);
+        method Action pwr_cont2_sp3_nvrhot(Bit#(1) value);
         method Action pwr_cont1_sp3_pg0(Bit#(1) value);
         method Action pwr_cont2_sp3_pg0(Bit#(1) value);
+
+        method Bit#(1) pwr_cont1_sp3_pwrok;
+        method Bit#(1) pwr_cont2_sp3_pwrok;
     endinterface
 
     interface A0BlockTop;
@@ -189,15 +203,17 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Wire#(Bool) b1_pg <- mkDWire(False);
     Wire#(Bool) b2_pg <- mkDWire(False);
     Wire#(Bool) c_pg <- mkDWire(False);
-    
+
     Wire#(Bool) aggregate_pg <- mkDWire(False);
     Wire#(Bool) aggregate_fault <- mkDWire(False);
 
     ConfigReg#(A0Output1Type) status1 <- mkConfigRegU();
     ConfigReg#(A0Output2Type) status2 <- mkConfigRegU();
-    ConfigReg#(AmdA0) amd_status <- mkConfigRegU();
+    ConfigReg#(AmdA0) amd_a0 <- mkConfigRegU();
+    ConfigReg#(AmdStatus) amd_status <- mkConfigRegU();
     ConfigReg#(GroupbPg) b_pgs <- mkConfigRegU();
     ConfigReg#(GroupcPg) c_pgs <- mkConfigRegU();
+    ConfigReg#(GroupbcFlts) bc_flts <- mkConfigRegU();
 
     // Power rails here
     // Group B1:
@@ -222,7 +238,12 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Wire#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkDWire(0);
     Wire#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkDWire(0);
     Wire#(Bit#(1)) pwr_cont2_sp3_pg0 <- mkDWire(0);
+    Wire#(Bit#(1)) pwr_cont1_sp3_cfp <- mkDWire(0);
+    Wire#(Bit#(1)) pwr_cont1_sp3_nvrhot <- mkDWire(1);
+    Wire#(Bit#(1)) pwr_cont2_sp3_cfp <- mkDWire(0);
+    Reg#(Bit#(1)) pwr_cont2_sp3_nvrhot <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkDWire(1);
+    Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(1);
 
     // Output registers
     Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);  // In practice we don't use this
@@ -496,11 +517,22 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             vdd_vcore: pwr_cont1_sp3_pg0,
             vddcr_soc_pg: pwr_cont2_sp3_pg0
         };
-        amd_status <= AmdA0 {
+        amd_a0 <= AmdA0 {
             reset : ~sp3_to_seq_reset_v3p3_l,
             pwrok : sp3_to_seq_pwrok_v3p3,
             slp_s5: ~sp3_to_seq_slp_s5_l,
             slp_s3: ~sp3_to_seq_slp_s3_l 
+        };
+        amd_status <= AmdStatus {
+            pwrgd_out: sp3_to_seq_pwrgd_out,
+            fsr_req: ~sp3_to_seq_fsr_req_l,
+            thermtrip: ~sp3_to_seq_thermtrip_l
+        };
+        bc_flts <= GroupbcFlts {
+            cont2_cfp: pwr_cont2_sp3_cfp,
+            cont2_nvrhot: pwr_cont2_sp3_nvrhot,
+            cont1_cfp: pwr_cont1_sp3_cfp,
+            cont1_nvrhot: pwr_cont1_sp3_nvrhot
         };
     endrule
 
@@ -513,6 +545,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             method sp3_to_seq_pwrok_v3p3 = sp3_to_seq_pwrok_v3p3._write;
             method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._write;
             method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._write;
+            method sp3_to_seq_fsr_req_l = sp3_to_seq_fsr_req_l._write;
             // To SP3
             method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._read;
             method seq_to_sp3_pwr_btn_l = seq_to_sp3_pwr_btn_l._read;
@@ -530,6 +563,12 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         interface PowerRail::Pins vtt_gh = vtt_gh.pins;
         method pwr_cont1_sp3_pg0 = pwr_cont1_sp3_pg0._write;
         method pwr_cont2_sp3_pg0 = pwr_cont2_sp3_pg0._write;
+        
+        method pwr_cont1_sp3_cfp = pwr_cont1_sp3_cfp._write;
+        method pwr_cont1_sp3_nvrhot = pwr_cont1_sp3_nvrhot._write;
+        method pwr_cont2_sp3_cfp = pwr_cont2_sp3_cfp._write;
+        method pwr_cont2_sp3_nvrhot = pwr_cont2_sp3_nvrhot._write;
+        
         method Bit#(1) pwr_cont1_sp3_pwrok;
             return pack(regulator_pwrok);
         endmethod
@@ -555,8 +594,10 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method status1 = status1._read;
         method status2 = status2._read;
         method amd_status = amd_status._read;
+        method amd_a0 = amd_a0._read;
         method b_pgs = b_pgs._read;
         method c_pgs = c_pgs._read;
+        method bc_flts = bc_flts._read;
         method mapo = mapo._read;
         method thermtrip = thermal_trip._read;
     endinterface
@@ -710,6 +751,7 @@ module mkSP3Model(SP3Model);
     Reg#(Bit#(1)) sp3_to_seq_pwrok_v3p3 <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(1);
+    Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(1);
     // To SP3
     Wire#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkDWire(1);
     Wire#(Bit#(1)) seq_to_sp3_pwr_btn_l <- mkDWire(1);
@@ -806,6 +848,7 @@ module mkSP3Model(SP3Model);
         method sp3_to_seq_pwrok_v3p3 = sp3_to_seq_pwrok_v3p3._read;
         method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._read;
         method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._read;
+        method sp3_to_seq_fsr_req_l = sp3_to_seq_fsr_req_l._read;
         // To SP3
         method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._write;
         method seq_to_sp3_pwr_btn_l = seq_to_sp3_pwr_btn_l._write;

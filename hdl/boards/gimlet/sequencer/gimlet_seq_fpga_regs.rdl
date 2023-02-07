@@ -321,7 +321,7 @@ addrmap gimlet_seq_fpga {
             should be here in: min 15ms, max of 20.4ms(SP3_TO_SEQ_PWROK_V3P3 net)";
         } PWROK[1] = 0;
         field {
-            desc = "Asserted (and inverted) from AMD’s RESET_L pin. 10Ms minimum assertion time, 
+            desc = "Asserted (and inverted) from AMD's RESET_L pin. 10Ms minimum assertion time, 
             remains asserted for minimum of 1ms after PWROK assertion
             (SP3_TO_SEQ_RESET_V3P3_L net)";
         } RESET[1] = 0;
@@ -393,24 +393,6 @@ addrmap gimlet_seq_fpga {
             SP3_VDD_VCORE_A0 and VDD_MEM_ABCD_A0 rails";
         } CONT1_CFP[1] = 0;
         field {
-            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, 
-            only valid after configuration from ISL68224 U352
-             driving VPP_ABCD_A0 and V3P3_SYS_A0 rails. (PWR_CONT_DIMM_ABCD_NVRHOT net)";
-        } ABCD_NVRHOT[1] = 0;
-        field {
-            desc = "Catastrophic fault protection output from ISL68224 feeding VPP_ABCD_A0 
-            and V3P3_SYS_A0 rails. (PWR_CONT_DIMM_ABCD_CFP net)";
-        } ABCD_CFP[1] = 0;
-        field {
-            desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, 
-            only valid after configuration from ISL68224 U418 driving VPP_EFGH_A0 rail.
-            (PWR_CONT_DIMM_EFGH_NVRHOT net)";
-        } EFGH_NVRHOT[1] = 0;
-         field {
-            desc = "Catastrophic fault protection output for ISL68224 and downstream devices
-            driving VPP_EFGH_A0. (PWR_CONT_DIMM_EFGH_CFP net)";
-        } EFGH_CFP[1] = 0;
-        field {
             desc = "Set high (inverted from board) when rail reaches OT_WARN threshold, only valid 
             after configuration. From RAA229618 U351 driving rails SP3_VDDCR_SOC_A0 and 
             VDD_MEM_EFGH_A0 (PWR_CONT2_SP3_NVRHOT net)";
@@ -440,22 +422,22 @@ addrmap gimlet_seq_fpga {
         name = "Power Status for NIC HP supplies";
         default sw = r;
         field {
-            desc = "Power good for V0P96_NIC_VDD_A0HP (PWR_CONT_NIC_PG0 net)";
+            desc = "Power good for V0P96_NIC_VDD_A0HP (PWR_CONT_NIC_PG0 net)";
         } NIC_V0P96_PG[1] = 0;
         field {
-            desc = "Power good for V1P1_NIC_ETH_IO_A0HP (inverted NIC_TO_SEQ_V1P1_PG_L net)";
+            desc = "Power good for V1P1_NIC_ETH_IO_A0HP (inverted NIC_TO_SEQ_V1P1_PG_L net)";
         } NIC_V1P1_PG[1] = 0;
         field {
-            desc = "Power good for V1P2_NIC_MDIO_A0HP  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+            desc = "Power good for V1P2_NIC_MDIO_A0HP  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
         } NIC_V1P2_PG[1] = 0;
          field {
-            desc = "Power good for V1P2_NIC_ETH  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+            desc = "Power good for V1P2_NIC_ETH  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
         } NIC_V1P2_ENET_PG[1] = 0;
         field {
-            desc = "Power good for V1P5_NIC_AVDD_A0HP (inverted NIC_TO_SEQ_V1P5A_PG_L net)";
+            desc = "Power good for V1P5_NIC_AVDD_A0HP (inverted NIC_TO_SEQ_V1P5A_PG_L net)";
         } NIC_V1P5A_PG[1] = 0;
         field {
-            desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP (inverted NIC_TO_SEQ_V1P5D_PG_L net)";
+            desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP (inverted NIC_TO_SEQ_V1P5D_PG_L net)";
         } NIC_V1P5D_PG[1] = 0;
         field {
             desc = "Power good for LDO_V3P3";
@@ -497,7 +479,7 @@ addrmap gimlet_seq_fpga {
         } FSR_REQ[1] = 0;
         field {
             desc = "Output from the AMD processor that it has effectively acknowledged that power is itself
-                    good.  This  is  connected  from  the  BSP  to  the  AP’s  PWR_GOOD  input  in  a  two  socket
+                    good.  This  is  connected  from  the  BSP  to  the  AP's  PWR_GOOD  input  in  a  two  socket
                     system.  The  FCH  may  actually  control  this  being  generated  via  the
                     FCH::PM::RESETCONTROL2 register. ";
         } PWRGD_OUT[1] = 0;
@@ -596,25 +578,25 @@ addrmap gimlet_seq_fpga {
 
     reg nic_output1_type {
         field {
-            desc = "Enable (U565), V0P96_NIC_VDD_A0HP rail (SEQ_TO_NIC_V0P9_A0HP_EN net)";
+            desc = "Enable (U565), V0P96_NIC_VDD_A0HP rail (SEQ_TO_NIC_V0P9_A0HP_EN net)";
         } NIC_V0P9_A0_EN[1] = 0;
         field {
-            desc = "Turns on V1P2_NIC_ENET_A0HP, no readback (SEQ_TO_NIC_V1P2_ENET_EN net)";
+            desc = "Turns on V1P2_NIC_ENET_A0HP, no readback (SEQ_TO_NIC_V1P2_ENET_EN net)";
         } NIC_V1P2_ETH_EN[1] = 0;
         field {
-            desc = "En for V1P5_NIC_AVDD_A0HP rail (SEQ_TO_NIC_V1P5A_EN net)";
+            desc = "En for V1P5_NIC_AVDD_A0HP rail (SEQ_TO_NIC_V1P5A_EN net)";
         } NIC_V1P5A_EN[1] = 0;
         field {
-            desc = "En for V1P5_NIC_PCIE_MEM_A0HP rail (SEQ_TO_NIC_V1P5D_EN net)";
+            desc = "En for V1P5_NIC_PCIE_MEM_A0HP rail (SEQ_TO_NIC_V1P5D_EN net)";
         } NIC_V1P5D_EN[1] = 0;
         field {
-            desc = "Enable for V1P2_NIC_MDIO_A0HP rail (SEQ_TO_NIC_V1P2_EN net)";
+            desc = "Enable for V1P2_NIC_MDIO_A0HP rail (SEQ_TO_NIC_V1P2_EN net)";
         } NIC_V1P2_EN[1] = 0;
         field {
-            desc = "Turns on V1P1_NIC_ETH_IO_A0HP rail (SEQ_TO_NIC_V1P1_EN net)";
+            desc = "Turns on V1P1_NIC_ETH_IO_A0HP rail (SEQ_TO_NIC_V1P1_EN net)";
         } NIC_V1P1_EN[1] = 0;
         field {
-            desc = "Enables V3PV_NIC_A0HP rail (SEQ_TO_NIC_LDO_V3P3_EN net)";
+            desc = "Enables V3PV_NIC_A0HP rail (SEQ_TO_NIC_LDO_V3P3_EN net)";
         } NIC_V3P3_EN[1] = 0;
     };
 
@@ -626,7 +608,7 @@ addrmap gimlet_seq_fpga {
             desc = "Becomes clock enable for clk_100M_TO_RSW (SEQ_TO_NIC_COMB_PG net)";
         } NIC_COMB_PG[1] = 0;
         field {
-            desc = "CLD Reset to Chelsio. De-asserted after NIC power stable (SEQ_TO_NIC_CLD_RST_L net inverted)";
+            desc = "CLD Reset to Chelsio. De-asserted after NIC power stable (SEQ_TO_NIC_CLD_RST_L net inverted)";
         } NIC_CLD_RST[1] = 0;
         field {
             desc = "Alert SP3 of a NIC power fault (NIC_TO_SP3_PWRFLT_L inverted net)";
@@ -683,10 +665,7 @@ addrmap gimlet_seq_fpga {
             installed";
         } ignore_sp[1] = 0; 
         field {
-            desc = "Debug enable bit. Setting this flips a mux on FPGA output pins to
-            be controlled by the following debug registers. If state maintence or pre-conditions
-            are required you may use the next bit to capture the current state, or write to the
-            debug registers to set up any desired pre-conditions";
+            desc = "Un-used";
         } REG_CTRL_EN[1] = 0;
         field {
             desc = "Nic debug control only. Seeting will force CLD_RST assert until cleared. When cleared,
@@ -702,22 +681,6 @@ addrmap gimlet_seq_fpga {
         } NIC_PERST_SOLO[1] = 0;
     } DBG_CTRL;
 
-    a1_output_type A1_DBG_OUT;
-    A1_DBG_OUT->name = "A1 Output debug control";  
-
-    a0_output1_type A0_DBG_OUT_1;
-    A0_DBG_OUT_1->name = "A0 Register 1 Output debug control"; 
-
-    a0_output2_type A0_DBG_OUT_2;
-    A0_DBG_OUT_2->name = "A0 Register 2 Output debug control"; 
-
-    nic_output1_type DBG_OUT_NIC1;
-    DBG_OUT_NIC1->name = "NIC REgister 1 Output debug control";
-    nic_output2_type DBG_OUT_NIC2;
-    DBG_OUT_NIC2->name = "Readbacks of FPGA outputs (register 2 of 2) to NIC supplies/NIC";
-
-    clk_gen_output_type CLKGEN_DBG_OUT;
-    CLKGEN_DBG_OUT->name = "Clock Generator Output readbacks";
 
     amd_output_type AMD_DBG_OUT;
     AMD_DBG_OUT->name = "Readbacks of FPGA outputs to AMD";

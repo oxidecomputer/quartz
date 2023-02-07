@@ -49,33 +49,21 @@ module mkGimletRegs(GimletRegIF);
     // Main control registers
     ConfigReg#(PwrCtrl) power_control <- mkReg(defaultValue);
     ConfigReg#(NicCtrl) nic_control <- mkReg(defaultValue);
-    //  NIC domain signals
-    
-    ConfigReg#(NicOutput1Type) dbg_nic1_out       <- mkReg(unpack(0));
-    ConfigReg#(NicOutput2Type) dbg_nic2_out       <- mkReg(unpack(0));
+
     // Early output signals
-    ConfigReg#(EarlyPower) early_output_rdbks  <- mkRegU();
-    ConfigReg#(EarlyRbks) early_inputs  <- mkRegU();
+    ConfigReg#(EarlyPower) early_output_rdbks  <- mkRegU();  // TODO: FIX ME
+    ConfigReg#(EarlyRbks) early_inputs  <- mkRegU(); // TODO: FIX ME
+
+    // TODO: want to set default to non-zero here
     ConfigReg#(EarlyPower) early_ctrl  <- mkReg(unpack('h06));  // want to force the 2V5 on due to level translator issue on gimlet.
     // A1 registers
-    ConfigReg#(A1OutputType) a1_dbg <- mkReg(unpack(0));
     ConfigReg#(A1OutputType) a1_output_readbacks <- mkRegU();
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
     ConfigReg#(A1smstatus) a1_sm <- mkRegU();
-    // A0 registers
-    ConfigReg#(A0Output1Type) a0_dbg_out1 <- mkReg(unpack(0)); // a0DbgOut1Offset
-    ConfigReg#(A0Output2Type) a0_dbg_out2 <- mkReg(unpack(0)); // a0DbgOut1Offset
-   
-    ConfigReg#(GroupbUnused) a0_groupB_unused <- mkReg(unpack(0)); //groupbUnusedOffset
-    ConfigReg#(GroupbcFlts) a0_groupC_faults <-mkReg(unpack(0)); //groupbcFltsOffset
     
     ConfigReg#(A0smstatus) a0_sm <- mkConfigRegU();
     // Misc IO registers
-    ConfigReg#(ClkgenStatus) clkgen_out_status <- mkReg(unpack(0)); // clkgenOutStatusOffset
-    ConfigReg#(ClkGenOutputType) clkgen_dbg_out <- mkReg(unpack(0)); // clkgenDbgOutOffset
-
-    ConfigReg#(AmdOutputType) amd_out_status <- mkReg(unpack(0)); // amdOutStatusOffset
-    ConfigReg#(AmdOutputType) amd_dbg_out <- mkReg(unpack(0)); // amdDbgOutOffset
+    ConfigReg#(ClkgenStatus) clkgen_out_status <- mkReg(unpack(0)); // TODO: FIX ME clkgenOutStatusOffset
 
     ConfigReg#(IrqType) irq_en_reg <- mkReg(unpack(0));
     ConfigReg#(IrqType) irq_cause_reg <- mkReg(unpack(0));
@@ -101,12 +89,14 @@ module mkGimletRegs(GimletRegIF);
     Wire#(A1StateType) a1_state <- mkDWire(IDLE);
     Wire#(A0Output1Type) a0_status1 <- mkDWire(unpack(0));
     Wire#(A0Output2Type) a0_status2 <- mkDWire(unpack(0));
-    Wire#(AmdA0) amd_status <- mkDWire(unpack(0));
+    Wire#(AmdA0) amd_a0 <- mkDWire(unpack(0));
+    Wire#(AmdStatus) amd_status <- mkDWire(unpack(0));
     Wire#(GroupbPg) a0_groupB_pg <- mkDWire(unpack(0));
     Wire#(GroupcPg) a0_groupC_pg <- mkDWire(unpack(0));
     Wire#(NicStatus) nic_status <- mkDWire(unpack(0));
     Wire#(Nicsmstatus) nic_state <- mkDWire(unpack(0));
     Wire#(BoardRev) brd_rev <- mkDWire(unpack(0));
+    Wire#(GroupbcFlts) bc_flts <- mkDWire(unpack(0));
     Wire#(Bit#(1)) a0_ok <- mkDWire(0);
     Wire#(Bit#(1)) a1_ok <- mkDWire(0);
     Wire#(Bit#(1)) nic_ok <- mkDWire(0);
@@ -166,40 +156,34 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(cs2Offset) : readdata <= tagged Valid (pack(fpga_cs2));
             fromInteger(cs3Offset) : readdata <= tagged Valid (pack(fpga_cs3));
             fromInteger(scrtchpadOffset) : readdata <= tagged Valid (pack(scratchpad));
-            fromInteger(statusOffset) : readdata <= tagged Valid (pack(status));
-            fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
             fromInteger(ifrOffset) : readdata <= tagged Valid (pack(irq_block.cause_reg));
+            fromInteger(ierOffset) : readdata <= tagged Valid (pack(irq_en_reg));
+            fromInteger(statusOffset) : readdata <= tagged Valid (pack(status));
+            fromInteger(earlyPowerCtrlOffset) : readdata <= tagged Valid (pack(early_ctrl));
             fromInteger(pwrCtrlOffset): readdata <= tagged Valid (pack(power_control));
             fromInteger(nicCtrlOffset): readdata <= tagged Valid (pack(nic_control));
-            fromInteger(boardRevOffset): readdata <= tagged Valid (pack(brd_rev));
-            fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
-            fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
-            fromInteger(outStatusNic1Offset) : readdata <= tagged Valid (pack(nic1_out_status));
-            fromInteger(outStatusNic2Offset) : readdata <= tagged Valid (pack(nic2_out_status));
-            fromInteger(dbgOutNic1Offset) : readdata <= tagged Valid (pack(dbg_nic1_out));
-            fromInteger(dbgOutNic2Offset) : readdata <= tagged Valid (pack(dbg_nic2_out));
-            fromInteger(earlyRbksOffset) : readdata <= tagged Valid (pack(early_inputs));
-            fromInteger(earlyPwrStatusOffset) : readdata <= tagged Valid (pack(early_output_rdbks));
-            fromInteger(earlyPowerCtrlOffset) : readdata <= tagged Valid (pack(early_ctrl));
-            fromInteger(a1DbgOutOffset) : readdata <= tagged Valid (pack(a1_dbg));
-            fromInteger(a1OutStatusOffset) : readdata <= tagged Valid (pack(a1_output_readbacks));
-            fromInteger(a1ReadbacksOffset) : readdata <= tagged Valid (pack(a1_inputs));
             fromInteger(a1smstatusOffset) : readdata <= tagged Valid (pack(a1_sm));
+            fromInteger(a0smstatusOffset) : readdata <= tagged Valid (pack(a0_sm));
+            fromInteger(nicsmstatusOffset) : readdata <= tagged Valid (pack(nic_state));
+            fromInteger(boardRevOffset): readdata <= tagged Valid (pack(brd_rev));
+            fromInteger(earlyRbksOffset) : readdata <= tagged Valid (pack(early_inputs));
+            fromInteger(a1ReadbacksOffset) : readdata <= tagged Valid (pack(a1_inputs));
+            fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(amd_a0));
+            fromInteger(groupbPgOffset) : readdata <= tagged Valid (pack(a0_groupB_pg));
+            fromInteger(groupbcFltsOffset) : readdata <= tagged Valid (pack(bc_flts));
+            fromInteger(groupcPgOffset) : readdata <= tagged Valid (pack(a0_groupC_pg));
+            fromInteger(nicStatusOffset) : readdata <= tagged Valid (pack(nic_status));
+            // clock gen status
+            fromInteger(amdStatusOffset) : readdata <= tagged Valid (pack(amd_status));
+            // fanoutstatus
+            fromInteger(earlyPwrStatusOffset) : readdata <= tagged Valid (pack(early_output_rdbks));
+            fromInteger(a1OutStatusOffset) : readdata <= tagged Valid (pack(a1_output_readbacks));
             fromInteger(a0OutStatus1Offset) : readdata <= tagged Valid (pack(a0_status1));
             fromInteger(a0OutStatus2Offset) : readdata <= tagged Valid (pack(a0_status2));
-            fromInteger(a0smstatusOffset) : readdata <= tagged Valid (pack(a0_sm));
-            fromInteger(a0DbgOut1Offset) : readdata <= tagged Valid (pack(a0_dbg_out1));
-            fromInteger(a0DbgOut2Offset) : readdata <= tagged Valid (pack(a0_dbg_out2));
-            fromInteger(nicsmstatusOffset) : readdata <= tagged Valid (pack(nic_state));
-            fromInteger(amdA0Offset) : readdata <= tagged Valid (pack(amd_status));
-            fromInteger(groupbPgOffset) : readdata <= tagged Valid (pack(a0_groupB_pg));
-            fromInteger(groupbUnusedOffset) : readdata <= tagged Valid (pack(a0_groupB_unused));
-            fromInteger(groupbcFltsOffset) : readdata <= tagged Valid (pack(a0_groupC_faults));
-            fromInteger(groupcPgOffset) : readdata <= tagged Valid (pack(a0_groupC_pg));
-            fromInteger(clkgenOutStatusOffset) : readdata <= tagged Valid (pack(clkgen_out_status));
-            fromInteger(clkgenDbgOutOffset) : readdata <= tagged Valid (pack(clkgen_dbg_out));
-            fromInteger(amdOutStatusOffset) : readdata <= tagged Valid (pack(amd_out_status));
-            fromInteger(amdDbgOutOffset) : readdata <= tagged Valid (pack(amd_dbg_out));
+            fromInteger(outStatusNic1Offset) : readdata <= tagged Valid (pack(nic1_out_status));
+            fromInteger(outStatusNic2Offset) : readdata <= tagged Valid (pack(nic2_out_status));
+            //fromInteger(clkgenOutStatusOffset) : readdata <= tagged Valid (pack(clkgen_out_status));
+            fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             default : readdata <= tagged Valid ('hff);
         endcase
     endrule
@@ -236,8 +220,6 @@ module mkGimletRegs(GimletRegIF);
         end else begin
             nic_control <= reg_update(nic_control, nic_control, fromInteger(nicCtrlOffset), nicCtrlOffset, WRITE, pack(nic_ctrl_next));
         end
-      
-        a1_dbg <= reg_update(a1_dbg, a1_dbg, address, a1DbgOutOffset, operation, writedata);
 
     endrule
 
@@ -298,8 +280,10 @@ module mkGimletRegs(GimletRegIF);
         method status1 = a0_status1._write;
         method status2 = a0_status2._write;
         method amd_status = amd_status._write;
+        method amd_a0 = amd_a0._write;
         method b_pgs = a0_groupB_pg._write;
         method c_pgs = a0_groupC_pg._write;
+        method bc_flts = bc_flts._write;
         method thermtrip = thermtrip._write;
         method mapo = a0_mapo._write;
     endinterface
