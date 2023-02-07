@@ -213,20 +213,45 @@ addrmap gimlet_seq_fpga {
         desc = "A1 'live' state machine status";
         default sw = r;
 
+        enum a1_state_machine {
+            IDLE = 8'h00 {desc = "";};
+            ENABLE = 8'h01 {desc = "";};
+            WAITPG = 8'h02 {desc = "";};
+            DELAY = 8'h03 {desc = "";};
+            DONE = 8'h05 {desc = "";};
+        };
+
         field {
-            desc = "TBD";
+            desc = "State Machine enum";
+            encode = a1_state_machine;
         } A1SM[7:0];
-        // TODO: A1 state machine decode in here
     } A1SMSTATUS;
     reg {
         name = "A0 SM Status";
         desc = "A0 'live' state machine status";
         default sw = r;
 
+        enum a0_state_machine {
+            IDLE = 8'h00 {desc = "";};
+            PBTN = 8'h01 {desc = "";};
+            WAITSLP = 8'h02 {desc = "";};
+            GROUPB1_EN = 8'h03 {desc = "";};
+            GROUPB1_PG = 8'h04 {desc = "";};
+            GROUPB2_EN = 8'h05 {desc = "";};
+            GROUPB2_PG = 8'h06 {desc = "";};
+            GROUPC_PG = 8'h07 {desc = "";};
+            DELAY_1MS = 8'h08 {desc = "";};
+            ASSERT_PG = 8'h09 {desc = "";};
+            WAIT_PWROK = 8'h0a {desc = "";};
+            WAIT_RESET_L = 8'h0b {desc = "";};
+            DONE = 8'h0c {desc = "";};
+            SAFE_DISABLE = 8'h0d {desc = "";};
+        };
+
         field {
-            desc = "TBD";
+            desc = "State Machine enum";
+            encode = a0_state_machine;
         } A0SM[7:0];
-        // TODO: A1 state machine decode in here
     } A0SMSTATUS;
     reg {
         name = "Nic SM Status";

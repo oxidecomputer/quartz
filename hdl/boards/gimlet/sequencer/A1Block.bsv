@@ -24,7 +24,7 @@ import PowerRail::*;
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Action a1_en(Bool value);  // SM enable pin
         method Bool ok();
-        method A1StateType state();
+        method A1smstatusA1sm state();
         method A1OutputType output_readbacks();
         method A1Readbacks input_readbacks();
         method Bool mapo();
@@ -35,7 +35,7 @@ import PowerRail::*;
         // method Action dbg_en(Bool value);    // Debug enable pin
         method Bool a1_en();  // SM enable pin
         method Action ok(Bool value);
-        method Action state (A1StateType value);
+        method Action state (A1smstatusA1sm value);
         method Action output_readbacks (A1OutputType value);
         method Action input_readbacks (A1Readbacks value);
         method Action mapo(Bool value);
@@ -70,20 +70,12 @@ import PowerRail::*;
         interface A1Regs reg_if;
     endinterface
 
-    typedef enum {  // Leaving revA gimlet sequence #s here for now.
-        IDLE = 'h0,
-        ENABLE = 'h1,
-        WAITPG = 'h2,
-        DELAY = 'h3,
-        DONE = 'h5
-    } A1StateType deriving (Eq, Bits);
-
     module mkA1BlockSeq#(Integer one_ms_counts)(A1BlockTop);
 
         Integer ten_ms = 10 * one_ms_counts;
         Integer rsm_delay = 200 * one_ms_counts;
 
-        ConfigReg#(A1StateType) state <- mkConfigReg(IDLE);
+        ConfigReg#(A1smstatusA1sm) state <- mkConfigReg(A1smstatusA1sm'(IDLE));
         ConfigReg#(A1OutputType) output_readbacks <- mkConfigRegU();
         ConfigReg#(A1Readbacks) input_readbacks <- mkConfigRegU();
 
@@ -113,21 +105,21 @@ import PowerRail::*;
             vec(sp3_v3p3_s5, sp3_v1p5_rtc, sp3_v0p9_s5, sp3_v1p8_s5);
 
 
-        function Action enable_rails(Vector#(4, PowerRail) rails, A1StateType step) =
+        function Action enable_rails(Vector#(4, PowerRail) rails, A1smstatusA1sm step) =
             action
                 state <= step;
                 for (int i = 0; i < 4; i=i+1)
                     rails[i].set_enabled(True);
             endaction;
 
-        function Action disable_rails(Vector#(4, PowerRail) rails, A1StateType step) =
+        function Action disable_rails(Vector#(4, PowerRail) rails, A1smstatusA1sm step) =
             action
                 state <= step;
                 for (int i = 0; i < 4; i=i+1)
                     rails[i].set_enabled(False);
             endaction;
 
-        function Stmt delay(Integer d, A1StateType step) =
+        function Stmt delay(Integer d, A1smstatusA1sm step) =
             seq
                 action
                     state <= step;
@@ -286,7 +278,7 @@ import PowerRail::*;
         method Action a0_busy();
         method Action a0_idle();
         method Bit#(1) seq_to_sp3_rsmrst_v3p3_l();
-        method A1StateType state();
+        method A1smstatusA1sm state();
 
     endinterface
 
