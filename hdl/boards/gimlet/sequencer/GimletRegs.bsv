@@ -86,7 +86,7 @@ module mkGimletRegs(GimletRegIF);
     RWire#(EarlyPower) cur_early_outputs <- mkRWire();
     RWire#(EarlyRbks) cur_early_inputs <- mkRWire();
 
-    Wire#(A1StateType) a1_state <- mkDWire(IDLE);
+    Wire#(A1smstatusA1sm) a1_state <- mkDWire(IDLE);
     Wire#(A0Output1Type) a0_status1 <- mkDWire(unpack(0));
     Wire#(A0Output2Type) a0_status2 <- mkDWire(unpack(0));
     Wire#(AmdA0) amd_a0 <- mkDWire(unpack(0));
@@ -257,7 +257,7 @@ module mkGimletRegs(GimletRegIF);
         method Action ok(Bool value);
             a1_ok <= pack(value);
         endmethod
-        method Action state(A1StateType value);
+        method Action state(A1smstatusA1sm value);
             a1_sm <= unpack({'0, pack(value)});
         endmethod
         method output_readbacks = a1_output_readbacks._write;
@@ -271,7 +271,7 @@ module mkGimletRegs(GimletRegIF);
         method Bool ignore_sp();
             return dbgCtrl_reg.ignore_sp == 1;
         endmethod 
-        method Action state (A0StateType value);
+        method Action state (A0smstatusA0sm value);
             a0_sm <= unpack({'0, pack(value)});
         endmethod
         method Action ok(Bool value);

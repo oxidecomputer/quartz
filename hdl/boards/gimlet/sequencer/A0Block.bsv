@@ -23,7 +23,7 @@ import PowerRail::*;
         method Action a0_en(Bool value);  // SM enable pin
         method Action ignore_sp(Bool value);
         method Bool ok;
-        method A0StateType state();
+        method A0smstatusA0sm state();
         method A0Output1Type status1;
         method A0Output2Type status2;
         method AmdA0 amd_a0;
@@ -43,7 +43,7 @@ import PowerRail::*;
         method Bool a0_en();  // SM enable pin
         method Bool ignore_sp();
         method Action ok(Bool value);
-        method Action state (A0StateType value);
+        method Action state (A0smstatusA0sm value);
         method Action status1 (A0Output1Type value);
         method Action status2 (A0Output2Type value);
         method Action amd_status (AmdStatus value);
@@ -156,25 +156,6 @@ import PowerRail::*;
         interface A0Regs reg_if;
     endinterface
 
-    typedef enum {
-        IDLE = 'h00,
-        PBTN = 'h01,           // 0x01
-        WAITSLP = 'h02,        // 0x02
-        GROUPB1_EN = 'h03,     // 0x03
-        GROUPB1_PG = 'h04,     // 0x04
-        GROUPB2_EN = 'h05,     // 0x05
-        GROUPB2_PG = 'h06,     // 0x06
-        GROUPC_PG = 'h07,      // 0x07
-        DELAY_1MS = 'h08,      // 0x08
-        ASSERT_PG = 'h09,      // 0x09
-        WAIT_PWROK = 'h0a,     // 0x0a
-        WAIT_RESET_L = 'h0b,   // 0x0b
-        DONE = 'h0c,           // 0x0c
-        SAFE_DISABLE = 'h0d    // 0x0d
-   
-    } A0StateType deriving (Eq, Bits);
-
-
 
 module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Integer two_ms = 2 * one_ms_counts;
@@ -184,7 +165,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Integer onehundred_ms = 100 * one_ms_counts;
     Integer startup_delay = ten_ms;
     
-    Reg#(A0StateType) state <- mkReg(IDLE);
+    Reg#(A0smstatusA0sm) state <- mkReg(IDLE);
 
     Reg#(UInt#(24)) ticks_count <- mkReg(0);
     RWire#(UInt#(24)) ticks_count_next <- mkRWire();
@@ -257,7 +238,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         vec(vdd_mem_abcd, vdd_mem_efgh, vtt_ab, vtt_cd,
             vtt_ef, vtt_gh);
 
-    function Action enable_rails(Vector#(n, PowerRail) rails, A0StateType step) =
+    function Action enable_rails(Vector#(n, PowerRail) rails, A0smstatusA0sm step) =
         action
             state <= step;
             for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
@@ -270,7 +251,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
                     rails[i].set_enabled(False);
             endaction;
 
-    function Stmt delay(Integer d, A0StateType step) =
+    function Stmt delay(Integer d, A0smstatusA0sm step) =
         seq
             action
                 state <= step;
@@ -309,7 +290,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     rule do_ps_faults;
         let mapo_fault = foldr(bool_or, False, map(PowerRail::fault, b1_rails)) ||
                          foldr(bool_or, False, map(PowerRail::fault, b2_rails)) ||
-                         (!c_pg && pack(state) >=pack(DELAY_1MS) && pack(state) <=pack(DONE));  // Allow group C to drop in SAFE_DISABLE
+                         (!c_pg && pack(state) >=pack(DELAY_1MS) && pack(state) <=pack(A0smstatusA0sm'(DONE)));  // Allow group C to drop in SAFE_DISABLE
 
         aggregate_fault <=  mapo_fault;
     endrule
@@ -617,7 +598,7 @@ interface Bench;
     interface PowerRailModel vtt_ef;
     interface PowerRailModel vtt_gh;
 
-    method A0StateType dut_state();
+    method A0smstatusA0sm dut_state();
     method Bool mapo();
     method Action sp3_disable(Bool value);
     method Action sp3_thermtrip();
@@ -683,7 +664,7 @@ module mkBench(Bench);
     interface  vtt_ef = vtt_ef_rail;
     interface  vtt_gh = vtt_gh_rail;
 
-    method A0StateType dut_state();
+    method A0smstatusA0sm dut_state();
         return dut.reg_if.state;
     endmethod
     method Bool mapo();
