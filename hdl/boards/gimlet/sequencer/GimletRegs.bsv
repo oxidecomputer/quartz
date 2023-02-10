@@ -134,7 +134,7 @@ module mkGimletRegs(GimletRegIF);
             amd_rstn_cnts <= amd_rstn_cnts + 1;
         end
         // Register writes take precedence and reset the counter.
-        if (amd_rstn_write) begin
+        if (amd_pwrokn_write) begin
             amd_pwrokn_cnts <= 0;
          // Saturating counter
         end else if (amd_pwrokn_fedge && amd_pwrokn_cnts < 255) begin
@@ -211,6 +211,8 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(outStatusNic2Offset) : readdata <= tagged Valid (pack(nic2_out_status));
             //fromInteger(clkgenOutStatusOffset) : readdata <= tagged Valid (pack(clkgen_out_status));
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
+            fromInteger(amdRstnCntsOffset) : readdata <= tagged Valid (pack(amd_rstn_cnts));
+            fromInteger(amdPwroknCntsOffset) : readdata <= tagged Valid (pack(amd_pwrokn_cnts));
             default : readdata <= tagged Valid ('hff);
         endcase
     endrule
@@ -249,12 +251,12 @@ module mkGimletRegs(GimletRegIF);
         end
 
         // Deal with register writes making clear signals
-        // if (do_write && address == fromInteger()) begin
-        //     amd_rstn_write.send();
-        // end
-        // if (do_write && address == fromInteger()) begin
-        //     amd_pwrokn_write.send();
-        // end
+        if (do_write && address == fromInteger(amdRstnCntsOffset)) begin
+            amd_rstn_write.send();
+        end
+        if (do_write && address == fromInteger(amdPwroknCntsOffset)) begin
+            amd_pwrokn_write.send();
+        end
     endrule
 
     interface Server decoder_if;

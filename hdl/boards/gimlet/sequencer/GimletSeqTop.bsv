@@ -3,6 +3,7 @@
 package GimletSeqTop;
 
 // BSV-provided stuff
+import Assert::*;
 import Clocks::*;
 import Connectable::*;
 import ClientServer::*;
@@ -196,6 +197,10 @@ interface Bench;
         method Action pmbus_on();
         method Action pmbus_off();
         method Action thermtrip();
+        method Action amd_force_reset_assert();
+        method Action amd_clear_reset_assert();
+        method Action amd_force_pwrok_deassert();
+        method Action amd_clear_pwrok_deassert();
         // method Bool a1_ok();
         // method Action power_up();
         // method Action power_down();
@@ -312,7 +317,18 @@ module mkBench(Bench);
     method Action thermtrip();
         sp3.thermtrip(True);
     endmethod
-
+    method Action amd_force_reset_assert();
+        sp3.rst_override(True);
+    endmethod
+    method Action amd_clear_reset_assert();
+        sp3.rst_override(False);
+    endmethod
+    method Action amd_force_pwrok_deassert();
+        sp3.pwrok_override(False);
+    endmethod
+    method Action amd_clear_pwrok_deassert();
+        sp3.pwrok_override(True);
+    endmethod
 endmodule
 
 module mkGimletTopTest(Empty);
@@ -409,6 +425,136 @@ module mkGimletThermtripTopTest(Empty);
     endseq
     );
 
+endmodule
+
+module mkGimletAMDResetTripTest(Empty);
+    
+    Bench bench <- mkBench();
+
+    // Sim book-keeping stuff
+    Reg#(Bit#(8)) read_byte <- mkReg(0);
+
+    //HLIST
+    //
+    mkAutoFSM(
+    seq
+        // Basic read
+        spiRead(read_byte, id0Offset, bench.bfm);
+        // Enable A1+A0 (now interlocked), sunny day case
+        spiWrite(pwrCtrlOffset, pwrCtrlA1pwren | pwrCtrlA0aEn,  bench.bfm);
+        action
+            $display("Delay for A1 SM good...");
+        endaction
+        spiReadUntil(read_byte, a1smstatusOffset, 'h05,  bench.bfm);
+         action
+            $display("A1 SM good!!!");
+        endaction
+        action
+            $display("Delay for A0 SM pmbus...");
+        endaction
+        spiReadUntil(read_byte, a0smstatusOffset, 'h07,  bench.bfm);
+        delay(30);
+        action
+             $display("Enable PMBus");
+        endaction
+        bench.pmbus_on();
+        spiReadUntil(read_byte, a0smstatusOffset, 'h0c,  bench.bfm);
+        action
+             $display("Design Up");
+        endaction
+        delay(30);
+
+        // make AMD reset trip
+        bench.amd_force_reset_assert();
+        delay(30);
+        // Check reset counter
+        spiRead(read_byte, amdRstnCntsOffset, bench.bfm);
+        dynamicAssert(read_byte == 1, "Did not read proper count read #1");
+        // Check IRQ cause
+        spiRead(read_byte, ifrOffset, bench.bfm);
+        dynamicAssert((read_byte & ifrAmdRstnFedge) != 0, "IRQ flag did not set");
+        // Clear AMD trip
+        bench.amd_clear_reset_assert();
+        delay(30);
+        // trip again (counter increases)
+        bench.amd_force_reset_assert();
+        delay(30);
+        // Check counter
+        spiRead(read_byte, amdRstnCntsOffset, bench.bfm);
+        dynamicAssert(read_byte == 2, "Did not read proper count read #2");
+        // Write to reg and check clear
+        spiWrite(amdRstnCntsOffset, 1,  bench.bfm);
+        spiRead(read_byte, amdRstnCntsOffset, bench.bfm);
+        dynamicAssert(read_byte == 0, "Did not read proper count after clear");
+
+    endseq
+    );
+    
+endmodule
+
+module mkGimletAMDPWROKTripTest(Empty);
+    
+    Bench bench <- mkBench();
+
+    // Sim book-keeping stuff
+    Reg#(Bit#(8)) read_byte <- mkReg(0);
+
+    //HLIST
+    //
+    mkAutoFSM(
+    seq
+        // Basic read
+        spiRead(read_byte, id0Offset, bench.bfm);
+        // Enable A1+A0 (now interlocked), sunny day case
+        spiWrite(pwrCtrlOffset, pwrCtrlA1pwren | pwrCtrlA0aEn,  bench.bfm);
+        action
+            $display("Delay for A1 SM good...");
+        endaction
+        spiReadUntil(read_byte, a1smstatusOffset, 'h05,  bench.bfm);
+         action
+            $display("A1 SM good!!!");
+        endaction
+        action
+            $display("Delay for A0 SM pmbus...");
+        endaction
+        spiReadUntil(read_byte, a0smstatusOffset, 'h07,  bench.bfm);
+        delay(30);
+        action
+             $display("Enable PMBus");
+        endaction
+        bench.pmbus_on();
+        spiReadUntil(read_byte, a0smstatusOffset, 'h0c,  bench.bfm);
+        action
+             $display("Design Up");
+        endaction
+        delay(30);
+
+        // make AMD reset trip
+        bench.amd_force_pwrok_deassert();
+        delay(30);
+        // Check reset counter
+        spiRead(read_byte, amdPwroknCntsOffset, bench.bfm);
+        dynamicAssert(read_byte == 1, "Did not read proper count read #1");
+        // Check IRQ cause
+        spiRead(read_byte, ifrOffset, bench.bfm);
+        dynamicAssert((read_byte & ifrAmdPwrokFedge) != 0, "IRQ flag did not set");
+        // Clear AMD trip
+        bench.amd_clear_pwrok_deassert();
+        delay(30);
+        // trip again (counter increases)
+        bench.amd_force_pwrok_deassert();
+        delay(30);
+        // Check counter
+        spiRead(read_byte, amdPwroknCntsOffset, bench.bfm);
+        dynamicAssert(read_byte == 2, "Did not read proper count read #2");
+        // Write to reg and check clear
+        spiWrite(amdPwroknCntsOffset, 1,  bench.bfm);
+        spiRead(read_byte, amdPwroknCntsOffset, bench.bfm);
+        dynamicAssert(read_byte == 0, "Did not read proper count after clear");
+
+    endseq
+    );
+    
 endmodule
 
 
