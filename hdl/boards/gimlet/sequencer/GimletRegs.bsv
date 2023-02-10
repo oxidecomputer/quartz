@@ -71,10 +71,18 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(IrqType) irq_clr_flags <- mkDReg(unpack(0));
     ConfigReg#(IrqType) irq_cause_raw <- mkDReg(unpack(0));
 
+    ConfigReg#(UInt#(8)) amd_rstn_cnts <- mkConfigReg(0);
+    ConfigReg#(UInt#(8)) amd_pwrokn_cnts <- mkConfigReg(0);
+
     PulseWire do_read <- mkPulseWire();
     PulseWire do_write <- mkPulseWire();
     PulseWire do_bitset <- mkPulseWire();
     PulseWire do_bitclear <- mkPulseWire();
+
+    PulseWire amd_rstn_write <- mkPulseWire();
+    PulseWire amd_pwrokn_write <- mkPulseWire();
+    PulseWire amd_rstn_fedge <- mkPulseWire();
+    PulseWire amd_pwrokn_fedge <- mkPulseWire();
 
     Reg#(Maybe#(Bit#(8))) readdata <- mkReg(tagged Invalid);
 
@@ -117,6 +125,23 @@ module mkGimletRegs(GimletRegIF);
     mkConnection(irq_clr_flags, irq_block.clear);
     mkConnection(irq_cause_raw, irq_block.cause_raw);
 
+    rule do_amd_cnts;
+        // Register writes take precedence and reset the counter.
+        if (amd_rstn_write) begin
+            amd_rstn_cnts <= 0;
+        // Saturating counter
+        end else if (amd_rstn_fedge && amd_rstn_cnts < 255) begin
+            amd_rstn_cnts <= amd_rstn_cnts + 1;
+        end
+        // Register writes take precedence and reset the counter.
+        if (amd_rstn_write) begin
+            amd_pwrokn_cnts <= 0;
+         // Saturating counter
+        end else if (amd_pwrokn_fedge && amd_pwrokn_cnts < 255) begin
+            amd_pwrokn_cnts <= amd_pwrokn_cnts + 1;
+        end
+    endrule
+
     rule do_status;
         status <= Status {
             int_pend: irq_block.irq_pin,
@@ -129,6 +154,8 @@ module mkGimletRegs(GimletRegIF);
 
     rule do_irqs;
         irq_cause_raw <= IrqType {
+            amd_rstn_fedge: pack(amd_rstn_cnts != 0),
+            amd_pwrok_fedge: pack(amd_pwrokn_cnts != 0),
             nicmapo: pack(nic_mapo),
             a0mapo: pack(a0_mapo),
             a1mapo: pack(a1_mapo),
@@ -221,6 +248,13 @@ module mkGimletRegs(GimletRegIF);
             nic_control <= reg_update(nic_control, nic_control, fromInteger(nicCtrlOffset), nicCtrlOffset, WRITE, pack(nic_ctrl_next));
         end
 
+        // Deal with register writes making clear signals
+        // if (do_write && address == fromInteger()) begin
+        //     amd_rstn_write.send();
+        // end
+        // if (do_write && address == fromInteger()) begin
+        //     amd_pwrokn_write.send();
+        // end
     endrule
 
     interface Server decoder_if;
@@ -286,6 +320,16 @@ module mkGimletRegs(GimletRegIF);
         method bc_flts = bc_flts._write;
         method thermtrip = thermtrip._write;
         method mapo = a0_mapo._write;
+        method Action amd_reset_fedge(Bool value);
+            if (value) begin
+                amd_rstn_fedge.send();
+            end
+        endmethod
+        method Action amd_pwrok_fedge(Bool value);
+            if (value) begin
+                amd_pwrokn_fedge.send();
+            end
+        endmethod
     endinterface
     interface NicRegsReverse nic_block;
         method Bool en;
