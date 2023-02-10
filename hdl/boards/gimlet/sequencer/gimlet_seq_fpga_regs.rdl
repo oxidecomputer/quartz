@@ -717,16 +717,18 @@ addrmap gimlet_seq_fpga {
     AMD_DBG_OUT->name = "Readbacks of FPGA outputs to AMD";
 
     reg amd_reset_fedge_counter {
-        default sw = rw;
+        default sw=rw;
+        default onwrite=wclr;
         field {
             desc = "Falling edge counter of AMD's reset output while in A0/A0HP. Saturates at 255. Any write clears";
         } RESET_CNTS[7:0] = 0;
-    };
+    } AMD_RSTN_CNTS;
 
     reg amd_pwrok_fedge_counter {
-        default sw = rw;
+        default sw=rw;
+        default onwrite=wclr;
         field {
             desc = "Falling edge counter of AMD's PowerOK output while in A0/A0HP. Saturates at 255.  Any write clears";
         } RESET_CNTS[7:0] = 0;
-    };
+    }AMD_PWROKN_CNTS;
 };

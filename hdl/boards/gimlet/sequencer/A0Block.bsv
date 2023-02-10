@@ -739,6 +739,8 @@ interface SP3Model;
     interface SP3 pins;
     method Action thermtrip(Bool value);
     method Action disabled(Bool value);
+    method Action pwrok_override(Bool value);
+    method Action rst_override(Bool value);
 endinterface
 
 typedef enum {
@@ -867,6 +869,20 @@ module mkSP3Model(SP3Model);
     endinterface
     method thermtrip = thermtrip_._write;
     method disabled = disabled_._write;
+    method Action pwrok_override (Bool value);
+        if (value) begin
+            sp3_to_seq_pwrok_v3p3 <= 1;
+        end else begin
+            sp3_to_seq_pwrok_v3p3 <= 0;
+        end
+    endmethod
+    method Action rst_override (Bool value);
+        if (value) begin
+            sp3_to_seq_reset_v3p3_l <= 0;
+        end else begin
+            sp3_to_seq_reset_v3p3_l <= 1;
+        end
+    endmethod
 endmodule
 
 module mkA0PowerUpTest(Empty);

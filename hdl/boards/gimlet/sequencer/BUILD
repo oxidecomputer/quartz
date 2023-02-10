@@ -129,6 +129,8 @@ bluesim_tests('TopTests',
     modules = [
         'mkGimletTopTest',
         'mkGimletThermtripTopTest',
+        'mkGimletAMDResetTripTest',
+        'mkGimletAMDPWROKTripTest',
     ],
     deps = [
         ':GimletSeqTop',
