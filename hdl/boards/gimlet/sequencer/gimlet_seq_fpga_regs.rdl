@@ -138,6 +138,12 @@ addrmap gimlet_seq_fpga {
         field {
             desc = "Nic MAPO";
         } NICMAPO[1];
+        field {
+            desc = "AMD PWROK fedge while in >=A0";
+        } AMD_PWROK_FEDGE[1];
+        field {
+            desc = "AMD RESET fedge while in >=A0";
+        } AMD_RSTN_FEDGE[1];
     };
 
     // Set up interrupt registers using a common irq_type
@@ -709,4 +715,18 @@ addrmap gimlet_seq_fpga {
 
     amd_output_type AMD_DBG_OUT;
     AMD_DBG_OUT->name = "Readbacks of FPGA outputs to AMD";
+
+    reg amd_reset_fedge_counter {
+        default sw = rw;
+        field {
+            desc = "Falling edge counter of AMD's reset output while in A0/A0HP. Saturates at 255. Any write clears";
+        } RESET_CNTS[7:0] = 0;
+    };
+
+    reg amd_pwrok_fedge_counter {
+        default sw = rw;
+        field {
+            desc = "Falling edge counter of AMD's PowerOK output while in A0/A0HP. Saturates at 255.  Any write clears";
+        } RESET_CNTS[7:0] = 0;
+    };
 };

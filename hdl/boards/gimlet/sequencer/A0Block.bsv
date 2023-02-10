@@ -33,6 +33,8 @@ import PowerRail::*;
         method GroupbcFlts bc_flts;
         method Bool mapo;
         method Bool thermtrip;
+        method Bool amd_reset_fedge;
+        method Bool amd_pwrok_fedge;
         // method A0OutStatus output_readbacks();
         // method A0Readbacks input_readbacks();
     endinterface
@@ -53,6 +55,8 @@ import PowerRail::*;
         method Action bc_flts (GroupbcFlts value);
         method Action mapo(Bool value);
         method Action thermtrip(Bool value);
+        method Action amd_reset_fedge(Bool value);
+        method Action amd_pwrok_fedge(Bool value);
         // method Action output_readbacks (A0OutStatus value);
         // method Action input_readbacks (A0Readbacks value);
     endinterface
@@ -73,6 +77,8 @@ import PowerRail::*;
             mkConnection(source.bc_flts, sink.bc_flts);
             mkConnection(source.mapo, sink.mapo);
             mkConnection(source.thermtrip, sink.thermtrip);
+            mkConnection(source.amd_reset_fedge, sink.amd_reset_fedge);
+            mkConnection(source.amd_pwrok_fedge, sink.amd_pwrok_fedge);
         endmodule
     endinstance
 
@@ -225,6 +231,12 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Reg#(Bit#(1)) pwr_cont2_sp3_nvrhot <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(1);
+
+    // Edge registers
+    Reg#(Bit#(1)) sp3_to_seq_pwrok_last <- mkReg(0);
+    Reg#(Bit#(1)) sp3_to_seq_reset_l_last <- mkReg(0);
+    PulseWire amd_pwrok_fedge <- mkPulseWire();
+    PulseWire amd_reset_fedge <- mkPulseWire();
 
     // Output registers
     Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);  // In practice we don't use this
@@ -437,6 +449,22 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     endrule
 
     (* fire_when_enabled *)
+    rule prev_regs;
+        sp3_to_seq_pwrok_last <= sp3_to_seq_pwrok_v3p3;
+        sp3_to_seq_reset_l_last <= sp3_to_seq_reset_v3p3_l;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_sp3_mon;
+        if (sp3_to_seq_pwrok_last == 1 && sp3_to_seq_pwrok_v3p3 == 0 && state == DONE) begin
+            amd_pwrok_fedge.send();
+        end
+        if (sp3_to_seq_reset_l_last == 1 && sp3_to_seq_reset_v3p3_l == 0 && state == DONE) begin
+            amd_reset_fedge.send();
+        end
+    endrule
+
+    (* fire_when_enabled *)
     rule do_enable;
         enable_last <= enable;
     endrule
@@ -581,6 +609,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method bc_flts = bc_flts._read;
         method mapo = mapo._read;
         method thermtrip = thermal_trip._read;
+        method amd_pwrok_fedge = amd_pwrok_fedge._read;
+        method amd_reset_fedge = amd_reset_fedge._read;
     endinterface
 
 endmodule
