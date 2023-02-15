@@ -36,7 +36,6 @@ function Stmt assert_hello(Get#(Character) tx, String msg) =
         assert_character_get_display(tx, end_of_message2, msg);
     endseq;
 
-(* synthesize *)
 module mkTransmitIdleTest (Empty);
     Transmitter tx <- mkTransmitter();
 
@@ -50,7 +49,6 @@ module mkTransmitIdleTest (Empty);
     mkTestWatchdog(20);
 endmodule
 
-(* synthesize *)
 module mkTransmitIdle1HelloEndOfMessage2Idle1Test (Empty);
     Transmitter tx <- mkTransmitter();
 
@@ -74,7 +72,6 @@ module mkTransmitIdle1HelloEndOfMessage2Idle1Test (Empty);
     mkTestWatchdog(20);
 endmodule
 
-(* synthesize *)
 module mkTransmitIdle1RequestIdle2Test (Empty);
     Transmitter tx <- mkTransmitter();
 
@@ -107,7 +104,6 @@ module mkTransmitIdle1RequestIdle2Test (Empty);
     mkTestWatchdog(20);
 endmodule
 
-(* synthesize *)
 module mkTransmitIdleBetweenBackToBackHelloTest (Empty);
     Transmitter tx <- mkTransmitter();
 

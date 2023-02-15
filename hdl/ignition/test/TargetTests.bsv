@@ -31,7 +31,6 @@ Parameters parameters =
 
 Integer test_timeout_25_ticks = 25;
 
-(* synthesize *)
 module mkPeriodicStatusMessagesTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -69,7 +68,6 @@ module mkPeriodicStatusMessagesTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReportReceiverStatusTest (Empty);
     TargetBench bench <- mkTargetBench(parameters, test_timeout_25_ticks);
     let rx = tpl_1(bench.link.message);
@@ -93,7 +91,6 @@ module mkReportReceiverStatusTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkControllerPresentTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -127,7 +124,6 @@ module mkControllerPresentTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReportLinkEventsTest (Empty);
     TargetBench bench <- mkTargetBench(parameters, test_timeout_25_ticks);
     let rx = tpl_1(bench.link.message);
@@ -148,7 +144,6 @@ module mkReportLinkEventsTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReportLinkEventsMultipleOccurencesTest (Empty);
     TargetBench bench <- mkTargetBench(parameters, test_timeout_25_ticks);
     let rx = tpl_1(bench.link.message);
@@ -183,7 +178,6 @@ module mkReportLinkEventsMultipleOccurencesTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReportFaultsTest (Empty);
     // Disable the system power fault monitor to avoid the additional Status
     // messages because a fault is triggered.
@@ -210,7 +204,6 @@ module mkReportFaultsTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemPowerOnRequestTest (Empty);
     // Set power button behavior instead of reset button, to start the system
     // with power disabled.
@@ -265,7 +258,6 @@ module mkSystemPowerOnRequestTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemPowerOffRequestTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -314,7 +306,6 @@ module mkSystemPowerOffRequestTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemResetRequestTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -386,7 +377,6 @@ module mkSystemResetRequestTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemResetShortButtonPressTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -427,7 +417,6 @@ module mkSystemResetShortButtonPressTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemResetLongButtonPressTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -470,7 +459,6 @@ module mkSystemResetLongButtonPressTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemPowerAbortOnFaultTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -513,7 +501,6 @@ module mkSystemPowerAbortOnFaultTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkRequestRestartAfterSystemPowerAbortTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -555,7 +542,6 @@ module mkRequestRestartAfterSystemPowerAbortTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkResetButtonRestartAfterSystemPowerAbortTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -583,7 +569,6 @@ module mkResetButtonRestartAfterSystemPowerAbortTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPowerButtonRestartAfterSystemPowerAbortTest (Empty);
     Parameters parameters_ = parameters;
     parameters_.button_behavior = PowerButton;
@@ -614,7 +599,6 @@ module mkPowerButtonRestartAfterSystemPowerAbortTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPowerFaultBitsStickyAfterSystemPowerAbortTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -647,7 +631,6 @@ module mkPowerFaultBitsStickyAfterSystemPowerAbortTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemPowerFaultMonitorDisabledDuringResetTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,

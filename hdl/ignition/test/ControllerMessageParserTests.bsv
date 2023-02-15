@@ -38,7 +38,6 @@ module mkParserTest #(
     mkTestWatchdog(20);
 endmodule
 
-(* synthesize *)
 module mkParseIdle1Test (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -49,7 +48,6 @@ module mkParseIdle1Test (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseIdle1PolarityInvertedTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -60,7 +58,6 @@ module mkParseIdle1PolarityInvertedTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseIdle2Test (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -71,7 +68,6 @@ module mkParseIdle2Test (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseIdle2PolarityInvertedTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -82,7 +78,6 @@ module mkParseIdle2PolarityInvertedTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseHelloTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -93,7 +88,6 @@ module mkParseHelloTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseSystemPowerOnRequestTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -104,7 +98,6 @@ module mkParseSystemPowerOnRequestTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseSystemPowerOffRequestTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -115,7 +108,6 @@ module mkParseSystemPowerOffRequestTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseSystemResetRequestTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -126,7 +118,6 @@ module mkParseSystemResetRequestTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseStatusTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -137,7 +128,6 @@ module mkParseStatusTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseVersionInvalidTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -148,7 +138,6 @@ module mkParseVersionInvalidTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseMessageTypeInvalidTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -159,7 +148,6 @@ module mkParseMessageTypeInvalidTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseRequestInvalidTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -170,7 +158,6 @@ module mkParseRequestInvalidTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseChecksumInvalidTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
@@ -181,7 +168,6 @@ module mkParseChecksumInvalidTest (Empty);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkParseOrderedSetInvalidTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(

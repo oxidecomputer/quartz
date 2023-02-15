@@ -286,25 +286,30 @@ interface SidecarMainboardControllerTop;
     interface Inout#(Bit#(1)) ignition_ctrl_to_rsw_b_dc_p;
 endinterface
 
-// A convenience swapper which
-typedef SerialIOAdapterTxInout#(5) IgnitionIO;
+// A convenience wrapper which
+typedef SampledSerialIOTxInout#(5) IgnitionIO;
 
 module mkIgnitionIOs #(
         Integer bank_id,
         Vector#(n, IgnitionController::Controller) controllers)
             (Vector#(n, IgnitionIO));
+    // The modulo 5 causes the strobe instances for different banks to be offset
+    // in phase. This avoids all transceivers switching at once and instead
+    // spreads out the transmit activity.
     Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, fromInteger(bank_id % 5));
 
+    function toSerial(txr) = txr.serial;
+
     Vector#(n, Transceiver) txrs <- mkTransceivers();
-    Vector#(n, IgnitionIO) io_adapters <- zipWithM(
-        mkSerialIOAdapterTxInout(tx_strobe),
+    Vector#(n, IgnitionIO) io <- zipWithM(
+        mkSampledSerialIOWithTxStrobeInout(tx_strobe),
         map(target_present, controllers),
-        map(toSerialIO, txrs));
+        map(toSerial, txrs));
 
     mkFreeRunningStrobe(tx_strobe);
     zipWithM(mkConnection, map(transceiver_client, controllers), txrs);
 
-    return io_adapters;
+    return io;
 endmodule
 
 module mkSidecarMainboardControllerTop

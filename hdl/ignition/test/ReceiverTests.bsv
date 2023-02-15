@@ -25,7 +25,6 @@ interface MockTransmitter;
     method Action invalid_character();
 endinterface
 
-(* synthesize *)
 module mkStartUpFromIdleTest (Empty);
     MessageParser parser <- mkMessageParser();
     Receiver#(1, Message) rx <- mkReceiver(parser);
@@ -56,7 +55,6 @@ module mkStartUpFromIdleTest (Empty);
     mkTestWatchdog(50);
 endmodule
 
-(* synthesize *)
 module mkStartUpFromIdlePolarityInvertedTest (Empty);
     MessageParser parser <- mkMessageParser();
     Receiver#(1, Message) rx <- mkReceiver(parser);
@@ -97,7 +95,6 @@ endmodule
 // - If the `character valid` history is not updated correctly no reset is
 //   triggered, causing the link to get stuck
 //
-(* synthesize *)
 module mkResetAfterInvalidCommaLikeCharacter (Empty);
     MessageParser parser <- mkMessageParser();
     Receiver#(1, Message) rx <- mkReceiver(parser);

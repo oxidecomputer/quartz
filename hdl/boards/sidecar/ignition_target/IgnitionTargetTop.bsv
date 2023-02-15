@@ -11,7 +11,7 @@ import IgnitionTargetWrapper::*;
 // Rev A
 //
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkSidecarRevATargetWithResetButton (IgnitionletTarget);
     Parameters parameters = default_app_with_reset_button;
     parameters.external_reset = False;
@@ -22,7 +22,7 @@ module mkSidecarRevATargetWithResetButton (IgnitionletTarget);
     return asIgnitionletTarget(_top);
 endmodule
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkSidecarRevATargetWithPowerButton (IgnitionletTarget);
     Parameters parameters = default_app_with_power_button;
     parameters.external_reset = False;
@@ -37,9 +37,7 @@ endmodule
 // Rev B
 //
 
-(* synthesize,
-    default_clock_osc = "clk_50mhz",
-    default_reset = "design_reset_l" *)
+(* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
 module mkSidecarRevBTargetWithResetButton (IgnitionletTarget);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;
@@ -50,9 +48,7 @@ module mkSidecarRevBTargetWithResetButton (IgnitionletTarget);
     return asIgnitionletTarget(_top);
 endmodule
 
-(* synthesize,
-    default_clock_osc = "clk_50mhz",
-    default_reset = "design_reset_l" *)
+(* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
 module mkSidecarRevBTargetWithPowerButton (IgnitionletTarget);
     Parameters parameters = default_app_with_power_button;
     parameters.invert_leds = True;

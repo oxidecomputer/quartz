@@ -1,6 +1,5 @@
 package IgnitionControllerAndTargetBench;
 
-import Assert::*;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
@@ -92,8 +91,8 @@ module mkIgnitionControllerAndTargetBench #(
     TargetTransceiver target_txr <- mkTargetTransceiver();
 
     Strobe#(3) target_tx_strobe <- mkLimitStrobe(1, 5, 0);
-    SerialIOAdapter#(5) target_io <-
-        mkSerialIOAdapter(
+    SampledSerialIO#(5) target_io <-
+        mkSampledSerialIOWithTxStrobe(
             target_tx_strobe,
             tuple2(target_txr.to_link, target_txr.from_link[0]));
 
@@ -108,8 +107,8 @@ module mkIgnitionControllerAndTargetBench #(
 
     // Set this TX strobe ~180 degrees out of phase from Target TX.
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 3);
-    SerialIOAdapter#(5) controller_io <-
-        mkSerialIOAdapter(
+    SampledSerialIO#(5) controller_io <-
+        mkSampledSerialIOWithTxStrobe(
             controller_tx_strobe,
             controller_txr.serial);
 

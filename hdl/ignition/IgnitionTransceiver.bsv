@@ -10,7 +10,6 @@ export TaggedMessage(..);
 export TargetTransceiver(..);
 export TargetTransceiverClient(..);
 export mkTargetTransceiver;
-export toSerialIOs;
 
 export Loopback(..);
 export mkLoopback;
@@ -40,7 +39,7 @@ import IgnitionTransmitter::*;
 //
 
 interface Transceiver;
-    interface SerialIO serial;
+    interface GetPut#(Bit#(1)) serial;
     interface GetS#(Message) to_client;
     interface PutS#(Message) from_client;
     method LinkStatus status();
@@ -88,7 +87,7 @@ module mkTransceivers (Vector#(n, Transceiver));
     // Transceiver.
     function Transceiver select_transceiver(Integer i);
         return (interface Transceiver;
-            interface SerialIO serial = tuple2(
+            interface GetPut serial = tuple2(
                     serializers[i].serial,
                     deserializers[i].serial);
             interface GetS to_client = fifoToGetS(rx_out[i]);
@@ -227,14 +226,6 @@ instance Connectable#(Transceiver, Transceiver);
         mkConnection(tpl_1(a.serial), tpl_2(b.serial));
     endmodule
 endinstance
-
-instance ToSerialIO#(Transceiver);
-    function SerialIO toSerialIO(Transceiver txr) = txr.serial;
-endinstance
-
-function Vector#(2, SerialIO) toSerialIOs(TargetTransceiver txr) =
-    vec(tuple2(txr.to_link, txr.from_link[0]),
-        tuple2(txr.to_link, txr.from_link[1]));
 
 interface Loopback;
     (* always_enabled *) method Bit#(1) _read();

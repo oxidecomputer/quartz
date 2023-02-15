@@ -36,7 +36,6 @@ IgnitionControllerAndTargetBench::Parameters parameters =
             protocol: protocol_parameters},
         invert_link_polarity: False};
 
-(* synthesize *)
 module mkControllerTargetPresentTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
@@ -66,7 +65,6 @@ module mkControllerTargetPresentTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetRoTFaultTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
@@ -111,7 +109,6 @@ module mkTargetRoTFaultTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetSystemResetTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
@@ -174,7 +171,6 @@ module mkTargetSystemResetTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetLinkEventsTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(

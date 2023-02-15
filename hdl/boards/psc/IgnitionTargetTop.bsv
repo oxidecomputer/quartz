@@ -10,7 +10,7 @@ import IgnitionTargetWrapper::*;
 // Rev A
 //
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkPSCRevAResetButton (IgnitionletTarget);
     Parameters parameters = default_app_with_reset_button;
     parameters.external_reset = False;
@@ -25,9 +25,7 @@ endmodule
 // Rev B
 //
 
-(* synthesize,
-    default_clock_osc = "clk_50mhz",
-    default_reset = "design_reset_l" *)
+(* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
 module mkPSCRevBResetButton (IgnitionletTarget);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;
@@ -37,9 +35,7 @@ module mkPSCRevBResetButton (IgnitionletTarget);
     return asIgnitionletTarget(_top);
 endmodule
 
-(* synthesize,
-    default_clock_osc = "clk_50mhz",
-    default_reset = "design_reset_l" *)
+(* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
 module mkPSCRevBResetButtonNoPowerFaultMonitor (IgnitionletTarget);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;

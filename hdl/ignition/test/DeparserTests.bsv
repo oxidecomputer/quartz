@@ -35,7 +35,6 @@ module mkDeparserTest #(
     mkTestWatchdog(20);
 endmodule
 
-(* synthesize *)
 module mkDeparseHelloTest (Empty);
     (* hide *) Empty _test <- mkDeparserTest(
         tagged Hello, 'hf0,
@@ -43,7 +42,6 @@ module mkDeparseHelloTest (Empty);
         "expected Hello frame");
 endmodule
 
-(* synthesize *)
 module mkDeparseSystemPowerOffRequestTest (Empty);
     (* hide *) Empty _test <- mkDeparserTest(
         tagged Request SystemPowerOff, 'ha3,
@@ -51,7 +49,6 @@ module mkDeparseSystemPowerOffRequestTest (Empty);
         "expected SystemPowerOff Request frame");
 endmodule
 
-(* synthesize *)
 module mkDeparseSystemPowerOnRequestTest (Empty);
     (* hide *) Empty _test <- mkDeparserTest(
         tagged Request SystemPowerOn, 'hd2,
@@ -59,7 +56,6 @@ module mkDeparseSystemPowerOnRequestTest (Empty);
         "expected SystemPowerOn Request frame");
 endmodule
 
-(* synthesize *)
 module mkDeparseSystemResetRequestTest (Empty);
     (* hide *) Empty _test <- mkDeparserTest(
         tagged Request SystemReset, 'hfd,
@@ -67,7 +63,6 @@ module mkDeparseSystemResetRequestTest (Empty);
         "expected SystemReset Request frame");
 endmodule
 
-(* synthesize *)
 module mkDeparseStatusTest (Empty);
     (* hide *) Empty _test <- mkDeparserTest(
         message_status_parse_deparse, 'h00,

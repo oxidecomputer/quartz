@@ -26,7 +26,6 @@ interface Loopback;
     method Action set_connected(LinkId link_id, Bool connected);
 endinterface
 
-(* synthesize *)
 module mkStartUpLink0Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -40,7 +39,6 @@ module mkStartUpLink0Test (Empty);
             False, "expected no polarity inversion detected on link"));
 endmodule
 
-(* synthesize *)
 module mkStartUpLink0PolarityInvertedTest (Empty);
     Loopback link <- mkLoopbackTransceiver(
         True,  // Invert polarity link 0
@@ -54,7 +52,6 @@ module mkStartUpLink0PolarityInvertedTest (Empty);
             True, "expected polarity inversion detected on link"));
 endmodule
 
-(* synthesize *)
 module mkStartUpLink1Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -68,7 +65,6 @@ module mkStartUpLink1Test (Empty);
             False, "expected no polarity inversion detected on link"));
 endmodule
 
-(* synthesize *)
 module mkStartUpLink1PolarityInvertedTest (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -82,7 +78,6 @@ module mkStartUpLink1PolarityInvertedTest (Empty);
             True, "expected polarity inversion detected on link"));
 endmodule
 
-(* synthesize *)
 module mkStartUpLink0Link1Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -102,7 +97,6 @@ module mkStartUpLink0Link1Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkStartUpLink0PolarityInvertedLink1Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         True,  // Invert polarity link 0
@@ -122,7 +116,6 @@ module mkStartUpLink0PolarityInvertedLink1Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkStartUpLink0Link1PolarityInvertedTest (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -142,7 +135,6 @@ module mkStartUpLink0Link1PolarityInvertedTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkStartUpLink0PolarityInvertedLink1PolarityInvertedTest (Empty);
     Loopback link <- mkLoopbackTransceiver(
         True,  // Invert polarity link 0
@@ -162,7 +154,6 @@ module mkStartUpLink0PolarityInvertedLink1PolarityInvertedTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReceiveHelloLink0Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -189,7 +180,6 @@ module mkReceiveHelloLink0Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReceiveHelloLink1Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -216,7 +206,6 @@ module mkReceiveHelloLink1Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkReceiveHelloLink0Link1Test (Empty);
     Loopback link <- mkLoopbackTransceiver(
         False, // Invert polarity link 0
@@ -306,13 +295,11 @@ module mkRestartTest #(LinkId link_to_be_restarted) (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkRestartLink0FromIdleLowTest (Empty);
     (* hide *) Empty _test <- mkRestartTest(0);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkRestartLink1FromIdleLowTest (Empty);
     (* hide *) Empty _test <- mkRestartTest(1);
     return _test;

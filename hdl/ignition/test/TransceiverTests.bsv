@@ -21,7 +21,6 @@ interface LoopbackTransceiver;
     method Action set_connected(Bool connected);
 endinterface
 
-(* synthesize *)
 module mkStartUpTest (Empty);
     LoopbackTransceiver txr <- mkLoopbackTransceiver(
         False, // Polarity not inverted
@@ -33,7 +32,6 @@ module mkStartUpTest (Empty);
             False, "expected no polarity inversion detected on link"));
 endmodule
 
-(* synthesize *)
 module mkStartUpPolarityInvertedTest (Empty);
     LoopbackTransceiver txr <- mkLoopbackTransceiver(
         True, // Polarity inverted
@@ -45,7 +43,6 @@ module mkStartUpPolarityInvertedTest (Empty);
             True, "expected polarity inversion detected on link"));
 endmodule
 
-(* synthesize *)
 module mkReceiveHelloTest (Empty);
     LoopbackTransceiver txr <- mkLoopbackTransceiver(
         False, // Polarity not inverted
@@ -87,19 +84,16 @@ module mkRestartTest #(Bit#(20) disconnect_pattern) (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkRestartFromIdleLowTest (Empty);
     (* hide *) Empty _test <- mkRestartTest('0);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkRestartFromIdleHighTest (Empty);
     (* hide *) Empty _test <- mkRestartTest('1);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkRestartFromAlmostCommaPatternTest (Empty);
     (* hide *) Empty _test <- mkRestartTest(almost_comma_disconnect_pattern);
     return _test;

@@ -93,7 +93,6 @@ interface Controller;
     (* always_enabled *) method Status status();
 endinterface
 
-(* synthesize *)
 module mkController #(Parameters parameters) (Controller);
     //
     // External pulse used to generate timed events.

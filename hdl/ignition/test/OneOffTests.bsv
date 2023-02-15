@@ -15,7 +15,6 @@ import IgnitionProtocol::*;
 import IgnitionTestHelpers::*;
 
 
-(* synthesize *)
 module mkSystemTypeEncodingBug (Test);
     //Deparser deparser <- mkDeparser();
     StatelessEncoder#(void) encoder <- mkStatelessEncoder();

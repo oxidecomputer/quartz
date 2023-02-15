@@ -187,23 +187,25 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 0);
     mkFreeRunningStrobe(controller_tx_strobe);
 
-    Vector#(4, SerialIOAdapterTxWithEnable#(5)) controller_io <-
+    function toSerial(txr) = txr.serial;
+
+    Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <-
         zipWithM(
-            mkSerialIOAdapterTxWithEnable(controller_tx_strobe),
+            mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe),
             map(target_present, controller.ignition_controllers),
-            map(toSerialIO, controller_txrs));
+            map(toSerial, controller_txrs));
 
     // Make Inouts for the two adapters connecting to the external Targets,
     // allowing them to be connected to the top level.
     Inout#(Bit#(1)) aux0_tx_ <-
-        mkOutputHighZSyncFor(
+        mkOutputWithEnableSyncFor(
             controller_io[2].tx,
-            controller_io[2].tx_en);
+            controller_io[2].tx_enabled);
 
     Inout#(Bit#(1)) aux1_tx_ <-
-        mkOutputHighZSyncFor(
+        mkOutputWithEnableSyncFor(
             controller_io[3].tx,
-            controller_io[3].tx_en);
+            controller_io[3].tx_enabled);
 
     //
     // Ignition Target, connected to Ignition Controllers 0, 1.
@@ -223,11 +225,14 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     Strobe#(3) target_tx_strobe <- mkLimitStrobe(1, 5, 3);
     mkFreeRunningStrobe(target_tx_strobe);
 
-    SerialIOAdapter#(5) target_link0 <-
-        mkSerialIOAdapter(target_tx_strobe, toSerialIOs(target_txr)[0]);
+    SampledSerialIO#(5) target_link0 <-
+        mkSampledSerialIOWithTxStrobe(
+            target_tx_strobe,
+            tuple2(target_txr.to_link, target_txr.from_link[0]));
 
-    SerialIOAdapter#(5) target_link1 <-
-        mkSerialIOAdapterPassiveTx(toSerialIOs(target_txr)[1]);
+    SampledSerialIO#(5) target_link1 <-
+        mkSampledSerialIOWithPassiveTx(
+            tuple2(target_txr.to_link, target_txr.from_link[1]));
 
     mkConnection(controller_io[0], target_link0);
 
@@ -235,7 +240,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     (* fire_when_enabled *)
     rule do_controller1_link_polarity_inverted;
         let controller_to_target =
-            controller_io[1].tx_en ?
+            controller_io[1].tx_enabled ?
                 controller_io[1].tx :
                 0;
 
@@ -265,10 +270,6 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     rule do_debug;
         debug_r <= 0;
     endrule
-
-    TriState#(Bit#(1)) foo_io <- mkTriState(
-        controller_io[2].tx_en,
-        controller_io[2].tx);
 
     method spi_csn = sync(csn);
     method spi_sclk = sync(sclk);

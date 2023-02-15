@@ -53,9 +53,9 @@ module mkIgnitionTargetIOAndResetWrapper
     // the uninitialized state to be ignored. Using the uninitialized variant
     // removes the complaint from BSC about reset information being lost because
     // no reset is present in the module boundary.
-    Reg#(UInt#(6)) id_sync <- mkConfigRegU();
-    Reg#(SystemFaults) flt_sync <- mkInputSync();
-    Reg#(Bool) btn_sync <- mkInputSync();
+    InputReg#(UInt#(6), 1) id_sync <- mkInputSync();
+    InputReg#(SystemFaults, 1) flt_sync <- mkInputSync();
+    InputReg#(Bool, 1) btn_sync <- mkInputSync();
 
     // A3/A2 power fault filter/debounce. These are to avoid tripping the power
     // fault monitor during a short duration glitch on these signals.
@@ -90,8 +90,8 @@ module mkIgnitionTargetIOAndResetWrapper
     TargetTransceiver txr <- mkTargetTransceiver(reset_by reset_sync);
 
     // Connect link 0.
-    SerialIOAdapter#(5) aux0_adapter <-
-        mkSerialIOAdapter(
+    SampledSerialIO#(5) aux0_io <-
+        mkSampledSerialIOWithTxStrobe(
             tx_strobe,
             tuple2(txr.to_link, txr.from_link[0]),
             reset_by reset_sync);
@@ -99,8 +99,8 @@ module mkIgnitionTargetIOAndResetWrapper
     DifferentialInput#(Bit#(1)) aux0_rx <- mkDifferentialInput(InputRegistered);
     DifferentialOutput#(Bit#(1)) aux0_tx <- mkDifferentialOutput(OutputRegistered);
 
-    mkConnection(aux0_rx, aux0_adapter.rx);
-    mkConnection(aux0_adapter.tx, aux0_tx._write);
+    mkConnection(aux0_rx, aux0_io.rx);
+    mkConnection(aux0_io.tx, aux0_tx._write);
 
     // Connect link 1.
     //
@@ -109,20 +109,20 @@ module mkIgnitionTargetIOAndResetWrapper
     // the serial Get interface to read the bit to be transmitterd, without
     // advancing it. This will make both IOAdapters transmit at the same time
     // without rule scheduling conflicts.
-    SerialIOAdapter#(5) aux1_adapter <-
-        mkSerialIOAdapterPassiveTx(
+    SampledSerialIO#(5) aux1_io <-
+        mkSampledSerialIOWithPassiveTx(
             tuple2(txr.to_link, txr.from_link[1]),
             reset_by reset_sync);
 
     DifferentialInput#(Bit#(1)) aux1_rx <- mkDifferentialInput(InputRegistered);
     DifferentialOutput#(Bit#(1)) aux1_tx <- mkDifferentialOutput(OutputRegistered);
 
-    mkConnection(aux1_rx, aux1_adapter.rx);
+    mkConnection(aux1_rx, aux1_io.rx);
     // Mirror aux0_rx to aux1_tx if requested in the parameters.
     if (parameters.mirror_link0_rx_as_link1_tx)
-        mkConnection(aux0_adapter.rx_sampled, aux1_tx._write);
+        mkConnection(aux0_io.rx_sample, aux1_tx._write);
     else
-        mkConnection(aux1_adapter.tx, aux1_tx._write);
+        mkConnection(aux1_io.tx, aux1_tx._write);
 
     // Strobe, used as a time pulse to generate timed events.
     Strobe#(16) strobe_1khz <-

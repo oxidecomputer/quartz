@@ -18,7 +18,7 @@ import IgnitionProtocol::*;
 import IgnitionTransceiver::*;
 
 
-(* synthesize, default_clock_osc = "clk_50mhz", no_default_reset *)
+(* default_clock_osc = "clk_50mhz", no_default_reset *)
 module mkTransceiverDebugTop (IgnitionTargetDebug);
     Reset reset_sync <- InitialReset::mkInitialReset(3);
 
@@ -33,8 +33,8 @@ module mkTransceiverDebugTop (IgnitionTargetDebug);
     TargetTransceiver txr <- mkTargetTransceiver(reset_by reset_sync);
 
     // Connect link 0.
-    SerialIOAdapter#(5) aux0_adapter <-
-        mkSerialIOAdapter(
+    SampledSerialIO#(5) aux0_io <-
+        mkSampledSerialIOWithTxStrobe(
             tx_strobe,
             tuple2(txr.to_link, txr.from_link[0]),
             reset_by reset_sync);
@@ -42,8 +42,8 @@ module mkTransceiverDebugTop (IgnitionTargetDebug);
     DifferentialInput#(Bit#(1)) aux0_rx <- mkDifferentialInput(InputRegistered);
     DifferentialOutput#(Bit#(1)) aux0_tx <- mkDifferentialOutput(OutputRegistered);
 
-    mkConnection(aux0_rx, aux0_adapter.rx);
-    mkConnection(aux0_adapter.tx, aux0_tx._write);
+    mkConnection(aux0_rx, aux0_io.rx);
+    mkConnection(aux0_io.tx, aux0_tx._write);
 
     // Connect link 1.
     //
@@ -52,16 +52,16 @@ module mkTransceiverDebugTop (IgnitionTargetDebug);
     // the serial Get interface to read the bit to be transmitterd, without
     // advancing it. This will make both IOAdapters transmit at the same time
     // without rule scheduling conflicts.
-    SerialIOAdapter#(5) aux1_adapter <-
-        mkSerialIOAdapterPassiveTx(
+    SampledSerialIO#(5) aux1_io <-
+        mkSampledSerialIOWithPassiveTx(
             tuple2(txr.to_link, txr.from_link[1]),
             reset_by reset_sync);
 
     DifferentialInput#(Bit#(1)) aux1_rx <- mkDifferentialInput(InputRegistered);
     DifferentialOutput#(Bit#(1)) aux1_tx <- mkDifferentialOutput(OutputRegistered);
 
-    mkConnection(aux1_rx, aux1_adapter.rx);
-    mkConnection(aux1_adapter.tx, aux1_tx._write);
+    mkConnection(aux1_rx, aux1_io.rx);
+    mkConnection(aux1_io.tx, aux1_tx._write);
 
     // Loopback the received message.
     (* fire_when_enabled *)

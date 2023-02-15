@@ -19,7 +19,6 @@ import IgnitionTestHelpers::*;
 
 IgnitionController::Parameters parameters = defaultValue;
 
-(* synthesize *)
 module mkPeriodicHelloTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
@@ -64,7 +63,6 @@ module mkPeriodicHelloTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetPresentTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
@@ -94,7 +92,6 @@ module mkTargetPresentTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetStateValidIfPresentTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
@@ -154,7 +151,6 @@ module mkTargetStateValidIfPresentTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetLinkStatusTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
@@ -201,7 +197,6 @@ module mkTargetLinkStatusTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkTargetLinkEventsTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
@@ -327,28 +322,24 @@ module mkSendRequestTest #(Request r, String msg) (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSendSystemPowerOffRequestTest (Empty);
     (* hide *) Empty _test <-
         mkSendRequestTest(SystemPowerOff, "expected SystemPowerOff Request");
     return _test;
 endmodule
 
-(* synthesize *)
 module mkSendSystemPowerOnRequestTest (Empty);
     (* hide *) Empty _test <-
         mkSendRequestTest(SystemPowerOn, "expected SystemPowerOn Request");
     return _test;
 endmodule
 
-(* synthesize *)
 module mkSendSystemResetRequestTest (Empty);
     (* hide *) Empty _test <-
         mkSendRequestTest(SystemReset, "expected SystemReset Request");
     return _test;
 endmodule
 
-(* synthesize *)
 module mkDropHelloTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
@@ -377,7 +368,6 @@ module mkDropHelloTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkDropRequestTest (Empty);
     ControllerBench bench <-
         mkControllerBench(

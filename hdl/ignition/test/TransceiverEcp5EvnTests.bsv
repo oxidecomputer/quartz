@@ -29,7 +29,7 @@ module mkLoopbackTest (Test#(LinkStatus, Bit#(1)));
     method Bit#(1) debug = loopback;
 endmodule
 
-(* synthesize, default_clock_osc="CLK_12mhz", default_reset="GSR_N" *)
+(* default_clock_osc="CLK_12mhz", default_reset="GSR_N" *)
 module mkTransceiverLoopbackEcp5EvnTestTop (TestTop);
     (* hide *) TestTop _test <- mkTestWrapper(mkLoopbackTest);
     return _test;

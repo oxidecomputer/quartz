@@ -5,7 +5,6 @@ bluespec_library('Board',
         'Board.bsv',
     ],
     deps = [
-        '//hdl:IOSync',
         'cobalt//hdl:InitialReset',
         'cobalt//hdl:TestUtils',
         # TODO (arjen): error on this: '//vnd/cobalt/hdl/interfaces:ICE40',
@@ -103,9 +102,9 @@ bluespec_verilog('TransceiverDebugTop',
     ],
     deps = [
         ':Board',
-        '//hdl:IOSync',
         '//hdl/ignition:Transceiver',
         'cobalt//hdl:InitialReset',
+        'cobalt//hdl:IOSync',
         'cobalt//hdl/interfaces:ICE40',
     ],
     local = {

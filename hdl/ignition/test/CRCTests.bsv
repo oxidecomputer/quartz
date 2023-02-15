@@ -18,7 +18,6 @@ function Action add(CRC#(8) crc, Bit#(8) v) =
         crc.add(v);
     endaction;
 
-(* synthesize *)
 module mkPattern1Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -31,7 +30,6 @@ module mkPattern1Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPattern2Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -43,7 +41,6 @@ module mkPattern2Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPattern3Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -56,7 +53,6 @@ module mkPattern3Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPattern4Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -69,7 +65,6 @@ module mkPattern4Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPattern5Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -87,7 +82,6 @@ module mkPattern5Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPattern6Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -99,7 +93,6 @@ module mkPattern6Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkPattern7Test (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -112,7 +105,6 @@ module mkPattern7Test (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkHelloTest (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -126,7 +118,6 @@ module mkHelloTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemPowerOffRequestTest (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -138,7 +129,6 @@ module mkSystemPowerOffRequestTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemPowerOnRequestTest (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 
@@ -150,7 +140,6 @@ module mkSystemPowerOnRequestTest (Empty);
     endseq);
 endmodule
 
-(* synthesize *)
 module mkSystemResetRequestTest (Empty);
     CRC#(8) crc <- mkIgnitionCRC();
 

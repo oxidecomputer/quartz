@@ -49,14 +49,13 @@ module mkTransceiverLoopbackTest (Test#(LinkStatus, Bit#(4)));
         pack(tx_strobe)};
 endmodule
 
-(* synthesize, default_clock_osc = "clk_50mhz", default_reset = "rst_nc" *)
+(* default_clock_osc = "clk_50mhz", default_reset = "rst_nc" *)
 module mkIgnitionletTransceiverLoopbackTestTop (IgnitionletSequencer);
     (* hide *) IgnitionletSequencer _test <-
         mkTestWrapper(mkTransceiverLoopbackTest);
     return _test;
 endmodule
 
-(* synthesize *)
 module mkIgnitionletTransceiverLoopbackTest (Empty);
     (* hide *) Test#(LinkStatus, Bit#(4)) _test <- mkTransceiverLoopbackTest();
 
