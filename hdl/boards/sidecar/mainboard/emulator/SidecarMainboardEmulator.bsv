@@ -121,7 +121,8 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
             controller.registers.tofino,
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
-            IgnitionController::register_pages(controller.ignition_controllers));
+            IgnitionController::register_pages(controller.ignition_controllers),
+            controller.registers.fans);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
     InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);

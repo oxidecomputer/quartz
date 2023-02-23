@@ -26,6 +26,35 @@ reg power_rail_state {
     } STATE[7:4] = 0;
 };
 
+reg fan_state {
+    regwidth = 8;
+    default sw = r;
+    default hw = w;
+
+    field {
+        desc = "FANx_HSC_TO_FPGA_PG was not released within timeout period.";
+    } PG_TIMED_OUT[5:5] = 0;
+    field {
+        desc = "PG was lost during normal operation.";
+    } POWER_FAULT[4:4] = 0;
+    field {
+        desc = "Value of FANx_HSC_TO_FPGA_PG.";
+    } PG[3:3] = 0;
+    field {
+        desc = "Debounced value of FANx_TO_FPGA_PRESENT_2V5.";
+    } PRESENT[2:2] = 0;
+    field {
+        sw = rw;
+        hw = r;
+        desc = "Drives FPGA_TO_FANx_LED_L (not actually active low).";
+    } LED[1:1] = 0;
+    field {
+        sw = rw;
+        hw = rw;
+        desc = "Drives FPGA_TO_FANx_HSC_EN. FPGA will clear if FANx_PRESENT not set.";
+    } ENABLE[0:0] = 0;
+};
+
 addrmap sidecar_mainboard_controller {
     name = "Sidecar Mainboard Controller";
     desc = "Register description of the Sidecar Mainboard Controller";
@@ -164,6 +193,18 @@ addrmap sidecar_mainboard_controller {
             desc = "Scribble Register for read-write use";
         } SCRATCHPAD[7:0] = 0;
     } SCRATCHPAD;
+
+    fan_state FAN0_STATE @ 0x20;
+    FAN0_STATE->name = "Fan 0 State";
+
+    fan_state FAN1_STATE;
+    FAN1_STATE->name = "Fan 1 State";
+
+    fan_state FAN2_STATE;
+    FAN2_STATE->name = "Fan 2 State";
+
+    fan_state FAN3_STATE;
+    FAN3_STATE->name = "Fan 3 State";
 
     reg {
         name = "Tofino Sequencer Control";

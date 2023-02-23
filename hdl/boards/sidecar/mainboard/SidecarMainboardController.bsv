@@ -19,7 +19,6 @@ import SerialIO::*;
 import SPI::*;
 import Strobe::*;
 
-import FanModule::*;
 import IgnitionController::*;
 import IgnitionProtocol::*;
 import IgnitionTransceiver::*;
@@ -64,14 +63,15 @@ interface Pins #(numeric type n_ignition_controllers);
     interface PCIeEndpointController::Pins pcie;
     interface Tofino2Sequencer::Pins tofino;
     interface I2CCommon::Pins tofino_debug_port;
-    interface Vector#(4, FanModule::Pins) fans;
     interface VSC7448Pins vsc7448;
+    interface Vector#(4, FanModulePins) fans;
 endinterface
 
 interface Registers #(numeric type n_ignition_controllers);
     interface PCIeEndpointController::Registers pcie;
     interface Tofino2Sequencer::Registers tofino;
     interface TofinoDebugPort::Registers tofino_debug_port;
+    interface Vector#(4, FanModuleRegisters) fans;
 endinterface
 
 interface MainboardController #(numeric type n_ignition_controllers);
@@ -142,7 +142,11 @@ module mkMainboardController #(Parameters parameters)
     // Fans
     //
 
-    Vector#(4, FanModule) fans <- replicateM(mkFanModule());
+    Vector#(4, FanModuleSequencer) fans <- replicateM(mkFanModuleSequencer());
+
+    for (int i = 0; i < 4; i = i + 1) begin
+        mkConnection(asIfc(tick_1khz), asIfc(fans[i].tick_1ms));
+    end
 
     //
     // Ignition Controllers
@@ -187,13 +191,14 @@ module mkMainboardController #(Parameters parameters)
         interface TofinoDebugPort::Pins tofino_debug_port = tofino_debug_port.pins;
         interface VSC7448Pins vsc7448 = vsc7448_sequencer.pins;
         interface PCIeEndpointController::Pins pcie = pcie_endpoint.pins;
-        interface fans = map(FanModule::pins, fans);
+        interface fans = map(SidecarMainboardMiscSequencers::fan_pins, fans);
     endinterface
 
     interface Registers registers;
         interface PCIeEndpointController::Registers pcie = pcie_endpoint.registers;
         interface Tofino2Sequencer::Registers tofino = tofino_sequencer.registers;
         interface TofinoDebugPort::Registers tofino_debug_port = tofino_debug_port.registers;
+        interface fans = map(SidecarMainboardMiscSequencers::fan_registers, fans);
     endinterface
 
     interface Vector ignition_controllers = ignition_controllers_;
