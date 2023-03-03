@@ -4,8 +4,8 @@
 # Ignition Target targets.
 #
 
-bluespec_verilog('IgnitionTargetTop',
-    top = 'IgnitionTargetTop.bsv',
+bluespec_verilog('IgnitionTargetPSC',
+    top = 'IgnitionTargetPSC.bsv',
     modules = [
         'mkPSCRevAResetButton',
         'mkPSCRevBResetButton',
@@ -19,12 +19,12 @@ bluespec_verilog('IgnitionTargetTop',
 yosys_design('ignition_target_psc_rev_a_reset_button_top',
     top_module = 'mkPSCRevAResetButton',
     sources = [
-        ':IgnitionTargetTop#mkPSCRevAResetButton',
+        ':IgnitionTargetPSC#mkPSCRevAResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../vnd/cobalt/hdl/InitialReset.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetPSC',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
@@ -41,11 +41,11 @@ nextpnr_ice40_bitstream('ignition_target_psc_rev_a_reset_button',
 yosys_design('ignition_target_psc_rev_b_reset_button_top',
     top_module = 'mkPSCRevBResetButton',
     sources = [
-        ':IgnitionTargetTop#mkPSCRevBResetButton',
+        ':IgnitionTargetPSC#mkPSCRevBResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetPSC',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
@@ -60,11 +60,11 @@ nextpnr_ice40_bitstream('ignition_target_psc_rev_b_reset_button',
 yosys_design('ignition_target_psc_rev_b_reset_button_no_power_fault_monitor_top',
     top_module = 'mkPSCRevBResetButtonNoPowerFaultMonitor',
     sources = [
-        ':IgnitionTargetTop#mkPSCRevBResetButtonNoPowerFaultMonitor',
+        ':IgnitionTargetPSC#mkPSCRevBResetButtonNoPowerFaultMonitor',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetPSC',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 

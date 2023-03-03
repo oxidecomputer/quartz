@@ -1,9 +1,9 @@
-package IgnitionTargetTop;
+package IgnitionTargetPSC;
 
 import DefaultValue::*;
 
-import Board::*;
 import IgnitionTarget::*;
+import IgnitionTargetTop::*;
 import IgnitionTargetWrapper::*;
 
 //
@@ -11,14 +11,14 @@ import IgnitionTargetWrapper::*;
 //
 
 (* default_clock_osc = "clk_50mhz", no_default_reset *)
-module mkPSCRevAResetButton (IgnitionletTarget);
+module mkPSCRevAResetButton (IgnitionTargetTopRevA);
     Parameters parameters = default_app_with_reset_button;
     parameters.external_reset = False;
     parameters.system_power_fault_monitor_enable = False;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTopRevA(_top);
 endmodule
 
 //
@@ -26,24 +26,24 @@ endmodule
 //
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
-module mkPSCRevBResetButton (IgnitionletTarget);
+module mkPSCRevBResetButton (IgnitionTargetTop);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTop(_top);
 endmodule
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
-module mkPSCRevBResetButtonNoPowerFaultMonitor (IgnitionletTarget);
+module mkPSCRevBResetButtonNoPowerFaultMonitor (IgnitionTargetTop);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;
     parameters.system_power_fault_monitor_enable = False;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTop(_top);
 endmodule
 
 endpackage

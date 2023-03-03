@@ -9,9 +9,7 @@ package Board;
 // designs for this board.
 //
 
-export DifferentialTransceiver(..);
-export IgnitionletTarget(..);
-export IgnitionTargetDebug(..);
+export IgnitionletTargetDebug(..);
 export IgnitionletSequencer(..);
 export IgnitionletTest(..);
 export mkTestWrapper;
@@ -25,32 +23,11 @@ import TestUtils::*;
 
 
 //
-// `DifferentialTranceiver(..)` is used to implement an LVDS transceiver, allowing the pin pads of
-// the diff pair to be connected somewhat conveniently to an appropriate IO primitive.
-//
-interface DifferentialTransceiver #(type one_bit_type);
-    interface DifferentialPairTx#(one_bit_type) tx;
-    interface DifferentialPairRx#(one_bit_type) rx;
-endinterface
-
-//
-// `IgnitionletTarget(..)` is an interface used to implement/prototype the Ignition Target
-// subsystem.
+// `IgnitionletTargetDebug(..)` is a modified `IgnitionTargetTop(..)` to aid
+// debugging on hardware.
 //
 (* always_enabled *)
-interface IgnitionletTarget;
-    (* prefix = "" *) method Action id((* port = "id" *) UInt#(6) val);
-    (* prefix = "" *) method Action flt((* port = "flt" *) Vector#(6, Bool) val);
-    (* prefix = "" *) method Action btn((* port = "btn" *) Bool val);
-    method Bool system_power_enable();
-    method Bit#(2) led();
-
-    interface DifferentialTransceiver#(Bit#(1)) aux0;
-    interface DifferentialTransceiver#(Bit#(1)) aux1;
-endinterface
-
-(* always_enabled *)
-interface IgnitionTargetDebug;
+interface IgnitionletTargetDebug;
     (* prefix = "" *) method Action btn((* port = "btn" *) Bool val);
     method Bool system_power_enable();
     method Bit#(2) led();
@@ -61,8 +38,8 @@ interface IgnitionTargetDebug;
 endinterface
 
 //
-// `IgnitionletSequencer(..)` is a more generic interface intended for prototyping of iCE40 based
-// power sequencing applications.
+// `IgnitionletSequencer(..)` is a more generic interface intended for
+// prototyping of iCE40 based power sequencing applications.
 //
 (* always_enabled *)
 interface IgnitionletSequencer;
@@ -74,8 +51,8 @@ interface IgnitionletSequencer;
 endinterface
 
 //
-// `IgnitionletSequencer(..)` is a more generic interface intended for prototyping of iCE40 based
-// power sequencing applications.
+// `IgnitionletTest(..)` is a top and harness for running unit tests on
+// hardware.
 //
 (* always_enabled *)
 interface IgnitionletTest;

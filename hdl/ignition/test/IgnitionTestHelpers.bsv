@@ -108,6 +108,17 @@ Message message_status_system_powered_off_controller0_present =
         link1_status: link_status_disconnected,
         link1_events: link_events_none};
 
+Message message_status_system_powering_on_a3_fault =
+    tagged Status {
+        system_type: target_system_type,
+        system_status: system_status_system_power_enabled,
+        system_faults: system_faults_power_a3,
+        request_status: request_status_power_on_in_progress,
+        link0_status: link_status_disconnected,
+        link0_events: link_events_none,
+        link1_status: link_status_disconnected,
+        link1_events: link_events_none};
+
 Message message_status_system_powering_on_a2_fault =
     tagged Status {
         system_type: target_system_type,
@@ -119,7 +130,18 @@ Message message_status_system_powering_on_a2_fault =
         link1_status: link_status_disconnected,
         link1_events: link_events_none};
 
-Message message_status_system_power_abort_in_progress =
+Message message_status_system_power_abort_a3_in_progress =
+    tagged Status {
+        system_type: target_system_type,
+        system_status: system_status_system_power_abort,
+        system_faults: system_faults_power_a3,
+        request_status: request_status_power_off_in_progress,
+        link0_status: link_status_disconnected,
+        link0_events: link_events_none,
+        link1_status: link_status_disconnected,
+        link1_events: link_events_none};
+
+Message message_status_system_power_abort_a2_in_progress =
     tagged Status {
         system_type: target_system_type,
         system_status: system_status_system_power_abort,

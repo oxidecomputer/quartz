@@ -1,5 +1,3 @@
-// Copyright 2021 Oxide Computer Company
-//
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -21,27 +19,14 @@ import SerialIO::*;
 import SchmittReg::*;
 import Strobe::*;
 
-import Board::*;
 import IgnitionProtocol::*;
 import IgnitionTarget::*;
+import IgnitionTargetTop::*;
 import IgnitionTransceiver::*;
 
 
-(* always_enabled *)
-interface IgnitionTargetIOWrapper;
-    method Action id(UInt#(6) val);
-    method Action flt(SystemFaults val);
-    method Action btn(Bool val);
-    method Bool system_power_enable();
-    method Bit#(2) led();
-    method Bit#(12) debug();
-
-    interface DifferentialTransceiver#(Bit#(1)) aux0;
-    interface DifferentialTransceiver#(Bit#(1)) aux1;
-endinterface
-
 module mkIgnitionTargetIOAndResetWrapper
-        #(Parameters parameters) (IgnitionTargetIOWrapper);
+        #(Parameters parameters) (IgnitionTargetTopWithDebug);
     Clock clk_50mhz <- exposeCurrentClock();
     Reset reset_sync <- case (parameters.external_reset)
             False: InitialReset::mkInitialReset(3);
@@ -144,6 +129,10 @@ module mkIgnitionTargetIOAndResetWrapper
     ReadOnly#(SystemPower) system_power_sync <-
         mkNullCrossingWire(clk_50mhz, app.system_power);
 
+    // The hotswap controller restart signal is negative asserted.
+    ReadOnly#(Bool) system_power_hotswap_controller_restart_sync <-
+        mkNullCrossingWire(clk_50mhz, !app.system_power_hotswap_controller_restart);
+
     ReadOnly#(Bit#(2)) leds_sync <-
         mkNullCrossingWire(clk_50mhz, app.leds);
 
@@ -198,6 +187,8 @@ module mkIgnitionTargetIOAndResetWrapper
     method flt = sync_inverted(flt_sync);
     method btn = sync(btn_sync);
     method system_power_enable = unpack(pack(system_power_sync));
+    method system_power_hotswap_controller_restart =
+            system_power_hotswap_controller_restart_sync;
     method led = leds_sync;
     method debug = '0;
 
@@ -211,17 +202,5 @@ module mkIgnitionTargetIOAndResetWrapper
         interface DifferentialPairTx tx = aux1_tx.pads;
     endinterface
 endmodule
-
-function IgnitionletTarget
-        asIgnitionletTarget(IgnitionTargetIOWrapper wrapper) =
-    interface IgnitionletTarget;
-        method id = wrapper.id;
-        method Action flt(val) = wrapper.flt(unpack(pack(val)));
-        method btn = wrapper.btn;
-        method system_power_enable = wrapper.system_power_enable;
-        method led = wrapper.led;
-        interface DifferentialTransceiver aux0 = wrapper.aux0;
-        interface DifferentialTransceiver aux1 = wrapper.aux1;
-    endinterface;
 
 endpackage: IgnitionTargetWrapper

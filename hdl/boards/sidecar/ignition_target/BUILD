@@ -4,8 +4,8 @@
 # Ignition Target targets.
 #
 
-bluespec_verilog('IgnitionTargetTop',
-    top = 'IgnitionTargetTop.bsv',
+bluespec_verilog('IgnitionTargetSidecar',
+    top = 'IgnitionTargetSidecar.bsv',
     modules = [
         'mkSidecarRevATargetWithResetButton',
         'mkSidecarRevATargetWithPowerButton',
@@ -22,12 +22,12 @@ bluespec_verilog('IgnitionTargetTop',
 yosys_design('ignition_target_rev_a_reset_button_top',
     top_module = 'mkSidecarRevATargetWithResetButton',
     sources = [
-        ':IgnitionTargetTop#mkSidecarRevATargetWithResetButton',
+        ':IgnitionTargetSidecar#mkSidecarRevATargetWithResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../../vnd/cobalt/hdl/InitialReset.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetSidecar',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
@@ -42,12 +42,12 @@ nextpnr_ice40_bitstream('ignition_target_sidecar_rev_a_reset_button',
 yosys_design('ignition_target_rev_a_power_button_top',
     top_module = 'mkSidecarRevATargetWithPowerButton',
     sources = [
-        ':IgnitionTargetTop#mkSidecarRevATargetWithPowerButton',
+        ':IgnitionTargetSidecar#mkSidecarRevATargetWithPowerButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../../vnd/cobalt/hdl/InitialReset.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetSidecar',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
@@ -59,31 +59,31 @@ nextpnr_ice40_bitstream('ignition_target_sidecar_rev_a_power_button',
         ':ignition_target_rev_a_power_button_top',
     ])
 
-# Rev B targets
+# Rev B, C targets
 
 yosys_design('ignition_target_rev_b_reset_button_top',
     top_module = 'mkSidecarRevBTargetWithResetButton',
     sources = [
-        ':IgnitionTargetTop#mkSidecarRevBTargetWithResetButton',
+        ':IgnitionTargetSidecar#mkSidecarRevBTargetWithResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetSidecar',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
 yosys_design('ignition_target_rev_b_power_button_top',
     top_module = 'mkSidecarRevBTargetWithPowerButton',
     sources = [
-        ':IgnitionTargetTop#mkSidecarRevBTargetWithPowerButton',
+        ':IgnitionTargetSidecar#mkSidecarRevBTargetWithPowerButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
-        ':IgnitionTargetTop',
+        ':IgnitionTargetSidecar',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_reset_button',
+nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_c_reset_button',
     env = 'ignition_target_rev_b',
     design = ':ignition_target_rev_b_reset_button_top#' \
                 'ignition_target_rev_b_reset_button_top.json',
@@ -91,7 +91,7 @@ nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_reset_button',
         ':ignition_target_rev_b_reset_button_top',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_power_button',
+nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_c_power_button',
     env = 'ignition_target_rev_b',
     design = ':ignition_target_rev_b_power_button_top#' \
                 'ignition_target_rev_b_power_button_top.json',

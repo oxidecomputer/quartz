@@ -1,9 +1,9 @@
-package IgnitionTargetTop;
+package IgnitionTargetSidecar;
 
 import DefaultValue::*;
 
-import Board::*;
 import IgnitionTarget::*;
+import IgnitionTargetTop::*;
 import IgnitionTargetWrapper::*;
 
 
@@ -12,25 +12,25 @@ import IgnitionTargetWrapper::*;
 //
 
 (* default_clock_osc = "clk_50mhz", no_default_reset *)
-module mkSidecarRevATargetWithResetButton (IgnitionletTarget);
+module mkSidecarRevATargetWithResetButton (IgnitionTargetTopRevA);
     Parameters parameters = default_app_with_reset_button;
     parameters.external_reset = False;
     parameters.system_power_fault_monitor_enable = False;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTopRevA(_top);
 endmodule
 
 (* default_clock_osc = "clk_50mhz", no_default_reset *)
-module mkSidecarRevATargetWithPowerButton (IgnitionletTarget);
+module mkSidecarRevATargetWithPowerButton (IgnitionTargetTopRevA);
     Parameters parameters = default_app_with_power_button;
     parameters.external_reset = False;
     parameters.system_power_fault_monitor_enable = False;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTopRevA(_top);
 endmodule
 
 //
@@ -38,25 +38,25 @@ endmodule
 //
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
-module mkSidecarRevBTargetWithResetButton (IgnitionletTarget);
+module mkSidecarRevBTargetWithResetButton (IgnitionTargetTop);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;
     parameters.system_power_fault_monitor_enable = False;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTop(_top);
 endmodule
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
-module mkSidecarRevBTargetWithPowerButton (IgnitionletTarget);
+module mkSidecarRevBTargetWithPowerButton (IgnitionTargetTop);
     Parameters parameters = default_app_with_power_button;
     parameters.invert_leds = True;
     parameters.system_power_fault_monitor_enable = False;
 
-    (* hide *) IgnitionTargetIOWrapper _top <-
+    (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
-    return asIgnitionletTarget(_top);
+    return asIgnitionTargetTop(_top);
 endmodule
 
 endpackage

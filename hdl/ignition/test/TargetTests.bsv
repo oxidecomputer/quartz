@@ -27,6 +27,7 @@ Parameters parameters =
         system_power_toggle_cool_down: 15,
         system_power_fault_monitor_enable: True,
         system_power_fault_monitor_start_delay: 10,
+        system_power_hotswap_controller_restart: True,
         protocol: defaultValue};
 
 Integer test_timeout_25_ticks = 25;
@@ -459,7 +460,7 @@ module mkSystemResetLongButtonPressTest (Empty);
     endseq);
 endmodule
 
-module mkSystemPowerAbortOnFaultTest (Empty);
+module mkSystemPowerAbortOnA2FaultTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
         3 * parameters.system_power_toggle_cool_down);
@@ -489,7 +490,101 @@ module mkSystemPowerAbortOnFaultTest (Empty);
 
                 // Expect a power off request to be initiated.
                 assert_get_eq(rx,
-                    message_status_system_power_abort_in_progress,
+                    message_status_system_power_abort_a2_in_progress,
+                    "expected system power abort in progress Status message");
+                assert_eq(
+                    bench.target.system_power, Off,
+                    "expected system power off");
+
+                bench.await_system_power_request_complete();
+            endseq
+        endpar
+    endseq);
+endmodule
+
+// Test that system power is aborted if the A3 power fault bit is not cleared in
+// time. This implies that system power hotplug controller restart is disabled.
+// See the explaination for this in the `do_update_system_power_state` rule in
+// `mkTarget`.
+module mkSystemPowerAbortOnA3FaultTimeoutTest (Empty);
+    Parameters parameters_ = parameters;
+    parameters_.system_power_hotswap_controller_restart = False;
+
+    TargetBench bench <- mkTargetBench(
+        parameters_,
+        3 * parameters.system_power_toggle_cool_down);
+
+    let rx = tpl_1(bench.link.message);
+
+    mkAutoFSM(seq
+        // Assert that the system initially powers on.
+        bench.link.set_connected(True, False);
+        assert_get_eq(rx,
+            message_status_system_powering_on,
+            "expected system powering on Status message");
+        assert_eq(bench.target.system_power, On, "expected system power on");
+
+        par
+            // Assert an A3 power fault while the system is powering on.
+            while (bench.target.system_power == On) seq
+                bench.set_faults(system_faults_power_a3);
+            endseq
+
+            seq
+                // Expect a power fault in A3 fault update.
+                assert_get_eq(rx,
+                    message_status_system_powering_on_a3_fault,
+                    "expected an A3 power fault during power on");
+
+                // Expect a power off request to be initiated.
+                assert_get_eq(rx,
+                    message_status_system_power_abort_a3_in_progress,
+                    "expected system power abort in progress Status message");
+                assert_eq(
+                    bench.target.system_power, Off,
+                    "expected system power off");
+
+                bench.await_system_power_request_complete();
+            endseq
+        endpar
+    endseq);
+endmodule
+
+// Test that system power is aborted if the A3 power fault bit is raised after
+// running for some time even when system power hotplug controller restart is
+// enabled.
+module mkSystemPowerAbortOnA3FaultTest (Empty);
+    TargetBench bench <- mkTargetBench(
+        parameters,
+        3 * parameters.system_power_toggle_cool_down);
+
+    let rx = tpl_1(bench.link.message);
+
+    mkAutoFSM(seq
+        // Assert that the system initially powers on.
+        bench.link.set_connected(True, False);
+        assert_get_eq(rx,
+            message_status_system_powering_on,
+            "expected system powering on Status message");
+        assert_eq(bench.target.system_power, On, "expected system power on");
+
+        par
+            seq
+                bench.await_system_power_request_complete();
+                // The timer to start the system power monitor should be
+                // running. Trigger an A3 power fault.
+                bench.set_faults(system_faults_power_a3);
+            endseq
+
+            seq
+                assert_get_eq(rx,
+                    message_status_system_powered_on,
+                    "expected system powered Status message");
+
+                // The system power monitor was enabled and immediately
+                // responded to the A3 power fault, triggering an abort.
+                assert_get_eq(rx,
+                    message_status_system_power_abort_a3_in_progress,
                     "expected system power abort in progress Status message");
                 assert_eq(
                     bench.target.system_power, Off,
@@ -659,6 +754,55 @@ module mkSystemPowerFaultMonitorDisabledDuringResetTest (Empty);
 
         bench.await_system_power_request_complete();
         assert_eq(bench.target.system_power, On, "expected system power on");
+    endseq);
+endmodule
+
+// Test that the system power hotswap controller restart is toggled when the
+// system powers down.
+module mkSystemPowerHotswapControllerRestartTest (Empty);
+    TargetBench bench <- mkTargetBench(
+        parameters,
+        4 * parameters.system_power_toggle_cool_down);
+
+    // Contineously assert that the system power hotswap controller restart
+    // tracks system power.
+    continuousAssert(
+        (bench.target.system_power == Off) ==
+            bench.target.system_power_hotswap_controller_restart,
+        "expected hotswap controller restart to mirror system power state");
+
+    mkAutoFSM(seq
+        assert_eq(
+            parameters.button_behavior,
+            ResetButton,
+            "expected Target configured with reset button");
+        // Wait for the initial system power on request to complete.
+        bench.await_system_power_request_complete();
+        assert_eq(bench.target.system_power, On, "expected system power on");
+
+        // Press the button and assert the system powered off.
+        bench.target.button_event(True);
+        action
+            assert_eq(
+                bench.target.system_power, Off,
+                "expected system power off");
+            assert_true(
+                bench.target.system_power_hotswap_controller_restart,
+                "expected hotswap controller restart");
+        endaction
+
+        // Reset the ticks counter on the next tick.
+        action
+            bench.await_tick();
+            bench.reset_ticks_elapsed();
+        endaction
+
+        // Release the button on tick into the power off sequence.
+        bench.target.button_event(False);
+
+        // Wait for system power on.
+        await(bench.target.system_power == On);
+        bench.await_system_power_request_complete();
     endseq);
 endmodule
 
