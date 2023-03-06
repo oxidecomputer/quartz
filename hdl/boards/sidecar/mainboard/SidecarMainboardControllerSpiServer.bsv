@@ -17,7 +17,10 @@ import git_version::*;
 import RegCommon::*;
 import WriteOnceReg::*;
 
+import IgnitionController::*;
+import IgnitionControllerRegisters::*;
 import PCIeEndpointController::*;
+import SidecarMainboardController::*;
 import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
 import TofinoDebugPort::*;
@@ -40,10 +43,15 @@ endinstance
 module mkSpiServer #(
         Tofino2Sequencer::Registers tofino,
         TofinoDebugPort::Registers tofino_debug_port,
-        PCIeEndpointController::Registers pcie)
+        PCIeEndpointController::Registers pcie,
+        Vector#(n_ignition_controllers, IgnitionController::Registers) ignition_pages)
             (SpiServer)
-        provisos (
-            NumAlias#(3, n_pages));
+                provisos (
+                    Add#(n_ignition_controllers, 4, n_pages),
+                    Add#(TLog#(n_pages), a__, 8),
+                    Add#(TLog#(n_ignition_controllers), b__, 8),
+                    // Less than 40 Ignition Controllers.
+                    Add#(n_ignition_controllers, c__, 40));
     Wire#(SpiRequest) in <- mkWire();
     Wire#(SpiResponse) out <- mkWire();
 
@@ -57,63 +65,69 @@ module mkSpiServer #(
     //
     // This does come at the expense of one cycle to route the request to the
     // selected page and one cycle to collect the response.
-    Reg#(Maybe#(OInt#(n_pages))) selected_page <- mkRegU();
-    Reg#(Maybe#(PageRequest)) page_request <- mkRegU();
-    Vector#(n_pages, Reg#(SpiResponse)) page_responses <- replicateM(mkRegU());
+    Vector#(n_pages, Reg#(Maybe#(PageRequest))) page_request <- replicateM(mkConfigReg(tagged Invalid));
+    Vector#(n_pages, Reg#(SpiResponse)) page_response <- replicateM(mkConfigRegU());
+    Reg#(Maybe#(OInt#(n_pages))) response_select <- mkRegU();
 
+    Reg#(Bool) request_in_progress <- mkDReg(False);
     Reg#(Bool) select_response <- mkDReg(False);
 
     (* fire_when_enabled *)
-    rule do_select_page (!isValid(page_request));
+    rule do_select_page (!isValid(response_select));
         let page = in.address[15:8];
         let page_limit = fromInteger(valueOf(n_pages));
 
-        selected_page <=
-            page < page_limit ?
+        request_in_progress <= True;
+        response_select <=
+            page < page_limit && in.op == READ ?
                 tagged Valid toOInt(truncate(page)) :
                 tagged Invalid;
-        page_request <= tagged Valid PageRequest {
-                op: in.op,
-                address: unpack(in.address[7:0]),
-                wdata: in.wdata};
+    endrule
+
+    for (Integer i = 0; i < valueOf(n_pages); i = i + 1) begin
+        let page_selected = (in.address[15:8] == fromInteger(i));
+
+        (* fire_when_enabled *)
+        rule do_request_from_page (page_selected && !isValid(page_request[i]));
+            page_request[i] <= tagged Valid
+                PageRequest {
+                    op: in.op,
+                    address: unpack(in.address[7:0]),
+                    wdata: in.wdata};
+        endrule
+    end
+
+    (* fire_when_enabled *)
+    rule do_complete_request (request_in_progress && isValid(response_select));
+        select_response <= True;
     endrule
 
     (* fire_when_enabled *)
-    rule do_complete_request (page_request matches tagged Valid .request);
-        if (request.op == READ)
-            select_response <= True;
-        page_request <= tagged Invalid;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_select_response (select_response);
-        if (selected_page matches tagged Valid .i)
-            out <= select(readVReg(page_responses), i);
+    rule do_select_response (select_response && isValid(response_select));
+        if (response_select matches tagged Valid .i)
+            out <= select(readVReg(page_response), i);
         else
-            out <= SpiResponse {readdata: 8'hff};
+            out <= SpiResponse {readdata: 8'h00};
+
+        response_select <= tagged Invalid;
     endrule
 
     //
     // Guard helpers for rules responding to page requests.
     //
 
-    function Bool page_selected(Integer i);
-        return case (selected_page) matches
-            tagged Valid .one_hot_selector: unpack(pack(one_hot_selector)[i]);
-            tagged Invalid: False;
+    function Maybe#(PageRequest) read_page(Integer i) =
+        case (page_request[i]) matches
+            tagged Valid .r &&& (r.op == READ): page_request[i];
+            default: tagged Invalid;
         endcase;
-    endfunction
 
-    function Bool read_page(Integer i);
-        return page_selected(i) &&
-            fromMaybe(defaultValue, page_request).op == READ;
-    endfunction
-
-    function Bool write_page(Integer i);
-        let op = fromMaybe(defaultValue, page_request).op;
-        let write_op = (op != NOOP && op != READ);
-        return page_selected(i) && write_op;
-    endfunction
+    function Maybe#(PageRequest) update_page(Integer i) =
+        case (page_request[i]) matches
+            tagged Valid .r &&& (r.op != NOOP &&& r.op != READ):
+                page_request[i];
+            default: tagged Invalid;
+        endcase;
 
     //
     // Page 0
@@ -123,9 +137,9 @@ module mkSpiServer #(
     Vector#(4, ConfigReg#(Bit#(8))) checksum <- replicateM(mkWriteOnceConfigReg(0));
 
     (* fire_when_enabled *)
-    rule do_page0_read (read_page(0));
+    rule do_page0_read (read_page(0) matches tagged Valid .request);
         let reader =
-            case (page_request.Valid.address)
+            case (request.address)
                 // ID, see RDL for the (default) values.
                 fromOffset(id0Offset): read(Id0'(defaultValue));
                 fromOffset(id1Offset): read(Id1'(defaultValue));
@@ -153,19 +167,17 @@ module mkSpiServer #(
                 // Scratchpad
                 fromOffset(scratchpadOffset): read(scratchpad);
 
-                default: read(8'hff);
+                default: read(8'h00);
             endcase;
 
         let data <- reader;
-        page_responses[0] <= data;
+
+        page_request[0] <= tagged Invalid;
+        page_response[0] <= data;
     endrule
 
     (* fire_when_enabled *)
-    rule do_page0_write (write_page(0));
-        // If this rule is enabled it is safe to assume the contents of the
-        // page_request register is valid.
-        let request = page_request.Valid;
-
+    rule do_page0_update (update_page(0) matches tagged Valid .request);
         case (request.address)
             fromOffset(cs0Offset): update(request.op, checksum[0], request.wdata);
             fromOffset(cs1Offset): update(request.op, checksum[1], request.wdata);
@@ -173,6 +185,8 @@ module mkSpiServer #(
             fromOffset(cs3Offset): update(request.op, checksum[3], request.wdata);
             fromOffset(scratchpadOffset): update(request.op, scratchpad, request.wdata);
         endcase
+
+        page_request[0] <= tagged Invalid;
     endrule
 
     //
@@ -180,9 +194,9 @@ module mkSpiServer #(
     //
 
     (* fire_when_enabled *)
-    rule do_page1_read (read_page(1));
+    rule do_page1_read (read_page(1) matches tagged Valid .request);
         let reader =
-            case (page_request.Valid.address)
+            case (request.address)
                 // Tofino sequencer
                 fromOffset(tofinoSeqCtrlOffset): read(tofino.ctrl);
                 fromOffset(tofinoSeqStateOffset): read(tofino.state);
@@ -204,23 +218,23 @@ module mkSpiServer #(
                 fromOffset(pcieHotplugCtrlOffset): read(pcie.ctrl);
                 fromOffset(pcieHotplugStatusOffset): read(pcie.status);
 
-                default: read(8'hff);
+                default: read(8'h00);
             endcase;
 
         let data <- reader;
-        page_responses[1] <= data;
+
+        page_request[1] <= tagged Invalid;
+        page_response[1] <= data;
     endrule
 
     (* fire_when_enabled *)
-    rule do_page1_write (write_page(1));
-        // If this rule is enabled it is safe to assume the contents of the
-        // page_request register is valid.
-        let request = page_request.Valid;
-
+    rule do_page1_update (update_page(1) matches tagged Valid .request);
         case (request.address)
             fromOffset(tofinoSeqCtrlOffset): update(request.op, tofino.ctrl, request.wdata);
             fromOffset(pcieHotplugCtrlOffset): update(request.op, pcie.ctrl, request.wdata);
         endcase
+
+        page_request[1] <= tagged Invalid;
     endrule
 
     //
@@ -228,31 +242,150 @@ module mkSpiServer #(
     //
 
     (* fire_when_enabled *)
-    rule do_page2_read (read_page(2));
+    rule do_page2_read (read_page(2) matches tagged Valid .request);
         let reader =
-            case (page_request.Valid.address)
+            case (request.address)
                 fromOffset(tofinoDebugPortStateOffset): read(tofino_debug_port.state);
                 fromOffset(tofinoDebugPortBufferOffset): read_volatile(tofino_debug_port.buffer);
-                default: read(8'hff);
+                default: read(8'h00);
             endcase;
 
         let data <- reader;
-        page_responses[2] <= data;
+
+        page_request[2] <= tagged Invalid;
+        page_response[2] <= data;
     endrule
 
     (* fire_when_enabled *)
-    rule do_page2_write (write_page(2));
-        // If this rule is enabled it is safe to assume the contents of the
-        // page_request register is valid.
-        let request = page_request.Valid;
-
+    rule do_page2_update (update_page(2) matches tagged Valid .request);
         case (request.address)
             fromOffset(tofinoDebugPortStateOffset):
                 update(request.op, tofino_debug_port.state, request.wdata);
             fromOffset(tofinoDebugPortBufferOffset):
                 write(WRITE, tofino_debug_port.buffer._write, request.wdata);
         endcase
+
+        page_request[2] <= tagged Invalid;
     endrule
+
+    //
+    // Ignition Pages
+    //
+
+    ConfigReg#(Vector#(5, Bit#(8))) target_present_summary <- mkConfigRegU();
+
+    (* fire_when_enabled *)
+    rule do_demux_target_present_summary;
+        // Collect a summary of the Target present bits as a 64 bit-vector.
+        function target_present(registers) =
+            registers.controller_status.target_present;
+
+        target_present_summary <=
+            unpack(extend(pack(map(target_present, ignition_pages))));
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_ignition_summary_page_read (
+            read_page(3) matches tagged Valid .request);
+        let reader =
+            case (request.address)
+                fromOffset(ignitionControllersCountOffset):
+                    read(Bit#(8)'(fromInteger(valueOf(n_ignition_controllers))));
+                fromOffset(ignitionTargetsPresent0Offset): read(target_present_summary[0]);
+                fromOffset(ignitionTargetsPresent1Offset): read(target_present_summary[1]);
+                fromOffset(ignitionTargetsPresent2Offset): read(target_present_summary[2]);
+                fromOffset(ignitionTargetsPresent3Offset): read(target_present_summary[3]);
+                fromOffset(ignitionTargetsPresent4Offset): read(target_present_summary[4]);
+                default: read(8'h00);
+            endcase;
+
+        let data <- reader;
+
+        page_request[3] <= tagged Invalid;
+        page_response[3] <= data;
+    endrule
+
+    for (Integer i = 0; i < valueOf(n_ignition_controllers); i = i + 1) begin
+        let page_id = i + 4;
+        let registers = asIfc(ignition_pages[i]);
+
+        (* fire_when_enabled *)
+        rule do_ignition_page_read (
+                read_page(page_id) matches tagged Valid ._request);
+            let reader =
+                case (_request.address)
+                    // Controller state
+                    fromInteger(controllerStatusOffset):
+                        read(registers.controller_status);
+                    fromInteger(controllerLinkStatusOffset):
+                        read(registers.controller_link_status);
+                    fromInteger(targetSystemTypeOffset):
+                        read(registers.target_system_type);
+                    fromInteger(targetSystemStatusOffset):
+                        read(registers.target_system_status);
+                    fromInteger(targetSystemFaultsOffset):
+                        read(registers.target_system_faults);
+                    fromInteger(targetRequestStatusOffset):
+                        read(registers.target_request_status);
+                    fromInteger(targetLink0StatusOffset):
+                        read(registers.target_link0_status);
+                    fromInteger(targetLink1StatusOffset):
+                        read(registers.target_link1_status);
+
+                    // Target Request
+                    fromInteger(targetRequestOffset):
+                        read(registers.target_request);
+
+                    // Controller Counters
+                    fromInteger(controllerStatusReceivedCountOffset):
+                        read_volatile(registers.controller_status_received_count);
+                    fromInteger(controllerHelloSentCountOffset):
+                        read_volatile(registers.controller_hello_sent_count);
+                    fromInteger(controllerRequestSentCountOffset):
+                        read_volatile(registers.controller_request_sent_count);
+                    fromInteger(controllerMessageDroppedCountOffset):
+                        read_volatile(registers.controller_message_dropped_count);
+
+                    // Controller Link Events
+                    fromInteger(controllerLinkEventsSummaryOffset):
+                        read(registers.controller_link_counters.summary);
+
+                    // Target Link 0 Events
+                    fromInteger(targetLink0EventsSummaryOffset):
+                        read(registers.target_link0_counters.summary);
+
+                    // Target Link 1 Events
+                    fromInteger(targetLink1EventsSummaryOffset):
+                        read(registers.target_link1_counters.summary);
+
+                    default: read(8'h00);
+                endcase;
+
+            let data <- reader;
+
+            page_request[page_id] <= tagged Invalid;
+            page_response[page_id] <= data;
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_ignition_page_update (
+                update_page(page_id) matches tagged Valid ._request);
+            function do_update(r) = update(_request.op, r, _request.wdata);
+
+            case (_request.address)
+                fromInteger(targetRequestOffset):
+                    do_update(registers.target_request);
+                fromInteger(controllerLinkEventsSummaryOffset):
+                    do_update(registers.controller_link_counters.summary);
+                fromInteger(targetLink0EventsSummaryOffset):
+                    do_update(registers.target_link0_counters.summary);
+                fromInteger(targetLink1EventsSummaryOffset):
+                    do_update(registers.target_link1_counters.summary);
+            endcase
+
+            page_request[page_id] <= tagged Invalid;
+        endrule
+    end
 
     interface Put request = toPut(asIfc(in));
     interface Put response = toGet(asIfc(out));

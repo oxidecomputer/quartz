@@ -7,10 +7,10 @@
 bluespec_verilog('IgnitionTargetTop',
     top = 'IgnitionTargetTop.bsv',
     modules = [
-        'mkGimletRevATargetWithResetButton',
-        'mkGimletRevATargetWithPowerButton',
-        'mkGimletRevBTargetWithResetButton',
-        'mkGimletRevBTargetWithPowerButton',
+        'mkSidecarRevATargetWithResetButton',
+        'mkSidecarRevATargetWithPowerButton',
+        'mkSidecarRevBTargetWithResetButton',
+        'mkSidecarRevBTargetWithPowerButton',
     ],
     deps = [
         '//hdl/ignition:Target',
@@ -20,9 +20,9 @@ bluespec_verilog('IgnitionTargetTop',
 # Rev A targets
 
 yosys_design('ignition_target_rev_a_reset_button_top',
-    top_module = 'mkGimletRevATargetWithResetButton',
+    top_module = 'mkSidecarRevATargetWithResetButton',
     sources = [
-        ':IgnitionTargetTop#mkGimletRevATargetWithResetButton',
+        ':IgnitionTargetTop#mkSidecarRevATargetWithResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../../vnd/cobalt/hdl/InitialReset.v',
     ],
@@ -31,7 +31,7 @@ yosys_design('ignition_target_rev_a_reset_button_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_gimlet_rev_a_reset_button',
+nextpnr_ice40_bitstream('ignition_target_sidecar_rev_a_reset_button',
     env = 'ignition_target_rev_a',
     design = ':ignition_target_rev_a_reset_button_top#' \
                 'ignition_target_rev_a_reset_button_top.json',
@@ -40,9 +40,9 @@ nextpnr_ice40_bitstream('ignition_target_gimlet_rev_a_reset_button',
     ])
 
 yosys_design('ignition_target_rev_a_power_button_top',
-    top_module = 'mkGimletRevATargetWithPowerButton',
+    top_module = 'mkSidecarRevATargetWithPowerButton',
     sources = [
-        ':IgnitionTargetTop#mkGimletRevATargetWithPowerButton',
+        ':IgnitionTargetTop#mkSidecarRevATargetWithPowerButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
         '../../../../vnd/cobalt/hdl/InitialReset.v',
     ],
@@ -51,7 +51,7 @@ yosys_design('ignition_target_rev_a_power_button_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_gimlet_rev_a_power_button',
+nextpnr_ice40_bitstream('ignition_target_sidecar_rev_a_power_button',
     env = 'ignition_target_rev_a',
     design = ':ignition_target_rev_a_power_button_top#' \
                 'ignition_target_rev_a_power_button_top.json',
@@ -62,9 +62,9 @@ nextpnr_ice40_bitstream('ignition_target_gimlet_rev_a_power_button',
 # Rev B targets
 
 yosys_design('ignition_target_rev_b_reset_button_top',
-    top_module = 'mkGimletRevBTargetWithResetButton',
+    top_module = 'mkSidecarRevBTargetWithResetButton',
     sources = [
-        ':IgnitionTargetTop#mkGimletRevBTargetWithResetButton',
+        ':IgnitionTargetTop#mkSidecarRevBTargetWithResetButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
@@ -73,9 +73,9 @@ yosys_design('ignition_target_rev_b_reset_button_top',
     ])
 
 yosys_design('ignition_target_rev_b_power_button_top',
-    top_module = 'mkGimletRevBTargetWithPowerButton',
+    top_module = 'mkSidecarRevBTargetWithPowerButton',
     sources = [
-        ':IgnitionTargetTop#mkGimletRevBTargetWithPowerButton',
+        ':IgnitionTargetTop#mkSidecarRevBTargetWithPowerButton',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
@@ -83,7 +83,7 @@ yosys_design('ignition_target_rev_b_power_button_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_rev_c_reset_button',
+nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_reset_button',
     env = 'ignition_target_rev_b',
     design = ':ignition_target_rev_b_reset_button_top#' \
                 'ignition_target_rev_b_reset_button_top.json',
@@ -91,7 +91,7 @@ nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_rev_c_reset_button',
         ':ignition_target_rev_b_reset_button_top',
     ])
 
-nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_rev_c_power_button',
+nextpnr_ice40_bitstream('ignition_target_sidecar_rev_b_power_button',
     env = 'ignition_target_rev_b',
     design = ':ignition_target_rev_b_power_button_top#' \
                 'ignition_target_rev_b_power_button_top.json',

@@ -59,11 +59,19 @@ bluespec_library('SidecarMainboardController',
         ':TofinoDebugPort',
         '//hdl:FanModule',
         '//hdl:PowerRail',
+        '//hdl/ignition:Controller',
+        '//hdl/ignition:ControllerRegisters',
+        '//hdl/ignition:Transceiver',
         'cobalt//hdl:GitVersion',
         'cobalt//hdl:RegCommon',
         'cobalt//hdl:WriteOnceReg',
         'cobalt//hdl/interfaces:SPI',
-    ])
+    ],
+    using = {
+        'bsc_flags': [
+            '+RTS', '-K0', '-RTS',
+        ]
+    })
 
 bluespec_library('SidecarMainboardControllerTop',
     sources = [
@@ -72,12 +80,18 @@ bluespec_library('SidecarMainboardControllerTop',
     deps = [
         ':SidecarMainboardController',
         'cobalt//hdl:IOSync',
+        'cobalt//hdl:SerialIO',
     ],
     using = {
-        # The folling script is needed to fix the inout syntax used in the generated Verilog.
-        # For additonal context, see https://github.com/B-Lang-org/bsc/issues/327#issuecomment-786182555
         'bsc_flags': [
+            # The folling script is needed to fix the inout syntax used in the
+            # generated Verilog. For additonal context, see
+            # https://github.com/B-Lang-org/bsc/issues/327#issuecomment-786182555
             '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-opt-undetermined-vals',
+            '-unspecified-to X',
+            '-steps-warn-interval 1000000',
+            '-steps-max-intervals 3',
         ]
     })
 
@@ -135,7 +149,4 @@ nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_b',
     ],
     local = {
         'nextpnr_constraints': ROOT + '/hdl/boards/sidecar/mainboard/sidecar_mainboard_controller_rev_b.lpf',
-        'nextpnr_ecp5_flags': [
-            '--45k',
-        ],
     })

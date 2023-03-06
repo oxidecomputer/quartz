@@ -1,0 +1,95 @@
+[*]
+[*] GTKWave Analyzer v3.3.107 (w)1999-2020 BSI
+[*] Sun Sep 18 23:05:58 2022
+[*]
+[dumpfile] "/Users/arjen/oxidecomputer/quartz/build/vcd/IntegrationTests_mkControllerTargetPresentTest.vcd"
+[dumpfile_mtime] "Fri Sep 16 23:57:30 2022"
+[dumpfile_size] 1419853
+[savefile] "/Users/arjen/oxidecomputer/quartz/hdl/ignition/test/IntegrationTests.gtkw"
+[timestart] 0
+[size] 3440 1387
+[pos] -1 -1
+*-12.000000 470 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] main.
+[treeopen] main.top.
+[sst_width] 554
+[signals_width] 434
+[sst_expanded] 1
+[sst_vpaned_height] 443
+@28
+main.top.bench_target_to_controller_link_tap$PROBE
+main.top.bench_controller_to_target_link_tap$PROBE
+@200
+-
+@28
++{tick} main.top.bench_tick_q
+@200
+-
+-Controller TX
+@22
++{Message} main.top.bench_controller__tx.D_IN[37:0]
++{value} main.top.bench_controller_txr_tx_value[8:0]
+@200
+-
+-Target RX
+@24
++{receive_state} main.top.bench_target_txr_rx_links_0_receive_state[2:0]
+@c00024
+#{parser_state} (0)main.top.bench_target_txr_rx_links_0_parser_state[43:0] (1)main.top.bench_target_txr_rx_links_0_parser_state[43:0] (2)main.top.bench_target_txr_rx_links_0_parser_state[43:0] (3)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+@28
+(0)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+(1)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+(2)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+(3)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+@1401200
+-group_end
+@c00024
+#{parser_result} (4)main.top.bench_target_txr_rx_links_0_parser_state[43:0] (5)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+@28
+(4)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+(5)main.top.bench_target_txr_rx_links_0_parser_state[43:0]
+@1401200
+-group_end
+@28
++{aligned} main.top.bench_target_txr_rx_links_0_aligned
++{locked} main.top.bench_target_txr_rx_links_0_locked
++{comma} main.top.bench_target_txr_rx_links_0_comma
+@22
++{value} main.top.bench_target_txr_rx_links_0_value[8:0]
++{Message} main.top.bench_target_txr_rx_out.D_IN[38:0]
+@200
+-
+-Target TX
+@22
++{Message} main.top.bench_target__tx.D_IN[37:0]
++{value} main.top.bench_target_txr_tx_value[8:0]
+@200
+-
+-Controller RX
+@24
++{receive_state} main.top.bench_controller_txr_rx_receive_state[2:0]
+@c00024
+#{parser_state} (0)main.top.bench_controller_txr_rx_parser_state[43:0] (1)main.top.bench_controller_txr_rx_parser_state[43:0] (2)main.top.bench_controller_txr_rx_parser_state[43:0] (3)main.top.bench_controller_txr_rx_parser_state[43:0]
+@28
+(0)main.top.bench_controller_txr_rx_parser_state[43:0]
+(1)main.top.bench_controller_txr_rx_parser_state[43:0]
+(2)main.top.bench_controller_txr_rx_parser_state[43:0]
+(3)main.top.bench_controller_txr_rx_parser_state[43:0]
+@1401204
+-group_end
+@c00025
+#{parser_result} (4)main.top.bench_controller_txr_rx_parser_state[43:0] (5)main.top.bench_controller_txr_rx_parser_state[43:0]
+@28
+(4)main.top.bench_controller_txr_rx_parser_state[43:0]
+(5)main.top.bench_controller_txr_rx_parser_state[43:0]
+@1401205
+-group_end
+@28
++{aligned} main.top.bench_controller_txr_rx_aligned
++{locked} main.top.bench_controller_txr_rx_locked
++{comma} main.top.bench_controller_txr_rx_comma
+@22
++{value} main.top.bench_controller_txr_rx_value[8:0]
++{Message} main.top.bench_controller_txr_rx_out.D_IN[37:0]
+[pattern_trace] 1
+[pattern_trace] 0

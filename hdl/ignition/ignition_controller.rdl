@@ -1,0 +1,183 @@
+// Copyright 2022 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+reg link_status {
+    regwidth = 8;
+    default sw = r;
+    default hw = w;
+
+    field {
+        desc = "Flag indicating the receiver is aligned to the clock";
+    } RECEIVER_ALIGNED[1] = 0;
+    field {
+        desc = "Flag indicating the receiver is receiving valid characters";
+    } RECEIVER_LOCKED[1] = 0;
+    field {
+        desc = "Flag indicating the polarity of the link is inverted";
+    } POLARITY_INVERTED[1] = 0;
+};
+
+reg link_events {
+    regwidth = 8;
+    default sw = rw;
+    default hw = rw;
+
+    field {
+        desc = "Flag indicating the transmitter encountered an invalid value";
+    } ENCODING_ERROR[1] = 0;
+    field {
+        desc = "Flag indicating the receiver encountered an invalid character";
+    } DECODING_ERROR[1] = 0;
+    field {
+        desc = "Flag indicating an invalid ordered set was received";
+    } ORDERED_SET_INVALID[1] = 0;
+    field {
+        desc = "Flag indicating a message with invalid version was received";
+    } MESSAGE_VERSION_INVALID[1] = 0;
+    field {
+        desc = "Flag indicating a message with invalid type was received";
+    } MESSAGE_TYPE_INVALID[1] = 0;
+    field {
+        desc = "Flag indicating a message with invalid checksum was received";
+    } MESSAGE_CHECKSUM_INVALID[1] = 0;
+};
+
+reg counter {
+    regwidth = 8;
+
+    field {
+        sw = r;
+        hw = w;
+        rclr;
+    } COUNT[7:0] = 0;
+};
+
+addrmap ignition_controller {
+    name = "Ignition Controller";
+    desc = "Register description of the Ignition Controller";
+
+    default regwidth = 8;
+    default sw = r;
+    default hw = w;
+
+    reg {
+        name = "Controller Status";
+
+        field {
+            desc = "A Target is present and the TARGET_SYSTEM_TYPE, TARGET_SYSTEM_STATUS and TARGET_REQUEST_STATUS registers are valid";
+        } TARGET_PRESENT[1] = 0;
+    } CONTROLLER_STATUS;
+
+    link_status CONTROLLER_LINK_STATUS;
+    CONTROLLER_LINK_STATUS->name = "Controller Link Status";
+
+    reg {
+        name = "Target System Type";
+        field {
+            desc = "The system type as advertised by the Target";
+        } SYSTEM_TYPE[7:0] = 0;
+    } TARGET_SYSTEM_TYPE;
+
+    reg {
+        name = "Target System Status";
+
+        field {
+            desc = "Flag indicating the Target has observed a Controller on link 0";
+        } CONTROLLER0_DETECTED[1] = 0;
+        field {
+            desc = "Flag indicating the Target has observed a Controller on link 1";
+        } CONTROLLER1_DETECTED[1] = 0;
+        field {
+            desc = "Flag indicating system power of the Target system is enabled";
+        } SYSTEM_POWER_ENABLED[1] = 0;
+        field {
+            desc = "Flag indicating system power was turned off due to power fault";
+        } SYSTEM_POWER_ABORT[1] = 0;
+    } TARGET_SYSTEM_STATUS;
+
+    reg {
+        name = "Target System Faults";
+
+        field {
+            desc = "Flag indicating a power fault in A3";
+        } POWER_FAULT_A3[1] = 0;
+        field {
+            desc = "Flag indicating a power fault in A2";
+        } POWER_FAULT_A2[1] = 0;
+        field {
+            desc = "Reserved fault flag";
+        } RESERVED1[1] = 0;
+        field {
+            desc = "Reserved fault flag";
+        } RESERVED2[1] = 0;
+        field {
+            desc = "Flag indicating an unrecoverable fault was detected by the SP";
+        } SP_FAULT[1] = 0;
+        field {
+            desc = "Flag indicating an unrecoverable fault was detected by the RoT";
+        } ROT_FAULT[1] = 0;
+    } TARGET_SYSTEM_FAULTS;
+
+    reg {
+        field {
+            desc = "Flag indicating a power off request is in progress";
+        } POWER_OFF_IN_PROGRESS[1] = 0;
+        field {
+            desc = "Flag indicating a power on request is in progress";
+        } POWER_ON_IN_PROGRESS[1] = 0;
+        field {
+            desc = "Flag indicating a system reset request is in progress";
+        } SYSTEM_RESET_IN_PROGRESS[1] = 0;
+    } TARGET_REQUEST_STATUS;
+
+    link_status TARGET_LINK0_STATUS;
+    TARGET_LINK0_STATUS->name = "Target Link 0 Status";
+
+    link_status TARGET_LINK1_STATUS;
+    TARGET_LINK1_STATUS->name = "Target Link 1 Status";
+
+    reg {
+        name = "Target Request";
+        default sw = rw;
+        default hw = rw;
+
+        field {
+            desc = "Value indicating the kind of request";
+        } KIND[1:0] = 0;
+        field {
+            desc = "Flag indicating a request is (still) pending";
+        } PENDING[7:7] = 0;
+    } TARGET_REQUEST @0x8;
+
+    counter CONTROLLER_STATUS_RECEIVED_COUNT @0x10;
+    CONTROLLER_STATUS_RECEIVED_COUNT->name = "Controller Status Received Count";
+    CONTROLLER_STATUS_RECEIVED_COUNT.COUNT->desc =
+        "The number of Status messages received by the Controller since last reset";
+
+    counter CONTROLLER_HELLO_SENT_COUNT;
+    CONTROLLER_HELLO_SENT_COUNT->name = "Controller Hello Sent Count";
+    CONTROLLER_HELLO_SENT_COUNT.COUNT->desc =
+        "The number of hello messages sent by the Controller since last reset";
+
+    counter CONTROLLER_REQUEST_SENT_COUNT;
+    CONTROLLER_REQUEST_SENT_COUNT->name = "Controller Request Sent Count";
+    CONTROLLER_REQUEST_SENT_COUNT.COUNT->desc =
+        "The number of request messages sent by the Controller since last reset";
+
+    counter CONTROLLER_MESSAGE_DROPPED_COUNT;
+    CONTROLLER_MESSAGE_DROPPED_COUNT->name = "Controller Message Dropped Count";
+    CONTROLLER_MESSAGE_DROPPED_COUNT.COUNT->desc =
+        "The number of messages dropped by the Controller since last reset";
+
+    link_events CONTROLLER_LINK_EVENTS_SUMMARY @0x20;
+    CONTROLLER_LINK_EVENTS_SUMMARY->name = "Controller Link Events Summary";
+
+    link_events TARGET_LINK0_EVENTS_SUMMARY @0x30;
+    TARGET_LINK0_EVENTS_SUMMARY->name = "Target Link 0 Events Summary";
+
+    link_events TARGET_LINK1_EVENTS_SUMMARY @0x40;
+    TARGET_LINK1_EVENTS_SUMMARY->name = "Target Link 1 Events Summary";
+};

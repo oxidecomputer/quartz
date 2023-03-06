@@ -7,6 +7,10 @@ bluespec_library('SidecarMainboardEmulator',
     deps = [
         '//hdl:PowerRail',
         '//hdl/boards/sidecar/mainboard:SidecarMainboardControllerTop',
+        '//hdl/ignition:Target',
+        '//hdl/ignition:Transceiver',
+        'cobalt//hdl:BitSampling',
+        'cobalt//hdl:SerialIO',
         'cobalt//hdl:Strobe',
         'cobalt//hdl/interfaces:ECP5',
     ])
