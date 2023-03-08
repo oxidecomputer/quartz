@@ -100,16 +100,18 @@ import PowerRail::*;
     module mkNicBlockSeq#(Integer one_ms_counts)(NicBlockTop);
         Integer ten_ms = 10 * one_ms_counts;
         Integer thirty_ms = 30 * one_ms_counts;
+        Integer cld_rst_to_perst_delay = ten_ms;
         Reg#(NicStateType) state <- mkReg(IDLE);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_perst_l <- mkReg(0);
         Reg#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_comb_pg_l <- mkReg(1);
         Reg#(Bool) upstream_ok <- mkReg(False);
-
+        Reg#(UInt#(24)) cld_rst_delay_cnts <- mkReg(0);
         Reg#(Bool) enable <- mkReg(False);
         Reg#(Bool) faulted <- mkReg(False);
         Reg#(Bool) abort <- mkReg(False);
+        Reg#(Bool) perst_can_deassert <- mkReg(False);
 
         Wire#(Bool) aggregate_pg <- mkDWire(False);
         Wire#(Bool) aggregate_fault <- mkDWire(False);
@@ -208,6 +210,25 @@ import PowerRail::*;
         endrule
 
         (* fire_when_enabled *)
+        rule do_cld_rst_to_perst_delay;
+            if (state != DONE || sw_reset) begin
+                cld_rst_delay_cnts <= 0;
+            end else if (state == DONE &&
+                         !sw_reset && 
+                         cld_rst_delay_cnts < fromInteger(cld_rst_to_perst_delay)) begin
+                // Count when we're Done sequencing, have released cld_rst
+                // we're power enabled from hubris
+                // and we havent hit the max count
+                cld_rst_delay_cnts <= cld_rst_delay_cnts + 1;
+            end
+            if (cld_rst_delay_cnts < fromInteger(cld_rst_to_perst_delay)) begin
+               perst_can_deassert <= False;
+            end else begin
+                perst_can_deassert <= True;
+            end
+        endrule
+
+        (* fire_when_enabled *)
         rule do_outputs;
             seq_to_nic_cld_rst_l <= pack(state == DONE && !cld_rst_override && !sw_reset);
             // If we're 'soloing' the PERST we want to ignore the SP3 completely and just use the register
@@ -216,7 +237,7 @@ import PowerRail::*;
             if (perst_solo) begin
                 seq_to_nic_perst_l <= pack(state == DONE && !perst_override);
             end else begin
-                seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && !perst_override && !sw_reset);
+                seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && perst_can_deassert && !perst_override && !sw_reset);
             end
             nic_to_sp3_pwrflt_l <= 1;
             seq_to_nic_comb_pg_l <= pack(state != DELAY && state != DONE);
