@@ -764,7 +764,7 @@ module mkSystemPowerHotswapControllerRestartTest (Empty);
         parameters,
         4 * parameters.system_power_toggle_cool_down);
 
-    // Contineously assert that the system power hotswap controller restart
+    // Contineously assert that the system power hotswap controller restart pin
     // tracks system power.
     continuousAssert(
         (bench.target.system_power == Off) ==
@@ -791,13 +791,9 @@ module mkSystemPowerHotswapControllerRestartTest (Empty);
                 "expected hotswap controller restart");
         endaction
 
-        // Reset the ticks counter on the next tick.
-        action
-            bench.await_tick();
-            bench.reset_ticks_elapsed();
-        endaction
-
-        // Release the button on tick into the power off sequence.
+        // Release the button on the next tick, allowing the system to power
+        // back up.
+        bench.await_tick();
         bench.target.button_event(False);
 
         // Wait for system power on.
