@@ -11,11 +11,9 @@ package IgnitionTargetTop;
 
 export DifferentialTransceiver(..);
 export IgnitionTargetTop(..);
-export IgnitionTargetTopRevA(..);
 export IgnitionTargetTopWithDebug(..);
 
 export asIgnitionTargetTop;
-export asIgnitionTargetTopRevA;
 
 import ICE40::*;
 import IgnitionProtocol::*;
@@ -42,26 +40,6 @@ interface IgnitionTargetTop;
 
     method Bool system_power_enable();
     method Bool system_power_hotswap_controller_restart();
-
-    // UI
-    method Bit#(2) led();
-    (* prefix = "" *) method Action btn(Bool btn);
-
-    interface DifferentialTransceiver#(Bit#(1)) aux0;
-    interface DifferentialTransceiver#(Bit#(1)) aux1;
-endinterface
-
-//
-// `IgnitionTargetTopRevA(..)` is similar to the `IgnitionTargetTop(..)`
-// interface but lacks system power hotswap controller restart support.
-//
-(* always_enabled *)
-interface IgnitionTargetTopRevA;
-    // Target system status and control
-    (* prefix = "" *) method Action id(UInt#(6) id);
-    (* prefix = "" *) method Action flt(SystemFaults flt);
-
-    method Bool system_power_enable();
 
     // UI
     method Bit#(2) led();
@@ -104,20 +82,6 @@ function IgnitionTargetTop
         method system_power_enable = wrapper.system_power_enable;
         method system_power_hotswap_controller_restart =
                 wrapper.system_power_hotswap_controller_restart;
-        method led = wrapper.led;
-        interface DifferentialTransceiver aux0 = wrapper.aux0;
-        interface DifferentialTransceiver aux1 = wrapper.aux1;
-    endinterface;
-
-// Expose a `IgnitionTargetTopWithDebug` as `IgnitionTargetTopRevA` by stripping
-// the debug and hotswap controller restart methods.
-function IgnitionTargetTopRevA
-        asIgnitionTargetTopRevA(IgnitionTargetTopWithDebug wrapper) =
-    interface IgnitionTargetTopRevA;
-        method id = wrapper.id;
-        method Action flt(val) = wrapper.flt(unpack(pack(val)));
-        method btn = wrapper.btn;
-        method system_power_enable = wrapper.system_power_enable;
         method led = wrapper.led;
         interface DifferentialTransceiver aux0 = wrapper.aux0;
         interface DifferentialTransceiver aux1 = wrapper.aux1;

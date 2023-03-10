@@ -29,7 +29,7 @@ yosys_design('ignition_target_psc_rev_a_reset_button_top',
     ])
 
 nextpnr_ice40_bitstream('ignition_target_psc_rev_a_reset_button',
-    env = 'ignition_target_rev_a',
+    env = 'ignition_target',
     design = ':ignition_target_psc_rev_a_reset_button_top#' \
                 'ignition_target_psc_rev_a_reset_button_top.json',
     deps = [
@@ -50,28 +50,9 @@ yosys_design('ignition_target_psc_rev_b_reset_button_top',
     ])
 
 nextpnr_ice40_bitstream('ignition_target_psc_rev_b_reset_button',
-    env = 'ignition_target_rev_b',
+    env = 'ignition_target',
     design = ':ignition_target_psc_rev_b_reset_button_top#' \
                 'ignition_target_psc_rev_b_reset_button_top.json',
     deps = [
         ':ignition_target_psc_rev_b_reset_button_top',
-    ])
-
-yosys_design('ignition_target_psc_rev_b_reset_button_no_power_fault_monitor_top',
-    top_module = 'mkPSCRevBResetButtonNoPowerFaultMonitor',
-    sources = [
-        ':IgnitionTargetPSC#mkPSCRevBResetButtonNoPowerFaultMonitor',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-    ],
-    deps = [
-        ':IgnitionTargetPSC',
-        'cobalt//vnd/bluespec:Verilog.v',
-    ])
-
-nextpnr_ice40_bitstream('ignition_target_psc_rev_b_reset_button_no_power_fault_monitor',
-    env = 'ignition_target_rev_b',
-    design = ':ignition_target_psc_rev_b_reset_button_no_power_fault_monitor_top#' \
-                'ignition_target_psc_rev_b_reset_button_no_power_fault_monitor_top.json',
-    deps = [
-        ':ignition_target_psc_rev_b_reset_button_no_power_fault_monitor_top',
     ])
