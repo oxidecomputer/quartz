@@ -41,6 +41,7 @@ interface Target;
     (* always_ready *) method Action button_event(Bool pressed);
 
     (* always_enabled *) method SystemPower system_power();
+    (* always_enabled *) method Bool system_power_hotswap_controller_restart();
     (* always_enabled *) method Bit#(2) leds();
 
     interface TargetTransceiverClient txr;
@@ -70,10 +71,14 @@ typedef struct {
     Maybe#(SystemType) system_type;
     ButtonBehavior button_behavior;
     Integer system_power_toggle_cool_down;
+    // Enable/disable the system power monitor which triggers a mutual assured
+    // power-off (MAPO) if A3/A2 power faults occur.
     Bool system_power_fault_monitor_enable;
     // The number of ticks before the power fault monitor starts after powering
     // on the target system.
     Integer system_power_fault_monitor_start_delay;
+    // Enable/disable hotswap controller restart during power on/off sequencing.
+    Bool system_power_hotswap_controller_restart;
     IgnitionProtocol::Parameters protocol;
 } Parameters;
 
@@ -87,6 +92,7 @@ Parameters default_app_with_reset_button =
         system_power_toggle_cool_down: 3000, // 3s if app tick at 1 kHz.
         system_power_fault_monitor_enable: True,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
+        system_power_hotswap_controller_restart: True,
         protocol: defaultValue};
 
 Parameters default_app_with_power_button =
@@ -97,8 +103,9 @@ Parameters default_app_with_power_button =
         system_type: tagged Invalid,
         button_behavior: PowerButton,
         system_power_toggle_cool_down: 1000, // 1s if app tick at 1 kHz.
-        system_power_fault_monitor_enable: True,
+        system_power_fault_monitor_enable: False,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
+        system_power_hotswap_controller_restart: False,
         protocol: defaultValue};
 
 instance DefaultValue#(Parameters);
@@ -199,6 +206,7 @@ module mkTarget #(Parameters parameters) (Target);
     Reg#(Maybe#(SystemType)) system_type <- mkConfigReg(tagged Invalid);
     Reg#(SystemPower) system_power_r <- mkConfigReg(Off);
     Reg#(Bool) system_power_abort <- mkConfigReg(False);
+    Reg#(Bool) system_power_hotswap_controller_restart_r <- mkConfigReg(False);
     Reg#(SystemFaults) system_faults <- mkConfigReg(system_faults_none);
     Reg#(RequestStatus) request_status <- mkConfigReg(defaultValue);
     Reg#(Bit#(2)) leds_r <- mkConfigRegU();
@@ -276,19 +284,48 @@ module mkTarget #(Parameters parameters) (Target);
 
     (* fire_when_enabled *)
     rule do_update_system_power_state;
+        //
+        // Updating all the system power state is a managed/modelled in the
+        // following steps:
+        //
+        // 1) Determine if a system power state change is needed based on
+        //    whether or not a system power request is in progress. As part of
+        //    this step the state associated with this request is updated.
+        // 2) If the system power state needs to change as a result of the logic
+        //    in step 1, execute that change
+        // 3) After changing the system power state in step 2, which sets a
+        //    system power toggle cool down timer, monitor the timer for
+        //    completion and allow in-progress system power requests to complete
+        // 4) Update the system power fault monitor enabled state depending on
+        //    state changes made in step 2
+        //
+        // Note that steps 3 and 4 are happening in parallel and not dependent
+        // on each other.
+        //
+
+        //
+        // Step 1
+        //
+        // Update any system power request and determine if the system power
+        // state needs to change.
+        //
         let system_power_next = system_power_r;
 
-        // Turn system power off when a power fault occurs.
+        // Turn system power off if a power fault occurs (MAPO).
         if (system_power_on &&
                 system_power_fault_monitor_enabled &&
                 system_power_fault) begin
+            // Signal the Controller that an abort happened as a result of a
+            // fault. This flag is only set here.
             system_power_abort <= True;
+
+            // Initiate a system power off in step 2.
             system_power_next = Off;
             request_status <= request_status_power_off_in_progress;
             $display("%5t [Target] System power fault, requesting SystemPowerOff", $time);
         end
         // If a system reset is in progress and the system power off cool down
-        // has completed, initate system power on.
+        // has completed, initate system power on in step 2.
         else if (system_reset_powering_off &&
                 system_power_toggle_cool_down_complete &&
                 reset_button_released) begin
@@ -297,8 +334,8 @@ module mkTarget #(Parameters parameters) (Target);
                 request_status_reset_in_progress |
                 request_status_power_on_in_progress;
         end
-        // Complete any pending system power request if the cool down has
-        // completed.
+        // Complete an in progress system power request if the cool down has
+        // completed. The completion event monitored here is updated in step 3.
         else if (((!system_resetting &&
                         (system_powering_on || system_powering_off)) ||
                     system_reset_powering_on) &&
@@ -306,7 +343,13 @@ module mkTarget #(Parameters parameters) (Target);
             request_status <= request_status_none;
             $display("%5t [Target] Request complete", $time);
         end
-        // Service any pending system power requests.
+        // Start any pending system power requests based on the current system
+        // power state and the request. Only certain transitions are legal and
+        // for those transitions which are not the request is simply ignored.
+        //
+        // It is expected that anyone requesting a change monitors the
+        // `request_status` fields in the `Status` messages sent by this Target
+        // to determine if the request is taking effect.
         else if (request.wget matches tagged Valid .request_) begin
             case (tuple2(system_power_r, request_)) matches
                 {Off, SystemPowerOn}: begin
@@ -328,35 +371,44 @@ module mkTarget #(Parameters parameters) (Target);
             endcase
         end
 
-        // Initiate a system power toggle if requested above.
+        //
+        // Step 2
+        //
+        // The request logic above has determined that a system power toggle is
+        // required. Initiate this change.
+        //
         if (system_power_r != system_power_next) begin
+            // The system power pin changes here.
             system_power_r <= system_power_next;
+            // On some Target implementations the hotswap controller which is
+            // part of the A3 system power supply should be restarted/cleared on
+            // system power down. This behavior is statically enabled for
+            // Gimlet/Sidecar and assumes the restart behavior of an ADM1272.
+            if (parameters.system_power_hotswap_controller_restart) begin
+                system_power_hotswap_controller_restart_r <= (system_power_next == Off);
+            end
+
             $display("%5t [Target] System power ", $time, fshow(system_power_next));
 
-            // Start the cool down timer.
+            // Start the system power toggle cool down timer.
             system_power_toggle_cool_down <=
                 fromInteger(parameters.system_power_toggle_cool_down + 1);
 
+            // Previous abort state should be cleared.
             if (system_power_next == On) begin
                 system_power_abort <= False;
 
                 if (system_power_abort) begin
                     $display("%5t [Target] System power abort cleared", $time);
                 end
-
-                // Set the timer to enable the power fault monitor if enabled in
-                // the parameters.
-                if (parameters.system_power_fault_monitor_enable) begin
-                    system_power_fault_monitor_start <=
-                        fromInteger(parameters.system_power_fault_monitor_start_delay + 1);
-                end
-                else begin
-                    $display("%5t [Target] System power fault monitor not enabled", $time);
-                end
             end
         end
 
-        // Determine whether or not a cool down completed.
+        //
+        // Step 3
+        //
+        // Monitor the system power toggle cool down counter for completion.
+        //
         if (system_power_r != system_power_next) begin
             // Await the next cool down complete.
             system_power_toggle_cool_down_complete <= False;
@@ -365,22 +417,71 @@ module mkTarget #(Parameters parameters) (Target);
             system_power_toggle_cool_down_complete <= True;
         end
 
-        // Determine whether or not to change the enabled state off the power
-        // fault monitor.
-        if (system_power_abort || system_power_next == Off) begin
-            system_power_fault_monitor_enabled <= False;
+        //
+        // Step 4
+        //
+        // Determine whether or not to enable the system power fault monitor.
+        // There is some subtlety here:
+        //
+        // If system power hotswap controller restart is enabled this controller
+        // may have its own power down cool down. If the power fault monitor
+        // were to be enabled before this cool down timer completed and the
+        // hotswap controller actually turned on its output the lack of a PG
+        // signal would erroneously trip the monitor and abort power before the
+        // hotswap controller was given the chance to enable its ouput.
+        //
+        // If this hotswap controller restart is enabled the power fault monitor
+        // enable timer is armed only once A3 PG has been observed/the fault bit
+        // has cleared. Otherwise the fault monitor enable timer is armed as
+        // soon as a system power transition happens from Off to On.
+        //
+        // The implicit trade-off here is that there is no A3 PG timeout if
+        // hotswap controller restart is enabled and a system may dwell forever
+        // in a state where system power is enabled but A3 never reached power
+        // good (as indicated by the A3 power fault bit remaining set after some
+        // time). Logic elsewhere should monitor for this case to occur and take
+        // appropriate action.
+        //
+        // Finally, with the system potentially dwelling a state where the
+        // transition from A3 to A2 never completes it is assumed that the power
+        // components in A3 are sufficiently robust that this is no problem.
+        // Generally these have appropriate input and output monitors and their
+        // own fault logic which should make this appropriate.
+        //
+        if (parameters.system_power_fault_monitor_enable) begin
+            if (system_power_on &&
+                    !(parameters.system_power_hotswap_controller_restart ||
+                        system_faults.power_a3) &&
+                    !system_power_fault_monitor_enabled &&
+                    system_power_fault_monitor_start.count != 0) begin
+                system_power_fault_monitor_start <=
+                    fromInteger(parameters.system_power_fault_monitor_start_delay + 1);
+            end
 
-            if (system_power_fault_monitor_enabled) begin
-                $display("%5t [Target] System power fault monitor disabled", $time);
+            // Enable the power fault monitor if the start timer has completed.
+            if (system_power_fault_monitor_start) begin
+                system_power_fault_monitor_enabled <= True;
+                $display("%5t [Target] System power fault monitor enabled", $time);
+            end
+            // If a power fault has occured or the system is powered off,
+            // disable the monitor to avoid subsequent erroneous abort triggers.
+            else if (system_power_abort || system_power_next == Off) begin
+                system_power_fault_monitor_enabled <= False;
+
+                if (system_power_fault_monitor_enabled) begin
+                    $display("%5t [Target] System power fault monitor disabled", $time);
+                end
             end
         end
-        else if (parameters.system_power_fault_monitor_enable &&
-                system_power_fault_monitor_start) begin
-            system_power_fault_monitor_enabled <= True;
-            $display("%5t [Target] System power fault monitor enabled", $time);
+        else if (system_power_r != system_power_next) begin
+            $display("%5t [Target] System power fault monitor not enabled", $time);
         end
     endrule
 
+    //
+    // The button, depending on its desired mode, may trigger system power
+    // requests. These rules are added here based on compile-time configuration.
+    //
     case (parameters.button_behavior)
         ResetButton: begin
             // Initiate a system power request if the button is pressed and no
@@ -575,6 +676,9 @@ module mkTarget #(Parameters parameters) (Target);
     endmethod
 
     method system_power = system_power_r;
+    method system_power_hotswap_controller_restart =
+            system_power_hotswap_controller_restart_r;
+
     method leds = leds_r;
 
     interface PulseWire tick_1khz = tick;

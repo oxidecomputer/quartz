@@ -70,7 +70,7 @@ yosys_design('ignitionlet_target_power_button_top',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_power_button',
-    env = 'ignition_target_rev_a',
+    env = 'ignition_target',
     design = ':ignitionlet_target_power_button_top#ignitionlet_target_power_button_top.json',
     deps = [
         ':ignitionlet_target_power_button_top',
@@ -89,7 +89,7 @@ yosys_design('ignitionlet_target_reset_button_top',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_reset_button',
-    env = 'ignition_target_rev_a',
+    env = 'ignition_target',
     design = ':ignitionlet_target_reset_button_top#ignitionlet_target_reset_button_top.json',
     deps = [
         ':ignitionlet_target_reset_button_top',
@@ -128,12 +128,12 @@ yosys_design('transceiver_debug_top',
     ])
 
 nextpnr_ice40_bitstream('transceiver_debug',
-    env = 'ignition_target_rev_a',
+    env = 'ignition_target',
     design = ':transceiver_debug_top#transceiver_debug_top.json',
     deps = [
         ':transceiver_debug_top',
     ],
     local = {
         'nextpnr_constraints':
-            ROOT + '/hdl/ignition/ignition_target_rev_a_debug.pcf',
+            ROOT + '/hdl/ignition/ignition_target_debug.pcf',
     })

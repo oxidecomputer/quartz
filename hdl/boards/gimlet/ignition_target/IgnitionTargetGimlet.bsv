@@ -1,18 +1,23 @@
-package IgnitionletTargetTop;
+package IgnitionTargetGimlet;
 
 import DefaultValue::*;
-import Vector::*;
 
 import IgnitionTarget::*;
-import IgnitionTargetWrapper::*;
 import IgnitionTargetTop::*;
+import IgnitionTargetWrapper::*;
 
+
+//
+// Rev B, C, D
+//
+// Note: Rev B top modules are compatible with Rev B, Rev C and Rev D board
+// revisions.
+//
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
-module mkIgnitionletTargetWithResetButton (IgnitionTargetTop);
-    let parameters = default_app_with_reset_button;
-    parameters.external_reset = False;
-    parameters.system_type = tagged Valid 5;
+module mkGimletRevBTargetWithResetButton (IgnitionTargetTop);
+    Parameters parameters = default_app_with_reset_button;
+    parameters.invert_leds = True;
 
     (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
@@ -20,10 +25,10 @@ module mkIgnitionletTargetWithResetButton (IgnitionTargetTop);
 endmodule
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
-module mkIgnitionletTargetWithPowerButton (IgnitionTargetTop);
-    let parameters = default_app_with_power_button;
-    parameters.external_reset = False;
-    parameters.system_type = tagged Valid 5;
+module mkGimletRevBTargetWithPowerButton (IgnitionTargetTop);
+    Parameters parameters = default_app_with_power_button;
+    parameters.invert_leds = True;
+    parameters.system_power_fault_monitor_enable = False;
 
     (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);

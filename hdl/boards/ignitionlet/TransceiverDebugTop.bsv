@@ -19,7 +19,7 @@ import IgnitionTransceiver::*;
 
 
 (* default_clock_osc = "clk_50mhz", no_default_reset *)
-module mkTransceiverDebugTop (IgnitionTargetDebug);
+module mkTransceiverDebugTop (IgnitionletTargetDebug);
     Reset reset_sync <- InitialReset::mkInitialReset(3);
 
     // Transceiver primitives. The SerialIOAdapters help connect the contineous

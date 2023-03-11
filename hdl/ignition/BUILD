@@ -44,6 +44,7 @@ bluespec_library('Target',
 
 bluespec_library('TargetWrapper',
     sources = [
+        'IgnitionTargetTop.bsv',
         'IgnitionTargetWrapper.bsv',
     ],
     deps = [
