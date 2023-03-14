@@ -352,7 +352,7 @@ module mkGimletRegs(GimletRegIF);
         method Action ok(Bool value);
             nic_ok <= pack(value);
         endmethod
-        method Action state(NicStateType value);
+        method Action state(NicsmstatusNicsm value);
             nic_state <= unpack({'0, pack(value)});
         endmethod
         method pgs = nic_status._write;

@@ -292,6 +292,7 @@ module mkGimletSeqTop (SeqPins);
 
     Reg#(Bit#(1)) dummy_high <- mkReg(1);
     Reg#(Bit#(1)) dummy_low <- mkReg(0);
+    Reg#(Bit#(1)) nic_3v3_pg <- mkReg(0);
 
     ICE40::Output#(Bit#(1)) cipo <- mkOutput(OutputTriState, False);
     
@@ -353,6 +354,13 @@ module mkGimletSeqTop (SeqPins);
     
     // this is a hack due to a revB issue where the pg doesn't actually wire to the
     // FPGA.
+    // rule nic_3v3_pg_fix;
+    //     let board_version = unpack({sync.pins.seq_rev_id2, sync.pins.seq_rev_id1, sync.pins.seq_rev_id0});
+    //     if (board_version == 1) begin  // 0 = A, 1 = B etc
+    //         nic_3v3_pg <= inner.nic_pins.ldo_v3p3.en;
+    //     end else begin
+    //         nic_3v3_pg <= // TODO: 3v3 feedback!!
+    // endrule
     mkConnection(inner.nic_pins.ldo_v3p3.en, inner.nic_pins.ldo_v3p3.pg);
 
     rule tristate (inner.spi_pins.output_en);

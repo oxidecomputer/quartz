@@ -218,6 +218,7 @@ module mkBench(Bench);
 
     Reg#(Bit#(1)) pwr_cont1_sp3_pg0 <- mkReg(0);
     Reg#(Bit#(1)) pwr_cont2_sp3_pg0 <- mkReg(0);
+    Reg#(Bit#(1)) sp3_to_seq_nic_perst_l <- mkReg(1);
     mkConnection(pwr_cont1_sp3_pg0, dut.a0_pins.pwr_cont1_sp3_pg0);
     mkConnection(pwr_cont2_sp3_pg0, dut.a0_pins.pwr_cont2_sp3_pg0);
 
@@ -274,6 +275,7 @@ module mkBench(Bench);
     mkConnection(v1p2_rail.pins, dut.nic_pins.v1p2);
     mkConnection(v1p1_rail.pins, dut.nic_pins.v1p1);
     mkConnection(v0p9_a0hp_rail.pins, dut.nic_pins.v0p9_a0hp);
+    mkConnection(sp3_to_seq_nic_perst_l, dut.nic_pins.sp3_to_seq_nic_perst_l);
 
             // method nic_to_seq_ext_rst_l = nic_to_seq_ext_rst_l._write;
             // method sp3_to_seq_nic_perst_l = sp3_to_seq_nic_perst_l._write;
@@ -366,7 +368,13 @@ module mkGimletTopTest(Empty);
         action
              $display("Design Up");
         endaction
-       
+        // Enable A1+A0 (now interlocked), sunny day case
+        spiWrite(nicCtrlOffset, 0,  bench.bfm);
+        action
+            $display("A0HP");
+        endaction
+        spiReadUntil(read_byte, outStatusNic2Offset, 'h22,  bench.bfm);
+        delay(30);
     endseq
     );
 
