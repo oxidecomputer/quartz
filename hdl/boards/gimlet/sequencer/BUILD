@@ -251,7 +251,7 @@ bluespec_verilog('pwr_seq_verilog',
         'bsc_flags': ['-suppress-warnings', 'G0046']
     }
     )
-yosys_design('gimlet_power_seq_yosys',
+yosys_design('gimlet_sdle_yosys',
     top_module = 'mkGimletPowerSeqTop',
     sources = [
         ':pwr_seq_verilog#mkGimletPowerSeqTop',
@@ -261,9 +261,9 @@ yosys_design('gimlet_power_seq_yosys',
         ':pwr_seq_verilog',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
-nextpnr_ice40_bitstream('gimlet_power_seq',
+nextpnr_ice40_bitstream('gimlet_sdle_only',
     env = 'gimlet_sequencer',
-    design = ':gimlet_power_seq_yosys#gimlet_power_seq_yosys.json',
+    design = ':gimlet_sdle_yosys#gimlet_sdle_yosys.json',
     deps = [
-        ':gimlet_power_seq_yosys',
+        ':gimlet_sdle_yosys',
     ])
