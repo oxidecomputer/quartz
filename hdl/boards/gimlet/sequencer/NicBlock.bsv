@@ -23,7 +23,7 @@ import PowerRail::*;
         method Action perst_override(Bool value);
         method Action perst_solo(Bool value);
         method Bool ok();
-        method NicStateType state();
+        method NicsmstatusNicsm state();
         method NicStatus pgs;
         method NicOutput1Type nic_ens;
         method NicOutput2Type nic_outs;
@@ -39,7 +39,7 @@ import PowerRail::*;
         method Bool perst_override;
         method Bool perst_solo;
         method Action ok(Bool value);
-        method Action state(NicStateType value);
+        method Action state(NicsmstatusNicsm value);
         method Action pgs (NicStatus value);
         method Action nic_ens (NicOutput1Type value);
         method Action nic_outs (NicOutput2Type value);
@@ -87,21 +87,20 @@ import PowerRail::*;
         interface NicRegs reg_if;
     endinterface
 
-    typedef enum {
-        IDLE = 'h00,
-        DELAY0 = 'h01,
-        STAGE0 = 'h02,
-        STAGE0_PG = 'h03,
-        DELAY = 'h04,
-        DONE = 'h05
+    // typedef enum {
+    //     IDLE = 'h00,
+    //     STAGE0 = 'h01,
+    //     STAGE0_PG = 'h02,
+    //     DELAY = 'h03,
+    //     DONE = 'h04
 
-    } NicStateType deriving (Eq, Bits);
+    // } NicStateType deriving (Eq, Bits);
 
     module mkNicBlockSeq#(Integer one_ms_counts)(NicBlockTop);
         Integer ten_ms = 10 * one_ms_counts;
         Integer thirty_ms = 30 * one_ms_counts;
         Integer cld_rst_to_perst_delay = ten_ms;
-        Reg#(NicStateType) state <- mkReg(IDLE);
+        Reg#(NicsmstatusNicsm) state <- mkReg(IDLE);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_perst_l <- mkReg(0);
         Reg#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkReg(0);
@@ -138,24 +137,21 @@ import PowerRail::*;
         Vector#(7, PowerRail) power_rails =
             vec(ldo_v3p3, v1p5a, v1p5d, v1p2_enet, v1p2, v1p1, v0p9_a0hp);
 
-        function Action enable_rails(Vector#(n, PowerRail) rails, NicStateType step) =
+        function Action enable_rails(Vector#(n, PowerRail) rails) =
         action
-            state <= step;
             for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
                 rails[i].set_enabled(True);
         endaction;
 
-        function Action disable_rails(Vector#(n, PowerRail) rails, NicStateType step) =
+        function Action disable_rails(Vector#(n, PowerRail) rails) =
                 action
-                    state <= step;
                     for (int i = 0; i < fromInteger(valueof(n)); i=i+1)
                         rails[i].set_enabled(False);
                 endaction;
 
-        function Stmt delay(Integer d, NicStateType step) =
+        function Stmt delay(Integer d) =
             seq
                 action
-                    state <= step;
                     ticks_count_next.wset(fromInteger(d + 1));
                 endaction
                 await(ticks_count == 0);
@@ -180,24 +176,45 @@ import PowerRail::*;
             ticks_count <= satMinus(Sat_Zero, ticks_count, 1);
         endrule
 
-        FSM nic_power_up_seq <- mkFSMWithPred(seq
-            // Enable all the rails
-            await(upstream_ok);
-            enable_rails(power_rails, STAGE0);
-            action
-                state <= STAGE0_PG;
-            endaction
-            await(aggregate_pg);
-
-            delay(thirty_ms, DELAY);
-            action
-                state <= DONE;
-            endaction
-        endseq, enable && !faulted && !abort);
-
-        FSM nic_power_dwn_seq <- mkFSMWithPred(seq
-            disable_rails(power_rails, IDLE);
-        endseq, !enable || faulted || abort);
+        (* fire_when_enabled, no_implicit_conditions *)
+        rule do_sm;
+            if (!faulted) begin
+                case (state)
+                    IDLE: begin
+                        // We're enabled, and our upstream is ok, enable the rails
+                        if (enable && upstream_ok) begin
+                            state <= STAGE0;
+                            enable_rails(power_rails);
+                        end else begin
+                            disable_rails(power_rails);
+                        end
+                    end
+                    STAGE0: begin  // rails enabled, check for PG
+                        if (!enable) begin
+                            state <= IDLE;
+                        end else if (aggregate_pg) begin
+                            state <= DELAY;  // Need 30ms delay before asserting comb_pg
+                            ticks_count_next.wset(fromInteger(thirty_ms + 1));
+                        end
+                    end
+                    DELAY: begin
+                        if (!enable) begin
+                            state <= IDLE;
+                        end else if (ticks_count == 0) begin
+                            state <= DONE;
+                        end
+                    end
+                    DONE: begin
+                        if (!enable) begin
+                            state <= IDLE;
+                        end
+                    end
+                endcase
+            end else if (faulted) begin
+                disable_rails(power_rails);
+                state <= IDLE;
+            end
+        endrule
 
          (* fire_when_enabled *)
         rule do_pg_aggregation;
@@ -244,27 +261,7 @@ import PowerRail::*;
         endrule
 
         (* fire_when_enabled *)
-        rule do_enable;
-            // enable_last <= enable;
-            if (faulted) begin
-                // We do a standard power-down in the fault case
-                // regardless of the rest of the system state.
-                nic_power_dwn_seq.start();
-            end else if (enable && state == IDLE) begin
-                // We only want to start this on a rising edge of
-                // the enable, meaning to re-start you need to
-                // clear the enable.
-                nic_power_up_seq.start();
-            end else if (!enable && state != IDLE) begin
-                // Even if we clear the enable, we can't start the
-                // power-down until the down-stream logic has finished
-                // powering off.
-                nic_power_dwn_seq.start();
-            end
-        endrule
-
-        (* fire_when_enabled *)
-        rule do_faulted_flag;
+        rule do_mapo_fault;
             if (aggregate_fault) begin
                 faulted <= aggregate_fault;
             end else if (!enable) begin
@@ -355,7 +352,7 @@ import PowerRail::*;
         method Action sp3_assert_perst();
         method Action sp3_deassert_perst();
         method Action a0_ok(Bool value);
-        method NicStateType state();
+        method NicsmstatusNicsm state();
         method Bit#(1) seq_to_nic_cld_rst_l();
         method Bit#(1) seq_to_nic_perst_l();
         method Bit#(1) nic_to_sp3_pwrflt_l();
@@ -417,7 +414,7 @@ import PowerRail::*;
         method Action a0_ok(Bool value);
             upstream_ok <= value;
         endmethod
-        method NicStateType state();
+        method NicsmstatusNicsm state();
             return dut.reg_if.state;
         endmethod
         method seq_to_nic_cld_rst_l = dut.pins.seq_to_nic_cld_rst_l;
@@ -450,7 +447,7 @@ import PowerRail::*;
             dynamicAssert(bench.seq_to_nic_perst_l == 0, "Expected perst asserted due to SP3");
             dynamicAssert(bench.nic_ok, "Expected Nic on");
             bench.sp3_deassert_perst();
-            delay(5);
+            delay(200);
             dynamicAssert(bench.seq_to_nic_perst_l == 1, "Expected perst now deasserted");
             delay(200);
         endseq);

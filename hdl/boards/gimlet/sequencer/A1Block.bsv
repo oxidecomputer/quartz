@@ -105,24 +105,21 @@ import PowerRail::*;
             vec(sp3_v3p3_s5, sp3_v1p5_rtc, sp3_v0p9_s5, sp3_v1p8_s5);
 
 
-        function Action enable_rails(Vector#(4, PowerRail) rails, A1smstatusA1sm step) =
+        function Action enable_rails(Vector#(4, PowerRail) rails) =
             action
-                state <= step;
                 for (int i = 0; i < 4; i=i+1)
                     rails[i].set_enabled(True);
             endaction;
 
-        function Action disable_rails(Vector#(4, PowerRail) rails, A1smstatusA1sm step) =
+        function Action disable_rails(Vector#(4, PowerRail) rails) =
             action
-                state <= step;
                 for (int i = 0; i < 4; i=i+1)
                     rails[i].set_enabled(False);
             endaction;
 
-        function Stmt delay(Integer d, A1smstatusA1sm step) =
+        function Stmt delay(Integer d) =
             seq
                 action
-                    state <= step;
                     ticks_count_next.wset(fromInteger(d + 1));
                 endaction
                 await(ticks_count == 0);
@@ -174,71 +171,50 @@ import PowerRail::*;
             aggregate_fault <= foldr(bool_or, False, map(PowerRail::fault, power_rails));
         endrule
 
-        FSM a1_power_up_seq <- mkFSMWithPred(seq
-            // Enable all the rails
-            enable_rails(power_rails, ENABLE);
-            // Wait for all rails ok, no faults
-            action
-                state <= WAITPG;
-            endaction
-            await(aggregate_pg && !aggregate_fault);
-            // Wait for RSM_DELAY
-            delay(rsm_delay, DELAY);
-            // De-assert rsm_rst_l
-            action
-                state <= DONE;
-                ok <= True;
-                sp3_rsmrst_v3p3_l_ <= 1;
-            endaction
-
-        endseq, enable && !faulted && !abort);
-
-        FSM a1_power_down_seq <- mkFSMWithPred(seq
-            action
-                sp3_rsmrst_v3p3_l_ <= 0;
-                ok <= False;
-            endaction
-            disable_rails(power_rails, IDLE);
-            action
+        (* fire_when_enabled, no_implicit_conditions *)
+        rule do_sm;
+            if (!faulted) begin
+                case (state)
+                    IDLE: begin
+                        if (enable) begin
+                            state <= WAITPG;
+                            enable_rails(power_rails);
+                            sp3_rsmrst_v3p3_l_ <= 0;
+                        end else if (downstream_idle) begin
+                            disable_rails(power_rails);
+                            sp3_rsmrst_v3p3_l_ <= 0;
+                        end
+                    end
+                    WAITPG: begin
+                        if (!enable) begin
+                           state <= IDLE;
+                        end else if (aggregate_pg) begin
+                            state <= DELAY;
+                            ticks_count_next.wset(fromInteger(rsm_delay + 1));
+                        end
+                    end
+                    DELAY: begin
+                        if (!enable) begin
+                            state <= IDLE;
+                        end else if (ticks_count == 0) begin
+                            state <= DONE;
+                            sp3_rsmrst_v3p3_l_ <= 1;
+                        end
+                    end
+                endcase
+            end else if (faulted) begin
+                disable_rails(power_rails);
                 state <= IDLE;
-            endaction
-        endseq, !enable || faulted);
-
-         (* fire_when_enabled *)
-        rule do_abort;
-            if  (pack(state) > 2 && !faulted) begin
-                abort <= !aggregate_pg || aggregate_fault;
-            end else begin
-                abort <= False;
+                sp3_rsmrst_v3p3_l_ <= 0;
             end
         endrule
 
         (* fire_when_enabled *)
-        rule do_faulted_flag;
-            if (abort) begin
-                faulted <= abort;
+        rule do_fault_mon;
+            if (aggregate_fault) begin
+                faulted <= True;
             end else if (!enable) begin
                 faulted <= False;
-            end
-        endrule
-
-        (* fire_when_enabled *)
-        rule do_enable;
-            enable_last <= enable;
-            if (faulted) begin
-                // We do a standard power-down in the fault case
-                // regardless of the rest of the system state.
-                a1_power_down_seq.start();
-            end else if (!enable_last && enable) begin
-                // We only want to start this on a rising edge of
-                // the enable, meaning to re-start you need to
-                // clear the enable.
-                a1_power_up_seq.start();
-            end else if (!enable && state != IDLE && downstream_idle) begin
-                // Even if we clear the enable, we can't start the
-                // power-down until the down-stream logic has finished
-                // powering off.
-                a1_power_down_seq.start();
             end
         endrule
 
@@ -250,7 +226,9 @@ import PowerRail::*;
             method seq_to_sp3_rsmrst_v3p3_l = sp3_rsmrst_v3p3_l_;
         endinterface
 
-        method a1_ok = ok;
+        method Bool a1_ok;
+            return state == DONE;
+        endmethod
         method a0_idle = downstream_idle._write;
 
         interface A1Regs reg_if;

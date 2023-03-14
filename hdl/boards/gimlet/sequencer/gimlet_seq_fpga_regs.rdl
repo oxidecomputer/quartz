@@ -264,8 +264,16 @@ addrmap gimlet_seq_fpga {
         desc = "Nic 'live' state machine status";
         default sw = r;
 
+        enum nic_state_machine {
+            IDLE = 8'h00 {desc = "";};
+            STAGE0 = 8'h01 {desc = "";};
+            STAGE0_PG = 8'h02 {desc = "";};
+            DELAY = 8'h03 {desc = "";};
+            DONE = 8'h04 {desc = "";};
+         };
         field {
-            desc = "TBD";
+            desc = "Nic SM Status";
+            encode = nic_state_machine;
         } NicSM[7:0];
         // TODO: A1 state machine decode in here
     } NICSMSTATUS;
