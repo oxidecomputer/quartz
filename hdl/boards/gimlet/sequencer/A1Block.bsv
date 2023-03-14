@@ -181,6 +181,8 @@ import PowerRail::*;
                             enable_rails(power_rails);
                             sp3_rsmrst_v3p3_l_ <= 0;
                         end else if (downstream_idle) begin
+                            // wait here for downstream stuff to finish up
+                            // then shut down
                             disable_rails(power_rails);
                             sp3_rsmrst_v3p3_l_ <= 0;
                         end
@@ -199,6 +201,11 @@ import PowerRail::*;
                         end else if (ticks_count == 0) begin
                             state <= DONE;
                             sp3_rsmrst_v3p3_l_ <= 1;
+                        end
+                    end
+                    DONE: begin
+                        if (!enable)  begin
+                            state <= IDLE;
                         end
                     end
                 endcase
