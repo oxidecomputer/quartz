@@ -103,6 +103,7 @@ import PowerRail::*;
         Reg#(NicsmstatusNicsm) state <- mkReg(IDLE);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_perst_l <- mkReg(0);
+        Reg#(Bit#(1)) seq_to_nic_cld_rst_l_nxt <- mkReg(0);
         Reg#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_comb_pg_l <- mkReg(1);
         Reg#(Bool) upstream_ok <- mkReg(False);
@@ -120,6 +121,8 @@ import PowerRail::*;
         Wire#(Bool) perst_override <- mkDWire(False);
         Wire#(Bool) perst_solo <- mkDWire(False);
         Wire#(Bool) sw_reset <- mkDWire(False);
+
+        Reg#(Vector#(7, Bit#(1))) cldrst_delay <- mkReg(replicate(0));
 
         Reg#(UInt#(24)) ticks_count <- mkReg(0);
         RWire#(UInt#(24)) ticks_count_next <- mkRWire();
@@ -246,8 +249,15 @@ import PowerRail::*;
         endrule
 
         (* fire_when_enabled *)
+        rule do_perst_delay;
+            cldrst_delay <= shiftInAtN(cldrst_delay, seq_to_nic_cld_rst_l_nxt);
+
+            seq_to_nic_cld_rst_l <= cldrst_delay[0];
+        endrule
+
+        (* fire_when_enabled *)
         rule do_outputs;
-            seq_to_nic_cld_rst_l <= pack(state == DONE && !cld_rst_override && !sw_reset);
+            seq_to_nic_cld_rst_l_nxt <= pack(state == DONE && !cld_rst_override && !sw_reset);
             // If we're 'soloing' the PERST we want to ignore the SP3 completely and just use the register
             // and statemachine. Otherwise we allow setting it via the register assuming SP3 is out of the
             // picture
