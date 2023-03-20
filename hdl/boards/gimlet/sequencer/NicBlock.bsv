@@ -100,14 +100,20 @@ import PowerRail::*;
         Integer ten_ms = 10 * one_ms_counts;
         Integer thirty_ms = 30 * one_ms_counts;
         Integer cld_rst_to_perst_delay = ten_ms;
+        Integer early_rest_time = 550 * one_ms_counts;
+        Integer cld_rst_early_rel = early_rest_time - (2 * ten_ms);
+        Integer perst_early_rel = cld_rst_early_rel - thirty_ms;
+
         Reg#(NicsmstatusNicsm) state <- mkReg(IDLE);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_perst_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l_nxt <- mkReg(0);
         Reg#(Bit#(1)) nic_to_sp3_pwrflt_l <- mkReg(0);
         Reg#(Bit#(1)) seq_to_nic_comb_pg_l <- mkReg(1);
+        Reg#(Bit#(1)) nic_cld_rst_l_sm <- mkReg(0);
+        Reg#(Bit#(1)) nic_perst_l_sm <- mkReg(0);
         Reg#(Bool) upstream_ok <- mkReg(False);
-        Reg#(UInt#(24)) cld_rst_delay_cnts <- mkReg(0);
+        Reg#(UInt#(25)) cld_rst_delay_cnts <- mkReg(0);
         Reg#(Bool) enable <- mkReg(False);
         Reg#(Bool) faulted <- mkReg(False);
         Reg#(Bool) abort <- mkReg(False);
@@ -124,8 +130,8 @@ import PowerRail::*;
 
         Reg#(Vector#(7, Bit#(1))) cldrst_delay <- mkReg(replicate(0));
 
-        Reg#(UInt#(24)) ticks_count <- mkReg(0);
-        RWire#(UInt#(24)) ticks_count_next <- mkRWire();
+        Reg#(UInt#(25)) ticks_count <- mkReg(0);
+        RWire#(UInt#(25)) ticks_count_next <- mkRWire();
 
         ConfigReg#(NicStatus) nic_pg <- mkConfigRegU();
 
@@ -185,29 +191,50 @@ import PowerRail::*;
                 case (state)
                     IDLE: begin
                         // We're enabled, and our upstream is ok, enable the rails
+                        nic_perst_l_sm <= 0;
+                        nic_cld_rst_l_sm <= 0;
                         if (enable && upstream_ok) begin
-                            state <= STAGE0;
+                            state <= PS_PG;
                             enable_rails(power_rails);
                         end else begin
                             disable_rails(power_rails);
                         end
                     end
-                    STAGE0: begin  // rails enabled, check for PG
+                    PS_PG: begin  // rails enabled, check for PG
                         if (!enable) begin
                             state <= IDLE;
                         end else if (aggregate_pg) begin
-                            state <= DELAY;  // Need 30ms delay before asserting comb_pg
+                            state <= PG_DELAY;  // Need 30ms delay before asserting comb_pg
                             ticks_count_next.wset(fromInteger(thirty_ms + 1));
                         end
                     end
-                    DELAY: begin
+                    PG_DELAY: begin
                         if (!enable) begin
                             state <= IDLE;
                         end else if (ticks_count == 0) begin
-                            state <= DONE;
+                            state <= EARLY_RESET;
+                            ticks_count_next.wset(fromInteger(early_rest_time + 1));
+                        end
+                    end
+                    EARLY_RESET: begin
+                        if (!enable) begin
+                            state <= IDLE;
+                        end else begin
+                            if (ticks_count == fromInteger(cld_rst_early_rel)) begin
+                                nic_cld_rst_l_sm <= 1;
+                            end
+                            if (ticks_count == fromInteger(perst_early_rel)) begin
+                                nic_perst_l_sm <= 1;
+                            end 
+
+                            if (ticks_count == 0) begin
+                                state <= DONE;
+                            end
                         end
                     end
                     DONE: begin
+                        nic_perst_l_sm <= 1;
+                        nic_cld_rst_l_sm <= 1;
                         if (!enable) begin
                             state <= IDLE;
                         end
@@ -257,17 +284,23 @@ import PowerRail::*;
 
         (* fire_when_enabled *)
         rule do_outputs;
-            seq_to_nic_cld_rst_l_nxt <= pack(state == DONE && !cld_rst_override && !sw_reset);
+            if (state != DONE) begin
+                seq_to_nic_cld_rst_l_nxt <= nic_cld_rst_l_sm;
+            end else begin
+                seq_to_nic_cld_rst_l_nxt <= pack(!cld_rst_override && !sw_reset);
+            end
             // If we're 'soloing' the PERST we want to ignore the SP3 completely and just use the register
             // and statemachine. Otherwise we allow setting it via the register assuming SP3 is out of the
             // picture
             if (perst_solo) begin
                 seq_to_nic_perst_l <= pack(state == DONE && !perst_override);
+            end else if (state != DONE) begin
+                seq_to_nic_perst_l <= nic_perst_l_sm;
             end else begin
-                seq_to_nic_perst_l <= pack(state == DONE && sp3_to_seq_nic_perst_l == 1 && perst_can_deassert && !perst_override && !sw_reset);
+                seq_to_nic_perst_l <= pack(sp3_to_seq_nic_perst_l == 1 && perst_can_deassert && !perst_override && !sw_reset);
             end
             nic_to_sp3_pwrflt_l <= 1;
-            seq_to_nic_comb_pg_l <= pack(state != DELAY && state != DONE);
+            seq_to_nic_comb_pg_l <= ~pack(state != IDLE && state != PS_PG);
         endrule
 
         (* fire_when_enabled *)
