@@ -100,9 +100,9 @@ import PowerRail::*;
         Integer ten_ms = 10 * one_ms_counts;
         Integer thirty_ms = 30 * one_ms_counts;
         Integer cld_rst_to_perst_delay = ten_ms;
-        Integer early_rest_time = 550 * one_ms_counts;
+        Integer early_rest_time = 80 * one_ms_counts;
         Integer cld_rst_early_rel = early_rest_time - (2 * ten_ms);
-        Integer perst_early_rel = cld_rst_early_rel - thirty_ms;
+        Integer perst_early_rel = cld_rst_early_rel - (2 * ten_ms);
 
         Reg#(NicsmstatusNicsm) state <- mkReg(IDLE);
         Reg#(Bit#(1)) seq_to_nic_cld_rst_l <- mkReg(0);
