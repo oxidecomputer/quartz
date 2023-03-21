@@ -266,9 +266,9 @@ addrmap gimlet_seq_fpga {
 
         enum nic_state_machine {
             IDLE = 8'h00 {desc = "";};
-            STAGE0 = 8'h01 {desc = "";};
-            STAGE0_PG = 8'h02 {desc = "";};
-            DELAY = 8'h03 {desc = "";};
+            PS_PG = 8'h01 {desc = "";};
+            PG_DELAY = 8'h02 {desc = "";};
+            EARLY_RESET = 8'h03 {desc = "";};
             DONE = 8'h04 {desc = "";};
          };
         field {
@@ -278,11 +278,11 @@ addrmap gimlet_seq_fpga {
         // TODO: A1 state machine decode in here
     } NICSMSTATUS;
     reg {
-        name = "Board Rev straps";
-        desc = "3 bits of board revision based on input straps";
+        name = "Board Ver straps";
+        desc = "3 bits of board version based on input straps";
         default sw = r;
         field {
-            desc = "0x7 or 0x0 = RevA. 0x1 = RevB";
+            desc = "0x7 or 0x0 = A. 0x1 = B, 0x2 = C, 0x3 = D, 0x4 = E";
         } ID[2:0];
     } BOARD_REV;
     // Readback blocks:
@@ -653,10 +653,10 @@ addrmap gimlet_seq_fpga {
             desc = "Alert SP3 of a NIC power fault (NIC_TO_SP3_PWRFLT_L inverted net)";
         } PWRFLT[1] = 0;
         field {
-            desc = "RevB-only PERST outptut (PERST_L inverted net)";
+            desc = "PERST outptut (PERST_L inverted net)";
         } NIC_PERST[1] = 0;
         field {
-            desc = "RevB-only nic ext rst output  ( inverted net)";
+            desc = "NIC's EXT_RST_L output (inverted).  Active when NIC internals in reset";
         } NIC_EXT_RST[1] = 0;
     };
 
