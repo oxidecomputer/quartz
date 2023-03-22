@@ -168,7 +168,7 @@ LOCATE COMP "i2c_fpga_to_tf_sda" SITE "C19";
 LOCATE COMP "i2c_fpga_to_tf_sda_o_r" SITE "A14";
 IOBUF PORT "i2c_fpga_to_tf_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
 IOBUF PORT "i2c_fpga_to_tf_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
-IOBUF PORT "i2c_fpga_to_tf_sda_o_r" PULLMODE=NONE IO_TYPE=LVCMOS18;
+IOBUF PORT "i2c_fpga_to_tf_sda_o_r" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
 
 // misc
 LOCATE COMP "tf_pg_led" SITE "A13";
@@ -203,8 +203,6 @@ LOCATE COMP "fpga_to_tf_test_jtsel[1]" SITE "E21";
 IOBUF PORT "fpga_to_tf_test_jtsel[1]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_spi_wp_l" SITE "A18";
 IOBUF PORT "fpga_to_tf_spi_wp_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
-
-// I2C (unwired)
 
 // PCIe
 LOCATE COMP "pcie_fpga_to_host_prsnt_l" SITE "A2";
@@ -389,9 +387,11 @@ LOCATE COMP "s9_rsw_aux_p" SITE "M21";
 IOBUF PORT "ignition_ctrl_to_psc0_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "ignition_ctrl_to_psc1_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "ignition_ctrl_to_rsw_b_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
+IOBUF PORT "ignition_ctrl_to_self_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "ignition_psc0_to_ctrl_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
 IOBUF PORT "ignition_psc1_to_ctrl_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
 IOBUF PORT "ignition_rsw_b_to_ctrl_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
+IOBUF PORT "ignition_target_to_self_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
 IOBUF PORT "rsw_s0_aux_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "rsw_s1_aux_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "rsw_s10_aux_dc_p" PULLMODE=NONE IO_TYPE=LVDS;

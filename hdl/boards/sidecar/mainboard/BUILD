@@ -98,17 +98,17 @@ bluespec_library('SidecarMainboardControllerTop',
 bluespec_verilog('mkSidecarMainboardControllerTop',
     top = 'SidecarMainboardControllerTop.bsv',
     modules = [
-        'mkSidecarMainboardControllerRevA',
-        'mkSidecarMainboardControllerRevB',
+        'mkSidecarMainboardControllerTop',
+        'mkSidecarMainboardControllerTopRevB',
     ],
     deps = [
         ':SidecarMainboardControllerTop',
     ])
 
-yosys_design('sidecar_mainboard_controller_top_rev_a',
-    top_module = 'mkSidecarMainboardControllerRevA',
+yosys_design('sidecar_mainboard_controller_top',
+    top_module = 'mkSidecarMainboardControllerTop',
     sources = [
-        ':mkSidecarMainboardControllerTop#mkSidecarMainboardControllerRevA',
+        ':mkSidecarMainboardControllerTop#mkSidecarMainboardControllerTop',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
@@ -116,23 +116,18 @@ yosys_design('sidecar_mainboard_controller_top_rev_a',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_a',
+
+nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_c',
     env = 'sidecar_mainboard_controller',
-    design = ':sidecar_mainboard_controller_top_rev_a#sidecar_mainboard_controller_top_rev_a.json',
+    design = ':sidecar_mainboard_controller_top#sidecar_mainboard_controller_top.json',
     deps = [
-        ':sidecar_mainboard_controller_top_rev_a',
-    ],
-    local = {
-        'nextpnr_constraints': ROOT + '/hdl/boards/sidecar/mainboard/sidecar_mainboard_controller_rev_a.lpf',
-        'nextpnr_ecp5_flags': [
-            '--um-45k',
-        ],
-    })
+        ':sidecar_mainboard_controller_top',
+    ])
 
 yosys_design('sidecar_mainboard_controller_top_rev_b',
-    top_module = 'mkSidecarMainboardControllerRevB',
+    top_module = 'mkSidecarMainboardControllerTopRevB',
     sources = [
-        ':mkSidecarMainboardControllerTop#mkSidecarMainboardControllerRevB',
+        ':mkSidecarMainboardControllerTop#mkSidecarMainboardControllerTopRevB',
         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
