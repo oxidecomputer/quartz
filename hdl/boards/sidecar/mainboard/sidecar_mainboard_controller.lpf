@@ -1,5 +1,5 @@
 // 50 MHz clock
-LOCATE COMP "clk_50m_fpga_refclk" SITE "B11";
+LOCATE COMP "clk_50m_fpga_refclk" SITE "E11";
 FREQUENCY PORT "clk_50m_fpga_refclk" 50 MHZ;
 IOBUF PORT "clk_50m_fpga_refclk" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
@@ -48,6 +48,15 @@ IOBUF PORT "ldo_to_fpga_v2p5_mgmt_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "mgmt_to_fpga_temp_therm_l" SITE "E6";
 IOBUF PORT "mgmt_to_fpga_temp_therm_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
+LOCATE COMP "fpga_to_ldo_phy4_en" SITE "D9";
+IOBUF PORT "fpga_to_ldo_phy4_en" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
+LOCATE COMP "ldo_to_fpga_v1p0_phy4_pg" SITE "B19";
+IOBUF PORT "ldo_to_fpga_v1p0_phy4_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "ldo_to_fpga_v2p5_phy4_pg" SITE "A14";
+IOBUF PORT "ldo_to_fpga_v2p5_phy4_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
+LOCATE COMP "fpga_to_phy4_reset_l" SITE "J4";
+IOBUF PORT "fpga_to_phy4_reset_l" PULLMODE=NONE IO_TYPE=LVCMOS25;
+
 // Fans
 LOCATE COMP "fpga_to_fan1_led_l" SITE "A8";
 IOBUF PORT "fpga_to_fan1_led_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
@@ -85,7 +94,7 @@ LOCATE COMP "fpga_led0" SITE "AB3";
 IOBUF PORT "fpga_led0" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_debug0" SITE "D11";
 IOBUF PORT "fpga_debug0" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_debug1" SITE "E11";
+LOCATE COMP "fpga_debug1" SITE "B11";
 IOBUF PORT "fpga_debug1" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
 // SP
@@ -93,16 +102,6 @@ LOCATE COMP "i2c_south1_sda" SITE "C9";
 IOBUF PORT "i2c_south1_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "i2c_south1_scl" SITE "D8";
 IOBUF PORT "i2c_south1_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
-LOCATE COMP "i2c_south1_sda_o_r" SITE "D9";
-IOBUF PORT "i2c_south1_sda_o_r" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
-
-// SP IRQ
-LOCATE COMP "fpga_to_sp_irq1_r" SITE "AB1";
-IOBUF PORT "fpga_to_sp_irq1_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_sp_irq0_r" SITE "AC1";
-IOBUF PORT "fpga_to_sp_irq0_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_sp_irq2_r" SITE "AE1";
-IOBUF PORT "fpga_to_sp_irq2_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
 // Tofino
 
@@ -171,10 +170,8 @@ IOBUF PORT "vr_tf_v1p8_to_fpga_vdda1p8_pg" PULLMODE=NONE IO_TYPE=LVCMOS18;
 // Debug port
 LOCATE COMP "i2c_fpga_to_tf_scl" SITE "A15";
 LOCATE COMP "i2c_fpga_to_tf_sda" SITE "C19";
-LOCATE COMP "i2c_fpga_to_tf_sda_o_r" SITE "A14";
 IOBUF PORT "i2c_fpga_to_tf_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
 IOBUF PORT "i2c_fpga_to_tf_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS18;
-IOBUF PORT "i2c_fpga_to_tf_sda_o_r" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
 // misc
 LOCATE COMP "tf_pg_led" SITE "A13";
@@ -210,8 +207,6 @@ IOBUF PORT "fpga_to_tf_test_jtsel[1]" PULLMODE=NONE IO_TYPE=LVCMOS18;
 LOCATE COMP "fpga_to_tf_spi_wp_l" SITE "A18";
 IOBUF PORT "fpga_to_tf_spi_wp_l" PULLMODE=NONE IO_TYPE=LVCMOS18;
 
-// I2C (unwired)
-
 // PCIe
 LOCATE COMP "pcie_fpga_to_host_prsnt_l" SITE "A2";
 IOBUF PORT "pcie_fpga_to_host_prsnt_l" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
@@ -226,6 +221,31 @@ IOBUF PORT "pcie_host_to_fpga_perst" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_pwren" SITE "D5";
 IOBUF PORT "pcie_host_to_fpga_pwren" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
+// TODO: wire these into Top
+
+LOCATE COMP "fpga_to_sp_irq1_r" SITE "AB1";
+IOBUF PORT "fpga_to_sp_irq1_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "sp_to_fpga_program_l" SITE "AB4";
+IOBUF PORT "sp_to_fpga_program_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_jtag_tdi" SITE "AB5";
+IOBUF PORT "fpga_jtag_tdi" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_irq0_r" SITE "AC1";
+IOBUF PORT "fpga_to_sp_irq0_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_to_fpga_cs1_l" SITE "AC2";
+IOBUF PORT "spi_sp_to_fpga_cs1_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_done" SITE "AC4";
+IOBUF PORT "fpga_to_sp_done" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_jtag_tdo" SITE "AC5";
+IOBUF PORT "fpga_jtag_tdo" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_jtag_tck" SITE "AD5";
+IOBUF PORT "fpga_jtag_tck" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_irq2_r" SITE "AE1";
+IOBUF PORT "fpga_to_sp_irq2_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_jtag_tms" SITE "AE5";
+IOBUF PORT "fpga_jtag_tms" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "sp_to_fpga_init_l" SITE "AF3";
+IOBUF PORT "sp_to_fpga_init_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
 // Ignition
 LOCATE COMP "ignition_ctrl_to_psc0_dc_n" SITE "C1";
 LOCATE COMP "ignition_ctrl_to_psc0_dc_p" SITE "C2";
@@ -233,12 +253,16 @@ LOCATE COMP "ignition_ctrl_to_psc1_dc_n" SITE "D3";
 LOCATE COMP "ignition_ctrl_to_psc1_dc_p" SITE "D4";
 LOCATE COMP "ignition_ctrl_to_rsw_b_dc_n" SITE "E1";
 LOCATE COMP "ignition_ctrl_to_rsw_b_dc_p" SITE "D2";
+LOCATE COMP "ignition_ctrl_to_self_dc_n" SITE "L4";
+LOCATE COMP "ignition_ctrl_to_self_dc_p" SITE "K4";
 LOCATE COMP "ignition_psc0_to_ctrl_n" SITE "C3";
 LOCATE COMP "ignition_psc0_to_ctrl_p" SITE "C4";
 LOCATE COMP "ignition_psc1_to_ctrl_n" SITE "B3";
 LOCATE COMP "ignition_psc1_to_ctrl_p" SITE "B1";
 LOCATE COMP "ignition_rsw_b_to_ctrl_n" SITE "D1";
 LOCATE COMP "ignition_rsw_b_to_ctrl_p" SITE "E3";
+LOCATE COMP "ignition_target_to_self_n" SITE "N5";
+LOCATE COMP "ignition_target_to_self_p" SITE "N6";
 LOCATE COMP "rsw_s0_aux_dc_n" SITE "V21";
 LOCATE COMP "rsw_s0_aux_dc_p" SITE "W23";
 LOCATE COMP "rsw_s1_aux_dc_n" SITE "U22";
@@ -370,9 +394,11 @@ LOCATE COMP "s9_rsw_aux_p" SITE "M21";
 IOBUF PORT "ignition_ctrl_to_psc0_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "ignition_ctrl_to_psc1_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "ignition_ctrl_to_rsw_b_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
+IOBUF PORT "ignition_ctrl_to_self_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "ignition_psc0_to_ctrl_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
 IOBUF PORT "ignition_psc1_to_ctrl_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
 IOBUF PORT "ignition_rsw_b_to_ctrl_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
+IOBUF PORT "ignition_target_to_self_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
 IOBUF PORT "rsw_s0_aux_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "rsw_s1_aux_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
 IOBUF PORT "rsw_s10_aux_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
