@@ -133,7 +133,7 @@ addrmap qsfp_modules_top {
 
     reg port_control {
         field {
-            desc ="Setting this bit will clear a fault state. This bit auto-clears.";
+            desc ="Setting this bit will clear a fault state. Note that if the power supply is not Aborted or TimedOut, nothing will happen. This bit auto-clears.";
         } CLEAR_FAULT[0:0] = 0;
     };
 
