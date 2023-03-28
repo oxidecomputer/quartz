@@ -218,7 +218,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Clear a hot swap controller fault
     (* fire_when_enabled *)
-    rule do_fault_clear (clear_fault);
+    rule do_fault_clear (clear_fault && (hot_swap.timed_out() || hot_swap.aborted()));
         hot_swap.clear();
     endrule
 
