@@ -30,7 +30,8 @@ QsfpModuleController::Parameters qsfp_test_params =
     QsfpModuleController::Parameters {
         system_frequency_hz: i2c_test_params.core_clk_freq,
         i2c_frequency_hz: i2c_test_params.scl_freq,
-        power_good_timeout_ms: 10
+        power_good_timeout_ms: 10,
+        t_init_ms: 20 // normally 2000, but sped up for simulation
     };
 
 // Helper function to unpack the Value from an ActionValue and do an assertion.
@@ -66,6 +67,12 @@ interface Bench;
     method Bool hsc_en;
     method Bool hsc_pg_timeout;
     method Bool hsc_pg_lost;
+
+    // Control of ModResetL
+    method Action set_resetl(Bit#(1) v);
+
+    // Expose if the module has been initialized or not
+    method Bool module_initialized;
 endinterface
 
 module mkBench (Bench);
@@ -78,6 +85,10 @@ module mkBench (Bench);
     Reg#(Bit#(1)) modprsl_r <- mkReg(1);
     mkConnection(controller.pins.intl, intl_r);
     mkConnection(controller.pins.modprsl, modprsl_r);
+
+    // Some registers for setting outputs
+    Reg#(Bit#(1)) resetl_r   <- mkReg(0); // 0 as it is pulled down on board
+    mkConnection(controller.resetl, resetl_r);
 
     // Hot swap
     Reg#(Bit#(1)) power_en_r  <- mkReg(1);
@@ -121,42 +132,48 @@ module mkBench (Bench);
         fifo_idx    <= fifo_idx + 1;
     endrule
 
-    // An FSM to execute an I2C write transaction to a module
+    // An FSM to execute an I2C write transaction to a module. The controller
+    // should ignore the command if the module has not been initialized.
     FSM write_seq <- mkFSMWithPred(seq
         controller.i2c_command.put(command_r);
-        check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
-        check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
+        if (controller.module_initialized()) seq
+            check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+            check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
 
-        check_peripheral_event(periph, tagged ReceivedData command_r.reg_addr, "Expected model to receive reg addr that was sent");
+            check_peripheral_event(periph, tagged ReceivedData command_r.reg_addr, "Expected model to receive reg addr that was sent");
 
-        while (bytes_done < command_r.num_bytes) seq
-            check_peripheral_event(periph, tagged ReceivedData pack(bytes_done)[7:0], "Expected to receive data that was sent");
-            bytes_done  <= bytes_done + 1;
-        endseq
-
-        check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-        bytes_done  <= 0;
-    endseq, command_r.op == Write);
-
-    // An FSM to execute an I2C read transaction to a module
-    FSM read_seq <- mkFSMWithPred(seq
-        controller.i2c_command.put(command_r);
-        check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
-        check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
-
-        while (bytes_done < command_r.num_bytes) seq
-            check_peripheral_event(periph, tagged TransmittedData pack(bytes_done)[7:0], "Expected to transmit the data which was previously written");
-
-            if (bytes_done + 1 < command_r.num_bytes) seq
-                check_peripheral_event(periph, tagged ReceivedAck, "Expected to receive ACK to send next byte");
+            while (bytes_done < command_r.num_bytes) seq
+                check_peripheral_event(periph, tagged ReceivedData pack(bytes_done)[7:0], "Expected to receive data that was sent");
+                bytes_done  <= bytes_done + 1;
             endseq
 
-            bytes_done  <= bytes_done + 1;
+            check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
+            bytes_done  <= 0;
         endseq
+    endseq, command_r.op == Write);
 
-        check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
-        check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-        bytes_done  <= 0;
+    // An FSM to execute an I2C read transaction to a module The controller
+    // should ignore the command if the module has not been initialized.
+    FSM read_seq <- mkFSMWithPred(seq
+        controller.i2c_command.put(command_r);
+        if (controller.module_initialized()) seq
+            check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+            check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
+
+            while (bytes_done < command_r.num_bytes) seq
+                check_peripheral_event(periph, tagged TransmittedData pack(bytes_done)[7:0], "Expected to transmit the data which was previously written");
+
+                if (bytes_done + 1 < command_r.num_bytes) seq
+                    check_peripheral_event(periph, tagged ReceivedAck, "Expected to receive ACK to send next byte");
+                endseq
+
+                bytes_done  <= bytes_done + 1;
+            endseq
+
+            check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
+            check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
+            bytes_done  <= 0;
+        endseq
     endseq, command_r.op == Read);
 
     interface registers = controller.registers;
@@ -189,10 +206,15 @@ module mkBench (Bench);
     method Action hsc_pg(Bit#(1) v);
         hsc_pg_r <= unpack(v);
     endmethod
+    method Action set_resetl(Bit#(1) v);
+        resetl_r    <= v;
+    endmethod
 
     method hsc_en = controller.pins.hsc.en;
     method hsc_pg_timeout = controller.pg_timeout;
     method hsc_pg_lost = controller.pg_lost;
+
+    method module_initialized = controller.module_initialized;
 endmodule
 
 function Stmt insert_and_power_module(Bench bench);
@@ -207,6 +229,22 @@ function Stmt insert_and_power_module(Bench bench);
         // after some delay, give the controller power good
         bench.hsc_pg(1);
         delay(5);
+    endseq);
+endfunction
+
+function Stmt deassert_reset_and_await_init(Bench bench);
+    return (seq
+        // release reset
+        bench.set_resetl(1);
+        // wait for module initialization
+        await(bench.module_initialized());
+    endseq);
+endfunction
+
+function Stmt add_and_initialize_module(Bench bench);
+    return (seq
+        insert_and_power_module(bench);
+        deassert_reset_and_await_init(bench);
     endseq);
 endfunction
 
@@ -271,7 +309,7 @@ module mkRemovePowerEnableTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        insert_and_power_module(bench);
+        add_and_initialize_module(bench);
         await(bench.hsc_en());
         bench.command(Command {
                 op: Read,
@@ -325,7 +363,7 @@ module mkPowerGoodLostTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        insert_and_power_module(bench);
+        add_and_initialize_module(bench);
         bench.hsc_pg(0);
         bench.command(Command {
                 op: Read,
@@ -356,7 +394,7 @@ module mkI2CReadTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        insert_and_power_module(bench);
+        add_and_initialize_module(bench);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
         delay(5);
@@ -378,9 +416,54 @@ module mkI2CWriteTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        insert_and_power_module(bench);
+        add_and_initialize_module(bench);
         bench.command(write_cmd);
         await(!bench.i2c_busy());
+        delay(5);
+    endseq);
+endmodule
+
+// mkInitializationTest
+//
+// This test attempts to do an I2C op with a module after its reset has been
+// released, but before t_init (see SFF-8679) has elapsed. That should yield a
+// `NotInitialized` error in the PORT_STATUS::ERROR register. It then makes sure
+// an I2C op can complete successfully, returning `NoError`. Finally, we assert
+// reset again and make sure that clears any initialized state and we receive
+// `NotInitialized` on a I2C op.
+module mkInitializationTest (Empty);
+    Bench bench <- mkBench();
+
+    Command read_cmd = Command {
+        op: Read,
+        i2c_addr: i2c_test_params.peripheral_addr,
+        reg_addr: 8'h00,
+        num_bytes: 1
+    };
+
+    mkAutoFSM(seq
+        delay(5);
+        insert_and_power_module(bench);
+        bench.set_resetl(1);
+        bench.command(read_cmd);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NotInitialized,
+            "NotInitialized error should be present when attempting to communicate before t_init has elapsed.");
+        
+        deassert_reset_and_await_init(bench);
+        bench.command(read_cmd);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NoError,
+            "NoError should be present when attempting to communicate after t_init has elapsed.");
+
+        bench.set_resetl(0);
+        bench.command(read_cmd);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NotInitialized,
+            "NotInitialized error should be present when resetl is asserted.");
         delay(5);
     endseq);
 endmodule
