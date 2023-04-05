@@ -50,24 +50,27 @@ typedef struct {
     Integer system_frequency_hz;
     Integer i2c_frequency_hz;
     Integer power_good_timeout_ms;
+    Integer t_init_ms;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
         i2c_frequency_hz: 100_000,
-        power_good_timeout_ms: 10
+        power_good_timeout_ms: 10,
+        t_init_ms: 2000 // t_init is 2 seconds per SFF-8679
     };
 endinstance
 
 // Types of communication errors a port could communicate
 typedef enum {
-    NoError = 0,
-    NoModule = 1,
-    NoPower = 2,
-    PowerFault = 3,
-    I2cAddressNack = 4,
-    I2cByteNack = 5
+    NoError = 0, // all good!
+    NoModule = 1, // no module found (modprsl = 1)
+    NoPower = 2, // power not enabled
+    PowerFault = 3, // power good timed out or lost
+    NotInitialized = 4, // module has not been out of reset for duration of t_init
+    I2cAddressNack = 5, // module nack'd the address
+    I2cByteNack = 6 // module nack'd a byte
 } PortError deriving (Bits, Eq, FShow);
 
 // A data/address pair to do a BRAM write
@@ -125,6 +128,9 @@ interface QsfpModuleController;
     method Bool pg_timeout;
     method Bool pg_lost;
 
+    // Convenience method to query if the module is initialized
+    method Bool module_initialized;
+
     // Register interface exposed over SPI
     interface Registers registers;
 
@@ -181,6 +187,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     PulseWire i2c_data_received                 <- mkPulseWire();
     Reg#(Bool) i2c_attempt                      <- mkDReg(False);
     Reg#(I2CCore::Command) next_i2c_command     <- mkReg(defaultValue);
+    Reg#(Bool) module_initialized_r             <- mkReg(False);
 
     // Internal pin signals, named with _ to avoid collisions at the interface
     Reg#(Bit#(1)) resetl_  <- mkRegU();
@@ -198,8 +205,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(PortControl) control   <- mkReg(defaultValue);
 
     // Delay
-    Wire#(Bool) tick_1ms_           <- mkWire();
-    Reg#(UInt#(11)) delay_counter   <- mkReg(0);
+    Wire#(Bool) tick_1ms_               <- mkWire();
+    Reg#(UInt#(11)) init_delay_counter  <- mkReg(0);
 
     // The hot swap expected a tick to correspond with its timeout
     (* fire_when_enabled *)
@@ -220,6 +227,21 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     (* fire_when_enabled *)
     rule do_fault_clear (clear_fault && (hot_swap.timed_out() || hot_swap.aborted()));
         hot_swap.clear();
+    endrule
+
+    // Set `module_initialized_r` after `t_init_ms` has elapsed after resetl
+    // has been deasserted.
+    rule do_reset_initialization (tick_1ms_ && !module_initialized_r && resetl_ == 1);
+        if (init_delay_counter > fromInteger(parameters.t_init_ms)) begin
+            module_initialized_r  <= True;
+        end
+        init_delay_counter  <= init_delay_counter + 1;
+    endrule
+
+    // If resetl is asserted, clear initialized state.
+    rule do_reset_init_delay (resetl_ == 0);
+        module_initialized_r  <= False;
+        init_delay_counter  <= 0;
     endrule
 
     // The buffer data is only considered valid for the transaction, so reset
@@ -307,6 +329,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             error   <= PowerFault;
         end else if (i2c_attempt && !hot_swap.enabled) begin
             error   <= NoPower;
+        end else if (i2c_attempt && !module_initialized_r) begin
+            error   <= NotInitialized;
         end else if (i2c_attempt) begin
             new_i2c_command.send();
             error   <= NoError;
@@ -383,6 +407,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method pg           = hot_swap.pin_state.good;
     method pg_timeout   = hot_swap.timed_out;
     method pg_lost      = hot_swap.aborted;
+
+    method module_initialized = module_initialized_r;
 
     method tick_1ms = tick_1ms_._write;
 
