@@ -61,7 +61,7 @@ module mkGimletRegs(GimletRegIF);
     ConfigReg#(A1Readbacks) a1_inputs <- mkRegU();
     ConfigReg#(A1smstatus) a1_sm <- mkRegU();
     
-    ConfigReg#(A0smstatus) a0_sm <- mkConfigRegU();
+    
     // Misc IO registers
     ConfigReg#(ClkgenStatus) clkgen_out_status <- mkReg(unpack(0)); // TODO: FIX ME clkgenOutStatusOffset
 
@@ -99,8 +99,15 @@ module mkGimletRegs(GimletRegIF);
     Wire#(A0Output2Type) a0_status2 <- mkDWire(unpack(0));
     Wire#(AmdA0) amd_a0 <- mkDWire(unpack(0));
     Wire#(AmdStatus) amd_status <- mkDWire(unpack(0));
+    Wire#(A0smstatusA0sm) a0_sm <- mkDWire(unpack(0));
     Wire#(GroupbPg) a0_groupB_pg <- mkDWire(unpack(0));
     Wire#(GroupcPg) a0_groupC_pg <- mkDWire(unpack(0));
+    Wire#(A0smstatusA0sm) max_a0_sm <- mkDWire(unpack(0));
+    Wire#(A0smstatusA0sm) flt_a0_sm <- mkDWire(unpack(0));
+    Wire#(GroupbPg) flt_a0_groupB_pg <- mkDWire(unpack(0));
+    Wire#(GroupcPg) flt_a0_groupC_pg <- mkDWire(unpack(0));
+    Wire#(GroupbPg) a0_flt_groupB_pg <- mkDWire(unpack(0));
+    Wire#(GroupcPg) a0_flt_groupC_pg <- mkDWire(unpack(0));
     Wire#(NicStatus) nic_status <- mkDWire(unpack(0));
     Wire#(Nicsmstatus) nic_state <- mkDWire(unpack(0));
     Wire#(BoardRev) brd_rev <- mkDWire(unpack(0));
@@ -190,7 +197,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(pwrCtrlOffset): readdata <= tagged Valid (pack(power_control));
             fromInteger(nicCtrlOffset): readdata <= tagged Valid (pack(nic_control));
             fromInteger(a1smstatusOffset) : readdata <= tagged Valid (pack(a1_sm));
-            fromInteger(a0smstatusOffset) : readdata <= tagged Valid (pack(a0_sm));
+            fromInteger(a0smstatusOffset) : readdata <= tagged Valid ({'h0, pack(a0_sm)});
             fromInteger(nicsmstatusOffset) : readdata <= tagged Valid (pack(nic_state));
             fromInteger(boardRevOffset): readdata <= tagged Valid (pack(brd_rev));
             fromInteger(earlyRbksOffset) : readdata <= tagged Valid (pack(early_inputs));
@@ -213,6 +220,11 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(dbgCtrlOffset) : readdata <= tagged Valid (pack(dbgCtrl_reg));
             fromInteger(amdRstnCntsOffset) : readdata <= tagged Valid (pack(amd_rstn_cnts));
             fromInteger(amdPwroknCntsOffset) : readdata <= tagged Valid (pack(amd_pwrokn_cnts));
+            fromInteger(amdPwroknCntsOffset) : readdata <= tagged Valid (pack(amd_pwrokn_cnts));
+            fromInteger(dbgMaxA0smstatusOffset) : readdata <= tagged Valid ({'h0, pack(max_a0_sm)});
+            fromInteger(fltA0SmstatusOffset) : readdata <= tagged Valid ({'h0, pack(flt_a0_sm)});
+            fromInteger(fltGroupcPgOffset) : readdata <= tagged Valid (pack(flt_a0_groupB_pg));
+            fromInteger(fltGroupbPgOffset) : readdata <= tagged Valid (pack(flt_a0_groupC_pg));
             default : readdata <= tagged Valid ('hff);
         endcase
     endrule
@@ -307,9 +319,7 @@ module mkGimletRegs(GimletRegIF);
         method Bool ignore_sp();
             return dbgCtrl_reg.ignore_sp == 1;
         endmethod 
-        method Action state (A0smstatusA0sm value);
-            a0_sm <= unpack({'0, pack(value)});
-        endmethod
+        method state = a0_sm._write;
         method Action ok(Bool value);
             a0_ok <= pack(value);
         endmethod
@@ -319,6 +329,10 @@ module mkGimletRegs(GimletRegIF);
         method amd_a0 = amd_a0._write;
         method b_pgs = a0_groupB_pg._write;
         method c_pgs = a0_groupC_pg._write;
+        method max_state = max_a0_sm._write;
+        method flt_state = flt_a0_sm._write;
+        method flt_b_pgs = flt_a0_groupB_pg._write;
+        method flt_c_pgs = flt_a0_groupC_pg._write;
         method bc_flts = bc_flts._write;
         method thermtrip = thermtrip._write;
         method mapo = a0_mapo._write;
