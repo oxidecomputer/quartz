@@ -15,7 +15,6 @@ export Parameters(..);
 export RamWrite(..);
 export Pins(..);
 export Registers(..);
-export PortError(..);
 
 // functions for doing mapping
 export get_pins;
@@ -61,17 +60,6 @@ instance DefaultValue#(Parameters);
         t_init_ms: 2000 // t_init is 2 seconds per SFF-8679
     };
 endinstance
-
-// Types of communication errors a port could communicate
-typedef enum {
-    NoError = 0, // all good!
-    NoModule = 1, // no module found (modprsl = 1)
-    NoPower = 2, // power not enabled
-    PowerFault = 3, // power good timed out or lost
-    NotInitialized = 4, // module has not been out of reset for duration of t_init
-    I2cAddressNack = 5, // module nack'd the address
-    I2cByteNack = 6 // module nack'd a byte
-} PortError deriving (Bits, Eq, FShow);
 
 // A data/address pair to do a BRAM write
 typedef struct {
@@ -192,14 +180,14 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Internal pin signals, named with _ to avoid collisions at the interface
     Reg#(Bit#(1)) resetl_  <- mkRegU();
     Reg#(Bit#(1)) lpmode_  <- mkRegU();
-    Reg#(Bool) intl_    <- mkReg(False);
-    Reg#(Bool) modprsl_ <- mkReg(False);
+    Reg#(Bool) intl_    <- mkReg(True);
+    Reg#(Bool) modprsl_ <- mkReg(True);
 
     Wire#(Bit#(1)) power_en_    <- mkWire();
 
     // Status
-    Reg#(PortError) error           <- mkReg(NoError);
-    PulseWire clear_fault           <- mkPulseWire();
+    Reg#(QsfpStatusPort0Error) error    <- mkReg(NoError);
+    PulseWire clear_fault               <- mkPulseWire();
 
     // Control - unused currently
     Reg#(PortControl) control   <- mkReg(defaultValue);
@@ -231,7 +219,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Set `module_initialized_r` after `t_init_ms` has elapsed after resetl
     // has been deasserted.
-    rule do_reset_initialization (tick_1ms_ && !module_initialized_r && resetl_ == 1);
+    rule do_reset_initialization (tick_1ms_ && !module_initialized_r && !modprsl_ && resetl_ == 1);
         if (init_delay_counter > fromInteger(parameters.t_init_ms)) begin
             module_initialized_r  <= True;
         end
@@ -239,7 +227,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     endrule
 
     // If resetl is asserted, clear initialized state.
-    rule do_reset_init_delay (resetl_ == 0);
+    rule do_reset_init_delay (modprsl_ || resetl_ == 0);
         module_initialized_r  <= False;
         init_delay_counter  <= 0;
     endrule

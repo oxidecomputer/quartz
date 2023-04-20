@@ -171,6 +171,7 @@ bluesim_tests('QsfpModuleControllerTests',
         'mkI2CReadTest',
         'mkI2CWriteTest',
         'mkInitializationTest',
+        'mkUninitializationAfterRemovalTest',
     ],
     deps = [
         'cobalt//hdl:Strobe',
