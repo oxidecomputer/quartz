@@ -35,6 +35,8 @@ import PowerRail::*;
         method A0smstatusA0sm flt_state;
         method GroupbPg flt_b_pgs;
         method GroupcPg flt_c_pgs;
+        method GroupbPg max_b_pgs;
+        method GroupcPg max_c_pgs;
         method Bool mapo;
         method Bool thermtrip;
         method Bool amd_reset_fedge;
@@ -61,6 +63,8 @@ import PowerRail::*;
         method Action flt_state (A0smstatusA0sm value);
         method Action flt_b_pgs (GroupbPg value);
         method Action flt_c_pgs (GroupcPg value);
+        method Action max_b_pgs (GroupbPg value);
+        method Action max_c_pgs (GroupcPg value);
         method Action mapo(Bool value);
         method Action thermtrip(Bool value);
         method Action amd_reset_fedge(Bool value);
@@ -86,6 +90,8 @@ import PowerRail::*;
             mkConnection(source.flt_state, sink.flt_state);
             mkConnection(source.flt_b_pgs, sink.flt_b_pgs);
             mkConnection(source.flt_c_pgs, sink.flt_c_pgs);
+            mkConnection(source.max_b_pgs, sink.max_b_pgs);
+            mkConnection(source.max_c_pgs, sink.max_c_pgs);
             mkConnection(source.bc_flts, sink.bc_flts);
             mkConnection(source.mapo, sink.mapo);
             mkConnection(source.thermtrip, sink.thermtrip);
@@ -216,6 +222,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     ConfigReg#(GroupcPg) c_pgs <- mkConfigRegU();
     ConfigReg#(GroupbPg) flt_b_pgs <- mkConfigReg(unpack(0));
     ConfigReg#(GroupcPg) flt_c_pgs <- mkConfigReg(unpack(0));
+    ConfigReg#(GroupbPg) max_b_pgs <- mkConfigReg(unpack(0));
+    ConfigReg#(GroupcPg) max_c_pgs <- mkConfigReg(unpack(0));
     ConfigReg#(GroupbcFlts) bc_flts <- mkConfigRegU();
 
     // Power rails here
@@ -346,10 +354,18 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         // rising edge enable = clear
         if (!enable_last && enable) begin
             max_state <= IDLE;
+            max_b_pgs <= unpack(0);
+            max_c_pgs <= unpack(0);
         end else begin
             // max hold on state
             if (pack(state) > pack(max_state)) begin
                 max_state <= state;
+            end
+            if (pack(b_pgs) > pack(max_b_pgs)) begin
+                max_b_pgs <= b_pgs;
+            end
+            if (pack(c_pgs) > pack(max_c_pgs)) begin
+                max_c_pgs <= c_pgs;
             end
         end
     endrule
@@ -658,6 +674,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method flt_state = flt_state._read;
         method flt_b_pgs = flt_b_pgs._read;
         method flt_c_pgs = flt_c_pgs._read;
+        method max_b_pgs = max_b_pgs._read;
+        method max_c_pgs = max_c_pgs._read;
         method mapo = mapo._read;
         method thermtrip = thermal_trip._read;
         method amd_pwrok_fedge = amd_pwrok_fedge._read;

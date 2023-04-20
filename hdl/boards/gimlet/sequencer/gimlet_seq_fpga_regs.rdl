@@ -746,15 +746,19 @@ addrmap gimlet_seq_fpga {
         } RESET_CNTS[7:0] = 0;
     }AMD_PWROKN_CNTS;
 
+    // MAX hold debug regs
     a0_sm DBG_MAX_A0SMSTATUS;
     DBG_MAX_A0SMSTATUS->name = "A0 SM status (Max-hold)";
+    Groupb_Pg MAX_GROUPB_PG;
+    MAX_GROUPB_PG->name = "Group B PGs (Max-hold)";
+    Groupc_Pg MAX_GROUPC_PG;
+    MAX_GROUPC_PG->name = "Group C PGs (Max-hold)";
 
+    // Fault debug regs
     a0_sm FLT_A0_SMSTATUS;
     FLT_A0_SMSTATUS->name = "A0 SM status (latched at fault)";
-
-    Groupc_Pg FLT_GROUPC_PG;
-    FLT_GROUPC_PG->name = "Group C PGs latched at fault";
-
     Groupb_Pg FLT_GROUPB_PG;
     FLT_GROUPB_PG->name = "Group B PGs latched at fault";
+    Groupc_Pg FLT_GROUPC_PG;
+    FLT_GROUPC_PG->name = "Group C PGs latched at fault";
 };
