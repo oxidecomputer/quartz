@@ -23,7 +23,7 @@ import PowerRail::*;
         method Action a0_en(Bool value);  // SM enable pin
         method Action ignore_sp(Bool value);
         method Bool ok;
-        method A0smstatusA0sm state();
+        method A0smstatusA0sm state;
         method A0Output1Type status1;
         method A0Output2Type status2;
         method AmdA0 amd_a0;
@@ -31,6 +31,12 @@ import PowerRail::*;
         method GroupbPg b_pgs;
         method GroupcPg c_pgs;
         method GroupbcFlts bc_flts;
+        method A0smstatusA0sm max_state;
+        method A0smstatusA0sm flt_state;
+        method GroupbPg flt_b_pgs;
+        method GroupcPg flt_c_pgs;
+        method GroupbPg max_b_pgs;
+        method GroupcPg max_c_pgs;
         method Bool mapo;
         method Bool thermtrip;
         method Bool amd_reset_fedge;
@@ -53,6 +59,12 @@ import PowerRail::*;
         method Action b_pgs (GroupbPg value);
         method Action c_pgs (GroupcPg value);
         method Action bc_flts (GroupbcFlts value);
+        method Action max_state (A0smstatusA0sm value);
+        method Action flt_state (A0smstatusA0sm value);
+        method Action flt_b_pgs (GroupbPg value);
+        method Action flt_c_pgs (GroupcPg value);
+        method Action max_b_pgs (GroupbPg value);
+        method Action max_c_pgs (GroupcPg value);
         method Action mapo(Bool value);
         method Action thermtrip(Bool value);
         method Action amd_reset_fedge(Bool value);
@@ -74,6 +86,12 @@ import PowerRail::*;
             mkConnection(source.amd_a0, sink.amd_a0);
             mkConnection(source.b_pgs, sink.b_pgs);
             mkConnection(source.c_pgs, sink.c_pgs);
+            mkConnection(source.max_state, sink.max_state);
+            mkConnection(source.flt_state, sink.flt_state);
+            mkConnection(source.flt_b_pgs, sink.flt_b_pgs);
+            mkConnection(source.flt_c_pgs, sink.flt_c_pgs);
+            mkConnection(source.max_b_pgs, sink.max_b_pgs);
+            mkConnection(source.max_c_pgs, sink.max_c_pgs);
             mkConnection(source.bc_flts, sink.bc_flts);
             mkConnection(source.mapo, sink.mapo);
             mkConnection(source.thermtrip, sink.thermtrip);
@@ -172,6 +190,8 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Integer startup_delay = ten_ms;
     
     Reg#(A0smstatusA0sm) state <- mkReg(IDLE);
+    Reg#(A0smstatusA0sm) max_state <- mkReg(IDLE);
+    Reg#(A0smstatusA0sm) flt_state <- mkReg(IDLE);
 
     Reg#(UInt#(24)) ticks_count <- mkReg(0);
     RWire#(UInt#(24)) ticks_count_next <- mkRWire();
@@ -200,6 +220,10 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     ConfigReg#(AmdStatus) amd_status <- mkConfigRegU();
     ConfigReg#(GroupbPg) b_pgs <- mkConfigRegU();
     ConfigReg#(GroupcPg) c_pgs <- mkConfigRegU();
+    ConfigReg#(GroupbPg) flt_b_pgs <- mkConfigReg(unpack(0));
+    ConfigReg#(GroupcPg) flt_c_pgs <- mkConfigReg(unpack(0));
+    ConfigReg#(GroupbPg) max_b_pgs <- mkConfigReg(unpack(0));
+    ConfigReg#(GroupcPg) max_c_pgs <- mkConfigReg(unpack(0));
     ConfigReg#(GroupbcFlts) bc_flts <- mkConfigRegU();
 
     // Power rails here
@@ -302,9 +326,48 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     rule do_ps_faults;
         let mapo_fault = foldr(bool_or, False, map(PowerRail::fault, b1_rails)) ||
                          foldr(bool_or, False, map(PowerRail::fault, b2_rails)) ||
-                         (!c_pg && pack(state) >=pack(DELAY_1MS) && pack(state) <=pack(A0smstatusA0sm'(DONE)));  // Allow group C to drop in SAFE_DISABLE
+                         (!c_pg && pack(state) >=pack(A0smstatusA0sm'(DELAY_1MS)) && pack(state) <=pack(A0smstatusA0sm'(DONE)));  // Allow group C to drop in SAFE_DISABLE
 
         aggregate_fault <=  mapo_fault;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_flt_debug_latch;
+        // rising edge enable = clear
+        if (!enable_last && enable) begin
+            flt_state <= IDLE;
+            flt_b_pgs <= unpack(0);
+            flt_c_pgs <= unpack(0);
+        end else if ((v3p3_sys.good && sp3_to_seq_thermtrip_l == 0) || aggregate_fault) begin
+            // latch current SM
+            flt_state <= state;
+            // snap current PGs
+            flt_b_pgs <= b_pgs;
+            flt_c_pgs <= c_pgs;
+        end
+      
+      
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_max_holds;
+        // rising edge enable = clear
+        if (!enable_last && enable) begin
+            max_state <= IDLE;
+            max_b_pgs <= unpack(0);
+            max_c_pgs <= unpack(0);
+        end else begin
+            // max hold on state
+            if (pack(state) > pack(max_state)) begin
+                max_state <= state;
+            end
+            if (pack(b_pgs) > pack(max_b_pgs)) begin
+                max_b_pgs <= b_pgs;
+            end
+            if (pack(c_pgs) > pack(max_c_pgs)) begin
+                max_c_pgs <= c_pgs;
+            end
+        end
     endrule
 
     // Now writing this stupid state machine for the 3rd time
@@ -471,7 +534,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
 
     (* fire_when_enabled *)
     rule raa_power_ok;
-        if (pack(state) >= pack(WAIT_PWROK)) begin
+        if (pack(state) >= pack(A0smstatusA0sm'(WAIT_PWROK))) begin
             regulator_pwrok <= (sp3_to_seq_pwrok_v3p3 == 1);
         end else begin
             regulator_pwrok <= False;
@@ -607,6 +670,12 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method b_pgs = b_pgs._read;
         method c_pgs = c_pgs._read;
         method bc_flts = bc_flts._read;
+        method max_state = max_state._read;
+        method flt_state = flt_state._read;
+        method flt_b_pgs = flt_b_pgs._read;
+        method flt_c_pgs = flt_c_pgs._read;
+        method max_b_pgs = max_b_pgs._read;
+        method max_c_pgs = max_c_pgs._read;
         method mapo = mapo._read;
         method thermtrip = thermal_trip._read;
         method amd_pwrok_fedge = amd_pwrok_fedge._read;

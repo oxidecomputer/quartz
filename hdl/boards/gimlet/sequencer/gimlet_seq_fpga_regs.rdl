@@ -232,12 +232,13 @@ addrmap gimlet_seq_fpga {
             encode = a1_state_machine;
         } A1SM[7:0];
     } A1SMSTATUS;
-    reg {
+
+    reg a0_sm {
         name = "A0 SM Status";
         desc = "A0 'live' state machine status";
         default sw = r;
 
-        enum a0_state_machine {
+         enum a0_state_machine {
             IDLE = 8'h00 {desc = "";};
             PBTN = 8'h01 {desc = "";};
             WAITSLP = 8'h02 {desc = "";};
@@ -258,7 +259,8 @@ addrmap gimlet_seq_fpga {
             desc = "State Machine enum";
             encode = a0_state_machine;
         } A0SM[7:0];
-    } A0SMSTATUS;
+    };
+    a0_sm A0SMSTATUS;
     reg {
         name = "Nic SM Status";
         desc = "Nic 'live' state machine status";
@@ -366,7 +368,7 @@ addrmap gimlet_seq_fpga {
         } RESET[1] = 0;
     } AMD_A0;
 
-    reg {
+    reg Groupb_Pg{
         name = "A0 Power Goods for Group B supplies";
         default sw = r;
 
@@ -400,7 +402,9 @@ addrmap gimlet_seq_fpga {
             PG1 from ISL68224 U352, should be configured to represent 
             V3P3_SYS_A0 rail status";
         } V3P3_SYS_PG[1] = 0;
-    } GROUPB_PG;
+    };
+    Groupb_Pg GROUPB_PG;
+
     reg {
         name = "A0 Power Goods for Un-used supplies";
         default sw = r;
@@ -442,7 +446,7 @@ addrmap gimlet_seq_fpga {
         } CONT2_CFP[1] = 0;
     } GROUPBC_FLTS;
 
-    reg {
+    reg Groupc_Pg {
         name = "A0 STATUS for Group C supplies";
         default sw = r;
 
@@ -454,7 +458,9 @@ addrmap gimlet_seq_fpga {
             desc = "Power good 0 from RA229618 (U350) is configured for
                     SP3_VDD_VCORE_A0 (PWR_CONT1_SP3_PG0 net)";
         } VDD_VCORE[1] = 0;
-    } GROUPC_PG;
+    };
+
+    Groupc_Pg GROUPC_PG;
 
     // NIC readbacks
     reg {
@@ -739,4 +745,20 @@ addrmap gimlet_seq_fpga {
             desc = "Falling edge counter of AMD's PowerOK output while in A0/A0HP. Saturates at 255.  Any write clears";
         } RESET_CNTS[7:0] = 0;
     }AMD_PWROKN_CNTS;
+
+    // MAX hold debug regs
+    a0_sm DBG_MAX_A0SMSTATUS;
+    DBG_MAX_A0SMSTATUS->name = "A0 SM status (Max-hold)";
+    Groupb_Pg MAX_GROUPB_PG;
+    MAX_GROUPB_PG->name = "Group B PGs (Max-hold)";
+    Groupc_Pg MAX_GROUPC_PG;
+    MAX_GROUPC_PG->name = "Group C PGs (Max-hold)";
+
+    // Fault debug regs
+    a0_sm FLT_A0_SMSTATUS;
+    FLT_A0_SMSTATUS->name = "A0 SM status (latched at fault)";
+    Groupb_Pg FLT_GROUPB_PG;
+    FLT_GROUPB_PG->name = "Group B PGs latched at fault";
+    Groupc_Pg FLT_GROUPC_PG;
+    FLT_GROUPC_PG->name = "Group C PGs latched at fault";
 };
