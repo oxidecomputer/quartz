@@ -1,45 +1,48 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Fri Dec 02 20:10:23 2022
+[*] Thu Apr 20 14:17:41 2023
 [*]
-[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkI2CReadTest.vcd"
-[dumpfile_mtime] "Fri Dec 02 20:05:11 2022"
-[dumpfile_size] 13652393
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkUninitializationAfterRemovalTest.vcd"
+[dumpfile_mtime] "Thu Apr 20 14:13:56 2023"
+[dumpfile_size] 863645
 [savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\boards\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
-[timestart] 0
+[timestart] 118326
 [size] 2551 1360
 [pos] -1 -1
-*-18.518816 1177000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-5.925377 118720 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] main.
 [treeopen] main.top.
 [sst_width] 446
 [signals_width] 526
 [sst_expanded] 1
-[sst_vpaned_height] 424
+[sst_vpaned_height] 414
 @200
 -DUT - QsfpModuleController
 -Pins
 @28
-main.top.bench_controller_present_
 main.top.bench_controller_lpmode_
-main.top.bench_controller_reset__
-main.top.bench_controller_hot_swap_enabled_r
+main.top.bench_controller_resetl_
+main.top.bench_controller_modprsl_
+main.top.bench_controller_intl_
 @200
 -
 @28
-main.top.bench_controller_hot_swap_good_r
 main.top.bench_controller_hot_swap_enabled_r
+main.top.bench_hsc_pg_r
 @200
 -
 -State
 @28
+main.top.bench_controller_i2c_attempt
+main.top.bench_controller_module_initialized_r
+@c00025
 main.top.bench_controller_error[2:0]
-@22
-main.top.bench_controller_sequence_state[3:0]
 @28
-main.top.bench_controller_fault
-main.top.bench_controller_target_power_state[2:0]
-main.top.bench_controller_current_power_state[2:0]
+(0)main.top.bench_controller_error[2:0]
+(1)main.top.bench_controller_error[2:0]
+(2)main.top.bench_controller_error[2:0]
+@1401205
+-group_end
 @200
 -
 -

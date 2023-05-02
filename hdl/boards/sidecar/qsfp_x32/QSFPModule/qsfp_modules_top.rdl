@@ -109,8 +109,20 @@ addrmap qsfp_modules_top {
         field {
             desc = "'1' if the bus is busy.";
         } BUSY[4:4] = 0;
+
+        enum error_types {
+            NoError = 4'h0 {desc = "All good!";};
+            NoModule = 4'h1 {desc = "No module found (ModPrsL = 1)";};
+            NoPower = 4'h2 {desc = "Power not enabled";};
+            PowerFault = 4'h3 {desc = "Power good timed out or lost";};
+            NotInitialized = 4'h4 {desc = "Module has not been out of reset for duration of t_init";};
+            I2cAddressNack = 4'h5 {desc = "Module nack'd the address";};
+            I2cByteNack = 4'h6 {desc = "Module nack'd a byte";};
+        };
+
         field {
-            desc = "0x0 = NoError, 0x01 = NoModule, 0x02 = NoPower, 0x03 = PowerFault, 0x04 = I2cAddressnack, 0x05 = I2cByteNack";
+            desc = "Port I2C error status";
+            encode = error_types;
         } ERROR[3:0] = 0;
     };
 

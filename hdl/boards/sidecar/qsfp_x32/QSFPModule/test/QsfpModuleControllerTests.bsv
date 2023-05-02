@@ -450,7 +450,7 @@ module mkInitializationTest (Empty);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NotInitialized,
             "NotInitialized error should be present when attempting to communicate before t_init has elapsed.");
-        
+
         deassert_reset_and_await_init(bench);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
@@ -465,6 +465,40 @@ module mkInitializationTest (Empty);
             NotInitialized,
             "NotInitialized error should be present when resetl is asserted.");
         delay(5);
+    endseq);
+endmodule
+
+// mkUninitializationAfterRemovalTest
+//
+// This test ensures that a previously initialized module is uninitialized when
+// the module is removed regardless of `ResetL`'s status. That way when it is
+// reinserted, the initialization process happens again.
+module mkUninitializationAfterRemovalTest (Empty);
+    Bench bench <- mkBench();
+
+    Command read_cmd = Command {
+        op: Read,
+        i2c_addr: i2c_test_params.peripheral_addr,
+        reg_addr: 8'h00,
+        num_bytes: 1
+    };
+
+    mkAutoFSM(seq
+        add_and_initialize_module(bench);
+        bench.command(read_cmd);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NoError,
+            "NoError should be present when attempting to communicate after t_init has elapsed.");
+
+        bench.modprsl(1);
+        bench.modprsl(0);
+        delay(3); // wait a few cycles for power to re-enable
+        bench.command(read_cmd);
+        await(!bench.i2c_busy());
+                assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NotInitialized,
+            "NotInitialized error should be present when a module has been reseated but not initialized.");
     endseq);
 endmodule
 
