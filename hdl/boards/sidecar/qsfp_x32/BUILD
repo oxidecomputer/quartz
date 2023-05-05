@@ -9,9 +9,9 @@ rdl('qsfp_x32_controller_registers',
     ],
     outputs = [
         'QsfpX32ControllerRegsPkg.bsv',
-        'qsfp_x32_controller_regs.html',
-        'qsfp_x32_controller_regs.adoc',
-        'qsfp_x32_controller_regs.json',
+        'sidecar_qsfp_x32_controller_regs.html',
+        'sidecar_qsfp_x32_controller_regs.adoc',
+        'sidecar_qsfp_x32_controller_regs.json',
     ])
 
 bluespec_library('QsfpX32ControllerRegsPkg',
