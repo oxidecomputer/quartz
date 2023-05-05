@@ -125,7 +125,7 @@ bluespec_verilog('QsfpX32ControllerTopV',
         ':QsfpX32ControllerTop',
     ])
 
-yosys_design('qsfp_x32_top',
+yosys_design('sidecar_qsfp_x32_controller_top',
     top_module = 'mkQsfpX32ControllerTop',
     sources = [
         ':QsfpX32ControllerTopV#mkQsfpX32ControllerTop',
@@ -136,25 +136,12 @@ yosys_design('qsfp_x32_top',
         'cobalt//vnd/bluespec:Verilog.v',
     ])
 
-# Rev A uses a LFE45UM device and requires a different device ID. This target
-# can be removed once rev A boards have been phased out.
-nextpnr_ecp5_bitstream('qsfp_x32_rev_a',
-    env = 'qsfp_x32',
-    design = ':qsfp_x32_top#qsfp_x32_top.json',
-    deps = [
-        ':qsfp_x32_top',
-    ],
-    local = {
-        'nextpnr_ecp5_flags': [
-            '--um-45k',
-        ]
-    })
 
-nextpnr_ecp5_bitstream('qsfp_x32_rev_b',
-    env = 'qsfp_x32',
-    design = ':qsfp_x32_top#qsfp_x32_top.json',
+nextpnr_ecp5_bitstream('sidecar_qsfp_x32_controller_rev_b_c',
+    env = 'sidecar_qsfp_x32_controller',
+    design = ':sidecar_qsfp_x32_controller_top#sidecar_qsfp_x32_controller_top.json',
     deps = [
-        ':qsfp_x32_top',
+        ':sidecar_qsfp_x32_controller_top',
     ])
 
 # Tests
