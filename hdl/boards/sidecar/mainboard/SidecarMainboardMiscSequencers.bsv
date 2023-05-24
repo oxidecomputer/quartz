@@ -8,6 +8,7 @@ package SidecarMainboardMiscSequencers;
 
 // BSV
 import Connectable::*;
+import ConfigReg::*;
 import DefaultValue::*;
 
 // Cobalt
@@ -137,7 +138,10 @@ module mkFanModuleSequencer (FanModuleSequencer);
     // Fault information is preserved until cleared via PMBUS OPERATION off or
     // CLEAR_FAULT, so this rail will disable on abort (losing PG during normal
     // operation). PG Timeout is 10 ms.
-    PowerRail#(4) adm1272 <- mkPowerRailDisableOnAbort(10);
+    //
+    // TODO(aaron): Change timeout from 0 (no timeout) back to 10 upon
+    // implementation of https://github.com/oxidecomputer/hardware-sidecar/issues/791
+    PowerRail#(4) adm1272 <- mkPowerRailDisableOnAbort(0);
 
     // This represents the debounced fan presence signal. Presence will only be
     // asserted internally after being observed for 500ms on the pin while it
@@ -148,14 +152,24 @@ module mkFanModuleSequencer (FanModuleSequencer);
 
     Reg#(Bool) led <- mkReg(False);
     Reg#(Bool) enable <- mkReg(False);
-    PulseWire sw_enable_request <- mkPulseWire();
+    ConfigReg#(Bool) enable_sw <- mkConfigReg(False);
+
+    // The hot swap expects a tick to correspond with its timeout
+    (* fire_when_enabled *)
+    rule do_hot_swap_tick (tick_1ms_);
+        adm1272.send();
+    endrule
 
     (* fire_when_enabled *)
     rule do_enable;
-        if (!fan_present) begin
+        if (!fan_present || !enable_sw) begin
             enable <= False;
             adm1272.set_enable(False);
-        end else if (fan_present && sw_enable_request) begin
+        end else if (adm1272.aborted() || adm1272.timed_out()) begin
+            enable <= False;
+        end else if (enable_sw && !enable) begin
+            // we only want this to fire once as .set_enable() restarts the
+            // PG timeout counter
             enable <= True;
             adm1272.set_enable(True);
         end
@@ -179,9 +193,7 @@ module mkFanModuleSequencer (FanModuleSequencer);
             };
             method Action _write(FanState next);
                 led <= unpack(next.led);
-                if (next.enable == 1) begin
-                    sw_enable_request.send();
-                end
+                enable_sw <= unpack(next.enable);
             endmethod
         endinterface
     endinterface
