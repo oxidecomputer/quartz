@@ -20,7 +20,6 @@ import SerialIO::*;
 import SPI::*;
 import Strobe::*;
 
-import FanModule::*;
 import IgnitionController::*;
 import IgnitionTransceiver::*;
 import PCIeEndpointController::*;
@@ -166,18 +165,22 @@ interface SidecarMainboardControllerTop;
     method Bool fpga_to_fan0_hsc_en();
     (* prefix = "" *) method Action fan0_hsc_to_fpga_pg(Bool fan0_hsc_to_fpga_pg);
     method Bool fpga_to_fan0_led_l();
+    (* prefix = "" *) method Action fan0_to_fpga_present(Bool fan0_to_fpga_present);
 
     method Bool fpga_to_fan1_hsc_en();
     (* prefix = "" *) method Action fan1_hsc_to_fpga_pg(Bool fan1_hsc_to_fpga_pg);
     method Bool fpga_to_fan1_led_l();
+    (* prefix = "" *) method Action fan1_to_fpga_present(Bool fan1_to_fpga_present);
 
     method Bool fpga_to_fan2_hsc_en();
     (* prefix = "" *) method Action fan2_hsc_to_fpga_pg(Bool fan2_hsc_to_fpga_pg);
     method Bool fpga_to_fan2_led_l();
+    (* prefix = "" *) method Action fan2_to_fpga_present(Bool fan2_to_fpga_present);
 
     method Bool fpga_to_fan3_hsc_en();
     (* prefix = "" *) method Action fan3_hsc_to_fpga_pg(Bool fan3_hsc_to_fpga_pg);
     method Bool fpga_to_fan3_led_l();
+    (* prefix = "" *) method Action fan3_to_fpga_present(Bool fan3_to_fpga_present);
 
     //
     // Front IO
@@ -355,7 +358,8 @@ module mkSidecarMainboardControllerTop
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
             register_pages(controller.ignition_controllers),
-                reset_by reset_sync);
+            controller.registers.fans,
+            reset_by reset_sync);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
     InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
@@ -486,21 +490,25 @@ module mkSidecarMainboardControllerTop
     // Fans
     //
 
-    ReadOnly#(Bool) fan0_en <- mkOutputSyncFor(controller.pins.fans[0].en);
+    ReadOnly#(Bool) fan0_en <- mkOutputSyncFor(controller.pins.fans[0].hsc.en);
     ReadOnly#(Bool) fan0_led <- mkOutputSyncFor(controller.pins.fans[0].led);
-    InputReg#(Bool, 2) fan0_pg <- mkInputSyncFor(controller.pins.fans[0].pg);
+    InputReg#(Bool, 2) fan0_pg <- mkInputSyncFor(controller.pins.fans[0].hsc.pg);
+    InputReg#(Bool, 2) fan0_present <- mkInputSyncFor(controller.pins.fans[0].present);
 
-    ReadOnly#(Bool) fan1_en <- mkOutputSyncFor(controller.pins.fans[1].en);
+    ReadOnly#(Bool) fan1_en <- mkOutputSyncFor(controller.pins.fans[1].hsc.en);
     ReadOnly#(Bool) fan1_led <- mkOutputSyncFor(controller.pins.fans[1].led);
-    InputReg#(Bool, 2) fan1_pg <- mkInputSyncFor(controller.pins.fans[1].pg);
+    InputReg#(Bool, 2) fan1_pg <- mkInputSyncFor(controller.pins.fans[1].hsc.pg);
+    InputReg#(Bool, 2) fan1_present <- mkInputSyncFor(controller.pins.fans[1].present);
 
-    ReadOnly#(Bool) fan2_en <- mkOutputSyncFor(controller.pins.fans[2].en);
+    ReadOnly#(Bool) fan2_en <- mkOutputSyncFor(controller.pins.fans[2].hsc.en);
     ReadOnly#(Bool) fan2_led <- mkOutputSyncFor(controller.pins.fans[2].led);
-    InputReg#(Bool, 2) fan2_pg <- mkInputSyncFor(controller.pins.fans[2].pg);
+    InputReg#(Bool, 2) fan2_pg <- mkInputSyncFor(controller.pins.fans[2].hsc.pg);
+    InputReg#(Bool, 2) fan2_present <- mkInputSyncFor(controller.pins.fans[2].present);
 
-    ReadOnly#(Bool) fan3_en <- mkOutputSyncFor(controller.pins.fans[3].en);
+    ReadOnly#(Bool) fan3_en <- mkOutputSyncFor(controller.pins.fans[3].hsc.en);
     ReadOnly#(Bool) fan3_led <- mkOutputSyncFor(controller.pins.fans[3].led);
-    InputReg#(Bool, 2) fan3_pg <- mkInputSyncFor(controller.pins.fans[3].pg);
+    InputReg#(Bool, 2) fan3_pg <- mkInputSyncFor(controller.pins.fans[3].hsc.pg);
+    InputReg#(Bool, 2) fan3_present <- mkInputSyncFor(controller.pins.fans[3].present);
 
     //
     // Front IO
@@ -681,18 +689,22 @@ module mkSidecarMainboardControllerTop
     method fpga_to_fan0_hsc_en = fan0_en;
     method fan0_hsc_to_fpga_pg = sync(fan0_pg);
     method fpga_to_fan0_led_l = fan0_led; // Not active low on Fan VPD.
+    method fan0_to_fpga_present = sync(fan0_present);
 
     method fpga_to_fan1_hsc_en = fan1_en;
     method fan1_hsc_to_fpga_pg = sync(fan1_pg);
     method fpga_to_fan1_led_l = fan1_led; // Not active low on Fan VPD.
+    method fan1_to_fpga_present = sync(fan1_present);
 
     method fpga_to_fan2_hsc_en = fan2_en;
     method fan2_hsc_to_fpga_pg = sync(fan2_pg);
     method fpga_to_fan2_led_l = fan2_led; // Not active low on Fan VPD.
+    method fan2_to_fpga_present = sync(fan2_present);
 
     method fpga_to_fan3_hsc_en = fan3_en;
     method fan3_hsc_to_fpga_pg = sync(fan3_pg);
     method fpga_to_fan3_led_l = fan3_led; // Not active low on Fan VPD.
+    method fan3_to_fpga_present = sync(fan3_present);
 
     // Front IO
     method fpga_to_front_io_hsc_en = front_io_en;
@@ -1009,18 +1021,22 @@ interface SidecarMainboardControllerTopRevB;
     method Bool fpga_to_fan0_hsc_en();
     (* prefix = "" *) method Action fan0_hsc_to_fpga_pg(Bool fan0_hsc_to_fpga_pg);
     method Bool fpga_to_fan0_led_l();
+    (* prefix = "" *) method Action fan0_to_fpga_present(Bool fan0_to_fpga_present);
 
     method Bool fpga_to_fan1_hsc_en();
     (* prefix = "" *) method Action fan1_hsc_to_fpga_pg(Bool fan1_hsc_to_fpga_pg);
     method Bool fpga_to_fan1_led_l();
+    (* prefix = "" *) method Action fan1_to_fpga_present(Bool fan1_to_fpga_present);
 
     method Bool fpga_to_fan2_hsc_en();
     (* prefix = "" *) method Action fan2_hsc_to_fpga_pg(Bool fan2_hsc_to_fpga_pg);
     method Bool fpga_to_fan2_led_l();
+    (* prefix = "" *) method Action fan2_to_fpga_present(Bool fan2_to_fpga_present);
 
     method Bool fpga_to_fan3_hsc_en();
     (* prefix = "" *) method Action fan3_hsc_to_fpga_pg(Bool fan3_hsc_to_fpga_pg);
     method Bool fpga_to_fan3_led_l();
+    (* prefix = "" *) method Action fan3_to_fpga_present(Bool fan3_to_fpga_present);
 
     //
     // Front IO
@@ -1274,18 +1290,22 @@ module mkSidecarMainboardControllerTopRevB (SidecarMainboardControllerTopRevB);
     method fpga_to_fan0_hsc_en = _top.fpga_to_fan0_hsc_en;
     method fan0_hsc_to_fpga_pg = _top.fan0_hsc_to_fpga_pg;
     method fpga_to_fan0_led_l = _top.fpga_to_fan0_led_l;
+    method fan0_to_fpga_present = _top.fan0_to_fpga_present;
 
     method fpga_to_fan1_hsc_en = _top.fpga_to_fan1_hsc_en;
     method fan1_hsc_to_fpga_pg = _top.fan1_hsc_to_fpga_pg;
     method fpga_to_fan1_led_l = _top.fpga_to_fan1_led_l;
+    method fan1_to_fpga_present = _top.fan1_to_fpga_present;
 
     method fpga_to_fan2_hsc_en = _top.fpga_to_fan2_hsc_en;
     method fan2_hsc_to_fpga_pg = _top.fan2_hsc_to_fpga_pg;
     method fpga_to_fan2_led_l = _top.fpga_to_fan2_led_l;
+    method fan2_to_fpga_present = _top.fan2_to_fpga_present;
 
     method fpga_to_fan3_hsc_en = _top.fpga_to_fan3_hsc_en;
     method fan3_hsc_to_fpga_pg = _top.fan3_hsc_to_fpga_pg;
     method fpga_to_fan3_led_l = _top.fpga_to_fan3_led_l;
+    method fan3_to_fpga_present = _top.fan3_to_fpga_present;
 
     //
     // Front IO

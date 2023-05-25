@@ -22,6 +22,7 @@ import IgnitionControllerRegisters::*;
 import PCIeEndpointController::*;
 import SidecarMainboardController::*;
 import SidecarMainboardControllerReg::*;
+import SidecarMainboardMiscSequencers::*;
 import Tofino2Sequencer::*;
 import TofinoDebugPort::*;
 
@@ -44,7 +45,8 @@ module mkSpiServer #(
         Tofino2Sequencer::Registers tofino,
         TofinoDebugPort::Registers tofino_debug_port,
         PCIeEndpointController::Registers pcie,
-        Vector#(n_ignition_controllers, IgnitionController::Registers) ignition_pages)
+        Vector#(n_ignition_controllers, IgnitionController::Registers) ignition_pages,
+        Vector#(4, FanModuleRegisters) fans)
             (SpiServer)
                 provisos (
                     Add#(n_ignition_controllers, 4, n_pages),
@@ -167,7 +169,13 @@ module mkSpiServer #(
                 // Scratchpad
                 fromOffset(scratchpadOffset): read(scratchpad);
 
-                default: read(8'h00);
+                // Fans
+                fromOffset(fan0StateOffset): read(fans[0].state);
+                fromOffset(fan1StateOffset): read(fans[1].state);
+                fromOffset(fan2StateOffset): read(fans[2].state);
+                fromOffset(fan3StateOffset): read(fans[3].state);
+
+                default: read(8'hff);
             endcase;
 
         let data <- reader;
@@ -184,6 +192,10 @@ module mkSpiServer #(
             fromOffset(cs2Offset): update(request.op, checksum[2], request.wdata);
             fromOffset(cs3Offset): update(request.op, checksum[3], request.wdata);
             fromOffset(scratchpadOffset): update(request.op, scratchpad, request.wdata);
+            fromOffset(fan0StateOffset): update(request.op, fans[0].state, request.wdata);
+            fromOffset(fan1StateOffset): update(request.op, fans[1].state, request.wdata);
+            fromOffset(fan2StateOffset): update(request.op, fans[2].state, request.wdata);
+            fromOffset(fan3StateOffset): update(request.op, fans[3].state, request.wdata);
         endcase
 
         page_request[0] <= tagged Invalid;

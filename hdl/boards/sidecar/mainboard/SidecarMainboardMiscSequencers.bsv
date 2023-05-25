@@ -1,6 +1,23 @@
+// Copyright 2023 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 package SidecarMainboardMiscSequencers;
 
+// BSV
+import Connectable::*;
+import ConfigReg::*;
+import DefaultValue::*;
+
+// Cobalt
+import Debouncer::*;
+
+// Quartz
 import PowerRail::*;
+
+import SidecarMainboardControllerReg::*;
 
 (* always_enabled *)
 interface VSC7448Pins;
@@ -98,5 +115,93 @@ module mkClockGeneratorSequencer #(Integer power_good_timeout) (ClockGeneratorSe
 
     interface PulseWire tick_1ms = tick;
 endmodule
+
+interface FanModulePins;
+    interface PowerRail::Pins hsc;
+    method Action present(Bool present);
+    method Bool led;
+endinterface
+
+interface FanModuleRegisters;
+    interface Reg#(FanState) state;
+endinterface
+
+interface FanModuleSequencer;
+    interface FanModulePins pins;
+    interface FanModuleRegisters registers;
+    interface PulseWire tick_1ms; 
+endinterface
+
+module mkFanModuleSequencer (FanModuleSequencer);
+
+    // The device controlling the rail here is an ADM1272 hot swap controller.
+    // Fault information is preserved until cleared via PMBUS OPERATION off or
+    // CLEAR_FAULT, so this rail will disable on abort (losing PG during normal
+    // operation). PG Timeout is 10 ms.
+    //
+    // TODO(aaron): Change timeout from 0 (no timeout) back to 10 upon
+    // implementation of https://github.com/oxidecomputer/hardware-sidecar/issues/791
+    PowerRail#(4) adm1272 <- mkPowerRailDisableOnAbort(0);
+
+    // This represents the debounced fan presence signal. Presence will only be
+    // asserted internally after being observed for 500ms on the pin while it
+    // will be removed immediately internally after it is lost on the pin.
+    Debouncer#(500, 0, Bool) fan_present <- mkDebouncer(False);
+    PulseWire tick_1ms_ <- mkPulseWire();
+    mkConnection(asIfc(tick_1ms_), asIfc(fan_present));
+
+    Reg#(Bool) led <- mkReg(False);
+    Reg#(Bool) enable <- mkReg(False);
+    ConfigReg#(Bool) enable_sw <- mkConfigReg(False);
+
+    // The hot swap expects a tick to correspond with its timeout
+    (* fire_when_enabled *)
+    rule do_hot_swap_tick (tick_1ms_);
+        adm1272.send();
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_enable;
+        if (!fan_present || !enable_sw) begin
+            enable <= False;
+            adm1272.set_enable(False);
+        end else if (adm1272.aborted() || adm1272.timed_out()) begin
+            enable <= False;
+        end else if (enable_sw && !enable) begin
+            // we only want this to fire once as .set_enable() restarts the
+            // PG timeout counter
+            enable <= True;
+            adm1272.set_enable(True);
+        end
+    endrule
+
+    interface FanModulePins pins;
+        interface PowerRail::Pins hsc = adm1272.pins;
+        method present = fan_present._write;
+        method led = led;
+    endinterface
+
+    interface FanModuleRegisters registers;
+        interface Reg state;
+            method _read = FanState {
+                pg_timed_out: pack(adm1272.timed_out()),
+                power_fault: pack(adm1272.aborted()),
+                pg: pack(adm1272.pin_state.good),
+                present: pack(fan_present),
+                led: pack(led),
+                enable: pack(enable)
+            };
+            method Action _write(FanState next);
+                led <= unpack(next.led);
+                enable_sw <= unpack(next.enable);
+            endmethod
+        endinterface
+    endinterface
+
+    method tick_1ms = tick_1ms_;
+endmodule
+
+function FanModulePins fan_pins(FanModuleSequencer m) = m.pins;
+function FanModuleRegisters fan_registers(FanModuleSequencer m) = m.registers;
 
 endpackage
