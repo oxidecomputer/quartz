@@ -27,8 +27,8 @@ interface TargetBench;
     method Action await_ticks_elapsed(Integer n);
     method Action pet_watchdog();
 
-    method Action await_system_power_request_complete();
-    method Action await_system_power_off_complete();
+    method Stmt await_system_power_request_complete();
+    method Stmt await_system_power_off_complete();
     method Stmt assert_system_powering_on(LinkStatus expected_link0_status);
 endinterface
 
@@ -83,11 +83,17 @@ module mkTargetBench #(
         await(ticks_elapsed_ >= fromInteger(tick_duration * n));
     method pet_watchdog = wd.send;
 
-    method Action await_system_power_request_complete() =
-        await(!_target.system_power_request_in_progress);
+    method Stmt await_system_power_request_complete() =
+        seq
+            await(_target.system_power_request_in_progress);
+            await(!_target.system_power_request_in_progress);
+        endseq;
 
-    method Action await_system_power_off_complete() =
-        await(!_target.system_power_off_in_progress);
+    method Stmt await_system_power_off_complete() =
+        seq
+            await(_target.system_power_request_in_progress);
+            await(!_target.system_power_off_in_progress);
+        endseq;
 
     method Stmt assert_system_powering_on(LinkStatus expected_link0_status) =
         seq

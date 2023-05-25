@@ -55,6 +55,7 @@ interface Target;
     method Bool system_power_request_in_progress();
     method Bool system_power_off_in_progress();
     method Bool system_power_on_in_progress();
+    method Bool system_power_aborted();
 endinterface
 
 typedef enum {
@@ -494,11 +495,13 @@ module mkTarget #(Parameters parameters) (Target);
                     initialized &&
                     button_pressed &&
                     !request_in_progress);
-                // If a system power abort happened, issue a power on request
-                // rather than a system reset request.
-                let request_ = system_power_abort ?
-                    SystemPowerOn :
-                    SystemReset;
+                // If the system is powered off, act as a power button rather
+                // than a reset button. The system power transition logic will
+                // clear the abort flag is this power off was in response to a
+                // system power fault/abort.
+                let request_ = system_power_off ?
+                        SystemPowerOn :
+                        SystemReset;
 
                 reset_button_released <= False;
                 request.wset(request_);
@@ -705,6 +708,7 @@ module mkTarget #(Parameters parameters) (Target);
     method system_power_request_in_progress = request_in_progress;
     method system_power_off_in_progress = system_powering_off;
     method system_power_on_in_progress = system_powering_on;
+    method system_power_aborted = system_power_abort;
 endmodule
 
 endpackage: IgnitionTarget
