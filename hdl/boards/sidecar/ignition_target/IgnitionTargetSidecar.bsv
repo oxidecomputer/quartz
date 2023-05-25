@@ -34,7 +34,7 @@ module mkSidecarRevATargetWithPowerButton (IgnitionTargetTop);
 endmodule
 
 //
-// Rev B
+// Rev B, C
 //
 
 (* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)

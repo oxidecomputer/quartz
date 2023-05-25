@@ -311,9 +311,12 @@ module mkTarget #(Parameters parameters) (Target);
         //
         let system_power_next = system_power_r;
 
-        // Turn system power off if a power fault occurs (MAPO).
-        if (system_power_on &&
+        // Turn system power off if a power fault occurs (MAPO). Disabling this
+        // in the `parameters` structure will cause the compiler to optimize
+        // this out.
+        if (parameters.system_power_fault_monitor_enable &&
                 system_power_fault_monitor_enabled &&
+                system_power_on &&
                 system_power_fault) begin
             // Signal the Controller that an abort happened as a result of a
             // fault. This flag is only set here.
