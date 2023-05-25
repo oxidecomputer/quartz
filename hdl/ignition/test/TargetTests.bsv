@@ -460,6 +460,44 @@ module mkSystemResetLongButtonPressTest (Empty);
     endseq);
 endmodule
 
+// Test that the system powers on when the system is powered off and the (reset)
+// button is pressed.
+module mkSystemPowerOnWhenResetButtonPressTest (Empty);
+    TargetBench bench <- mkTargetBench(
+        parameters,
+        4 * parameters.system_power_toggle_cool_down);
+
+    let tx = tpl_2(bench.link.message);
+
+    mkAutoFSM(seq
+        assert_eq(
+            parameters.button_behavior,
+            ResetButton,
+            "expected Target configured with reset button");
+        // Assert that the system initially powers on.
+        bench.link.set_connected(False, True);
+        bench.await_system_power_request_complete();
+        assert_eq(bench.target.system_power, On, "expected system power on");
+
+        // Send Hello's and wait for the controller to be marked present.
+        repeat(3) tx.put(tagged Hello);
+        repeat(2) bench.await_tick();
+
+        // Send a SystemPowerOff request and wait for the request to complete.
+        tx.put(tagged Request SystemPowerOff);
+        bench.await_system_power_request_complete();
+        assert_eq(bench.target.system_power, Off, "expected system power off");
+
+        // Press the (reset) button and assert the system powered on.
+        bench.target.button_event(True);
+        bench.target.button_event(False);
+        bench.await_system_power_request_complete();
+        assert_eq(
+            bench.target.system_power, On,
+            "expected system power on");
+    endseq);
+endmodule
+
 module mkSystemPowerAbortOnA2FaultTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
@@ -670,22 +708,23 @@ module mkPowerButtonRestartAfterSystemPowerAbortTest (Empty);
 
     TargetBench bench <- mkTargetBench(
         parameters_,
-        4 * parameters.system_power_toggle_cool_down);
+        4 * parameters_.system_power_toggle_cool_down);
 
     mkAutoFSM(seq
         // Set an A2 power fault while a system powers on, triggering an
         // emergency power off.
         bench.set_faults(system_faults_power_a2);
-        bench.link.set_connected(False, True);
+        bench.target.button_event(True);
+
         bench.await_system_power_request_complete();
         assert_eq(bench.target.system_power, Off, "expected system power off");
+        assert_true(
+            bench.target.system_power_aborted,
+            "expected system power abort");
 
-        // Resolve A2 power fault.
+        // Resolve A2 power fault and press the button again.
         bench.set_faults(system_faults_none);
-
-        // Press the button.
         bench.target.button_event(True);
-        bench.target.button_event(False);
 
         bench.await_system_power_request_complete();
         assert_eq(
