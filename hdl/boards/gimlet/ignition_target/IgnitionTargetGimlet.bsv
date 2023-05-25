@@ -18,6 +18,7 @@ import IgnitionTargetWrapper::*;
 module mkGimletRevBTargetWithResetButton (IgnitionTargetTop);
     Parameters parameters = default_app_with_reset_button;
     parameters.invert_leds = True;
+    parameters.system_power_fault_monitor_enable = False;
 
     (* hide *) IgnitionTargetTopWithDebug _top <-
         mkIgnitionTargetIOAndResetWrapper(parameters);
