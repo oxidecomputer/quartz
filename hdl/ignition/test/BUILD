@@ -266,6 +266,7 @@ bluesim_tests('IntegrationTests',
         'mkTargetRoTFaultTest',
         'mkTargetSystemResetTest',
         'mkTargetLinkEventsTest',
+        'mkControllerAlwaysTransmitOverrideTest',
     ],
     deps = [
         ':IgnitionControllerAndTargetBench',

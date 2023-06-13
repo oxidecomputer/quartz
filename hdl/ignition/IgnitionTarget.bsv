@@ -56,6 +56,9 @@ interface Target;
     method Bool system_power_off_in_progress();
     method Bool system_power_on_in_progress();
     method Bool system_power_aborted();
+
+    method Bool controller0_present();
+    method Bool controller1_present();
 endinterface
 
 typedef enum {
@@ -709,6 +712,9 @@ module mkTarget #(Parameters parameters) (Target);
     method system_power_off_in_progress = system_powering_off;
     method system_power_on_in_progress = system_powering_on;
     method system_power_aborted = system_power_abort;
+
+    method controller0_present = links[0].controller_present;
+    method controller1_present = links[1].controller_present;
 endmodule
 
 endpackage: IgnitionTarget

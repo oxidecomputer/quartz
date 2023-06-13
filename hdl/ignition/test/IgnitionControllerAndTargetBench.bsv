@@ -49,14 +49,15 @@ module mkLink #(
         String name,
         Bit#(1) tx,
         function Action rx(Bit#(1) b),
-        Bool invert_link_polarity)
+        Bool invert_link_polarity,
+        Bool tx_enable)
             (Link);
     Reg#(LinkState) state <- mkReg(Disconnected);
     Probe#(Bit#(1)) tap <- mkProbe();
 
     (* fire_when_enabled *)
     rule do_transmit;
-        let b = state == Connected ? tx : 0;
+        let b = state == Connected && tx_enable ? tx : 0;
         let b_ = invert_link_polarity ? ~b : b;
 
         tap <= b_;
@@ -121,14 +122,16 @@ module mkIgnitionControllerAndTargetBench #(
             "Controller->Target",
             controller_io.tx,
             target_io.rx,
-            parameters.invert_link_polarity);
+            parameters.invert_link_polarity,
+            tx_enable(controller_));
 
     Link target_to_controller_link <-
         mkLink(
             "Target->Controller",
             target_io.tx,
             controller_io.rx,
-            parameters.invert_link_polarity);
+            parameters.invert_link_polarity,
+            True);
 
     //
     // Bench timing.
