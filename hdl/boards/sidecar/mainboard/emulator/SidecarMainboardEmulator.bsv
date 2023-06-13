@@ -193,7 +193,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <-
         zipWithM(
             mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe),
-            map(target_present, controller.ignition_controllers),
+            map(tx_enable, controller.ignition_controllers),
             map(toSerial, controller_txrs));
 
     // Make Inouts for the two adapters connecting to the external Targets,

@@ -12,7 +12,7 @@ export mkController;
 export registers;
 export transceiver_client;
 export register_pages;
-export target_present;
+export tx_enable;
 
 // Interrupt helpers.
 export interrupts_none;
@@ -62,7 +62,7 @@ interface LinkEventCounterRegisters;
 endinterface
 
 interface Registers;
-    interface ReadOnly#(IgnitionControllerRegisters::ControllerStatus) controller_status;
+    interface Reg#(IgnitionControllerRegisters::ControllerState) controller_state;
     interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) controller_link_status;
     interface ReadOnly#(IgnitionControllerRegisters::TargetSystemType) target_system_type;
     interface ReadOnly#(IgnitionControllerRegisters::TargetSystemStatus) target_system_status;
@@ -81,6 +81,7 @@ interface Registers;
 endinterface
 
 typedef struct {
+    Bool always_transmit;
     Bool target_present;
     Bool receiver_locked;
 } Status deriving (Bits);
@@ -131,6 +132,10 @@ module mkController #(Parameters parameters) (Controller);
 
     // A pending `Request`, received upstream (software).
     ConfigReg#(Maybe#(Request)) pending_request <- mkConfigReg(tagged Invalid);
+
+    // Settable override to make the Controller always transmit rather than wait
+    // for a Target to be present first.
+    ConfigReg#(Bool) always_transmit <- mkConfigReg(False);
 
     //
     // Events
@@ -257,9 +262,15 @@ module mkController #(Parameters parameters) (Controller);
     endinterface
 
     interface Registers registers;
-        interface ReadOnly controller_status = valueToReadOnly(
-            ControllerStatus {
-                target_present: pack(target_present)});
+        interface Reg controller_state;
+            method _read = ControllerState {
+                target_present: pack(target_present),
+                always_transmit: pack(always_transmit)};
+
+            method Action _write(ControllerState state);
+                always_transmit <= unpack(state.always_transmit);
+            endmethod
+        endinterface
 
         interface ReadOnly controller_link_status =
             valueToReadOnly(
@@ -356,7 +367,8 @@ module mkController #(Parameters parameters) (Controller);
 
     method status = Status {
         receiver_locked: link_status.receiver_locked,
-        target_present: target_present};
+        target_present: target_present,
+        always_transmit: always_transmit};
 endmodule
 
 //
@@ -458,6 +470,6 @@ function Vector#(n, Registers) register_pages(Vector#(n, Controller) controllers
 
 function TransceiverClient transceiver_client(Controller c) = c.txr;
 
-function Bool target_present(Controller c) = c.status.target_present;
+function Bool tx_enable(Controller c) = c.status.always_transmit || c.status.target_present;
 
 endpackage

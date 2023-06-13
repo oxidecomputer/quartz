@@ -290,7 +290,7 @@ module mkSpiServer #(
     rule do_demux_target_present_summary;
         // Collect a summary of the Target present bits as a 64 bit-vector.
         function target_present(registers) =
-            registers.controller_status.target_present;
+            registers.controller_state.target_present;
 
         target_present_summary <=
             unpack(extend(pack(map(target_present, ignition_pages))));
@@ -327,8 +327,8 @@ module mkSpiServer #(
             let reader =
                 case (_request.address)
                     // Controller state
-                    fromInteger(controllerStatusOffset):
-                        read(registers.controller_status);
+                    fromInteger(controllerStateOffset):
+                        read(registers.controller_state);
                     fromInteger(controllerLinkStatusOffset):
                         read(registers.controller_link_status);
                     fromInteger(targetSystemTypeOffset):
