@@ -123,6 +123,9 @@ module mkIgnitionControllerAndTargetBench #(
             controller_io.tx,
             target_io.rx,
             parameters.invert_link_polarity,
+            // Mimic the hardware implementation where the output buffer of the
+            // Controller transmitter is only enabled if a Target is present or
+            // the `always_transmit` bit has been set.
             tx_enabled(controller_));
 
     Link target_to_controller_link <-
