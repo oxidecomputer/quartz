@@ -51,7 +51,7 @@ module mkPeriodicHelloTest (Empty);
             // timout on the Target side.
             assert_eq(
                 bench.ticks_elapsed,
-                fromInteger(parameters.protocol.hello_interval - 1),
+                fromInteger(parameters.protocol.hello_interval),
                 "expected the configured number of ticks between Hello messages");
 
             bench.reset_ticks_elapsed();
