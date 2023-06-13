@@ -12,7 +12,7 @@ export mkController;
 export registers;
 export transceiver_client;
 export register_pages;
-export tx_enable;
+export tx_enabled;
 
 // Interrupt helpers.
 export interrupts_none;
@@ -470,6 +470,6 @@ function Vector#(n, Registers) register_pages(Vector#(n, Controller) controllers
 
 function TransceiverClient transceiver_client(Controller c) = c.txr;
 
-function Bool tx_enable(Controller c) = c.status.always_transmit || c.status.target_present;
+function Bool tx_enabled(Controller c) = c.status.always_transmit || c.status.target_present;
 
 endpackage

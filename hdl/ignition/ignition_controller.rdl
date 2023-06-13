@@ -64,7 +64,7 @@ addrmap ignition_controller {
     default hw = w;
 
     reg {
-        name = "Controller Status";
+        name = "Controller State";
 
         field {
             desc = "A Target is present and the TARGET_SYSTEM_TYPE, TARGET_SYSTEM_STATUS and TARGET_REQUEST_STATUS registers are valid";

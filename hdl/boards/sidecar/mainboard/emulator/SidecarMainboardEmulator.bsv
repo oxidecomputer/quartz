@@ -193,7 +193,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <-
         zipWithM(
             mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe),
-            map(tx_enable, controller.ignition_controllers),
+            map(tx_enabled, controller.ignition_controllers),
             map(toSerial, controller_txrs));
 
     // Make Inouts for the two adapters connecting to the external Targets,
@@ -246,7 +246,12 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
                 0;
 
         target_link1.rx(~(controller_to_target));
-        controller_io[1].rx(~target_link1.tx);
+
+        // The Target->Controller direction is not connected, simulating a cable
+        // failure and allowing for the `always_transmit` bit to be tested. If
+        // this bit is enabled Controller 1 will be marked as present by the
+        // Target (and this will be visible on Controller 0) despite the Target
+        // not being present for Controller 1.
     endrule
 
     //

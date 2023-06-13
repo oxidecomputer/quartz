@@ -385,6 +385,8 @@ module mkSpiServer #(
             function do_update(r) = update(_request.op, r, _request.wdata);
 
             case (_request.address)
+                fromInteger(controllerStateOffset):
+                    do_update(registers.controller_state);
                 fromInteger(targetRequestOffset):
                     do_update(registers.target_request);
                 fromInteger(controllerLinkEventsSummaryOffset):

@@ -319,7 +319,7 @@ module mkIgnitionIOs #(
     Vector#(n, Transceiver) txrs <- mkTransceivers();
     Vector#(n, IgnitionIO) io <- zipWithM(
         mkSampledSerialIOWithTxStrobeInout(tx_strobe),
-        map(tx_enable, controllers),
+        map(tx_enabled, controllers),
         map(toSerial, txrs));
 
     mkFreeRunningStrobe(tx_strobe);

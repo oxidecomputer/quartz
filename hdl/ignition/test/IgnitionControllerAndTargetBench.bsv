@@ -123,7 +123,7 @@ module mkIgnitionControllerAndTargetBench #(
             controller_io.tx,
             target_io.rx,
             parameters.invert_link_polarity,
-            tx_enable(controller_));
+            tx_enabled(controller_));
 
     Link target_to_controller_link <-
         mkLink(
