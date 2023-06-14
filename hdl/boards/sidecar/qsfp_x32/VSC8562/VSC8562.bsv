@@ -73,6 +73,7 @@ interface Registers;
     interface Reg#(PhySmiPhyAddr) phy_smi_phy_addr;
     interface Reg#(PhySmiRegAddr) phy_smi_reg_addr;
     interface Reg#(PhySmiCtrl) phy_smi_ctrl;
+    interface ReadOnly#(PhyRailStates) phy_rail_states;
 endinterface
 
 interface Pins;
@@ -144,6 +145,13 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(Bit#(1)) refclk_en     <- mkReg(0);
     Reg#(Bit#(1)) reset_        <- mkReg(1);
 
+    // Hardware control of configuration pins, after PHY initialization these
+    // registers are ignored and the phy_ctrl registers are used to control the
+    // pins.
+    Reg#(Bool) coma_mode_hw <- mkReg(False);
+    Reg#(Bool) refclk_en_hw <- mkReg(False);
+    Reg#(Bool) reset_hw     <- mkReg(True);
+
     // SMI interrupt pin regsiter
     Reg#(Bit#(1)) mdint         <- mkReg(0);
 
@@ -155,7 +163,6 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(UInt#(7)) ms_cntr      <- mkReg(0);
     PulseWire reset_ms_cntr     <- mkPulseWire();
 
-    Reg#(Bool) coma_mode_hw     <- mkReg(False);
     Reg#(Bool) smi_busy         <- mkReg(False);
     Reg#(Bit#(16)) read_data_r  <- mkReg(0);
     Wire#(Bool) pg_timed_out    <- mkWire();
@@ -194,36 +201,42 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             await(v1p0.pin_state.enable && v1p0.pin_state.good);
             v2p5.set_enable(True);
             await(v2p5.pin_state.enable && v2p5.pin_state.good);
-            refclk_en       <= 1;
+            refclk_en_hw    <= True;
             await(ms_cntr == fromInteger(parameters.refclk_en_to_stable_ms + 1));
             reset_ms_cntr.send();
-            reset_          <= 0;
+            reset_hw        <= False;
             await(ms_cntr == fromInteger(parameters.reset_release_to_ready_ms + 1));
             reset_ms_cntr.send();
-            // relinquish COMA_MODE control to SW
-            action
-                coma_mode_hw    <= False;
-                phy_ready       <= True;
-            endaction
+            // Indicate to SW that the PHY is initialized
+            phy_ready       <= True;
         endseq, phy_ctrl.en == 1 && !pg_timed_out);
 
     // VSC8562 power down sequence (no special requirements noted in datasheet)
     FSM vsc8562_power_down_seq <- mkFSMWithPred(seq
             action
                 coma_mode_hw    <= False;
+                reset_hw        <= True;
+                refclk_en_hw    <= False;
                 phy_ready       <= False;
             endaction
-            reset_          <= 1;
-            refclk_en       <= 0;
+            v2p5.set_enable(False);
             v1p0.set_enable(False);
         endseq, phy_ctrl.en == 0 || pg_timed_out);
 
-    // This allows hardware to override COMA_MODE control during initial
-    // power-on sequencing and then hand it over to software control after
+    // This allows hardware to override COMA_MODE, REFCLK_EN, and RESET control
+    // during initial power-on sequencing and then hand it over to software
+    // control after
     (* fire_when_enabled, no_implicit_conditions *)
-    rule do_coma_mode_comb;
-        coma_mode   <= pack((coma_mode_hw ||
-                            (unpack(phy_ctrl.coma_mode) && phy_ready)));
+    rule do_pin_control_comb;
+            if (phy_ready) begin
+                coma_mode   <= phy_ctrl.coma_mode;
+                refclk_en   <= phy_ctrl.refclk_en;
+                reset_      <= phy_ctrl.reset;
+            end else begin
+                coma_mode   <= pack(coma_mode_hw);
+                refclk_en   <= pack(refclk_en_hw);
+                reset_      <= pack(reset_hw);
+            end
     endrule
 
     (* fire_when_enabled *)
@@ -286,7 +299,9 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
                 phy_ctrl <= PhyCtrl {
                     en: next.en,
                     coma_mode: next.coma_mode,
-                    clear_power_fault: 0
+                    clear_power_fault: 0,
+                    refclk_en: next.refclk_en,
+                    reset: next.reset
                 };
                 if (next.clear_power_fault == 1) begin
                     clear_fault.send();
@@ -294,7 +309,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             endmethod
         endinterface
         interface ReadOnly phy_smi_status   = valueToReadOnly(
-            PhySmiStatus{
+            PhySmiStatus {
                 busy: pack(smi_busy),
                 mdint: mdint
             });
@@ -305,6 +320,11 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
         interface Reg phy_smi_phy_addr      = smi_phy_addr;
         interface Reg phy_smi_reg_addr      = smi_reg_addr;
         interface Reg phy_smi_ctrl          = smi_ctrl;
+        interface ReadOnly phy_rail_states  = valueToReadOnly(
+            PhyRailStates {
+                v1p0_state: pack(v1p0.state()),
+                v2p5_state: pack(v2p5.state())
+            });
     endinterface
 
     interface Pins pins;

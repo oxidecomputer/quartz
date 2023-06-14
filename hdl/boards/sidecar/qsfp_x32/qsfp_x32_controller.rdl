@@ -126,11 +126,11 @@ addrmap qsfp_x32_controller {
     // VSC8562
     //
 
-    vsc8562 VSC8562;
+    vsc8562 VSC8562 @0x0100;
 
     //
     // QSFP Modules
     //
 
-    qsfp_modules_top QSFP;
+    qsfp_modules_top QSFP @0x1000;
 };
