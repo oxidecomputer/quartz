@@ -119,6 +119,8 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(top.fpga_app_id);
         end else if (spi_request.address == fromInteger(ledCtrlOffset)) begin
             ret_byte = pack(top.led_ctrl);
+        end else if (spi_request.address == fromInteger(fpgaBoardVerOffset)) begin
+            ret_byte = pack(top.fpga_board_ver);
         end else if (spi_request.address == fromInteger(vsc8562PhyStatusOffset)) begin
             ret_byte = pack(vsc8562.phy_status);
         end else if (spi_request.address == fromInteger(vsc8562PhyCtrlOffset)) begin

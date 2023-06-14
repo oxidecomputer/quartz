@@ -113,6 +113,15 @@ addrmap qsfp_x32_controller {
         } RESET[0:0] = 1;
     } LED_CTRL;
 
+    reg {
+        name = "QSFP Board Version";
+        default sw = r;
+
+        field {
+            desc = "0x0 = Ver A, 0x1 = Ver B or C";
+        } VERSION[4:0] = 0;
+    } FPGA_BOARD_VER;
+
     //
     // VSC8562
     //
