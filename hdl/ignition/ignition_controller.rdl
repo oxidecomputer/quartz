@@ -64,12 +64,17 @@ addrmap ignition_controller {
     default hw = w;
 
     reg {
-        name = "Controller Status";
+        name = "Controller State";
 
         field {
             desc = "A Target is present and the TARGET_SYSTEM_TYPE, TARGET_SYSTEM_STATUS and TARGET_REQUEST_STATUS registers are valid";
         } TARGET_PRESENT[1] = 0;
-    } CONTROLLER_STATUS;
+        field {
+            sw = rw;
+            hw = r;
+            desc = "Always transmit rather than wait for a Target to be present first";
+        } ALWAYS_TRANSMIT[1] = 0;
+    } CONTROLLER_STATE;
 
     link_status CONTROLLER_LINK_STATUS;
     CONTROLLER_LINK_STATUS->name = "Controller Link Status";

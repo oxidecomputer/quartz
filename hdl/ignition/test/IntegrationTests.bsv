@@ -33,6 +33,7 @@ IgnitionControllerAndTargetBench::Parameters parameters =
             system_power_toggle_cool_down: 2,
             system_power_fault_monitor_enable: True,
             system_power_fault_monitor_start_delay: 2,
+            system_power_hotswap_controller_restart: True,
             protocol: protocol_parameters},
         invert_link_polarity: False};
 
@@ -40,10 +41,10 @@ module mkControllerTargetPresentTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
             parameters,
-            4 * max(protocol_parameters.hello_interval,
+            10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_status = bench.controller.registers.controller_status;
+    let controller_state = bench.controller.registers.controller_state;
     let target_system_status = bench.controller.registers.target_system_status;
 
     mkAutoFSM(seq
@@ -52,7 +53,7 @@ module mkControllerTargetPresentTest (Empty);
             bench.target_to_controller.set_state(Connected);
         endaction
         par
-            await_set(controller_status.target_present);
+            await_set(controller_state.target_present);
             await_set(target_system_status.controller0_detected);
         endpar
 
@@ -69,10 +70,10 @@ module mkTargetRoTFaultTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
             parameters,
-            5 * max(protocol_parameters.hello_interval,
+            10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_status = bench.controller.registers.controller_status;
+    let controller_state = bench.controller.registers.controller_state;
     let target_system_status = bench.controller.registers.target_system_status;
     let target_system_faults = bench.controller.registers.target_system_faults;
 
@@ -82,7 +83,7 @@ module mkTargetRoTFaultTest (Empty);
             bench.target_to_controller.set_state(Connected);
         endaction
         par
-            await_set(controller_status.target_present);
+            await_set(controller_state.target_present);
             await_set(target_system_status.controller0_detected);
         endpar
 
@@ -116,7 +117,7 @@ module mkTargetSystemResetTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_status = bench.controller.registers.controller_status;
+    let controller_state = bench.controller.registers.controller_state;
     let target_system_status = bench.controller.registers.target_system_status;
     let target_request = asReg(bench.controller.registers.target_request);
     let target_request_status = bench.controller.registers.target_request_status;
@@ -127,7 +128,7 @@ module mkTargetSystemResetTest (Empty);
             bench.target_to_controller.set_state(Connected);
         endaction
         par
-            await_set(controller_status.target_present);
+            await_set(controller_state.target_present);
             await_set(target_system_status.controller0_detected);
         endpar
 
@@ -178,7 +179,7 @@ module mkTargetLinkEventsTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_status = bench.controller.registers.controller_status;
+    let controller_state = bench.controller.registers.controller_state;
     let target_system_status = bench.controller.registers.target_system_status;
     let target_link0_status = bench.controller.registers.target_link0_status;
     let target_link0_events =
@@ -192,7 +193,7 @@ module mkTargetLinkEventsTest (Empty);
             bench.target_to_controller.set_state(Connected);
         endaction
         par
-            await_set(controller_status.target_present);
+            await_set(controller_state.target_present);
             await_set(target_system_status.controller0_detected);
         endpar
 
@@ -222,6 +223,46 @@ module mkTargetLinkEventsTest (Empty);
         assert_eq(
             target_link1_events, unpack('0),
             "expected no events for link 1");
+    endseq);
+endmodule
+
+// Verify that the Controller transmitter output enable override allows the
+// Controller to start transmitting Hello messages before detecting the presence
+// of a Target.
+module mkControllerAlwaysTransmitOverrideTest (Empty);
+    IgnitionControllerAndTargetBench bench <-
+        mkIgnitionControllerAndTargetBench(
+            parameters,
+            10 * max(protocol_parameters.hello_interval,
+                    protocol_parameters.status_interval));
+
+    let controller_state = asReg(bench.controller.registers.controller_state);
+    let controller_link_status = bench.controller.registers.controller_link_status;
+
+    mkAutoFSM(seq
+        // Connect only the Controller->Target direction. This will keep the
+        // Controller from transmitting because it will not detect a Target to
+        // be present.
+        bench.controller_to_target.set_state(Connected);
+
+        // Set the Controller to always transmit and await for the Target to
+        // detect the controller.
+        controller_state <= unpack('h02);
+
+        // Assume the Controller has started sending Hello messages. Wait for
+        // the Controller to be marked present.
+        await(bench.target.controller0_present);
+
+        // Assert the Controller has still not heard from the Target.
+        assert_not_set(
+            controller_link_status.receiver_aligned,
+            "expected receiver not aligned");
+        assert_not_set(
+            controller_link_status.receiver_locked,
+            "expected receiver not locked");
+        assert_not_set(
+            controller_state.target_present,
+            "expected no Target present");
     endseq);
 endmodule
 

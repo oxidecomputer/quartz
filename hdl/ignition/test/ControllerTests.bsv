@@ -51,7 +51,7 @@ module mkPeriodicHelloTest (Empty);
             // timout on the Target side.
             assert_eq(
                 bench.ticks_elapsed,
-                fromInteger(parameters.protocol.hello_interval - 1),
+                fromInteger(parameters.protocol.hello_interval),
                 "expected the configured number of ticks between Hello messages");
 
             bench.reset_ticks_elapsed();
@@ -80,7 +80,7 @@ module mkTargetPresentTest (Empty);
         repeat(3) tx.put(message_status_system_powered_on_link0_connected);
 
         action
-            await(controller.registers.controller_status.target_present == 1);
+            await(controller.registers.controller_state.target_present == 1);
             bench.reset_ticks_elapsed();
 
             assert_count(
@@ -88,7 +88,7 @@ module mkTargetPresentTest (Empty);
                 "expected Status received count to be 3");
         endaction
 
-        await(controller.registers.controller_status.target_present == 0);
+        await(controller.registers.controller_state.target_present == 0);
     endseq);
 endmodule
 
@@ -101,7 +101,7 @@ module mkTargetStateValidIfPresentTest (Empty);
     let tx = tpl_2(bench.link.message);
 
     // Shortcuts to registers.
-    let controller_status = bench.controller.registers.controller_status;
+    let controller_state = bench.controller.registers.controller_state;
     let target_system_type = bench.controller.registers.target_system_type;
     let target_system_status = bench.controller.registers.target_system_status;
 
@@ -116,7 +116,7 @@ module mkTargetStateValidIfPresentTest (Empty);
         action
             // Target presence is not yet valid after one Status message.
             bench.await_tick();
-            assert_not_set(controller_status.target_present,
+            assert_not_set(controller_state.target_present,
                 "expected Target not present");
             assert_eq(
                 target_system_type,
@@ -137,7 +137,7 @@ module mkTargetStateValidIfPresentTest (Empty);
         action
             bench.await_tick();
             assert_set(
-                controller_status.target_present,
+                controller_state.target_present,
                 "expected Target present");
             assert_eq(
                 target_system_type.system_type,
@@ -160,7 +160,7 @@ module mkTargetLinkStatusTest (Empty);
     let tx = tpl_2(bench.link.message);
 
     // Shortcuts to registers.
-    let controller_status = bench.controller.registers.controller_status;
+    let controller_state = bench.controller.registers.controller_state;
     let link0_status = bench.controller.registers.target_link0_status;
     let link1_status = bench.controller.registers.target_link1_status;
 
@@ -177,7 +177,7 @@ module mkTargetLinkStatusTest (Empty);
         action
             bench.await_tick();
             assert_set(
-                controller_status.target_present,
+                controller_state.target_present,
                 "expected Target present");
 
             // Test the Link 0 Status registers.
@@ -206,7 +206,6 @@ module mkTargetLinkEventsTest (Empty);
     let tx = tpl_2(bench.link.message);
 
     // Shortcuts to registers.
-    let controller_status = bench.controller.registers.controller_status;
     let target_link0_counters = bench.controller.registers.target_link0_counters;
     let target_link1_counters = bench.controller.registers.target_link1_counters;
     let link_events =
