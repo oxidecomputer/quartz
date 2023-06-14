@@ -131,6 +131,7 @@ interface TargetTransceiver;
     interface PutS#(Message) from_client;
     method Vector#(2, LinkStatus) status();
     method Vector#(2, LinkEvents) events();
+    method Action tick_1khz();
 endinterface
 
 interface TargetTransceiverClient;
@@ -179,6 +180,8 @@ module mkTargetTransceiver (TargetTransceiver);
     method events = vec(
         rx.events[0] | tx.events,
         rx.events[1] | tx.events);
+
+    method tick_1khz = rx.tick_1khz;
 endmodule
 
 //

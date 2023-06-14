@@ -83,6 +83,8 @@ typedef struct {
     Integer system_power_fault_monitor_start_delay;
     // Enable/disable hotswap controller restart during power on/off sequencing.
     Bool system_power_hotswap_controller_restart;
+    // Enable/disable the receiver watchdog.
+    Bool receiver_watchdog_enable;
     IgnitionProtocol::Parameters protocol;
 } Parameters;
 
@@ -97,6 +99,7 @@ Parameters default_app_with_reset_button =
         system_power_fault_monitor_enable: True,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
         system_power_hotswap_controller_restart: True,
+        receiver_watchdog_enable: True,
         protocol: defaultValue};
 
 Parameters default_app_with_power_button =
@@ -110,6 +113,7 @@ Parameters default_app_with_power_button =
         system_power_fault_monitor_enable: False,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
         system_power_hotswap_controller_restart: False,
+        receiver_watchdog_enable: True,
         protocol: defaultValue};
 
 instance DefaultValue#(Parameters);

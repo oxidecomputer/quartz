@@ -34,6 +34,7 @@ IgnitionControllerAndTargetBench::Parameters parameters =
             system_power_fault_monitor_enable: True,
             system_power_fault_monitor_start_delay: 2,
             system_power_hotswap_controller_restart: True,
+            receiver_watchdog_enable: True,
             protocol: protocol_parameters},
         invert_link_polarity: False};
 

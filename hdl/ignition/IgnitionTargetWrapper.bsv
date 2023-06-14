@@ -121,6 +121,11 @@ module mkIgnitionTargetIOAndResetWrapper
     // Connect the app to the 1kHz tick.
     mkConnection(asIfc(strobe_1khz), asIfc(app.tick_1khz));
 
+    // Connect the transceiver watchdog to the 1kHz tick.
+    if (parameters.receiver_watchdog_enable) begin
+        mkConnection(asIfc(strobe_1khz), asIfc(txr.tick_1khz));
+    end
+
     // Connect the app to the transceiver.
     mkConnection(txr, app.txr);
 

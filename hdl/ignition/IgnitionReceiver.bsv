@@ -25,6 +25,7 @@ interface Receiver#(numeric type n, type message_t);
     interface Get#(Tuple2#(UInt#(TLog#(n)), message_t)) message;
     method Vector#(n, LinkStatus) status();
     method Vector#(n, LinkEvents) events();
+    method Action tick_1khz();
 endinterface
 
 typedef enum {
@@ -64,6 +65,8 @@ typedef struct {
     // Deserializer interface for the channel.
     Wire#(DeserializedCharacter) character;
     PulseWire character_accepted;
+    // Watchdog interface for the channel.
+    Reg#(Bool) locked_timeout;
 } State#(type parser_t);
 
 module mkReceiver
@@ -102,6 +105,8 @@ module mkReceiver
 
         channels[i].character <- mkWire();
         channels[i].character_accepted <- mkPulseWire();
+
+        channels[i].locked_timeout <- mkConfigRegU();
     end
 
     Reg#(UInt#(TLog#(n))) reset_or_fetch_select <- mkReg(0);
@@ -115,6 +120,9 @@ module mkReceiver
     Reg#(Bool) parse_value <- mkDReg(False);
 
     Wire#(Tuple2#(UInt#(TLog#(n)), message_t)) received_message <- mkWire();
+
+    Reg#(UInt#(8)) watchdog_ticks_remaining <- mkRegU();
+    PulseWire watchdog_fired <- mkPulseWire();
 
     // This rule only makes sense for a receiver with more than 1 channel. The
     // compiler does the right thing here and optimizes the contents away, but
@@ -154,6 +162,8 @@ module mkReceiver
             channels[i].parser_state <= defaultValue;
             channels[i].expect_idle <= False;
             channels[i].idle_set_valid_history <= replicate(unknown);
+
+            channels[i].locked_timeout <= False;
         endrule
 
         // Fetch the next character for the channel under consideration.
@@ -334,7 +344,8 @@ module mkReceiver
             // remaining is condering the receive history to determine if the
             // link should be locked.
             if (countElem(known_invalid, channels[i].character_valid_history) > 2 ||
-                    channels[i].idle_set_valid_history == all_idle_sets_invalid) begin
+                    channels[i].idle_set_valid_history == all_idle_sets_invalid ||
+                    channels[i].locked_timeout)  begin
                 reset_receiver = True;
             end
             else if (channels[i].aligned &&
@@ -351,6 +362,16 @@ module mkReceiver
             // checks either reset the receiver or continue waiting for the next
             // character.
             channels[i].phase <= reset_receiver ? Resetting : Fetching;
+        endrule
+
+        // Monitor the locked watchdog strobe. If the channel is not locked set
+        // the timeout flag and request a reset after the next Receive phase.
+        // The `locked_timeout` flag is reset during the `Resetting` phase.
+        rule do_channel_locked_watchdog (
+                channels[i].phase != Resetting &&
+                !channels[i].locked &&
+                watchdog_fired);
+            channels[i].locked_timeout <= True;
         endrule
     end
 
@@ -416,6 +437,16 @@ module mkReceiver
     interface Get message = toGet(received_message);
     method status = map(receiver_status, channels);
     method events = map(receiver_events, channels);
+
+    method Action tick_1khz();
+        // This automatically rolls over from 0, restarting the watchdog
+        // timer.
+        watchdog_ticks_remaining <= watchdog_ticks_remaining - 1;
+
+        if (watchdog_ticks_remaining == 0) begin
+            watchdog_fired.send();
+        end
+    endmethod
 endmodule
 
 //

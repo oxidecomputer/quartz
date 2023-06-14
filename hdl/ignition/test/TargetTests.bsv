@@ -28,6 +28,7 @@ Parameters parameters =
         system_power_fault_monitor_enable: True,
         system_power_fault_monitor_start_delay: 10,
         system_power_hotswap_controller_restart: True,
+        receiver_watchdog_enable: True,
         protocol: defaultValue};
 
 Integer test_timeout_25_ticks = 25;
