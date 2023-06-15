@@ -156,7 +156,8 @@ module mkMainboardController #(Parameters parameters)
         ignition_controllers_ <- replicateM(mkController(defaultValue));
 
     // Connect each Controller to the global tick.
-    function mk_tick_connection(controller) =
+    function module#(Empty) mk_tick_connection(
+            IgnitionController::Controller controller) =
         mkConnection(asIfc(tick_1khz), asIfc(controller.tick_1khz));
 
     mapM(mk_tick_connection, ignition_controllers_);

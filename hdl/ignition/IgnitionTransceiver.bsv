@@ -19,6 +19,7 @@ import ConfigReg::*;
 import Connectable::*;
 import FIFO::*;
 import GetPut::*;
+import RevertingVirtualReg::*;
 import Vector::*;
 
 import Deserializer8b10b::*;
@@ -42,14 +43,17 @@ interface Transceiver;
     interface GetPut#(Bit#(1)) serial;
     interface GetS#(Message) to_client;
     interface PutS#(Message) from_client;
+    method Action tick_1khz();
     method LinkStatus status();
     method LinkEvents events();
+    method Bool receiver_locked_timeout();
 endinterface
 
 interface TransceiverClient;
     interface GetS#(Message) to_txr;
     interface PutS#(Message) from_txr;
     method Action monitor(LinkStatus status, LinkEvents events);
+    method Bool tick_1khz();
 endinterface
 
 // Use the multi channel `Receiver` to construct a vector of `Transceiver`s.
@@ -62,6 +66,11 @@ module mkTransceivers (Vector#(n, Transceiver));
     Receiver#(n, Message) rx <- mkReceiver(parser);
 
     mkConnection(deserializers, rx);
+
+    // Dummy actions, used to avoid compiler warnings. See comment below in the
+    // `select_transceiver` function.
+    Vector#(n, Reg#(Bool)) watchdog_dummy_actions <-
+            replicateM(mkRevertingVirtualReg(False));
 
     // Messages are received by rx one at the time. Distribute them to a series
     // of output FIFOs based on their channel tag.
@@ -99,6 +108,21 @@ module mkTransceivers (Vector#(n, Transceiver));
             // unused bits set to False. As such it is assumed this "or" will
             // disappear during synthesis.
             method events = rx.events[i] | tx[i].events;
+
+            method receiver_locked_timeout = rx.locked_timeout[i];
+
+            // This is a bit meh, but the multi-channel receiver has a single
+            // watchdog action which operates on all channels. Connect this
+            // method to the first `Transceiver` returned from this module,
+            // while connecting all other transceiver interfaces to dummy
+            // virtual registers to suppress "body of rule empty" warnings from
+            // the compilor. The virtual registers are only used by the
+            // scheduler and will not result in anything showing up in the
+            // resulting logic.
+            method Action tick_1khz();
+                if (i == 0) rx.tick_1khz();
+                else watchdog_dummy_actions[i] <= True;
+            endmethod
         endinterface);
     endfunction
 
@@ -129,9 +153,10 @@ interface TargetTransceiver;
     interface Vector#(2, Put#(Bit#(1))) from_link;
     interface GetS#(TaggedMessage) to_client;
     interface PutS#(Message) from_client;
+    method Action tick_1khz();
     method Vector#(2, LinkStatus) status();
     method Vector#(2, LinkEvents) events();
-    method Action tick_1khz();
+    method Vector#(2, Bool) receiver_locked_timeout();
 endinterface
 
 interface TargetTransceiverClient;
@@ -140,9 +165,12 @@ interface TargetTransceiverClient;
     method Action monitor(
         Vector#(2, LinkStatus) status,
         Vector#(2, LinkEvents) events);
+    method Bool tick_1khz();
 endinterface
 
-module mkTargetTransceiver (TargetTransceiver);
+module mkTargetTransceiver
+        #(Bool receiver_watchdog_enabled)
+            (TargetTransceiver);
     // Receive chain.
     Vector#(2, Deserializer) deserializers <- replicateM(mkDeserializer());
     ControllerMessageParser parser <- mkControllerMessageParser();
@@ -181,7 +209,11 @@ module mkTargetTransceiver (TargetTransceiver);
         rx.events[0] | tx.events,
         rx.events[1] | tx.events);
 
-    method tick_1khz = rx.tick_1khz;
+    method receiver_locked_timeout = rx.locked_timeout;
+
+    method Action tick_1khz();
+        if (receiver_watchdog_enabled) rx.tick_1khz();
+    endmethod
 endmodule
 
 //
@@ -196,6 +228,11 @@ instance Connectable#(Transceiver, TransceiverClient);
         (* fire_when_enabled *)
         rule do_monitor;
             client.monitor(txr.status, txr.events);
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_tick_receiver_watchdog (client.tick_1khz);
+            txr.tick_1khz();
         endrule
     endmodule
 endinstance
@@ -214,6 +251,11 @@ instance Connectable#(TargetTransceiver, TargetTransceiverClient);
         (* fire_when_enabled *)
         rule do_monitor;
             client.monitor(txr.status, txr.events);
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_tick_receiver_watchdog (client.tick_1khz);
+            txr.tick_1khz();
         endrule
     endmodule
 endinstance

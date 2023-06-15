@@ -25,6 +25,7 @@ interface Receiver#(numeric type n, type message_t);
     interface Get#(Tuple2#(UInt#(TLog#(n)), message_t)) message;
     method Vector#(n, LinkStatus) status();
     method Vector#(n, LinkEvents) events();
+    method Vector#(n, Bool) locked_timeout();
     method Action tick_1khz();
 endinterface
 
@@ -121,8 +122,8 @@ module mkReceiver
 
     Wire#(Tuple2#(UInt#(TLog#(n)), message_t)) received_message <- mkWire();
 
-    Reg#(UInt#(8)) watchdog_ticks_remaining <- mkRegU();
-    PulseWire watchdog_fired <- mkPulseWire();
+    Reg#(UInt#(9)) watchdog_ticks_remaining <- mkRegU();
+    Reg#(Bool) watchdog_fired <- mkDReg(False);
 
     // This rule only makes sense for a receiver with more than 1 channel. The
     // compiler does the right thing here and optimizes the contents away, but
@@ -437,15 +438,13 @@ module mkReceiver
     interface Get message = toGet(received_message);
     method status = map(receiver_status, channels);
     method events = map(receiver_events, channels);
+    method locked_timeout = map(receiver_locked_timeout, channels);
 
     method Action tick_1khz();
         // This automatically rolls over from 0, restarting the watchdog
         // timer.
         watchdog_ticks_remaining <= watchdog_ticks_remaining - 1;
-
-        if (watchdog_ticks_remaining == 0) begin
-            watchdog_fired.send();
-        end
+        watchdog_fired <= (watchdog_ticks_remaining == 0);
     endmethod
 endmodule
 
@@ -509,6 +508,9 @@ function LinkEvents receiver_events(State#(parser_t) channel);
             decoding_error: channel.decoding_error,
             encoding_error: False};
 endfunction
+
+function Bool receiver_locked_timeout(State#(parser_t) channel) =
+        channel.locked_timeout;
 
 instance Connectable#(Vector#(n, Deserializer8b10b::Deserializer), Receiver#(n, message_t));
     module mkConnection #(

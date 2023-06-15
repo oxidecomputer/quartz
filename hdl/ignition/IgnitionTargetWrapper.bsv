@@ -72,7 +72,10 @@ module mkIgnitionTargetIOAndResetWrapper
     // effective link baudrate of 10Mb/s.
 
     Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, 0, reset_by reset_sync);
-    TargetTransceiver txr <- mkTargetTransceiver(reset_by reset_sync);
+    TargetTransceiver txr <-
+        mkTargetTransceiver(
+            parameters.receiver_watchdog_enable,
+            reset_by reset_sync);
 
     // Connect link 0.
     SampledSerialIO#(5) aux0_io <-
@@ -120,11 +123,6 @@ module mkIgnitionTargetIOAndResetWrapper
 
     // Connect the app to the 1kHz tick.
     mkConnection(asIfc(strobe_1khz), asIfc(app.tick_1khz));
-
-    // Connect the transceiver watchdog to the 1kHz tick.
-    if (parameters.receiver_watchdog_enable) begin
-        mkConnection(asIfc(strobe_1khz), asIfc(txr.tick_1khz));
-    end
 
     // Connect the app to the transceiver.
     mkConnection(txr, app.txr);

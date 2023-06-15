@@ -213,7 +213,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     //
 
     Target target <- mkTarget(default_app_with_reset_button);
-    TargetTransceiver target_txr <- mkTargetTransceiver();
+    TargetTransceiver target_txr <- mkTargetTransceiver(True);
 
     mkConnection(asIfc(tick_1khz), asIfc(target.tick_1khz));
     mkConnection(target_txr, target.txr);

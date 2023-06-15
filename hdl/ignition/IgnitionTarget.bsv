@@ -710,6 +710,8 @@ module mkTarget #(Parameters parameters) (Target);
             links[0].monitor(status[0], events[0]);
             links[1].monitor(status[1], events[1]);
         endmethod
+
+        method Bool tick_1khz = tick;
     endinterface
 
     method system_power_request_in_progress = request_in_progress;

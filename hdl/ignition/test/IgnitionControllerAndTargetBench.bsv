@@ -37,6 +37,9 @@ interface IgnitionControllerAndTargetBench;
     method Action await_tick();
     method Action pet_watchdog();
     method Action set_target_system_faults(SystemFaults faults);
+
+    method Bool controller_receiver_locked_timeout();
+    method Bool target_receiver_locked_timeout();
 endinterface
 
 typedef struct {
@@ -89,7 +92,7 @@ module mkIgnitionControllerAndTargetBench #(
     // Target, transceiver and IO adapter.
     //
     Target target_ <- mkTarget(parameters.target);
-    TargetTransceiver target_txr <- mkTargetTransceiver();
+    TargetTransceiver target_txr <- mkTargetTransceiver(True);
 
     Strobe#(3) target_tx_strobe <- mkLimitStrobe(1, 5, 0);
     SampledSerialIO#(5) target_io <-
@@ -173,6 +176,11 @@ module mkIgnitionControllerAndTargetBench #(
     method await_tick = await(tick);
     method pet_watchdog = wd.send;
     method set_target_system_faults = target_faults._write;
+
+    method controller_receiver_locked_timeout =
+            controller_txr.receiver_locked_timeout;
+    method target_receiver_locked_timeout =
+            target_txr.receiver_locked_timeout[0];
 endmodule
 
 endpackage

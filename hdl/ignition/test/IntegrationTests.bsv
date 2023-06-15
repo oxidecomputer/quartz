@@ -267,6 +267,58 @@ module mkControllerAlwaysTransmitOverrideTest (Empty);
     endseq);
 endmodule
 
+// Verify that both the Controller and Target receivers are reset due to a
+// locked state timeout.
+module mkReceiverLockedTimeoutTest (Empty);
+    IgnitionControllerAndTargetBench bench <-
+        mkIgnitionControllerAndTargetBench(parameters, 500);
+
+    mkAutoFSM(seq
+        // The link between Controller and Target is not connected, causing both
+        // receivers never to reach locked state.
+
+        par
+            await(bench.controller_receiver_locked_timeout);
+            await(bench.target_receiver_locked_timeout);
+        endpar
+    endseq);
+endmodule
+
+module mkNoReceiverLockedTimeoutTest (Empty);
+    IgnitionControllerAndTargetBench bench <-
+        mkIgnitionControllerAndTargetBench(parameters, 1100);
+
+    Reg#(int) controller_ticks <- mkReg(0);
+    Reg#(int) target_ticks <- mkReg(0);
+
+    (* fire_when_enabled *)
+    rule do_count_controller_ticks (bench.controller.tick_1khz);
+        controller_ticks <= controller_ticks + 1;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_count_target_ticks (bench.target.tick_1khz);
+        target_ticks <= target_ticks + 1;
+    endrule
+
+    continuousAssert(
+        !bench.controller_receiver_locked_timeout,
+        "expected no Controller receiver locked timeout");
+
+    continuousAssert(
+        !bench.target_receiver_locked_timeout,
+        "expected no Tontroller receiver locked timeout");
+
+    mkAutoFSM(seq
+        action
+            bench.controller_to_target.set_state(Connected);
+            bench.target_to_controller.set_state(Connected);
+        endaction
+
+        await(controller_ticks > 1000 && target_ticks > 1000);
+    endseq);
+endmodule
+
 //
 // Helpers
 //
