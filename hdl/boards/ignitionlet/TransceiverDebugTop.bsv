@@ -30,7 +30,7 @@ module mkTransceiverDebugTop (IgnitionletTargetDebug);
     // effective link baudrate of 10Mb/s.
 
     Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, 0, reset_by reset_sync);
-    TargetTransceiver txr <- mkTargetTransceiver(reset_by reset_sync);
+    TargetTransceiver txr <- mkTargetTransceiver(True, reset_by reset_sync);
 
     // Connect link 0.
     SampledSerialIO#(5) aux0_io <-

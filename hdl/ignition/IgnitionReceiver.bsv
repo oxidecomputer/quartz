@@ -83,9 +83,9 @@ module mkReceiver
     for (Integer i = 0; i < valueOf(n); i = i + 1) begin
         channels[i].phase <- mkReg(Resetting);
 
-        //channels[i].reset_receiver <- mkReg(True);
         channels[i].aligned <- mkConfigRegU();
         channels[i].locked <- mkConfigRegU();
+        channels[i].locked_timeout <- mkConfigRegU();
         channels[i].polarity_inverted <- mkConfigRegU();
 
         channels[i].rd <- mkRegU();
@@ -106,8 +106,6 @@ module mkReceiver
 
         channels[i].character <- mkWire();
         channels[i].character_accepted <- mkPulseWire();
-
-        channels[i].locked_timeout <- mkConfigRegU();
     end
 
     Reg#(UInt#(TLog#(n))) reset_or_fetch_select <- mkReg(0);
@@ -155,6 +153,7 @@ module mkReceiver
 
             channels[i].aligned <= False;
             channels[i].locked <= False;
+            channels[i].locked_timeout <= False;
             channels[i].polarity_inverted <= False;
 
             channels[i].rd <= RunningNegative;
@@ -163,8 +162,6 @@ module mkReceiver
             channels[i].parser_state <= defaultValue;
             channels[i].expect_idle <= False;
             channels[i].idle_set_valid_history <= replicate(unknown);
-
-            channels[i].locked_timeout <= False;
         endrule
 
         // Fetch the next character for the channel under consideration.

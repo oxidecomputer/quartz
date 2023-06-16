@@ -134,7 +134,7 @@ endmodule
 
 // This tests the receiver locked watchdog, ensuring that the receiver is
 // periodically reset if it does not reach locked state. The test expects the
-// receiver to be reset twice.
+// receiver to be reset three times.
 module mkLockedTimeoutTest (Empty);
     MessageParser parser <- mkMessageParser();
     Receiver#(1, Message) rx <- mkReceiver(parser);
@@ -188,6 +188,9 @@ module mkLockedTimeoutTest (Empty);
     mkTestWatchdog(2000);
 endmodule
 
+// Test that the locked timeout does not fire once a receiver is locked. The
+// test locks the receiver and two full timeout periods, testing that the
+// timeout does not fire.
 module mkNoLockedTimeoutIfLockedTest (Empty);
     MessageParser parser <- mkMessageParser();
     Receiver#(1, Message) rx <- mkReceiver(parser);
