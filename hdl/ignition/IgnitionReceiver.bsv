@@ -367,9 +367,9 @@ module mkReceiver
         // The `locked_timeout` flag is reset during the `Resetting` phase.
         rule do_channel_locked_watchdog (
                 channels[i].phase != Resetting &&
-                !channels[i].locked &&
                 watchdog_fired);
-            channels[i].locked_timeout <= True;
+            channels[i].locked_timeout <=
+                !(channels[i].aligned && channels[i].locked);
         endrule
     end
 
