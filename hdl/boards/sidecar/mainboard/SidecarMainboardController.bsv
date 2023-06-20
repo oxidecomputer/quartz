@@ -50,8 +50,6 @@ instance DefaultValue#(Parameters);
 endinstance
 
 typedef struct {
-    Bool ext_ignition_target_present;
-    Bool ext_ignition_receiver_locked;
     Bool pcie_present;
     Bool tofino_in_a0;
     Bool tofino_sequencer_running;
@@ -175,11 +173,7 @@ module mkMainboardController #(Parameters parameters)
             tofino_sequencer_running:
                 tofino_sequencer.registers.state.state != 0,
             tofino_in_a0: tofino_sequencer.registers.state.state == 2,
-            pcie_present: pcie_endpoint.pins.present,
-            ext_ignition_receiver_locked:
-                ignition_controllers_[2].status.receiver_locked,
-            ext_ignition_target_present:
-                ignition_controllers_[2].status.target_present};
+            pcie_present: pcie_endpoint.pins.present};
     endrule
 
     //

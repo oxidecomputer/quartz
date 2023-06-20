@@ -164,11 +164,23 @@ module mkReceiver
             channels[i].idle_set_valid_history <= replicate(unknown);
         endrule
 
-        // Fetch the next character for the channel under consideration.
+        // Fetch the next character for the channel under consideration. Note
+        // that this rule has an implicit dependency on the deserializer
+        // producing the characters. If the receiver is not aligned (a comma has
+        // not been succesfully decoded) the deserializer may not produce
+        // characters at a steady rate and the receiver will remain in this
+        // `phase`, waiting for the next character to be produced by the
+        // deserializer.
+        //
+        // Subsequent phases do not have this behavior and once a character has
+        // been dequeued the receiver will go through the `Decoding`, `Parsing`
+        // and `Receiving` phases and return to either the `Resetting` or
+        // `Fetching` phase.
         (* fire_when_enabled *)
         rule do_fetch_channel_character (
                 reset_or_fetch_select == fromInteger(i) &&
-                channels[i].phase == Fetching);
+                channels[i].phase == Fetching &&
+                !channels[i].locked_timeout);
             channels[i].phase <= Decoding;
             channels[i].character_accepted.send();
 
@@ -178,6 +190,20 @@ module mkReceiver
                 channel_select: fromInteger(i),
                 rd: channels[i].rd,
                 character: channels[i].character});
+        endrule
+
+        // Because the rule above may block if no character is received from the
+        // deserializer the, a `locked_timeout` can preempt this and return the
+        // receiver to the `Resetting` phase. This guarantees that the receiver
+        // is either locked or periodically returns to the `Resetting` phase.
+        // Upon receiver reset the deserializer will slip bits until the next
+        // comma is succesfully decoded.
+        (* fire_when_enabled *)
+        rule do_abort_fetch_on_locked_timeout (
+                reset_or_fetch_select == fromInteger(i) &&
+                channels[i].phase == Fetching &&
+                channels[i].locked_timeout);
+            channels[i].phase <= Resetting;
         endrule
 
         // The shared decode rule has signaled that decoding completed. Demux
@@ -339,7 +365,7 @@ module mkReceiver
             end
 
             // With most of the bookkeeping out of the way the only thing
-            // remaining is condering the receive history to determine if the
+            // remaining is considering the receive history to determine if the
             // link should be locked.
             if (countElem(known_invalid, channels[i].character_valid_history) > 2 ||
                     channels[i].idle_set_valid_history == all_idle_sets_invalid ||
@@ -369,7 +395,7 @@ module mkReceiver
                 channels[i].phase != Resetting &&
                 watchdog_fired);
             channels[i].locked_timeout <=
-                !(channels[i].aligned && channels[i].locked);
+                !channels[i].aligned || !channels[i].locked;
         endrule
     end
 

@@ -191,7 +191,7 @@ endmodule
 // Test that the locked timeout does not fire once a receiver is locked. The
 // test locks the receiver and two full timeout periods, testing that the
 // timeout does not fire.
-module mkNoLockedTimeoutIfLockedTest (Empty);
+module mkNoLockedTimeoutIfReceiverLockedTest (Empty);
     MessageParser parser <- mkMessageParser();
     Receiver#(1, Message) rx <- mkReceiver(parser);
     MockTransmitter tx <- mkMockTransmitter(rx, RunningNegative, False);

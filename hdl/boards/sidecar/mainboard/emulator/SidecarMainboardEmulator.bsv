@@ -176,25 +176,26 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
 
     // Instantiate Transceivers, IO adapters and connect them to the Ignition
     // Controllers.
-    Vector#(n_ignition_controllers, Transceiver)
-        controller_txrs <- mkTransceivers();
+    Transceivers#(n_ignition_controllers) controller_txrs <- mkTransceivers();
 
     zipWithM(
         mkConnection,
-        controller_txrs,
+        controller_txrs.txrs,
         map(transceiver_client,
             controller.ignition_controllers));
+
+    mkConnection(asIfc(tick_1khz), asIfc(controller_txrs.tick_1khz));
 
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 0);
     mkFreeRunningStrobe(controller_tx_strobe);
 
-    function toSerial(txr) = txr.serial;
+    function to_serial(txr) = txr.serial;
 
     Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <-
         zipWithM(
             mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe),
             map(tx_enabled, controller.ignition_controllers),
-            map(toSerial, controller_txrs));
+            map(to_serial, controller_txrs.txrs));
 
     // Make Inouts for the two adapters connecting to the external Targets,
     // allowing them to be connected to the top level.
@@ -259,15 +260,34 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     // boundary.
     //
 
+    ReadOnly#(Bit#(1)) ignition_link2_status_led <-
+        mkLinkStatusLED(
+            controller.ignition_controllers[2].status.target_present,
+            controller_txrs.txrs[2].status,
+            controller_txrs.txrs[2].receiver_locked_timeout,
+            False);
+
+    ReadOnly#(Bit#(1)) ignition_link3_status_led <-
+        mkLinkStatusLED(
+            controller.ignition_controllers[3].status.target_present,
+            controller_txrs.txrs[3].status,
+            controller_txrs.txrs[3].receiver_locked_timeout,
+            False);
+
     Reg#(Bit#(8)) led_r <- mkConfigRegU();
 
     (* fire_when_enabled *)
     rule do_set_led;
-        led_r <=  ~{pack(target.system_power), '0, pack(controller.status)};
+        led_r <=  ~{
+            pack(target.system_power),
+            ignition_link3_status_led,
+            ignition_link2_status_led,
+            '0,
+            pack(controller.status)};
     endrule
 
     //
-    // Additinal debug
+    // Additional debug
     //
 
     Reg#(Bit#(1)) debug_r <- mkRegU();

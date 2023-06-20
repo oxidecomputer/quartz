@@ -15,7 +15,7 @@ import IgnitionTransceiver::*;
 
 
 module mkTransceiverLoopbackTest (Test#(LinkStatus, Bit#(4)));
-    Transceiver txr <- mkTransceiver();
+    Transceiver txr <- mkTransceiver(False);
 
     Strobe#(2) tx_strobe <- mkPowerTwoStrobe(1, 0);
     SerialIOAdapter#(4) serial_adapter <-

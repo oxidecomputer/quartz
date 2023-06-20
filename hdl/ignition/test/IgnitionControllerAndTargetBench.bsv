@@ -3,6 +3,7 @@ package IgnitionControllerAndTargetBench;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
+import DReg::*;
 import GetPut::*;
 import Probe::*;
 import StmtFSM::*;
@@ -39,7 +40,10 @@ interface IgnitionControllerAndTargetBench;
     method Action set_target_system_faults(SystemFaults faults);
 
     method Bool controller_receiver_locked_timeout();
-    method Bool target_receiver_locked_timeout();
+    interface Vector#(2, Bool) target_receiver_locked_timeout;
+
+    method Bit#(1) controller_to_target_status_led();
+    method Bit#(1) target_to_controller_status_led();
 endinterface
 
 typedef struct {
@@ -89,10 +93,18 @@ module mkIgnitionControllerAndTargetBench #(
         Integer watchdog_timeout_in_ticks)
             (IgnitionControllerAndTargetBench);
     //
+    // Bench tick.
+    //
+    Strobe#(10) tick <- mkLimitStrobe(1, tick_duration, 0);
+    mkFreeRunningStrobe(tick);
+
+    //
     // Target, transceiver and IO adapter.
     //
     Target target_ <- mkTarget(parameters.target);
     TargetTransceiver target_txr <- mkTargetTransceiver(True);
+
+    mkConnection(asIfc(tick), asIfc(target_.tick_1khz));
 
     Strobe#(3) target_tx_strobe <- mkLimitStrobe(1, 5, 0);
     SampledSerialIO#(5) target_io <-
@@ -107,7 +119,9 @@ module mkIgnitionControllerAndTargetBench #(
     // Controller, transceiver and IO adapter.
     //
     Controller controller_ <- mkController(parameters.controller);
-    Transceiver controller_txr <- mkTransceiver();
+    Transceiver controller_txr <- mkTransceiver(tick);
+
+    mkConnection(asIfc(tick), asIfc(controller_.tick_1khz));
 
     // Set this TX strobe ~180 degrees out of phase from Target TX.
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 3);
@@ -139,14 +153,47 @@ module mkIgnitionControllerAndTargetBench #(
             parameters.invert_link_polarity,
             True);
 
-    //
-    // Bench timing.
-    //
-    Strobe#(10) tick <- mkLimitStrobe(1, tick_duration, 0);
+    // Link status "LEDs".
+    ReadOnly#(Bit#(1)) controller_to_target_link_status_led <-
+        mkLinkStatusLED(
+            target_.controller0_present,
+            target_txr.status[0],
+            target_txr.receiver_locked_timeout[0],
+            False);
 
-    mkConnection(asIfc(tick), asIfc(target_.tick_1khz));
-    mkConnection(asIfc(tick), asIfc(controller_.tick_1khz));
-    mkFreeRunningStrobe(tick);
+    ReadOnly#(Bit#(1)) target_to_controller_link_status_led <-
+        mkLinkStatusLED(
+            controller_.status.target_present,
+            controller_txr.status,
+            controller_txr.receiver_locked_timeout,
+            False);
+
+    // Generate single cycle timeout strobes on the positive edge for both
+    // receivers.
+    Reg#(Bool) past_controller_receiver_locked_timeout <- mkReg(False);
+    Reg#(Bool) controller_receiver_locked_timeout_ <- mkDReg(False);
+
+    Vector#(2, Reg#(Bool)) past_target_receiver_locked_timeout <- replicateM(mkReg(False));
+    Vector#(2, Reg#(Bool)) target_receiver_locked_timeout_ <- replicateM(mkDReg(False));
+
+    (* fire_when_enabled *)
+    rule do_past_receiver_locked_timeout;
+        past_controller_receiver_locked_timeout <=
+            controller_txr.receiver_locked_timeout;
+
+        controller_receiver_locked_timeout_ <=
+            !past_controller_receiver_locked_timeout &&
+                controller_txr.receiver_locked_timeout;
+
+        for (Integer i = 0; i < 2; i = i + 1) begin
+            past_target_receiver_locked_timeout[i] <=
+                target_txr.receiver_locked_timeout[i];
+
+            target_receiver_locked_timeout_[i] <=
+                !past_target_receiver_locked_timeout[i] &&
+                    target_txr.receiver_locked_timeout[i];
+        end
+    endrule
 
     (* fire_when_enabled *)
     rule do_display_tick (tick);
@@ -178,9 +225,14 @@ module mkIgnitionControllerAndTargetBench #(
     method set_target_system_faults = target_faults._write;
 
     method controller_receiver_locked_timeout =
-            controller_txr.receiver_locked_timeout;
-    method target_receiver_locked_timeout =
-            target_txr.receiver_locked_timeout[0];
+            controller_receiver_locked_timeout_;
+    interface Vector target_receiver_locked_timeout =
+            readVReg(target_receiver_locked_timeout_);
+
+    method controller_to_target_status_led =
+            controller_to_target_link_status_led;
+    method target_to_controller_status_led =
+            target_to_controller_link_status_led;
 endmodule
 
 endpackage
