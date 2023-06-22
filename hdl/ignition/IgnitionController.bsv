@@ -259,6 +259,8 @@ module mkController #(Parameters parameters) (Controller);
             link_status <= status;
             link_monitor.monitor(events);
         endmethod
+
+        method tick_1khz = tick;
     endinterface
 
     interface Registers registers;

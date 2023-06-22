@@ -34,6 +34,7 @@ IgnitionControllerAndTargetBench::Parameters parameters =
             system_power_fault_monitor_enable: True,
             system_power_fault_monitor_start_delay: 2,
             system_power_hotswap_controller_restart: True,
+            receiver_watchdog_enable: True,
             protocol: protocol_parameters},
         invert_link_polarity: False};
 
@@ -263,6 +264,74 @@ module mkControllerAlwaysTransmitOverrideTest (Empty);
         assert_not_set(
             controller_state.target_present,
             "expected no Target present");
+    endseq);
+endmodule
+
+// Verify that both the Controller and Target receivers are reset due to a
+// locked timeout. A previous version of this test would only wait for a single
+// timeout and failed to catch a case where the timeout would fire but the
+// receiver did not actually reset (unsetting the locked_timeout flag in the
+// process). The test now verifies repeated timeout/reset behavior.
+module mkReceiversLockedTimeoutTest (Empty);
+    IgnitionControllerAndTargetBench bench <-
+        mkIgnitionControllerAndTargetBench(parameters, 1000);
+
+    mkAutoFSM(seq
+        // The link between Controller and Target is not connected, causing both
+        // receivers never to reach locked state.
+
+        par
+            repeat(3) await(bench.controller_receiver_locked_timeout);
+            repeat(3) await(bench.target_receiver_locked_timeout[0]);
+            repeat(3) await(bench.target_receiver_locked_timeout[1]);
+        endpar
+    endseq);
+endmodule
+
+// Verify that once locked both the Controller and Target link 0 receivers can
+// operate for multiple timeout periods without being interrupted. In additing
+// this test demonstrates the receiver for Target link 1 to be reset three times
+// during the test.
+module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
+    IgnitionControllerAndTargetBench bench <-
+        mkIgnitionControllerAndTargetBench(parameters, 1100);
+
+    Reg#(int) controller_ticks <- mkReg(0);
+    Reg#(int) target_ticks <- mkReg(0);
+
+    (* fire_when_enabled *)
+    rule do_count_controller_ticks (bench.controller.tick_1khz);
+        controller_ticks <= controller_ticks + 1;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_count_target_ticks (bench.target.tick_1khz);
+        target_ticks <= target_ticks + 1;
+    endrule
+
+    continuousAssert(
+        !bench.controller_receiver_locked_timeout,
+        "expected no Controller receiver locked timeout");
+
+    continuousAssert(
+        !bench.target_receiver_locked_timeout[0],
+        "expected no receiver locked timeout for Target link 0");
+
+    mkAutoFSM(seq
+        action
+            bench.controller_to_target.set_state(Connected);
+            bench.target_to_controller.set_state(Connected);
+        endaction
+
+        par
+            // Both the Controller and Target link 0 should go for 1000 ticks
+            // without a receiver timeout.
+            await(controller_ticks > 1000);
+            await(target_ticks > 1000);
+
+            // Target link 1 should time out three times during this period.
+            repeat(3) await(bench.target_receiver_locked_timeout[1]);
+        endpar
     endseq);
 endmodule
 

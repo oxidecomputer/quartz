@@ -314,16 +314,25 @@ module mkIgnitionIOs #(
     // spreads out the transmit activity.
     Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, fromInteger(bank_id % 5));
 
-    function toSerial(txr) = txr.serial;
+    function to_serial(txr) = txr.serial;
 
-    Vector#(n, Transceiver) txrs <- mkTransceivers();
+    Transceivers#(n) txrs <- mkTransceivers();
     Vector#(n, IgnitionIO) io <- zipWithM(
         mkSampledSerialIOWithTxStrobeInout(tx_strobe),
         map(tx_enabled, controllers),
-        map(toSerial, txrs));
+        map(to_serial, txrs.txrs));
 
     mkFreeRunningStrobe(tx_strobe);
-    zipWithM(mkConnection, map(transceiver_client, controllers), txrs);
+    zipWithM(mkConnection, map(transceiver_client, controllers), txrs.txrs);
+
+    // Create a registered copy of the first Controller tick to help P&R.
+    Reg#(Bool) watchdog_tick <- mkRegU();
+
+    (* fire_when_enabled *)
+    rule do_receiver_watchdog;
+        watchdog_tick <= controllers[0].tick_1khz;
+        if (watchdog_tick) txrs.tick_1khz();
+    endrule
 
     return io;
 endmodule

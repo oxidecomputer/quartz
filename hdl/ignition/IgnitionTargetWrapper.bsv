@@ -72,7 +72,10 @@ module mkIgnitionTargetIOAndResetWrapper
     // effective link baudrate of 10Mb/s.
 
     Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, 0, reset_by reset_sync);
-    TargetTransceiver txr <- mkTargetTransceiver(reset_by reset_sync);
+    TargetTransceiver txr <-
+        mkTargetTransceiver(
+            parameters.receiver_watchdog_enable,
+            reset_by reset_sync);
 
     // Connect link 0.
     SampledSerialIO#(5) aux0_io <-
@@ -124,6 +127,38 @@ module mkIgnitionTargetIOAndResetWrapper
     // Connect the app to the transceiver.
     mkConnection(txr, app.txr);
 
+    // Generate link 0/1 status LEDs. These can be used for link debug. If not
+    // connected to output pins this logic will be optimized away, but it's
+    // available here for debug.
+    ReadOnly#(Bit#(1)) aux0_link_status_led <-
+            mkLinkStatusLED(
+                app.controller0_present,
+                txr.status[0],
+                txr.receiver_locked_timeout[0],
+                parameters.invert_leds,
+                reset_by reset_sync);
+
+    ReadOnly#(Bit#(1)) aux1_link_status_led <-
+            mkLinkStatusLED(
+                app.controller1_present,
+                txr.status[1],
+                txr.receiver_locked_timeout[1],
+                parameters.invert_leds,
+                reset_by reset_sync);
+
+    // The combined link status LED will be on if either links shows a
+    // Controller present, off if either links is aligned or locked and blinking
+    // if both receivers are peridically reset by the watchdog due to receiver
+    // locked timeout.
+    ReadOnly#(Bit#(1)) combined_link_status_led <-
+            mkLinkStatusLED(
+                app.controller0_present || app.controller1_present,
+                txr.status[0] | txr.status[1],
+                txr.receiver_locked_timeout[0] &&
+                    txr.receiver_locked_timeout[1],
+                parameters.invert_leds,
+                reset_by reset_sync);
+
     // This null crossings is needed to convince BSC the missing reset
     // information for these output signals is acceptable.
     ReadOnly#(SystemPower) system_power_sync <-
@@ -134,7 +169,9 @@ module mkIgnitionTargetIOAndResetWrapper
         mkNullCrossingWire(clk_50mhz, !app.system_power_hotswap_controller_restart);
 
     ReadOnly#(Bit#(2)) leds_sync <-
-        mkNullCrossingWire(clk_50mhz, app.leds);
+            mkNullCrossingWire(
+                clk_50mhz,
+                {pack(app.system_power), combined_link_status_led});
 
     // Connect application methods to synchronized inputs.
     (* fire_when_enabled *)

@@ -280,6 +280,24 @@ instance DefaultValue#(LinkStatus);
     defaultValue = unpack('0);
 endinstance
 
+instance Bitwise#(LinkStatus);
+    function LinkStatus \& (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) & pack(s2));
+    function LinkStatus \| (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) | pack(s2));
+    function LinkStatus \^ (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) ^ pack(s2));
+    function LinkStatus \~^ (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) ~^ pack(s2));
+    function LinkStatus \^~ (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) ^~ pack(s2));
+    function LinkStatus invert (LinkStatus s) = unpack(invert(pack(s)));
+
+    function LinkStatus \<< (LinkStatus s, t x) =
+        error("Left shift operation is not supported with type LinkStatus");
+    function LinkStatus \>> (LinkStatus s, t x) =
+        error("Right shift operation is not supported with type LinkStatus");
+    function Bit#(1) msb (LinkStatus s) =
+        error("msb operation is not supported with type LinkStatus");
+    function Bit#(1) lsb (LinkStatus s) =
+        error("lsb operation is not supported with type LinkStatus");
+endinstance
+
 LinkStatus link_status_disconnected = defaultValue;
 LinkStatus link_status_connected = unpack('h3);
 LinkStatus link_status_connected_polarity_inverted = unpack('h7);

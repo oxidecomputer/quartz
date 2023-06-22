@@ -122,17 +122,16 @@ module mkTransmitter (Transmitter);
                 // receiver end, but the receiver will detect this either as a
                 // result of a decode error, a message not parsing properly or a
                 // checksum error.
-                even <= !even;
-                rd <= result.rd;
                 out.enq(unpack(c));
                 encoding_error <= True;
             end
             tagged Valid .c: begin
-                even <= !even;
-                rd <= result.rd;
                 out.enq(c);
             end
         endcase
+
+        even <= !even;
+        rd <= result.rd;
 
         // Perform the CRC calculation in parallel with decoding the value so
         // its result will be available during the `Deparse` phase.

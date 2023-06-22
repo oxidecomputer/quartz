@@ -25,6 +25,8 @@ interface Receiver#(numeric type n, type message_t);
     interface Get#(Tuple2#(UInt#(TLog#(n)), message_t)) message;
     method Vector#(n, LinkStatus) status();
     method Vector#(n, LinkEvents) events();
+    method Vector#(n, Bool) locked_timeout();
+    method Action tick_1khz();
 endinterface
 
 typedef enum {
@@ -64,6 +66,8 @@ typedef struct {
     // Deserializer interface for the channel.
     Wire#(DeserializedCharacter) character;
     PulseWire character_accepted;
+    // Watchdog interface for the channel.
+    Reg#(Bool) locked_timeout;
 } State#(type parser_t);
 
 module mkReceiver
@@ -79,9 +83,9 @@ module mkReceiver
     for (Integer i = 0; i < valueOf(n); i = i + 1) begin
         channels[i].phase <- mkReg(Resetting);
 
-        //channels[i].reset_receiver <- mkReg(True);
         channels[i].aligned <- mkConfigRegU();
         channels[i].locked <- mkConfigRegU();
+        channels[i].locked_timeout <- mkConfigRegU();
         channels[i].polarity_inverted <- mkConfigRegU();
 
         channels[i].rd <- mkRegU();
@@ -116,6 +120,9 @@ module mkReceiver
 
     Wire#(Tuple2#(UInt#(TLog#(n)), message_t)) received_message <- mkWire();
 
+    Reg#(UInt#(9)) watchdog_ticks_remaining <- mkRegU();
+    Reg#(Bool) watchdog_fired <- mkDReg(False);
+
     // This rule only makes sense for a receiver with more than 1 channel. The
     // compiler does the right thing here and optimizes the contents away, but
     // then leaves the empty rule resulting in a warning. This compile time
@@ -146,6 +153,7 @@ module mkReceiver
 
             channels[i].aligned <= False;
             channels[i].locked <= False;
+            channels[i].locked_timeout <= False;
             channels[i].polarity_inverted <= False;
 
             channels[i].rd <= RunningNegative;
@@ -156,11 +164,23 @@ module mkReceiver
             channels[i].idle_set_valid_history <= replicate(unknown);
         endrule
 
-        // Fetch the next character for the channel under consideration.
+        // Fetch the next character for the channel under consideration. Note
+        // that this rule has an implicit dependency on the deserializer
+        // producing the characters. If the receiver is not aligned (a comma has
+        // not been succesfully decoded) the deserializer may not produce
+        // characters at a steady rate and the receiver will remain in this
+        // `phase`, waiting for the next character to be produced by the
+        // deserializer.
+        //
+        // Subsequent phases do not have this behavior and once a character has
+        // been dequeued the receiver will go through the `Decoding`, `Parsing`
+        // and `Receiving` phases and return to either the `Resetting` or
+        // `Fetching` phase.
         (* fire_when_enabled *)
         rule do_fetch_channel_character (
                 reset_or_fetch_select == fromInteger(i) &&
-                channels[i].phase == Fetching);
+                channels[i].phase == Fetching &&
+                !channels[i].locked_timeout);
             channels[i].phase <= Decoding;
             channels[i].character_accepted.send();
 
@@ -170,6 +190,20 @@ module mkReceiver
                 channel_select: fromInteger(i),
                 rd: channels[i].rd,
                 character: channels[i].character});
+        endrule
+
+        // Because the rule above may block if no character is received from the
+        // deserializer the, a `locked_timeout` can preempt this and return the
+        // receiver to the `Resetting` phase. This guarantees that the receiver
+        // is either locked or periodically returns to the `Resetting` phase.
+        // Upon receiver reset the deserializer will slip bits until the next
+        // comma is succesfully decoded.
+        (* fire_when_enabled *)
+        rule do_abort_fetch_on_locked_timeout (
+                reset_or_fetch_select == fromInteger(i) &&
+                channels[i].phase == Fetching &&
+                channels[i].locked_timeout);
+            channels[i].phase <= Resetting;
         endrule
 
         // The shared decode rule has signaled that decoding completed. Demux
@@ -331,10 +365,11 @@ module mkReceiver
             end
 
             // With most of the bookkeeping out of the way the only thing
-            // remaining is condering the receive history to determine if the
+            // remaining is considering the receive history to determine if the
             // link should be locked.
             if (countElem(known_invalid, channels[i].character_valid_history) > 2 ||
-                    channels[i].idle_set_valid_history == all_idle_sets_invalid) begin
+                    channels[i].idle_set_valid_history == all_idle_sets_invalid ||
+                    channels[i].locked_timeout)  begin
                 reset_receiver = True;
             end
             else if (channels[i].aligned &&
@@ -351,6 +386,16 @@ module mkReceiver
             // checks either reset the receiver or continue waiting for the next
             // character.
             channels[i].phase <= reset_receiver ? Resetting : Fetching;
+        endrule
+
+        // Monitor the locked watchdog strobe. If the channel is not locked set
+        // the timeout flag and request a reset after the next Receive phase.
+        // The `locked_timeout` flag is reset during the `Resetting` phase.
+        rule do_channel_locked_watchdog (
+                channels[i].phase != Resetting &&
+                watchdog_fired);
+            channels[i].locked_timeout <=
+                !channels[i].aligned || !channels[i].locked;
         endrule
     end
 
@@ -416,6 +461,14 @@ module mkReceiver
     interface Get message = toGet(received_message);
     method status = map(receiver_status, channels);
     method events = map(receiver_events, channels);
+    method locked_timeout = map(receiver_locked_timeout, channels);
+
+    method Action tick_1khz();
+        // This automatically rolls over from 0, restarting the watchdog
+        // timer.
+        watchdog_ticks_remaining <= watchdog_ticks_remaining - 1;
+        watchdog_fired <= (watchdog_ticks_remaining == 0);
+    endmethod
 endmodule
 
 //
@@ -478,6 +531,9 @@ function LinkEvents receiver_events(State#(parser_t) channel);
             decoding_error: channel.decoding_error,
             encoding_error: False};
 endfunction
+
+function Bool receiver_locked_timeout(State#(parser_t) channel) =
+        channel.locked_timeout;
 
 instance Connectable#(Vector#(n, Deserializer8b10b::Deserializer), Receiver#(n, message_t));
     module mkConnection #(

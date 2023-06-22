@@ -104,7 +104,7 @@ module mkLoopbackTransceiver #(
         Bit#(20) disconnect_pattern,
         Integer n_characters_watchdog)
             (LoopbackTransceiver);
-    (* hide *) Transceiver _txr <- mkTransceiver();
+    (* hide *) Transceiver _txr <- mkTransceiver(True);
     Loopback loopback <-
         mkLoopback(_txr, polarity_inverted, disconnect_pattern);
 

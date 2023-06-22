@@ -1,6 +1,7 @@
 package IgnitionTransceiver;
 
 export Transceiver(..);
+export Transceivers(..);
 export TransceiverClient(..);
 export mkTransceiver;
 export mkTransceivers;
@@ -14,11 +15,14 @@ export mkTargetTransceiver;
 export Loopback(..);
 export mkLoopback;
 
+export mkLinkStatusLED;
+
 import BuildVector::*;
 import ConfigReg::*;
 import Connectable::*;
 import FIFO::*;
 import GetPut::*;
+import RevertingVirtualReg::*;
 import Vector::*;
 
 import Deserializer8b10b::*;
@@ -44,16 +48,25 @@ interface Transceiver;
     interface PutS#(Message) from_client;
     method LinkStatus status();
     method LinkEvents events();
+    method Bool receiver_locked_timeout();
+endinterface
+
+interface Transceivers#(numeric type n);
+    interface Vector#(n, Transceiver) txrs;
+    // Strobe driving the shared receiver watchdog.
+    method Action tick_1khz();
 endinterface
 
 interface TransceiverClient;
     interface GetS#(Message) to_txr;
     interface PutS#(Message) from_txr;
     method Action monitor(LinkStatus status, LinkEvents events);
+    // Strobe driving the shared receiver watchdog.
+    method Bool tick_1khz();
 endinterface
 
 // Use the multi channel `Receiver` to construct a vector of `Transceiver`s.
-module mkTransceivers (Vector#(n, Transceiver));
+module mkTransceivers (Transceivers#(n));
     //
     // Receive chain
     //
@@ -99,17 +112,26 @@ module mkTransceivers (Vector#(n, Transceiver));
             // unused bits set to False. As such it is assumed this "or" will
             // disappear during synthesis.
             method events = rx.events[i] | tx[i].events;
+
+            method receiver_locked_timeout = rx.locked_timeout[i];
         endinterface);
     endfunction
 
-    return map(select_transceiver, genVector);
+    interface Vector txrs = map(select_transceiver, genVector);
+    method tick_1khz = rx.tick_1khz;
 endmodule
 
 // Convenience constructor for just a single Transceiver. This is primarily used
 // in tests.
-module mkTransceiver (Transceiver);
-    (* hide *) Vector#(1, Transceiver) _txrs <- mkTransceivers();
-    return _txrs[0];
+module mkTransceiver #(Bool tick_1khz) (Transceiver);
+    (* hide *) Transceivers#(1) _txrs <- mkTransceivers();
+
+    (* fire_when_enabled *)
+    rule do_tick_receiver_watchdog (tick_1khz);
+        _txrs.tick_1khz();
+    endrule
+
+    return _txrs.txrs[0];
 endmodule
 
 //
@@ -131,6 +153,9 @@ interface TargetTransceiver;
     interface PutS#(Message) from_client;
     method Vector#(2, LinkStatus) status();
     method Vector#(2, LinkEvents) events();
+    method Vector#(2, Bool) receiver_locked_timeout();
+    // Strobe driving the shared receiver watchdog.
+    method Action tick_1khz();
 endinterface
 
 interface TargetTransceiverClient;
@@ -139,9 +164,12 @@ interface TargetTransceiverClient;
     method Action monitor(
         Vector#(2, LinkStatus) status,
         Vector#(2, LinkEvents) events);
+    method Bool tick_1khz();
 endinterface
 
-module mkTargetTransceiver (TargetTransceiver);
+module mkTargetTransceiver
+        #(Bool receiver_watchdog_enabled)
+            (TargetTransceiver);
     // Receive chain.
     Vector#(2, Deserializer) deserializers <- replicateM(mkDeserializer());
     ControllerMessageParser parser <- mkControllerMessageParser();
@@ -179,6 +207,12 @@ module mkTargetTransceiver (TargetTransceiver);
     method events = vec(
         rx.events[0] | tx.events,
         rx.events[1] | tx.events);
+
+    method receiver_locked_timeout = rx.locked_timeout;
+
+    method Action tick_1khz();
+        if (receiver_watchdog_enabled) rx.tick_1khz();
+    endmethod
 endmodule
 
 //
@@ -211,6 +245,11 @@ instance Connectable#(TargetTransceiver, TargetTransceiverClient);
         (* fire_when_enabled *)
         rule do_monitor;
             client.monitor(txr.status, txr.events);
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_tick_receiver_watchdog (client.tick_1khz);
+            txr.tick_1khz();
         endrule
     endmodule
 endinstance
@@ -266,5 +305,41 @@ module mkLoopback #(
     method connected = connected_;
     method set_connected = connected_._write;
 endmodule
+
+module mkLinkStatusLED
+        #(Bool peer_present,
+            LinkStatus link_status,
+            Bool locked_timeout,
+            Bool invert_led)
+                (ReadOnly#(Bit#(1)));
+    Reg#(Bool) past_locked_timeout <- mkReg(False);
+    Reg#(Bit#(1)) locked_timeout_blink <- mkReg(0);
+    (* hide *) Reg#(Bit#(1)) _q <- mkReg(0);
+
+    (* fire_when_enabled *)
+    rule do_status_led;
+        past_locked_timeout <= locked_timeout;
+
+        // Use the positive edge to generate a blinky.
+        locked_timeout_blink <=
+                !past_locked_timeout && locked_timeout ?
+                    ~locked_timeout_blink :
+                    locked_timeout_blink;
+
+        // Generate the status LED. The LED will be on if the link is up and a
+        // peer is present, off if the link is aligned or locked but no peer is
+        // present and blinking if no transmitter detected and the receiver is
+        // reset by the watchdog.
+        if (peer_present)
+            _q <= invert_led ? 0 : 1;
+        else if (link_status.receiver_aligned || link_status.receiver_locked)
+            _q <= invert_led ? 1 : 0;
+        else
+            _q <= locked_timeout_blink;
+    endrule
+
+    method _read = _q;
+endmodule
+
 
 endpackage

@@ -311,7 +311,7 @@ module mkLoopbackTransceiver #(
         Bit#(20) disconnect_pattern,
         Integer n_characters_watchdog)
             (Loopback);
-    (* hide *) TargetTransceiver _txr <- mkTargetTransceiver();
+    (* hide *) TargetTransceiver _txr <- mkTargetTransceiver(True);
     Vector#(2, Reg#(Bool)) connected <- replicateM(mkReg(False));
 
     Reg#(UInt#(5)) disconnect_bit_select <- mkReg(0);
