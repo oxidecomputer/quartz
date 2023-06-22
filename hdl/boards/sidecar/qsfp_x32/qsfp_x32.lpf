@@ -58,6 +58,7 @@ LOCATE COMP "fpga_to_leds0_reset_l" SITE "D1";
 IOBUF PORT "fpga_to_leds0_reset_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_leds0_oe_l" SITE "E3";
 IOBUF PORT "fpga_to_leds0_oe_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
 LOCATE COMP "debug_fpga_io[0]" SITE "H6";
 IOBUF PORT "debug_fpga_io[0]" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "debug_fpga_io[1]" SITE "H5";
@@ -74,6 +75,17 @@ LOCATE COMP "debug_fpga_io[6]" SITE "K6";
 IOBUF PORT "debug_fpga_io[6]" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "debug_fpga_io[7]" SITE "J6";
 IOBUF PORT "debug_fpga_io[7]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
+LOCATE COMP "fpga_board_ver[4]" SITE "A11";
+IOBUF PORT "fpga_board_ver[4]" PULLMODE=NONE IO_TYPE=LVCMOS25;
+LOCATE COMP "fpga_board_ver[3]" SITE "A10";
+IOBUF PORT "fpga_board_ver[3]" PULLMODE=NONE IO_TYPE=LVCMOS25;
+LOCATE COMP "fpga_board_ver[2]" SITE "B10";
+IOBUF PORT "fpga_board_ver[2]" PULLMODE=NONE IO_TYPE=LVCMOS25;
+LOCATE COMP "fpga_board_ver[1]" SITE "C10";
+IOBUF PORT "fpga_board_ver[1]" PULLMODE=NONE IO_TYPE=LVCMOS25;
+LOCATE COMP "fpga_board_ver[0]" SITE "D10";
+IOBUF PORT "fpga_board_ver[0]" PULLMODE=NONE IO_TYPE=LVCMOS25;
 
 # FPGA0: P0, FPGA1: P8
 LOCATE COMP "fpga_to_qsfp_en_0" SITE "V26";

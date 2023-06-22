@@ -17,11 +17,13 @@ interface Pins;
     method Bit#(1) led_controller_reset;
     method Bit#(1) led_controller_output_en;
     method Action fpga_app_id(Bit#(1) val);
+    method Action fpga_board_ver(Bit#(5) val);
 endinterface
 
 interface Registers;
     interface ReadOnly#(FpgaId) fpga_app_id;
     interface Reg#(LedCtrl) led_ctrl;
+    interface ReadOnly#(FpgaBoardVer) fpga_board_ver;
 endinterface
 
 interface QsfpX32ControllerTopRegs;
@@ -33,16 +35,25 @@ module mkQsfpX32ControllerTopRegs (QsfpX32ControllerTopRegs);
 
     Reg#(Bit#(1)) fpga_app  <- mkReg(0);
     Reg#(LedCtrl) led_ctrl  <- mkReg(defaultValue);
+    Reg#(Bit#(5)) fpga_ver  <- mkReg(0);
 
     interface Registers registers;
-        interface ReadOnly fpga_app_id  = valueToReadOnly(FpgaId {id: fpga_app});
+        interface ReadOnly fpga_app_id  = valueToReadOnly(
+            FpgaId {
+                id: fpga_app
+            });
         interface Reg led_ctrl          = led_ctrl;
+        interface ReadOnly fpga_board_ver = valueToReadOnly(
+            FpgaBoardVer {
+                version: fpga_ver
+            });
     endinterface
 
     interface Pins pins;
         method fpga_app_id = fpga_app._write;
         method led_controller_reset     = led_ctrl.reset;
         method led_controller_output_en = led_ctrl.oe;
+        method fpga_board_ver = fpga_ver._write;
     endinterface
 endmodule
 

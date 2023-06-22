@@ -223,6 +223,7 @@ interface QsfpControllerTop;
     method Bit#(1) fpga_to_leds0_oe_l();
     method Bit#(8) debug_fpga_io();
     (* prefix = "" *) method Action fpga_app_id_r(Bit#(1) fpga_app_id_r);
+    (* prefix = "" *) method Action fpga_board_ver(Bit#(5) fpga_board_ver);
 endinterface
 
 function Inout#(Bit#(1)) inout_from_tristate(TriState#(Bit#(1)) tristate) = tristate.io;
@@ -533,10 +534,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     // SPI Peripheral
     //
 
-    InputReg#(Bit#(1), 2) csn       <- mkInputSyncFor(controller.spi.csn);
-    InputReg#(Bit#(1), 2) sclk      <- mkInputSyncFor(controller.spi.sclk);
-    InputReg#(Bit#(1), 2) copi      <- mkInputSyncFor(controller.spi.copi);
-    ReadOnly#(Bit#(1)) cipo <- mkOutputSyncFor(controller.spi.cipo);
+    InputReg#(Bit#(1), 2) csn   <- mkInputSyncFor(controller.spi.csn);
+    InputReg#(Bit#(1), 2) sclk  <- mkInputSyncFor(controller.spi.sclk);
+    InputReg#(Bit#(1), 2) copi  <- mkInputSyncFor(controller.spi.copi);
+    ReadOnly#(Bit#(1)) cipo     <- mkOutputSyncFor(controller.spi.cipo);
 
     //
     // Power
@@ -545,31 +546,32 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     //
     // PHY
     //
-    ReadOnly#(Bool) phy_vr_en        <- mkOutputSyncFor(controller.vsc8562.v1p0.en);
-    InputReg#(Bool, 2) phy_v1p0_pg           <- mkInputSyncFor(controller.vsc8562.v1p0.pg);
-    InputReg#(Bool, 2) phy_v2p5_pg           <- mkInputSyncFor(controller.vsc8562.v2p5.pg);
+    ReadOnly#(Bool) phy_vr_en           <- mkOutputSyncFor(controller.vsc8562.v1p0.en);
+    InputReg#(Bool, 2) phy_v1p0_pg      <- mkInputSyncFor(controller.vsc8562.v1p0.pg);
+    InputReg#(Bool, 2) phy_v2p5_pg      <- mkInputSyncFor(controller.vsc8562.v2p5.pg);
 
     ReadOnly#(Bit#(1)) phy_coma_mode    <- mkOutputSyncFor(controller.vsc8562.coma_mode);
     ReadOnly#(Bit#(1)) phy_refclk_en    <- mkOutputSyncFor(controller.vsc8562.refclk_en);
     ReadOnly#(Bit#(1)) phy_reset_       <- mkOutputSyncFor(controller.vsc8562.reset_);
 
     ReadOnly#(Bit#(1)) phy_mdc          <- mkOutputSyncFor(controller.vsc8562.smi.mdc);
-    InputReg#(Bit#(1), 2) phy_mdint             <- mkInputSyncFor(controller.vsc8562.mdint);
+    InputReg#(Bit#(1), 2) phy_mdint     <- mkInputSyncFor(controller.vsc8562.mdint);
     ReadOnly#(Bool) phy_mdio_out_en     <- mkOutputSyncFor(controller.vsc8562.smi.mdio.out_en);
     ReadOnly#(Bit#(1)) phy_mdio_out     <- mkOutputSyncFor(controller.vsc8562.smi.mdio.out);
-    InputReg#(Bit#(1), 2) phy_mdio_in           <- mkInputSyncFor(controller.vsc8562.smi.mdio.in);
+    InputReg#(Bit#(1), 2) phy_mdio_in   <- mkInputSyncFor(controller.vsc8562.smi.mdio.in);
     TriState#(Bit#(1)) phy_mdio         <- mkTriState(phy_mdio_out_en, phy_mdio_out);
     mkConnection(sync(phy_mdio_in), phy_mdio._read);
 
     //
     // Miscellaneous
     //
-    ReadOnly#(Bit#(1)) fpga_led_blinky  <- mkOutputSyncFor(controller.blinky.led[0]);
-    InputReg#(Bit#(1), 2) fpga_app_id           <- mkInputSyncFor(controller.top.fpga_app_id);
-    ReadOnly#(Bit#(1)) led_reset        <- mkOutputSyncFor(controller.top.led_controller_reset);
-    ReadOnly#(Bit#(1)) led_oe           <- mkOutputSyncFor(controller.top.led_controller_output_en);
-    InputReg#(Bit#(1), 2) pmbus_v3p3_alert      <- mkInputSync();
-    InputReg#(Bit#(1), 2) vr_v3p3_pg    <- mkInputSync();
+    ReadOnly#(Bit#(1)) fpga_led_blinky      <- mkOutputSyncFor(controller.blinky.led[0]);
+    InputReg#(Bit#(1), 2) fpga_app_id       <- mkInputSyncFor(controller.top.fpga_app_id);
+    ReadOnly#(Bit#(1)) led_reset            <- mkOutputSyncFor(controller.top.led_controller_reset);
+    ReadOnly#(Bit#(1)) led_oe               <- mkOutputSyncFor(controller.top.led_controller_output_en);
+    InputReg#(Bit#(1), 2) pmbus_v3p3_alert  <- mkInputSync();
+    InputReg#(Bit#(1), 2) vr_v3p3_pg        <- mkInputSync();
+    InputReg#(Bit#(5), 2) fpga_board_ver_in <- mkInputSyncFor(controller.top.fpga_board_ver);
 
     //
     // Wire design out to the device pins
@@ -773,6 +775,7 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
                         1'b0,   // Bit 2, J31 pin 3
                         1'b0,   // Bit 1, J31 pin 2
                         1'b0};  // Bit 0, J31 pin 1
+    method fpga_board_ver                   = sync(fpga_board_ver_in);
 endmodule
 
 endpackage: QsfpX32ControllerTop
