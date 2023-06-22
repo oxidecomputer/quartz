@@ -328,8 +328,8 @@ module mkLinkStatusLED
 
         // Generate the status LED. The LED will be on if the link is up and a
         // peer is present, off if the link is aligned or locked but no peer is
-        // present and blinking if no transmitter detected and the receiver is reset
-        // by the watchdog.
+        // present and blinking if no transmitter detected and the receiver is
+        // reset by the watchdog.
         if (peer_present)
             _q <= invert_led ? 0 : 1;
         else if (link_status.receiver_aligned || link_status.receiver_locked)
