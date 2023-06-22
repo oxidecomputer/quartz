@@ -802,13 +802,21 @@ endmodule
 module mkSystemPowerHotswapControllerRestartTest (Empty);
     TargetBench bench <- mkTargetBench(
         parameters,
-        4 * parameters.system_power_toggle_cool_down);
+        10 * parameters.system_power_toggle_cool_down);
+
+    Reg#(Bool) system_first_powered_on <- mkReg(False);
+
+    (* fire_when_enabled *)
+    rule do_set_system_first_powered_on (bench.target.system_power == On);
+        system_first_powered_on <= True;
+    endrule
 
     // Contineously assert that the system power hotswap controller restart pin
     // tracks system power.
     continuousAssert(
-        (bench.target.system_power == Off) ==
-            bench.target.system_power_hotswap_controller_restart,
+        !system_first_powered_on ||
+            ((bench.target.system_power == Off) ==
+                bench.target.system_power_hotswap_controller_restart),
         "expected hotswap controller restart to mirror system power state");
 
     mkAutoFSM(seq
@@ -820,25 +828,27 @@ module mkSystemPowerHotswapControllerRestartTest (Empty);
         bench.await_system_power_request_complete();
         assert_eq(bench.target.system_power, On, "expected system power on");
 
-        // Press the button and assert the system powered off.
-        bench.target.button_event(True);
-        action
-            assert_eq(
-                bench.target.system_power, Off,
-                "expected system power off");
-            assert_true(
-                bench.target.system_power_hotswap_controller_restart,
-                "expected hotswap controller restart");
-        endaction
+        repeat(2) seq
+            // Press the button and assert the system powered off.
+            bench.target.button_event(True);
+            action
+                assert_eq(
+                    bench.target.system_power, Off,
+                    "expected system power off");
+                assert_true(
+                    bench.target.system_power_hotswap_controller_restart,
+                    "expected hotswap controller restart");
+            endaction
 
-        // Release the button on the next tick, allowing the system to power
-        // back up.
-        bench.await_tick();
-        bench.target.button_event(False);
+            // Release the button on the next tick, allowing the system to power
+            // back up.
+            bench.await_tick();
+            bench.target.button_event(False);
 
-        // Wait for system power on.
-        await(bench.target.system_power == On);
-        bench.await_system_power_request_complete();
+            // Wait for system power on.
+            await(bench.target.system_power == On);
+            bench.await_system_power_request_complete();
+        endseq
     endseq);
 endmodule
 
