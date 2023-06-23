@@ -108,6 +108,12 @@ function Stmt power_up_sequence(Bench bench);
         await(bench.registers.phy_status.ready == 1);
         assert_not_set(bench.registers.phy_status.pg_timed_out,
             "PG timeout should not have ocurred during a successful power up");
+        assert_eq(unpack(bench.registers.phy_rail_states.v1p0_state),
+            Enabled,
+            "V1P0 rail should be Enabled at the end of the power up sequence.");
+        assert_eq(unpack(bench.registers.phy_rail_states.v2p5_state),
+            Enabled,
+            "V2P5 rail should be Enabled at the end of the power up sequence.");
     endseq);
 endfunction
 
@@ -187,6 +193,12 @@ module mkPowerDownTest (Empty);
             "Reset should not be released until the PHY is enabled");
         bench.v1p0_pg(False);
         bench.v2p5_pg(False);
+        assert_eq(unpack(bench.registers.phy_rail_states.v1p0_state),
+            Disabled,
+            "V1P0 rail should be Disabled at the end of the power down sequence.");
+        assert_eq(unpack(bench.registers.phy_rail_states.v2p5_state),
+            Disabled,
+            "V2P5 rail should be Disabled at the end of the power down sequence.");
         delay(5);
     endseq);
 endmodule

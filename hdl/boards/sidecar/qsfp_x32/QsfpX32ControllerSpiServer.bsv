@@ -141,6 +141,8 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(vsc8562.phy_smi_reg_addr);
         end else if (spi_request.address == fromInteger(vsc8562PhySmiCtrlOffset)) begin
             ret_byte = pack(vsc8562.phy_smi_ctrl);
+        end else if (spi_request.address == fromInteger(vsc8562PhyRailStatesOffset)) begin
+            ret_byte = pack(vsc8562.phy_rail_states);
         end else if (spi_request.address == fromInteger(qsfpI2cBusAddrOffset)) begin
             ret_byte = pack(qsfp_top.i2c_bus_addr);
         end else if (spi_request.address == fromInteger(qsfpI2cRegAddrOffset)) begin

@@ -29,7 +29,7 @@ addrmap vsc8562 {
         } READY[6:6] = 0;
 
         field {
-            desc = "Value inverted to drive  FPGA1_TO_PHY_RESET_L.";
+            desc = "Value of FPGA1_TO_PHY_RESET_L";
         } RESET[5:5] = 0;
 
         field {
@@ -57,11 +57,19 @@ addrmap vsc8562 {
         name = "Control bits related to VSC8562  (valid on FPGA1 only)";
 
         field {
+            desc = "Software control for the FPGA1_TO_PHY_RESET_L net. Only effective after PHY initialization.";
+        } RESET[4:4] = 0;
+
+        field {
+            desc = "Software control for the FPGA1_TO_PHY_REFCLK_EN net. Only effective after PHY initialization.";
+        } REFCLK_EN[3:3] = 1;
+
+        field {
             desc = "Setting this bit to 1 will clear the timed out state of the V1P0 and V2P5 rail controllers, allowing PHY power sequencing to be attempted again.";
         } CLEAR_POWER_FAULT[2:2] = 0;
 
         field {
-            desc = "Software control for the COMA_MODE pin.";
+            desc = "Software control for the FPGA1_TO_PHY_COMA_MODE net. Only effective after PHY initialization.";
         } COMA_MODE[1:1] = 1;
 
         field {
@@ -146,4 +154,17 @@ addrmap vsc8562 {
             desc = "Read = 0, Write = 1";
         } RW[0:0] = 0;
     } PHY_SMI_CTRL;
+
+    reg {
+        name = "PHY PowerRail state (internal to FPGA)";
+        default sw = r;
+
+        field {
+            desc = "0x0 = Disabled, 0x1 = RampingUp, 0x2 = TimedOut, 0x3 = Aborted, 0x4 = Enabled";
+        } V2P5_STATE[6:4] = 0;
+
+        field {
+            desc = "0x0 = Disabled, 0x1 = RampingUp, 0x2 = TimedOut, 0x3 = Aborted, 0x4 = Enabled";
+        } V1P0_STATE[2:0] = 0;
+    } PHY_RAIL_STATES;
 };
