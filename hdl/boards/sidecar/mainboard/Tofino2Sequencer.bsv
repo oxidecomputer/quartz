@@ -652,17 +652,4 @@ function ReadOnly#(v) castToReadOnly(t val)
         endinterface);
 endfunction
 
-function ReadOnly#(PowerRailState) powerRailToReadOnly(PowerRail rail);
-    return (
-        interface ReadOnly
-            method _read =
-                PowerRailState {
-                    enable: pack(rail.pin_state.enable),
-                    good: pack(rail.pin_state.good),
-                    fault: pack(rail.pin_state.fault),
-                    vrhot: pack(rail.pin_state.vrhot),
-                    state: extend(pack(rail.state))};
-        endinterface);
-endfunction
-
 endpackage

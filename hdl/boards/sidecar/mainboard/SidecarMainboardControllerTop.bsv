@@ -368,6 +368,7 @@ module mkSidecarMainboardControllerTop
             controller.registers.pcie,
             register_pages(controller.ignition_controllers),
             controller.registers.fans,
+            asIfc(controller.registers.front_io_hsc),
             reset_by reset_sync);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
@@ -522,8 +523,8 @@ module mkSidecarMainboardControllerTop
     //
     // Front IO
     //
-    Reg#(Bool) front_io_en <- mkReg(True);
-    InputReg#(Bool, 2) front_io_pg <- mkInputSync();
+    ReadOnly#(Bool) front_io_hsc_en <- mkOutputSyncFor(controller.pins.front_io_hsc.en);
+    InputReg#(Bool, 2) front_io_hsc_pg <- mkInputSyncFor(controller.pins.front_io_hsc.pg);
 
     //
     // Ignition
@@ -716,8 +717,8 @@ module mkSidecarMainboardControllerTop
     method fan3_to_fpga_present = sync(fan3_present);
 
     // Front IO
-    method fpga_to_front_io_hsc_en = front_io_en;
-    method front_io_hsc_to_fpga_pg = sync(front_io_pg);
+    method fpga_to_front_io_hsc_en = front_io_hsc_en;
+    method front_io_hsc_to_fpga_pg = sync(front_io_hsc_pg);
 
     // Ignition
     //

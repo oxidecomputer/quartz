@@ -745,7 +745,17 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     method vr_v1p0_phy_to_fpga_pg   = sync(phy_v1p0_pg);
     method vr_v2p5_phy_to_fpga_pg   = sync(phy_v2p5_pg);
 
-    method fpga_to_phy_refclk_en    = phy_refclk_en;
+    method fpga_to_phy_refclk_en;
+        // The PHY oscillator on Rev B and C boards has an errata for its EN
+        // pin, causing it on occasion to misbehave when enabled (much) later
+        // after PoR. On these boards always enable the output irrespective of
+        // sequencer state.
+        if (fpga_board_ver_in == 'h1 || fpga_board_ver_in == 'h2) begin
+            return 1;
+        end else begin
+            return phy_refclk_en;
+        end
+    endmethod
     method fpga_to_phy_coma_mode    = phy_coma_mode;
     method fpga_to_phy_reset_l      = ~phy_reset_;
 

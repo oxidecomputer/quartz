@@ -2,6 +2,7 @@
 
 rdl('sidecar_mainboard_controller_registers',
     sources = [
+        '../../../power_rail.rdl',
         'sidecar_mainboard_controller.rdl',
     ],
     outputs = [

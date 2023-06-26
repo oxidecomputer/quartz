@@ -46,7 +46,8 @@ module mkSpiServer #(
         TofinoDebugPort::Registers tofino_debug_port,
         PCIeEndpointController::Registers pcie,
         Vector#(n_ignition_controllers, IgnitionController::Registers) ignition_pages,
-        Vector#(4, FanModuleRegisters) fans)
+        Vector#(4, FanModuleRegisters) fans,
+        Reg#(PowerRailState) front_io_hsc)
             (SpiServer)
                 provisos (
                     Add#(n_ignition_controllers, 4, n_pages),
@@ -175,6 +176,9 @@ module mkSpiServer #(
                 fromOffset(fan2StateOffset): read(fans[2].state);
                 fromOffset(fan3StateOffset): read(fans[3].state);
 
+                // Front IO
+                fromOffset(frontIoStateOffset): read(front_io_hsc);
+
                 default: read(8'hff);
             endcase;
 
@@ -196,6 +200,7 @@ module mkSpiServer #(
             fromOffset(fan1StateOffset): update(request.op, fans[1].state, request.wdata);
             fromOffset(fan2StateOffset): update(request.op, fans[2].state, request.wdata);
             fromOffset(fan3StateOffset): update(request.op, fans[3].state, request.wdata);
+            fromOffset(frontIoStateOffset): update(request.op, front_io_hsc, request.wdata);
         endcase
 
         page_request[0] <= tagged Invalid;

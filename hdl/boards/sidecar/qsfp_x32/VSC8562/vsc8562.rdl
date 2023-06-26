@@ -77,6 +77,17 @@ addrmap vsc8562 {
         } EN[0:0] = 1;
     } PHY_CTRL;
 
+    reg {
+        name = "State bits indicating the PHY oscillator is operating nominal";
+
+        field {
+            desc = "Bit indicating whether or not the GOOD bit is valid";
+        } VALID[1] = 0;
+        field {
+            desc = "Bit indicating whether or not the oscillator is operating nominal";
+        } GOOD[1] = 0;
+    } PHY_OSC;
+
     // SPI <-> SMI
     reg {
         name = "Status bits for the SMI interface to the VSC8562 (valid on FPGA1 only)";

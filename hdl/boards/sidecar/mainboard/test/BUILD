@@ -60,3 +60,15 @@ bluesim_tests('Tofino2SequencerTests',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
     ])
+
+bluesim_tests('MainboardControllerTests',
+    suite = 'MainboardControllerTests.bsv',
+    env = 'cobalt//bluesim_default',
+    modules = [
+        'mkFrontIOHSCTest',
+    ],
+    deps = [
+        '//hdl:PowerRail',
+        '//hdl/boards/sidecar/mainboard:SidecarMainboardController',
+        'cobalt//hdl:TestUtils',
+    ])

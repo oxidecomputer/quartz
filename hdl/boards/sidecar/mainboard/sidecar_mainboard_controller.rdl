@@ -4,28 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-reg power_rail_state {
-    regwidth = 8;
-    default sw = r;
-    default hw = w;
-
-    field {
-        desc = "Flag indicating the power rail is enabled";
-    } ENABLE[1] = 0;
-    field {
-        desc = "Flag indicating the power rail is operating nominally";
-    } GOOD[1] = 0;
-    field {
-        desc = "Flag indicating the power rail experienced a fault";
-    } FAULT[1] = 0;
-    field {
-        desc = "Flag indicating the voltage regulator is experiencing a high temperature";
-    } VRHOT[1] = 0;
-    field {
-        desc = "State of the power rail according to the sequencer";
-    } STATE[7:4] = 0;
-};
-
 reg fan_state {
     regwidth = 8;
     default sw = r;
@@ -205,6 +183,9 @@ addrmap sidecar_mainboard_controller {
 
     fan_state FAN3_STATE;
     FAN3_STATE->name = "Fan 3 State";
+
+    power_rail_state FRONT_IO_STATE @ 0x30;
+    FRONT_IO_STATE->name = "Front IO State";
 
     reg {
         name = "Tofino Sequencer Control";

@@ -23,6 +23,7 @@ import IgnitionController::*;
 import IgnitionProtocol::*;
 import IgnitionTransceiver::*;
 import PCIeEndpointController::*;
+import PowerRail::*;
 import SidecarMainboardControllerReg::*;
 import SidecarMainboardMiscSequencers::*;
 import Tofino2Sequencer::*;
@@ -33,6 +34,7 @@ typedef struct {
     Integer system_frequency_hz;
     Integer clock_generator_power_good_timeout;
     Integer vsc7448_power_good_timeout;
+    Integer front_io_power_good_timeout;
     Bit#(7) tofino_i2c_address;
     Integer tofino_i2c_frequency_hz;
     Tofino2Sequencer::Parameters tofino_sequencer;
@@ -44,6 +46,7 @@ instance DefaultValue#(Parameters);
             system_frequency_hz: 50_000_000,
             clock_generator_power_good_timeout: 10,
             vsc7448_power_good_timeout: 10,
+            front_io_power_good_timeout: 75,
             tofino_i2c_address: 7'b1011_011, // 5Bh
             tofino_i2c_frequency_hz: 100_000,
             tofino_sequencer: defaultValue};
@@ -61,6 +64,7 @@ interface Pins #(numeric type n_ignition_controllers);
     interface PCIeEndpointController::Pins pcie;
     interface Tofino2Sequencer::Pins tofino;
     interface I2CCommon::Pins tofino_debug_port;
+    interface PowerRail::Pins front_io_hsc;
     interface VSC7448Pins vsc7448;
     interface Vector#(4, FanModulePins) fans;
 endinterface
@@ -69,6 +73,7 @@ interface Registers #(numeric type n_ignition_controllers);
     interface PCIeEndpointController::Registers pcie;
     interface Tofino2Sequencer::Registers tofino;
     interface TofinoDebugPort::Registers tofino_debug_port;
+    interface Reg#(PowerRailState) front_io_hsc;
     interface Vector#(4, FanModuleRegisters) fans;
 endinterface
 
@@ -137,6 +142,14 @@ module mkMainboardController #(Parameters parameters)
     mkConnection(asIfc(tick_1khz), asIfc(vsc7448_sequencer.tick_1ms));
 
     //
+    // Front IO Hot Swap Controller
+    //
+    PowerRail#(7) front_io_hsc <-
+        mkPowerRailDisableOnAbort(parameters.front_io_power_good_timeout);
+
+    mkConnection(tick_1khz, front_io_hsc);
+
+    //
     // Fans
     //
 
@@ -184,6 +197,7 @@ module mkMainboardController #(Parameters parameters)
         interface ClockGeneratorPins clocks = clock_generator_sequencer.pins;
         interface Tofino2Sequencer::Pins tofino = tofino_sequencer.pins;
         interface TofinoDebugPort::Pins tofino_debug_port = tofino_debug_port.pins;
+        interface front_io_hsc = front_io_hsc.pins;
         interface VSC7448Pins vsc7448 = vsc7448_sequencer.pins;
         interface PCIeEndpointController::Pins pcie = pcie_endpoint.pins;
         interface fans = map(SidecarMainboardMiscSequencers::fan_pins, fans);
@@ -193,6 +207,7 @@ module mkMainboardController #(Parameters parameters)
         interface PCIeEndpointController::Registers pcie = pcie_endpoint.registers;
         interface Tofino2Sequencer::Registers tofino = tofino_sequencer.registers;
         interface TofinoDebugPort::Registers tofino_debug_port = tofino_debug_port.registers;
+        interface front_io_hsc = powerRailToReg(front_io_hsc);
         interface fans = map(SidecarMainboardMiscSequencers::fan_registers, fans);
     endinterface
 
