@@ -6,6 +6,8 @@ bluesim_tests('PCIeEndpointControllerTests',
     modules = [
         'mkResetHostControlTest',
         'mkResetSoftwareControlTest',
+        'mkSequencerFaultSoftwareOverrideTest',
+        'mkSequencerFaultTest',
     ],
     deps = [
         '//hdl:PowerRail',

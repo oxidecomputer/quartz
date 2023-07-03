@@ -321,20 +321,20 @@ addrmap sidecar_mainboard_controller {
         default hw = r;
 
         field {
-            desc = "Present";
+            desc = "Bit indicating Tofino Present";
         } PRESENT[1] = 0;
         field {
-            desc = "Power Fault";
-        } POWER_FAULT[1] = 0;
-        field {
-            desc = "Alert";
-        } ALERT[1] = 0;
-        field {
-            desc = "PCIe Reset";
+            desc = "Bit indicating the desired state of Tofino PCIe Reset, valid if host override bit set";
         } RESET[1] = 0;
         field {
             desc = "Override host PCIe Reset";
         } OVERRIDE_HOST_RESET[1] = 0;
+        field {
+            desc = "Bit indicating the desired state of PCIe Power Fault, valid if sequencer override bit set";
+        } POWER_FAULT[1] = 0;
+        field {
+            desc = "Override sequencer power fault";
+        } OVERRIDE_SEQ_POWER_FAULT[1] = 0;
     } PCIE_HOTPLUG_CTRL;
 
     reg {
@@ -343,8 +343,14 @@ addrmap sidecar_mainboard_controller {
         default hw = w;
 
         field {
-            desc = "Host PCIe Reset";
+            desc = "State of PCIe Present signal";
+        } PRESENT[1] = 0;
+        field {
+            desc = "State of PCIe Reset signal";
         } HOST_RESET[1] = 0;
+        field {
+            desc = "State of PCIe Power Fault signal";
+        } POWER_FAULT[1] = 0;
     } PCIE_HOTPLUG_STATUS;
 
     reg {

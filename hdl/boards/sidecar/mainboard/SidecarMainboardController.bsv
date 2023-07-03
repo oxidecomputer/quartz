@@ -119,16 +119,10 @@ module mkMainboardController #(Parameters parameters)
 
     Tofino2Sequencer tofino_sequencer <-
         mkTofino2Sequencer(parameters.tofino_sequencer);
-    PCIeEndpointController pcie_endpoint <- mkPCIeEndpointController();
+    PCIeEndpointController pcie_endpoint <-
+        mkPCIeEndpointController(tofino_sequencer);
 
     mkConnection(asIfc(tick_1khz), asIfc(tofino_sequencer.tick_1ms));
-
-    // Control the Tofino 2 reset pin based on the state of the PCIe Endpoint
-    // Controller.
-    (* fire_when_enabled *)
-    rule do_tofino_pcie_reset (pcie_endpoint.reset_peripheral);
-        tofino_sequencer.pcie_reset();
-    endrule
 
     TofinoDebugPort tofino_debug_port <-
         mkTofinoDebugPort(

@@ -46,6 +46,8 @@ bluespec_library('PCIeEndpointController',
     ],
     deps = [
         ':SidecarMainboardControllerReg',
+        ':Tofino2Sequencer',
+        '//hdl:CommonFunctions',
     ])
 
 bluespec_library('SidecarMainboardController',

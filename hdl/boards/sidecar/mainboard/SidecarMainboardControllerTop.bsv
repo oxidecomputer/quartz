@@ -468,11 +468,6 @@ module mkSidecarMainboardControllerTop
 
     ReadOnly#(Bool) pcie_present <- mkOutputSyncFor(controller.pins.pcie.present);
     ReadOnly#(Bool) pcie_power_fault <- mkOutputSyncFor(controller.pins.pcie.power_fault);
-    // TODO (arjen): The PWREN pin was repurposed to ALERT pin between Gimlet
-    // Rev A and Rev B. The Sidecar mainboard is still configured as input. Keep
-    // this disabled until an MCN has been assigned or Sidecar Mainboard Rev B
-    // is released.
-    //ReadOnly#(Bool) pcie_alert <- mkOutputSyncFor(controller.pins.pcie.alert);
     InputReg#(Bool, 2) pcie_reset <- mkInputSyncFor(controller.pins.pcie.reset);
 
     //
