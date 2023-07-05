@@ -64,7 +64,12 @@ module mkPCIeEndpointController
                 ctrl.override_seq_power_fault == 1 &&
                 ctrl.power_fault == 1;
 
+        // Set the power fault based on the sequencer status. To avoid the host
+        // seeing faults during Tofino start-up, before presence is asserted,
+        // the present pin is required to be set before the fault is externally
+        // visible.
         let sequencer_power_fault =
+                ctrl.present == 1 &&
                 ctrl.override_seq_power_fault == 0 &&
                 sequencer.registers.error.error != 0;
 

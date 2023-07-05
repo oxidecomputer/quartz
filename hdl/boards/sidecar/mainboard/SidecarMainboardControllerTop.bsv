@@ -654,7 +654,8 @@ module mkSidecarMainboardControllerTop
     interface Inout i2c_fpga_to_tf_sda = tofino_debug_port_sda;
 
     method pcie_fpga_to_host_prsnt_l = !pcie_present;
-    method pcie_fpga_to_host_pwrflt = pcie_power_fault;
+    // The power fault signal should really be negative logic.
+    method pcie_fpga_to_host_pwrflt = !pcie_power_fault;
     method pcie_host_to_fpga_perst = sync_inverted(pcie_reset);
 
     // Clock Generator pins

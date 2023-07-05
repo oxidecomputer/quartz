@@ -114,7 +114,9 @@ module mkSequencerFaultTest (Empty);
             status.power_fault,
             "expected Power Fault not set");
 
+        endpoint.registers.ctrl.present <= 1;
         ctrl.en <= 1;
+
         await(error != 0);
         assert_set(status.power_fault, "expected Power Fault set");
 
@@ -147,6 +149,7 @@ module mkSequencerFaultSoftwareOverrideTest (Empty);
             "expected Power Fault not set");
 
         // Override and set the power fault bit.
+        endpoint_ctrl.present <= 1;
         endpoint_ctrl.override_seq_power_fault <= 1;
         endpoint_ctrl.power_fault <= 1;
         noAction; // Wait a cycle for state to propagate.
@@ -160,7 +163,8 @@ module mkSequencerFaultSoftwareOverrideTest (Empty);
             endpoint_status.power_fault,
             "expected Power Fault not set");
 
-        // Enable the sequencer causing a fault and the power fault bit to follow.
+        // Enable the sequencer causing a fault and the power fault bit to
+        // follow.
         sequencer_ctrl.en <= 1;
         await(sequencer_error != 0);
         assert_set(endpoint_status.power_fault, "expected Power Fault set");
