@@ -46,6 +46,10 @@ instance DefaultValue#(Parameters);
             system_frequency_hz: 50_000_000,
             clock_generator_power_good_timeout: 10,
             vsc7448_power_good_timeout: 10,
+            // The EN->PG time of the front IO hot swap controller was
+            // experimentally determined to be 35 ms. A timeout value of 75 ms
+            // was chosen to have _a_ timeout but because there are no safety
+            // implications if the HSC does not start ample margin is provided.
             front_io_power_good_timeout: 75,
             tofino_i2c_address: 7'b1011_011, // 5Bh
             tofino_i2c_frequency_hz: 100_000,

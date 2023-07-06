@@ -24,7 +24,9 @@ module mkFrontIOHSCTest (Empty);
             front_io_hsc.state.enabled,
             "expected Front IO HSC disabled");
 
-        repeat(3) seq
+        // Repeat the power up sequence twice to make sure nothing gets stuck
+        // after being disabled.
+        repeat(2) seq
             controller.registers.front_io_hsc.enable <= 1;
 
             await(front_io_hsc.state.enabled);
@@ -54,7 +56,6 @@ endmodule
 
 module mkBenchMainboardController (BenchMainboardController);
     Parameters parameters = defaultValue;
-    //parameters.system_frequency_hz = 1000;
 
     (* hide *) BenchMainboardController _c <- mkMainboardController(parameters);
     return _c;
