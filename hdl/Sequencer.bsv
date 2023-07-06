@@ -1,3 +1,0 @@
-package Sequencer;
-
-endpackage
