@@ -6,6 +6,36 @@
 
 package PowerRail;
 
+export Pins(..);
+export State(..);
+export PinState(..);
+export PowerRail(..);
+
+export mkPowerRail;
+export mkPowerRailDisableOnAbort;
+export mkPowerRailLeaveEnabledOnAbort;
+export powerRailToReg;
+export powerRailToReadOnly;
+
+export state;
+export disabled;
+export ramping_up;
+export timed_out;
+export aborted;
+export enabled;
+export good_timeout;
+
+export enable;
+export good;
+export fault;
+export vrhot;
+export timeout_duration;
+
+export ModelPins(..);
+export ModelState(..);
+export PowerRailModel(..);
+export mkPowerRailModel;
+
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
@@ -190,7 +220,7 @@ module mkPowerRail #(
 
     method set_enable = enabled_request.wset;
     method clear = clear_w.send;
-    method Action send() = timeout.send;
+    method Action send = timeout.send;
 
     method Bool disabled = (state_r == Disabled);
     method Bool ramping_up = (state_r == RampingUp);
@@ -219,18 +249,69 @@ function module#(PowerRail#(timeout_sz))
     mkPowerRailLeaveEnabledOnAbort(Integer timemout_ticks) =
         mkPowerRail(False, timemout_ticks);
 
-instance Connectable#(PulseWire, PowerRail#(timeout_sz));
-    module mkConnection #(PulseWire w, PowerRail#(timeout_sz) r) (Empty);
+//
+// Wrappers which exposes the given PowerRail into a byte type which can be
+// added to a register map.
+//
+function ReadOnly#(power_rail_state_type)
+        powerRailToReadOnly(PowerRail#(timeout_sz) power_rail)
+            provisos (Bits#(power_rail_state_type, 8));
+    return (
+        interface ReadOnly
+            method _read =
+                unpack({
+                    extend(pack(state(power_rail))),
+                    pack(vrhot(power_rail)),
+                    pack(fault(power_rail)),
+                    pack(good(power_rail)),
+                    pack(enable(power_rail))});
+        endinterface);
+endfunction
+
+function Reg#(power_rail_state_type)
+        powerRailToReg(PowerRail#(timeout_sz) power_rail)
+            provisos (Bits#(power_rail_state_type, 8));
+    return (
+        interface Reg
+            method power_rail_state_type _read();
+                return unpack({
+                    extend(pack(state(power_rail))),
+                    pack(vrhot(power_rail)),
+                    pack(fault(power_rail)),
+                    pack(good(power_rail)),
+                    pack(enable(power_rail))});
+            endmethod
+
+            method Action _write(power_rail_state_type state_next);
+                let enable = unpack(pack(state_next)[0]);
+
+                if (enable) begin
+                    power_rail.set_enable(True);
+                end else begin
+                    power_rail.clear();
+                end
+            endmethod
+        endinterface);
+endfunction
+
+instance Connectable#(Bool, PowerRail#(timeout_sz));
+    module mkConnection #(Bool b, PowerRail#(timeout_sz) r) (Empty);
         (* fire_when_enabled *)
-        rule do_tick (w);
+        rule do_tick (b);
             r.send();
         endrule
     endmodule
 endinstance
 
+instance Connectable#(PulseWire, PowerRail#(timeout_sz));
+    module mkConnection #(PulseWire w, PowerRail#(timeout_sz) r) (Empty);
+        mkConnection(w, r);
+    endmodule
+endinstance
+
 instance Connectable#(Strobe#(strobe_sz), PowerRail#(timeout_sz));
     module mkConnection #(Strobe#(strobe_sz) s, PowerRail#(timeout_sz) r) (Empty);
-        mkConnection(asPulseWire(s), r);
+        mkConnection(s, r);
     endmodule
 endinstance
 
@@ -238,6 +319,7 @@ endinstance
 // Helper functions to facilitate higher order constructs, such as iterating
 // over a `Vector` using `map`.
 //
+function State state(PowerRail#(timeout_sz) r) = r.state;
 function Bool disabled(PowerRail#(timeout_sz) r) = r.disabled;
 function Bool ramping_up(PowerRail#(timeout_sz) r) = r.ramping_up;
 function Bool timed_out(PowerRail#(timeout_sz) r) = r.timed_out;
@@ -298,7 +380,7 @@ endinterface
 
 module mkPowerRailModel #(
         String name,
-        Strobe#(tick_sz) tick,
+        Bool tick,
         Integer enable_to_good_delay)
             (PowerRailModel#(delay_sz));
     ConfigReg#(Bool) enabled <- mkConfigReg(False);

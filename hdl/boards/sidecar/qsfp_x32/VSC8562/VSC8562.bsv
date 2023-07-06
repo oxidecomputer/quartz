@@ -65,6 +65,7 @@ endinstance
 interface Registers;
     interface ReadOnly#(PhyStatus) phy_status;
     interface Reg#(PhyCtrl) phy_ctrl;
+    interface Reg#(PhyOsc) phy_osc;
     interface ReadOnly#(PhySmiStatus) phy_smi_status;
     interface Reg#(PhySmiRdata1) phy_smi_rdata1;
     interface Reg#(PhySmiRdata0) phy_smi_rdata0;
@@ -128,6 +129,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
 
     // SPI register interface
     Reg#(PhyCtrl) phy_ctrl              <- mkReg(defaultValue);
+    Reg#(PhyOsc) phy_osc                <- mkReg(defaultValue);
     Reg#(PhySmiRdata1) smi_rdata1      <- mkReg(defaultValue);
     Reg#(PhySmiRdata0) smi_rdata0      <- mkReg(defaultValue);
     Reg#(PhySmiWdata1) smi_wdata1      <- mkReg(defaultValue);
@@ -308,6 +310,20 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
                 end
             endmethod
         endinterface
+
+        interface Reg phy_osc;
+            method _read = phy_osc;
+            method Action _write(PhyOsc next);
+                // This register should only be written once after PoR. If the
+                // `good` bit is false the front IO board should be power
+                // cycled, resetting this register due to the controller loosing
+                // power.
+                if (phy_osc.valid == 0 && next.valid == 1) begin
+                    phy_osc <= next;
+                end
+            endmethod
+        endinterface
+
         interface ReadOnly phy_smi_status   = valueToReadOnly(
             PhySmiStatus {
                 busy: pack(smi_busy),

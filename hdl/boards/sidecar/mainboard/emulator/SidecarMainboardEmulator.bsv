@@ -122,7 +122,8 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
             IgnitionController::register_pages(controller.ignition_controllers),
-            controller.registers.fans);
+            controller.registers.fans,
+            controller.registers.front_io_hsc);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
     InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
@@ -161,6 +162,10 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     mkConnection(vddt.pins, controller.pins.tofino.vddt);
     mkConnection(vdda15.pins, controller.pins.tofino.vdda15);
     mkConnection(vdda18.pins, controller.pins.tofino.vdda18);
+
+    PowerRailModel#(16) front_io_hsc <- mkDefaultPowerRailModel("FRONT_IO");
+
+    mkConnection(front_io_hsc.pins, controller.pins.front_io_hsc);
 
     //
     // Tofino bits.
@@ -282,7 +287,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
             pack(target.system_power),
             ignition_link3_status_led,
             ignition_link2_status_led,
-            '0,
+            pack(front_io_hsc.state.enabled),
             pack(controller.status)};
     endrule
 

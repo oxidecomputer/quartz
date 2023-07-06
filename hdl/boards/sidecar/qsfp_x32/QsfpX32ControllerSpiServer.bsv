@@ -125,6 +125,8 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(vsc8562.phy_status);
         end else if (spi_request.address == fromInteger(vsc8562PhyCtrlOffset)) begin
             ret_byte = pack(vsc8562.phy_ctrl);
+        end else if (spi_request.address == fromInteger(vsc8562PhyOscOffset)) begin
+            ret_byte = pack(vsc8562.phy_osc);
         end else if (spi_request.address == fromInteger(vsc8562PhySmiStatusOffset)) begin
             ret_byte = pack(vsc8562.phy_smi_status);
         end else if (spi_request.address == fromInteger(vsc8562PhySmiRdata0Offset)) begin
@@ -377,6 +379,7 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
     addRules(do_spi_write(scratchpadOffset, scratchpad));
     addRules(do_spi_write(ledCtrlOffset, top.led_ctrl));
     addRules(do_spi_write(vsc8562PhyCtrlOffset, vsc8562.phy_ctrl));
+    addRules(do_spi_write(vsc8562PhyOscOffset, vsc8562.phy_osc));
     addRules(do_spi_write(vsc8562PhySmiWdata1Offset, vsc8562.phy_smi_wdata1));
     addRules(do_spi_write(vsc8562PhySmiWdata0Offset, vsc8562.phy_smi_wdata0));
     addRules(do_spi_write(vsc8562PhySmiPhyAddrOffset, vsc8562.phy_smi_phy_addr));
