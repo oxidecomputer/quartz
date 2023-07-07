@@ -15,7 +15,7 @@ import Tofino2Sequencer::*;
 // This test demonstrates host control over PERST for a downstream peripheral
 // when the `override_host_reset` flag is not set in the `ctrl` register.
 module mkResetHostControlTest (Empty);
-    Tofino2Sequencer sequencer <- mkMockTofino2SequencerWithReset();
+    Tofino2Sequencer sequencer <- mkMockTofino2Sequencer();
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
     Reg#(Bool) reset_from_host <- mkReg(True);
 
@@ -58,7 +58,7 @@ endmodule
 // peripheral when the `override_host_reset` flag is not set in the `ctrl`
 // register.
 module mkResetSoftwareControlTest (Empty);
-    Tofino2Sequencer sequencer <- mkMockTofino2SequencerWithReset();
+    Tofino2Sequencer sequencer <- mkMockTofino2Sequencer();
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
     Reg#(Bool) reset_from_host <- mkReg(True);
 
@@ -98,7 +98,7 @@ endmodule
 // This test demonstrates the PCIe Power Fault being set when the
 // sequencer encounters an error.
 module mkSequencerFaultTest (Empty);
-    Tofino2Sequencer sequencer <- mkMockTofino2SequencerWithError();
+    Tofino2Sequencer sequencer <- mkMockTofino2Sequencer();
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
 
     let ctrl = asReg(sequencer.registers.ctrl);
@@ -131,7 +131,7 @@ endmodule
 // This test demonstrates software control over PCIe Power Fault when the
 // override bit is set in the control register.
 module mkSequencerFaultSoftwareOverrideTest (Empty);
-    Tofino2Sequencer sequencer <- mkMockTofino2SequencerWithError();
+    Tofino2Sequencer sequencer <- mkMockTofino2Sequencer();
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
 
     let sequencer_ctrl = asReg(sequencer.registers.ctrl);
@@ -179,25 +179,15 @@ module mkSequencerFaultSoftwareOverrideTest (Empty);
     mkTestWatchdog(20);
 endmodule
 
-module mkMockTofino2SequencerWithReset (Tofino2Sequencer);
-    (* hide *) Tofino2Sequencer _mock <- mkTofino2Sequencer(defaultValue);
-    PulseWire pcie_reset_request <- mkPulseWire();
-
-    // Override the reset parts of the interface.
-    _mock.pcie_reset = pcie_reset_request.send;
-    _mock.pins.resets =
-            Tofino2Resets {
-                pwron: False,
-                pcie: pcie_reset_request};
-
-    return _mock;
-endmodule
-
-module mkMockTofino2SequencerWithError (Tofino2Sequencer);
+// Mock the Tofino2Sequencer, bypassing most of its behavior while leaving the
+// interface in tact, allowing the tests above to focus on just the behavior of
+// the PERST and Power Fault pins.
+module mkMockTofino2Sequencer (Tofino2Sequencer);
     (* hide *) Tofino2Sequencer _mock <- mkTofino2Sequencer(defaultValue);
     ConfigReg#(TofinoSeqCtrl) ctrl <- mkConfigReg(defaultValue);
-    ConfigReg#(Error) error <- mkConfigReg(None);
+    ConfigReg#(Error) mock_error <- mkConfigReg(None);
 
+    PulseWire pcie_reset_request <- mkPulseWire();
     RWire#(TofinoSeqCtrl) ctrl_next <- mkRWire();
 
     (* fire_when_enabled *)
@@ -205,16 +195,23 @@ module mkMockTofino2SequencerWithError (Tofino2Sequencer);
         if (ctrl_next.wget matches tagged Valid .next) begin
             if (next.clear_error == 1) begin
                 ctrl.en <= 0;
-                error <= None;
+                mock_error <= None;
             end else begin
                 ctrl.en <= next.en;
             end
 
         // Fault when the sequencer is enabled.
-        end else if (ctrl.en == 1 && error == None) begin
-            error <= PowerFault;
+        end else if (ctrl.en == 1 && mock_error == None) begin
+            mock_error <= PowerFault;
         end
     endrule
+
+    // Override reset behavior of the mock.
+    _mock.pcie_reset = pcie_reset_request.send;
+        _mock.pins.resets =
+                Tofino2Resets {
+                    pwron: False,
+                    pcie: pcie_reset_request};
 
     // Override control and error register behavior of the mock.
     _mock.registers.ctrl =
@@ -223,7 +220,7 @@ module mkMockTofino2SequencerWithError (Tofino2Sequencer);
             method _write = ctrl_next.wset;
         endinterface);
 
-    _mock.registers.error = castToReadOnly(error);
+    _mock.registers.error = castToReadOnly(mock_error);
 
     return _mock;
 endmodule

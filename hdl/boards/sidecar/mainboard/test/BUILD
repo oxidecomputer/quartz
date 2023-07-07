@@ -31,7 +31,14 @@ bluesim_tests('TofinoDebugPortTests',
         '//hdl/boards/sidecar/mainboard:TofinoDebugPort',
         '//hdl/I2C:I2CPeripheralModel',
         'cobalt//hdl:TestUtils',
-    ])
+    ],
+    # Suppress cc++ errors in Bluesim generated code.
+    extra = {
+        'bsc_flags': [
+            '-Xc++', '-Wno-dangling-else',
+            '-Xc++', '-Wno-bool-operation',
+        ],
+    })
 
 bluesim_tests('Tofino2SequencerTests',
     suite = 'Tofino2SequencerTests.bsv',
