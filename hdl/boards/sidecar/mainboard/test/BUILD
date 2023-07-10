@@ -1,5 +1,14 @@
 # -*- python -*- vim:syntax=python:
 
+bluespec_library('MockTofino2Sequencer',
+    sources = [
+        'MockTofino2Sequencer.bsv',
+    ],
+    deps = [
+        '//hdl:CommonFunctions',
+        '//hdl/boards/sidecar/mainboard:Tofino2Sequencer',
+    ])
+
 bluesim_tests('PCIeEndpointControllerTests',
     suite = 'PCIeEndpointControllerTests.bsv',
     env = 'cobalt//bluesim_default',
@@ -10,6 +19,7 @@ bluesim_tests('PCIeEndpointControllerTests',
         'mkSequencerFaultTest',
     ],
     deps = [
+        ':MockTofino2Sequencer',
         '//hdl:PowerRail',
         '//hdl/boards/sidecar/mainboard:PCIeEndpointController',
         'cobalt//hdl:Strobe',
@@ -31,14 +41,7 @@ bluesim_tests('TofinoDebugPortTests',
         '//hdl/boards/sidecar/mainboard:TofinoDebugPort',
         '//hdl/I2C:I2CPeripheralModel',
         'cobalt//hdl:TestUtils',
-    ],
-    # Suppress cc++ errors in Bluesim generated code.
-    extra = {
-        'bsc_flags': [
-            '-Xc++', '-Wno-dangling-else',
-            '-Xc++', '-Wno-bool-operation',
-        ],
-    })
+    ])
 
 bluesim_tests('Tofino2SequencerTests',
     suite = 'Tofino2SequencerTests.bsv',
