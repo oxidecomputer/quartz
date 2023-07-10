@@ -468,11 +468,6 @@ module mkSidecarMainboardControllerTop
 
     ReadOnly#(Bool) pcie_present <- mkOutputSyncFor(controller.pins.pcie.present);
     ReadOnly#(Bool) pcie_power_fault <- mkOutputSyncFor(controller.pins.pcie.power_fault);
-    // TODO (arjen): The PWREN pin was repurposed to ALERT pin between Gimlet
-    // Rev A and Rev B. The Sidecar mainboard is still configured as input. Keep
-    // this disabled until an MCN has been assigned or Sidecar Mainboard Rev B
-    // is released.
-    //ReadOnly#(Bool) pcie_alert <- mkOutputSyncFor(controller.pins.pcie.alert);
     InputReg#(Bool, 2) pcie_reset <- mkInputSyncFor(controller.pins.pcie.reset);
 
     //
@@ -659,7 +654,8 @@ module mkSidecarMainboardControllerTop
     interface Inout i2c_fpga_to_tf_sda = tofino_debug_port_sda;
 
     method pcie_fpga_to_host_prsnt_l = !pcie_present;
-    method pcie_fpga_to_host_pwrflt = pcie_power_fault;
+    // The power fault signal should really be negative logic.
+    method pcie_fpga_to_host_pwrflt = !pcie_power_fault;
     method pcie_host_to_fpga_perst = sync_inverted(pcie_reset);
 
     // Clock Generator pins

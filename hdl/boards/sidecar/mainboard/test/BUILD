@@ -1,13 +1,25 @@
 # -*- python -*- vim:syntax=python:
 
+bluespec_library('MockTofino2Sequencer',
+    sources = [
+        'MockTofino2Sequencer.bsv',
+    ],
+    deps = [
+        '//hdl:CommonFunctions',
+        '//hdl/boards/sidecar/mainboard:Tofino2Sequencer',
+    ])
+
 bluesim_tests('PCIeEndpointControllerTests',
     suite = 'PCIeEndpointControllerTests.bsv',
     env = 'cobalt//bluesim_default',
     modules = [
         'mkResetHostControlTest',
         'mkResetSoftwareControlTest',
+        'mkSequencerFaultSoftwareOverrideTest',
+        'mkSequencerFaultTest',
     ],
     deps = [
+        ':MockTofino2Sequencer',
         '//hdl:PowerRail',
         '//hdl/boards/sidecar/mainboard:PCIeEndpointController',
         'cobalt//hdl:Strobe',
