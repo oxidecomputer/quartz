@@ -100,6 +100,11 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     Wire#(Bit#(1))  sda_in          <- mkWire();
     Reg#(Bool)      sda_changed     <- mkReg(False);
 
+    Reg#(Bit#(1)) scl_out_en_r      <- mkReg(0);
+    Reg#(Bit#(1)) sda_out_en_r      <- mkReg(0);
+    Reg#(Bit#(1)) scl_out_en_inv    <- mkReg(0);
+    Reg#(Bit#(1)) sda_out_en_inv    <- mkReg(0);
+
     Reg#(State) state           <- mkReg(AwaitStart);
     Reg#(Bool) scl_active       <- mkReg(False);
     Reg#(ShiftBits) shift_bits  <- mkReg(shift_bits_reset);
@@ -289,15 +294,27 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
         endcase
     endrule
 
+    // Register the output signals to have a stable output, rather than a
+    // combinatorial one. This means we should register the tristate enable as
+    // well to keep things aligned.
+    (* fire_when_enabled *)
+    rule do_register_output_inversions;
+        scl_out_en_inv  <= ~scl_out_en;
+        sda_out_en_inv  <= ~sda_out_en;
+
+        scl_out_en_r    <= scl_out_en;
+        sda_out_en_r    <= sda_out_en;
+    endrule
+
     interface Pins pins;
         interface Bidirection scl;
-            method out      = ~scl_out_en;
-            method out_en   = unpack(scl_out_en);
+            method out      = scl_out_en_inv;
+            method out_en   = unpack(scl_out_en_r);
             method in       = scl_in._write;
         endinterface
         interface Bidirection sda;
-            method out      = ~sda_out_en;
-            method out_en   = unpack(sda_out_en);
+            method out      = sda_out_en_inv;
+            method out_en   = unpack(sda_out_en_r);
             method in       = sda_in._write;
         endinterface
     endinterface
