@@ -35,12 +35,15 @@ import GetPut::*;
 import StmtFSM::*;
 
 // Quartz
-import Bidirection::*;
 import CommonFunctions::*;
 import I2CBitController::*;
 import I2CCommon::*;
 import I2CCore::*;
 import PowerRail::*;
+
+// Cobalt
+import Bidirection::*;
+import Debouncer::*;
 
 // RDL auto-generated code
 import QsfpX32ControllerRegsPkg::*;
@@ -87,13 +90,14 @@ interface Registers;
 endinterface
 
 interface Pins;
-    interface PowerRail::Pins hsc;
     interface Bidirection#(Bit#(1)) scl;
     interface Bidirection#(Bit#(1)) sda;
     method Bit#(1) lpmode;
     method Bit#(1) resetl;
     method Action intl(Bit#(1) val);
     method Action modprsl(Bit#(1) val);
+    method Bool power_en;
+    method Action power_good(Bool val);
 endinterface
 
 interface QsfpModuleController;
@@ -133,9 +137,6 @@ interface QsfpModuleController;
 endinterface
 
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
-    // Power Rail control for the hot swap controller
-    PowerRail#(4) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
-
     // I2C core for the module management interface
     I2CCore i2c_core    <-
         mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
@@ -178,12 +179,13 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(Bool) module_initialized_r             <- mkReg(False);
 
     // Internal pin signals, named with _ to avoid collisions at the interface
-    Reg#(Bit#(1)) resetl_  <- mkRegU();
-    Reg#(Bit#(1)) lpmode_  <- mkRegU();
-    Reg#(Bool) intl_    <- mkReg(True);
-    Reg#(Bool) modprsl_ <- mkReg(True);
+    Reg#(Bit#(1)) resetl_  <- mkReg(1);
+    Reg#(Bit#(1)) lpmode_  <- mkReg(0);
 
-    Wire#(Bit#(1)) power_en_    <- mkWire();
+    Reg#(Bool) hw_power_en          <- mkReg(False);
+    Reg#(Bit#(1)) lpmode_hw_gated   <- mkReg(0);
+
+    Wire#(Bit#(1)) power_en_sw    <- mkWire();
 
     // Status
     Reg#(QsfpStatusPort0Error) error    <- mkReg(NoError);
@@ -196,6 +198,21 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Wire#(Bool) tick_1ms_               <- mkWire();
     Reg#(UInt#(11)) init_delay_counter  <- mkReg(0);
 
+    // We do some light debouncing on these input signals since any single-cycle
+    // glitch could cause a fault.
+    Debouncer#(10, 10, Bool) power_good_ <- mkDebouncer(False);
+    Debouncer#(10, 10, Bool) intl_ <- mkDebouncer(True);
+    Debouncer#(10, 10, Bool) modprsl_ <- mkDebouncer(True);
+    mkConnection(asIfc(tick_1ms_), asIfc(power_good_));
+    mkConnection(asIfc(tick_1ms_), asIfc(intl_));
+    mkConnection(asIfc(tick_1ms_), asIfc(modprsl_));
+
+    // Power Rail control for the hot swap controller
+    PowerRail#(4) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
+    Reg#(Bool) power_en_ <- mkReg(False);
+    hot_swap.pins.en = power_en_;
+    mkConnection(hot_swap.pins.pg, power_good_);
+
     // The hot swap expected a tick to correspond with its timeout
     (* fire_when_enabled *)
     rule do_hot_swap_tick (tick_1ms_);
@@ -206,9 +223,20 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_power_control;
         if (modprsl_ || (hot_swap.timed_out() || hot_swap.aborted())) begin
             hot_swap.set_enable(False);
-        end else if (!modprsl_) begin
-            hot_swap.set_enable(power_en_ == 1);
+            hw_power_en <= False;
+        end else if (!modprsl_ && !hw_power_en) begin
+            hot_swap.set_enable(power_en_sw == 1);
+            hw_power_en <= power_en_;
         end
+    endrule
+
+    // The assertion of LpMode needs to be gated by applying eFuse power.
+    // Otherwise, the 3V3 from driving LpMode bleeds out on the eFuse 3V3 rail,
+    // resulting in pull-ups rising. For additional details, see
+    // https://github.com/oxidecomputer/hardware-qsfp-x32/issues/47
+    (* fire_when_enabled *)
+    rule do_lpmode_gating;
+        lpmode_hw_gated <= pack(lpmode_ == 1 && hw_power_en);
     endrule
 
     // Clear a hot swap controller fault
@@ -357,11 +385,10 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // Physical module pins
     interface Pins pins;
-        interface PowerRail::Pins hsc = hot_swap.pins;
         interface Bidirection scl = i2c_core.pins.scl;
         interface Bidirection sda = i2c_core.pins.sda;
 
-        method lpmode = pack(lpmode_);
+        method lpmode = pack(lpmode_hw_gated);
         method resetl = pack(resetl_);
         method Action intl(Bit#(1) v);
             intl_ <= unpack(v);
@@ -369,6 +396,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         method Action modprsl(Bit#(1) v);
             modprsl_ <= unpack(v);
         endmethod
+
+        method power_en = power_en_;
+        method power_good = power_good_._write;
     endinterface
 
     // next i2c command
@@ -391,7 +421,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method modprsl  = modprsl_;
     method intl     = intl_;
 
-    method power_en     = power_en_._write;
+    method power_en     = power_en_sw._write;
     method pg           = hot_swap.pin_state.good;
     method pg_timeout   = hot_swap.timed_out;
     method pg_lost      = hot_swap.aborted;
