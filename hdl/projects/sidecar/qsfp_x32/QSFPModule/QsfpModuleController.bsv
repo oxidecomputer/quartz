@@ -200,9 +200,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // We do some light debouncing on these input signals since any single-cycle
     // glitch could cause a fault.
-    Debouncer#(10, 10, Bool) power_good_ <- mkDebouncer(False);
-    Debouncer#(10, 10, Bool) intl_ <- mkDebouncer(True);
-    Debouncer#(10, 10, Bool) modprsl_ <- mkDebouncer(True);
+    Debouncer#(5, 5, Bool) power_good_ <- mkDebouncer(False);
+    Debouncer#(5, 5, Bool) intl_ <- mkDebouncer(True);
+    Debouncer#(5, 5, Bool) modprsl_ <- mkDebouncer(True);
     mkConnection(asIfc(tick_1ms_), asIfc(power_good_));
     mkConnection(asIfc(tick_1ms_), asIfc(intl_));
     mkConnection(asIfc(tick_1ms_), asIfc(modprsl_));
@@ -210,8 +210,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Power Rail control for the hot swap controller
     PowerRail#(4) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
     Reg#(Bool) power_en_ <- mkReg(False);
-    hot_swap.pins.en = power_en_;
-    mkConnection(hot_swap.pins.pg, power_good_);
+    mkConnection(hot_swap.pins.en, power_en_._write);
+    mkConnection(power_good_, hot_swap.pins.pg);
 
     // The hot swap expected a tick to correspond with its timeout
     (* fire_when_enabled *)
