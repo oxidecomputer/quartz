@@ -53,6 +53,7 @@ typedef struct {
     Integer i2c_frequency_hz;
     Integer power_good_timeout_ms;
     Integer t_init_ms;
+    Integer input_debounce_duration_ms;
 } Parameters;
 
 instance DefaultValue#(Parameters);
@@ -60,7 +61,8 @@ instance DefaultValue#(Parameters);
         system_frequency_hz: 50_000_000,
         i2c_frequency_hz: 100_000,
         power_good_timeout_ms: 10,
-        t_init_ms: 2000 // t_init is 2 seconds per SFF-8679
+        t_init_ms: 2000, // t_init is 2 seconds per SFF-8679
+        input_debounce_duration_ms: 5
     };
 endinstance
 
@@ -190,6 +192,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Status
     Reg#(QsfpStatusPort0Error) error    <- mkReg(NoError);
     PulseWire clear_fault               <- mkPulseWire();
+    Reg#(PortStatus) port_status_r <- mkReg(defaultValue);
 
     // Control - unused currently
     Reg#(PortControl) control   <- mkReg(defaultValue);
@@ -200,9 +203,19 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // We do some light debouncing on these input signals since any single-cycle
     // glitch could cause a fault.
-    Debouncer#(5, 5, Bool) power_good_ <- mkDebouncer(False);
-    Debouncer#(5, 5, Bool) intl_ <- mkDebouncer(True);
-    Debouncer#(5, 5, Bool) modprsl_ <- mkDebouncer(True);
+    Debouncer#(3, Bool) power_good_ <- mkDebouncer(
+        parameters.input_debounce_duration_ms,
+        parameters.input_debounce_duration_ms,
+        False);
+    Debouncer#(3, Bool) intl_ <- mkDebouncer(
+        parameters.input_debounce_duration_ms,
+        parameters.input_debounce_duration_ms,
+        True);
+    Debouncer#(3, Bool) modprsl_ <- mkDebouncer(
+        parameters.input_debounce_duration_ms,
+        parameters.input_debounce_duration_ms,
+        True);
+
     mkConnection(asIfc(tick_1ms_), asIfc(power_good_));
     mkConnection(asIfc(tick_1ms_), asIfc(intl_));
     mkConnection(asIfc(tick_1ms_), asIfc(modprsl_));
@@ -236,7 +249,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // https://github.com/oxidecomputer/hardware-qsfp-x32/issues/47
     (* fire_when_enabled *)
     rule do_lpmode_gating;
-        lpmode_hw_gated <= pack(lpmode_ == 1 && hw_power_en);
+        lpmode_hw_gated <= pack(lpmode_ == 1 && hw_power_en && power_good_);
     endrule
 
     // Clear a hot swap controller fault
@@ -361,12 +374,21 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         end
     endrule
 
-    // Registers for SPI peripheral
-    interface Registers registers;
-        interface ReadOnly port_status = valueToReadOnly(PortStatus {
+    // Adding a register stage here to help out timing.
+    // The mux going into the error register is pretty nasty (see do_i2c rule
+    // above) and connecting it directly to the SPI peripheral would result in
+    // missing timing occassionally.
+    (* fire_when_enabled *)
+    rule do_port_status_reg;
+        port_status_r <= PortStatus {
             busy: pack(i2c_core.busy()),
             error: {0, pack(error)}
-        });
+        };
+    endrule
+
+    // Registers for SPI peripheral
+    interface Registers registers;
+        interface ReadOnly port_status = valueToReadOnly(port_status_r);
         interface Reg port_control;
             method _read = control;
             method Action _write(PortControl _);

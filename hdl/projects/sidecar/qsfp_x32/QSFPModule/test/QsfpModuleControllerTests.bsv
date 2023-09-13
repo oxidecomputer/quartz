@@ -30,8 +30,9 @@ QsfpModuleController::Parameters qsfp_test_params =
     QsfpModuleController::Parameters {
         system_frequency_hz: i2c_test_params.core_clk_freq,
         i2c_frequency_hz: i2c_test_params.scl_freq,
-        power_good_timeout_ms: 10,
-        t_init_ms: 20 // normally 2000, but sped up for simulation
+        power_good_timeout_ms: 5,
+        t_init_ms: 20, // normally 2000, but sped up for simulation
+        input_debounce_duration_ms: 2
     };
 
 // Helper function to unpack the Value from an ActionValue and do an assertion.
@@ -46,12 +47,6 @@ function Action check_peripheral_event(I2CPeripheralModel peripheral,
 // The Bench is what is accessed in the unit tests themselves. All interaction
 // with the DUT is done through this interface.
 interface Bench;
-    // QSFP module low speed pins
-    method Bit#(1) lpmode;
-    method Bit#(1) resetl;
-    method Action intl(Bit#(1) v);
-    method Action modprsl(Bit#(1) v);
-
     // The SPI register interface for the controller
     interface Registers registers;
 
@@ -61,15 +56,37 @@ interface Bench;
     // A way to expose if the I2C read/write is finished
     method Bool i2c_busy();
 
-    // Control of the hot swap power good pin
-    method Action power_en(Bit#(1) v);
-    method Action hsc_pg(Bit#(1) v);
+    // Control of the hot swap power enable pin
+    method Action set_power_en(Bit#(1) v);
+    // Readback of the enable pin
     method Bool hsc_en;
+    // Control of the hot swap power good pin
+    method Action set_hsc_pg(Bit#(1) v);
+    // Readback of the enable pin
+    method Bool hsc_pg;
+
     method Bool hsc_pg_timeout;
     method Bool hsc_pg_lost;
 
-    // Control of ModResetL
+    // Control of ModResetL for the bench
     method Action set_resetl(Bit#(1) v);
+    // Readback of ModResetL pin
+    method Bit#(1) resetl;
+
+    // Control of LPMode/TxDis for the bench
+    method Action set_lpmode(Bit#(1) v);
+    // Readback of LPMode pin
+    method Bit#(1) lpmode;
+
+    // Control of IntL for the bench
+    method Action set_intl(Bit#(1) v);
+    // Readback of IntL pin
+    method Bit#(1) intl;
+
+    // Control of ModPrsL for the bench
+    method Action set_modprsl(Bit#(1) v);
+    // Readback of ModPrsL pin
+    method Bit#(1) modprsl;
 
     // Expose if the module has been initialized or not
     method Bool module_initialized;
@@ -88,13 +105,15 @@ module mkBench (Bench);
 
     // Some registers for setting outputs
     Reg#(Bit#(1)) resetl_r   <- mkReg(0); // 0 as it is pulled down on board
+    Reg#(Bit#(1)) lpmode_r   <- mkReg(0);
     mkConnection(controller.resetl, resetl_r);
+    mkConnection(controller.lpmode, lpmode_r);
 
     // Hot swap
     Reg#(Bit#(1)) power_en_r  <- mkReg(1);
     Reg#(Bool) hsc_pg_r     <- mkReg(False);
     mkConnection(controller.power_en, power_en_r);
-    mkConnection(controller.pins.hsc.pg, hsc_pg_r);
+    mkConnection(controller.pins.power_good, hsc_pg_r);
 
     Strobe#(16) tick_1khz   <-
         mkLimitStrobe(1, qsfp_test_params.system_frequency_hz / 1000, 0);
@@ -191,26 +210,33 @@ module mkBench (Bench);
         end
     endmethod
 
-    method lpmode = controller.pins.lpmode;
+    method intl = pack(controller.intl);
+    method modprsl = pack(controller.modprsl);
     method resetl = controller.pins.resetl;
-    method Action intl(Bit#(1) v);
+    method lpmode = controller.pins.lpmode;
+
+    method Action set_intl(Bit#(1) v);
         intl_r <= v;
     endmethod
-    method Action modprsl(Bit#(1) v);
+    method Action set_modprsl(Bit#(1) v);
         modprsl_r <= v;
-    endmethod
-
-    method Action power_en(Bit#(1) v);
-        power_en_r <= v;
-    endmethod
-    method Action hsc_pg(Bit#(1) v);
-        hsc_pg_r <= unpack(v);
     endmethod
     method Action set_resetl(Bit#(1) v);
         resetl_r    <= v;
     endmethod
+    method Action set_lpmode(Bit#(1) v);
+        lpmode_r    <= v;
+    endmethod
 
-    method hsc_en = controller.pins.hsc.en;
+    method Action set_power_en(Bit#(1) v);
+        power_en_r <= v;
+    endmethod
+    method Action set_hsc_pg(Bit#(1) v);
+        hsc_pg_r <= unpack(v);
+    endmethod
+
+    method hsc_en = controller.pins.power_en;
+    method hsc_pg = controller.pg;
     method hsc_pg_timeout = controller.pg_timeout;
     method hsc_pg_lost = controller.pg_lost;
 
@@ -222,12 +248,16 @@ function Stmt insert_and_power_module(Bench bench);
         // insert a module, which tells the controller to enable power
         assert_false(bench.hsc_en(),
             "Hot swap should not be enabled when module is not present");
-        bench.modprsl(0);
-        delay(5);
+        bench.set_modprsl(0);
+        // modprsl is debounced, so wait for it to transition
+        await(bench.modprsl == 0);
+        delay(3);
         assert_true(bench.hsc_en(),
             "Hot swap should be enabled when module is present");
         // after some delay, give the controller power good
-        bench.hsc_pg(1);
+        bench.set_hsc_pg(1);
+        // power good is debounced, so wait for it to transition
+        await(bench.hsc_pg);
         delay(5);
     endseq);
 endfunction
@@ -283,7 +313,7 @@ module mkNoPowerTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        bench.modprsl(0);
+        bench.set_modprsl(0);
         await(bench.hsc_en());
         bench.command(Command {
                 op: Read,
@@ -321,9 +351,12 @@ module mkRemovePowerEnableTest (Empty);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
             "NoPower should be present when attempting to communicate when the hot swap is stable.");
-        bench.power_en(0);
+        bench.set_power_en(0);
         delay(2);
-        bench.hsc_pg(0);
+        bench.set_hsc_pg(0);
+        // PG is debounced and thus won't transition immediately
+        await(!bench.hsc_pg);
+        delay(2);
         assert_eq(bench.hsc_en(), False, "Expect hot swap to no longer be enabled.");
         delay(5);
     endseq);
@@ -338,7 +371,7 @@ module mkPowerGoodTimeoutTest (Empty);
 
     mkAutoFSM(seq
         delay(5);
-        bench.modprsl(0);
+        bench.set_modprsl(0);
         await(bench.hsc_pg_timeout());
         bench.command(Command {
                 op: Read,
@@ -364,7 +397,9 @@ module mkPowerGoodLostTest (Empty);
     mkAutoFSM(seq
         delay(5);
         add_and_initialize_module(bench);
-        bench.hsc_pg(0);
+        bench.set_hsc_pg(0);
+        // PG is debounced and thus won't transition immediately
+        await(!bench.hsc_pg);
         bench.command(Command {
                 op: Read,
                 i2c_addr: i2c_test_params.peripheral_addr,
@@ -491,14 +526,77 @@ module mkUninitializationAfterRemovalTest (Empty);
             NoError,
             "NoError should be present when attempting to communicate after t_init has elapsed.");
 
-        bench.modprsl(1);
-        bench.modprsl(0);
+        bench.set_modprsl(1);
+        // ModPrsL is debounced and thus won't transition immediately
+        await(bench.modprsl == 1);
+        bench.set_modprsl(0);
+        await(bench.modprsl == 0);
         delay(3); // wait a few cycles for power to re-enable
         bench.command(read_cmd);
         await(!bench.i2c_busy());
-                assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NotInitialized,
             "NotInitialized error should be present when a module has been reseated but not initialized.");
+    endseq);
+endmodule
+
+// mkNoLPModeWhenModuleIsUnpoweredTest
+//
+// This test checks that hardware gating of the LPMode signal is working to
+// override SW setting LPMode when a module has not been powered. Details on
+// why we do this: https://github.com/oxidecomputer/hardware-qsfp-x32/issues/47
+module mkNoLPModeWhenModuleIsUnpoweredTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        bench.set_lpmode(0);
+        delay(3);
+        assert_not_set(bench.lpmode, "LpMode should be deasserted when set to 0.");
+
+        bench.set_lpmode(1); // SW attempts to assert LPMode
+        delay(3);
+        assert_not_set(bench.lpmode, "LpMode should be deasserted when a module is not present and powered.");
+
+        bench.set_modprsl(0); // insert a module
+        await(bench.modprsl == 0); // wait out debounce
+        delay(3);
+        assert_set(bench.hsc_en, "HSC power should be enabled now that a module is present.");
+        bench.set_hsc_pg(1);
+        assert_not_set(bench.hsc_pg, "HSC PG should not be debounced yet.");
+        assert_not_set(bench.lpmode, "LpMode should be deasserted when a module is not present and powered.");
+
+        await(bench.hsc_pg); // wait out debounce
+        assert_set(bench.lpmode, "LpMode should be asserted now that 3.3V is up.");
+    endseq);
+endmodule
+
+// mkIntLTest
+//
+// This test ensures that the IntL input pin is properly reflected on the
+// interface.
+module mkIntLTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        assert_set(bench.intl, "IntL's default state should be pulled up.");
+        bench.set_intl(0);
+        await(bench.intl == 0);
+        assert_not_set(bench.intl, "IntL should be low after debounce");
+    endseq);
+endmodule
+
+// mkModPrsLTest
+//
+// This test ensures that the ModPrsL input pin is properly reflected on the
+// interface.
+module mkModPrsLTest (Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        assert_set(bench.modprsl, "ModPrsL's default state should be pulled up.");
+        bench.set_modprsl(0);
+        await(bench.modprsl == 0);
+        assert_not_set(bench.modprsl, "ModPrsL should be low after debounce");
     endseq);
 endmodule
 
