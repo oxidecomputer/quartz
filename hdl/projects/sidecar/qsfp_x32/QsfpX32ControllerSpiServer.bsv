@@ -225,14 +225,26 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.mod_controls[15]);
         end else if (spi_request.address == fromInteger(qsfpI2cCtrlOffset)) begin
             ret_byte = pack(qsfp_top.i2c_ctrl);
-        end else if (spi_request.address == fromInteger(qsfpPowerEn0Offset)) begin
-            ret_byte = pack(qsfp_top.power_en0);
-        end else if (spi_request.address == fromInteger(qsfpPowerEn1Offset)) begin
-            ret_byte = pack(qsfp_top.power_en1);
-        end else if (spi_request.address == fromInteger(qsfpPowerGood0Offset)) begin
-            ret_byte = pack(qsfp_top.power_good0);
-        end else if (spi_request.address == fromInteger(qsfpPowerGood1Offset)) begin
-            ret_byte = pack(qsfp_top.power_good1);
+        end else if (spi_request.address == fromInteger(qsfpPowerEnCtrl0Offset)) begin
+            ret_byte = pack(qsfp_top.power_en_ctrl0);
+        end else if (spi_request.address == fromInteger(qsfpPowerEnCtrl1Offset)) begin
+            ret_byte = pack(qsfp_top.power_en_ctrl1);
+        end else if (spi_request.address == fromInteger(qsfpModResetlCtrl0Offset)) begin
+            ret_byte = pack(qsfp_top.mod_resetl_ctrl0);
+        end else if (spi_request.address == fromInteger(qsfpModResetlCtrl1Offset)) begin
+            ret_byte = pack(qsfp_top.mod_resetl_ctrl1);
+        end else if (spi_request.address == fromInteger(qsfpModLpmodeCtrl0Offset)) begin
+            ret_byte = pack(qsfp_top.mod_lpmode_ctrl0);
+        end else if (spi_request.address == fromInteger(qsfpModLpmodeCtrl1Offset)) begin
+            ret_byte = pack(qsfp_top.mod_lpmode_ctrl1);
+        end else if (spi_request.address == fromInteger(qsfpPowerEnPins0Offset)) begin
+            ret_byte = pack(qsfp_top.power_en_pins0);
+        end else if (spi_request.address == fromInteger(qsfpPowerEnPins1Offset)) begin
+            ret_byte = pack(qsfp_top.power_en_pins1);
+        end else if (spi_request.address == fromInteger(qsfpPowerGoodPins0Offset)) begin
+            ret_byte = pack(qsfp_top.power_good_pins0);
+        end else if (spi_request.address == fromInteger(qsfpPowerGoodPins1Offset)) begin
+            ret_byte = pack(qsfp_top.power_good_pins1);
         end else if (spi_request.address == fromInteger(qsfpPowerGoodTimeout0Offset)) begin
             ret_byte = pack(qsfp_top.power_good_timeout0);
         end else if (spi_request.address == fromInteger(qsfpPowerGoodTimeout1Offset)) begin
@@ -241,22 +253,22 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.power_good_lost0);
         end else if (spi_request.address == fromInteger(qsfpPowerGoodLost1Offset)) begin
             ret_byte = pack(qsfp_top.power_good_lost1);
-        end else if (spi_request.address == fromInteger(qsfpModResetl0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_resetl0);
-        end else if (spi_request.address == fromInteger(qsfpModResetl1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_resetl1);
-        end else if (spi_request.address == fromInteger(qsfpModLpmode0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_lpmode0);
-        end else if (spi_request.address == fromInteger(qsfpModLpmode1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_lpmode1);
-        end else if (spi_request.address == fromInteger(qsfpModModprsl0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_modprsl0);
-        end else if (spi_request.address == fromInteger(qsfpModModprsl1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_modprsl1);
-        end else if (spi_request.address == fromInteger(qsfpModIntl0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_intl0);
-        end else if (spi_request.address == fromInteger(qsfpModIntl1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_intl1);
+        end else if (spi_request.address == fromInteger(qsfpModResetlPins0Offset)) begin
+            ret_byte = pack(qsfp_top.mod_resetl_pins0);
+        end else if (spi_request.address == fromInteger(qsfpModResetlPins1Offset)) begin
+            ret_byte = pack(qsfp_top.mod_resetl_pins1);
+        end else if (spi_request.address == fromInteger(qsfpModLpmodePins0Offset)) begin
+            ret_byte = pack(qsfp_top.mod_lpmode_pins0);
+        end else if (spi_request.address == fromInteger(qsfpModLpmodePins1Offset)) begin
+            ret_byte = pack(qsfp_top.mod_lpmode_pins1);
+        end else if (spi_request.address == fromInteger(qsfpModModprslPins0Offset)) begin
+            ret_byte = pack(qsfp_top.mod_modprsl_pins0);
+        end else if (spi_request.address == fromInteger(qsfpModModprslPins1Offset)) begin
+            ret_byte = pack(qsfp_top.mod_modprsl_pins1);
+        end else if (spi_request.address == fromInteger(qsfpModIntlPins0Offset)) begin
+            ret_byte = pack(qsfp_top.mod_intl_pins0);
+        end else if (spi_request.address == fromInteger(qsfpModIntlPins1Offset)) begin
+            ret_byte = pack(qsfp_top.mod_intl_pins1);
         end else if (spi_request.address == fromInteger(qsfpPort0StatusOffset)) begin
             ret_byte = pack(qsfp_top.mod_statuses[0]);
         end else if (isBetween(spi_request.address, qsfpPort0ReadBufferOffset, readBufferNumEntries)) begin
@@ -391,12 +403,12 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
     addRules(do_spi_write(qsfpI2cBcast1Offset, qsfp_top.i2c_bcast1));
     addRules(do_spi_write(qsfpI2cBcast0Offset, qsfp_top.i2c_bcast0));
     addRules(do_spi_write(qsfpI2cCtrlOffset, qsfp_top.i2c_ctrl));
-    addRules(do_spi_write(qsfpPowerEn0Offset, qsfp_top.power_en0));
-    addRules(do_spi_write(qsfpPowerEn1Offset, qsfp_top.power_en1));
-    addRules(do_spi_write(qsfpModResetl0Offset, qsfp_top.mod_resetl0));
-    addRules(do_spi_write(qsfpModResetl1Offset, qsfp_top.mod_resetl1));
-    addRules(do_spi_write(qsfpModLpmode0Offset, qsfp_top.mod_lpmode0));
-    addRules(do_spi_write(qsfpModLpmode1Offset, qsfp_top.mod_lpmode1));
+    addRules(do_spi_write(qsfpPowerEnCtrl0Offset, qsfp_top.power_en_ctrl0));
+    addRules(do_spi_write(qsfpPowerEnCtrl1Offset, qsfp_top.power_en_ctrl1));
+    addRules(do_spi_write(qsfpModResetlCtrl0Offset, qsfp_top.mod_resetl_ctrl0));
+    addRules(do_spi_write(qsfpModResetlCtrl1Offset, qsfp_top.mod_resetl_ctrl1));
+    addRules(do_spi_write(qsfpModLpmodeCtrl0Offset, qsfp_top.mod_lpmode_ctrl0));
+    addRules(do_spi_write(qsfpModLpmodeCtrl1Offset, qsfp_top.mod_lpmode_ctrl1));
     addRules(do_spi_write(qsfpControlPort0Offset, qsfp_top.mod_controls[0]));
     addRules(do_spi_write(qsfpControlPort1Offset, qsfp_top.mod_controls[1]));
     addRules(do_spi_write(qsfpControlPort2Offset, qsfp_top.mod_controls[2]));

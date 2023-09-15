@@ -166,9 +166,23 @@ addrmap qsfp_modules_top {
     port_control CONTROL_PORT14;
     port_control CONTROL_PORT15;
 
+    //
+    // Module pin control and readbacks
+    //
+    // The following set of registers contains _CTRL registers for software to
+    // control a given output pin. There are also _PINS registers which act as
+    // readbacks for input pins (after any debouncing) and also the output pins.
+    // The design will attempt to make output pins match the state of the
+    // corresponding _CTRL register, but there may be additional FPGA logic that
+    // gates that from happening. Having both _CTRL and _PINS registers allows for
+    // us to differentiate between what we intend to be happening and what is
+    // actually happening.
+    //
+
     reg {
-        name = "Ports 0 -> 7 HSC Enable. Clear bit to remove module power.";
-        default sw = r;
+        name = "SW control of eFuse enable for ports 0 -> 7";
+        default hw = r;
+
         field {} PORT7[7:7] = 1;
         field {} PORT6[6:6] = 1;
         field {} PORT5[5:5] = 1;
@@ -177,11 +191,12 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 1;
         field {} PORT1[1:1] = 1;
         field {} PORT0[0:0] = 1;
-    } POWER_EN0;
+    } POWER_EN_CTRL0;
 
     reg {
-        name = "Ports 8 -> 15 HSC Enable. Clear bit to remove module power.";
-        default sw = r;
+        name = "SW control of eFuse enable for ports 8 -> 15";
+        default hw = r;
+
         field {} PORT15[7:7] = 1;
         field {} PORT14[6:6] = 1;
         field {} PORT13[5:5] = 1;
@@ -190,10 +205,94 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 1;
         field {} PORT9[1:1] = 1;
         field {} PORT8[0:0] = 1;
-    } POWER_EN1;
+    } POWER_EN_CTRL1;
 
     reg {
-        name = "Ports 0 -> 7 HSC power good";
+        name = "SW control of ResetL for ports 0 -> 7";
+        default hw = r;
+
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } MOD_RESETL_CTRL0;
+
+    reg {
+        name = "SW control of ResetL for ports 8 -> 15";
+        default hw = r;
+
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } MOD_RESETL_CTRL1;
+
+    reg {
+        name = "SW control of LPMode/TxDis for ports 0 -> 7";
+        default hw = r;
+
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } MOD_LPMODE_CTRL0;
+
+    reg {
+        name = "SW control of LPMode/TxDis for ports 8 -> 15";
+        default hw = r;
+
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } MOD_LPMODE_CTRL1;
+
+    reg {
+        name = "Physical eFuse enable pins of ports 0 -> 7";
+        default sw = r;
+
+        field {} PORT7[7:7] = 0;
+        field {} PORT6[6:6] = 0;
+        field {} PORT5[5:5] = 0;
+        field {} PORT4[4:4] = 0;
+        field {} PORT3[3:3] = 0;
+        field {} PORT2[2:2] = 0;
+        field {} PORT1[1:1] = 0;
+        field {} PORT0[0:0] = 0;
+    } POWER_EN_PINS0;
+
+    reg {
+        name = "Physical eFuse enable pins of ports 8 -> 15";
+        default sw = r;
+
+        field {} PORT15[7:7] = 0;
+        field {} PORT14[6:6] = 0;
+        field {} PORT13[5:5] = 0;
+        field {} PORT12[4:4] = 0;
+        field {} PORT11[3:3] = 0;
+        field {} PORT10[2:2] = 0;
+        field {} PORT9[1:1] = 0;
+        field {} PORT8[0:0] = 0;
+    } POWER_EN_PINS1;
+
+    reg {
+        name = "Physical eFuse power good pins of ports 0 -> 7";
         default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -203,10 +302,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } POWER_GOOD0;
+    } POWER_GOOD_PINS0;
 
     reg {
-        name = "Ports 8 -> 15 HSC power good";
+        name = "Physical eFuse power good pins of ports 8 -> 15";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -216,10 +315,10 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } POWER_GOOD1;
+    } POWER_GOOD_PINS1;
 
     reg {
-        name = "Ports 0 -> 7 HSC power good not asserted within period after enabled";
+        name = "Ports 0 -> 7 eFuse power good not asserted within period after enabled";
         default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -232,7 +331,7 @@ addrmap qsfp_modules_top {
     } POWER_GOOD_TIMEOUT0;
 
     reg {
-        name = "Ports 8 -> 15 HSC power good not asserted within period after enabled";
+        name = "Ports 8 -> 15 eFuse power good not asserted within period after enabled";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -245,7 +344,7 @@ addrmap qsfp_modules_top {
     } POWER_GOOD_TIMEOUT1;
 
     reg {
-        name = "Ports 0 -> 7 HSC power good lost after successful enable";
+        name = "Ports 0 -> 7 eFuse power good lost after successful enable";
         default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -258,7 +357,7 @@ addrmap qsfp_modules_top {
     } POWER_GOOD_LOST0;
 
     reg {
-        name = "Ports 8 -> 15 HSC power good lost after successful enable";
+        name = "Ports 8 -> 15 eFuse power good lost after successful enable";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -271,7 +370,9 @@ addrmap qsfp_modules_top {
     } POWER_GOOD_LOST1;
 
     reg {
-        name = "Ports 0 -> 7 Module ResetL";
+        name = "Physical module ResetL pins of ports 0 -> 7";
+        default hw = r;
+
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
         field {} PORT5[5:5] = 0;
@@ -280,10 +381,12 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } MOD_RESETL0;
+    } MOD_RESETL_PINS0;
 
     reg {
-        name = "Ports 8 -> 15 Module ResetL";
+        name = "Physical module ResetL pins of ports 8 -> 15";
+        default hw = r;
+
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
         field {} PORT13[5:5] = 0;
@@ -292,10 +395,10 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } MOD_RESETL1;
+    } MOD_RESETL_PINS1;
 
     reg {
-        name = "Ports 0 -> 7 Module LPMode/TxDis";
+        name = "Physical module LPMode/TxDis pins of ports 0 -> 7";
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
         field {} PORT5[5:5] = 0;
@@ -304,10 +407,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } MOD_LPMODE0;
+    } MOD_LPMODE_PINS0;
 
     reg {
-        name = "Ports 8 -> 15 Module LPMode/TxDis";
+        name = "Physical module LPMode/TxDis pins of ports 8 -> 15";
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
         field {} PORT13[5:5] = 0;
@@ -316,10 +419,10 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } MOD_LPMODE1;
+    } MOD_LPMODE_PINS1;
 
     reg {
-        name = "Ports 0 -> 7 Module ModPrsL";
+        name = "Physical module ModPrsL pins of ports 0 -> 7";
         default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -329,10 +432,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } MOD_MODPRSL0;
+    } MOD_MODPRSL_PINS0;
 
     reg {
-        name = "Ports 8 -> 15 Module ModPrsL";
+        name = "Physical module ModPrsL pins of ports 8 -> 15";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -342,10 +445,10 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } MOD_MODPRSL1;
+    } MOD_MODPRSL_PINS1;
 
     reg {
-        name = "Ports 0 -> 7 Module IntL/RxLOS";
+        name = "Physical module IntL/RxLOS pins of ports 0 -> 7";
         default sw = r;
         field {} PORT7[7:7] = 0;
         field {} PORT6[6:6] = 0;
@@ -355,10 +458,10 @@ addrmap qsfp_modules_top {
         field {} PORT2[2:2] = 0;
         field {} PORT1[1:1] = 0;
         field {} PORT0[0:0] = 0;
-    } MOD_INTL0;
+    } MOD_INTL_PINS0;
 
     reg {
-        name = "Ports 8 -> 15 Module IntL/RxLOS";
+        name = "Physical module IntL/RxLOS pins of ports 8 -> 15";
         default sw = r;
         field {} PORT15[7:7] = 0;
         field {} PORT14[6:6] = 0;
@@ -368,7 +471,7 @@ addrmap qsfp_modules_top {
         field {} PORT10[2:2] = 0;
         field {} PORT9[1:1] = 0;
         field {} PORT8[0:0] = 0;
-    } MOD_INTL1;
+    } MOD_INTL_PINS1;
 
     //
     // I2C Write and Read Buffers

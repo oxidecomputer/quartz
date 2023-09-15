@@ -92,12 +92,15 @@ interface Registers;
 endinterface
 
 interface Pins;
+    // communication
     interface Bidirection#(Bit#(1)) scl;
     interface Bidirection#(Bit#(1)) sda;
+    // low-speed control
     method Bit#(1) lpmode;
     method Bit#(1) resetl;
     method Action intl(Bit#(1) val);
     method Action modprsl(Bit#(1) val);
+    // eFuse power supply
     method Bool power_en;
     method Action power_good(Bool val);
 endinterface
