@@ -1,3 +1,6 @@
 [submodule "vnd/cobalt"]
 	path = vnd/cobalt
 	url = git@github.com:oxidecomputer/cobalt.git
+[submodule "prelude"]
+	path = prelude
+	url = https://github.com/facebook/buck2-prelude.git
