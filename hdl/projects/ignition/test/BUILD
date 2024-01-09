@@ -5,7 +5,7 @@ bluespec_library('TestHelpers',
         'IgnitionTestHelpers.bsv',
     ],
     deps = [
-        '//hdl/ignition:Protocol',
+        '//hdl/projects/ignition:Protocol',
         'cobalt//hdl:Encoding8b10b',
         'cobalt//hdl:TestUtils',
         'cobalt//hdl/test:Encoding8b10bReference',
@@ -19,8 +19,8 @@ bluespec_library('Bench',
     ],
     deps =[
         ':TestHelpers',
-        '//hdl/ignition:Controller',
-        '//hdl/ignition:Target',
+        '//hdl/projects/ignition:Controller',
+        '//hdl/projects/ignition:Target',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
     ])
@@ -30,8 +30,8 @@ bluespec_library('IgnitionControllerAndTargetBench',
         'IgnitionControllerAndTargetBench.bsv',
     ],
     deps = [
-        '//hdl/ignition:Controller',
-        '//hdl/ignition:Target',
+        '//hdl/projects/ignition:Controller',
+        '//hdl/projects/ignition:Target',
         'cobalt//hdl:SerialIO',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
@@ -111,7 +111,7 @@ bluesim_tests('MessageParserTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
+        '//hdl/projects/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -136,7 +136,7 @@ bluesim_tests('ControllerMessageParserTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
+        '//hdl/projects/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -152,7 +152,7 @@ bluesim_tests('DeparserTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
+        '//hdl/projects/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -174,7 +174,7 @@ bluesim_tests('CRCTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
+        '//hdl/projects/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -190,8 +190,8 @@ bluesim_tests('ReceiverTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
-        '//hdl/ignition:Transceiver',
+        '//hdl/projects/ignition:Protocol',
+        '//hdl/projects/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
         'cobalt//hdl/test:Encoding8b10bReference',
     ])
@@ -207,8 +207,8 @@ bluesim_tests('TransmitterTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
-        '//hdl/ignition:Transceiver',
+        '//hdl/projects/ignition:Protocol',
+        '//hdl/projects/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -225,8 +225,8 @@ bluesim_tests('TransceiverTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
-        '//hdl/ignition:Transceiver',
+        '//hdl/projects/ignition:Protocol',
+        '//hdl/projects/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -250,8 +250,8 @@ bluesim_tests('TargetTransceiverTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/ignition:Protocol',
-        '//hdl/ignition:Transceiver',
+        '//hdl/projects/ignition:Protocol',
+        '//hdl/projects/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
     ],
     local = {
@@ -284,7 +284,7 @@ bluesim_tests('IntegrationTests',
 #     ],
 #     deps = [
 #         ':TestHelpers',
-#         '//hdl/ignition:Transceiver',
+#         '//hdl/projects/ignition:Transceiver',
 #         'cobalt//hdl/boards/ecp5_evn:Board',
 #     ])
 
@@ -315,8 +315,8 @@ bluesim_tests('IntegrationTests',
 #     ],
 #     deps = [
 #         ':TestHelpers',
-#         '//hdl/ignition:Transceiver',
-#         '//hdl/boards/ignitionlet:Board',
+#         '//hdl/projects/ignition:Transceiver',
+#         '//hdl/projects/ignitionlet:Board',
 #     ])
 
 # bluespec_verilog('IgnitionletTransceiverLoopbackTest_verilog',
@@ -326,8 +326,8 @@ bluesim_tests('IntegrationTests',
 #     ],
 #     deps = [
 #         ':TestHelpers',
-#         '//hdl/ignition:Transceiver',
-#         '//hdl/boards/ignitionlet:Board',
+#         '//hdl/projects/ignition:Transceiver',
+#         '//hdl/projects/ignitionlet:Board',
 #     ])
 
 # yosys_design('ignitionlet_transceiver_loopback_test_top',

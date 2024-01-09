@@ -53,8 +53,8 @@ bluespec_verilog('IgnitionletTargetTop',
         'mkIgnitionletTargetDebug',
     ],
     deps = [
-        '//hdl/ignition:Target',
-        '//hdl/ignition:TargetWrapper',
+        '//hdl/projects/ignition:Target',
+        '//hdl/projects/ignition:TargetWrapper',
     ])
 
 yosys_design('ignitionlet_target_power_button_top',
@@ -102,7 +102,7 @@ bluespec_verilog('TransceiverDebugTop',
     ],
     deps = [
         ':Board',
-        '//hdl/ignition:Transceiver',
+        '//hdl/projects/ignition:Transceiver',
         'cobalt//hdl:InitialReset',
         'cobalt//hdl:IOSync',
         'cobalt//hdl/interfaces:ICE40',
@@ -135,5 +135,5 @@ nextpnr_ice40_bitstream('transceiver_debug',
     ],
     local = {
         'nextpnr_constraints':
-            ROOT + '/hdl/ignition/ignition_target_debug.pcf',
+            ROOT + '/hdl/projects/ignition/ignition_target_debug.pcf',
     })

@@ -3,7 +3,7 @@
 rdl('qsfp_x32_controller_registers',
     sources = [
         'VSC8562/vsc8562.rdl',
-        '../../../I2C/I2CCore.rdl',
+        '../../../ip/bsv/I2C/I2CCore.rdl',
         'QSFPModule/qsfp_modules_top.rdl',
         'qsfp_x32_controller.rdl',
     ],
@@ -29,9 +29,9 @@ bluespec_library('VSC8562',
     ],
     deps = [
         ':QsfpX32ControllerRegsPkg',
-        '//hdl:CommonFunctions',
-        '//hdl:PowerRail',
-        '//hdl/MDIO:MDIO',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/ip/bsv/MDIO:MDIO',
         'cobalt//hdl:Bidirection',
         'cobalt//hdl:Strobe',
     ])
@@ -41,7 +41,7 @@ bluespec_library('QsfpX32ControllerTopRegs',
         'QsfpX32ControllerTopRegs.bsv'
     ],
     deps = [
-        '//hdl:CommonFunctions',
+        '//hdl/ip/bsv:CommonFunctions',
         ':QsfpX32ControllerRegsPkg',
     ])
 
@@ -51,9 +51,9 @@ bluespec_library('QsfpModuleController',
     ],
     deps = [
         ':QsfpX32ControllerRegsPkg',
-        '//hdl:CommonFunctions',
-        '//hdl:PowerRail',
-        '//hdl/I2C:I2CCore',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/ip/bsv/I2C:I2CCore',
         'cobalt//hdl:Bidirection',
     ])
 
@@ -65,9 +65,9 @@ bluespec_library('QsfpModulesTop',
     deps = [
         ':QsfpModuleController',
         ':QsfpX32ControllerRegsPkg',
-        '//hdl:CommonFunctions',
-        '//hdl:PowerRail',
-        '//hdl/I2C:I2CCore',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/ip/bsv/I2C:I2CCore',
     ])
 
 bluespec_library('QsfpX32ControllerSpiServer',
@@ -102,7 +102,7 @@ bluespec_library('QsfpX32ControllerTop',
     ],
     deps = [
         ':QsfpX32Controller',
-        '//hdl/I2C:I2CCore',
+        '//hdl/ip/bsv/I2C:I2CCore',
         'cobalt//hdl:IOSync',
         'cobalt//hdl:Strobe',
     ],
@@ -163,11 +163,11 @@ bluesim_tests('QsfpModuleControllerTests',
     deps = [
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
-        '//hdl/I2C:I2CCommon',
-        '//hdl/I2C:I2CCore',
-        '//hdl/I2C:I2CPeripheralModel',
-        '//hdl:CommonFunctions',
-        '//hdl:PowerRail',
+        '//hdl/ip/bsv/I2C:I2CCommon',
+        '//hdl/ip/bsv/I2C:I2CCore',
+        '//hdl/ip/bsv/I2C:I2CPeripheralModel',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:PowerRail',
         ':QsfpModuleController',
         ':QsfpX32ControllerRegsPkg',
     ])
@@ -187,8 +187,8 @@ bluesim_tests('VSC8562Tests',
         'cobalt//hdl:Bidirection',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
-        '//hdl:PowerRail',
-        '//hdl/MDIO:MDIO',
-        '//hdl/MDIO:MDIOPeripheralModel',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/ip/bsv/MDIO:MDIO',
+        '//hdl/ip/bsv/MDIO:MDIOPeripheralModel',
         ':VSC8562'
     ])

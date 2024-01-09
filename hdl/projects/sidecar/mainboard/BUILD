@@ -2,7 +2,7 @@
 
 rdl('sidecar_mainboard_controller_registers',
     sources = [
-        '../../../power_rail.rdl',
+        '../../../ip/bsv/power_rail/power_rail.rdl',
         'sidecar_mainboard_controller.rdl',
     ],
     outputs = [
@@ -27,8 +27,8 @@ bluespec_library('TofinoDebugPort',
     ],
     deps = [
         ':SidecarMainboardControllerReg',
-        '//hdl:CommonFunctions',
-        '//hdl/I2C:I2CCore',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv/I2C:I2CCore',
     ])
 
 bluespec_library('Tofino2Sequencer',
@@ -37,7 +37,7 @@ bluespec_library('Tofino2Sequencer',
     ],
     deps = [
         ':SidecarMainboardControllerReg',
-        '//hdl:PowerRail',
+        '//hdl/ip/bsv:PowerRail',
     ])
 
 bluespec_library('PCIeEndpointController',
@@ -47,7 +47,7 @@ bluespec_library('PCIeEndpointController',
     deps = [
         ':SidecarMainboardControllerReg',
         ':Tofino2Sequencer',
-        '//hdl:CommonFunctions',
+        '//hdl/ip/bsv:CommonFunctions',
     ])
 
 bluespec_library('SidecarMainboardController',
@@ -60,10 +60,10 @@ bluespec_library('SidecarMainboardController',
         ':PCIeEndpointController',
         ':Tofino2Sequencer',
         ':TofinoDebugPort',
-        '//hdl:PowerRail',
-        '//hdl/ignition:Controller',
-        '//hdl/ignition:ControllerRegisters',
-        '//hdl/ignition:Transceiver',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/projects/ignition:Controller',
+        '//hdl/projects/ignition:ControllerRegisters',
+        '//hdl/projects/ignition:Transceiver',
         'cobalt//hdl:Debouncer',
         'cobalt//hdl:GitVersion',
         'cobalt//hdl:RegCommon',
@@ -146,5 +146,5 @@ nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_b',
         ':sidecar_mainboard_controller_top_rev_b',
     ],
     local = {
-        'nextpnr_constraints': ROOT + '/hdl/boards/sidecar/mainboard/sidecar_mainboard_controller_rev_b.lpf',
+        'nextpnr_constraints': ROOT + '/hdl/projects/sidecar/mainboard/sidecar_mainboard_controller_rev_b.lpf',
     })

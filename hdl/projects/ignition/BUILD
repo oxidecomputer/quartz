@@ -7,7 +7,7 @@ bluespec_library('Protocol',
         'IgnitionProtocolParser.bsv',
     ],
     deps = [
-        '//hdl:SettableCRC',
+        '//hdl/ip/bsv:SettableCRC',
         'cobalt//hdl:Encoding8b10b',
     ])
 
@@ -28,7 +28,7 @@ bluespec_library('Target',
     ],
     deps = [
         ':Transceiver',
-        '//hdl/boards/ignitionlet:Board',
+        '//hdl/projects/ignitionlet:Board',
         'cobalt//hdl:Countdown',
         'cobalt//hdl:SchmittReg',
         'cobalt//hdl:Strobe',

@@ -12,7 +12,7 @@ bluespec_library('FanModule',
 
 bluespec_library('PowerRail',
     sources = [
-        'PowerRail.bsv',
+        'power_rail/PowerRail.bsv',
     ],
     deps = [
         'cobalt//hdl:Countdown',

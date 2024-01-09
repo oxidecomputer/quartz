@@ -5,8 +5,8 @@ bluespec_library('MockTofino2Sequencer',
         'MockTofino2Sequencer.bsv',
     ],
     deps = [
-        '//hdl:CommonFunctions',
-        '//hdl/boards/sidecar/mainboard:Tofino2Sequencer',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/projects/sidecar/mainboard:Tofino2Sequencer',
     ])
 
 bluesim_tests('PCIeEndpointControllerTests',
@@ -20,8 +20,8 @@ bluesim_tests('PCIeEndpointControllerTests',
     ],
     deps = [
         ':MockTofino2Sequencer',
-        '//hdl:PowerRail',
-        '//hdl/boards/sidecar/mainboard:PCIeEndpointController',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/projects/sidecar/mainboard:PCIeEndpointController',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
     ])
@@ -38,8 +38,8 @@ bluesim_tests('TofinoDebugPortTests',
         'mkDirectWriteTest',
     ],
     deps = [
-        '//hdl/boards/sidecar/mainboard:TofinoDebugPort',
-        '//hdl/I2C:I2CPeripheralModel',
+        '//hdl/projects/sidecar/mainboard:TofinoDebugPort',
+        '//hdl/ip/bsv/I2C:I2CPeripheralModel',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -67,8 +67,8 @@ bluesim_tests('Tofino2SequencerTests',
         'mkVrHotInA0Test',
     ],
     deps = [
-        '//hdl:PowerRail',
-        '//hdl/boards/sidecar/mainboard:Tofino2Sequencer',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/projects/sidecar/mainboard:Tofino2Sequencer',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
     ])
@@ -80,7 +80,7 @@ bluesim_tests('MainboardControllerTests',
         'mkFrontIOHSCTest',
     ],
     deps = [
-        '//hdl:PowerRail',
-        '//hdl/boards/sidecar/mainboard:SidecarMainboardController',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/projects/sidecar/mainboard:SidecarMainboardController',
         'cobalt//hdl:TestUtils',
     ])

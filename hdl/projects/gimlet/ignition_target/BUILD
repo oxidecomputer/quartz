@@ -11,8 +11,8 @@ bluespec_verilog('IgnitionTargetGimlet',
         'mkGimletRevBTargetWithPowerButton',
     ],
     deps = [
-        '//hdl/ignition:Target',
-        '//hdl/ignition:TargetWrapper',
+        '//hdl/projects/ignition:Target',
+        '//hdl/projects/ignition:TargetWrapper',
     ])
 
 # Rev B, C, D compatible targets

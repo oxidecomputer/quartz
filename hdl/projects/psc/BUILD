@@ -12,8 +12,8 @@ bluespec_verilog('IgnitionTargetPSC',
         'mkPSCRevBResetButtonNoPowerFaultMonitor',
     ],
     deps = [
-        '//hdl/ignition:Target',
-        '//hdl/ignition:TargetWrapper',
+        '//hdl/projects/ignition:Target',
+        '//hdl/projects/ignition:TargetWrapper',
     ])
 
 yosys_design('ignition_target_psc_rev_a_reset_button_top',
