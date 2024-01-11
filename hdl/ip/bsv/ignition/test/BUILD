@@ -5,7 +5,7 @@ bluespec_library('TestHelpers',
         'IgnitionTestHelpers.bsv',
     ],
     deps = [
-        '//hdl/projects/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Protocol',
         'cobalt//hdl:Encoding8b10b',
         'cobalt//hdl:TestUtils',
         'cobalt//hdl/test:Encoding8b10bReference',
@@ -19,8 +19,8 @@ bluespec_library('Bench',
     ],
     deps =[
         ':TestHelpers',
-        '//hdl/projects/ignition:Controller',
-        '//hdl/projects/ignition:Target',
+        '//hdl/ip/bsv/ignition:Controller',
+        '//hdl/ip/bsv/ignition:Target',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
     ])
@@ -30,8 +30,8 @@ bluespec_library('IgnitionControllerAndTargetBench',
         'IgnitionControllerAndTargetBench.bsv',
     ],
     deps = [
-        '//hdl/projects/ignition:Controller',
-        '//hdl/projects/ignition:Target',
+        '//hdl/ip/bsv/ignition:Controller',
+        '//hdl/ip/bsv/ignition:Target',
         'cobalt//hdl:SerialIO',
         'cobalt//hdl:Strobe',
         'cobalt//hdl:TestUtils',
@@ -111,7 +111,7 @@ bluesim_tests('MessageParserTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -136,7 +136,7 @@ bluesim_tests('ControllerMessageParserTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -152,7 +152,7 @@ bluesim_tests('DeparserTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -174,7 +174,7 @@ bluesim_tests('CRCTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Protocol',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -190,8 +190,8 @@ bluesim_tests('ReceiverTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
-        '//hdl/projects/ignition:Transceiver',
+        '//hdl/ip/bsv/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
         'cobalt//hdl/test:Encoding8b10bReference',
     ])
@@ -207,8 +207,8 @@ bluesim_tests('TransmitterTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
-        '//hdl/projects/ignition:Transceiver',
+        '//hdl/ip/bsv/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -225,8 +225,8 @@ bluesim_tests('TransceiverTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
-        '//hdl/projects/ignition:Transceiver',
+        '//hdl/ip/bsv/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
     ])
 
@@ -250,8 +250,8 @@ bluesim_tests('TargetTransceiverTests',
     ],
     deps = [
         ':TestHelpers',
-        '//hdl/projects/ignition:Protocol',
-        '//hdl/projects/ignition:Transceiver',
+        '//hdl/ip/bsv/ignition:Protocol',
+        '//hdl/ip/bsv/ignition:Transceiver',
         'cobalt//hdl:TestUtils',
     ],
     local = {
@@ -284,7 +284,7 @@ bluesim_tests('IntegrationTests',
 #     ],
 #     deps = [
 #         ':TestHelpers',
-#         '//hdl/projects/ignition:Transceiver',
+#         '//hdl/ip/bsv/ignition:Transceiver',
 #         'cobalt//hdl/boards/ecp5_evn:Board',
 #     ])
 
@@ -315,7 +315,7 @@ bluesim_tests('IntegrationTests',
 #     ],
 #     deps = [
 #         ':TestHelpers',
-#         '//hdl/projects/ignition:Transceiver',
+#         '//hdl/ip/bsv/ignition:Transceiver',
 #         '//hdl/projects/ignitionlet:Board',
 #     ])
 
@@ -326,7 +326,7 @@ bluesim_tests('IntegrationTests',
 #     ],
 #     deps = [
 #         ':TestHelpers',
-#         '//hdl/projects/ignition:Transceiver',
+#         '//hdl/ip/bsv/ignition:Transceiver',
 #         '//hdl/projects/ignitionlet:Board',
 #     ])
 

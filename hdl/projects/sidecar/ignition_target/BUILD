@@ -13,8 +13,8 @@ bluespec_verilog('IgnitionTargetSidecar',
         'mkSidecarRevBTargetWithPowerButton',
     ],
     deps = [
-        '//hdl/projects/ignition:Target',
-        '//hdl/projects/ignition:TargetWrapper',
+        '//hdl/ip/bsv/ignition:Target',
+        '//hdl/ip/bsv/ignition:TargetWrapper',
     ])
 
 # Rev A targets
