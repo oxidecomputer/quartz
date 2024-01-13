@@ -5,7 +5,7 @@ bluespec_library('Encoding8b10bReference',
         'Encoding8b10bReference.bsv',
     ],
     deps = [
-        '//hdl:Encoding8b10b',
+        '//hdl/ip/bsv:Encoding8b10b',
     ])
 
 bluesim_tests('Encoding8b10bTests',
@@ -17,8 +17,8 @@ bluesim_tests('Encoding8b10bTests',
     ],
     deps = [
         ':Encoding8b10bReference',
-        '//hdl:Encoding8b10b',
-        '//hdl:TestUtils',
+        '//hdl/ip/bsv:Encoding8b10b',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('BitSamplingTests',
@@ -39,6 +39,6 @@ bluesim_tests('BitSamplingTests',
         'mkAsyncBitSamplingTest',
     ],
     deps = [
-        '//hdl:BitSampling',
-        '//hdl:TestUtils',
+        '//hdl/ip/bsv:BitSampling',
+        '//hdl/ip/bsv:TestUtils',
     ])

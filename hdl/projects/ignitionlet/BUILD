@@ -5,10 +5,10 @@ bluespec_library('Board',
         'Board.bsv',
     ],
     deps = [
-        'cobalt//hdl:InitialReset',
-        'cobalt//hdl:TestUtils',
-        # TODO (arjen): error on this: '//vnd/cobalt/hdl/interfaces:ICE40',
-        'cobalt//hdl/interfaces:ICE40',
+        '//hdl/ip/bsv:InitialReset',
+        '//hdl/ip/bsv:TestUtils',
+        # TODO (arjen): error on this: '//vnd/cobalt/hdl/ip/bsv/interfaces:ICE40',
+        '//hdl/ip/bsv/interfaces:ICE40',
     ])
 
 bluespec_verilog('examples',
@@ -18,7 +18,7 @@ bluespec_verilog('examples',
     ],
     deps = [
         ':Board',
-        'cobalt//hdl/examples:Blinky',
+        '//hdl/ip/bsv/examples:Blinky',
     ])
 
 #
@@ -61,12 +61,12 @@ yosys_design('ignitionlet_target_power_button_top',
     top_module = 'mkIgnitionletTargetWithPowerButton',
     sources = [
         ':IgnitionletTargetTop#mkIgnitionletTargetWithPowerButton',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-        '../../../vnd/cobalt/hdl/InitialReset.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../ip/bsv/InitialReset.v',
     ],
     deps = [
         ':IgnitionletTargetTop',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_power_button',
@@ -80,12 +80,12 @@ yosys_design('ignitionlet_target_reset_button_top',
     top_module = 'mkIgnitionletTargetWithResetButton',
     sources = [
         ':IgnitionletTargetTop#mkIgnitionletTargetWithResetButton',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-        '../../../vnd/cobalt/hdl/InitialReset.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../ip/bsv/InitialReset.v',
     ],
     deps = [
         ':IgnitionletTargetTop',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ice40_bitstream('ignitionlet_target_reset_button',
@@ -103,15 +103,15 @@ bluespec_verilog('TransceiverDebugTop',
     deps = [
         ':Board',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:InitialReset',
-        'cobalt//hdl:IOSync',
-        'cobalt//hdl/interfaces:ICE40',
+        '//hdl/ip/bsv:InitialReset',
+        '//hdl/ip/bsv:IOSync',
+        '//hdl/ip/bsv/interfaces:ICE40',
     ],
     local = {
         'bsc_flags': [
             # The folling script is needed to fix the inout syntax used in the
             # generated Verilog.
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-verilog-filter', ROOT + '/vnd/bluespec/basicinout.pl',
         ],
     })
 
@@ -119,12 +119,12 @@ yosys_design('transceiver_debug_top',
     top_module = 'mkTransceiverDebugTop',
     sources = [
         ':TransceiverDebugTop#mkTransceiverDebugTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-        '../../../vnd/cobalt/hdl/InitialReset.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../ip/bsv/InitialReset.v',
     ],
     deps = [
         ':TransceiverDebugTop',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ice40_bitstream('transceiver_debug',

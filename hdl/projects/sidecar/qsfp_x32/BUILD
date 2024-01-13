@@ -20,7 +20,7 @@ bluespec_library('QsfpX32ControllerRegsPkg',
     ],
     deps = [
         ':qsfp_x32_controller_registers',
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
     ])
 
 bluespec_library('VSC8562',
@@ -32,8 +32,8 @@ bluespec_library('VSC8562',
         '//hdl/ip/bsv:CommonFunctions',
         '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv/MDIO:MDIO',
-        'cobalt//hdl:Bidirection',
-        'cobalt//hdl:Strobe',
+        '//hdl/ip/bsv:Bidirection',
+        '//hdl/ip/bsv:Strobe',
     ])
 
 bluespec_library('QsfpX32ControllerTopRegs',
@@ -54,7 +54,7 @@ bluespec_library('QsfpModuleController',
         '//hdl/ip/bsv:CommonFunctions',
         '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv/I2C:I2CCore',
-        'cobalt//hdl:Bidirection',
+        '//hdl/ip/bsv:Bidirection',
     ])
 
 
@@ -86,9 +86,9 @@ bluespec_library('QsfpX32Controller',
         'QsfpX32Controller.bsv',
     ],
     deps = [
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl/examples:Blinky',
-        'cobalt//hdl/interfaces:SPI',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv/examples:Blinky',
+        '//hdl/ip/bsv/interfaces:SPI',
         ':QsfpX32ControllerTopRegs',
         ':QsfpX32ControllerRegsPkg',
         ':QsfpX32ControllerSpiServer',
@@ -103,14 +103,14 @@ bluespec_library('QsfpX32ControllerTop',
     deps = [
         ':QsfpX32Controller',
         '//hdl/ip/bsv/I2C:I2CCore',
-        'cobalt//hdl:IOSync',
-        'cobalt//hdl:Strobe',
+        '//hdl/ip/bsv:IOSync',
+        '//hdl/ip/bsv:Strobe',
     ],
     using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.
         # For additonal context, see https://github.com/B-Lang-org/bsc/issues/327#issuecomment-786182555
         'bsc_flags': [
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-verilog-filter', ROOT + '//vnd/bluespec/basicinout.pl',
         ]
     })
 
@@ -129,11 +129,11 @@ yosys_design('sidecar_qsfp_x32_controller_top',
     top_module = 'mkQsfpX32ControllerTop',
     sources = [
         ':QsfpX32ControllerTopV#mkQsfpX32ControllerTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':QsfpX32ControllerTopV',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 
@@ -147,7 +147,7 @@ nextpnr_ecp5_bitstream('sidecar_qsfp_x32_controller_rev_b_c',
 # Tests
 
 bluesim_tests('QsfpModuleControllerTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'QSFPModule/test/QsfpModuleControllerTests.bsv',
     modules = [
         'mkNoModuleTest',
@@ -161,8 +161,8 @@ bluesim_tests('QsfpModuleControllerTests',
         'mkUninitializationAfterRemovalTest',
     ],
     deps = [
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
         '//hdl/ip/bsv/I2C:I2CCommon',
         '//hdl/ip/bsv/I2C:I2CCore',
         '//hdl/ip/bsv/I2C:I2CPeripheralModel',
@@ -173,7 +173,7 @@ bluesim_tests('QsfpModuleControllerTests',
     ])
 
 bluesim_tests('VSC8562Tests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'VSC8562/test/VSC8562Tests.bsv',
     modules = [
         'mkPowerOnByDefaultTest',
@@ -184,9 +184,9 @@ bluesim_tests('VSC8562Tests',
         'mkMdintTest',
     ],
     deps = [
-        'cobalt//hdl:Bidirection',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:Bidirection',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
         '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv/MDIO:MDIO',
         '//hdl/ip/bsv/MDIO:MDIOPeripheralModel',

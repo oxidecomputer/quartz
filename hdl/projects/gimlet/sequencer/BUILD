@@ -21,7 +21,7 @@ bluespec_library('GimletSeqFpgaRegs',
         ':regs_pkg#GimletSeqFpgaRegs.bsv',
     ],
     deps = [
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
         ':regs_pkg',
     ])
 
@@ -30,9 +30,9 @@ bluespec_library('GimletRegs',
         'GimletRegs.bsv',
     ],
     deps = [
-        'cobalt//hdl:GitVersion',
+        '//hdl/ip/bsv:GitVersion',
         ':IrqBlock',
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
         ':GimletSeqFpgaRegs',
         ':NicBlock',
         # ':EarlyPowerBlock',
@@ -46,7 +46,7 @@ bluespec_library('Regs',
         'Regs.bsv',
     ],
     deps = [
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
     ])
 
 bluespec_library('PowerRail',
@@ -63,10 +63,10 @@ bluespec_library('NicBlock',
     deps = [
         ':GimletSeqFpgaRegs',
         ':PowerRail',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 bluesim_tests('NICTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = "NicBlock.bsv",
     modules = [
         'mkPowerUpNicTest',
@@ -83,11 +83,11 @@ bluespec_library('A1Block',
     deps = [
          ':GimletSeqFpgaRegs',
          ':PowerRail',
-         'cobalt//hdl:TestUtils',
+         '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('A1Tests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = "A1Block.bsv",
     modules = [
         'mkA1PowerUpTest',
@@ -106,10 +106,10 @@ bluespec_library('A0Block',
     deps = [
          ':GimletSeqFpgaRegs',
          ':PowerRail',
-         'cobalt//hdl:TestUtils',
+         '//hdl/ip/bsv:TestUtils',
     ])
 bluesim_tests('A0Tests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = "A0Block.bsv",
     modules = [
         'mkA0PowerUpTest',
@@ -124,7 +124,7 @@ bluesim_tests('A0Tests',
     ]
 )
 bluesim_tests('TopTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = "GimletSeqTop.bsv",
     modules = [
         'mkGimletTopTest',
@@ -142,8 +142,8 @@ bluespec_library('GimletSeqTop',
         'GimletSeqTop.bsv',
     ],
     deps = [
-        'cobalt//hdl/interfaces:SPI',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv/interfaces:SPI',
+        '//hdl/ip/bsv:TestUtils',
         ':NicBlock',
         ':GimletRegs',
         ':GimletSeqFpgaRegs',
@@ -160,13 +160,13 @@ bluespec_library('GimletTopIOSync',
         'GimletTopIOSync.bsv',
     ],
     deps = [
-        'cobalt//hdl/interfaces:ICE40',
+        '//hdl/ip/bsv/interfaces:ICE40',
         ':GimletSeqTop',
     ],
     using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.
         'bsc_flags': [
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-verilog-filter', ROOT + '/vnd/bluespec/basicinout.pl',
         ]
     }
 )
@@ -190,22 +190,22 @@ bluespec_verilog('seq_verilog',
 #     top_module = 'mkIgnitionletTop',
 #     sources = [
 #         ':ign_verilog#mkIgnitionletTop',
-#         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+#         '//vnd/bluespec:Verilog.v#Verilog.v',
 #     ],
 #     deps = [
 #         ':ign_verilog',
-#         'cobalt//vnd/bluespec:Verilog.v',
+#         '//vnd/bluespec:Verilog.v',
 #     ])
 
 yosys_design('gimlet_sequencer_yosys',
     top_module = 'mkGimletSeqTop',
     sources = [
         ':seq_verilog#mkGimletSeqTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':seq_verilog',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 # nextpnr_ice40_bitstream('ignitionlet_spi',
@@ -226,14 +226,14 @@ bluespec_library('AllEnable',
         'AllEnable.bsv',
     ],
     deps = [
-         'cobalt//hdl/interfaces:SPI',
-         'cobalt//hdl/interfaces:ICE40',
+         '//hdl/ip/bsv/interfaces:SPI',
+         '//hdl/ip/bsv/interfaces:ICE40',
         ':GimletRegs',
     ],
     using = {
-        # The folling script is needed to fix the inout syntax used in the generated Verilog.
+        # The following script is needed to fix the inout syntax used in the generated Verilog.
         'bsc_flags': [
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-verilog-filter', ROOT + '/vnd/bluespec/basicinout.pl',
         ]
     }
     )
@@ -255,11 +255,11 @@ yosys_design('gimlet_sdle_yosys',
     top_module = 'mkGimletPowerSeqTop',
     sources = [
         ':pwr_seq_verilog#mkGimletPowerSeqTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':pwr_seq_verilog',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 nextpnr_ice40_bitstream('gimlet_sdle_only',
     env = 'gimlet_sequencer',

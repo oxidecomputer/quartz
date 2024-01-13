@@ -5,7 +5,7 @@ bluespec_library('Board',
         'Board.bsv',
     ],
     deps = [
-        '//hdl/interfaces:ECP5',
+        '//hdl/ip/bsv/interfaces:ECP5',
     ])
 
 bluespec_verilog('examples',
@@ -17,8 +17,8 @@ bluespec_verilog('examples',
     ],
     deps = [
         ':Board',
-        '//hdl/examples:Blinky',
-        '//hdl/examples:LoopbackUART',
+        '//hdl/ip/bsv/examples:Blinky',
+        '//hdl/ip/bsv/examples:LoopbackUART',
     ])
 
 # Blinky design targets
@@ -65,7 +65,7 @@ yosys_design('clocks',
     top_module = 'mkClocks',
     sources = [
         ':examples#mkClocks',
-        '../../interfaces/ECP5PLL.v', # This is a hack, we should improve this.
+        '../../ip/bsv/interfaces/ECP5PLL.v', # This is a hack, we should improve this
         '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [

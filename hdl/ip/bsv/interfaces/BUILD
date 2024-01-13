@@ -5,7 +5,7 @@ bluespec_library('ECP5',
         'ECP5.bsv',
     ],
     deps = [
-        '//hdl:PLL',
+        '//hdl/ip/bsv:PLL',
     ])
 
 bluespec_library('ICE40',
@@ -22,10 +22,10 @@ bluespec_library('UART',
         'UART.bsv',
     ],
     deps = [
-        '//hdl:BitSampling',
-        '//hdl:SerialIO',
-        '//hdl:Strobe',
-        '//hdl:TestUtils',
+        '//hdl/ip/bsv:BitSampling',
+        '//hdl/ip/bsv:SerialIO',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('UARTTests',
@@ -51,7 +51,7 @@ bluespec_library('SPI',
         'SPI.bsv',
     ],
     deps = [
-        '//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
     ])
 
 bluesim_tests('SPITests',

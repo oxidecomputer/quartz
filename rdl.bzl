@@ -22,7 +22,7 @@ rdl_file = rule(
     }
 )
 
-def _rdl_gen_impl(ctx):
+def _rdl_gen_impl(ctx: AnalysisContext) -> list[Provider]:
     # need to put the deps first
     deps = []
     tops = []
@@ -47,8 +47,9 @@ def _rdl_gen_impl(ctx):
         category="rdl",
         
     )
-
-    return [DefaultInfo(default_outputs=outs)]
+    return [
+        DefaultInfo(default_output=outs[0])
+    ]
 
 rdl_gen = rule(
     impl = _rdl_gen_impl,

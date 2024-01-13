@@ -15,7 +15,7 @@ bluespec_library('I2CCoreRegs',
         ':I2CCoreRegsPkg#I2CCoreRegs.bsv',
     ],
     deps = [
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
         ':I2CCoreRegsPkg',
     ])
 
@@ -24,7 +24,7 @@ bluespec_library('I2CCommon',
         'I2CCommon.bsv',
     ],
     deps = [
-        'cobalt//hdl:Bidirection',
+        '//hdl/ip/bsv:Bidirection',
     ])
 
 bluespec_library('I2CBitController',
@@ -33,7 +33,7 @@ bluespec_library('I2CBitController',
     ],
     deps = [
         ':I2CCommon',
-        'cobalt//hdl:Strobe'
+        '//hdl/ip/bsv:Strobe'
     ])
 
 bluespec_library('I2CCore',
@@ -54,7 +54,7 @@ bluespec_library('I2CPeripheralModel',
     ])
 
 bluesim_tests('I2CBitControllerTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'test/I2CBitControllerTests.bsv',
     modules = [
         'mkI2CBitControlOneByteWriteTest',
@@ -70,7 +70,7 @@ bluesim_tests('I2CBitControllerTests',
     ])
 
 bluesim_tests('I2CCoreTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'test/I2CCoreTests.bsv',
     modules = [
         'mkI2CCoreOneByteWriteTest',

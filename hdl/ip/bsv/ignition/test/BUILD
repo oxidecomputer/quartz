@@ -6,9 +6,9 @@ bluespec_library('TestHelpers',
     ],
     deps = [
         '//hdl/ip/bsv/ignition:Protocol',
-        'cobalt//hdl:Encoding8b10b',
-        'cobalt//hdl:TestUtils',
-        'cobalt//hdl/test:Encoding8b10bReference',
+        '//hdl/ip/bsv:Encoding8b10b',
+        '//hdl/ip/bsv:TestUtils',
+        '//hdl/ip/bsv/test:Encoding8b10bReference',
     ])
 
 bluespec_library('Bench',
@@ -21,8 +21,8 @@ bluespec_library('Bench',
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Controller',
         '//hdl/ip/bsv/ignition:Target',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluespec_library('IgnitionControllerAndTargetBench',
@@ -32,13 +32,13 @@ bluespec_library('IgnitionControllerAndTargetBench',
     deps = [
         '//hdl/ip/bsv/ignition:Controller',
         '//hdl/ip/bsv/ignition:Target',
-        'cobalt//hdl:SerialIO',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:SerialIO',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('TargetTests',
-    env = 'cobalt//bluesim_debug',
+    env = '//bluesim_debug',
     suite = 'TargetTests.bsv',
     modules = [
         'mkPeriodicStatusMessagesTest',
@@ -66,11 +66,11 @@ bluesim_tests('TargetTests',
     deps = [
         ':Bench',
         ':TestHelpers',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('ControllerTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'ControllerTests.bsv',
     modules = [
         'mkPeriodicHelloTest',
@@ -87,11 +87,11 @@ bluesim_tests('ControllerTests',
     deps = [
         ':Bench',
         ':TestHelpers',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('MessageParserTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'MessageParserTests.bsv',
     modules = [
         'mkParseIdle1Test',
@@ -112,11 +112,11 @@ bluesim_tests('MessageParserTests',
     deps = [
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('ControllerMessageParserTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'ControllerMessageParserTests.bsv',
     modules = [
         'mkParseIdle1Test',
@@ -137,11 +137,11 @@ bluesim_tests('ControllerMessageParserTests',
     deps = [
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('DeparserTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'DeparserTests.bsv',
     modules = [
         'mkDeparseHelloTest',
@@ -153,11 +153,11 @@ bluesim_tests('DeparserTests',
     deps = [
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('CRCTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'CRCTests.bsv',
     modules = [
         'mkPattern1Test',
@@ -175,11 +175,11 @@ bluesim_tests('CRCTests',
     deps = [
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('ReceiverTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'ReceiverTests.bsv',
     modules = [
         'mkStartUpFromIdleTest',
@@ -192,12 +192,12 @@ bluesim_tests('ReceiverTests',
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:TestUtils',
-        'cobalt//hdl/test:Encoding8b10bReference',
+        '//hdl/ip/bsv:TestUtils',
+        '//hdl/ip/bsv/test:Encoding8b10bReference',
     ])
 
 bluesim_tests('TransmitterTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'TransmitterTests.bsv',
     modules = [
         'mkTransmitIdleTest',
@@ -209,11 +209,11 @@ bluesim_tests('TransmitterTests',
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('TransceiverTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'TransceiverTests.bsv',
     modules = [
         'mkStartUpTest',
@@ -227,11 +227,11 @@ bluesim_tests('TransceiverTests',
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('TargetTransceiverTests',
-    env = 'cobalt//bluesim_debug',
+    env = '//bluesim_debug',
     suite = 'TargetTransceiverTests.bsv',
     modules = [
         'mkStartUpLink0Test',
@@ -252,7 +252,7 @@ bluesim_tests('TargetTransceiverTests',
         ':TestHelpers',
         '//hdl/ip/bsv/ignition:Protocol',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ],
     local = {
         #'bsc_flags': [
@@ -261,7 +261,7 @@ bluesim_tests('TargetTransceiverTests',
     })
 
 bluesim_tests('IntegrationTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'IntegrationTests.bsv',
     modules = [
         'mkControllerAlwaysTransmitOverrideTest',
@@ -285,30 +285,30 @@ bluesim_tests('IntegrationTests',
 #     deps = [
 #         ':TestHelpers',
 #         '//hdl/ip/bsv/ignition:Transceiver',
-#         'cobalt//hdl/boards/ecp5_evn:Board',
+#         '//hdl/ip/bsv/boards/ecp5_evn:Board',
 #     ])
 
 # yosys_design('transceiver_loopback_ecp5_evn_test_top',
 #     top_module = 'mkTransceiverLoopbackEcp5EvnTestTop',
 #     sources = [
 #         ':TransceiverEcp5EvnTests#mkTransceiverLoopbackEcp5EvnTestTop',
-#         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+#         '//vnd/bluespec:Verilog.v#Verilog.v',
 #         '../../../vnd/cobalt/hdl/InitialReset.v',
 #     ],
 #     deps = [
 #         ':TransceiverEcp5EvnTests',
-#         'cobalt//vnd/bluespec:Verilog.v',
+#         '//vnd/bluespec:Verilog.v',
 #     ])
 
 # nextpnr_ecp5_bitstream('transceiver_loopback_ecp5_evn_test',
-#     env = 'cobalt//ecp5_evn_test',
+#     env = '//ecp5_evn_test',
 #     design = ':transceiver_loopback_ecp5_evn_test_top#transceiver_loopback_ecp5_evn_test_top.json',
 #     deps = [
 #         ':transceiver_loopback_ecp5_evn_test_top',
 #     ])
 
 # bluesim_tests('IgnitionletTransceiverLoopbackTest',
-#     env = 'cobalt//bluesim_default',
+#     env = '//bluesim_default',
 #     suite = 'IgnitionletTransceiverLoopbackTest.bsv',
 #     modules = [
 #         'mkIgnitionletTransceiverLoopbackTest',
@@ -334,12 +334,12 @@ bluesim_tests('IntegrationTests',
 #     top_module = 'mkIgnitionletTransceiverLoopbackTestTop',
 #     sources = [
 #         ':IgnitionletTransceiverLoopbackTest_verilog#mkIgnitionletTransceiverLoopbackTestTop',
-#         'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+#         '//vnd/bluespec:Verilog.v#Verilog.v',
 #         '../../../vnd/cobalt/hdl/InitialReset.v',
 #     ],
 #     deps = [
 #         ':IgnitionletTransceiverLoopbackTest_verilog',
-#         'cobalt//vnd/bluespec:Verilog.v',
+#         '//vnd/bluespec:Verilog.v',
 #     ])
 
 # nextpnr_ice40_bitstream('igntionlet_transceiver_loopback_test',

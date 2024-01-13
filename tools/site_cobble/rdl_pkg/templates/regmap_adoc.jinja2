@@ -7,7 +7,7 @@
 |===
 | Bits | SW Access | Name | Function
         {% for field in register.fields %}
-|[{{ field.bitslice_str() }}] | {{field.get_property('sw').name}} | {{ field.name }} | {{ field.desc }}
+|[{{ field.bsv_bitslice_str() }}] | {{field.get_property('sw').name}} | {{ field.name }} | {{ field.desc }}
         {% endfor %}
 |===
 

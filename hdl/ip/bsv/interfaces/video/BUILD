@@ -8,7 +8,7 @@ bluespec_library('video',
         'TMDS.bsv',
     ],
     deps = [
-        '//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 c_library('source_validation',

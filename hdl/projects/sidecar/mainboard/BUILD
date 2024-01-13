@@ -18,7 +18,7 @@ bluespec_library('SidecarMainboardControllerReg',
     ],
     deps = [
         ':sidecar_mainboard_controller_registers',
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
     ])
 
 bluespec_library('TofinoDebugPort',
@@ -64,11 +64,11 @@ bluespec_library('SidecarMainboardController',
         '//hdl/ip/bsv/ignition:Controller',
         '//hdl/ip/bsv/ignition:ControllerRegisters',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:Debouncer',
-        'cobalt//hdl:GitVersion',
-        'cobalt//hdl:RegCommon',
-        'cobalt//hdl:WriteOnceReg',
-        'cobalt//hdl/interfaces:SPI',
+        '//hdl/ip/bsv:Debouncer',
+        '//hdl/ip/bsv:GitVersion',
+        '//hdl/ip/bsv:RegCommon',
+        '//hdl/ip/bsv:WriteOnceReg',
+        '//hdl/ip/bsv/interfaces:SPI',
     ],
     using = {
         'bsc_flags': [
@@ -82,15 +82,15 @@ bluespec_library('SidecarMainboardControllerTop',
     ],
     deps = [
         ':SidecarMainboardController',
-        'cobalt//hdl:IOSync',
-        'cobalt//hdl:SerialIO',
+        '//hdl/ip/bsv:IOSync',
+        '//hdl/ip/bsv:SerialIO',
     ],
     using = {
         'bsc_flags': [
             # The folling script is needed to fix the inout syntax used in the
             # generated Verilog. For additonal context, see
             # https://github.com/B-Lang-org/bsc/issues/327#issuecomment-786182555
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-verilog-filter', ROOT + '/vnd/bluespec/basicinout.pl',
             '-opt-undetermined-vals',
             '-unspecified-to X',
             '-steps-warn-interval 1000000',
@@ -112,11 +112,11 @@ yosys_design('sidecar_mainboard_controller_top',
     top_module = 'mkSidecarMainboardControllerTop',
     sources = [
         ':mkSidecarMainboardControllerTop#mkSidecarMainboardControllerTop',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':mkSidecarMainboardControllerTop',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 
@@ -131,11 +131,11 @@ yosys_design('sidecar_mainboard_controller_top_rev_b',
     top_module = 'mkSidecarMainboardControllerTopRevB',
     sources = [
         ':mkSidecarMainboardControllerTop#mkSidecarMainboardControllerTopRevB',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':mkSidecarMainboardControllerTop',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 

@@ -10,7 +10,7 @@ bluespec_library('LoopbackUART',
         'LoopbackUART.bsv',
     ],
     deps = [
-        '//hdl/interfaces:UART',
+        '//hdl/ip/bsv/interfaces:UART',
     ])
 
 bluesim_tests('LoopbackUARTTests',
@@ -32,7 +32,7 @@ bluespec_library('TestPatternVideoSource',
         'TestPatternVideoSource.bsv',
     ],
     deps = [
-        '//hdl/interfaces/video:video',
+        '//hdl/ip/bsv/interfaces/video:video',
     ])
 
 bluespec_verilog('TestPatternVideoSource_verilog',
@@ -62,6 +62,6 @@ c_binary('test_pattern_video_source',
     ],
     deps = [
         ':mk100pTestPatternVideoSource',
-        '//hdl/interfaces/video:source_validation',
+        '//hdl/ip/bsv/interfaces/video:source_validation',
         '//vnd/yosys:cxxrtl',
     ])

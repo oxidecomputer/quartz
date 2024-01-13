@@ -11,7 +11,7 @@ bluespec_library('MockTofino2Sequencer',
 
 bluesim_tests('PCIeEndpointControllerTests',
     suite = 'PCIeEndpointControllerTests.bsv',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     modules = [
         'mkResetHostControlTest',
         'mkResetSoftwareControlTest',
@@ -22,13 +22,13 @@ bluesim_tests('PCIeEndpointControllerTests',
         ':MockTofino2Sequencer',
         '//hdl/ip/bsv:PowerRail',
         '//hdl/projects/sidecar/mainboard:PCIeEndpointController',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('TofinoDebugPortTests',
     suite = 'TofinoDebugPortTests.bsv',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     modules = [
         'mkClearSendBufferTest',
         'mkAbortRequestOnAddressNackTest',
@@ -40,12 +40,12 @@ bluesim_tests('TofinoDebugPortTests',
     deps = [
         '//hdl/projects/sidecar/mainboard:TofinoDebugPort',
         '//hdl/ip/bsv/I2C:I2CPeripheralModel',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('Tofino2SequencerTests',
     suite = 'Tofino2SequencerTests.bsv',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     modules = [
         'mkAckVidTimeoutTest',
         'mkCtrlEnNotSetAfterClearError',
@@ -69,18 +69,18 @@ bluesim_tests('Tofino2SequencerTests',
     deps = [
         '//hdl/ip/bsv:PowerRail',
         '//hdl/projects/sidecar/mainboard:Tofino2Sequencer',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('MainboardControllerTests',
     suite = 'MainboardControllerTests.bsv',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     modules = [
         'mkFrontIOHSCTest',
     ],
     deps = [
         '//hdl/ip/bsv:PowerRail',
         '//hdl/projects/sidecar/mainboard:SidecarMainboardController',
-        'cobalt//hdl:TestUtils',
+        '//hdl/ip/bsv:TestUtils',
     ])

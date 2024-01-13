@@ -8,7 +8,7 @@ bluespec_library('Protocol',
     ],
     deps = [
         '//hdl/ip/bsv:SettableCRC',
-        'cobalt//hdl:Encoding8b10b',
+        '//hdl/ip/bsv:Encoding8b10b',
     ])
 
 bluespec_library('Transceiver',
@@ -19,7 +19,7 @@ bluespec_library('Transceiver',
     ],
     deps = [
         ':Protocol',
-        'cobalt//hdl:SerialIO',
+        '//hdl/ip/bsv:SerialIO',
     ])
 
 bluespec_library('Target',
@@ -29,9 +29,9 @@ bluespec_library('Target',
     deps = [
         ':Transceiver',
         '//hdl/projects/ignitionlet:Board',
-        'cobalt//hdl:Countdown',
-        'cobalt//hdl:SchmittReg',
-        'cobalt//hdl:Strobe',
+        '//hdl/ip/bsv:Countdown',
+        '//hdl/ip/bsv:SchmittReg',
+        '//hdl/ip/bsv:Strobe',
     ],
     using = {
         'bsc_flags': [
@@ -49,18 +49,18 @@ bluespec_library('TargetWrapper',
     ],
     deps = [
         ':Target',
-        'cobalt//hdl:BitSampling',
-        'cobalt//hdl:InitialReset',
-        'cobalt//hdl:IOSync',
-        'cobalt//hdl:SchmittReg',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl/interfaces:ICE40',
+        '//hdl/ip/bsv:BitSampling',
+        '//hdl/ip/bsv:InitialReset',
+        '//hdl/ip/bsv:IOSync',
+        '//hdl/ip/bsv:SchmittReg',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv/interfaces:ICE40',
     ],
     using = {
+        # The folling script is needed to fix the inout syntax used in the
+        # generated Verilog.
         'bsc_flags': [
-            # The folling script is needed to fix the inout syntax used in the
-            # generated Verilog.
-            '-verilog-filter', ROOT + '/vnd/cobalt/vnd/bluespec/basicinout.pl',
+            '-verilog-filter', ROOT + '/vnd/bluespec/basicinout.pl',
         ]
     })
 
@@ -73,9 +73,9 @@ bluespec_library('Controller',
         ':ControllerRegisters',
         ':Protocol',
         ':Transceiver',
-        'cobalt//hdl:Countdown',
-        'cobalt//hdl:SchmittReg',
-        'cobalt//hdl:Strobe',
+        '//hdl/ip/bsv:Countdown',
+        '//hdl/ip/bsv:SchmittReg',
+        '//hdl/ip/bsv:Strobe',
     ],
     using = {
         # Bluesim generated C++ output seems to trigger compiler warnings.
@@ -103,7 +103,7 @@ bluespec_library('ControllerRegisters',
     ],
     deps = [
         ':ignition_controller_registers',
-        'cobalt//hdl:RegCommon',
+        '//hdl/ip/bsv:RegCommon',
     ])
 
 bluespec_verilog('mkParser',

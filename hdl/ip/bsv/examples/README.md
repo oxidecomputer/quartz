@@ -35,7 +35,7 @@ A two character test bench using Bluesim can be run from the Cobble ```build``` 
 follows:
 
 ```
-$ ./cobble build latest/hdl/examples/uart_loopback_test && latest/hdl/examples/uart_loopback_test
+$ ./cobble build latest/hdl/ip/bsv/examples/uart_loopback_test && latest/hdl/ip/bsv/examples/uart_loopback_test
 'h55
 'haa
 ```
@@ -51,7 +51,7 @@ and TMDS encoder.
 Run the test bench from the Cobble ```build``` direction as follows:
 
 ```
-$ ./cobble build latest/hdl/examples/test_pattern_video_source && latest/hdl/examples/test_pattern_video_source
+$ ./cobble build latest/hdl/ip/bsv/examples/test_pattern_video_source && latest/hdl/ip/bsv/examples/test_pattern_video_source
 Frame 1 160x100
 Done
 ```

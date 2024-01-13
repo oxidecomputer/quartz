@@ -38,8 +38,8 @@ import WriteOnlyTriState::*;
 // (and often simpler) as possible.
 //
 // For a concrete example of the `SampledSerialIO` interface and a UART, see the
-// `SamplingTransceiver` in `hdl/interfaces/UART.bsv`, `LoopbackUART` in
-// `hdl/examples/LoopbackUART.bsv` and a concrete realization of this module in
+// `SamplingTransceiver` in `hdl/ip/bsv/interfaces/UART.bsv`, `LoopbackUART` in
+// `hdl/ip/bsv/examples/LoopbackUART.bsv` and a concrete realization of this module in
 // the `Examples.bsv` for one of the boards foud in `hdl/boards`.
 //
 

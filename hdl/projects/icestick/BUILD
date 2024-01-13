@@ -4,9 +4,7 @@ bluespec_library('Board',
     sources = [
         'Board.bsv',
     ],
-    deps = [
-        '//hdl/interfaces:ECP5',
-    ])
+)
 
 bluespec_verilog('examples',
     top = 'Examples.bsv',
@@ -16,9 +14,8 @@ bluespec_verilog('examples',
     ],
     deps = [
         ':Board',
-        '//hdl:IOSync',
-        '//hdl/examples:Blinky',
-        '//hdl/examples:LoopbackUART',
+        '//hdl/ip/bsv/examples:Blinky',
+        '//hdl/ip/bsv/examples:LoopbackUART',
     ])
 
 # Blinky design targets
@@ -32,8 +29,8 @@ yosys_design('blinky',
         ':examples',
     ])
 
-nextpnr_ecp5_bitstream('blinky_ulx3s',
-    env = 'ulx3s',
+nextpnr_ice40_bitstream('blinky_icestick',
+    env = 'icestick',
     design = ':blinky#blinky.json',
     deps = [
         ':blinky',
@@ -52,8 +49,8 @@ yosys_design('loopback_uart',
         '//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ecp5_bitstream('loopback_uart_ulx3s',
-    env = 'ulx3s',
+nextpnr_ice40_bitstream('loopback_uart_icestick',
+    env = 'icestick',
     design = ':loopback_uart#loopback_uart.json',
     deps = [
         ':loopback_uart',

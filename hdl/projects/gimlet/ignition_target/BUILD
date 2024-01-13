@@ -21,22 +21,22 @@ yosys_design('ignition_target_rev_b_reset_button_top',
     top_module = 'mkGimletRevBTargetWithResetButton',
     sources = [
         ':IgnitionTargetGimlet#mkGimletRevBTargetWithResetButton',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':IgnitionTargetGimlet',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 yosys_design('ignition_target_rev_b_power_button_top',
     top_module = 'mkGimletRevBTargetWithPowerButton',
     sources = [
         ':IgnitionTargetGimlet#mkGimletRevBTargetWithPowerButton',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
         ':IgnitionTargetGimlet',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_c_d_reset_button',

@@ -9,10 +9,10 @@ bluespec_library('SidecarMainboardEmulator',
         '//hdl/projects/sidecar/mainboard:SidecarMainboardControllerTop',
         '//hdl/ip/bsv/ignition:Target',
         '//hdl/ip/bsv/ignition:Transceiver',
-        'cobalt//hdl:BitSampling',
-        'cobalt//hdl:SerialIO',
-        'cobalt//hdl:Strobe',
-        'cobalt//hdl/interfaces:ECP5',
+        '//hdl/ip/bsv:BitSampling',
+        '//hdl/ip/bsv:SerialIO',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv/interfaces:ECP5',
     ])
 
 bluespec_verilog('mkSidecarMainboardEmulatorOnEcp5Evn',
@@ -28,12 +28,12 @@ yosys_design('sidecar_mainboard_emulator_epc5_evn_top',
     top_module = 'mkSidecarMainboardEmulatorOnEcp5Evn',
     sources = [
         ':mkSidecarMainboardEmulatorOnEcp5Evn#mkSidecarMainboardEmulatorOnEcp5Evn',
-        'cobalt//vnd/bluespec:Verilog.v#Verilog.v',
-        '../../../../../vnd/cobalt/hdl/interfaces/ECP5PLL.v', # Hack
+        '//vnd/bluespec:Verilog.v#Verilog.v',
+        '../../../../ip/bsv/interfaces/ECP5PLL.v', # This is a hack, we should improve this
     ],
     deps = [
         ':mkSidecarMainboardEmulatorOnEcp5Evn',
-        'cobalt//vnd/bluespec:Verilog.v',
+        '//vnd/bluespec:Verilog.v',
     ])
 
 nextpnr_ecp5_bitstream('sidecar_mainboard_emulator_ecp5_evn',

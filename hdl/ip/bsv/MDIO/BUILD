@@ -5,8 +5,8 @@ bluespec_library('MDIO',
         'MDIO.bsv'
     ],
     deps = [
-        'cobalt//hdl:Bidirection',
-        'cobalt//hdl:Strobe',
+        '//hdl/ip/bsv:Bidirection',
+        '//hdl/ip/bsv:Strobe',
     ])
 
 bluespec_library('MDIOPeripheralModel',
@@ -18,7 +18,7 @@ bluespec_library('MDIOPeripheralModel',
     ])
 
 bluesim_tests('MDIOTests',
-    env = 'cobalt//bluesim_default',
+    env = '//bluesim_default',
     suite = 'test/MDIOTests.bsv',
     modules = [
         'mkMDIOReadTest',

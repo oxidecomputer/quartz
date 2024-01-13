@@ -12,8 +12,8 @@
 
 #include <backends/cxxrtl/cxxrtl_vcd.h>
 
-#include "hdl/examples/mk100pTestPatternVideoSource.h"
-#include "hdl/interfaces/video/video_source_validation.h"
+#include "hdl/ip/bsv/examples/mk100pTestPatternVideoSource.h"
+#include "hdl/ip/bsv/interfaces/video/video_source_validation.h"
 
 
 struct Source : private cxxrtl_design::p_mk100pTestPatternVideoSource
