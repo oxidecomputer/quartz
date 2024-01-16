@@ -72,7 +72,7 @@ tar zxf bsc-2022.01-ubuntu*
 # Do cobalt setup (python packages required)
 #
 banner cobalt Setup
-pushd vnd/cobalt
+pushd tools
 #
 # Install cobalt-related python stuff, ninja + other 3rd party things
 #
@@ -92,7 +92,7 @@ pushd build
 #
 # Initialize cobalt
 #
-../vnd/cobalt/vnd/cobble/cobble init .. --reinit
+../vnd/cobble/cobble init .. --reinit
 
 #
 # Do the build
