@@ -91,7 +91,7 @@ RUN git clone --recursive $BSC_CONTRIB_URL /tmp/bsc-contrib && cd /tmp/bsc-contr
     rm -rf /tmp/bsc-contrib
 
 # Install python dependencies from cobble's requirements.txt
-COPY requirements.txt /tmp/requirements.txt
+COPY tools/requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt && \
     rm /tmp/requirements.txt
 
