@@ -40,7 +40,7 @@ def _rdl_gen_impl(ctx: AnalysisContext) -> list[Provider]:
     outs = [ctx.actions.declare_output(out) for out in ctx.attrs.outputs]
     ctx.actions.run([
         "python3", 
-        "./vnd/cobalt/tools/site_cobble/rdl_pkg/rdl_cli.py", 
+        "./tools/site_cobble/rdl_pkg/rdl_cli.py", 
         "--inputs", ins, 
         "--outputs", [x.as_output() for x in outs],
         ],
