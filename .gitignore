@@ -3,10 +3,19 @@ BUILD.vars
 /build
 __pycache__
 
+# Buck2 ignores
+/buck-out
+
+# VUnit ignores
+/vunit_out
+
 devcontainer.json
 
 # VS Code settings
 .vscode
+
+# pycharm
+/.idea
 
 # MacOS metadata
 .DS_Store

@@ -28,7 +28,7 @@ entity uart_tx is
    tdata : in std_logic_vector(7 downto 0));
 begin
   -- pragma translate_off
-  check_stable(clk, check_enabled, tvalid, tready, tdata, "tdata must be stable until tready is active");
+  check_stable(clk, check_enabled, tvalid, tready, tdata, "tdata must be stable until tready is active!");
   check_stable(clk, check_enabled, tvalid, tready, tvalid, "tvalid must be active until tready is active");
   check_not_unknown(clk, check_enabled, tvalid, "tvalid must never be unknown");
   check_not_unknown(clk, check_enabled, tready, "tready must never be unknown");
