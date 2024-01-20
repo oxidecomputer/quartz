@@ -16,8 +16,6 @@ vu.add_osvvm()
 vu.add_random()
 vu.add_verification_components()
 
-# Create default library 'lib'
-
 # Create libraries
 {% for library in libraries %}
 {{library.name}} = vu.add_library("{{library.name}}")
@@ -25,7 +23,6 @@ vu.add_verification_components()
 {{library.name}}.add_source_file("{{file}}")
 {% endfor %}
 {% endfor %}
-
 
 # Run vunit function
 vu.main()

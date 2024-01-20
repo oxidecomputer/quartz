@@ -48,7 +48,7 @@ def _rdl_gen_impl(ctx: AnalysisContext) -> list[Provider]:
         
     )
     return [
-        DefaultInfo(default_output=outs[0])
+        DefaultInfo(default_outputs=outs)
     ]
 
 rdl_gen = rule(

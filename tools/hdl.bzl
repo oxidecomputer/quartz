@@ -1,4 +1,8 @@
-load("@prelude//utils:utils.bzl", "flatten")
+load(
+    "@prelude//python:toolchain.bzl",
+    "PythonPlatformInfo",
+    "PythonToolchainInfo",
+)
 
 def project_as_args(value: Artifact):
   return cmd_args(value)
@@ -25,14 +29,17 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
 
     # do VUnit stuff here
     if ctx.attrs.is_tb:
+
+        # Get the vunit_gen python executable since we'll be using it for
+        #  for generating our VUnit's run.py
+        vunit_gen = ctx.attrs._bins[RunInfo]
         # Get the file-names in bottom-up order (doesn't matter for VUnit)
         in_args = top_tset.project_as_args("args", ordering = "postorder")
     
-        # Generate the vunit run.py file output
+        # Generate the VUnit run.py file output
         out_run_py= ctx.actions.declare_output("run.py")
         cmd = cmd_args()
-        cmd.add("python3")
-        cmd.add("./tools/vunit_gen/vunit_gen_cli.py")
+        cmd.add(vunit_gen)
         cmd.add("--inputs", in_args)
         cmd.add("--output", out_run_py.as_output())
         ctx.actions.run(cmd, category="vunit")
@@ -45,21 +52,26 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         # Run the vunit run.py created above with --compile flag
         #vunit_out= ctx.actions.declare_output("vunit_out", dir=True) 
         #compile_only= cmd_args()
-        #compile_only.add("python3")
+        #compile_only.add(python)
         #compile_only.add(out_run_py)
         #ctx.actions.run(compile_only, category="vunit_compile")
         #providers.append(DefaultInfo(default_outputs=[out_run_py,vunit_out]))
 
         providers.append(DefaultInfo(default_output=out_run_py))
 
+        # Get the system-python executable since we'll be using it for
+        #  for running VUnit itself
+        python = ctx.attrs._toolchain[PythonToolchainInfo].interpreter
+
         #
         # Left here as an example of how set up the `buck test` command
         # Build a ExternalRunnerTestInfo to run this file from the command line
-        #test_cmd = ["python3", out_run_py]
+        #test_cmd = [python, out_run_py]
         #providers.append(ExternalRunnerTestInfo("vunit", test_cmd))
 
-         # Build a RunInfo to run this file from the command line
-        run_cmd = cmd_args("python3", out_run_py,)
+        # Build a RunInfo to run this file from the command line
+        
+        run_cmd = cmd_args(python, out_run_py)
         providers.append(RunInfo(run_cmd))
     else:
       providers.append(DefaultInfo(default_outputs=ctx.attrs.srcs)) # A little unclear that this is correct
@@ -72,5 +84,7 @@ vhdl_unit = rule(
         "deps": attrs.list(attrs.dep(), default=[]),
         "srcs": attrs.list(attrs.source()),
         "is_tb": attrs.bool(default=False),
+        "_toolchain": attrs.toolchain_dep(default="toolchains//:python"),
+        "_bins": attrs.exec_dep(default="root//tools/vunit_gen:vunit_gen")
     }
 )

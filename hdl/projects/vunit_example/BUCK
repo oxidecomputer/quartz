@@ -1,25 +1,8 @@
-load(":hdl.bzl", "vhdl_unit")
-
-vhdl_unit(
-    name = "shared_pkg",
-    srcs = ["shared_pkg.vhd"],
-)
-
-vhdl_unit(
-    name = "shared_pkg2",
-    srcs = ["shared_pkg2.vhd"],
-    deps = [":shared_pkg3"]
-)
-
-vhdl_unit(
-    name = "shared_pkg3",
-    srcs = ["shared_pkg3.vhd"],
-)
+load("//tools:hdl.bzl", "vhdl_unit")
 
 vhdl_unit(
     name = "uart_rx",
-    srcs = ["uart_rx.vhd", "another_file.vhd"],
-    deps = [":shared_pkg", ":shared_pkg2"],
+    srcs = ["uart_rx.vhd",],
 )
 
 vhdl_unit(

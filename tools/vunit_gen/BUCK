@@ -1,0 +1,12 @@
+python_binary(
+    name = 'vunit_gen',
+    main = 'vunit_gen_cli.py',
+    deps = [':vunit_gen_lib'],
+    visibility = ["PUBLIC"],
+)
+
+python_library(
+    name = 'vunit_gen_lib',
+    srcs = ['vunit_gen_cli.py'],
+    resources = glob(["templates/*.jinja2"])
+)
