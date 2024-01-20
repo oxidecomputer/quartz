@@ -1,6 +1,5 @@
 load(
     "@prelude//python:toolchain.bzl",
-    "PythonPlatformInfo",
     "PythonToolchainInfo",
 )
 
@@ -14,12 +13,24 @@ HDLFileInfo = provider(fields = {
     "set": provider_field(UnitTSet)
 })
 
+GenVHDLInfo = provider(fields = {
+    "src": provider_field(Artifact)
+})
+
 def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     providers = []
+   
     # Add the deps to a TSet for these files
-    deps_tset = [x[HDLFileInfo].set for x in ctx.attrs.deps]
-    
-    # Make the deps a child of the tset containing any sources
+    # These are normal vhdl files as dependencies (they have an HDLFileInfo provider)
+    deps_tset = [x[HDLFileInfo].set for x in ctx.attrs.deps if x.get(HDLFileInfo)]
+
+    # We may also have source files that are generated from something as a dependency.
+    # these are expected to have a GenVHDLInfo provider attached. We make a TSet for these
+    # and extend the known dependencies for this file with these also.
+    gen_deps_tset = [ctx.actions.tset(UnitTSet, value=x[GenVHDLInfo].src) for x in ctx.attrs.deps if x.get(GenVHDLInfo)]
+    deps_tset.extend(gen_deps_tset)
+
+    # Now that we have all the deps, make them children of the tset containing any sources
     tops = [ctx.actions.tset(UnitTSet, value=x, children=deps_tset) for x in ctx.attrs.srcs]
     top_tset = ctx.actions.tset(UnitTSet, children=tops)
     providers.append(

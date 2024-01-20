@@ -7,9 +7,14 @@ from jinja2 import Environment, FileSystemLoader
 from systemrdl.node import RootNode, Node
 from systemrdl import RDLWalker
 
-from models import Register, Field, ReservedField, Memory
-from listeners import BaseListener
-from utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
+try:
+    from models import Register, Field, ReservedField, Memory
+    from listeners import BaseListener
+    from utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
+except:
+    from rdl_pkg.models import Register, Field, ReservedField, Memory
+    from rdl_pkg.listeners import BaseListener
+    from rdl_pkg.utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
 
 from typing import Any, Dict, List
 

@@ -6,9 +6,16 @@ from pathlib import Path
 from systemrdl import RDLCompiler, RDLCompileError, RDLWalker
 from systemrdl.node import FieldNode
 
-from exporter import MapExporter, MapofMapsExporter
-from listeners import PreExportListener, MyModelPrintingListener
-from json_dump import convert_to_json
+# This is a dumb hack to deal with the fact that buck2 and cobble run python differently
+# and I couldn't figure out a way to make them both import the same way
+try:
+    from exporter import MapExporter, MapofMapsExporter
+    from listeners import PreExportListener, MyModelPrintingListener
+    from json_dump import convert_to_json
+except ModuleNotFoundError:
+    from rdl_pkg.exporter import MapExporter, MapofMapsExporter
+    from rdl_pkg.listeners import PreExportListener, MyModelPrintingListener
+    from rdl_pkg.json_dump import convert_to_json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--input', '--inputs', nargs="+", dest='input_file', help='Explicit input list')

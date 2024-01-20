@@ -1,6 +1,11 @@
 from systemrdl import RDLListener, AddrmapNode, RegfileNode, RegNode, FieldNode, MemNode
 
-from models import Register, Field, Memory
+# This is a dumb hack to deal with the fact that buck2 and cobble run python differently
+# and I couldn't figure out a way to make them both import the same way
+try:
+    from models import Register, Field, Memory
+except ModuleNotFoundError:
+    from rdl_pkg.models import Register, Field, Memory
 
 # Define a listener that will print out the register model hierarchy
 class MyModelPrintingListener(RDLListener):
