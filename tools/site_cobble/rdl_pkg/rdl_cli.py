@@ -18,10 +18,14 @@ except ModuleNotFoundError:
     from rdl_pkg.json_dump import convert_to_json
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--input', '--inputs', nargs="+", dest='input_file', help='Explicit input list')
-parser.add_argument('--out-dir', dest='out_dir', default=Path.cwd(), help='Output directory')
-parser.add_argument('--debug', action="store_true", default=False)
-parser.add_argument('--outputs', nargs="+", help="Explicit output list")
+parser.add_argument(
+    "--input", "--inputs", nargs="+", dest="input_file", help="Explicit input list"
+)
+parser.add_argument(
+    "--out-dir", dest="out_dir", default=Path.cwd(), help="Output directory"
+)
+parser.add_argument("--debug", action="store_true", default=False)
+parser.add_argument("--outputs", nargs="+", help="Explicit output list")
 
 
 def main():
@@ -40,13 +44,12 @@ def main():
         listener = MyModelPrintingListener()
         walker.walk(root, listener)
 
-
     # Run the pre_export listener so we have a list of maps we need to generate
     pre_export = PreExportListener()
     RDLWalker().walk(root, pre_export)
 
     output_filenames = [Path(x) for x in args.outputs]
-    output_filenames_no_json = [x for x in output_filenames if '.json' not in str(x)]
+    output_filenames_no_json = [x for x in output_filenames if ".json" not in str(x)]
     # For a map of maps, we're going to generate:
     # Address offsets bsv using full address and flattening the naming
     # Address offsets json using full address and flattening the naming??
@@ -64,12 +67,13 @@ def main():
         exporter.export(pre_export.maps[0], output_filenames_no_json)
 
         # Dump json output if requested
-        json_files = [x for x in output_filenames if '.json' in str(x)]
+        json_files = [x for x in output_filenames if ".json" in str(x)]
         if len(json_files) == 1:
             json_name = Path(json_files[0])
             convert_to_json(rdlc, root, json_name)
         elif len(json_files) > 1:
             raise Exception(f'Specified too many .json outputs: {json_files.join(",")}')
+
 
 args = parser.parse_args()
 

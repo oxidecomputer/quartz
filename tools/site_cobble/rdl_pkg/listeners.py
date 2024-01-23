@@ -7,6 +7,7 @@ try:
 except ModuleNotFoundError:
     from rdl_pkg.models import Register, Field, Memory
 
+
 # Define a listener that will print out the register model hierarchy
 class MyModelPrintingListener(RDLListener):
     def __init__(self):
@@ -15,20 +16,20 @@ class MyModelPrintingListener(RDLListener):
     # noinspection PyPep8Naming
     def enter_Component(self, node):
         if not isinstance(node, FieldNode):
-            print(" "*self.indent, node.get_path_segment())
+            print(" " * self.indent, node.get_path_segment())
             self.indent += 4
 
     # noinspection PyPep8Naming
     def enter_Reg(self, node):
-        print(" "*self.indent, "Name:", node.get_property("name"))
-        print(" "*self.indent, "Offset:", node.raw_address_offset)
-        print(" "*self.indent, "Address:", node.absolute_address)
+        print(" " * self.indent, "Name:", node.get_property("name"))
+        print(" " * self.indent, "Offset:", node.raw_address_offset)
+        print(" " * self.indent, "Address:", node.absolute_address)
 
     # noinspection PyPep8Naming
     def enter_Field(self, node):
         # Print some stuff about the field
-        if node.get_property('encode') is not None:
-            my_enum = node.get_property('encode')
+        if node.get_property("encode") is not None:
+            my_enum = node.get_property("encode")
             print("Encode: {}".format(my_enum.type_name))
             print("Encode: {}".format(my_enum.members))
             for i in my_enum:
@@ -37,7 +38,7 @@ class MyModelPrintingListener(RDLListener):
                 print(f"Encode: {i.rdl_name}")
         bit_range_str = "[%d:%d]" % (node.high, node.low)
         sw_access_str = "sw=%s" % node.get_property("sw").name
-        print(" "*self.indent, bit_range_str, node.get_path_segment(), sw_access_str)
+        print(" " * self.indent, bit_range_str, node.get_path_segment(), sw_access_str)
 
     # noinspection PyPep8Naming
     def exit_Component(self, node):
@@ -46,10 +47,10 @@ class MyModelPrintingListener(RDLListener):
 
     # noinspection PyPep8Naming
     def enter_Mem(self, node):
-        print(" "*self.indent, "Offset:", node.raw_address_offset)
-        print(" "*self.indent, "Address:", node.absolute_address)
-        print(" "*self.indent, "Entries:", node.get_property('mementries'))
-        print(" "*self.indent, "Width:", node.get_property('memwidth'))
+        print(" " * self.indent, "Offset:", node.raw_address_offset)
+        print(" " * self.indent, "Address:", node.absolute_address)
+        print(" " * self.indent, "Entries:", node.get_property("mementries"))
+        print(" " * self.indent, "Width:", node.get_property("memwidth"))
 
 
 # Define a listener that will determine top Address map and other
@@ -106,7 +107,9 @@ class BaseListener(RDLListener):
         # node.orig_type_name is None, use node.type_name
         #
 
-        if (node.type_name in self.known_types) or (node.orig_type_name is not None and node.orig_type_name in self.known_types):
+        if (node.type_name in self.known_types) or (
+            node.orig_type_name is not None and node.orig_type_name in self.known_types
+        ):
             repeated_type = True
         else:
             if node.orig_type_name is not None:
@@ -141,7 +144,9 @@ class BaseListener(RDLListener):
         pass
 
     def exit_Mem(self, node) -> None:
-        if (node.type_name in self.known_types) or (node.orig_type_name is not None and node.orig_type_name in self.known_types):
+        if (node.type_name in self.known_types) or (
+            node.orig_type_name is not None and node.orig_type_name in self.known_types
+        ):
             repeated_type = True
         else:
             if node.orig_type_name is not None:
