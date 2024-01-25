@@ -60,7 +60,7 @@ rdl_file = rule(
     impl=_rdl_file_impl,
     attrs={
         "src": attrs.source(),
-        "deps": attrs.list(attrs.dep()),
+        "deps": attrs.list(attrs.dep(), default=[]),
         "outputs": attrs.list(attrs.string(), default=[]),
         "_rdl_gen": attrs.exec_dep(default="root//tools/site_cobble/rdl_pkg:rdl_cli"),
     },
