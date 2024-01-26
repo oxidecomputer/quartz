@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, PackageLoader
 
 
 parser = argparse.ArgumentParser()
@@ -21,7 +21,7 @@ class Library:
 def main():
     # Load jinja templates
     env = Environment(
-        loader=FileSystemLoader(Path(__file__).parent / "templates"),
+        loader=PackageLoader("vunit_gen"),
         lstrip_blocks=True,
         trim_blocks=True,
     )
@@ -31,7 +31,7 @@ def main():
     print([Path.cwd() / Path(x) for x in args.inputs])
     for x in args.inputs:
         p = Path.cwd() / Path(x)
-        lib.files.append(p.absolute())
+        lib.files.append(p.absolute().as_posix())
 
     content = template.render(
         libraries=[lib],

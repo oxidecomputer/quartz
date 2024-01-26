@@ -3,7 +3,7 @@ from os import PathLike
 
 from typing import TYPE_CHECKING
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, PackageLoader, FileSystemLoader
 from systemrdl.node import RootNode, Node
 from systemrdl import RDLWalker
 
@@ -11,10 +11,12 @@ try:
     from models import Register, Field, ReservedField, Memory
     from listeners import BaseListener
     from utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
+    loader = FileSystemLoader(Path(__file__).parent / "templates")
 except:
     from rdl_pkg.models import Register, Field, ReservedField, Memory
     from rdl_pkg.listeners import BaseListener
     from rdl_pkg.utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
+    loader = PackageLoader("rdl_pkg")
 
 from typing import Any, Dict, List
 
@@ -64,7 +66,7 @@ class BaseExporter:
 
         # Load jinja templates
         self.env = Environment(
-            loader=FileSystemLoader(Path(__file__).parent / "templates"),
+            loader=loader,
             lstrip_blocks=True,
             trim_blocks=True,
         )

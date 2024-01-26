@@ -7,6 +7,7 @@ python_binary(
 
 python_library(
     name = 'vunit_gen_lib',
-    srcs = ['vunit_gen_cli.py'],
+    srcs = glob(["*.py"]),
+    base_module = "vunit_gen",
     resources = glob(["templates/*.jinja2"])
 )
