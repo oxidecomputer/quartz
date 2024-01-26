@@ -62,8 +62,17 @@ For information on building `BUCK` files see [here](BUCK_RULES.md)
 
 ### Prerequisites
 - You need a copy of buck2 built locally. [Instructions](https://buck2.build/docs/getting_started/)
-- You'll need python3/pip installed and accessible on your path.
+- You'll need python3/pip installed and accessible on your path. We have python 3.10
+working in linux, and python 3.12 working in windows. Python 3.9 did not work in 
+windows at least, we have no other data points on other python versions.
 - You'll need to install required python packages `pip install -r tools/requirements.txt`
+- You'll need to have GHDL installed and on your path (in linux this comes with
+the oss-cad-suite, but oss-cad-suite windows builds don't build GHDL). As of
+Jan '24, the ghdl-MINGW32 bit nightly version was working in windows.
+
+:warning: **Windows Users**: You need to be in Developer Mode for buck2 to be
+able to use symlinks, and should consider setting `LongPathsEnabled` in regedit at
+`HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem` to 1 and rebooting.
 
 ### buck2 run
 Comprehensive buck2 command line guidance is out of the scope of this document
