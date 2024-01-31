@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+# Generated run.py from buck2
+
+import os
+import sys
+from pathlib import Path
+from vunit import VUnit
+
+# Here's an ugly hack to force the output path to be up at the repo root
+# this is because we are using buck2 run, but not putting the vunit_out/
+# folder as an buck2 controlled output so that we easily preserve
+# pre-compiled artifacts
+
+def find_project_root():
+    current_path = os.getcwd()
+    drive_root = os.path.splitdrive(os.path.abspath(current_path))[0] + os.sep
+    while True:
+        if Path(current_path) == Path(current_path).root:
+            #raise NoRootException('No ".buckroot" found for project')
+            break
+
+        new_path, tail = os.path.split(current_path)
+        root_path = Path(current_path) / ".buckroot"
+        if root_path.exists():
+            break
+        current_path = new_path
+
+    return Path(current_path)
+
+
+# Now use the ugly hack to set the output_path
+output_dir = find_project_root() / 'vunit_out'
+if "-o" not in sys.argv:
+    sys.argv.append("-o")
+    sys.argv.append("{}".format(output_dir))
+
+vu = VUnit.from_argv(compile_builtins=False)
+
+# For now, add everything here so it's always available
+vu.add_vhdl_builtins()
+vu.add_com()
+vu.add_json4vhdl()
+vu.add_osvvm()
+vu.add_random()
+vu.add_verification_components()
+
+# Create libraries
+{% for library in libraries %}
+{{library.name}} = vu.add_library("{{library.name}}")
+{% for file in library.files %}
+{{library.name}}.add_source_file("{{file}}")
+{% endfor %}
+{% endfor %}
+
+# Run vunit function
+vu.main()
