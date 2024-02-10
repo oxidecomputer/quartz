@@ -1,0 +1,20 @@
+vhdl_unit(
+    name = "meta_sync",
+    srcs = ["meta_sync.vhd",],
+)
+
+vhdl_unit(
+    name = "async_reset_bridge",
+    srcs = ["async_reset_bridge.vhd",],
+)
+
+vhdl_unit(
+    name = "tacd",
+    srcs = ["tacd.vhd",],
+)
+
+vhdl_unit(
+    name = "bacd",
+    srcs = ["bacd.vhd",],
+    deps = [":tacd"]
+)
