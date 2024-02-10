@@ -1,3 +1,9 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
 load(
     "@prelude//python:toolchain.bzl",
     "PythonToolchainInfo",
@@ -86,6 +92,8 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd.add(vunit_gen)
         cmd.add("--inputs", in_args)
         cmd.add("--output", out_run_py.as_output())
+        if ctx.attrs.simulator:
+            cmd.add("--simulator", ctx.attrs.simulator)
         ctx.actions.run(cmd, category="vunit")
 
         # Left here as an example of how to put the vunit_out
@@ -140,6 +148,10 @@ vhdl_unit = rule(
             for which a run.py should be generate"
             ),
             default=False,
+        ),
+        "simulator": attrs.string(
+            doc="nvc or ghdl",
+            default="",
         ),
         "_toolchain": attrs.toolchain_dep(
             doc="Use system python toolchain for running VUnit",

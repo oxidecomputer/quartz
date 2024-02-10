@@ -1,3 +1,9 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
 import argparse
 from pathlib import Path
 from jinja2 import Environment, PackageLoader
@@ -8,6 +14,7 @@ parser.add_argument(
     "--input", "--inputs", nargs="+", dest="inputs", help="Explicit input file list"
 )
 parser.add_argument("--output", dest="output", help="Explicit output list")
+parser.add_argument("--simulator", dest="simulator", default="", help="specify simulator name (ghdl or nvc)")
 
 args = parser.parse_args()
 
@@ -35,6 +42,7 @@ def main():
 
     content = template.render(
         libraries=[lib],
+        simulator=args.simulator,
         # vunit_out=args.vunit_out,
     )
     with open(args.output, mode="w", encoding="utf-8") as message:
