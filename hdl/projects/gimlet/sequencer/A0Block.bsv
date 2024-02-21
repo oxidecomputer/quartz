@@ -102,6 +102,7 @@ import PowerRail::*;
 
     interface FpgaSP3;
         // From SP3
+        method Action sp3_to_sp_nic_pwren_l(Bit#(1) value);
         method Action sp3_to_seq_pwrgd_out(Bit#(1) value);
         method Action sp3_to_seq_slp_s3_l(Bit#(1) value);
         method Action sp3_to_seq_slp_s5_l(Bit#(1) value);
@@ -117,6 +118,7 @@ import PowerRail::*;
 
     interface SP3;
         // From SP3
+        method Bit#(1) sp3_to_sp_nic_pwren_l();
         method Bit#(1) sp3_to_seq_pwrgd_out();
         method Bit#(1) sp3_to_seq_slp_s3_l();
         method Bit#(1) sp3_to_seq_slp_s5_l();
@@ -132,6 +134,7 @@ import PowerRail::*;
 
     instance Connectable#(FpgaSP3, SP3);
         module mkConnection#(FpgaSP3 source, SP3 sink) (Empty);
+            mkConnection(source.sp3_to_sp_nic_pwren_l, sink.sp3_to_sp_nic_pwren_l);
             mkConnection(source.sp3_to_seq_pwrgd_out, sink.sp3_to_seq_pwrgd_out);
             mkConnection(source.sp3_to_seq_slp_s3_l, sink.sp3_to_seq_slp_s3_l);
             mkConnection(source.sp3_to_seq_slp_s5_l, sink.sp3_to_seq_slp_s5_l);
@@ -255,6 +258,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Reg#(Bit#(1)) pwr_cont2_sp3_nvrhot <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(1);
+    Wire#(Bit#(1)) sp3_to_sp_nic_pwren_l <- mkDWire(1);
 
     // Edge registers
     Reg#(Bit#(1)) sp3_to_seq_pwrok_last <- mkReg(0);
@@ -596,6 +600,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             slp_s3: ~sp3_to_seq_slp_s3_l 
         };
         amd_status <= AmdStatus {
+            nic_pwren: ~sp3_to_sp_nic_pwren_l,
             pwrgd_out: sp3_to_seq_pwrgd_out,
             fsr_req: ~sp3_to_seq_fsr_req_l,
             thermtrip: ~sp3_to_seq_thermtrip_l
@@ -611,6 +616,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     interface A0Pins pins;
         interface FpgaSP3 sp3;
             // From SP3
+            method sp3_to_sp_nic_pwren_l = sp3_to_sp_nic_pwren_l._write;
             method sp3_to_seq_pwrgd_out = sp3_to_seq_pwrgd_out._write;
             method sp3_to_seq_slp_s3_l = sp3_to_seq_slp_s3_l._write;
             method sp3_to_seq_slp_s5_l = sp3_to_seq_slp_s5_l._write;
@@ -834,6 +840,8 @@ module mkSP3Model(SP3Model);
     Reg#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(1);
     Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(1);
+    Reg#(Bit#(1)) sp3_to_sp_nic_pwren_l <- mkReg(1);
+    
     // To SP3
     Wire#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkDWire(1);
     Wire#(Bit#(1)) seq_to_sp3_pwr_btn_l <- mkDWire(1);
@@ -931,6 +939,7 @@ module mkSP3Model(SP3Model);
         method sp3_to_seq_reset_v3p3_l = sp3_to_seq_reset_v3p3_l._read;
         method sp3_to_seq_thermtrip_l = sp3_to_seq_thermtrip_l._read;
         method sp3_to_seq_fsr_req_l = sp3_to_seq_fsr_req_l._read;
+        method sp3_to_sp_nic_pwren_l = sp3_to_sp_nic_pwren_l._read;
         // To SP3
         method seq_to_sp3_sys_rst_l = seq_to_sp3_sys_rst_l._write;
         method seq_to_sp3_pwr_btn_l = seq_to_sp3_pwr_btn_l._write;
