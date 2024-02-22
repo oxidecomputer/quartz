@@ -53,6 +53,8 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     # children of *every* source. This is most conservatively safe, and since the TSets are
     # merged in buck2 and shared DAG segments are only emmitted once when projecting, this
     # is pretty in-expensive.
+    if len(ctx.attrs.srcs) == 0:
+        fail("Empty srcs list found. Bad glob maybe?")
     tops = [
         ctx.actions.tset(UnitTSet, value=x, children=deps_tset) for x in ctx.attrs.srcs
     ]
@@ -151,7 +153,7 @@ vhdl_unit = rule(
         ),
         "simulator": attrs.string(
             doc="nvc or ghdl",
-            default="",
+            default="nvc",
         ),
         "_toolchain": attrs.toolchain_dep(
             doc="Use system python toolchain for running VUnit",
