@@ -40,6 +40,8 @@ interface InPins;
     (* prefix = "" *)
     method Action pwr_cont_nic_pg0((* port="pwr_cont_nic_pg0" *) Bit#(1) value);
     (* prefix = "" *)
+    method Action sp3_to_sp_nic_pwren_l((* port="sp3_to_sp_nic_pwren_l" *) Bit#(1) value);
+    (* prefix = "" *)
     method Action nic_to_seq_v1p5d_pg((* port="nic_to_seq_v1p5d_pg" *) Bit#(1) value);
     (* prefix = "" *)
     method Action nic_to_seq_v1p5a_pg((* port="nic_to_seq_v1p5a_pg" *) Bit#(1) value);
@@ -153,6 +155,7 @@ interface InPinsReversed;
     method Bit#(1) seq_rev_id2();
     method Bit#(1) pwr_cont_nic_pg1();
     method Bit#(1) pwr_cont_nic_pg0();
+    method Bit#(1) sp3_to_sp_nic_pwren_l();
     method Bit#(1) nic_to_seq_v1p5d_pg();
     method Bit#(1) nic_to_seq_v1p5a_pg();
     method Bit#(1) nic_to_seq_v1p2_pg();
@@ -317,6 +320,7 @@ module mkGimletSeqTop (SeqPins);
 
     // A0 input connections
     // from sp3
+    mkConnection(sync.syncd.sp3_to_sp_nic_pwren_l, inner.a0_pins.sp3.sp3_to_sp_nic_pwren_l);
     mkConnection(sync.syncd.sp3_to_seq_pwrgd_out, inner.a0_pins.sp3.sp3_to_seq_pwrgd_out);
     mkConnection(sync.syncd.sp3_to_seq_slp_s3_l, inner.a0_pins.sp3.sp3_to_seq_slp_s3_l);
     mkConnection(sync.syncd.sp3_to_seq_slp_s5_l, inner.a0_pins.sp3.sp3_to_seq_slp_s5_l);
@@ -395,6 +399,7 @@ module mkGimletSeqTop (SeqPins);
         method seq_rev_id2 = sync.pins.seq_rev_id2;
         method pwr_cont_nic_pg1 = sync.pins.pwr_cont_nic_pg1;
         method pwr_cont_nic_pg0 = sync.pins.pwr_cont_nic_pg0;
+        method sp3_to_sp_nic_pwren_l = sync.pins.sp3_to_sp_nic_pwren_l;
         method nic_to_seq_v1p5d_pg = sync.pins.nic_to_seq_v1p5d_pg;
         method nic_to_seq_v1p5a_pg = sync.pins.nic_to_seq_v1p5a_pg;
         method nic_to_seq_v1p2_pg = sync.pins.nic_to_seq_v1p2_pg;
@@ -513,6 +518,7 @@ module mkInputSync(InputSync);
     SyncBitIfc#(Bit#(1)) seq_rev_id2 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) pwr_cont_nic_pg1 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) pwr_cont_nic_pg0 <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
+    SyncBitIfc#(Bit#(1)) sp3_to_sp_nic_pwren_l <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) nic_to_seq_v1p5d_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) nic_to_seq_v1p5a_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
     SyncBitIfc#(Bit#(1)) nic_to_seq_v1p2_pg <- mkSyncBit1(clk_sys, rst_sys, clk_sys);
@@ -573,6 +579,7 @@ module mkInputSync(InputSync);
         method seq_rev_id2 = seq_rev_id2.send;
         method pwr_cont_nic_pg1 = pwr_cont_nic_pg1.send;
         method pwr_cont_nic_pg0 = pwr_cont_nic_pg0.send;
+        method sp3_to_sp_nic_pwren_l = sp3_to_sp_nic_pwren_l.send;
         method nic_to_seq_v1p5d_pg = nic_to_seq_v1p5d_pg.send;
         method nic_to_seq_v1p5a_pg = nic_to_seq_v1p5a_pg.send;
         method nic_to_seq_v1p2_pg = nic_to_seq_v1p2_pg.send;
@@ -633,6 +640,7 @@ module mkInputSync(InputSync);
         method seq_rev_id2 = seq_rev_id2.read;
         method pwr_cont_nic_pg1 = pwr_cont_nic_pg1.read;
         method pwr_cont_nic_pg0 = pwr_cont_nic_pg0.read;
+        method sp3_to_sp_nic_pwren_l = sp3_to_sp_nic_pwren_l.read;
         method nic_to_seq_v1p5d_pg = nic_to_seq_v1p5d_pg.read;
         method nic_to_seq_v1p5a_pg = nic_to_seq_v1p5a_pg.read;
         method nic_to_seq_v1p2_pg = nic_to_seq_v1p2_pg.read;

@@ -21,6 +21,7 @@ set_io --warn-no-port nic_to_seq_ext_rst_l C13
 set_io --warn-no-port pwr_cont_nic_en1 C16
 set_io --warn-no-port seq_to_nic_v1p5d_en D1
 set_io --warn-no-port seq_to_clk_nmr_l D2
+set_io --warn-no-port sp3_to_sp_nic_pwren_l D4
 #set_io --warn-no-port nic_to_seq_v1p1_pg D14
 set_io --warn-no-port fanhp_to_seq_fault_l D15
 set_io --warn-no-port fanhp_to_seq_pwrgd D16
