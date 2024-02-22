@@ -27,9 +27,6 @@ entity meta_sync is
     port(
         async_input : in  std_logic; --! Async signal to sync
         clk : in  std_logic; --! Latching clock input
-        --! Optional, active-high reset
-        --! assumed already sync'd to clk's domain
-        reset : in  std_logic := '0';
         sycnd_output : out std_logic  --! Output, sync'd to clk
     );
 end entity;

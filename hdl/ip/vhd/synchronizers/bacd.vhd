@@ -44,7 +44,7 @@ entity bacd is
         reset_latch       : in  std_logic;  
         clk_latch         : in  std_logic;  
         datavalid_latch   : out std_logic;
-        bus_latch         : out std_logic_vector := (others => '0')  
+        bus_latch         : out std_logic_vector  
   );
 end entity;
 

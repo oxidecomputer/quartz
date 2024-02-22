@@ -1,3 +1,7 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:rdl.bzl", "rdl_file")
+
+
 vhdl_unit(
     name = "meta_sync",
     srcs = ["meta_sync.vhd",],
@@ -17,4 +21,16 @@ vhdl_unit(
     name = "bacd",
     srcs = ["bacd.vhd",],
     deps = [":tacd"]
+)
+
+vhdl_unit(
+    name = "tb_synchronizers",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":bacd", 
+        ":meta_sync", 
+        ":async_reset_bridge", 
+        ":tacd",
+    ]
 )
