@@ -46,7 +46,8 @@ begin
             msg_type := message_type(request_msg);
             if msg_type = write_msg then
                 data := pop(request_msg); -- get the payload
-                info("Got write" & hex_image(data));
+                --demonstration of logging and string_io functions
+                info("Got write" & hex_image(data));  
                 gpio_out <= data(OUT_NUM_BITS - 1 downto 0); -- apply to outputs
             elsif msg_type = read_msg then
                 info("got read");
