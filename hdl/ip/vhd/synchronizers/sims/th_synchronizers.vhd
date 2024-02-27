@@ -21,6 +21,10 @@ architecture th of th_synchronizers is
   signal bacd1_write_allowed : std_logic;
   signal bacd1_datavalid : std_logic;
   signal bacd1_latch_bus : std_logic_vector(7 downto 0);
+
+  signal tacd_latch_out : std_logic;
+
+  signal sim_gpio_out : std_logic;
 begin
 
   -- set up 2 fastish, un-related clocks for the sim
@@ -52,6 +56,25 @@ begin
       bus_latch       => bacd1_latch_bus
     );
 
+    sim_gpio_inst: entity work.sim_gpio
+      generic map(
+          OUT_NUM_BITS => 1,
+          IN_NUM_BITS => 1,
+          ACTOR_NAME => "tacd_stim"
+      )
+      port map(
+          gpio_in(0) => tacd_latch_out,
+          gpio_out(0) => sim_gpio_out
+      );
+
+  tacd_inst : entity work.tacd
+    port
+    map (
+    clk_launch      => clk_a,
+    pulse_in_launch => sim_gpio_out,
+    clk_latch       => clk_b,
+    pulse_out_latch => tacd_latch_out
+    );
   -- bacd2_inst : entity work.bacd
   --   generic
   --   map (
@@ -96,13 +119,6 @@ begin
   --   sycnd_output => sycnd_output
   --   );
 
-  -- tacd_inst : entity work.tacd
-  --   port
-  --   map (
-  --   clk_launch      => clk_launch,
-  --   pulse_in_launch => pulse_in_launch,
-  --   clk_latch       => clk_latch,
-  --   pulse_out_latch => pulse_out_latch
-  --   );
+  
 
 end architecture;

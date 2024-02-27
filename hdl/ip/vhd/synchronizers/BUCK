@@ -32,5 +32,6 @@ vhdl_unit(
         ":meta_sync", 
         ":async_reset_bridge", 
         ":tacd",
+        "//hdl/ip/vhd/vunit_components:sim_gpio"
     ]
 )

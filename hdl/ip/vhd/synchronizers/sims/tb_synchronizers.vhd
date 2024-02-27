@@ -12,6 +12,7 @@ library vunit_lib;
 context vunit_lib.com_context;
 context vunit_lib.vunit_context;
 
+use work.gpio_msg_pkg.all;
 
 entity tb_synchronizers is
     generic(runner_cfg : string);
@@ -36,7 +37,13 @@ begin
     alias bacd1_datavalid is <<signal .tb_synchronizers.th.bacd1_datavalid : std_logic>>;
     alias bacd1_latch_bus is <<signal .tb_synchronizers.th.bacd1_latch_bus : std_logic_vector(7 downto 0)>>;
 
+    alias tacd_latch_out is <<signal .tb_synchronizers.th.tacd_latch_out : std_logic>>;
+
     variable test_byte : std_logic_vector(7 downto 0) := (others => '0');
+    variable test_data : std_logic_vector(31 downto 0) := (others => '0');
+    variable gpio_data : std_logic_vector(31 downto 0) := (others => '0');
+
+    variable msg_target : actor_t;
 
   begin
     -- Always the first thing in the process, set up things for the VUnit test runner
@@ -45,7 +52,6 @@ begin
     -- Reach into the test harness, which generates and de-asserts reset and hold the
     -- test cases off until we're out of reset. This runs for every test case
     wait until reset_b = '0';
-    wait for 200 ns;
     
     -- This is how vunit controls test execution, we loop on the `test_suite` and then
     -- use the `run` function to name our test cases. When the user selects a specific
@@ -72,6 +78,21 @@ begin
             wait until bacd1_datavalid = '1' for 100 ns;
             check_equal(bacd1_datavalid, '1', "Datavalid unexpectedly 0 so we timed out");
             check_equal(bacd1_latch_bus, test_byte, "Expected bus value did not propagate");
+        elsif run("bacd_msg_passing") then
+            msg_target := find("tacd_stim");  -- get actor for the tacd_gpio block
+            check_equal(tacd_latch_out, '0', "TACD output pulse unexpectedly 1 at reset");
+
+            -- Set bit0 of the GPIO which will trigger the tacd to fire and cross domains
+            gpio_data := X"ffffffff";
+            set_gpio(net, msg_target, gpio_data);
+            wait until tacd_latch_out = '1' for 100 ns;
+            check_equal(tacd_latch_out, '1', "TACD output pulse 0 so we timed out");
+            -- Unnecessary since we used an external name check, 
+            -- but provided as an example of reading back the gpio using the network
+            get_gpio(net, msg_target, gpio_data);
+            test_data := X"00000001";
+            check_equal(gpio_data, test_data, "TACD output pulse as read by bfm had incorrect value");
+
         end if;
     end loop;
        
