@@ -24,6 +24,13 @@ class Library:
         self.name = name
         self.files = [] if files is None else files
 
+class CodecGen:
+    def __init__(self, types_name, codec_name):
+        self.types_name
+        self.codec_name
+
+def codecs_from_inputs(i):
+    pass
 
 def main():
     # Load jinja templates
@@ -43,6 +50,7 @@ def main():
     content = template.render(
         libraries=[lib],
         simulator=args.simulator,
+        codec_packages=[],
         # vunit_out=args.vunit_out,
     )
     with open(args.output, mode="w", encoding="utf-8") as message:

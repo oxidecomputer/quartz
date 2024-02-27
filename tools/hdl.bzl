@@ -66,6 +66,22 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         )
     )
 
+    # do Vunit com generation if requested and provide a GenVHDLInfo provider
+    if ctx.attrs.codec_package:
+        if len(ctx.attrs.srcs) != 1:
+            fail("Trying to generate codecs on more than one source file isn't supported")
+        # Get the vunit_gen python executable since we'll be using it for
+        #  for generating our VUnit's run.py (from our toolchains defs)
+        vunit_gen = ctx.attrs._vunit_codec[RunInfo]
+        # Generate the VUnit codec file output in buck_out/ somewhere
+        out_codec_pkg = ctx.actions.declare_output("{}.vhd".format(ctx.attrs.codec_package))
+        cmd = cmd_args()
+        cmd.add(vunit_gen)
+        cmd.add("--input", ctx.attrs.srcs[0])
+        cmd.add("--output", out_codec_pkg.as_output())
+        ctx.actions.run(cmd, category="vunit_codec_gen")
+        providers.append(GenVHDLInfo(src=out_codec_pkg))
+
     # do VUnit stuff here if this is a test bench
     # Note that this is not acutally generated in the buck_out/ folder
     # After playing with this a bit, putting the vunitout folder in the
@@ -82,7 +98,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     if ctx.attrs.is_tb:
         # Get the vunit_gen python executable since we'll be using it for
         #  for generating our VUnit's run.py (from our toolchains defs)
-        vunit_gen = ctx.attrs._bins[RunInfo]
+        vunit_gen = ctx.attrs._vunit_gen[RunInfo]
 
         # Get the file-names in bottom-up order (order doesn't matter for VUnit
         # since it will maintain its own dependency relationships)
@@ -151,6 +167,13 @@ vhdl_unit = rule(
             ),
             default=False,
         ),
+        "codec_package": attrs.string(
+            doc=(
+                "Set to True when you want to generate VUnit codec package\
+            name of the package, no extension"
+            ),
+            default="",
+        ),
         "simulator": attrs.string(
             doc="nvc or ghdl",
             default="nvc",
@@ -159,9 +182,13 @@ vhdl_unit = rule(
             doc="Use system python toolchain for running VUnit",
             default="toolchains//:python",
         ),
-        "_bins": attrs.exec_dep(
+        "_vunit_gen": attrs.exec_dep(
             doc="Use vunit_gen toolchain for generating VUnit run.pys",
             default="root//tools/vunit_gen:vunit_gen",
+        ),
+        "_vunit_codec": attrs.exec_dep(
+            doc="Use vunit_gen toolchain for generating VUnit run.pys",
+            default="root//tools/vunit_gen:vunit_com_codec_gen",
         ),
     },
 )

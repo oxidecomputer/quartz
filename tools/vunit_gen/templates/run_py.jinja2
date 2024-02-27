@@ -59,5 +59,13 @@ vu.add_verification_components()
 {% endfor %}
 {% endfor %}
 
+{% if codec_packages %}
+# Generate codecs
+{% for pkg in codec_packages %}
+{{pkg.types_name}} = lib.package('{{pkg.types_name}}')
+{{pkg.types_name}}.generate_codecs(codec_package_name='{{pkg.types_name}}', used_packages=['ieee.std_logic_1164', 'ieee.numeric_std'])
+{% endfor %}
+{% endif %}
+
 # Run vunit function
 vu.main()
