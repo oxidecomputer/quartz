@@ -1,4 +1,5 @@
 vhdl_unit(
     name = "basic_arbiter",
     srcs = ["basic_arbiter.vhd",],
+    visibility = ['PUBLIC'],
 )
