@@ -27,6 +27,7 @@ package calc_pkg is
     --! on a condition. Frequently used during constant definition of parameterized
     --! modules, giving ternary-like selection in constant definition
     function sel(cond : boolean; if_true: natural; if_false: natural) return natural;
+    function sel(cond : boolean; if_true: string; if_false: string) return string;
 
 
 end package;
@@ -55,6 +56,14 @@ package body calc_pkg is
     end log2ceil;
 
     function sel(cond : boolean; if_true: natural; if_false: natural) return natural is
+    begin
+        if cond then
+            return if_true;
+        else
+            return if_false;
+        end if;
+    end function;
+    function sel(cond : boolean; if_true: string; if_false: string) return string is
     begin
         if cond then
             return if_true;

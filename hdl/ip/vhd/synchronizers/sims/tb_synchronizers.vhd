@@ -78,7 +78,7 @@ begin
             wait until bacd1_datavalid = '1' for 100 ns;
             check_equal(bacd1_datavalid, '1', "Datavalid unexpectedly 0 so we timed out");
             check_equal(bacd1_latch_bus, test_byte, "Expected bus value did not propagate");
-        elsif run("bacd_msg_passing") then
+        elsif run("tacd_msg_passing") then
             msg_target := find("tacd_stim");  -- get actor for the tacd_gpio block
             check_equal(tacd_latch_out, '0', "TACD output pulse unexpectedly 1 at reset");
 

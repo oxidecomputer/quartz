@@ -1,0 +1,4 @@
+vhdl_unit(
+    name = "dcfifo_xpm",
+    srcs = ["dcfifo_xpm.vhd",],
+)
