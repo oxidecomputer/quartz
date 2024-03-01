@@ -1,6 +1,9 @@
 [submodule "prelude"]
 	path = prelude
 	url = https://github.com/facebook/buck2-prelude.git
+[submodule "vnd/xpm/xpm_vhdl"]
+	path = vnd/xpm/xpm_vhdl
+	url =  https://github.com/fransschreuder/xpm_vhdl.git
 [submodule "vnd/cobble"]
 	path = vnd/cobble
-	url = git@github.com:oxidecomputer/cobble-build.git
+	url = https://github.com/oxidecomputer/cobble-build.git

@@ -12,21 +12,39 @@ load(
 
 # Take a TSet and project out the values as names for
 # a command-line tool
-def project_as_args(value: Artifact):
-    return cmd_args(value)
+def project_as_args(value: tuple):
+    return cmd_args(value[0])
 
+def project_as_json(value: tuple):
+    v = {
+        "artifact": value[0],
+        "library": value[1]
+    }
+    
+    return v
 
-# A TSet for HDL units
-UnitTSet = transitive_set(args_projections={"args": project_as_args})
+# A TSet for HDL units. Expects a 2 field tuple of:
+# (Artifact, str) where string is an optional library name
+UnitTSet = transitive_set(
+    args_projections={"args": project_as_args},
+    json_projections={"json": project_as_json})
 
 # HDL files can have 0 or more dependencies on other HDL files
 # so we return a UnitTSet with the file and any deps (as TSets)
-HDLFileInfo = provider(fields={"set": provider_field(UnitTSet)})
+HDLFileInfo = provider(
+    fields={
+        "set": provider_field(UnitTSet)
+    })
 
 # Some build stages generate HDL that we'd like to do something
 # with down-stream, so we return them as an Artifact so they can
 # be dealt with specially if needed
-GenVHDLInfo = provider(fields={"src": provider_field(Artifact)})
+GenVHDLInfo = provider(
+    fields={
+        "src": provider_field(Artifact),
+        "library":provider_field(str, default=""),
+    
+    })
 
 
 def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
@@ -41,7 +59,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     # We filter deps for things that provide GenVHDLInfo and then make a TSet for
     # these and extend the known dependencies for this file with these also.
     gen_deps_tset = [
-        ctx.actions.tset(UnitTSet, value=x[GenVHDLInfo].src)
+        ctx.actions.tset(UnitTSet, value=(x[GenVHDLInfo].src, x[GenVHDLInfo].library))
         for x in ctx.attrs.deps
         if x.get(GenVHDLInfo)
     ]
@@ -56,7 +74,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     if len(ctx.attrs.srcs) == 0:
         fail("Empty srcs list found. Bad glob maybe?")
     tops = [
-        ctx.actions.tset(UnitTSet, value=x, children=deps_tset) for x in ctx.attrs.srcs
+        ctx.actions.tset(UnitTSet, value=(x, ctx.attrs.library), children=deps_tset) for x in ctx.attrs.srcs
     ]
     top_tset = ctx.actions.tset(UnitTSet, children=tops)
 
@@ -102,13 +120,15 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
 
         # Get the file-names in bottom-up order (order doesn't matter for VUnit
         # since it will maintain its own dependency relationships)
-        in_args = top_tset.project_as_args("args", ordering="postorder")
+        in_args = top_tset.project_as_json("json", ordering="postorder")
+        in_args = ctx.actions.write_json("vunit_gen_input.json", in_args, with_inputs=True)
+        print(in_args)
 
         # Generate the VUnit run.py file output in buck_out/ somewhere
         out_run_py = ctx.actions.declare_output("run.py")
         cmd = cmd_args()
         cmd.add(vunit_gen)
-        cmd.add("--inputs", in_args)
+        cmd.add("--input", in_args)
         cmd.add("--output", out_run_py.as_output())
         if ctx.attrs.simulator:
             cmd.add("--simulator", ctx.attrs.simulator)
@@ -160,6 +180,13 @@ vhdl_unit = rule(
             default=[],
         ),
         "srcs": attrs.list(attrs.source(doc="Expected VHDL sources")),
+        "library": attrs.string(
+            doc=(
+                "Specify a library name, if none specified, the design\
+            will be compiled into the default work_lib"
+            ),
+            default=""
+        ),
         "is_tb": attrs.bool(
             doc=(
                 "Set to True when this is a top-level VUnit testbench\
