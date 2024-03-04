@@ -1,4 +1,8 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
 vhdl_unit(
     name = "dcfifo_xpm",
     srcs = ["dcfifo_xpm.vhd",],
+    deps = ["//vnd/xpm:xpm"],
+    visibility = ["PUBLIC"],
 )
