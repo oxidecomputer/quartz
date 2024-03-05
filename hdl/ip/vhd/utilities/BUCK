@@ -1,3 +1,5 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
 vhdl_unit(
     name = "calc_pkg",
     srcs = ["calc_pkg.vhd",],

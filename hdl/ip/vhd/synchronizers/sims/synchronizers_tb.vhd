@@ -14,30 +14,31 @@ context vunit_lib.vunit_context;
 
 use work.gpio_msg_pkg.all;
 
-entity tb_synchronizers is
+entity synchronizers_tb is
     generic(runner_cfg : string);
 end entity;
 
-architecture tb of tb_synchronizers is
+architecture tb of synchronizers_tb is
 begin
-    th: entity work.th_synchronizers;
+    th: entity work.synchronizers_th;
         
   bench:process
     -- Note: External names are broken in GHDL llvm backends https://github.com/ghdl/ghdl/issues/2610
     -- So this sim only works in other simulators, like nvc
-    alias reset_a is <<signal .tb_synchronizers.th.reset_a : std_logic>>;
-    alias reset_b is <<signal .tb_synchronizers.th.reset_b : std_logic>>;
+    -- reset_a uses the absolute path form (starting with a '.') and
+    -- reset_b uses the relative path form of external naming for example purposes.
+    alias reset_a is <<signal .synchronizers_tb.th.reset_a : std_logic>>;
+    alias reset_b is <<signal th.reset_b : std_logic>>;
 
 
     -- An example of reaching into the testharness with alias. Sort of a naive way of doing things
     -- but functional and often useful for some basic things
-    alias bacd1_write is <<signal .tb_synchronizers.th.bacd1_write : std_logic>>;
-    alias bacd1_launch_bus is <<signal .tb_synchronizers.th.bacd1_launch_bus : std_logic_vector(7 downto 0)>>;
-    alias bacd1_write_allowed is <<signal .tb_synchronizers.th.bacd1_write_allowed : std_logic>>;
-    alias bacd1_datavalid is <<signal .tb_synchronizers.th.bacd1_datavalid : std_logic>>;
-    alias bacd1_latch_bus is <<signal .tb_synchronizers.th.bacd1_latch_bus : std_logic_vector(7 downto 0)>>;
+    alias bacd1_write is <<signal th.bacd1_write : std_logic>>;
+    alias bacd1_launch_bus is <<signal th.bacd1_launch_bus : std_logic_vector(7 downto 0)>>;
+    alias bacd1_datavalid is <<signal th.bacd1_datavalid : std_logic>>;
+    alias bacd1_latch_bus is <<signal th.bacd1_latch_bus : std_logic_vector(7 downto 0)>>;
 
-    alias tacd_latch_out is <<signal .tb_synchronizers.th.tacd_latch_out : std_logic>>;
+    alias tacd_latch_out is <<signal th.tacd_latch_out : std_logic>>;
 
     variable test_byte : std_logic_vector(7 downto 0) := (others => '0');
     variable test_data : std_logic_vector(31 downto 0) := (others => '0');

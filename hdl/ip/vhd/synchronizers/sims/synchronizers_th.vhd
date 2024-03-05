@@ -6,10 +6,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-entity th_synchronizers is
+entity synchronizers_th is
 end entity;
 
-architecture th of th_synchronizers is
+architecture th of synchronizers_th is
   signal clk_a   : std_logic := '0';
   signal reset_a : std_logic := '1';
 
@@ -63,7 +63,12 @@ begin
           ACTOR_NAME => "tacd_stim"
       )
       port map(
-          gpio_in(0) => tacd_latch_out,
+          clk => clk_a,
+          -- note that this is *technically* a cdc issue
+          -- but this is in simulation and we're messing with
+          -- this *slowly* in the testbench so it works fine here
+          -- and saves another sim_gpio instance connected to clk_b
+          gpio_in(0) => tacd_latch_out, 
           gpio_out(0) => sim_gpio_out
       );
 

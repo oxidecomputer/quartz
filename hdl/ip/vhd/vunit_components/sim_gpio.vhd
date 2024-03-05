@@ -28,6 +28,7 @@ entity sim_gpio is
         ACTOR_NAME : string := "sim_gpio"
     );
     port(
+        clk       : in std_logic;
         gpio_in   : in std_logic_vector(IN_NUM_BITS - 1 downto 0) := (others => '0');
         gpio_out  : out std_logic_vector(OUT_NUM_BITS - 1 downto 0) := (others => '0')
     );
@@ -42,16 +43,23 @@ begin
     begin
         self := new_actor(ACTOR_NAME);
         loop
+
             receive(net, self, request_msg);
             msg_type := message_type(request_msg);
             if msg_type = write_msg then
                 data := pop(request_msg); -- get the payload
                 --demonstration of logging and string_io functions
-                info("Got write" & hex_image(data));  
+                info("Got write" & hex_image(data)); 
+                -- We want sync transitions so let's adjust the output
+                -- after the falling_edge of the clock and then wait for
+                -- the rising edge after setting
+                wait until falling_edge(clk);   
                 gpio_out <= data(OUT_NUM_BITS - 1 downto 0); -- apply to outputs
+                wait until rising_edge(clk);  -- make sure we assert through rising edge
             elsif msg_type = read_msg then
                 info("got read");
                 data := (others => '0');  -- clear any stale data
+                wait until rising_edge(clk);  --sample at rising edge
                 data(IN_NUM_BITS - 1 downto 0) := gpio_in; -- sample data
                 -- create and send the reply message
                 reply_msg := new_msg(read_reply_msg);

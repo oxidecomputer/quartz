@@ -28,7 +28,7 @@ vhdl_unit(
 )
 
 vhdl_unit(
-    name = "tb_synchronizers",
+    name = "synchronizers_tb",
     is_tb = True,
     srcs = glob(["sims/*.vhd"]),
     deps = [

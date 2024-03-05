@@ -19,7 +19,7 @@ entity dcfifo_xpm is
     CDC_STAGES : integer range 2 to 8 := 2;
     --! How deep the fifo is in terms of the native
     --! data-width word size. Must be a power of 2
-    FIFO_WRITE_DEPTH : integer;
+    FIFO_WRITE_DEPTH : integer range 16 to 4*1024*1024;
     --! Width of read and write data interfaces.
     DATA_WIDTH : integer;
     --! Set to true to have FIFO output immediately valid
@@ -43,7 +43,7 @@ entity dcfifo_xpm is
     --! Write full flag, sync to write clock domain
     wfull : out std_logic;
     --! Number of words stored in fifo, sync to write clock domain
-    wusedwds : out std_logic_vector(log2ceil(FIFO_WRITE_DEPTH) - 1 downto 0);
+    wusedwds : out std_logic_vector(log2ceil(FIFO_WRITE_DEPTH) downto 0);
     -- Read interface
     --! Read clock
     rclk : in std_logic;
@@ -58,7 +58,7 @@ entity dcfifo_xpm is
     --! Read empty flag, sync to read clock domain
     rempty : out std_logic;
     --! Number of words stored in fifo, sync to read clock domain
-    rusedwds : out std_logic_vector(log2ceil(FIFO_WRITE_DEPTH) - 1 downto 0)
+    rusedwds : out std_logic_vector(log2ceil(FIFO_WRITE_DEPTH) downto 0)
   );
 end entity;
 
@@ -82,7 +82,7 @@ begin
   FULL_RESET_VALUE    => 0,
   PROG_EMPTY_THRESH   => PROG_EMPTY_THRESH,
   PROG_FULL_THRESH    => PROG_FULL_THRESH,
-  RD_DATA_COUNT_WIDTH => log2ceil(FIFO_WRITE_DEPTH),
+  RD_DATA_COUNT_WIDTH => log2ceil(FIFO_WRITE_DEPTH) + 1,
   READ_DATA_WIDTH     => DATA_WIDTH,
   READ_MODE           => READ_MODE,
   RELATED_CLOCKS      => 0,
@@ -90,7 +90,7 @@ begin
   USE_ADV_FEATURES    => "0707", -- String
   WAKEUP_TIME         => 0,
   WRITE_DATA_WIDTH    => DATA_WIDTH,
-  WR_DATA_COUNT_WIDTH => log2ceil(FIFO_WRITE_DEPTH)
+  WR_DATA_COUNT_WIDTH => log2ceil(FIFO_WRITE_DEPTH) +1
   )
   port map
   (
