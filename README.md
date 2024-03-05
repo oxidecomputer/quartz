@@ -73,8 +73,12 @@ from the releases section, for windows there are also compiled binaries in the r
 able to use symlinks, and should consider setting `LongPathsEnabled` in regedit at
 `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem` to 1 and rebooting.
 
-### nvc-vivado macros
-you'll need to `nvc --install xpm_vhd` to make available for simulation the Xilinx XPM macros
+### vivado macros
+There are simulation-only XPM macros available in the `vnd/xpm/xpm_vhdl` submodule, provided
+by the https://github.com/fransschreuder/xpm_vhdl project.
+There is a BUCK file at vnd/xpm so you can add `//vnd/xpm:xpm` as a dependency to any
+module that needs to use the XPM library.
+
 ### buck2 run
 Comprehensive buck2 command line guidance is out of the scope of this document
 but if you want to see a list of all available buck2 targets you can do: `buck2 ctargets /...`
