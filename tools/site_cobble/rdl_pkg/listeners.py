@@ -1,3 +1,9 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
 from systemrdl import RDLListener, AddrmapNode, RegfileNode, RegNode, FieldNode, MemNode
 
 # This is a dumb hack to deal with the fact that buck2 and cobble run python differently

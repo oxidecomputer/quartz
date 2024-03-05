@@ -34,6 +34,12 @@ output_dir = find_project_root() / 'vunit_out'
 if "-o" not in sys.argv:
     sys.argv.append("-o")
     sys.argv.append("{}".format(output_dir))
+{% if simulator %}
+# Another dirty hack since VUnit only allows simulator specification
+# via environment variables, and we don't have a great way of passing
+# those in via buck2
+os.environ["VUNIT_SIMULATOR"] = "{{simulator}}"
+{% endif %}
 
 vu = VUnit.from_argv(compile_builtins=False)
 
@@ -52,6 +58,14 @@ vu.add_verification_components()
 {{library.name}}.add_source_file("{{file}}")
 {% endfor %}
 {% endfor %}
+
+{% if codec_packages %}
+# Generate codecs
+{% for pkg in codec_packages %}
+{{pkg.types_name}} = lib.package('{{pkg.types_name}}')
+{{pkg.types_name}}.generate_codecs(codec_package_name='{{pkg.types_name}}', used_packages=['ieee.std_logic_1164', 'ieee.numeric_std'])
+{% endfor %}
+{% endif %}
 
 # Run vunit function
 vu.main()
