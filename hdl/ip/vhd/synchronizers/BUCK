@@ -1,6 +1,4 @@
 load("//tools:hdl.bzl", "vhdl_unit")
-load("//tools:rdl.bzl", "rdl_file")
-
 
 vhdl_unit(
     name = "meta_sync",

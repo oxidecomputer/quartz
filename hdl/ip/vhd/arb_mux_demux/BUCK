@@ -1,5 +1,17 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
 vhdl_unit(
     name = "basic_arbiter",
     srcs = ["basic_arbiter.vhd",],
     visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "arb_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":basic_arbiter",
+        "//hdl/ip/vhd/vunit_components:sim_gpio"
+    ]
 )

@@ -103,4 +103,6 @@ begin
     wait;
     end process;
     
+    -- Example total test timeout dog
+    test_runner_watchdog(runner, 10 ms);
 end tb;

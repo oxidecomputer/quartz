@@ -40,16 +40,16 @@ port(
 );
 end entity;
 architecture rtl of basic_arbiter is
-  constant ZEROS         : std_logic_vector(requests'range) := (others => '0');
-signal  requests_int     : unsigned(requests'range);
-signal  requests_masked_twos    : unsigned(requests'range);
-signal  requests_masked  : unsigned(requests'range);
-signal  requests_last    : unsigned(requests'range);
-signal  grants_int       : unsigned(requests'range);
-signal  grants_last      : unsigned(requests'range);
-signal  grants_mask      : unsigned(requests'range);
-signal  req_vec_f_edge   : unsigned(requests'range);
-signal  req_f_edge       : std_logic;
+  constant ZEROS         : unsigned(requests'range) := (others => '0');
+  signal  requests_int     : unsigned(requests'range);
+  signal  requests_masked_twos    : unsigned(requests'range);
+  signal  requests_masked  : unsigned(requests'range);
+  signal  requests_last    : unsigned(requests'range);
+  signal  grants_int       : unsigned(requests'range);
+  signal  grants_last      : unsigned(requests'range);
+  signal  grants_mask      : unsigned(requests'range);
+  signal  req_vec_f_edge   : unsigned(requests'range);
+  signal  req_f_edge       : std_logic;
 
 
 begin
@@ -97,13 +97,13 @@ begin
           grants_last    <= grants_int;
         end if;
         if reset = '1' then
-          grants       <= (others => '0');
+          grants_int       <= ZEROS;
           grants_last      <= (others => '0');
           requests_last    <= (others => '0');
         end if;
     end if;
 end process;
     
-grants   <= std_logic_vector(grants);
+grants   <= std_logic_vector(grants_int);
 
 end architecture;
