@@ -31,6 +31,14 @@ architecture th of memories_th is
   alias rusedwds : std_logic_vector(4 downto 0) is read_side_reads(12 downto 8);
   alias rempty : std_logic is read_side_reads(13);
 
+  signal dpr_write_side_control : std_logic_vector(12 downto 0);
+  alias dpr_write : std_logic is dpr_write_side_control(12);
+  alias dpr_waddr : std_logic_vector(3 downto 0) is dpr_write_side_control(11 downto 8);
+  alias dpr_wdata : std_logic_vector(7 downto 0) is dpr_write_side_control(7 downto 0);
+
+  signal dpr_raddr : std_logic_vector(3 downto 0);
+  signal dpr_rdata : std_logic_vector(7 downto 0);
+
 begin
 
     -- set up 2 fastish, un-related clocks for the sim
@@ -41,6 +49,9 @@ begin
     clk_b   <= not clk_b after 5 ns;
     reset_b <= '0' after 220 ns;
 
+    --------------------------------------------------------------------------------
+    -- Dual clock FIFO DUT
+    --------------------------------------------------------------------------------
     -- Simple show-ahead fifo for testing
     show_ahead_dcfifo_dut: entity work.dcfifo_xpm
         generic map
@@ -89,4 +100,47 @@ begin
           gpio_in => read_side_reads, 
           gpio_out(0) => read_req
       );
+      
+      --------------------------------------------------------------------------------
+      -- Dual Port RAM DUT
+      --------------------------------------------------------------------------------
+      simple_dpr_dut: entity work.dual_clock_simple_dpr
+        generic map(
+            DATA_WIDTH => 8,
+            NUM_WORDS => 16,
+            REG_OUTPUT => false
+        )
+        port map(
+            wclk => clk_a,
+            waddr => dpr_waddr,
+            wdata =>  dpr_wdata,
+            wren => dpr_write,
+            rclk  => clk_b,
+            raddr => dpr_raddr,
+            rdata => dpr_rdata
+        );
+
+        dpr_write_side_gpios: entity work.sim_gpio
+        generic map(
+            OUT_NUM_BITS => 13,
+            IN_NUM_BITS => 1,
+            ACTOR_NAME => "dpr_write_side"
+        )
+        port map(
+            clk => clk_a,
+            gpio_in(0) => '0', 
+            gpio_out => dpr_write_side_control
+        );
+  
+        dpr_read_side_gpios: entity work.sim_gpio
+        generic map(
+            OUT_NUM_BITS => 4,
+            IN_NUM_BITS => 8,
+            ACTOR_NAME => "dpr_read_side"
+        )
+        port map(
+            clk => clk_b,
+            gpio_in => dpr_rdata, 
+            gpio_out => dpr_raddr
+        );
 end th;

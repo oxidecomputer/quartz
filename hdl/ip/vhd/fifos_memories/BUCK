@@ -11,11 +11,21 @@ vhdl_unit(
 )
 
 vhdl_unit(
+    name = "dual_clock_simple_dpr",
+    srcs = ["dual_clock_simple_dpr.vhd",],
+    deps = [
+        "//hdl/ip/vhd/utilities:calc_pkg",
+        ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
     name = "memories_tb",
     is_tb = True,
     srcs = glob(["sims/*.vhd"]),
     deps = [
         ":dcfifo_xpm",
+        ":dual_clock_simple_dpr",
         "//hdl/ip/vhd/vunit_components:sim_gpio"
     ]
 )
