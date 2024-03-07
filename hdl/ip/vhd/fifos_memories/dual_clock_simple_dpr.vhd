@@ -38,15 +38,14 @@ port(
     --! Read-side interface clock
     rclk  : in  std_logic;
     --! Read address, sync'd to rclk domain
-    raddr : in  std_logic_vector(log2ceil(NUM_WORDS) - 1 downto 0); --rclk domain
+    raddr : in  std_logic_vector(log2ceil(NUM_WORDS) - 1 downto 0);
     --! Read data, sync'd to rclk domain
     rdata : out std_logic_vector(DATA_WIDTH - 1 downto 0)
 );
 end dual_clock_simple_dpr;
 
 architecture rtl of dual_clock_simple_dpr is
-    type ram_type is array (NUM_WORDS - 1 downto 0) of std_logic_vector(wdata'range);
-    -- Declare the RAM signal.	
+    type ram_type is array (NUM_WORDS - 1 downto 0) of std_logic_vector(wdata'range);	
     signal ram : ram_type;
 begin
     -- Write side interface
@@ -59,6 +58,7 @@ begin
         end if;
     end process;
     
+    -- Read-side interface
     out_reg: if REG_OUTPUT = true generate
         process(rclk)
         begin

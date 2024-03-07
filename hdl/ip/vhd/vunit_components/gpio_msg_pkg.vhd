@@ -17,15 +17,17 @@ package gpio_msg_pkg is
     constant read_msg : msg_type_t := new_msg_type("read");
     constant read_reply_msg : msg_type_t := new_msg_type("read_reply");
 
+    constant GPIO_MESAGE_DATA_WDITH : integer := 32;
+
     procedure set_gpio(
         signal net : inout network_t;
         constant actor: actor_t;
-        variable data: in std_logic_vector(31 downto 0)
+        variable data: in std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0)
     );
     procedure get_gpio(
         signal net : inout network_t;
         constant actor: actor_t;
-        variable data: out std_logic_vector(31 downto 0)
+        variable data: out std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0)
     );
    
 
@@ -37,7 +39,7 @@ package body gpio_msg_pkg is
     procedure set_gpio(
         signal net : inout network_t;
         constant actor: actor_t;
-        variable data: in std_logic_vector(31 downto 0)
+        variable data: in std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0)
     ) is
         variable request_msg: msg_t := new_msg(write_msg);
     begin
@@ -49,7 +51,7 @@ package body gpio_msg_pkg is
     procedure get_gpio(
         signal net : inout network_t;
         constant actor: actor_t;
-        variable data: out std_logic_vector(31 downto 0)
+        variable data: out std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0)
     ) is
         variable request_msg: msg_t := new_msg(read_msg);
         variable reply_msg: msg_t;

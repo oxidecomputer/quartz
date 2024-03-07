@@ -14,41 +14,41 @@ context vunit_lib.com_context;
 
 use work.gpio_msg_pkg.all;
 
-package arb_sim_pkg is
+package arbiter_sim_pkg is
 
     procedure set_arb(
         signal net : inout network_t;
-        variable data: in std_logic_vector(2 downto 0)
+        variable msg_target :in actor_t;
+        variable data: in std_logic_vector
     );
     procedure get_grant(
         signal net : inout network_t;
-        variable data: out std_logic_vector(2 downto 0)
+        variable msg_target :in actor_t;
+        variable data: out std_logic_vector
     );
 
 end package;
 
-package body arb_sim_pkg is
+package body arbiter_sim_pkg is
 
     procedure set_arb(
         signal net : inout network_t;
-        variable data: in std_logic_vector(2 downto 0)
+        variable msg_target :in actor_t;
+        variable data: in std_logic_vector
     ) is
-        variable msg_target : actor_t;
-        variable send_data: std_logic_vector(31 downto 0) := (others => '0');
+        variable send_data: std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0) := (others => '0');
     begin
-        msg_target := find("arb_ctrl");
-        send_data(2 downto 0) := data;
+        send_data(data'range) := data;
         set_gpio(net, msg_target, send_data);
     end;
     procedure get_grant(
         signal net : inout network_t;
-        variable data: out std_logic_vector(2 downto 0)
+        variable msg_target :in actor_t;
+        variable data: out std_logic_vector
     ) is
-        variable msg_target : actor_t;
-        variable get_data: std_logic_vector(31 downto 0) := (others => '0');
+        variable get_data: std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0) := (others => '0');
     begin
-        msg_target := find("arb_ctrl");
         get_gpio(net, msg_target, get_data);
-        data := get_data(2 downto 0);
+        data := get_data(data'range);
     end;
 end package body;   

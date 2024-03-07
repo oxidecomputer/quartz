@@ -16,8 +16,8 @@ use ieee.numeric_std.all;
 --! is intended for "infrequent" (with respect to both clock frequencies)
 --! data changes, where we don't want to use a FIFO. Note that for data
 --! that does change frequently w.r.t. the clocks, a FIFO is probably the
-
 --! right answer.
+--! The initialism bacd stands for bus-across-clock-domains.
 --! The logic consuming the `bus_b` output can make no assumptions about
 --! the validity of the `bus_b`
 --! This is a handshake synchronizer, using pacd for the handshakes.
@@ -139,7 +139,9 @@ begin
   else
     generate
       -- Pass through without extra register stages. This means
-      -- when valid
+      -- the bus is really only guaranteed valid for the cycle
+      -- where datavalid_latch is also asserted and must be
+      -- captured by downstream logic at this time.
       bus_latch       <= bus_latch_reg_internal;
       datavalid_latch <= handshake_from_launch;
     end generate;

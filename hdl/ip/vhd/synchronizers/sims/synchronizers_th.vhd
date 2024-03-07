@@ -35,10 +35,8 @@ begin
   clk_b   <= not clk_b after 5 ns;
   reset_b <= '0' after 220 ns;
 
-  -- Instantiate the DUTs here
-
   -- Bus across clock domains
-  bacd_inst : entity work.bacd
+  dut_bacd_inst : entity work.bacd
     generic
     map (
     ALWAYS_VALID_IN_B => false
@@ -80,50 +78,5 @@ begin
     clk_latch       => clk_b,
     pulse_out_latch => tacd_latch_out
     );
-  -- bacd2_inst : entity work.bacd
-  --   generic
-  --   map (
-  --   ALWAYS_VALID_IN_B => true
-  --   )
-  --   port
-  --   map (
-  --   reset_launch    => reset_launch,
-  --   clk_launch      => clk_launch,
-  --   write_launch    => write_launch,
-  --   bus_launch      => bus_launch,
-  --   write_allowed   => write_allowed,
-  --   reset_latch     => reset_latch,
-  --   clk_latch       => clk_latch,
-  --   datavalid_latch => datavalid_latch,
-  --   bus_latch       => bus_latch
-  --   );
-
-  -- -- reset bridge
-  -- async_reset_bridge_inst : entity work.async_reset_bridge
-  --   generic
-  --   map (
-  --   ASYNC_RESET_ACTIVE_LEVEL => ASYNC_RESET_ACTIVE_LEVEL
-  --   )
-  --   port
-  --   map (
-  --   clk         => clk_b,
-  --   reset_async => reset_async,
-  --   reset_sync  => reset_sync
-  --   );
-
-  -- -- basic meta filter
-  -- meta_sync_inst : entity work.meta_sync
-  --   generic
-  --   map (
-  --   STAGES => 2
-  --   )
-  --   port
-  --   map (
-  --   async_input  => async_input,
-  --   clk          => clk_b,
-  --   sycnd_output => sycnd_output
-  --   );
-
-  
 
 end architecture;

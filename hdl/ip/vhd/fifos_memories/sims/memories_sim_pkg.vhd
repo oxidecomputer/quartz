@@ -24,17 +24,6 @@ package memories_sim_pkg is
         signal net : inout network_t;
         variable data: out std_logic_vector(7 downto 0)
     );
-    -- procedure read_write_flags(
-    --     signal net : inout network_t;
-    --     variable wfull: out std_logic;
-    --     variable wusedwds: out unsigned(3 downto 0)
-    -- );
-    -- procedure read_read_flags(
-    --     signal net : inout network_t;
-    --     variable rempty: out std_logic;
-    --     variable rusedwds: out unsigned(3 downto 0)
-    -- );
-
     procedure write_dpr(
         signal net : inout network_t;
         variable addr: in std_logic_vector(3 downto 0);
@@ -86,22 +75,6 @@ package body memories_sim_pkg is
         data := get_data(7 downto 0);
 
     end procedure;
-    -- procedure read_write_flags(
-    --     signal net : inout network_t;
-    --     variable wfull: out std_logic;
-    --     variable wusedwds: out unsigned(3 downto 0)
-    -- ) is
-    -- begin
-
-    -- end procedure;
-    -- procedure read_read_flags(
-    --     signal net : inout network_t;
-    --     variable rempty: out std_logic;
-    --     variable rusedwds: out unsigned(3 downto 0)
-    -- ) is
-    -- begin
-
-    -- end procedure;
     
     procedure write_dpr(
         signal net : inout network_t;
