@@ -517,14 +517,6 @@ addrmap gimlet_seq_fpga {
     reg {
         name = "General AMD readbacks";
         field {
-            desc = "NIC_PWREN (inversion of net SP3_TO_SP_NIC_PWREN_L), available on C and newer Gimlets.
-                   When Asserted high in this register, the net is active low, and NIC power is expected to
-                   be commanded on by Hubris (see NIC_CTRL register).  This is a readback-only view, no 
-                   autonomous FPGA action occurs on the status of this pin, Hubris also monitors and takes
-                   action.  Only valid in A0 and higher power states but is a simple pass-through in the
-                   FPGA, no gating logic";
-        } NIC_PWREN[1] = 0;
-        field {
             desc = "inverted CPU's thermtrip_L, 500ms to shut down power planes into S5 state. De-assertion of PWROK resets THERMTRIP_L";
         } THERMTRIP[1] = 0;
         field {
@@ -536,6 +528,14 @@ addrmap gimlet_seq_fpga {
                     system.  The  FCH  may  actually  control  this  being  generated  via  the
                     FCH::PM::RESETCONTROL2 register. ";
         } PWRGD_OUT[1] = 0;
+        field {
+            desc = "NIC_PWREN (inversion of net SP3_TO_SP_NIC_PWREN_L), available on C and newer Gimlets.
+                   When Asserted high in this register, the net is active low, and NIC power is expected to
+                   be commanded on by Hubris (see NIC_CTRL register).  This is a readback-only view, no 
+                   autonomous FPGA action occurs on the status of this pin, Hubris also monitors and takes
+                   action.  Only valid in A0 and higher power states but is a simple pass-through in the
+                   FPGA, no gating logic";
+        } NIC_PWREN[1] = 0;
     } AMD_STATUS;
   
     // We use this type to create both a status register for reading outputs
