@@ -17,3 +17,14 @@ vhdl_unit(
     srcs = ["transforms_pkg.vhd",],
     visibility = ['PUBLIC'],
 )
+
+vhdl_unit(
+    name = "utilities_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":transforms_pkg", 
+        ":time_pkg", 
+        ":calc_pkg",
+    ]
+)
