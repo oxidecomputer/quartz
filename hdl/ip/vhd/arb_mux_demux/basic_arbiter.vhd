@@ -54,7 +54,7 @@ architecture rtl of basic_arbiter is
 
 begin
     requests_int  <= unsigned(requests);
-round_robbin_mode: if PRIORITY = false generate
+round_robin_mode: if PRIORITY = false generate
     -- This uses a grant-masking scheme to generate round-robin grant behavior.
     -- We want to mask off the previous granted channel and any lower bits
     -- so the upper bits get a round-robin chance.

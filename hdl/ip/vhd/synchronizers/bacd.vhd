@@ -15,7 +15,8 @@ use ieee.numeric_std.all;
 --! two clock domains. This is implemented in flipflops only, and
 --! is intended for "infrequent" (with respect to both clock frequencies)
 --! data changes, where we don't want to use a FIFO. Note that for data
---! that does change frequently wrt the clocks, a FIFO is probably the
+--! that does change frequently w.r.t. the clocks, a FIFO is probably the
+
 --! right answer.
 --! The logic consuming the `bus_b` output can make no assumptions about
 --! the validity of the `bus_b`

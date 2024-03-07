@@ -38,10 +38,11 @@ architecture rtl of meta_sync is
     attribute SHREG_EXTRACT : string;
     attribute ASYNC_REG     : string;
     attribute RLOC          : string;
-    -- Guard against SRL16 inference in case reset is unused
     -- We want flipflops, not LUT-based shift registers here
     attribute SHREG_EXTRACT of sr : signal is "no";
+    -- Guard against SRL16 inference in case reset is unused
     attribute ASYNC_REG of sr     : signal is "TRUE";
+
 begin
 
     multi_reg_gen : if STAGES > 1 generate

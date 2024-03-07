@@ -28,7 +28,8 @@ use ieee.numeric_std.all;
 --! the resets into both domains to provide a consistent view, or be
 --! very selective about which flops are reset. Because this is a 
 --! toggle synchronizer, the actual state of the line going between
---! domains doesn't matter and changes on every risign edge, were
+--! domains doesn't matter and changes on every rising edge, where
+
 --! in the catching domain, any line toggle generates a pulse out.
 --! Spurious edges in the output domain could be issued if resets
 --! in the sending domain are asserted and change the state of the
@@ -65,10 +66,11 @@ signal b_sr                  : unsigned(2 downto 0) := (others => '0');  --! syn
 attribute SHREG_EXTRACT : string;
 attribute ASYNC_REG     : string;
 attribute RLOC          : string;
--- Guard against SRL16 inference in case Reset is unused
 -- We want flipflops, not LUT-based shift registers here
 attribute SHREG_EXTRACT of b_sr : signal is "no";
+-- Guard against SRL16 inference in case Reset is unused
 attribute ASYNC_REG of b_sr     : signal is "TRUE";
+
 
 begin
 
