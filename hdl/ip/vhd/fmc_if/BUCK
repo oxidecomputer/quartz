@@ -1,0 +1,18 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "stm32h7_fmc_model",
+    srcs = glob(["model/*.vhd"]),
+    deps = [],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "fmc_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":stm32h7_fmc_model",
+    ],
+    visibility = ['PUBLIC'],
+)
