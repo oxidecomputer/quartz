@@ -78,10 +78,10 @@ architecture rtl of tacd is
 begin
 
   --! Input edge detector and toggled line registers in the
-  --! `clk_latch` domain
-  clk_latch_regs : process (clk_latch)
+  --! `clk_launch` domain
+  clk_launch_regs : process (clk_launch)
   begin
-    if rising_edge(clk_latch) then
+    if rising_edge(clk_launch) then
       pulse_in_launch_last <= pulse_in_launch;
       -- Toggle the line going between the designs on every rising edge of the input
       if pulse_in_launch_redge = '1' then

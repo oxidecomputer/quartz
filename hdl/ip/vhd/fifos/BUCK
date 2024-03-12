@@ -1,0 +1,22 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "dcfifo_xpm",
+    srcs = ["dcfifo_xpm.vhd",],
+    deps = [
+        "//vnd/xpm:xpm",
+        "//hdl/ip/vhd/utilities:calc_pkg",
+        ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "fifos_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":dcfifo_xpm",
+        "//hdl/ip/vhd/vunit_components:sim_gpio"
+    ],
+    visibility = ['PUBLIC'],
+)

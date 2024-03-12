@@ -26,5 +26,6 @@ vhdl_unit(
         ":transforms_pkg", 
         ":time_pkg", 
         ":calc_pkg",
-    ]
+    ],
+    visibility = ['PUBLIC'],
 )

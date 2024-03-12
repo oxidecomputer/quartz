@@ -35,5 +35,6 @@ vhdl_unit(
         ":async_reset_bridge", 
         ":tacd",
         "//hdl/ip/vhd/vunit_components:sim_gpio"
-    ]
+    ],
+    visibility = ['PUBLIC'],
 )

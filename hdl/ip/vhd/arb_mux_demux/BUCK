@@ -16,5 +16,6 @@ vhdl_unit(
     deps = [
         ":arbiter",
         "//hdl/ip/vhd/vunit_components:sim_gpio"
-    ]
+    ],
+    visibility = ['PUBLIC'],
 )

@@ -12,16 +12,16 @@ library vunit_lib;
 context vunit_lib.com_context;
 context vunit_lib.vunit_context;
 
-use work.memories_sim_pkg.all;
+use work.fifos_sim_pkg.all;
 
-entity memories_tb is
+entity fifos_tb is
   generic
     (runner_cfg : string);
 end entity;
 
-architecture tb of memories_tb is
+architecture tb of fifos_tb is
 begin
-  th : entity work.memories_th;
+  th : entity work.fifos_th;
 
   bench : process
     -- Note: External names are broken in GHDL llvm backends https://github.com/ghdl/ghdl/issues/2610
@@ -33,7 +33,6 @@ begin
 
     variable write_data : std_logic_vector(7 downto 0);
     variable read_data : std_logic_vector(7 downto 0);
-    variable dpr_addr : std_logic_vector(3 downto 0);
 
 
   begin
@@ -55,24 +54,6 @@ begin
         pop_fifo(net, read_data);
         --check read-side data
         check_equal(read_data, write_data, "Mismatch detected");
-      elsif run("basic_dpr_test") then
-         -- load fifo with data
-         write_data := X"AA";
-         dpr_addr := X"0";
-         write_dpr(net, dpr_addr, write_data);
-         write_data := X"55";
-         dpr_addr := X"1";
-         write_dpr(net, dpr_addr, write_data);
-         wait for 1 us;
-         read_dpr(net, dpr_addr, read_data);
-         --check read-side data
-         check_equal(read_data, write_data, "Mismatch detected");
-         
-         write_data := X"AA";
-         dpr_addr := X"0";
-         read_dpr(net, dpr_addr, read_data);
-         --check read-side data
-         check_equal(read_data, write_data, "Mismatch detected");
       end if;
     end loop;
     wait for 1 us;

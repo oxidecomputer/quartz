@@ -1,16 +1,6 @@
 load("//tools:hdl.bzl", "vhdl_unit")
 
 vhdl_unit(
-    name = "dcfifo_xpm",
-    srcs = ["dcfifo_xpm.vhd",],
-    deps = [
-        "//vnd/xpm:xpm",
-        "//hdl/ip/vhd/utilities:calc_pkg",
-        ],
-    visibility = ["PUBLIC"],
-)
-
-vhdl_unit(
     name = "dual_clock_simple_dpr",
     srcs = ["dual_clock_simple_dpr.vhd",],
     deps = [
@@ -24,8 +14,8 @@ vhdl_unit(
     is_tb = True,
     srcs = glob(["sims/*.vhd"]),
     deps = [
-        ":dcfifo_xpm",
         ":dual_clock_simple_dpr",
         "//hdl/ip/vhd/vunit_components:sim_gpio"
-    ]
+    ],
+    visibility = ['PUBLIC'],
 )

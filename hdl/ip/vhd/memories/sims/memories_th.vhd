@@ -57,7 +57,8 @@ begin
         generic map
         (
           FIFO_WRITE_DEPTH => 16,
-          DATA_WIDTH => 8
+          DATA_WIDTH => 8,
+          SHOWAHEAD_MODE => true
         )
         port map
         (

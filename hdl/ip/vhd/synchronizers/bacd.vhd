@@ -89,7 +89,11 @@ begin
   --! and start the handshake across
   regs_in_a : process (clk_launch, reset_launch)
   begin
-    if rising_edge(clk_launch) then
+    if reset_launch then
+      write_in_progress <= '0';
+      bus_launch_reg    <= (others => '0');
+      write_a_in_last   <= '0'; 
+    elsif rising_edge(clk_launch) then
       write_a_in_last <= write_a_in_masked;
       -- On a rising edge of the write signal, latch the 
       -- bus in the `clk_a` domain, so long as we're not in the
@@ -99,39 +103,30 @@ begin
         bus_launch_reg    <= bus_launch;
         write_in_progress <= '1';
         --Once we get the handshake back, clear write_in_progress
-      elsif handshake_from_latch = '1' then
+      elsif handshake_from_latch then
         write_in_progress <= '0';
       end if;
-
-      -- sync reset
-      if reset_launch = '1' then
-        write_in_progress <= '0';
-        bus_launch_reg    <= (others => '0');
-        write_a_in_last   <= '0';
-      end if;
-
     end if;
   end process;
 
   -- Register 
   regs_b : process (clk_latch, reset_latch)
   begin
-    if rising_edge(clk_latch) then
+    if reset_latch then
+      bus_latch_reg_internal <= (others => '0');
+    elsif rising_edge(clk_latch) then
       bus_latch_reg_internal <= bus_launch_reg;
     end if;
   end process;
   extra_reg_gen : if ALWAYS_VALID_IN_B generate
     extra_regs_b : process (clk_latch, reset_latch)
     begin
-      if rising_edge(clk_latch) then
-        if handshake_from_launch = '1' then
+      if reset_latch then
+        datavalid_latch <= '0';
+      elsif rising_edge(clk_latch) then
+        if handshake_from_launch then
           bus_latch       <= bus_latch_reg_internal;
           datavalid_latch <= '1';
-        end if;
-
-        --sync reset, don't care about bus_b here
-        if reset_latch = '1' then
-          datavalid_latch <= '0';
         end if;
       end if;
     end process;

@@ -1,0 +1,14 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "ip_regression_tb",
+    is_tb = True,
+    srcs = [],
+    deps = [
+        "//hdl/ip/vhd/arb_mux_demux:arbiter_tb", 
+        "//hdl/ip/vhd/fifos:fifos_tb",
+        "//hdl/ip/vhd/memories:memories_tb",
+        "//hdl/ip/vhd/synchronizers:synchronizers_tb",
+        "//hdl/ip/vhd/utilities:utilities_tb",
+    ]
+)

@@ -84,7 +84,11 @@ begin
 
     the_arbiter : process (clk)
     begin
-      if rising_edge(clk) then
+      if reset then
+        grants_int    <= ZEROS;
+        grants_last   <= (others => '0');
+        requests_last <= (others => '0');
+      elsif rising_edge(clk) then
         -- Store history for edge detector
         requests_last <= requests_int;
         -- To determine a grant, we take the currently active requests vector,
@@ -98,11 +102,6 @@ begin
           -- requests cause arbitration updates and we save the current grant for use in round-robin
           -- arbitration next time.
           grants_last <= grants_int;
-        end if;
-        if reset then
-          grants_int    <= ZEROS;
-          grants_last   <= (others => '0');
-          requests_last <= (others => '0');
         end if;
       end if;
     end process;
