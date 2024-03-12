@@ -71,11 +71,20 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     # children of *every* source. This is most conservatively safe, and since the TSets are
     # merged in buck2 and shared DAG segments are only emmitted once when projecting, this
     # is pretty in-expensive.
+
+    # We don't allow empty sources unless this is a testbench since it could be a combined
+    # simulation target that just loads other simulations for regression runs etc
+    if len(ctx.attrs.srcs) == 0 and (not ctx.attrs.is_tb):
+        fail("Empty srcs list found, and not a test_bench. Bad glob maybe?")
+
+    # Deal with testbench that is just a wrapper, meaning it has no sources itself so we use
+    # the deps as the top set vs adding the deps to each of the sources
     if len(ctx.attrs.srcs) == 0:
-        fail("Empty srcs list found. Bad glob maybe?")
-    tops = [
-        ctx.actions.tset(UnitTSet, value=(x, ctx.attrs.library), children=deps_tset) for x in ctx.attrs.srcs
-    ]
+        tops = deps_tset
+    else:
+        tops = [
+            ctx.actions.tset(UnitTSet, value=(x, ctx.attrs.library), children=deps_tset) for x in ctx.attrs.srcs
+        ]
     top_tset = ctx.actions.tset(UnitTSet, children=tops)
 
     providers.append(

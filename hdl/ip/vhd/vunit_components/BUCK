@@ -1,0 +1,15 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:rdl.bzl", "rdl_file")
+
+vhdl_unit(
+    name = "gpio_msg_pkg",
+    srcs = ["gpio_msg_pkg.vhd",],
+    codec_package = "gpio_msg_pkg_codec",
+    visibility = ['PUBLIC'],
+)
+vhdl_unit(
+    name = "sim_gpio",
+    srcs = ["sim_gpio.vhd",],
+    deps = [":gpio_msg_pkg"],
+    visibility = ['PUBLIC'],
+)

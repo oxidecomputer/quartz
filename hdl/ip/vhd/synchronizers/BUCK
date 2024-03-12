@@ -1,0 +1,40 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "meta_sync",
+    srcs = ["meta_sync.vhd",],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "async_reset_bridge",
+    srcs = ["async_reset_bridge.vhd",],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "tacd",
+    srcs = ["tacd.vhd",],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "bacd",
+    srcs = ["bacd.vhd",],
+    deps = [":tacd"],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "synchronizers_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":bacd", 
+        ":meta_sync", 
+        ":async_reset_bridge", 
+        ":tacd",
+        "//hdl/ip/vhd/vunit_components:sim_gpio"
+    ],
+    visibility = ['PUBLIC'],
+)
