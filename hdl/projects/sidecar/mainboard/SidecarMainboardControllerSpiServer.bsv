@@ -5,6 +5,7 @@ export SpiResponse(..);
 export SpiServer(..);
 export mkSpiServer;
 
+import BuildVector::*;
 import ClientServer::*;
 import ConfigReg::*;
 import Connectable::*;
@@ -13,6 +14,7 @@ import GetPut::*;
 import OInt::*;
 import Vector::*;
 
+import CounterRAM::*;
 import git_version::*;
 import RegCommon::*;
 import WriteOnceReg::*;
@@ -27,122 +29,117 @@ import Tofino2Sequencer::*;
 import TofinoDebugPort::*;
 
 
-typedef struct {
-    RegOps op;
-    UInt#(8) address;
-    Bit#(8) wdata;
-} PageRequest deriving (Bits, Eq);
-
-instance DefaultValue#(PageRequest);
-    defaultValue =
-        PageRequest {
-            op: NOOP,
-            address: ?,
-            wdata: ?};
-endinstance
-
 module mkSpiServer #(
         Tofino2Sequencer::Registers tofino,
         TofinoDebugPort::Registers tofino_debug_port,
         PCIeEndpointController::Registers pcie,
-        Vector#(n_ignition_controllers, IgnitionController::Registers) ignition_pages,
+        IgnitionController::Controller#(n_ignition_controllers) ignition,
         Vector#(4, FanModuleRegisters) fans,
         Reg#(PowerRailState) front_io_hsc)
             (SpiServer)
                 provisos (
-                    Add#(n_ignition_controllers, 4, n_pages),
-                    Add#(TLog#(n_pages), a__, 8),
-                    Add#(TLog#(n_ignition_controllers), b__, 8),
-                    // Less than 40 Ignition Controllers.
-                    Add#(n_ignition_controllers, c__, 40));
+                    NumAlias#(6, n_pages),
+                    // Allow up to 64 Ignition Controllers given the SPI address
+                    // width and the way Controllers are mapped into this space.
+                    Add#(TLog#(n_ignition_controllers), a__, 6),
+                    Add#(n_ignition_controllers, b__, 64));
     Wire#(SpiRequest) in <- mkWire();
     Wire#(SpiResponse) out <- mkWire();
 
-    // The fan-in of requests and fan-out for responses is becoming wide,
-    // especially once Ignition Controller pages are added. In order to allow
-    // the placement process more freedom, latch the incoming request and
-    // generate a one-hot page select signal from the address MSB. In addition,
-    // a response register is allocated per page and the one-hot selector is
-    // used to select the appropriate response. This reduces the demux required
-    // to drive the response.
-    //
-    // This does come at the expense of one cycle to route the request to the
-    // selected page and one cycle to collect the response.
-    Vector#(n_pages, Reg#(Maybe#(PageRequest))) page_request <- replicateM(mkConfigReg(tagged Invalid));
-    Vector#(n_pages, Reg#(SpiResponse)) page_response <- replicateM(mkConfigRegU());
-    Reg#(Maybe#(OInt#(n_pages))) response_select <- mkRegU();
+    Reg#(Maybe#(OInt#(n_pages))) response_select <- mkReg(tagged Invalid);
+    Reg#(UInt#(4)) cycles_until_response_needed <- mkRegU();
 
-    Reg#(Bool) request_in_progress <- mkDReg(False);
-    Reg#(Bool) select_response <- mkDReg(False);
+    RegisterPage page0 <- mkPage0(fans, front_io_hsc);
+    RegisterPage page1 <- mkPage1(tofino, pcie);
+    RegisterPage page2 <- mkPage2(tofino_debug_port);
+    RegisterPage ignition_general_page <-
+            mkIgnitionGeneralPage(ignition);
+    RegisterPage ignition_registers_page <-
+            mkIgnitionRegistersPage(ignition.registers);
+    RegisterPage ignition_counters_page <-
+            mkIgnitionCountersPage(ignition.counters);
+
+    Vector#(n_pages, RegisterPage) pages =
+            vec(page0,
+                page1,
+                page2,
+                ignition_general_page,
+                ignition_registers_page,
+                ignition_counters_page);
 
     (* fire_when_enabled *)
     rule do_select_page (!isValid(response_select));
-        let page = in.address[15:8];
-        let page_limit = fromInteger(valueOf(n_pages));
+        function ActionValue#(Bool)
+                offer_request(RegisterPage page) = page.offer(in);
 
-        request_in_progress <= True;
-        response_select <=
-            page < page_limit && in.op == READ ?
-                tagged Valid toOInt(truncate(page)) :
-                tagged Invalid;
-    endrule
+        // Dispatch the incoming request to all pages, calling their `offer`
+        // method. This returns a vector of booleans indicating whether or not
+        // the page accepted the request. The assumption is that the acceptance
+        // criteria of the pages are mutually exclusive, resulting in the vector
+        // containing zero or one True values.
+        let accepted <- mapM(offer_request, pages);
 
-    for (Integer i = 0; i < valueOf(n_pages); i = i + 1) begin
-        let page_selected = (in.address[15:8] == fromInteger(i));
-
-        (* fire_when_enabled *)
-        rule do_request_from_page (page_selected && !isValid(page_request[i]));
-            page_request[i] <= tagged Valid
-                PageRequest {
-                    op: in.op,
-                    address: unpack(in.address[7:0]),
-                    wdata: in.wdata};
-        endrule
-    end
-
-    (* fire_when_enabled *)
-    rule do_complete_request (request_in_progress && isValid(response_select));
-        select_response <= True;
+        if (\or (accepted)) begin
+            // If one of the accept bits is set, store the vector as OInt,
+            // allowing one-hot selection of the response.
+            response_select <= tagged Valid unpack(pack(accepted));
+            cycles_until_response_needed <= 8;
+        end
+        else begin
+            out <= SpiResponse {readdata: 'h00};
+        end
     endrule
 
     (* fire_when_enabled *)
-    rule do_select_response (select_response && isValid(response_select));
-        if (response_select matches tagged Valid .i)
-            out <= select(readVReg(page_response), i);
-        else
-            out <= SpiResponse {readdata: 8'h00};
+    rule do_select_response (response_select matches tagged Valid .i);
+        function read_page(page) = page.read;
 
-        response_select <= tagged Invalid;
+        if (cycles_until_response_needed == 0) begin
+            out <= select(map(read_page, pages), i);
+            response_select <= tagged Invalid;
+        end
+        else begin
+            cycles_until_response_needed <= cycles_until_response_needed - 1;
+        end
     endrule
 
-    //
-    // Guard helpers for rules responding to page requests.
-    //
+    interface Put request;
+        method put if (!isValid(response_select)) = in._write;
+    endinterface
 
-    function Maybe#(PageRequest) read_page(Integer i) =
-        case (page_request[i]) matches
-            tagged Valid .r &&& (r.op == READ): page_request[i];
-            default: tagged Invalid;
-        endcase;
+    interface Get response = toGet(asIfc(out));
+endmodule
 
-    function Maybe#(PageRequest) update_page(Integer i) =
-        case (page_request[i]) matches
-            tagged Valid .r &&& (r.op != NOOP &&& r.op != READ):
-                page_request[i];
-            default: tagged Invalid;
-        endcase;
+//
+// Register pages
+//
 
-    //
-    // Page 0
-    //
+interface RegisterPage;
+    method ActionValue#(Bool) offer(SpiRequest request);
+    method SpiResponse read();
+endinterface
+
+//
+// Page 0
+//
+
+module mkPage0 #(
+            Vector#(4, FanModuleRegisters) fans,
+            Reg#(PowerRailState) front_io_hsc)
+                (RegisterPage);
+    Reg#(SpiResponse) response <- mkConfigRegU();
+    Reg#(Maybe#(RegOps)) maybe_op <- mkReg(tagged Invalid);
+    Reg#(Bit#(8)) address <- mkRegU();
+    Reg#(Bit#(8)) wdata <- mkRegU();
 
     ConfigReg#(Scratchpad) scratchpad <- mkConfigReg(unpack('0));
-    Vector#(4, ConfigReg#(Bit#(8))) checksum <- replicateM(mkWriteOnceConfigReg(0));
+    Vector#(4, ConfigReg#(Bit#(8)))
+            checksum <- replicateM(mkWriteOnceConfigReg(0));
 
     (* fire_when_enabled *)
-    rule do_page0_read (read_page(0) matches tagged Valid .request);
+    rule do_page1_read (maybe_op matches tagged Valid .op &&& op == READ);
         let reader =
-            case (request.address)
+            case (address)
                 // ID, see RDL for the (default) values.
                 fromOffset(id0Offset): read(Id0'(defaultValue));
                 fromOffset(id1Offset): read(Id1'(defaultValue));
@@ -182,38 +179,62 @@ module mkSpiServer #(
                 default: read(8'hff);
             endcase;
 
-        let data <- reader;
+        let rdata <- reader;
 
-        page_request[0] <= tagged Invalid;
-        page_response[0] <= data;
+        maybe_op <= tagged Invalid;
+        response <= rdata;
     endrule
 
     (* fire_when_enabled *)
-    rule do_page0_update (update_page(0) matches tagged Valid .request);
-        case (request.address)
-            fromOffset(cs0Offset): update(request.op, checksum[0], request.wdata);
-            fromOffset(cs1Offset): update(request.op, checksum[1], request.wdata);
-            fromOffset(cs2Offset): update(request.op, checksum[2], request.wdata);
-            fromOffset(cs3Offset): update(request.op, checksum[3], request.wdata);
-            fromOffset(scratchpadOffset): update(request.op, scratchpad, request.wdata);
-            fromOffset(fan0StateOffset): update(request.op, fans[0].state, request.wdata);
-            fromOffset(fan1StateOffset): update(request.op, fans[1].state, request.wdata);
-            fromOffset(fan2StateOffset): update(request.op, fans[2].state, request.wdata);
-            fromOffset(fan3StateOffset): update(request.op, fans[3].state, request.wdata);
-            fromOffset(frontIoStateOffset): update(request.op, front_io_hsc, request.wdata);
+    rule do_page0_upate (maybe_op matches tagged Valid .op &&& op != READ);
+        case (address)
+            fromOffset(cs0Offset): update(op, checksum[0], wdata);
+            fromOffset(cs1Offset): update(op, checksum[1], wdata);
+            fromOffset(cs2Offset): update(op, checksum[2], wdata);
+            fromOffset(cs3Offset): update(op, checksum[3], wdata);
+            fromOffset(scratchpadOffset): update(op, scratchpad, wdata);
+            fromOffset(fan0StateOffset): update(op, fans[0].state, wdata);
+            fromOffset(fan1StateOffset): update(op, fans[1].state, wdata);
+            fromOffset(fan2StateOffset): update(op, fans[2].state, wdata);
+            fromOffset(fan3StateOffset): update(op, fans[3].state, wdata);
+            fromOffset(frontIoStateOffset): update(op, front_io_hsc, wdata);
         endcase
 
-        page_request[0] <= tagged Invalid;
+        maybe_op <= tagged Invalid;
     endrule
 
-    //
-    // Page 1, Tofino sequencer, PCIe endpoint
-    //
+    method ActionValue#(Bool) offer(SpiRequest request) if (!isValid(maybe_op));
+        let accepted = (request.address[15:8] == 0 && request.op != NOOP);
+
+        if (accepted) begin
+            maybe_op <= tagged Valid request.op;
+            address <= request.address[7:0];
+            wdata <= request.wdata;
+        end
+
+        return accepted;
+    endmethod
+
+    method read = response;
+endmodule
+
+//
+// Page 1, Tofino sequencer, PCIe endpoint
+//
+
+module mkPage1 #(
+            Tofino2Sequencer::Registers tofino,
+            PCIeEndpointController::Registers pcie)
+                (RegisterPage);
+    Reg#(SpiResponse) response <- mkConfigRegU();
+    Reg#(Maybe#(RegOps)) maybe_op <- mkReg(tagged Invalid);
+    Reg#(Bit#(8)) address <- mkRegU();
+    Reg#(Bit#(8)) wdata <- mkRegU();
 
     (* fire_when_enabled *)
-    rule do_page1_read (read_page(1) matches tagged Valid .request);
+    rule do_page1_read (maybe_op matches tagged Valid .op &&& op == READ);
         let reader =
-            case (request.address)
+            case (address)
                 // Tofino sequencer
                 fromOffset(tofinoSeqCtrlOffset): read(tofino.ctrl);
                 fromOffset(tofinoSeqStateOffset): read(tofino.state);
@@ -231,183 +252,244 @@ module mkSpiServer #(
                 fromOffset(tofinoResetOffset): read(tofino.tofino_reset);
                 fromOffset(tofinoMiscOffset): read(tofino.misc);
 
-                // PCIe
+                // PCIe control
                 fromOffset(pcieHotplugCtrlOffset): read(pcie.ctrl);
                 fromOffset(pcieHotplugStatusOffset): read(pcie.status);
 
                 default: read(8'h00);
             endcase;
 
-        let data <- reader;
+        let rdata <- reader;
 
-        page_request[1] <= tagged Invalid;
-        page_response[1] <= data;
+        maybe_op <= tagged Invalid;
+        response <= rdata;
     endrule
 
     (* fire_when_enabled *)
-    rule do_page1_update (update_page(1) matches tagged Valid .request);
-        case (request.address)
-            fromOffset(tofinoSeqCtrlOffset): update(request.op, tofino.ctrl, request.wdata);
-            fromOffset(pcieHotplugCtrlOffset): update(request.op, pcie.ctrl, request.wdata);
+    rule do_page1_update (maybe_op matches tagged Valid .op &&& op != READ);
+        case (address)
+            fromOffset(tofinoSeqCtrlOffset): update(op, tofino.ctrl, wdata);
+            fromOffset(pcieHotplugCtrlOffset): update(op, pcie.ctrl, wdata);
         endcase
 
-        page_request[1] <= tagged Invalid;
+        maybe_op <= tagged Invalid;
     endrule
 
-    //
-    // Page 2, Tofino Debug Port
-    //
+    method ActionValue#(Bool) offer(SpiRequest request) if (!isValid(maybe_op));
+        let accepted = (request.address[15:8] == 1 && request.op != NOOP);
+
+        if (accepted) begin
+            maybe_op <= tagged Valid request.op;
+            address <= request.address[7:0];
+            wdata <= request.wdata;
+        end
+
+        return accepted;
+    endmethod
+
+    method read = response;
+endmodule
+
+//
+// Page 2, Tofino Debug Port
+//
+
+module mkPage2 #(TofinoDebugPort::Registers tofino_debug_port) (RegisterPage);
+    Reg#(SpiResponse) response <- mkConfigRegU();
+    Reg#(Maybe#(RegOps)) maybe_op <- mkReg(tagged Invalid);
+    Reg#(Bit#(8)) address <- mkRegU();
+    Reg#(Bit#(8)) wdata <- mkRegU();
 
     (* fire_when_enabled *)
-    rule do_page2_read (read_page(2) matches tagged Valid .request);
+    rule do_page2_read (maybe_op matches tagged Valid .op &&& op == READ);
         let reader =
-            case (request.address)
-                fromOffset(tofinoDebugPortStateOffset): read(tofino_debug_port.state);
-                fromOffset(tofinoDebugPortBufferOffset): read_volatile(tofino_debug_port.buffer);
+            case (address)
+                fromOffset(tofinoDebugPortStateOffset):
+                        read(tofino_debug_port.state);
+                fromOffset(tofinoDebugPortBufferOffset):
+                        read_volatile(tofino_debug_port.buffer);
                 default: read(8'h00);
             endcase;
 
-        let data <- reader;
+        let rdata <- reader;
 
-        page_request[2] <= tagged Invalid;
-        page_response[2] <= data;
+        maybe_op <= tagged Invalid;
+        response <= rdata;
     endrule
 
     (* fire_when_enabled *)
-    rule do_page2_update (update_page(2) matches tagged Valid .request);
-        case (request.address)
+    rule do_page2_update (maybe_op matches tagged Valid .op &&& op != READ);
+        case (address)
             fromOffset(tofinoDebugPortStateOffset):
-                update(request.op, tofino_debug_port.state, request.wdata);
+                update(op, tofino_debug_port.state, wdata);
             fromOffset(tofinoDebugPortBufferOffset):
-                write(WRITE, tofino_debug_port.buffer._write, request.wdata);
+                write(WRITE, tofino_debug_port.buffer._write, wdata);
         endcase
 
-        page_request[2] <= tagged Invalid;
+        maybe_op <= tagged Invalid;
     endrule
 
-    //
-    // Ignition Pages
-    //
+    method ActionValue#(Bool) offer(SpiRequest request) if (!isValid(maybe_op));
+        let accepted = (request.address[15:8] == 2 && request.op != NOOP);
 
-    ConfigReg#(Vector#(5, Bit#(8))) target_present_summary <- mkConfigRegU();
+        if (accepted) begin
+            maybe_op <= tagged Valid request.op;
+            address <= request.address[7:0];
+            wdata <= request.wdata;
+        end
+
+        return accepted;
+    endmethod
+
+    method read = response;
+endmodule
+
+module mkIgnitionGeneralPage
+        #(IgnitionController::Controller#(n_ignition_controllers) ignition)
+            (RegisterPage)
+                provisos (Add#(n_ignition_controllers, a__, 64));
+    Reg#(Maybe#(Bit#(8))) maybe_address <- mkReg(tagged Invalid);
+    Reg#(SpiResponse) response <- mkConfigRegU();
+
+    Vector#(8, Bit#(8)) presence_summary =
+            unpack(extend(pack(ignition.presence_summary)));
 
     (* fire_when_enabled *)
-    rule do_demux_target_present_summary;
-        // Collect a summary of the Target present bits as a 64 bit-vector.
-        function target_present(registers) =
-            registers.controller_state.target_present;
-
-        target_present_summary <=
-            unpack(extend(pack(map(target_present, ignition_pages))));
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_ignition_summary_page_read (
-            read_page(3) matches tagged Valid .request);
+    rule do_get_response (maybe_address matches tagged Valid .address);
         let reader =
-            case (request.address)
+            case (address)
                 fromOffset(ignitionControllersCountOffset):
-                    read(Bit#(8)'(fromInteger(valueOf(n_ignition_controllers))));
-                fromOffset(ignitionTargetsPresent0Offset): read(target_present_summary[0]);
-                fromOffset(ignitionTargetsPresent1Offset): read(target_present_summary[1]);
-                fromOffset(ignitionTargetsPresent2Offset): read(target_present_summary[2]);
-                fromOffset(ignitionTargetsPresent3Offset): read(target_present_summary[3]);
-                fromOffset(ignitionTargetsPresent4Offset): read(target_present_summary[4]);
+                        read(Bit#(8)'(fromInteger(
+                            valueOf(n_ignition_controllers))));
+                fromOffset(ignitionTargetsPresent0Offset):
+                        read(presence_summary[0]);
+                fromOffset(ignitionTargetsPresent1Offset):
+                        read(presence_summary[1]);
+                fromOffset(ignitionTargetsPresent2Offset):
+                        read(presence_summary[2]);
+                fromOffset(ignitionTargetsPresent3Offset):
+                        read(presence_summary[3]);
+                fromOffset(ignitionTargetsPresent4Offset):
+                        read(presence_summary[4]);
                 default: read(8'h00);
             endcase;
 
-        let data <- reader;
+        let rdata <- reader;
 
-        page_request[3] <= tagged Invalid;
-        page_response[3] <= data;
+        maybe_address <= tagged Invalid;
+        response <= rdata;
     endrule
 
-    for (Integer i = 0; i < valueOf(n_ignition_controllers); i = i + 1) begin
-        let page_id = i + 4;
-        let registers = asIfc(ignition_pages[i]);
+    method ActionValue#(Bool) offer(SpiRequest request)
+            if (!isValid(maybe_address));
+        let accepted = (request.address[15:8] == 3 && request.op != NOOP);
 
-        (* fire_when_enabled *)
-        rule do_ignition_page_read (
-                read_page(page_id) matches tagged Valid ._request);
-            let reader =
-                case (_request.address)
-                    // Controller state
+        if (accepted) begin
+            maybe_address <= tagged Valid request.address[7:0];
+        end
+
+        return accepted;
+    endmethod
+
+    method read = response;
+endmodule
+
+module mkIgnitionRegistersPage
+        #(IgnitionController::Registers#(n) registers)
+            (RegisterPage)
+                provisos (Add#(TLog#(n), a__, 6));
+    Reg#(Bool) await_response <- mkReg(False);
+    Reg#(SpiResponse) response <- mkConfigRegU();
+
+    (* fire_when_enabled *)
+    rule do_get_response (await_response);
+        let data <- registers.response.get;
+
+        await_response <= False;
+        response <= SpiResponse {readdata: data};
+    endrule
+
+    method ActionValue#(Bool) offer(SpiRequest request) if (!await_response);
+        let accepted = ({request.address[15:14], request.address[7]} == 3'b010);
+
+        ControllerId#(n) controller = unpack(truncate(request.address[13:8]));
+
+        if (accepted) begin
+            // Determine if the request is for a live register.
+            let maybe_register =
+                case (request.address[7:0])
+                    fromInteger(transceiverStateOffset):
+                        tagged Valid TransceiverState;
                     fromInteger(controllerStateOffset):
-                        read(registers.controller_state);
-                    fromInteger(controllerLinkStatusOffset):
-                        read(registers.controller_link_status);
+                        tagged Valid ControllerState;
                     fromInteger(targetSystemTypeOffset):
-                        read(registers.target_system_type);
+                        tagged Valid TargetSystemType;
                     fromInteger(targetSystemStatusOffset):
-                        read(registers.target_system_status);
-                    fromInteger(targetSystemFaultsOffset):
-                        read(registers.target_system_faults);
-                    fromInteger(targetRequestStatusOffset):
-                        read(registers.target_request_status);
+                        tagged Valid TargetSystemStatus;
+                    fromInteger(targetSystemEventsOffset):
+                        tagged Valid TargetSystemEvents;
+                    fromInteger(targetSystemPowerRequestStatusOffset):
+                        tagged Valid TargetSystemPowerRequestStatus;
                     fromInteger(targetLink0StatusOffset):
-                        read(registers.target_link0_status);
+                        tagged Valid TargetLink0Status;
                     fromInteger(targetLink1StatusOffset):
-                        read(registers.target_link1_status);
-
-                    // Target Request
-                    fromInteger(targetRequestOffset):
-                        read(registers.target_request);
-
-                    // Controller Counters
-                    fromInteger(controllerStatusReceivedCountOffset):
-                        read_volatile(registers.controller_status_received_count);
-                    fromInteger(controllerHelloSentCountOffset):
-                        read_volatile(registers.controller_hello_sent_count);
-                    fromInteger(controllerRequestSentCountOffset):
-                        read_volatile(registers.controller_request_sent_count);
-                    fromInteger(controllerMessageDroppedCountOffset):
-                        read_volatile(registers.controller_message_dropped_count);
-
-                    // Controller Link Events
-                    fromInteger(controllerLinkEventsSummaryOffset):
-                        read(registers.controller_link_counters.summary);
-
-                    // Target Link 0 Events
-                    fromInteger(targetLink0EventsSummaryOffset):
-                        read(registers.target_link0_counters.summary);
-
-                    // Target Link 1 Events
-                    fromInteger(targetLink1EventsSummaryOffset):
-                        read(registers.target_link1_counters.summary);
-
-                    default: read(8'h00);
+                        tagged Valid TargetLink1Status;
+                    default:
+                        tagged Invalid;
                 endcase;
 
-            let data <- reader;
+            if (maybe_register matches tagged Valid .register) begin
+                await_response <= True;
+                registers.request.put(
+                        RegisterRequest {
+                            id: controller,
+                            register: register,
+                            op: tagged Read});
+            end
+            else begin
+                response <= SpiResponse {readdata: 'h00};
+            end
+        end
 
-            page_request[page_id] <= tagged Invalid;
-            page_response[page_id] <= data;
-        endrule
+        return accepted;
+    endmethod
 
-        (* fire_when_enabled *)
-        rule do_ignition_page_update (
-                update_page(page_id) matches tagged Valid ._request);
-            function do_update(r) = update(_request.op, r, _request.wdata);
+    method read = response;
+endmodule
 
-            case (_request.address)
-                fromInteger(controllerStateOffset):
-                    do_update(registers.controller_state);
-                fromInteger(targetRequestOffset):
-                    do_update(registers.target_request);
-                fromInteger(controllerLinkEventsSummaryOffset):
-                    do_update(registers.controller_link_counters.summary);
-                fromInteger(targetLink0EventsSummaryOffset):
-                    do_update(registers.target_link0_counters.summary);
-                fromInteger(targetLink1EventsSummaryOffset):
-                    do_update(registers.target_link1_counters.summary);
-            endcase
+module mkIgnitionCountersPage
+        #(IgnitionController::Counters#(n) counters)
+            (RegisterPage)
+                provisos (Add#(TLog#(n), a__, 6));
+    Reg#(Bool) await_response <- mkReg(False);
+    Reg#(SpiResponse) response <- mkConfigRegU();
 
-            page_request[page_id] <= tagged Invalid;
-        endrule
-    end
+    (* fire_when_enabled *)
+    rule do_get_response (await_response);
+        let data <- counters.response.get;
 
-    interface Put request = toPut(asIfc(in));
-    interface Put response = toGet(asIfc(out));
+        await_response <= False;
+        response <= SpiResponse {readdata: pack(data)};
+    endrule
+
+    method ActionValue#(Bool) offer(SpiRequest request) if (!await_response);
+        let accepted = ({request.address[15:14], request.address[7]} == 3'b011);
+
+        ControllerId#(n) controller = unpack(truncate(request.address[13:8]));
+        CounterId counter = unpack(request.address[5:0]);
+
+        if (accepted) begin
+            await_response <= True;
+            counters.request.put(
+                    CounterAddress {
+                        controller: controller,
+                        counter: counter});
+        end
+
+        return accepted;
+    endmethod
+
+    method read = response;
 endmodule
 
 //
@@ -418,9 +500,9 @@ typedef RegRequest#(16, 8) SpiRequest;
 typedef RegResp#(8) SpiResponse;
 typedef Server#(SpiRequest, SpiResponse) SpiServer;
 
-function UInt#(8) fromOffset(Integer offset);
+function Bit#(8) fromOffset(Integer offset);
     Bit#(16) offset_ = fromInteger(offset);
-    return unpack(offset_[7:0]);
+    return offset_[7:0];
 endfunction
 
 // Turn the read of a register into an ActionValue.
