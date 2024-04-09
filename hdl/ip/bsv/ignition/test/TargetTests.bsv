@@ -329,7 +329,7 @@ module mkSystemResetRequestTest (Empty);
             system_status_system_powered_on_controller0_present);
 
         // Send a power off request and wait for confirmation.
-        tx.put(tagged Request SystemReset);
+        tx.put(tagged Request SystemPowerReset);
 
         // Expect a Status update indicating the system is powered off and a
         // reset is in progress.

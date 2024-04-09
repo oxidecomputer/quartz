@@ -56,11 +56,11 @@ module mkDeparseSystemPowerOnRequestTest (Empty);
         "expected SystemPowerOn Request frame");
 endmodule
 
-module mkDeparseSystemResetRequestTest (Empty);
+module mkDeparseSystemPowerResetRequestTest (Empty);
     (* hide *) Empty _test <- mkDeparserTest(
-        tagged Request SystemReset, 'hfd,
-        mk_request_sequence(SystemReset),
-        "expected SystemReset Request frame");
+        tagged Request SystemPowerReset, 'hfd,
+        mk_request_sequence(SystemPowerReset),
+        "expected SystemPowerReset Request frame");
 endmodule
 
 module mkDeparseStatusTest (Empty);

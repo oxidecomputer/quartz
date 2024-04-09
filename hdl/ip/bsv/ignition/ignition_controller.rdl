@@ -10,14 +10,14 @@ reg link_status {
     default hw = w;
 
     field {
-        desc = "Flag indicating the receiver is aligned to the clock";
+        desc = "Flag indicating the receiver is aligned to the symbol boundaries";
     } RECEIVER_ALIGNED[1] = 0;
     field {
-        desc = "Flag indicating the receiver is receiving valid characters";
+        desc = "Flag indicating the receiver is receiving valid ordered sets";
     } RECEIVER_LOCKED[1] = 0;
     field {
-        desc = "Flag indicating the polarity of the link is inverted";
-    } POLARITY_INVERTED[1] = 0;
+        desc = "Flag indicating the receiver detected the polarity of the link to be inverted";
+    } RECEIVER_POLARITY_INVERTED[1] = 0;
 };
 
 reg link_events {
@@ -64,20 +64,28 @@ addrmap ignition_controller {
     default hw = w;
 
     reg {
+        name = "Controller Transceiver State";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Flag indicating the receiver is aligned to the symbol boundaries";
+        } RECEIVER_ALIGNED[1] = 0;
+        field {
+            desc = "Flag indicating the receiver is receiving valid ordered sets";
+        } RECEIVER_LOCKED[1] = 0;
+        field {
+            desc = "Flag indicating the polarity of the link is inverted";
+        } RECEIVER_POLARITY_INVERTED[1] = 0;
+    } TRANSCEIVER_STATE;
+
+    reg {
         name = "Controller State";
 
         field {
-            desc = "A Target is present and the TARGET_SYSTEM_TYPE, TARGET_SYSTEM_STATUS and TARGET_REQUEST_STATUS registers are valid";
+            desc = "A Target is present and the TARGET_SYSTEM_TYPE, TARGET_SYSTEM_STATUS and TARGET_SYSTEM_POWER_REQUEST_STATUS registers are valid";
         } TARGET_PRESENT[1] = 0;
-        field {
-            sw = rw;
-            hw = r;
-            desc = "Always transmit rather than wait for a Target to be present first";
-        } ALWAYS_TRANSMIT[1] = 0;
     } CONTROLLER_STATE;
-
-    link_status CONTROLLER_LINK_STATUS;
-    CONTROLLER_LINK_STATUS->name = "Controller Link Status";
 
     reg {
         name = "Target System Type";
@@ -104,7 +112,7 @@ addrmap ignition_controller {
     } TARGET_SYSTEM_STATUS;
 
     reg {
-        name = "Target System Faults";
+        name = "Target System Events";
 
         field {
             desc = "Flag indicating a power fault in A3";
@@ -119,12 +127,12 @@ addrmap ignition_controller {
             desc = "Reserved fault flag";
         } RESERVED2[1] = 0;
         field {
-            desc = "Flag indicating an unrecoverable fault was detected by the SP";
-        } SP_FAULT[1] = 0;
+            desc = "";
+        } SP[1] = 0;
         field {
-            desc = "Flag indicating an unrecoverable fault was detected by the RoT";
-        } ROT_FAULT[1] = 0;
-    } TARGET_SYSTEM_FAULTS;
+            desc = "";
+        } ROT[1] = 0;
+    } TARGET_SYSTEM_EVENTS;
 
     reg {
         field {
@@ -135,8 +143,17 @@ addrmap ignition_controller {
         } POWER_ON_IN_PROGRESS[1] = 0;
         field {
             desc = "Flag indicating a system reset request is in progress";
-        } SYSTEM_RESET_IN_PROGRESS[1] = 0;
-    } TARGET_REQUEST_STATUS;
+        } POWER_RESET_IN_PROGRESS[1] = 0;
+        field {
+            desc = "Reserved";
+        } RESERVED[1] = 0;
+        field {
+            hw = r;
+            sw = w;
+            woclr;
+            desc = "Send a system power request; 1 = power off, 2 = power on, 3 = power reset";
+        } SYSTEM_POWER_REQUEST[2] = 0;
+    } TARGET_SYSTEM_POWER_REQUEST_STATUS;
 
     link_status TARGET_LINK0_STATUS;
     TARGET_LINK0_STATUS->name = "Target Link 0 Status";
@@ -144,45 +161,183 @@ addrmap ignition_controller {
     link_status TARGET_LINK1_STATUS;
     TARGET_LINK1_STATUS->name = "Target Link 1 Status";
 
-    reg {
-        name = "Target Request";
-        default sw = rw;
-        default hw = rw;
+    counter TARGET_PRESENT_COUNT @0x80;
+    TARGET_PRESENT_COUNT->name = "Target Present Count";
+    TARGET_PRESENT_COUNT.COUNT->desc =
+        "The number of positive edges on the Target present signal since last reset";
 
-        field {
-            desc = "Value indicating the kind of request";
-        } KIND[1:0] = 0;
-        field {
-            desc = "Flag indicating a request is (still) pending";
-        } PENDING[7:7] = 0;
-    } TARGET_REQUEST @0x8;
+    counter TARGET_TIMEOUT_COUNT;
+    TARGET_TIMEOUT_COUNT->name = "Target Timeout Count";
+    TARGET_TIMEOUT_COUNT.COUNT->desc =
+        "The number of negative edges on the Target present signal since last reset";
 
-    counter CONTROLLER_STATUS_RECEIVED_COUNT @0x10;
-    CONTROLLER_STATUS_RECEIVED_COUNT->name = "Controller Status Received Count";
-    CONTROLLER_STATUS_RECEIVED_COUNT.COUNT->desc =
-        "The number of Status messages received by the Controller since last reset";
+    counter TARGET_STATUS_RECEIVED_COUNT;
+    TARGET_STATUS_RECEIVED_COUNT->name = "Target Status Received Count";
+    TARGET_STATUS_RECEIVED_COUNT.COUNT->desc =
+        "The number of Status messages received from the Target since last reset";
+
+    counter TARGET_STATUS_TIMEOUT_COUNT;
+    TARGET_STATUS_TIMEOUT_COUNT->name = "Target Status Timeout Count";
+    TARGET_STATUS_TIMEOUT_COUNT.COUNT->desc =
+        "The number times a Status message failed to be received in the expected time windown since last reset";
 
     counter CONTROLLER_HELLO_SENT_COUNT;
     CONTROLLER_HELLO_SENT_COUNT->name = "Controller Hello Sent Count";
     CONTROLLER_HELLO_SENT_COUNT.COUNT->desc =
-        "The number of hello messages sent by the Controller since last reset";
+        "The number of Hello messages sent by the Controller since last reset";
 
-    counter CONTROLLER_REQUEST_SENT_COUNT;
-    CONTROLLER_REQUEST_SENT_COUNT->name = "Controller Request Sent Count";
-    CONTROLLER_REQUEST_SENT_COUNT.COUNT->desc =
-        "The number of request messages sent by the Controller since last reset";
+    counter CONTROLLER_SYSTEM_POWER_REQUEST_SENT_COUNT;
+    CONTROLLER_SYSTEM_POWER_REQUEST_SENT_COUNT->name = "Controller System Power Request Sent Count";
+    CONTROLLER_SYSTEM_POWER_REQUEST_SENT_COUNT.COUNT->desc =
+        "The number of SystemPowerRequest messages sent by the Controller since last reset";
 
-    counter CONTROLLER_MESSAGE_DROPPED_COUNT;
-    CONTROLLER_MESSAGE_DROPPED_COUNT->name = "Controller Message Dropped Count";
-    CONTROLLER_MESSAGE_DROPPED_COUNT.COUNT->desc =
-        "The number of messages dropped by the Controller since last reset";
+    counter CONTROLLER_RECEIVER_RESET_COUNT;
+    CONTROLLER_RECEIVER_RESET_COUNT->name = "Controller Receiver Reset Count";
+    CONTROLLER_RECEIVER_RESET_COUNT.COUNT->desc =
+        "The number of times the Controller receiver was reset since last reset";
 
-    link_events CONTROLLER_LINK_EVENTS_SUMMARY @0x20;
-    CONTROLLER_LINK_EVENTS_SUMMARY->name = "Controller Link Events Summary";
+    counter CONTROLLER_RECEIVER_ALIGNED_COUNT;
+    CONTROLLER_RECEIVER_ALIGNED_COUNT->name = "Controller Receiver Aligned Count";
+    CONTROLLER_RECEIVER_ALIGNED_COUNT.COUNT->desc =
+        "The number of times the Controller receiver transitioned to aligned since last reset";
 
-    link_events TARGET_LINK0_EVENTS_SUMMARY @0x30;
-    TARGET_LINK0_EVENTS_SUMMARY->name = "Target Link 0 Events Summary";
+    counter CONTROLLER_RECEIVER_LOCKED_COUNT;
+    CONTROLLER_RECEIVER_LOCKED_COUNT->name = "Controller Receiver Locked Count";
+    CONTROLLER_RECEIVER_LOCKED_COUNT.COUNT->desc =
+        "The number of times the Controller receiver transitioned to locked since last reset";
 
-    link_events TARGET_LINK1_EVENTS_SUMMARY @0x40;
-    TARGET_LINK1_EVENTS_SUMMARY->name = "Target Link 1 Events Summary";
+    counter CONTROLLER_RECEIVER_POLARITY_INVERTED_COUNT;
+    CONTROLLER_RECEIVER_POLARITY_INVERTED_COUNT->name = "Controller Receiver Polarity Inverted Count";
+    CONTROLLER_RECEIVER_POLARITY_INVERTED_COUNT.COUNT->desc =
+        "The number of times the Controller receiver observed the polarity of the channel to be inverted since last reset";
+
+    counter CONTROLLER_ENCODING_ERROR_COUNT;
+    CONTROLLER_ENCODING_ERROR_COUNT->name = "Controller Encoding Error Count";
+    CONTROLLER_ENCODING_ERROR_COUNT.COUNT->desc =
+        "The number of encoding errors observed by the Controller transmitter since last reset";
+
+    counter CONTROLLER_DECODING_ERROR_COUNT;
+    CONTROLLER_DECODING_ERROR_COUNT->name = "Controller Decoding Error Count";
+    CONTROLLER_DECODING_ERROR_COUNT.COUNT->desc =
+        "The number of decoding errors observed by the Controller receiver since last reset";
+
+    counter CONTROLLER_ORDERED_SET_INVALID_COUNT;
+    CONTROLLER_ORDERED_SET_INVALID_COUNT->name = "Controller Ordered Set Invalid Count";
+    CONTROLLER_ORDERED_SET_INVALID_COUNT.COUNT->desc =
+        "The number of invalid ordered sets observed by the Controller receiver since last reset";
+
+    counter CONTROLLER_MESSAGE_VERSION_INVALID_COUNT;
+    CONTROLLER_MESSAGE_VERSION_INVALID_COUNT->name = "Controller Message Version Invalid Count";
+    CONTROLLER_MESSAGE_VERSION_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid version observed by the Controller receiver since last reset";
+
+    counter CONTROLLER_MESSAGE_TYPE_INVALID_COUNT;
+    CONTROLLER_MESSAGE_TYPE_INVALID_COUNT->name = "Controller Message Type Invalid Count";
+    CONTROLLER_MESSAGE_TYPE_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid type observed by the Controller receiver since last reset";
+
+    counter CONTROLLER_MESSAGE_CHECKSUM_INVALID_COUNT;
+    CONTROLLER_MESSAGE_CHECKSUM_INVALID_COUNT->name = "Controller Message Checksum Invalid Count";
+    CONTROLLER_MESSAGE_CHECKSUM_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid checksum observed by the Controller receiver since last reset";
+
+    counter TARGET_LINK0_RECEIVER_RESET_COUNT;
+    TARGET_LINK0_RECEIVER_RESET_COUNT->name = "Target Link 0 Receiver Reset Count";
+    TARGET_LINK0_RECEIVER_RESET_COUNT.COUNT->desc =
+        "The number of times the Target link 0 receiver was reset since last reset";
+
+    counter TARGET_LINK0_RECEIVER_ALIGNED_COUNT;
+    TARGET_LINK0_RECEIVER_ALIGNED_COUNT->name = "Target Link 0 Receiver Aligned Count";
+    TARGET_LINK0_RECEIVER_ALIGNED_COUNT.COUNT->desc =
+        "The number of times the Target link 0 receiver transitioned to aligned since last reset";
+
+    counter TARGET_LINK0_RECEIVER_LOCKED_COUNT;
+    TARGET_LINK0_RECEIVER_LOCKED_COUNT->name = "Target Link 0 Receiver Locked Count";
+    TARGET_LINK0_RECEIVER_LOCKED_COUNT.COUNT->desc =
+        "The number of times the Target link 0 receiver transitioned to locked since last reset";
+
+    counter TARGET_LINK0_RECEIVER_POLARITY_INVERTED_COUNT;
+    TARGET_LINK0_RECEIVER_POLARITY_INVERTED_COUNT->name = "Target Link 0 Receiver Polarity Inverted Count";
+    TARGET_LINK0_RECEIVER_POLARITY_INVERTED_COUNT.COUNT->desc =
+        "The number of times the Target link 0 receiver observed the polarity of the channel to be inverted since last reset";
+
+    counter TARGET_LINK0_ENCODING_ERROR_COUNT;
+    TARGET_LINK0_ENCODING_ERROR_COUNT->name = "Target Link 0 Encoding Error Count";
+    TARGET_LINK0_ENCODING_ERROR_COUNT.COUNT->desc =
+        "The number of encoding errors observed by the Target link 0 transceiver since last reset";
+
+    counter TARGET_LINK0_DECODING_ERROR_COUNT;
+    TARGET_LINK0_DECODING_ERROR_COUNT->name = "Target Link 0 Decoding Error Count";
+    TARGET_LINK0_DECODING_ERROR_COUNT.COUNT->desc =
+        "The number of decoding errors observed by the Target link 0 transceiver since last reset";
+
+    counter TARGET_LINK0_ORDERED_SET_INVALID_COUNT;
+    TARGET_LINK0_ORDERED_SET_INVALID_COUNT->name = "Target Link 0 Ordered Set Invalid Count";
+    TARGET_LINK0_ORDERED_SET_INVALID_COUNT.COUNT->desc =
+        "The number of invalid ordered sets observed by the Target link 0 transceiver since last reset";
+
+    counter TARGET_LINK0_MESSAGE_VERSION_INVALID_COUNT;
+    TARGET_LINK0_MESSAGE_VERSION_INVALID_COUNT->name = "Target Link 0 Message Version Invalid Count";
+    TARGET_LINK0_MESSAGE_VERSION_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid version observed by the Target link 0 transceiver since last reset";
+
+    counter TARGET_LINK0_MESSAGE_TYPE_INVALID_COUNT;
+    TARGET_LINK0_MESSAGE_TYPE_INVALID_COUNT->name = "Target Link 0 Message Type Invalid Count";
+    TARGET_LINK0_MESSAGE_TYPE_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid type observed by the Target link 0 transceiver since last reset";
+
+    counter TARGET_LINK0_MESSAGE_CHECKSUM_INVALID_COUNT;
+    TARGET_LINK0_MESSAGE_CHECKSUM_INVALID_COUNT->name = "Target Link 0 Message Checksum Invalid Count";
+    TARGET_LINK0_MESSAGE_CHECKSUM_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid checksum observed by the Target link 0 transceiver since last reset";
+
+    counter TARGET_LINK1_RECEIVER_RESET_COUNT;
+    TARGET_LINK1_RECEIVER_RESET_COUNT->name = "Target Link 1 Receiver Reset Count";
+    TARGET_LINK1_RECEIVER_RESET_COUNT.COUNT->desc =
+        "The number of times the Target link 1 receiver was reset since last reset";
+
+    counter TARGET_LINK1_RECEIVER_ALIGNED_COUNT;
+    TARGET_LINK1_RECEIVER_ALIGNED_COUNT->name = "Target Link 1 Receiver Aligned Count";
+    TARGET_LINK1_RECEIVER_ALIGNED_COUNT.COUNT->desc =
+        "The number of times the Target link 1 receiver transitioned to aligned since last reset";
+
+    counter TARGET_LINK1_RECEIVER_LOCKED_COUNT;
+    TARGET_LINK1_RECEIVER_LOCKED_COUNT->name = "Target Link 1 Receiver Locked Count";
+    TARGET_LINK1_RECEIVER_LOCKED_COUNT.COUNT->desc =
+        "The number of times the Target link 1 receiver transitioned to locked since last reset";
+
+    counter TARGET_LINK1_RECEIVER_POLARITY_INVERTED_COUNT;
+    TARGET_LINK1_RECEIVER_POLARITY_INVERTED_COUNT->name = "Target Link 1 Receiver Polarity Inverted Count";
+    TARGET_LINK1_RECEIVER_POLARITY_INVERTED_COUNT.COUNT->desc =
+        "The number of times the Target link 1 receiver observed the polarity of the channel to be inverted since last reset";
+
+    counter TARGET_LINK1_ENCODING_ERROR_COUNT;
+    TARGET_LINK1_ENCODING_ERROR_COUNT->name = "Target Link 1 Encoding Error Count";
+    TARGET_LINK1_ENCODING_ERROR_COUNT.COUNT->desc =
+        "The number of encoding errors observed by the Target link 1 transceiver since last reset";
+
+    counter TARGET_LINK1_DECODING_ERROR_COUNT;
+    TARGET_LINK1_DECODING_ERROR_COUNT->name = "Target Link 1 Decoding Error Count";
+    TARGET_LINK1_DECODING_ERROR_COUNT.COUNT->desc =
+        "The number of decoding errors observed by the Target link 1 transceiver since last reset";
+
+    counter TARGET_LINK1_ORDERED_SET_INVALID_COUNT;
+    TARGET_LINK1_ORDERED_SET_INVALID_COUNT->name = "Target Link 1 Ordered Set Invalid Count";
+    TARGET_LINK1_ORDERED_SET_INVALID_COUNT.COUNT->desc =
+        "The number of invalid ordered sets observed by the Target link 1 transceiver since last reset";
+
+    counter TARGET_LINK1_MESSAGE_VERSION_INVALID_COUNT;
+    TARGET_LINK1_MESSAGE_VERSION_INVALID_COUNT->name = "Target Link 1 Message Version Invalid Count";
+    TARGET_LINK1_MESSAGE_VERSION_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid version observed by the Target link 1 transceiver since last reset";
+
+    counter TARGET_LINK1_MESSAGE_TYPE_INVALID_COUNT;
+    TARGET_LINK1_MESSAGE_TYPE_INVALID_COUNT->name = "Target Link 1 Message Type Invalid Count";
+    TARGET_LINK1_MESSAGE_TYPE_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid type observed by the Target link 1 transceiver since last reset";
+
+    counter TARGET_LINK1_MESSAGE_CHECKSUM_INVALID_COUNT;
+    TARGET_LINK1_MESSAGE_CHECKSUM_INVALID_COUNT->name = "Target Link 1 Message Checksum Invalid Count";
+    TARGET_LINK1_MESSAGE_CHECKSUM_INVALID_COUNT.COUNT->desc =
+        "The number of messages with invalid checksum observed by the Target link 1 transceiver since last reset";
 };
