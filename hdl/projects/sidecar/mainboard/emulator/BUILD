@@ -5,14 +5,14 @@ bluespec_library('SidecarMainboardEmulator',
         'SidecarMainboardEmulator.bsv',
     ],
     deps = [
-        '//hdl/ip/bsv:PowerRail',
-        '//hdl/projects/sidecar/mainboard:SidecarMainboardControllerTop',
-        '//hdl/ip/bsv/ignition:Target',
-        '//hdl/ip/bsv/ignition:Transceiver',
         '//hdl/ip/bsv:BitSampling',
+        '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv:SerialIO',
         '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv/ignition:Target',
+        '//hdl/ip/bsv/ignition:Transceiver',
         '//hdl/ip/bsv/interfaces:ECP5',
+        '//hdl/projects/sidecar/mainboard:SidecarMainboardControllerTop',
     ])
 
 bluespec_verilog('mkSidecarMainboardEmulatorOnEcp5Evn',

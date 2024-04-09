@@ -122,8 +122,8 @@ module mkTofinoDebugPort #(
     ConfigReg#(Maybe#(Error)) error <- mkConfigReg(tagged Invalid);
 
     // Buffer and connections to the module interface.
-    FIFOF#(Bit#(8)) send_buffer <- mkSizedBRAMFIFOF(256);
-    FIFOF#(Bit#(8)) receive_buffer <- mkSizedBRAMFIFOF(256);
+    FIFOF#(Bit#(8)) send_buffer <- mkSizedBRAMFIFOF(255);
+    FIFOF#(Bit#(8)) receive_buffer <- mkSizedBRAMFIFOF(255);
 
     // Connect the FIFOs to the register interface. The use of a DWire between
     // the receive FIFO and register interface will return a 0 if the FIFO is

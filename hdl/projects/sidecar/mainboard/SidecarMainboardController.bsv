@@ -70,7 +70,7 @@ typedef struct {
     Bit#(1) clk_1hz;
 } Status deriving (Bits, Eq, FShow);
 
-interface Pins #(numeric type n_ignition_controllers);
+interface Pins;
     interface ClockGeneratorPins clocks;
     interface PCIeEndpointController::Pins pcie;
     interface Tofino2Sequencer::Pins tofino;
@@ -80,7 +80,7 @@ interface Pins #(numeric type n_ignition_controllers);
     interface Vector#(4, FanModulePins) fans;
 endinterface
 
-interface Registers #(numeric type n_ignition_controllers);
+interface Registers;
     interface PCIeEndpointController::Registers pcie;
     interface Tofino2Sequencer::Registers tofino;
     interface TofinoDebugPort::Registers tofino_debug_port;
@@ -89,31 +89,29 @@ interface Registers #(numeric type n_ignition_controllers);
 endinterface
 
 interface MainboardController #(numeric type n_ignition_controllers);
-    interface Pins#(n_ignition_controllers) pins;
-    interface Registers#(n_ignition_controllers) registers;
-    interface Vector#(n_ignition_controllers, Controller) ignition_controllers;
+    interface Pins pins;
+    interface Registers registers;
+    interface Controller#(n_ignition_controllers) ignition_controller;
     interface ReadOnly#(Status) status;
 endinterface
 
 module mkMainboardController #(Parameters parameters)
-        (MainboardController#(n_ignition_controllers))
-            provisos (
-                Add#(TLog#(TAdd#(n_ignition_controllers, 1)), a__, 8));
+        (MainboardController#(n_ignition_controllers));
     //
     // Timing
     //
 
-    Strobe#(20) tick_1khz <-
-        mkLimitStrobe(1, (parameters.system_frequency_hz / 1000), 0);
-    Strobe#(10) tick_2hz <- mkLimitStrobe(1, 500, 0);
+    let limit_1mhz = fromInteger(parameters.system_frequency_hz / 1_000_000);
+    let limit_1khz = fromInteger(1_000_000 / 1000);
+    let limit_2hz = fromInteger(1000 / 2);
 
-    mkFreeRunningStrobe(tick_1khz);
-    mkConnection(asIfc(tick_1khz), asIfc(tick_2hz));
-
-    Strobe#(6) tick_1mhz <-
-        mkLimitStrobe(1, (parameters.system_frequency_hz / 1_000_000), 0);
+    Strobe#(6) tick_1mhz <- mkLimitStrobe(1, limit_1mhz, 0);
+    Strobe#(10) tick_1khz <- mkLimitStrobe(1, limit_1khz, 0);
+    Strobe#(9) tick_2hz <- mkLimitStrobe(1, limit_2hz, 0);
 
     mkFreeRunningStrobe(tick_1mhz);
+    mkConnection(asIfc(tick_1mhz), asIfc(tick_1khz));
+    mkConnection(asIfc(tick_1khz), asIfc(tick_2hz));
 
     //
     // Clock Generator sequencer
@@ -176,15 +174,13 @@ module mkMainboardController #(Parameters parameters)
     // Ignition Controllers
     //
 
-    Vector#(n_ignition_controllers, IgnitionController::Controller)
-        ignition_controllers_ <- replicateM(mkController(defaultValue));
+    IgnitionController::Controller#(n_ignition_controllers)
+            ignition <- mkController(defaultValue, False);
 
-    // Connect each Controller to the global tick.
-    function module#(Empty) mk_tick_connection(
-            IgnitionController::Controller controller) =
-        mkConnection(asIfc(tick_1khz), asIfc(controller.tick_1khz));
-
-    mapM(mk_tick_connection, ignition_controllers_);
+    (* fire_when_enabled *)
+    rule do_ignition_controller_tick_1mhz (tick_1mhz);
+        ignition.tick_1mhz();
+    endrule
 
     //
     // Debug status
@@ -224,7 +220,8 @@ module mkMainboardController #(Parameters parameters)
         interface fans = map(SidecarMainboardMiscSequencers::fan_registers, fans);
     endinterface
 
-    interface Vector ignition_controllers = ignition_controllers_;
+    interface Controller ignition_controller = ignition;
+
     interface ReadOnly status = regToReadOnly(status_r);
 endmodule
 
