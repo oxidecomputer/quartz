@@ -1,477 +1,1350 @@
 package IgnitionController;
 
 export Parameters(..);
-export ReadVolatile(..);
-export LinkEventCounterRegisters(..);
-export Registers(..);
-export Interrupts(..);
-export Status(..);
 export Controller(..);
+export ControllerId(..);
+export RegisterId(..);
+export RegisterRequest_$op(..);
+export RegisterRequest(..);
+export Registers(..);
+export CounterAddress(..);
+export CounterId(..);
+export Counter(..);
+export Counters(..);
 
 export mkController;
-export registers;
-export transceiver_client;
-export register_pages;
-export tx_enabled;
+export read_controller_register_into;
+export clear_controller_counter;
+export read_controller_counter_into;
 
-// Interrupt helpers.
-export interrupts_none;
-
+import BRAMCore::*;
+import BRAMFIFO::*;
+import BuildVector::*;
+import ClientServer::*;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
-import DReg::*;
-import GetPut::*;
 import FIFO::*;
+import FIFOF::*;
+import GetPut::*;
+import StmtFSM::*;
 import Vector::*;
 
-import Countdown::*;
-import SchmittReg::*;
-import Strobe::*;
+import CounterRAM::*;
 
 import IgnitionControllerRegisters::*;
-import IgnitionEventCounter::*;
 import IgnitionProtocol::*;
+import IgnitionReceiver::*;
 import IgnitionTransceiver::*;
+import IgnitionTransmitter::*;
 
 
 typedef struct {
+    Integer tick_period;
     IgnitionProtocol::Parameters protocol;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
+        tick_period: 1000,
         protocol: defaultValue};
 endinstance
 
-typedef struct {
-} Interrupts deriving (Bits, Eq, FShow);
+typedef UInt#(TLog#(n)) ControllerId#(numeric type n);
 
-interface ReadVolatile#(type t);
-    method ActionValue#(t) _read();
-endinterface
-
-interface LinkEventCounterRegisters;
-    interface Reg#(IgnitionControllerRegisters::LinkEvents) summary;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) encoding_error;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) decoding_error;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) ordered_set_invalid;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) message_version_invalid;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) message_type_invalid;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) message_checksum_invalid;
-endinterface
-
-interface Registers;
-    interface Reg#(IgnitionControllerRegisters::ControllerState) controller_state;
-    interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) controller_link_status;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetSystemType) target_system_type;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetSystemStatus) target_system_status;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetSystemFaults) target_system_faults;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetRequestStatus) target_request_status;
-    interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) target_link0_status;
-    interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) target_link1_status;
-    interface Reg#(IgnitionControllerRegisters::TargetRequest) target_request;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_status_received_count;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_hello_sent_count;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_request_sent_count;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_message_dropped_count;
-    interface LinkEventCounterRegisters controller_link_counters;
-    interface LinkEventCounterRegisters target_link0_counters;
-    interface LinkEventCounterRegisters target_link1_counters;
-endinterface
+typedef enum {
+    TransceiverState = 0,
+    ControllerState,
+    TargetSystemType,
+    TargetSystemStatus,
+    TargetSystemEvents,
+    TargetSystemPowerRequestStatus,
+    TargetLink0Status,
+    TargetLink1Status
+} RegisterId deriving (Bits, Eq, FShow);
 
 typedef struct {
-    Bool always_transmit;
-    Bool target_present;
-    Bool receiver_locked;
-} Status deriving (Bits);
+    ControllerId#(n) id;
+    RegisterId register;
+    union tagged {
+        void Read;
+        Bit#(8) Write;
+    } op;
+} RegisterRequest#(numeric type n) deriving (Bits, FShow);
 
-interface Controller;
-    interface TransceiverClient txr;
-    interface Registers registers;
-    interface Reg#(Interrupts) interrupts;
-    interface PulseWire tick_1khz;
-    (* always_enabled *) method Status status();
+typedef enum {
+    TargetPresent,
+    TargetTimeout,
+    StatusReceived,
+    StatusTimeout,
+    HelloSent,
+    SystemPowerRequestSent,
+    ControllerReceiverReset,
+    ControllerReceiverAligned,
+    ControllerReceiverLocked,
+    ControllerReceiverPolarityInverted,
+    ControllerEncodingError,
+    ControllerDecodingError,
+    ControllerOrderedSetInvalid,
+    ControllerMessageVersionInvalid,
+    ControllerMessageTypeInvalid,
+    ControllerMessageChecksumInvalid,
+    TargetLink0ReceiverReset,
+    TargetLink0ReceiverAligned,
+    TargetLink0ReceiverLocked,
+    TargetLink0ReceiverPolarityInverted,
+    TargetLink0EncodingError,
+    TargetLink0DecodingError,
+    TargetLink0OrderedSetInvalid,
+    TargetLink0MessageVersionInvalid,
+    TargetLink0MessageTypeInvalid,
+    TargetLink0MessageChecksumInvalid,
+    TargetLink1ReceiverReset,
+    TargetLink1ReceiverAligned,
+    TargetLink1ReceiverLocked,
+    TargetLink1ReceiverPolarityInverted,
+    TargetLink1EncodingError,
+    TargetLink1DecodingError,
+    TargetLink1OrderedSetInvalid,
+    TargetLink1MessageVersionInvalid,
+    TargetLink1MessageTypeInvalid,
+    TargetLink1MessageChecksumInvalid
+} CounterId deriving (Bits, Eq, FShow);
+
+typedef struct {
+    ControllerId#(n) controller;
+    CounterId counter;
+} CounterAddress#(numeric type n) deriving (Bits, Eq, FShow);
+
+typedef UInt#(8) Counter;
+
+typedef Server#(RegisterRequest#(n), Bit#(8)) Registers#(numeric type n);
+typedef Server#(CounterAddress#(n), Counter) Counters#(numeric type n);
+
+interface Controller #(numeric type n);
+    method Action tick_1mhz();
+
+    // Transceiver interface
+    interface ControllerTransceiverClient#(n) txr;
+
+    // Software interface
+    interface Registers#(n) registers;
+    interface Counters#(n) counters;
+    method Vector#(n, Bool) presence_summary();
+
+    // Debug
+    (* always_ready *) method Bool idle();
 endinterface
 
-module mkController #(Parameters parameters) (Controller);
+module mkController #(Parameters parameters, Bool init) (Controller#(n));
+    let status_message_timeout_reset_value =
+            fromInteger(parameters.protocol.status_interval + 1);
+
+    FIFOF#(RegisterRequest#(n)) software_request <- mkGFIFOF(False, True);
+    FIFOF#(Bit#(8)) software_response <- mkFIFOF();
+    FIFOF#(ControllerId#(n)) tick_events <- mkGFIFOF(False, True);
+    FIFOF#(ReceiverEvent#(n)) receiver_events <- mkGFIFOF(False, True);
+    FIFOF#(TransmitterEvent#(n)) transmitter_events <- mkFIFOF();
+    FIFOF#(Bool) transmitter_output_enabled_events <- mkFIFOF();
+
+    let event_handler_idle =
+            !(software_request.notEmpty ||
+                tick_events.notEmpty ||
+                receiver_events.notEmpty);
+
+    // Register files holding the per-Controller state.
+    RegisterFile#(n, PresenceRegister) presence <- mkBRAMRegisterFile();
+    RegisterFile#(n, TransceiverRegister) transceiver <- mkBRAMRegisterFile();
+    RegisterFile#(n, HelloTimerRegister) hello_timer <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, SystemType)
+            target_system_type <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, SystemStatus)
+            target_system_status <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, SystemFaults)
+            target_system_events <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, RequestStatus)
+            target_system_power_request_status <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, LinkStatus)
+            target_link0_status <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, LinkEvents)
+            target_link0_events <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, LinkStatus)
+            target_link1_status <- mkBRAMRegisterFile();
+    DualValueRegisterFile#(n, LinkEvents)
+            target_link1_events <- mkBRAMRegisterFile();
+
+    Vector#(n, Reg#(Bool)) presence_summary_r <- replicateM(mkConfigReg(False));
+
+    // Event counter state
+    FIFOF#(CountableApplicationEventsWithId#(n))
+            countable_application_events <- mkGFIFOF(True, False);
+    FIFOF#(CountableTransceiverEventsWithId#(n))
+            countable_transceiver_events <- mkGFIFOF(True, False);
+    FIFOF#(CountableTransceiverEventsWithId#(n))
+            countable_target_link0_events <- mkGFIFOF(True, False);
+    FIFOF#(CountableTransceiverEventsWithId#(n))
+            countable_target_link1_events <- mkGFIFOF(True, False);
+
+    FIFOF#(CounterAddress#(n))
+            increment_application_event_counter <- mkGLFIFOF(False, True);
+    FIFOF#(CounterAddress#(n))
+            increment_transceiver_event_counter <- mkGLFIFOF(False, True);
+    FIFOF#(CounterAddress#(n))
+            increment_target_link0_event_counter <- mkGLFIFOF(False, True);
+    FIFOF#(CounterAddress#(n))
+            increment_target_link1_event_counter <- mkGLFIFOF(False, True);
+    FIFOF#(CounterAddress#(n))
+            increment_event_counter <- mkSizedBRAMFIFOF(255);
+
+    let n_counters = valueOf(TExp#(SizeOf#(CounterAddress#(n))));
+    CounterRAM#(CounterAddress#(n), 8, 1)
+            event_counters <- mkCounterRAM(n_counters);
+
+    // Event handler state
+    Reg#(ControllerId#(n)) current_controller <- mkRegU();
+    Reg#(EventHandlerState) event_handler_state <- mkReg(AwaitingEvent);
+
+    PulseWire tick <- mkPulseWire();
+    Reg#(UInt#(10)) tick_count <- mkReg(0);
+
     //
-    // External pulse used to generate timed events.
+    // Register file init
     //
-    Reg#(Bool) tick <- mkDReg(False);
+    // The register files may be initialized with random data upon reset. This
+    // reset sequence will reset all registers to zero and then not run again.
+    // If this module is part of a design targeting a device which clears BRAMs
+    // on PoR, `init` can be set to False during elaboration which will optimize
+    // this away.
+    //
+    Reg#(Bool) init_complete <- mkReg(!init);
 
-    Reg#(LinkStatus) link_status <- mkRegU();
-    Wire#(Message) rx <- mkWire();
-    FIFO#(Message) tx <- mkLFIFO();
+    if (init) begin
+        Reg#(ControllerId#(n)) i <- mkReg(0);
 
-    // `CountingMonitors` keep track of link events occuring on the local
-    // receiver as well as the two receivers on the `Target` side.
-    CountingMonitor link_monitor <- mkCountingMonitor();
-    CountingMonitor target_link0_monitor <- mkCountingMonitor();
-    CountingMonitor target_link1_monitor <- mkCountingMonitor();
+        FSM init_seq <- mkFSMWithPred(seq
+            repeat(fromInteger(valueof(n))) action
+                // Select the registers for each Controller in sequence..
+                presence.select(i);
+                transceiver.select(i);
+                hello_timer.select(i);
 
-    // Additional Message counters.
-    Counter n_status_received <- mkCounter();
-    Counter n_hello_sent <- mkCounter();
-    Counter n_request_sent <- mkCounter();
-    Counter n_message_dropped <- mkCounter();
+                target_system_type.select(i);
+                target_system_status.select(i);
+                target_system_events.select(i);
+                target_system_power_request_status.select(i);
+                target_link0_status.select(i);
+                target_link0_events.select(i);
+                target_link1_status.select(i);
+                target_link1_events.select(i);
 
-    // `Target` present indicator. This is implemented using a filter, requiring
-    // three Status messages to be received before the `Target` is marked
-    // present.
-    Reg#(Bool) past_target_present <- mkReg(False);
-    SchmittReg#(3, Bool) target_present <-
-        mkSchmittReg(False, EdgePatterns {
-            negative_edge: 'b100,
-            positive_edge: 'b111,
-            mask: 'b111});
+                // .. and reset the their values.
+                //
+                // A read-modify-write sequence is not needed so the select and
+                // write-back of the registers can happen in the same cycle.
+                presence <= unpack('0);
+                transceiver <= unpack('0);
+                hello_timer <= unpack('0);
 
-    // The latest `Status` `Message` received from a `Target`. This should only
-    // be considered valid if the `target_present` flag above is True.
-    Reg#(Message) status_message <- mkRegU();
+                target_system_type <= unpack('0);
+                target_system_status <= unpack('0);
+                target_system_events <= unpack('0);
+                target_system_power_request_status <= unpack('0);
+                target_link0_status <= unpack('0);
+                target_link0_events <= unpack('0);
+                target_link1_status <= unpack('0);
+                target_link1_events <= unpack('0);
 
-    // A pending `Request`, received upstream (software).
-    ConfigReg#(Maybe#(Request)) pending_request <- mkConfigReg(tagged Invalid);
+                i <= i + 1;
+            endaction
+            init_complete <= True;
+        endseq, !init_complete);
 
-    // Settable override to make the Controller always transmit rather than wait
-    // for a Target to be present first.
-    ConfigReg#(Bool) always_transmit <- mkConfigReg(False);
+        (* fire_when_enabled *)
+        rule do_init (!init_complete);
+            init_seq.start();
+        endrule
+    end
 
     //
-    // Events
-    //
-    PulseWire message_accepted <- mkPulseWire();
-
-    PulseWire status_received <- mkPulseWire();
-    Countdown#(6) status_update_expired <- mkCountdownBy1();
-
-    Countdown#(6) hello_expired <- mkCountdownBy1();
-    Reg#(Bool) hello_requested <- mkReg(True);
-
-    //
-    // Connect the global tick
+    // Generate Tick events
     //
 
     (* fire_when_enabled *)
-    rule do_tick (tick);
-        status_update_expired.send();
-        hello_expired.send();
+    rule do_tick (init_complete && tick);
+        let wrap = tick_count == fromInteger(parameters.tick_period - 1);
+        tick_count <= wrap ? 0 : tick_count + 1;
+    endrule
+
+    let tick_phase_shift = parameters.tick_period / valueof(n);
+
+    for (Integer i = 0; i < valueof(n); i = i + 1) begin
+        (* fire_when_enabled *)
+        rule do_tick_event (
+                init_complete &&
+                tick &&
+                tick_count == fromInteger(i * tick_phase_shift));
+            tick_events.enq(fromInteger(i));
+        endrule
+    end
+
+    //
+    // Event counters rules
+    //
+
+    Reg#(ControllerId#(n)) countable_application_events_id <- mkRegU();
+    Reg#(CountableApplicationEvents)
+            countable_application_events_remaining <- mkReg(0);
+
+    (* fire_when_enabled *)
+    rule do_deq_countable_application_events
+            (countable_application_events_remaining == 0);
+        countable_application_events_id <=
+                countable_application_events.first.id;
+        countable_application_events_remaining <=
+                countable_application_events.first.events;
+
+        countable_application_events.deq();
     endrule
 
     (* fire_when_enabled *)
-    rule do_update_target_presence;
-        if (status_received)
-            target_present <= True;
-        else if (status_update_expired) begin
-            target_present <= False;
-            $display("%5t [Controller] Target Status timeout", $time);
+    rule do_decode_countable_application_events
+            (countable_application_events_remaining != 0);
+        Reg#(CountableApplicationEvents) events =
+                countable_application_events_remaining;
+
+        function increment(counter) =
+            increment_application_event_counter.enq(
+                    CounterAddress {
+                        controller: countable_application_events_id,
+                        counter: counter});
+
+        if (events.status_received) begin
+            events.status_received <= False;
+            increment(StatusReceived);
         end
-
-        if (status_received || status_update_expired) begin
-            status_update_expired <=
-                fromInteger(parameters.protocol.status_interval + 2);
+        else if (events.status_timeout) begin
+            events.status_timeout <= False;
+            increment(StatusTimeout);
         end
-
-        past_target_present <= target_present;
-
-        if (past_target_present != target_present) begin
-            let format = target_present ?
-                "%5t [Controller] Target present" :
-                "%5t [Controller] Target not present";
-            $display(format, $time);
+        else if (events.target_present) begin
+            events.target_present <= False;
+            increment(TargetPresent);
+        end
+        else if (events.target_timeout) begin
+            events.target_timeout <= False;
+            increment(TargetTimeout);
+        end
+        else if (events.hello_sent) begin
+            events.hello_sent <= False;
+            increment(HelloSent);
+        end
+        else if (events.system_power_request_sent) begin
+            events.system_power_request_sent <= False;
+            increment(SystemPowerRequestSent);
         end
     endrule
 
+    Reg#(ControllerId#(n)) countable_transceiver_events_id <- mkRegU();
+    Reg#(CountableTransceiverEvents)
+            countable_transceiver_events_remaining <- mkReg(0);
+
     (* fire_when_enabled *)
-    rule do_receive_status_message (rx matches tagged Status .*);
-        message_accepted.send();
-        status_message <= rx;
+    rule do_deq_countable_transceiver_events
+            (countable_transceiver_events_remaining == 0);
+        countable_transceiver_events_id <=
+                countable_transceiver_events.first.id;
+        countable_transceiver_events_remaining <=
+                countable_transceiver_events.first.events;
 
-        // Update the counters tracking Target side link events.
-        target_link0_monitor.monitor(rx.Status.link0_events);
-        target_link1_monitor.monitor(rx.Status.link1_events);
-
-        n_status_received.send();
-        status_received.send();
-
-        $display(
-            "%5t [Controller] Received ", $time,
-            message_status_pretty_format(rx));
+        countable_transceiver_events.deq();
     endrule
 
     (* fire_when_enabled *)
-    rule do_request_hello (!hello_requested && hello_expired);
-        hello_requested <= True;
+    rule do_decode_countable_transceiver_events
+            (countable_transceiver_events_remaining != 0);
+        Reg#(CountableTransceiverEvents) events =
+                countable_transceiver_events_remaining;
+
+        function increment(counter) =
+            increment_transceiver_event_counter.enq(
+                    CounterAddress {
+                        controller: countable_transceiver_events_id,
+                        counter: counter});
+
+        if (events.encoding_error) begin
+            events.encoding_error <= False;
+            increment(ControllerEncodingError);
+        end
+        else if (events.decoding_error) begin
+            events.decoding_error <= False;
+            increment(ControllerDecodingError);
+        end
+        else if (events.ordered_set_invalid) begin
+            events.ordered_set_invalid <= False;
+            increment(ControllerOrderedSetInvalid);
+        end
+        else if (events.message_version_invalid) begin
+            events.message_version_invalid <= False;
+            increment(ControllerMessageVersionInvalid);
+        end
+        else if (events.message_type_invalid) begin
+            events.message_type_invalid <= False;
+            increment(ControllerMessageTypeInvalid);
+        end
+        else if (events.message_checksum_invalid) begin
+            events.message_checksum_invalid <= False;
+            increment(ControllerMessageChecksumInvalid);
+        end
+        else if (events.aligned) begin
+            events.aligned <= False;
+            increment(ControllerReceiverAligned);
+        end
+        else if (events.locked) begin
+            events.locked <= False;
+            increment(ControllerReceiverLocked);
+        end
+        else if (events.polarity_inverted) begin
+            events.polarity_inverted <= False;
+            increment(ControllerReceiverPolarityInverted);
+        end
+        else if (events.reset) begin
+            events.reset <= False;
+            increment(ControllerReceiverReset);
+        end
+    endrule
+
+    Reg#(ControllerId#(n)) countable_target_link0_events_id <- mkRegU();
+    Reg#(CountableTransceiverEvents)
+            countable_target_link0_events_remaining <- mkReg(0);
+
+    (* fire_when_enabled *)
+    rule do_deq_countable_link0_events
+            (countable_target_link0_events_remaining == 0);
+        countable_target_link0_events_id <=
+                countable_target_link0_events.first.id;
+        countable_target_link0_events_remaining <=
+                countable_target_link0_events.first.events;
+
+        countable_target_link0_events.deq();
     endrule
 
     (* fire_when_enabled *)
-    rule do_handle_hello_expired (hello_requested && !isValid(pending_request));
-        tx.enq(tagged Hello);
+    rule do_decode_countable_target_link0_events
+            (countable_target_link0_events_remaining != 0);
+        Reg#(CountableTransceiverEvents) events =
+                countable_target_link0_events_remaining;
 
-        n_hello_sent.send();
-        hello_expired <= fromInteger(parameters.protocol.hello_interval);
-        hello_requested <= False;
+        function increment(counter) =
+            increment_target_link0_event_counter.enq(
+                    CounterAddress {
+                        controller: countable_target_link0_events_id,
+                        counter: counter});
 
-        $display("%5t [Controller] Sent Hello", $time);
+        if (events.encoding_error) begin
+            events.encoding_error <= False;
+            increment(TargetLink0EncodingError);
+        end
+        else if (events.decoding_error) begin
+            events.decoding_error <= False;
+            increment(TargetLink0DecodingError);
+        end
+        else if (events.ordered_set_invalid) begin
+            events.ordered_set_invalid <= False;
+            increment(TargetLink0OrderedSetInvalid);
+        end
+        else if (events.message_version_invalid) begin
+            events.message_version_invalid <= False;
+            increment(TargetLink0MessageVersionInvalid);
+        end
+        else if (events.message_type_invalid) begin
+            events.message_type_invalid <= False;
+            increment(TargetLink0MessageTypeInvalid);
+        end
+        else if (events.message_checksum_invalid) begin
+            events.message_checksum_invalid <= False;
+            increment(TargetLink0MessageChecksumInvalid);
+        end
+        else if (events.aligned) begin
+            events.aligned <= False;
+            increment(TargetLink0ReceiverAligned);
+        end
+        else if (events.locked) begin
+            events.locked <= False;
+            increment(TargetLink0ReceiverLocked);
+        end
+        else if (events.polarity_inverted) begin
+            events.polarity_inverted <= False;
+            increment(TargetLink0ReceiverPolarityInverted);
+        end
+        else if (events.reset) begin
+            events.reset <= False;
+            increment(TargetLink0ReceiverReset);
+        end
+    endrule
+
+    Reg#(ControllerId#(n)) countable_target_link1_events_id <- mkRegU();
+    Reg#(CountableTransceiverEvents)
+            countable_target_link1_events_remaining <- mkReg(0);
+
+    (* fire_when_enabled *)
+    rule do_deq_countable_link1_events
+            (countable_target_link1_events_remaining == 0);
+        countable_target_link1_events_id <=
+                countable_target_link1_events.first.id;
+        countable_target_link1_events_remaining <=
+                countable_target_link1_events.first.events;
+
+        countable_target_link1_events.deq();
     endrule
 
     (* fire_when_enabled *)
-    rule do_send_request (pending_request matches tagged Valid .request);
-        tx.enq(tagged Request request);
+    rule do_decode_countable_target_link1_events
+            (countable_target_link1_events_remaining != 0);
+        Reg#(CountableTransceiverEvents) events =
+                countable_target_link1_events_remaining;
 
-        n_request_sent.send();
-        pending_request <= tagged Invalid;
+        function increment(counter) =
+            increment_target_link1_event_counter.enq(
+                    CounterAddress {
+                        controller: countable_target_link1_events_id,
+                        counter: counter});
 
-        $display("%5t [Controller] Sent Request ", $time, fshow(request));
+        if (events.encoding_error) begin
+            events.encoding_error <= False;
+            increment(TargetLink1EncodingError);
+        end
+        else if (events.decoding_error) begin
+            events.decoding_error <= False;
+            increment(TargetLink1DecodingError);
+        end
+        else if (events.ordered_set_invalid) begin
+            events.ordered_set_invalid <= False;
+            increment(TargetLink1OrderedSetInvalid);
+        end
+        else if (events.message_version_invalid) begin
+            events.message_version_invalid <= False;
+            increment(TargetLink1MessageVersionInvalid);
+        end
+        else if (events.message_type_invalid) begin
+            events.message_type_invalid <= False;
+            increment(TargetLink1MessageTypeInvalid);
+        end
+        else if (events.message_checksum_invalid) begin
+            events.message_checksum_invalid <= False;
+            increment(TargetLink1MessageChecksumInvalid);
+        end
+        else if (events.aligned) begin
+            events.aligned <= False;
+            increment(TargetLink1ReceiverAligned);
+        end
+        else if (events.locked) begin
+            events.locked <= False;
+            increment(TargetLink1ReceiverLocked);
+        end
+        else if (events.polarity_inverted) begin
+            events.polarity_inverted <= False;
+            increment(TargetLink1ReceiverPolarityInverted);
+        end
+        else if (events.reset) begin
+            events.reset <= False;
+            increment(TargetLink1ReceiverReset);
+        end
+    endrule
+
+    Reg#(Vector#(4, Bool))
+            increment_event_counter_source_select_base <- mkReg(unpack(1));
+
+    (* fire_when_enabled *)
+    rule do_merge_increment_counter_requests;
+        let pending = vec(
+                increment_application_event_counter.notEmpty,
+                increment_transceiver_event_counter.notEmpty,
+                increment_target_link0_event_counter.notEmpty,
+                increment_target_link1_event_counter.notEmpty);
+
+        let source_select =
+                round_robin_select(
+                    pending,
+                    increment_event_counter_source_select_base);
+
+        function Action deq_from(FIFOF#(CounterAddress#(n)) source) =
+            action
+                increment_event_counter.enq(source.first);
+                source.deq();
+                increment_event_counter_source_select_base <=
+                        rotateR(source_select);
+            endaction;
+
+        if (source_select[0])
+            deq_from(increment_application_event_counter);
+        else if (source_select[1])
+            deq_from(increment_transceiver_event_counter);
+        else if (source_select[2])
+            deq_from(increment_target_link0_event_counter);
+        else if (source_select[3])
+            deq_from(increment_target_link1_event_counter);
     endrule
 
     (* fire_when_enabled *)
-    rule do_drop_hello_message (rx matches tagged Hello);
-        message_accepted.send();
-        n_message_dropped.send();
-        $display("%5t [Controller] Hello dropped", $time);
+    rule do_increment_counter;
+        increment_event_counter.deq();
+        event_counters.producer.request.put(
+                CounterWriteRequest {
+                    id: increment_event_counter.first,
+                    op: Add,
+                    amount: 1});
     endrule
+
+    let event_counting_idle =
+            !(countable_application_events.notEmpty ||
+                countable_transceiver_events.notEmpty ||
+                countable_target_link0_events.notEmpty ||
+                countable_target_link1_events.notEmpty ||
+                increment_application_event_counter.notEmpty ||
+                increment_transceiver_event_counter.notEmpty ||
+                increment_target_link0_event_counter.notEmpty ||
+                increment_target_link1_event_counter.notEmpty ||
+                increment_event_counter.notEmpty) &&
+            countable_application_events_remaining == 0 &&
+            countable_transceiver_events_remaining == 0 &&
+            countable_target_link0_events_remaining == 0 &&
+            countable_target_link1_events_remaining == 0 &&
+            event_counters.producer.idle;
+
+    function Action enq_countable_application_events(
+            CountableApplicationEvents events) =
+        countable_application_events.enq(
+                CountableApplicationEventsWithId {
+                    id: current_controller,
+                    events: events});
+
+    function Action enq_countable_transceiver_events(
+            CountableTransceiverEvents events) =
+        countable_transceiver_events.enq(
+                CountableTransceiverEventsWithId {
+                    id: current_controller,
+                    events: events});
+
+    //
+    // Event handler rules
+    //
 
     (* fire_when_enabled *)
-    rule do_drop_request_message (rx matches tagged Request .request);
-        message_accepted.send();
-        n_message_dropped.send();
-        $display("%5t [Controller] Request ", $time, fshow(request), " dropped");
-    endrule
-
-    let system_type =
-        TargetSystemType {
-            system_type: pack(status_message.Status.system_type.id)};
-
-    let target_system_status = target_present ?
-            pack(status_message.Status.system_status) :
-            '0;
-
-    interface TransceiverClient txr;
-        interface GetS to_txr = fifoToGetS(tx);
-
-        interface PutS from_txr;
-            method offer = rx._write;
-            method accepted = message_accepted;
-        endinterface
-
-        method Action monitor(LinkStatus status, LinkEvents events);
-            link_status <= status;
-            link_monitor.monitor(events);
-        endmethod
-
-        method tick_1khz = tick;
-    endinterface
-
-    interface Registers registers;
-        interface Reg controller_state;
-            method _read = ControllerState {
-                target_present: pack(target_present),
-                always_transmit: pack(always_transmit)};
-
-            method Action _write(ControllerState state);
-                always_transmit <= unpack(state.always_transmit);
-            endmethod
-        endinterface
-
-        interface ReadOnly controller_link_status =
-            valueToReadOnly(
-                IgnitionControllerRegisters::LinkStatus {
-                    receiver_aligned: pack(link_status.receiver_aligned),
-                    receiver_locked: pack(link_status.receiver_locked),
-                    polarity_inverted: pack(link_status.polarity_inverted)});
-
-        interface ReadOnly target_system_type =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.system_type,
-                defaultValue);
-
-        interface ReadOnly target_system_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.system_status,
-                defaultValue);
-
-        interface ReadOnly target_system_faults =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.system_faults,
-                defaultValue);
-
-        interface ReadOnly target_request_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.request_status,
-                defaultValue);
-
-        interface ReadOnly target_link0_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.link0_status,
-                defaultValue);
-
-        interface ReadOnly target_link1_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.link1_status,
-                defaultValue);
-
-        interface Reg target_request;
-            method TargetRequest _read();
-                let kind = isValid(pending_request) ?
-                        pack(fromMaybe(?, pending_request)) : 0;
-                return TargetRequest {
-                    kind: pack(kind),
-                    pending: pack(isValid(pending_request))};
-            endmethod
-
-            method Action _write(TargetRequest request) if (!isValid(pending_request));
-                let request_ =
-                    case (request.kind)
-                        1: tagged Valid SystemPowerOff;
-                        2: tagged Valid SystemPowerOn;
-                        3: tagged Valid SystemReset;
-                        default: tagged Invalid;
-                    endcase;
-                pending_request <= request_;
-
-                if (request_ matches tagged Valid .r)
-                    $display(
-                        "%5t [Controller] ", $time,
-                        fshow(r), " Request pending");
+    rule do_start_event_handler (
+            init_complete &&
+            event_handler_state == AwaitingEvent);
+        // Get the Controller id for the next pending event. If no event is
+        // pending the `Invalid` variant will keep the event handler waiting
+        // until one arrives.
+        let maybe_controller_id = (begin
+                if (software_request.notEmpty)
+                    tagged Valid software_request.first.id;
+                else if (tick_events.notEmpty)
+                    tagged Valid tick_events.first;
+                else if (receiver_events.notEmpty)
+                    tagged Valid receiver_events.first.id;
                 else
-                    $display("%5t [Controller] Request kind %2d ignored", $time);
-            endmethod
+                    tagged Invalid;
+            end);
+
+        // If an event is pending, request the Controller state to be read by
+        // setting the id in all register files. This will automatically cause a
+        // read of each register file on the next clock cycle.
+        if (maybe_controller_id matches tagged Valid .id) begin
+            current_controller <= id;
+
+            presence.select(id);
+            transceiver.select(id);
+            hello_timer.select(id);
+
+            target_system_type.select(id);
+            target_system_status.select(id);
+            target_system_events.select(id);
+            target_system_power_request_status.select(id);
+            target_link0_status.select(id);
+            target_link0_events.select(id);
+            target_link1_status.select(id);
+            target_link1_events.select(id);
+
+            event_handler_state <= ReadingRegisters;
+        end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_reading_register_data (
+            init_complete &&
+            event_handler_state == ReadingRegisters);
+        // Select the appropriate handler.
+        event_handler_state <=
+                (begin
+                    if (software_request.notEmpty)
+                        HandlingSoftwareRequest;
+                    else if (tick_events.notEmpty)
+                        HandlingTickEvent;
+                    else
+                        HandlingReceiverEvent;
+                end);
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_software_request (
+            init_complete &&
+            event_handler_state == HandlingSoftwareRequest);
+        function Action respond_with(value_t value)
+                provisos (
+                    Bits#(value_t, value_t_sz),
+                    Add#(value_t_sz, a__, 8),
+                    FShow#(value_t)) =
+            software_response.enq(extend(pack(value)));
+
+        function Action respond_with_current(
+                RegisterFile#(n, Vector#(2, value_t)) file)
+                    provisos (
+                        Bits#(value_t, value_t_sz),
+                        Add#(value_t_sz, a__, 8),
+                        DefaultValue#(value_t)) =
+            software_response.enq(extend(pack(
+                    presence.present ?
+                        file[presence.current_status_message] :
+                        defaultValue)));
+
+        case (tuple2(
+                software_request.first.op,
+                software_request.first.register)) matches
+            {tagged Read, TransceiverState}:
+                respond_with(transceiver);
+
+            {tagged Write .b, TransceiverState}: begin
+                let request = TransceiverRegister'(unpack(truncate(b)));
+
+                // Update the transceiver register. A change to the transmitter
+                // output enable mode is applied by on the next tick event. See
+                // `do_handle_tick_event`.
+                transceiver.transmitter_output_mode <=
+                        request.transmitter_output_mode;
+            end
+
+            {tagged Read, ControllerState}:
+                respond_with(presence.present);
+
+            {tagged Read, TargetSystemType}:
+                respond_with_current(target_system_type);
+
+            {tagged Read, TargetSystemStatus}:
+                respond_with_current(target_system_status);
+
+            {tagged Read, TargetSystemEvents}:
+                respond_with_current(target_system_events);
+
+            {tagged Read, TargetSystemPowerRequestStatus}:
+                respond_with_current(
+                    target_system_power_request_status);
+
+            {tagged Write .b, TargetSystemPowerRequestStatus}: begin
+                let maybe_request =
+                        case (b[5:4])
+                            1: tagged Valid SystemPowerOff;
+                            2: tagged Valid SystemPowerOn;
+                            3: tagged Valid SystemPowerReset;
+                            default: tagged Invalid;
+                        endcase;
+
+                if (presence.present &&&
+                        maybe_request matches tagged Valid .request) begin
+                    $display("%5t [Controller %02d] Requesting ",
+                            $time,
+                            current_controller, fshow(request));
+
+                    transmitter_events.enq(
+                            TransmitterEvent {
+                                id: current_controller,
+                                ev: tagged Message tagged Request request});
+
+                    enq_countable_application_events(
+                            CountableApplicationEvents {
+                                status_received: False,
+                                status_timeout: False,
+                                target_present: False,
+                                target_timeout: False,
+                                hello_sent: False,
+                                system_power_request_sent: True});
+                end
+            end
+
+            {tagged Read, TargetLink0Status}:
+                respond_with_current(target_link0_status);
+
+            {tagged Read, TargetLink1Status}:
+                respond_with_current(target_link1_status);
+        endcase
+
+        software_request.deq();
+        event_handler_state <= AwaitingEvent;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_tick_event (
+            init_complete &&
+            event_handler_state == HandlingTickEvent);
+        let status_timeout = False;
+        let target_timeout = False;
+        let hello_sent = False;
+
+        // Copy the `presence` register so indiviual fields can be updated as
+        // appropriate.
+        let presence_ = presence;
+
+        // Update the presence history if a Status message timeout occures.
+        if (presence.status_message_timeout_ticks_remaining == 0) begin
+            $display("%5t [Controller %02d] Target Status timeout",
+                    $time,
+                    current_controller);
+
+            // Add a timeout to the presence history.
+            presence_.history = shiftInAt0(presence.history, False);
+
+            // Reset the timeout counter.
+            presence_.status_message_timeout_ticks_remaining =
+                    status_message_timeout_reset_value;
+
+            status_timeout = True;
+        end
+        // Count down the Status message timeout counter.
+        else begin
+            presence_.status_message_timeout_ticks_remaining =
+                presence.status_message_timeout_ticks_remaining - 1;
+        end
+
+        // Update the filtered presence bit given the new history.
+        if (pack(presence_.history) == 'b000 && presence.present) begin
+            $display("%5t [Controller %02d] Target not present",
+                    $time,
+                    current_controller);
+
+            target_timeout = True;
+            presence_.present = False;
+        end
+
+        // Write back the presence state.
+        presence <= presence_;
+        presence_summary_r[current_controller] <= presence_.present;
+
+        // Transmit an Hello message if the Hello timer expires.
+        if (hello_timer.ticks_remaining == 0) begin
+            $display("%5t [Controller %02d] Hello",
+                    $time,
+                    current_controller);
+
+            hello_timer.ticks_remaining <=
+                    fromInteger(parameters.protocol.hello_interval);
+
+            transmitter_events.enq(
+                    TransmitterEvent {
+                        id: current_controller,
+                        ev: tagged Message tagged Hello});
+
+            hello_sent = True;
+        end
+        // Count down the Hello timer.
+        else begin
+            hello_timer.ticks_remaining <= hello_timer.ticks_remaining - 1;
+        end
+
+        // Update the transmitter output enable based on its enable mode and
+        // Target presence.
+        case (transceiver.transmitter_output_mode)
+            Disabled:
+                transmitter_output_enabled_events.enq(False);
+            EnabledWhenTargetPresent:
+                transmitter_output_enabled_events.enq(presence.present);
+            AlwaysEnabled:
+                transmitter_output_enabled_events.enq(True);
+        endcase
+
+        // Enqueue a request to update the appropriate counters.
+        if (status_timeout || target_timeout || hello_sent) begin
+            enq_countable_application_events(
+                    CountableApplicationEvents {
+                        status_received: False,
+                        status_timeout: status_timeout,
+                        target_present: False,
+                        target_timeout: target_timeout,
+                        hello_sent: hello_sent,
+                        system_power_request_sent: False});
+        end
+
+        // Complete the tick event.
+        tick_events.deq();
+        event_handler_state <= AwaitingEvent;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_receiver_event (
+            init_complete &&
+            event_handler_state == HandlingReceiverEvent);
+        case (receiver_events.first.ev) matches
+            tagged TargetStatusReceived: begin
+                $display("%5t [Controller %02d] Received Status",
+                        $time,
+                        current_controller);
+
+                PresenceRegister presence_ = presence;
+                Bool target_present = False;
+
+                // Make the last Status message active by flipping the
+                // Status message pointer.
+                presence_.current_status_message =
+                        presence.current_status_message + 1;
+
+                // Reset the Status timeout counter.
+                presence_.status_message_timeout_ticks_remaining =
+                        status_message_timeout_reset_value;
+
+                // Update the presence history.
+                presence_.history = shiftInAt0(presence.history, True);
+
+                if (pack(presence_.history) == 3'b001 &&
+                        !presence.present) begin
+                    $display("%5t [Controller %02d] Target present",
+                            $time,
+                            current_controller);
+
+                    presence_.present = True;
+                    target_present = True;
+                end
+
+                // Write back the presence state.
+                presence <= presence_;
+                presence_summary_r[current_controller] <= presence_.present;
+
+                enq_countable_application_events(
+                        CountableApplicationEvents {
+                            status_received: True,
+                            status_timeout: False,
+                            target_present: target_present,
+                            target_timeout: False,
+                            hello_sent: False,
+                            system_power_request_sent: False});
+
+                // Request the Target link events to be counted.
+                let previous = presence.current_status_message;
+                let current = presence_.current_status_message;
+
+                countable_target_link0_events.enq(
+                        CountableTransceiverEventsWithId {
+                            id: current_controller,
+                            events: determine_transceiver_events(
+                                target_link0_status[previous],
+                                target_link0_status[current],
+                                target_link0_events[current],
+                                // Attempt to detect receiver resets by
+                                // comparing the current and previous receiver
+                                // status. This is not an accurate count since
+                                // this will only count instances where the
+                                // status changes as a result of the reset.
+                                // Subsequent resets may happen without the
+                                // status changing, which will go unnoticed
+                                // here. But for the purposes of remote
+                                // monitoring the Target this is good enough.
+                                True)});
+
+                countable_target_link1_events.enq(
+                        CountableTransceiverEventsWithId {
+                            id: current_controller,
+                            events: determine_transceiver_events(
+                                target_link1_status[previous],
+                                target_link1_status[current],
+                                target_link1_events[current],
+                                True)});
+            end
+
+            tagged StatusMessageFragment .field: begin
+                // Write the non-active portion of the Status message field
+                // register.
+                function Action write_status_message_field(
+                        RegisterFile#(n, Vector#(2, t)) register,
+                        t value)
+                            provisos (
+                                Bits#(t, t_sz)) =
+                    action
+                        let both_values = register;
+
+                        // Update the non-active value slot in the register.
+                        if (presence.current_status_message == 0)
+                            both_values[1] = value;
+                        else
+                            both_values[0] = value;
+
+                        // Write back the register.
+                        register <= both_values;
+                    endaction;
+
+                case (field) matches
+                    tagged SystemType .system_type:
+                        write_status_message_field(
+                                target_system_type,
+                                system_type);
+
+                    tagged SystemStatus .system_status:
+                        write_status_message_field(
+                                target_system_status,
+                                system_status);
+
+                    tagged SystemEvents .system_events:
+                        write_status_message_field(
+                                target_system_events,
+                                system_events);
+
+                    tagged SystemPowerRequestStatus
+                            .system_power_request_status:
+                        write_status_message_field(
+                                target_system_power_request_status,
+                                system_power_request_status);
+
+                    tagged Link0Status .link0_status:
+                        write_status_message_field(
+                                target_link0_status,
+                                link0_status);
+
+                    tagged Link0Events .link0_events:
+                        write_status_message_field(
+                                target_link0_events,
+                                link0_events);
+
+                    tagged Link0Status .link1_status:
+                        write_status_message_field(
+                                target_link1_status,
+                                link1_status);
+
+                    tagged Link0Events .link1_events:
+                        write_status_message_field(
+                                target_link1_events,
+                                link1_events);
+                endcase
+            end
+
+            tagged ReceiverReset: begin
+                $display("%5t [Controller %02d] Receiver reset",
+                        $time,
+                        current_controller);
+
+                transceiver.receiver_status <= link_status_none;
+
+                enq_countable_transceiver_events(
+                        countable_transceiver_events_receiver_reset);
+            end
+
+            tagged ReceiverStatusChange .current_status: begin
+                transceiver.receiver_status <= current_status;
+
+                enq_countable_transceiver_events(
+                        determine_transceiver_events(
+                            transceiver.receiver_status,
+                            current_status,
+                            defaultValue,
+                            // Do not attempt to infer receiver resets from the
+                            // link status as that would result in the wrong
+                            // count. The receiver may reset multiple times
+                            // without the status changing, which would result
+                            // in those events not being counted if the status
+                            // was used to infer this happening. The
+                            // `ReceiverReset` event above is the more accurate
+                            // way to update this counter.
+                            False));
+            end
+
+            tagged ReceiverEvent .events: begin
+                enq_countable_transceiver_events(
+                        determine_transceiver_events(
+                            defaultValue,
+                            defaultValue,
+                            events,
+                            False));
+            end
+        endcase
+
+        // Complete the receiver event.
+        receiver_events.deq();
+        event_handler_state <= AwaitingEvent;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_discard_transmitter_output_enabled_events;
+        transmitter_output_enabled_events.deq();
+    endrule
+
+    interface ControllerTransceiverClient txr;
+        interface Get tx = toGet(transmitter_events);
+        interface Put rx = toPut(receiver_events);
+    endinterface
+
+    interface Server registers;
+        interface Put request = toPut(software_request);
+        interface Get response = toGet(software_response);
+    endinterface
+
+    interface Server counters;
+        interface Put request;
+            method put(address) =
+                    event_counters.consumer.request.put(
+                        CounterReadRequest {
+                            id: address,
+                            clear: True});
         endinterface
 
-        interface ReadVolatile controller_status_received_count = readCounter(n_status_received);
-        interface ReadVolatile controller_hello_sent_count = readCounter(n_hello_sent);
-        interface ReadVolatile controller_request_sent_count = readCounter(n_request_sent);
-        interface ReadVolatile controller_message_dropped_count = readCounter(n_message_dropped);
-        interface LinkEventCounterRegisters controller_link_counters = asLinkEventCounterRegisters(link_monitor);
-        interface LinkEventCounterRegisters target_link0_counters = asLinkEventCounterRegisters(target_link0_monitor);
-        interface LinkEventCounterRegisters target_link1_counters = asLinkEventCounterRegisters(target_link1_monitor);
+        interface Get response = event_counters.consumer.response;
     endinterface
 
-    interface Reg interrupts;
-        method _read = defaultValue;
-        method Action _write(Interrupts i);
-        endmethod
-    endinterface
+    method presence_summary = readVReg(presence_summary_r);
 
-    interface PulseWire tick_1khz;
-        method _read = tick;
-        method Action send();
-            tick <= True;
-        endmethod
-    endinterface
+    method tick_1mhz = tick.send;
 
-    method status = Status {
-        receiver_locked: link_status.receiver_locked,
-        target_present: target_present,
-        always_transmit: always_transmit};
+    method idle = init_complete && event_handler_idle && event_counting_idle;
 endmodule
 
-//
-// Helpers
-//
+interface RegisterFile#(numeric type n, type t);
+    method Action select(ControllerId#(n) id);
+    method Action _write(t value);
+    method t _read();
+endinterface
 
-instance Connectable#(Transceiver, Controller);
-    module mkConnection #(Transceiver txr, Controller c) (Empty);
-        mkConnection(txr, c.txr);
-    endmodule
+typedef RegisterFile#(n, Vector#(2, t))
+        DualValueRegisterFile#(numeric type n, type t);
+
+module mkBRAMRegisterFile (RegisterFile#(n, t))
+        provisos (Bits#(t, t_sz));
+    BRAM_PORT#(ControllerId#(n), t) ram <- mkBRAMCore1(valueof(n), False);
+    Reg#(RegisterFileRequest#(n, t)) request <- mkRegU();
+
+    RWire#(ControllerId#(n)) controller_id <- mkRWire();
+    RWire#(t) new_value <- mkRWire();
+
+    (* fire_when_enabled *)
+    rule do_update_state;
+        request <= RegisterFileRequest {
+                id: fromMaybe(request.id, controller_id.wget),
+                data: new_value.wget};
+
+        // The register file contineously reads or writes the data for the set
+        // Controller id. If no new data is provided through `new_value`, the
+        // `data` field in the request automatically becomes `Invalid` causing a
+        // BRAM read instead of a write.
+        if (request.data matches tagged Valid .data)
+            ram.put(True, request.id, data);
+        else
+            ram.put(False, request.id, ?);
+    endrule
+
+    method select = controller_id.wset;
+    method _read = ram.read;
+    method _write = new_value.wset;
+endmodule
+
+typedef struct {
+    ControllerId#(n) id;
+    Maybe#(t) data;
+} RegisterFileRequest#(numeric type n, type t) deriving (Bits, Eq, FShow);
+
+typedef enum {
+    Disabled = 0,
+    EnabledWhenTargetPresent = 1,
+    AlwaysEnabled = 2
+} TransmitterOutputMode deriving (Bits, Eq, FShow);
+
+typedef struct {
+    ControllerId#(n) id;
+    union tagged {
+        TransmitterOutputMode SetTransmitterOutputMode;
+        SystemPowerRequest SystemPowerRequest;
+    } ev;
+} SoftwareEvent#(numeric type n) deriving (Bits, Eq, FShow);
+
+typedef struct {
+    Bool reset;
+    Bool polarity_inverted;
+    Bool locked;
+    Bool aligned;
+    Bool message_checksum_invalid;
+    Bool message_type_invalid;
+    Bool message_version_invalid;
+    Bool ordered_set_invalid;
+    Bool decoding_error;
+    Bool encoding_error;
+} CountableTransceiverEvents deriving (Bits, Eq, FShow);
+
+instance Literal#(CountableTransceiverEvents);
+    function CountableTransceiverEvents fromInteger(Integer x) =
+            unpack(fromInteger(x));
+    function Bool inLiteralRange(CountableTransceiverEvents e, Integer x) =
+            fromInteger(x) <= pack(CountableTransceiverEvents'(unpack('1)));
 endinstance
 
-// Interrupts
-Interrupts interrupts_none = unpack('0);
+function CountableTransceiverEvents determine_transceiver_events(
+        LinkStatus past_status,
+        LinkStatus current_status,
+        LinkEvents link_events,
+        Bool infer_reset) =
+    CountableTransceiverEvents {
+        reset:
+            (infer_reset &&
+                past_status.polarity_inverted &&
+                !current_status.polarity_inverted) ||
+            (infer_reset &&
+                past_status.receiver_locked &&
+                !current_status.receiver_locked) ||
+            (infer_reset &&
+                past_status.receiver_aligned &&
+                !current_status.receiver_aligned),
+        polarity_inverted:
+            !past_status.polarity_inverted &&
+                current_status.polarity_inverted,
+        locked:
+            !past_status.receiver_locked &&
+                current_status.receiver_locked,
+        aligned:
+            !past_status.receiver_aligned &&
+                current_status.receiver_aligned,
+        message_checksum_invalid: link_events.message_checksum_invalid,
+        message_type_invalid: link_events.message_type_invalid,
+        message_version_invalid: link_events.message_version_invalid,
+        ordered_set_invalid: link_events.ordered_set_invalid,
+        decoding_error: link_events.decoding_error,
+        encoding_error: link_events.encoding_error};
 
-instance DefaultValue#(Interrupts);
-    defaultValue = interrupts_none;
+CountableTransceiverEvents countable_transceiver_events_receiver_reset =
+        CountableTransceiverEvents {
+            reset: True,
+            polarity_inverted: False,
+            locked: False,
+            aligned: False,
+            message_checksum_invalid: False,
+            message_type_invalid: False,
+            message_version_invalid: False,
+            ordered_set_invalid: False,
+            decoding_error: False,
+            encoding_error: False};
+
+typedef struct {
+    Bool system_power_request_sent;
+    Bool hello_sent;
+    Bool target_timeout;
+    Bool target_present;
+    Bool status_timeout;
+    Bool status_received;
+} CountableApplicationEvents deriving (Bits, Eq, FShow);
+
+instance Literal#(CountableApplicationEvents);
+    function CountableApplicationEvents fromInteger(Integer x) =
+            unpack(fromInteger(x));
+    function Bool inLiteralRange(CountableApplicationEvents e, Integer x) =
+            fromInteger(x) <= pack(e);
 endinstance
 
-instance Bitwise#(Interrupts);
-    function Interrupts \& (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) & pack(i2));
-    function Interrupts \| (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) | pack(i2));
-    function Interrupts \^ (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) ^ pack(i2));
-    function Interrupts \~^ (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) ~^ pack(i2));
-    function Interrupts \^~ (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) ^~ pack(i2));
-    function Interrupts invert (Interrupts i) =
-        unpack(invert(pack(i)));
-    function Interrupts \<< (Interrupts i, t x) =
-        error("Left shift operation is not supported with type Interrupts");
-    function Interrupts \>> (Interrupts i, t x) =
-        error("Right shift operation is not supported with type Interrupts");
-    function Bit#(1) msb (Interrupts i) =
-        error("msb operation is not supported with type Interrupts");
-    function Bit#(1) lsb (Interrupts i) =
-        error("lsb operation is not supported with type Interrupts");
-endinstance
+typedef struct {
+    ControllerId#(n) id;
+    events_type events;
+} CountableEventsWithId#(numeric type n, type events_type)
+    deriving (Bits, FShow);
 
-// Helpers used to map values/internal registers onto the register interface.
-function ReadOnly#(t) valueToReadOnly(t val);
-    return (
-        interface ReadOnly
-            method _read = val;
-        endinterface);
+typedef CountableEventsWithId#(n, CountableTransceiverEvents)
+        CountableTransceiverEventsWithId#(numeric type n);
+
+typedef CountableEventsWithId#(n, CountableApplicationEvents)
+        CountableApplicationEventsWithId#(numeric type n);
+
+typedef struct {
+    UInt#(1) current_status_message;
+    UInt#(6) status_message_timeout_ticks_remaining;
+    Bool present;
+    Vector#(3, Bool) history;
+} PresenceRegister deriving (Bits, FShow);
+
+typedef struct {
+    TransmitterOutputMode transmitter_output_mode;
+    Bit#(1) reserved;
+    LinkStatus receiver_status;
+} TransceiverRegister deriving (Bits, FShow);
+
+typedef struct {
+    UInt#(6) ticks_remaining;
+} HelloTimerRegister deriving (Bits, FShow);
+
+typedef enum {
+    AwaitingEvent = 0,
+    ReadingRegisters,
+    HandlingSoftwareRequest,
+    HandlingTickEvent,
+    HandlingReceiverEvent
+} EventHandlerState deriving (Bits, Eq, FShow);
+
+module mkDefaultControllerUsingBRAM (Controller#(36));
+    (* hide *) Controller#(36) _c <- mkController(defaultValue, False);
+    return _c;
+endmodule
+
+function Stmt read_controller_register_into(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        RegisterId register_id,
+        Reg#(register_value_type) destination)
+            provisos (
+                Bits#(register_value_type, register_value_type_sz),
+                Add#(register_value_type_sz, a__, 8));
+    return seq
+        controller.registers.request.put(
+                RegisterRequest {
+                    op: tagged Read,
+                    id: controller_id,
+                    register: register_id});
+
+        action
+            let response <- controller.registers.response.get;
+            destination <= unpack(truncate(response));
+        endaction
+    endseq;
 endfunction
 
-function ReadOnly#(v) castToReadOnly(t val)
-        provisos (
-            Bits#(t, t_sz),
-            Bits#(v, v_sz),
-            Add#(t_sz, _, v_sz));
-    return (
-        interface ReadOnly
-            method _read = unpack(zeroExtend(pack(val)));
-        endinterface);
+function Stmt clear_controller_counter(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        CounterId counter_id) =
+    seq
+        controller.counters.request.put(
+                CounterAddress {
+                    controller: controller_id,
+                    counter: counter_id});
+
+        action
+            let count <- controller.counters.response.get;
+        endaction
+    endseq;
+
+function Stmt read_controller_counter_into(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        CounterId counter_id,
+        Reg#(UInt#(8)) counter) =
+    seq
+        controller.counters.request.put(
+                CounterAddress {
+                    controller: controller_id,
+                    counter: counter_id});
+        action
+            let count <- controller.counters.response.get;
+            counter <= count;
+        endaction
+    endseq;
+
+function bit_vector_t round_robin_select(
+        bit_vector_t pending,
+        bit_vector_t base)
+            provisos (Bits#(bit_vector_t, sz));
+    let _pending = {pack(pending), pack(pending)};
+
+    Tuple2#(Bit#(sz), Bit#(sz)) result =
+            split(_pending & ~(_pending - extend(pack(base))));
+
+    return unpack(result.fst | result.snd);
 endfunction
-
-function ReadOnly#(v) castToReadOnlyIf(Bool pred, t val, t alt)
-        provisos (
-            Bits#(t, t_sz),
-            Bits#(v, v_sz),
-            Add#(t_sz, _, v_sz));
-    return castToReadOnly(pred ? val : alt);
-endfunction
-
-function ReadVolatile#(IgnitionControllerRegisters::Counter)
-        readCounter(ActionValue#(Count) c) =
-    (interface ReadVolatile#(IgnitionControllerRegisters::Counter);
-        method ActionValue#(IgnitionControllerRegisters::Counter) _read();
-            let x <- c;
-            return unpack(pack(x));
-        endmethod
-    endinterface);
-
-function LinkEventCounterRegisters
-        asLinkEventCounterRegisters(CountingMonitor monitor) =
-    (interface LinkEventCounterRegisters;
-        interface Reg summary;
-            method _read = unpack(extend(pack(monitor.counters.summary)));
-            method Action _write(IgnitionControllerRegisters::LinkEvents e) =
-                monitor.counters.clear(unpack(truncate(pack(e))));
-        endinterface
-        interface ReadVolatile encoding_error = readCounter(monitor.counters.encoding_error);
-        interface ReadVolatile decoding_error = readCounter(monitor.counters.decoding_error);
-        interface ReadVolatile ordered_set_invalid = readCounter(monitor.counters.ordered_set_invalid);
-        interface ReadVolatile message_version_invalid = readCounter(monitor.counters.message_version_invalid);
-        interface ReadVolatile message_type_invalid = readCounter(monitor.counters.message_type_invalid);
-        interface ReadVolatile message_checksum_invalid = readCounter(monitor.counters.message_checksum_invalid);
-    endinterface);
-
-function Registers registers(Controller c) = c.registers;
-
-function Vector#(n, Registers) register_pages(Vector#(n, Controller) controllers) =
-    map(registers, controllers);
-
-function TransceiverClient transceiver_client(Controller c) = c.txr;
-
-function Bool tx_enabled(Controller c) = c.status.always_transmit || c.status.target_present;
 
 endpackage

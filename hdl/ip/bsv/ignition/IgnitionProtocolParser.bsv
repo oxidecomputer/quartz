@@ -12,6 +12,10 @@ export ControllerMessageParserState;
 export ControllerMessageParser;
 export mkControllerMessageParser;
 
+export StreamingStatusMessageParserState(..);
+export StreamingStatusMessageParser;
+export mkStreamingStatusMessageParser;
+
 import DefaultValue::*;
 
 import Encoding8b10b::*;
@@ -117,7 +121,7 @@ module mkMessageParser (Parser#(MessageParserState, Message));
                 case (d)
                     1: tagged ComparingChecksum tagged Request SystemPowerOff;
                     2: tagged ComparingChecksum tagged Request SystemPowerOn;
-                    3: tagged ComparingChecksum tagged Request SystemReset;
+                    3: tagged ComparingChecksum tagged Request SystemPowerReset;
                     default: tagged AwaitingReset tagged Error RequestInvalid;
                 endcase
 
@@ -325,7 +329,7 @@ module mkControllerMessageParser
                 case (d)
                     1: tagged ComparingChecksum tagged Request SystemPowerOff;
                     2: tagged ComparingChecksum tagged Request SystemPowerOn;
-                    3: tagged ComparingChecksum tagged Request SystemReset;
+                    3: tagged ComparingChecksum tagged Request SystemPowerReset;
                     default: tagged AwaitingReset tagged Error RequestInvalid;
                 endcase
 
@@ -370,6 +374,141 @@ module mkControllerMessageParser
 
     method Maybe#(Result#(ControllerMessage))
             result(ControllerMessageParserState state);
+        return case (state) matches
+            tagged AwaitingReset .result: tagged Valid result;
+            default: tagged Invalid;
+        endcase;
+    endmethod
+endmodule
+
+typedef Parser#(StreamingStatusMessageParserState, void)
+            StreamingStatusMessageParser;
+
+typedef union tagged {
+    void AwaitingOrderedSet;
+    void ParsingIdle;
+    void ParsingVersion;
+    void ParsingMessageType;
+    void ParsingSystemType;
+    SystemType ParsingSystemStatus;
+    SystemStatus ParsingSystemFaults;
+    SystemFaults ParsingRequestStatus;
+    RequestStatus ParsingLink0Status;
+    LinkStatus ParsingLink0Events;
+    LinkEvents ParsingLink1Status;
+    LinkStatus ParsingLink1Events;
+    LinkEvents ComparingChecksum;
+    void ParsingEndOfMessage1;
+    Result#(void) AwaitingReset;
+} StreamingStatusMessageParserState deriving (Bits, Eq, FShow);
+
+instance DefaultValue#(StreamingStatusMessageParserState);
+    defaultValue = tagged AwaitingOrderedSet;
+endinstance
+
+module mkStreamingStatusMessageParser
+            (Parser#(StreamingStatusMessageParserState, void));
+
+    method ActionValue#(StreamingStatusMessageParserState) parse(
+            StreamingStatusMessageParserState state,
+            Value value,
+            Bit#(8) running_checksum);
+        return case (tuple2(state, value)) matches
+            {tagged AwaitingOrderedSet, tagged K 'hbc}: // K28.5, comma
+                tagged ParsingIdle;
+            {tagged AwaitingOrderedSet, tagged K 'h1c}: // K28.0, start_of_message
+                tagged ParsingVersion;
+            {tagged AwaitingOrderedSet, .*}:
+                tagged AwaitingOrderedSet;
+
+            // Parse idle sets
+            {tagged ParsingIdle, tagged D 'h4a}: // D10.2, idle1
+                tagged AwaitingReset tagged Idle1 False;
+            {tagged ParsingIdle, tagged D 'hb5}: // D21.5, bit inverse of idle1
+                tagged AwaitingReset tagged Idle1 True;
+            {tagged ParsingIdle, tagged D 'hb3}: // D19.5, idle2
+                tagged AwaitingReset tagged Idle2 False;
+            {tagged ParsingIdle, tagged D 'h4c}: // D12.2, bit inverse of idle2
+                tagged AwaitingReset tagged Idle2 True;
+
+            // Parse message header
+            {tagged ParsingVersion, tagged D 1}:
+                tagged ParsingMessageType;
+            {tagged ParsingVersion, tagged D .*}:
+                tagged AwaitingReset tagged Error VersionInvalid;
+
+            {tagged ParsingMessageType, tagged D .d}:
+                case (d)
+                    1: tagged ParsingSystemType;
+                    default: tagged AwaitingReset tagged Error MessageTypeInvalid;
+                endcase
+
+            // Parse Status
+            {tagged ParsingSystemType, tagged D .d}:
+                tagged ParsingSystemStatus unpack(truncate(d));
+
+            {tagged ParsingSystemStatus .*, tagged D .d}:
+                tagged ParsingSystemFaults unpack(truncate(d));
+
+            {tagged ParsingSystemFaults .*, tagged D .d}:
+                tagged ParsingRequestStatus unpack(truncate(d));
+
+            {tagged ParsingRequestStatus .*, tagged D .d}:
+                tagged ParsingLink0Status unpack(truncate(d));
+
+            {tagged ParsingLink0Status .*, tagged D .d}:
+                tagged ParsingLink0Events unpack(truncate(d));
+
+            {tagged ParsingLink0Events .*, tagged D .d}:
+                tagged ParsingLink1Status unpack(truncate(d));
+
+            {tagged ParsingLink1Status .*, tagged D .d}:
+                tagged ParsingLink1Events unpack(truncate(d));
+
+            {tagged ParsingLink1Events .*, tagged D .d}:
+                tagged ComparingChecksum unpack(truncate(d));
+
+            // Parse message footer
+            {tagged ComparingChecksum .*, tagged D .d}:
+                (begin
+                    if (d == running_checksum)
+                        tagged ParsingEndOfMessage1;
+                    else
+                        tagged AwaitingReset tagged Error ChecksumInvalid;
+                end);
+
+            {tagged ParsingEndOfMessage1, tagged K 'hf7}: // K23.7
+                tagged AwaitingReset tagged Message (?);
+
+            // Reject anything else as an invalid ordered set.
+            default:
+                tagged AwaitingReset tagged Error OrderedSetInvalid;
+        endcase;
+    endmethod
+
+    method Bool awaiting_ordered_set(StreamingStatusMessageParserState state);
+        return case (state) matches
+            tagged AwaitingOrderedSet: True;
+            default: False;
+        endcase;
+    endmethod
+
+    method Bool parsing_idle(StreamingStatusMessageParserState state);
+        return case (state) matches
+            tagged ParsingIdle: True;
+            default: False;
+        endcase;
+    endmethod
+
+    method Bool done(StreamingStatusMessageParserState state);
+        return case (state) matches
+            tagged AwaitingReset .*: True;
+            default: False;
+        endcase;
+    endmethod
+
+    method Maybe#(Result#(void))
+                result(StreamingStatusMessageParserState state);
         return case (state) matches
             tagged AwaitingReset .result: tagged Valid result;
             default: tagged Invalid;

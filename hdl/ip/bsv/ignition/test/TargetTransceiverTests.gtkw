@@ -5,7 +5,7 @@
 [dumpfile] "/Users/arjen/oxidecomputer/quartz/build/vcd/TargetTransceiverTests_mkStartUpLink0PolarityInvertedLink1PolarityInvertedTest.vcd"
 [dumpfile_mtime] "Thu Oct 27 03:09:17 2022"
 [dumpfile_size] 45502
-[savefile] "/Users/arjen/oxidecomputer/quartz/hdl/ip/bsv/ignition/test/TargetTransceiverTests.gtkw"
+[savefile] "/Users/arjen/oxidecomputer/quartz/hdl/ignition/test/TargetTransceiverTests.gtkw"
 [timestart] 0
 [size] 3440 1387
 [pos] -1 -1

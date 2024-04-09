@@ -1,5 +1,6 @@
 package IgnitionControllerAndTargetBench;
 
+import ClientServer::*;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
@@ -31,13 +32,16 @@ endinterface
 
 interface IgnitionControllerAndTargetBench;
     interface Target target;
-    interface Controller controller;
+    interface Controller#(4) controller;
     interface Link controller_to_target;
     interface Link target_to_controller;
 
     method Action await_tick();
     method Action pet_watchdog();
     method Action set_target_system_faults(SystemFaults faults);
+
+    method Bool target_system_power_off();
+    method Bool target_system_power_on();
 
     method Bool controller_receiver_locked_timeout();
     interface Vector#(2, Bool) target_receiver_locked_timeout;
@@ -86,7 +90,7 @@ module mkLink #(
     endmethod
 endmodule
 
-Integer tick_duration = 1000;
+// /Integer tick_duration = 1000;
 
 module mkIgnitionControllerAndTargetBench #(
         Parameters parameters,
@@ -95,7 +99,11 @@ module mkIgnitionControllerAndTargetBench #(
     //
     // Bench tick.
     //
-    Strobe#(10) tick <- mkLimitStrobe(1, tick_duration, 0);
+    Strobe#(6) tick <- mkLimitStrobe(1, 50, 0);
+    Strobe#(10) target_tick <-
+            mkLimitStrobe(1, parameters.controller.tick_period, 0);
+
+    mkConnection(asIfc(tick), asIfc(target_tick));
     mkFreeRunningStrobe(tick);
 
     //
@@ -103,32 +111,45 @@ module mkIgnitionControllerAndTargetBench #(
     //
     Target target_ <- mkTarget(parameters.target);
     TargetTransceiver target_txr <- mkTargetTransceiver(True);
-
-    mkConnection(asIfc(tick), asIfc(target_.tick_1khz));
-
     Strobe#(3) target_tx_strobe <- mkLimitStrobe(1, 5, 0);
     SampledSerialIO#(5) target_io <-
         mkSampledSerialIOWithTxStrobe(
             target_tx_strobe,
             tuple2(target_txr.to_link, target_txr.from_link[0]));
 
-    mkConnection(target_txr, target_.txr);
+    // Connect the Target and transceiver manually so the transceiver tick can
+    // be driven at a higher rate, reducing the time between receiver resets
+    // (and shortening tests a bit).
+    mkConnection(target_txr.to_client, target_.txr.from_txr);
+    mkConnection(target_.txr.to_txr, target_txr.from_client);
+
+    (* fire_when_enabled *)
+    rule do_target_txr_monitor;
+        target_.txr.monitor(target_txr.status, target_txr.events);
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_tick_target_rx_watchdog;
+        target_txr.tick_1khz();
+    endrule
+
+    mkConnection(asIfc(target_tick), asIfc(target_.tick_1khz));
     mkFreeRunningStrobe(target_tx_strobe);
 
     //
     // Controller, transceiver and IO adapter.
     //
-    Controller controller_ <- mkController(parameters.controller);
-    Transceiver controller_txr <- mkTransceiver(tick);
+    Controller#(4) controller_ <- mkController(parameters.controller, True);
+    ControllerTransceiver#(4) controller_txr <- mkControllerTransceiver();
 
-    mkConnection(asIfc(tick), asIfc(controller_.tick_1khz));
+    mkConnection(asIfc(tick), asIfc(controller_.tick_1mhz));
 
     // Set this TX strobe ~180 degrees out of phase from Target TX.
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 3);
     SampledSerialIO#(5) controller_io <-
         mkSampledSerialIOWithTxStrobe(
             controller_tx_strobe,
-            controller_txr.serial);
+            controller_txr.serial[0]);
 
     mkConnection(controller_txr, controller_.txr);
     mkFreeRunningStrobe(controller_tx_strobe);
@@ -143,7 +164,7 @@ module mkIgnitionControllerAndTargetBench #(
             // Mimic the hardware implementation where the output buffer of the
             // Controller transmitter is only enabled if a Target is present or
             // the `always_transmit` bit has been set.
-            tx_enabled(controller_));
+            True); // TODO (arjen): fix initial high-z state
 
     Link target_to_controller_link <-
         mkLink(
@@ -163,10 +184,27 @@ module mkIgnitionControllerAndTargetBench #(
 
     ReadOnly#(Bit#(1)) target_to_controller_link_status_led <-
         mkLinkStatusLED(
-            controller_.status.target_present,
-            controller_txr.status,
-            controller_txr.receiver_locked_timeout,
+            False, //controller_.status.target_present,
+            link_status_disconnected, //controller_txr.status,
+            False, //controller_txr.receiver_locked_timeout,
             False);
+
+    // Discard transmitted bits from the remaining three Controllers in order to
+    // not stall the shared transmitter FIFO.
+    (* fire_when_enabled *)
+    rule do_discard_controller_1;
+        let _ <- controller_txr.serial[1].fst.get;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_discard_controller_2;
+        let _ <- controller_txr.serial[2].fst.get;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_discard_controller_3;
+        let _ <- controller_txr.serial[3].fst.get;
+    endrule
 
     // Generate single cycle timeout strobes on the positive edge for both
     // receivers.
@@ -178,12 +216,12 @@ module mkIgnitionControllerAndTargetBench #(
 
     (* fire_when_enabled *)
     rule do_past_receiver_locked_timeout;
-        past_controller_receiver_locked_timeout <=
-            controller_txr.receiver_locked_timeout;
+    //     past_controller_receiver_locked_timeout <=
+    //         controller_txr.receiver_locked_timeout;
 
-        controller_receiver_locked_timeout_ <=
-            !past_controller_receiver_locked_timeout &&
-                controller_txr.receiver_locked_timeout;
+    //     controller_receiver_locked_timeout_ <=
+    //         !past_controller_receiver_locked_timeout &&
+    //             controller_txr.receiver_locked_timeout;
 
         for (Integer i = 0; i < 2; i = i + 1) begin
             past_target_receiver_locked_timeout[i] <=
@@ -195,13 +233,16 @@ module mkIgnitionControllerAndTargetBench #(
         end
     endrule
 
-    (* fire_when_enabled *)
-    rule do_display_tick (tick);
-        $display("%5t [Bench] Tick", $time);
-    endrule
+    // (* fire_when_enabled *)
+    // rule do_display_tick (tick);
+    //     $display("%5t [Bench] Tick", $time);
+    // endrule
 
     TestWatchdog wd <-
-        mkTestWatchdog(tick_duration * watchdog_timeout_in_ticks);
+        mkTestWatchdog(
+                parameters.controller.tick_period *
+                watchdog_timeout_in_ticks *
+                50);
 
     (* fire_when_enabled *)
     rule do_set_system_type;
@@ -223,6 +264,9 @@ module mkIgnitionControllerAndTargetBench #(
     method await_tick = await(tick);
     method pet_watchdog = wd.send;
     method set_target_system_faults = target_faults._write;
+
+    method target_system_power_off = (target_.system_power == Off);
+    method target_system_power_on = (target_.system_power == On);
 
     method controller_receiver_locked_timeout =
             controller_receiver_locked_timeout_;

@@ -1,14 +1,19 @@
 package IgnitionTestHelpers;
 
 import BuildVector::*;
+import ClientServer::*;
 import GetPut::*;
+import StmtFSM::*;
 import Vector::*;
 
 import Encoding8b10b::*;
 import Encoding8b10bReference::*;
 import TestUtils::*;
 
+import IgnitionController::*;
 import IgnitionProtocol::*;
+import IgnitionReceiver::*;
+import IgnitionTransceiver::*;
 
 
 Bit#(20) default_disconnect_pattern = '0;
@@ -28,6 +33,17 @@ SystemStatus system_status_system_powered_on_both_controllers_present =
     system_status_system_power_enabled |
     system_status_controller1_present |
     system_status_controller0_present;
+
+Message message_status_none =
+    tagged Status {
+        system_type: target_system_type,
+        system_status: defaultValue,
+        system_faults: system_faults_none,
+        request_status: request_status_none,
+        link0_status: link_status_disconnected,
+        link0_events: link_events_none,
+        link1_status: link_status_disconnected,
+        link1_events: link_events_none};
 
 Message message_status_system_powering_on =
     tagged Status {
@@ -71,6 +87,17 @@ Message message_status_system_powered_on_link0_connected =
         system_faults: system_faults_none,
         request_status: request_status_none,
         link0_status: link_status_connected,
+        link0_events: link_events_none,
+        link1_status: link_status_disconnected,
+        link1_events: link_events_none};
+
+Message message_status_system_powered_on_link0_disconnected =
+    tagged Status {
+        system_type: target_system_type,
+        system_status: system_status_system_power_enabled,
+        system_faults: system_faults_none,
+        request_status: request_status_none,
+        link0_status: link_status_disconnected,
         link0_events: link_events_none,
         link1_status: link_status_disconnected,
         link1_events: link_events_none};
@@ -189,6 +216,19 @@ Message message_status_system_power_abort_a2_fault_controller0_present =
         link1_status: link_status_disconnected,
         link1_events: link_events_none};
 
+function Message message_status_with_system_status(
+        Message m,
+        SystemStatus system_status) =
+    tagged Status {
+        system_type: m.Status.system_type,
+        system_status: system_status,
+        system_faults: m.Status.system_faults,
+        request_status: m.Status.request_status,
+        link0_status: m.Status.link0_status,
+        link0_events: m.Status.link0_events,
+        link1_status: m.Status.link1_status,
+        link1_events: m.Status.link1_events};
+
 function Message message_status_with_link0_status(
         Message m,
         LinkStatus link0_status) =
@@ -289,7 +329,7 @@ ValueSequence#(5) hello_sequence = vec(
     tagged D 'hf0,
     end_of_message1);
 
-function ValueSequence#(6) mk_request_sequence(Request r) = vec(
+function ValueSequence#(6) mk_request_sequence(SystemPowerRequest r) = vec(
     start_of_message,
     tagged D fromInteger(defaultValue.version),
     tagged D 3,
@@ -298,7 +338,7 @@ function ValueSequence#(6) mk_request_sequence(Request r) = vec(
         (case (r)
             SystemPowerOff: 'ha3;
             SystemPowerOn: 'hd2;
-            SystemReset: 'hfd;
+            SystemPowerReset: 'hfd;
         endcase),
     end_of_message1);
 
@@ -415,5 +455,99 @@ function Action assert_character_rdp_get_display(
         assert_character_rdp(actual, v, msg);
         $display(fshow(actual), " (%h)", actual.x);
     endaction;
+
+function Stmt controller_receive_status_message(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        Message message);
+    return seq
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged SystemType
+                                message.Status.system_type});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged SystemStatus
+                                message.Status.system_status});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged SystemEvents
+                                message.Status.system_faults});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged SystemPowerRequestStatus
+                                message.Status.request_status});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged Link0Status message.Status.link0_status});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged Link0Events message.Status.link0_events});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged Link1Status message.Status.link1_status});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged StatusMessageFragment
+                            tagged Link1Events message.Status.link1_events});
+        controller.txr.rx.put(
+                ReceiverEvent {
+                    id: controller_id,
+                    ev: tagged TargetStatusReceived});
+    endseq;
+endfunction
+
+
+function Stmt assert_controller_counter_eq(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        CounterId counter_id,
+        UInt#(8) expected_count,
+        String msg) =
+    seq
+        controller.counters.request.put(
+            CounterAddress {
+                controller: controller_id,
+                counter: counter_id});
+        assert_get_eq(controller.counters.response, expected_count, msg);
+    endseq;
+
+function Stmt assert_controller_register_eq(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        RegisterId register_id,
+        value_t expected_value,
+        String msg)
+            provisos (
+                Bits#(value_t, value_t_sz),
+                Add#(value_t_sz, a__, 8),
+                Eq#(value_t),
+                FShow#(value_t)) =
+    seq
+        controller.registers.request.put(
+            RegisterRequest {
+                id: controller_id,
+                register: register_id,
+                op: tagged Read});
+        action
+            let data <- controller.registers.response.get;
+            assert_eq(unpack(truncate(data)), expected_value, msg);
+        endaction
+    endseq;
 
 endpackage

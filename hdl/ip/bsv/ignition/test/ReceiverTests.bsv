@@ -17,6 +17,8 @@ import IgnitionProtocol::*;
 import IgnitionProtocolParser::*;
 import IgnitionReceiver::*;
 import IgnitionTransceiver::*;
+import IgnitionTransmitter::*;
+import IgnitionTestHelpers::*;
 
 
 interface MockTransmitter;
@@ -300,6 +302,45 @@ module mkMockTransmitter #(
         // Inject an invalid character into the receiver.
         in <= 0;
     endmethod
+endmodule
+
+module mkControllerReceiverTest (Empty);
+    ControllerReceiver#(36) receiver <- mkControllerReceiver();
+
+    FIFO#(Message) message <- mkLFIFO();
+    Transmitter tx <- mkTransmitter();
+    Vector#(36, FIFO#(DeserializedCharacter)) tx_buffers <- replicateM(mkSizedFIFO(3));
+
+    (* fire_when_enabled *)
+    rule do_buffer_next_character;
+        let c <- tx.character.get;
+
+        for (Integer i = 0; i < 36; i = i + 1) begin
+            tx_buffers[i].enq(DeserializedCharacter {c: c, comma: ?});
+        end
+    endrule
+
+    for (Integer i = 0; i < 36; i = i + 1) begin
+        mkConnection(fifoToGetS(tx_buffers[i]), receiver.rx[i].character);
+    end
+
+    mkConnection(fifoToGetS(message), tx.message);
+
+    function Action receive_and_display_event() =
+        action
+            let e <- receiver.events.get;
+            $display("%05t: ", $time, fshow(e));
+        endaction;
+
+    mkAutoFSM(seq
+        repeat(36) receive_and_display_event(); // Reset
+        repeat(36) receive_and_display_event(); // Aligned
+        repeat(36) receive_and_display_event(); // Locked
+        message.enq(message_status_system_powered_on_link0_connected);
+        repeat(36 * 9) receive_and_display_event(); // Message
+    endseq);
+
+    mkTestWatchdog(1000);
 endmodule
 
 endpackage
