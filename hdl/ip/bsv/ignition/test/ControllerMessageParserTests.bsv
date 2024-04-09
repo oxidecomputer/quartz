@@ -108,12 +108,12 @@ module mkParseSystemPowerOffRequestTest (Empty);
     return _test;
 endmodule
 
-module mkParseSystemResetRequestTest (Empty);
+module mkParseSystemPowerResetRequestTest (Empty);
     (* hide *) Empty _test <-
         mkParserTest(
-            mk_request_sequence(SystemReset), 'hfd,
-            tagged Message tagged Request SystemReset,
-            "expected SystemReset Request");
+            mk_request_sequence(SystemPowerReset), 'hfd,
+            tagged Message tagged Request SystemPowerReset,
+            "expected SystemPowerReset Request");
 
     return _test;
 endmodule

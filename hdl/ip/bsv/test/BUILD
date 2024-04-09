@@ -42,3 +42,24 @@ bluesim_tests('BitSamplingTests',
         '//hdl/ip/bsv:BitSampling',
         '//hdl/ip/bsv:TestUtils',
     ])
+
+bluesim_tests('CounterRAMTests',
+    env = 'bluesim_debug',
+    suite = 'CounterRAMTests.bsv',
+    modules = [
+        'mkAddSaturateTest',
+        'mkConcurrentReadClearAndUpdateScenario1Test',
+        'mkConcurrentReadClearAndUpdateScenario2Test',
+        'mkConcurrentReadClearAndUpdateScenario3Test',
+        'mkConcurrentReadClearAndUpdateScenario4Test',
+        'mkMultipleAddMultipleCountersTest',
+        'mkMultipleAddSingleCounterTest',
+        'mkSetAndReadClearTest',
+        'mkSetAndReadTest',
+        'mkSubtractSaturateTest',
+    ],
+    deps = [
+        '//hdl/ip/bsv:CounterRAM',
+        '//hdl/ip/bsv:TestUtils',
+    ])
+
