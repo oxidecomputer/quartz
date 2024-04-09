@@ -5,8 +5,20 @@
 -- Copyright 2024 Oxide Computer Company
 
 
---! Bus master model based on ST's RM0433
---! figures 115 and 116
+--! FMC controller model based on ST's RM0433
+--! figures 115 and 116 for simulation of the
+--! FPGA's target interface
+
+--Notes from cliff's hardware prototype and saleae:
+-- * 32 bit write cycle timing matches figure 116 in the refman. 
+--     There is a minimum two cycle latency from address-valid to data movement,
+--     with no strobe controlling that, so logic on the FPGA will just have to know that. 
+--     The write is performed in lower address, higher address order.
+-- * 16 bit write cycle looks exactly the same but with one fewer cycle at the end doing the writing.
+-- * reads match figure 115. For reasons I don't yet understand, it is holding OE low 
+--     for 4 cycles on a 16 bit transfer, 5 cycles on a 32 bit burst. This kind of suggests 
+--     that it expects that two-cycle latency from the first rising clock edge after OE is asserted, 
+--     but that's not what figure 115 shows.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -67,6 +79,9 @@ begin
         procedure transaction_start(constant kind: txn_type) is
         begin
             addr := pop_std_ulogic_vector(request_msg);
+            -- In 16 bit mode, so we need to shift the address to the right by one
+            -- per table 156 in the ref manual (RM0433 rev 8, page 803)
+            addr := "0" & addr(addr'left downto 1);
             rem_data_cnt := pop_integer(request_msg);
             ne(0) <= '0';
             a <= addr(a'range);
