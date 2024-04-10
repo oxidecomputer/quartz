@@ -1,0 +1,46 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
+def vhdl_toml_gen(ctx):
+    # start with all the buck2 targets
+    target_universe = ctx.target_universe("//...").target_set()
+    # Get the deps
+    targets = ctx.cquery().deps(target_universe)
+    # Filter for vhdl files
+    vhdl_files = ctx.cquery().kind("vhdl.*", targets)
+     # Eagerly analyze targets
+    ctx.analysis(vhdl_files)
+    
+
+    files_by_library_name = dict()
+
+    for file in vhdl_files:
+        attrs = file.attrs_eager()
+        #print("attrs", attrs)
+        srcs = [ctx.fs.project_rel_path(x) for x in file.sources()]
+        if len(srcs) == 0:
+            continue
+        lib_name = attrs.library.value()
+        if lib_name == "":
+           lib_name = "worklib"
+        #print("lib_name", lib_name)
+        files = files_by_library_name.pop("{}".format(lib_name), {"files": []}).get("files")
+        files.extend(srcs)
+        files_by_library_name.update({"{}".format(lib_name): {"files": files}})
+        #print(files_by_library_name.get("{}".format(lib_name)))
+    outjson = {"libraries": files_by_library_name}
+    ctx.output.print_json(outjson)
+
+
+
+
+
+vhdl_ls_toml_gen = bxl_main(
+    impl = vhdl_toml_gen,
+    cli_args = {
+        # cli args that you want to receive from the command line
+    },
+)
