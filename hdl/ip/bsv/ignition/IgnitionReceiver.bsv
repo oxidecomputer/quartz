@@ -10,6 +10,7 @@ export ReceiverEvent(..);
 export ReceiverEvent_$ev(..);
 
 import BRAMCore::*;
+import BRAMFIFO::*;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
@@ -669,7 +670,7 @@ module mkControllerReceiver (ControllerReceiver#(n))
     // buffer. This decouples the demux pipeline from the receiver logic,
     // reducing the length of pipeline enable signals while preserving the
     // ability to process a receiver event very cycle.
-    FIFOF#(DeserializerEvent#(n)) deserializer_events_l0 <- mkGSizedFIFOF(False, True, 2);
+    FIFOF#(DeserializerEvent#(n)) deserializer_events_l0 <- mkGFIFOF(False, True);
 
     //
     // Deserializer mux stage(s)
@@ -821,7 +822,7 @@ module mkControllerReceiver (ControllerReceiver#(n))
     Reg#(Maybe#(DeserializerEvent#(n))) deserializer_event <- mkReg(tagged Invalid);
     Reg#(Maybe#(DecoderEvent#(n))) decoder_event <- mkReg(tagged Invalid);
     Reg#(Maybe#(ParserEvent#(n))) parser_event <- mkReg(tagged Invalid);
-    FIFOF#(ReceiverEvent#(n)) receiver_events <- mkSizedFIFOF(2);
+    FIFOF#(ReceiverEvent#(n)) receiver_events <- mkSizedBRAMFIFOF(1023);
 
     Reg#(Maybe#(UInt#(id_sz))) receive_state_1_id <- mkReg(tagged Invalid);
     Reg#(ReceiveState1) receive_state_1_next <- mkRegU();
