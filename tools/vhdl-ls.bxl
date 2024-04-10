@@ -5,33 +5,53 @@
 # Copyright 2024 Oxide Computer Company
 
 def vhdl_toml_gen(ctx):
-    # start with all the buck2 targets
+    # start with all the buck2 targets from the root
     target_universe = ctx.target_universe("//...").target_set()
     # Get the deps
     targets = ctx.cquery().deps(target_universe)
-    # Filter for vhdl files
+    # Filter for vhdl files in the project
     vhdl_files = ctx.cquery().kind("vhdl.*", targets)
      # Eagerly analyze targets
     ctx.analysis(vhdl_files)
     
-
+    # We're going to mutate this dict below to
+    # build out a list by library name of source files
+    # for https://github.com/VHDL-LS/rust_hdl
     files_by_library_name = dict()
 
     for file in vhdl_files:
+        # For each target, we're going to need the attributes to figure
+        # out if there are specified libraries or just the default lib
         attrs = file.attrs_eager()
-        #print("attrs", attrs)
+        # We're also going to want relative pathnames for the sources
+        # to pass to the tool
         srcs = [ctx.fs.project_rel_path(x) for x in file.sources()]
         if len(srcs) == 0:
+            # we allow combination sims with no source files, so
+            # if we find one of those, we'll just move on since
+            # there's nothing to do
             continue
         lib_name = attrs.library.value()
+        # We allow empty library names, but need to dump them into a defaul
+        # library, and it can't be named "work" due to continued confusion
+        # around 'work' not being an *actual* library name see
+        # https://insights.sigasi.com/tech/work-not-vhdl-library/
         if lib_name == "":
            lib_name = "worklib"
-        #print("lib_name", lib_name)
-        files = files_by_library_name.pop("{}".format(lib_name), {"files": []}).get("files")
+        # Now we want to add or extend the dictionary with our list of files so
+        # we get any extant files in the library with our current name
+        # extend that list with any new files and update this new, larger list
+        # in the dictionary
+        files = files_by_library_name.get("{}".format(lib_name), {"files": []}).get("files")
         files.extend(srcs)
         files_by_library_name.update({"{}".format(lib_name): {"files": files}})
-        #print(files_by_library_name.get("{}".format(lib_name)))
+    
+    # VHDL-LS wants a specific structure that was annoying to work with above so
+    # we add the "libraries" layer here
+    # BXL can only generate json natively, but we've matched the expected structure
+    # of the toml file so we can just run this through a converter
     outjson = {"libraries": files_by_library_name}
+    # Put it to std-out
     ctx.output.print_json(outjson)
 
 
