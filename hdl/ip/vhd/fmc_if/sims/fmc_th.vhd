@@ -46,4 +46,6 @@ begin
             nl   => nl,
             nwait => nwait
         );
+
+    DUT: entity work.stm32h7_fmc_target
 end th;
