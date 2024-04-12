@@ -1,0 +1,15 @@
+set PROJ_NAME {{project_name}}
+set PROJ_DIR {{base_dir}}
+
+set_param general.maxThreads {{max_threads}}
+open_checkpoint {{input_checkpoint}}
+
+opt_design -directive Explore
+report_timing_summary -file $PROJ_DIR/${PROJ_NAME}_timing.rpt
+report_utilization -file $PROJ_DIR/${PROJ_NAME}_utilization.rpt
+write_checkpoint -force $PROJ_DIR/${PROJ_NAME}.dcp
+## Upgrade DSP connection warnings (like "Invalid PCIN Connection for OPMODE value") to
+## an error because this is an error post route
+set_property SEVERITY {ERROR} [get_drc_checks DSPS-*]
+## Run DRC on opt design to catch early issues like comb loops
+report_drc -file $PROJ_DIR/${PROJ_NAME}.rpt

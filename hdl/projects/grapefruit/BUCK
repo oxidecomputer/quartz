@@ -1,0 +1,15 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:rdl.bzl", "rdl_file")
+load("//tools:vivado.bzl", "synthesize")
+
+vhdl_unit(
+    name = "grapefruit_top",
+    srcs = ["grapefruit_top.vhd"],
+)
+
+synthesize(
+    name="grapefruit_synth",
+    top_entity_name="grapefruit_top",
+    top= ":grapefruit_top",
+    part= "xc7s50csga324-1",
+)

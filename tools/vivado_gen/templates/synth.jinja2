@@ -1,0 +1,30 @@
+# synthesis related settings
+set checkpoint_file [lindex $argv 0]
+set report_file [lindex $argv 1]
+
+set_part {{project.part}}
+
+{% for source in project.sources %}
+{% set suffix = source.path.suffix %}
+{% if suffix in [".sv"] %}
+read_verilog -sv {{source.path}}
+{% elif suffix in [".v", ".vh"] %}
+read_verilog {{source.path}}
+{% elif suffix in [".vhd"] %}
+read_vhdl -vhdl2008 {{source.path}}
+{% elif suffix in [".xci"] %}
+read_ip {{source.path}}
+{% endif %}
+{% endfor %}
+
+## constraints here
+{% for file in constraints %}
+read_xdc {{file}}
+{% endfor %}
+
+## Synthesize Design
+set_param general.maxThreads {{project.max_threads}}
+eval "synth_design {{project.synth_args}} -top {{project.top_name}} -part {{project.part}}"
+report_timing_summary -file $report_file
+report_utilization -file $report_file
+write_checkpoint -force $checkpoint_file

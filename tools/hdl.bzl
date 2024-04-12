@@ -131,7 +131,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         # since it will maintain its own dependency relationships)
         in_args = top_tset.project_as_json("json", ordering="postorder")
         in_args = ctx.actions.write_json("vunit_gen_input.json", in_args, with_inputs=True)
-        print(in_args)
+        #print(in_args)
 
         # Generate the VUnit run.py file output in buck_out/ somewhere
         out_run_py = ctx.actions.declare_output("run.py")
