@@ -123,14 +123,25 @@ module mkIgnitionControllerAndTargetBench #(
     mkConnection(target_txr.to_client, target_.txr.from_txr);
     mkConnection(target_.txr.to_txr, target_txr.from_client);
 
+    // In the actual application the transceiver watchdog tick is supposed to be
+    // connected to the 1 kHz strobe. Combined with a nine bit counter this
+    // results in a watchdog event every half second. This is appropriate for a
+    // real-world scenario, where these watchdogs are expected to help with link
+    // startup during cable hotplug events, but during simulation it requires a
+    // significant number of cycles (>10M) to even observe a single such
+    // watchdog event.
+    //
+    // Instead of connecting to the application tick, connect the receiver to
+    // the symbol tick. This results in a possible watchdog reset every 500
+    // symbols, which still leaves plenty of time for the receiver to align and
+    // lock during simulation. It makes the simulation deviate from the real
+    // world, but this seems appropriate given that no other logic depends on
+    // the timing of the transceiver watchdog.
+    mkConnection(asIfc(tick), asIfc(target_txr.tick_1khz));
+
     (* fire_when_enabled *)
     rule do_target_txr_monitor;
         target_.txr.monitor(target_txr.status, target_txr.events);
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_tick_target_rx_watchdog;
-        target_txr.tick_1khz();
     endrule
 
     mkConnection(asIfc(target_tick), asIfc(target_.tick_1khz));

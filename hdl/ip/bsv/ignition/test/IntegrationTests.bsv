@@ -341,23 +341,23 @@ module mkReceiversLockedTimeoutTest (Empty);
         //     let _ <- bench.controller.registers.controller_link_status;
         // endaction
 
-        // par
-        //     repeat(3) seq
-        //         await(bench.controller_receiver_locked_timeout);
+        par
+            // repeat(4) seq
+            //     await(bench.controller_receiver_locked_timeout);
 
-        //         // Wait for the receiver reset event bit to be set in the link
-        //         // status register.
-        //         // action
-        //         //     let link_status <-
-        //         //             bench.controller.registers.controller_link_status;
+            //     // Wait for the receiver reset event bit to be set in the link
+            //     // status register.
+            //     // action
+            //     //     let link_status <-
+            //     //             bench.controller.registers.controller_link_status;
 
-        //         //     await_set(link_status.receiver_reset_event);
-        //         // endaction
-        //     endseq
+            //     //     await_set(link_status.receiver_reset_event);
+            //     // endaction
+            // endseq
 
-        //     repeat(3) await(bench.target_receiver_locked_timeout[0]);
-        //     repeat(3) await(bench.target_receiver_locked_timeout[1]);
-        // endpar
+            repeat(4) await(bench.target_receiver_locked_timeout[0]);
+            repeat(4) await(bench.target_receiver_locked_timeout[1]);
+        endpar
     endseq);
 endmodule
 
@@ -369,22 +369,17 @@ module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(parameters, 1100);
 
-    Reg#(int) controller_ticks <- mkReg(0);
-    Reg#(int) target_ticks <- mkReg(0);
-
-    // (* fire_when_enabled *)
-    // rule do_count_controller_ticks (bench.controller.tick_1khz);
-    //     controller_ticks <= controller_ticks + 1;
-    // endrule
+    Reg#(int) txr_watchdog_ticks <- mkReg(0);
 
     (* fire_when_enabled *)
-    rule do_count_target_ticks (bench.target.tick_1khz);
-        target_ticks <= target_ticks + 1;
+    rule do_count_txr_watchdog_ticks;
+        bench.await_tick();
+        txr_watchdog_ticks <= txr_watchdog_ticks + 1;
     endrule
 
-    // continuousAssert(
-    //     !bench.controller_receiver_locked_timeout,
-    //     "expected no Controller receiver locked timeout");
+    continuousAssert(
+        !bench.controller_receiver_locked_timeout,
+        "expected no Controller receiver locked timeout");
 
     continuousAssert(
         !bench.target_receiver_locked_timeout[0],
@@ -399,11 +394,10 @@ module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
         par
             // Both the Controller and Target link 0 should go for 1000 ticks
             // without a receiver timeout.
-            //await(controller_ticks > 1000);
-            await(target_ticks > 1000);
+            await(txr_watchdog_ticks > 1000);
 
             // Target link 1 should time out three times during this period.
-            repeat(3) await(bench.target_receiver_locked_timeout[1]);
+            repeat(4) await(bench.target_receiver_locked_timeout[1]);
         endpar
     endseq);
 endmodule

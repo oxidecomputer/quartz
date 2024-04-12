@@ -1147,12 +1147,14 @@ module mkControllerReceiver (ControllerReceiver#(n))
                         case (result) matches
                             tagged Error .e:
                                 case (e)
-                                    // OrderedSetInvalid errors may occur during link start-up. To
-                                    // avoid this noise being propagated in Status messages,
-                                    // suppress these errors specifically until the link is locked.
-                                    // Other errors are fair game even if the link is not locked
-                                    // since the parser should not produce them unless conditions
-                                    // are really bad/odd.
+                                    // OrderedSetInvalid errors may occur during
+                                    // link start-up. To avoid this noise being
+                                    // propagated in counters, suppress these
+                                    // errors specifically until the link is
+                                    // locked. Other errors are fair game even
+                                    // if the link is not locked since the
+                                    // parser should not produce them unless
+                                    // conditions are really bad/odd.
                                     OrderedSetInvalid:
                                         if (locked)
                                             enq_event(tagged ReceiverEvent
@@ -1312,10 +1314,7 @@ function Vector#(n, Bool) select_fifo(
             Bit#(n) grant_base);
     let pending = {pack(not_empty), pack(not_empty)};
 
-    match {.left, .right} =
-            Tuple2#(Bit#(n), Bit#(n))'(split(
-                pending & ~(pending - extend(grant_base))));
-
+    match {.left, .right} = split(pending & ~(pending - extend(grant_base)));
     return unpack(left | right);
 endfunction
 
