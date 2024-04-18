@@ -34,6 +34,7 @@ class Project:
         synth_args: List[str],
         report_file: str,
         max_threads: int,
+        input_checkpoint: str,
     ):
         self.flow = flow
         self.part = part
@@ -43,10 +44,11 @@ class Project:
         self.synth_args = synth_args
         self.report_file = report_file
         self.max_threads = max_threads
+        self.input_checkpoint = input_checkpoint
     
     @classmethod
     def from_dict(cls, inputs):
-        srcs = inputs.get("sources")
+        srcs = inputs.get("sources", [])
         sources = []
         for file in srcs:
             sources.append(Source(Path(file.get("artifact")), file.get("library")))
@@ -54,12 +56,13 @@ class Project:
         return cls(
             flow=inputs.get("flow"),
             part=inputs.get("part"),
-            top_name=inputs.get("top_name"),
-            constraints=inputs.get("constraints"),
+            top_name=inputs.get("top_name", ""),
+            constraints=inputs.get("constraints", []),
             sources=sources,
             synth_args=inputs.get("synth_args"),
             report_file=inputs.get("report_file"),
             max_threads=inputs.get("max_threads"),
+            input_checkpoint=inputs.get("input_checkpoint", "")
         )
 def main():
 
@@ -74,20 +77,23 @@ def main():
         lstrip_blocks=True,
         trim_blocks=True,
     )
+ 
+    print("Constraints:")
+    print(project.constraints)
 
     # get flow id from the json file
     if project.flow == "synthesis":
         template = env.get_template("synth.jinja2")
     elif project.flow == "optimize":
-        pass
+        template = env.get_template("optimize.jinja2")
     elif project.flow == "place":
-        pass
+        template = env.get_template("place.jinja2")
     elif project.flow == "place_optimize":
-        pass
+        template = env.get_template("place_optimize.jinja2")
     elif project.flow == "route":
-        pass
+        template = env.get_template("route.jinja2")
     elif project.flow == "bitstream":
-        pass
+        template = env.get_template("bitstream.jinja2")
     else:
         print("Unknown flow")
     

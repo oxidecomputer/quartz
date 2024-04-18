@@ -1,0 +1,21 @@
+# Due to how we're generating this file in buck2,
+# we don't know the output filenames when generating
+# this file since they are not yet bound. Attempting
+# to pre-bind them, results in buck2 failures since
+# the action that generates *this* file doesn't 
+# produce these as outputs. As such, we pass them
+# in as arguments to this script when calling
+# Vivado.
+#
+# Expects 3 arguments: 
+# [0]: output bitfile
+
+# Get tclargs here
+set output_bit [lindex $argv 0]
+
+
+set_param general.maxThreads {{project.max_threads}}
+open_checkpoint {{project.input_checkpoint}}
+
+#write_debug_probes -force $PROJ_DIR/${PROJ_NAME}.ltx
+write_bitstream -force $output_bit -bin_file
