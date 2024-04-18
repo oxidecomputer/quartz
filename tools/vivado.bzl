@@ -89,7 +89,7 @@ def synthesize(ctx):
     ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
 
     vivado = cmd_args()
-    vivado.add("vivado")
+    vivado.add(ctx.attrs._toolchain[RunInfo])
     vivado.add("-mode", "batch")
     vivado.add("-source", vivado_flow_tcl)
     vivado.add("-log", logfile.as_output())
@@ -142,7 +142,7 @@ def optimize(ctx, input_checkpoint):
     ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
 
     vivado = cmd_args()
-    vivado.add("vivado")
+    vivado.add(ctx.attrs._toolchain[RunInfo])
     vivado.add("-mode", "batch")
     vivado.add("-source", vivado_flow_tcl)
     vivado.add("-log", logfile.as_output())
@@ -197,7 +197,7 @@ def place(ctx, input_checkpoint, optimize=False):
     ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
 
     vivado = cmd_args()
-    vivado.add("vivado")
+    vivado.add(ctx.attrs._toolchain[RunInfo])
     vivado.add("-mode", "batch")
     vivado.add("-source", vivado_flow_tcl)
     vivado.add("-log", logfile.as_output())
@@ -254,7 +254,7 @@ def route(ctx, input_checkpoint):
     ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
 
     vivado = cmd_args()
-    vivado.add("vivado")
+    vivado.add(ctx.attrs._toolchain[RunInfo])
     vivado.add("-mode", "batch")
     vivado.add("-source", vivado_flow_tcl)
     vivado.add("-log", logfile.as_output())
@@ -309,7 +309,7 @@ def bitstream(ctx, input_checkpoint):
     ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
 
     vivado = cmd_args()
-    vivado.add("vivado")
+    vivado.add(ctx.attrs._toolchain[RunInfo])
     vivado.add("-mode", "batch")
     vivado.add("-source", vivado_flow_tcl)
     vivado.add("-log", logfile.as_output())
@@ -341,5 +341,9 @@ vivado_bitstream = rule(
                 doc="Generate a Vivado tcl for this project",
                 default="root//tools/vivado_gen:vivado_gen",
             ),
+        "_toolchain": attrs.toolchain_dep(
+            doc="Vivado",
+            default="toolchains//:vivado",
+        ),
     },
 )
