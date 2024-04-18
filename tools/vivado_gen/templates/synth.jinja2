@@ -27,7 +27,7 @@ read_verilog -sv {{source.path}}
 read_verilog {{source.path}}
 {% elif suffix in [".vhd"] %}
 {% set lib_cmd = "" if not source.library else "-library {} ".format(source.library) %}
-read_vhdl {{lib_cmd}}-vhdl2008 {{source.path}}
+read_vhdl {{lib_cmd}}-vhdl2008 {{source.path.absolute().as_posix()}}
 {% elif suffix in [".xci"] %}
 read_ip {{source.path}}
 {% endif %}
@@ -35,7 +35,7 @@ read_ip {{source.path}}
 
 ## constraints here
 {% for file in project.constraints %}
-read_xdc {{file}}
+read_xdc {{file.absolute().as_posix()}}
 {% endfor %}
 
 ## Synthesize Design
