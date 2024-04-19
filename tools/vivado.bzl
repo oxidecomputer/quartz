@@ -1,4 +1,10 @@
 
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
 load(
     "@prelude//python:toolchain.bzl",
     "PythonToolchainInfo",
@@ -42,6 +48,7 @@ def _vivado_bitstream(ctx):
     router = route(ctx, placer_opt)
     return bitstream(ctx, router)
 
+
 def synthesize(ctx):
     flow = "synthesize"
     name_and_flow = ctx.attrs.name + "_" + flow
@@ -51,22 +58,13 @@ def synthesize(ctx):
     # Deal with constraint files as inputs
     constraints = ctx.attrs.constraints
 
-    # create a checkpoint file
-    checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
-    # create a report file
-    report = ctx.actions.declare_output("{}.rpt".format(name_and_flow))
-    # create a log file
-    logfile = ctx.actions.declare_output("{}.log".format(name_and_flow))
-    # create a journal file
-    journal = ctx.actions.declare_output("{}.jou".format(name_and_flow))
     # output of this is a checkpoint file
 
     # Get list of all sources from the dep tree via the tset in HDLFileInfo
     source_files_tset = ctx.attrs.top[HDLFileInfo].set
     source_files = source_files_tset.project_as_json("json", ordering="postorder")
     
-
-    out_file = {
+    out_json = {
         "flow": "synthesis",
         "part": ctx.attrs.part,
         "max_threads": 8,
@@ -76,24 +74,15 @@ def synthesize(ctx):
         "top_name": ctx.attrs.top_entity_name
 
     }
-    in_json_file = ctx.actions.write_json("vivado_{}_input.json".format(flow), out_file, with_inputs=True)
-    
-    vivado_flow_tcl = ctx.actions.declare_output("{}.tcl".format(flow))
 
-    vivado_gen = ctx.attrs._vivado_gen[RunInfo]
-    cmd = cmd_args()
-    cmd.add(vivado_gen)
-    cmd.add("--input", in_json_file)
-    cmd.add("--output", vivado_flow_tcl.as_output())
-
-    ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
-
-    vivado = cmd_args()
-    vivado.add(ctx.attrs._toolchain[RunInfo])
-    vivado.add("-mode", "batch")
-    vivado.add("-source", vivado_flow_tcl)
-    vivado.add("-log", logfile.as_output())
-    vivado.add("-journal", journal.as_output())
+    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
+    # create a checkpoint file
+    checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
+    # create a report file
+    report = ctx.actions.declare_output("{}.rpt".format(name_and_flow))
+    # Build vivado command
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
+    # Add output files to tclargs
     vivado.add("-tclargs", checkpoint.as_output(), report.as_output())
     # because we're using the inputs to generate a tcl that *just* lists them,
     # irrespective of their content, we make the inputs here hidden inputs
@@ -102,7 +91,7 @@ def synthesize(ctx):
     # constraint file content changes
     vivado.hidden(ctx.attrs.constraints)
     vivado.hidden(ctx.attrs.top.get(DefaultInfo).default_outputs)
-    
+    # Run vivado
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=checkpoint))
     return providers
@@ -114,39 +103,22 @@ def optimize(ctx, input_checkpoint):
     input_checkpoint = input_checkpoint[0].default_outputs[0]
 
     providers = []
-    out_file = {
+    out_json = {
         "flow": flow,
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
-    in_json_file = ctx.actions.write_json("vivado_{}_input.json".format(flow), out_file, with_inputs=True)
+    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create a report file
     timing_report = ctx.actions.declare_output("{}_timing.rpt".format(name_and_flow))
     utilization_report = ctx.actions.declare_output("{}_utilization.rpt".format(name_and_flow))
-    # create a log file
-    logfile = ctx.actions.declare_output("{}.log".format(name_and_flow))
-    # create a journal file
-    journal = ctx.actions.declare_output("{}.jou".format(name_and_flow))
     # drc report
     drc = ctx.actions.declare_output("{}_drc.rpt".format(name_and_flow))
 
-    vivado_flow_tcl = ctx.actions.declare_output("{}.tcl".format(flow))
-
-    vivado_gen = ctx.attrs._vivado_gen[RunInfo]
-    cmd = cmd_args()
-    cmd.add(vivado_gen)
-    cmd.add("--input", in_json_file)
-    cmd.add("--output", vivado_flow_tcl.as_output())
-    ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
-
-    vivado = cmd_args()
-    vivado.add(ctx.attrs._toolchain[RunInfo])
-    vivado.add("-mode", "batch")
-    vivado.add("-source", vivado_flow_tcl)
-    vivado.add("-log", logfile.as_output())
-    vivado.add("-journal", journal.as_output())
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
+    # Add output files to tclargs
     vivado.add("-tclargs", 
         out_checkpoint.as_output(), 
         timing_report.as_output(), 
@@ -170,38 +142,21 @@ def place(ctx, input_checkpoint, optimize=False):
     input_checkpoint = input_checkpoint[0].default_outputs[0]
 
     providers = []
-    out_file = {
+    out_json = {
         "flow": flow,
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
 
-    in_json_file = ctx.actions.write_json("vivado_{}_input.json".format(flow), out_file, with_inputs=True)
+    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create a report file
     timing_report = ctx.actions.declare_output("{}_timing.rpt".format(name_and_flow))
     utilization_report = ctx.actions.declare_output("{}_utilization.rpt".format(name_and_flow))
-    # create a log file
-    logfile = ctx.actions.declare_output("{}log".format(name_and_flow))
-    # create a journal file
-    journal = ctx.actions.declare_output("{}.jou".format(name_and_flow))
 
-    vivado_flow_tcl = ctx.actions.declare_output("{}.tcl".format(flow))
-
-    vivado_gen = ctx.attrs._vivado_gen[RunInfo]
-    cmd = cmd_args()
-    cmd.add(vivado_gen)
-    cmd.add("--input", in_json_file)
-    cmd.add("--output", vivado_flow_tcl.as_output())
-    ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
-
-    vivado = cmd_args()
-    vivado.add(ctx.attrs._toolchain[RunInfo])
-    vivado.add("-mode", "batch")
-    vivado.add("-source", vivado_flow_tcl)
-    vivado.add("-log", logfile.as_output())
-    vivado.add("-journal", journal.as_output())
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
+    # Add output files to tclargs
     vivado.add("-tclargs", 
         out_checkpoint.as_output(), 
         timing_report.as_output(), 
@@ -223,13 +178,12 @@ def route(ctx, input_checkpoint):
     name_and_flow = ctx.attrs.name + "_" + flow
     input_checkpoint = input_checkpoint[0].default_outputs[0]
     providers = []
-    out_file = {
+    out_json = {
         "flow": flow,
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
-
-    in_json_file = ctx.actions.write_json("vivado_{}_input.json".format(flow), out_file, with_inputs=True)
+    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create reports files
@@ -239,26 +193,9 @@ def route(ctx, input_checkpoint):
     io_report = ctx.actions.declare_output("{}_io.rpt".format(name_and_flow))
     power_report = ctx.actions.declare_output("{}_power.rpt".format(name_and_flow))
     io_timing_report = ctx.actions.declare_output("{}_io_timing.rpt".format(name_and_flow))
-    # create a log file
-    logfile = ctx.actions.declare_output("{}log".format(name_and_flow))
-    # create a journal file
-    journal = ctx.actions.declare_output("{}.jou".format(name_and_flow))
 
-    vivado_flow_tcl = ctx.actions.declare_output("{}.tcl".format(flow))
-
-    vivado_gen = ctx.attrs._vivado_gen[RunInfo]
-    cmd = cmd_args()
-    cmd.add(vivado_gen)
-    cmd.add("--input", in_json_file)
-    cmd.add("--output", vivado_flow_tcl.as_output())
-    ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
-
-    vivado = cmd_args()
-    vivado.add(ctx.attrs._toolchain[RunInfo])
-    vivado.add("-mode", "batch")
-    vivado.add("-source", vivado_flow_tcl)
-    vivado.add("-log", logfile.as_output())
-    vivado.add("-journal", journal.as_output())
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
+    # Add output files to tclargs
     vivado.add("-tclargs", 
         out_checkpoint.as_output(), 
         timing_report.as_output(), 
@@ -285,35 +222,17 @@ def bitstream(ctx, input_checkpoint):
     input_checkpoint = input_checkpoint[0].default_outputs[0]
 
     providers = []
-    out_file = {
+    out_json = {
         "flow": flow,
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
-    in_json_file = ctx.actions.write_json("vivado_{}_input.json".format(flow), out_file, with_inputs=True)
+    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
     
     # create a bitstream file
     bitstream = ctx.actions.declare_output("{}.bit".format(ctx.attrs.name))
-    # create a log file
-    logfile = ctx.actions.declare_output("{}.log".format(name_and_flow))
-    # create a journal file
-    journal = ctx.actions.declare_output("{}.jou".format(name_and_flow))
-
-    vivado_flow_tcl = ctx.actions.declare_output("{}.tcl".format(flow))
-
-    vivado_gen = ctx.attrs._vivado_gen[RunInfo]
-    cmd = cmd_args()
-    cmd.add(vivado_gen)
-    cmd.add("--input", in_json_file)
-    cmd.add("--output", vivado_flow_tcl.as_output())
-    ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
-
-    vivado = cmd_args()
-    vivado.add(ctx.attrs._toolchain[RunInfo])
-    vivado.add("-mode", "batch")
-    vivado.add("-source", vivado_flow_tcl)
-    vivado.add("-log", logfile.as_output())
-    vivado.add("-journal", journal.as_output())
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
+    # Add output files to tclargs
     vivado.add("-tclargs", 
         bitstream.as_output(),
     )
@@ -327,6 +246,39 @@ def bitstream(ctx, input_checkpoint):
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=bitstream))
     return providers
+
+
+def _vivado_tcl_gen_common(ctx, flow, json):
+    in_json_file = ctx.actions.write_json("vivado_{}_input.json".format(flow), json, with_inputs=True)
+    
+    vivado_flow_tcl = ctx.actions.declare_output("{}.tcl".format(flow))
+
+    vivado_gen = ctx.attrs._vivado_gen[RunInfo]
+    cmd = cmd_args()
+    cmd.add(vivado_gen)
+    cmd.add("--input", in_json_file)
+    cmd.add("--output", vivado_flow_tcl.as_output())
+
+    ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
+
+    return vivado_flow_tcl
+    
+
+def _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl):
+    # Each of the phases uses a similar vivado pattern where we execute a 
+    # tcl with some logs, and generate a checkpoint. Some steps generate
+    # create a log file
+    logfile = ctx.actions.declare_output("{}.log".format(name_and_flow))
+    # create a journal file
+    journal = ctx.actions.declare_output("{}.jou".format(name_and_flow))
+
+    vivado = cmd_args()
+    vivado.add(ctx.attrs._toolchain[RunInfo])
+    vivado.add("-mode", "batch")
+    vivado.add("-source", vivado_flow_tcl)
+    vivado.add("-log", logfile.as_output())
+    vivado.add("-journal", journal.as_output())
+    return vivado
 
 vivado_bitstream = rule(
     impl=_vivado_bitstream,

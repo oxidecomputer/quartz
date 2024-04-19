@@ -26,5 +26,5 @@ begin
         end if;
 
     end process;
-    ledn <= counter(16);
+    ledn <= not counter(26);
 end architecture;
