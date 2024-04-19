@@ -1,0 +1,34 @@
+# Due to how we're generating this file in buck2,
+# we don't know the output filenames when generating
+# this file since they are not yet bound. Attempting
+# to pre-bind them, results in buck2 failures since
+# the action that generates *this* file doesn't 
+# produce these as outputs. As such, we pass them
+# in as arguments to this script when calling
+# Vivado.
+#
+# Expects 4 arguments: 
+# [0]: output checkpoint
+# [1]: output timing report
+# [2]: output utilization report
+# [3]: output drc report
+
+# Get tclargs here
+set output_checkpoint [lindex $argv 0]
+set timing_report [lindex $argv 1]
+set utilization_report [lindex $argv 2]
+set drc_report [lindex $argv 3]
+
+
+set_param general.maxThreads {{project.max_threads}}
+open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
+
+opt_design -directive Explore
+report_timing_summary -file $timing_report
+report_utilization -file $utilization_report
+write_checkpoint -force $output_checkpoint
+## Upgrade DSP connection warnings (like "Invalid PCIN Connection for OPMODE value") to
+## an error because this is an error post route
+set_property SEVERITY {ERROR} [get_drc_checks DSPS-*]
+## Run DRC on opt design to catch early issues like comb loops
+report_drc -file $drc_report

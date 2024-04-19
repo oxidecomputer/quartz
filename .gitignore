@@ -19,3 +19,7 @@ devcontainer.json
 
 # MacOS metadata
 .DS_Store
+
+# Vivado
+/.Xil
+clockinfo.txt

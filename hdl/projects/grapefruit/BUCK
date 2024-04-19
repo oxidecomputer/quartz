@@ -1,0 +1,16 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:rdl.bzl", "rdl_file")
+load("//tools:vivado.bzl", "vivado_bitstream")
+
+vhdl_unit(
+    name = "grapefruit_top",
+    srcs = ["grapefruit_top.vhd"],
+)
+
+vivado_bitstream(
+    name="grapefruit",
+    top_entity_name="grapefruit_top",
+    top= ":grapefruit_top",
+    part= "xc7s50csga324-1",
+    constraints=glob(["*.xdc"]),
+)

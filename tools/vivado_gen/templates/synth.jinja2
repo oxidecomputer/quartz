@@ -1,0 +1,46 @@
+# Due to how we're generating this file in buck2,
+# we don't know the output filenames when generating
+# this file since they are not yet bound. Attempting
+# to pre-bind them, results in buck2 failures since
+# the action that generates *this* file doesn't 
+# produce these as outputs. As such, we pass them
+# in as arguments to this script when calling
+# Vivado.
+#
+# Expects 2 arguments: 
+# [0]: output_checkpoint
+# [1]: report file
+
+# Get tclargs here
+set output_checkpoint [lindex $argv 0]
+set report_file [lindex $argv 1]
+
+# synthesis related settings
+set_part {{project.part}}
+
+# Load the sources
+{% for source in project.sources %}
+{% set suffix = source.path.suffix %}
+{% if suffix in [".sv"] %}
+read_verilog -sv {{source.path.absolute().as_posix()}}
+{% elif suffix in [".v", ".vh"] %}
+read_verilog {{source.path.absolute().as_posix()}}
+{% elif suffix in [".vhd"] %}
+{% set lib_cmd = "" if not source.library else "-library {} ".format(source.library) %}
+read_vhdl {{lib_cmd}}-vhdl2008 {{source.path.absolute().as_posix()}}
+{% elif suffix in [".xci"] %}
+read_ip {{source.path.absolute().as_posix()}}
+{% endif %}
+{% endfor %}
+
+## constraints here
+{% for file in project.constraints %}
+read_xdc {{file.absolute().as_posix()}}
+{% endfor %}
+
+## Synthesize Design
+set_param general.maxThreads {{project.max_threads}}
+eval "synth_design {{project.synth_args}} -top {{project.top_name}} -part {{project.part}}"
+report_timing_summary -file $report_file
+report_utilization -file $report_file
+write_checkpoint -force $output_checkpoint

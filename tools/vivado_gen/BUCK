@@ -1,0 +1,13 @@
+python_binary(
+    name = 'vivado_gen',
+    main = 'vivado_gen.py',
+    deps = [':vivado_gen_lib'],
+    visibility = ["PUBLIC"],
+)
+
+python_library(
+    name = 'vivado_gen_lib',
+    srcs = glob(["*.py"]),
+    base_module = "vivado_gen",
+    resources = glob(["templates/*.jinja2"])
+)

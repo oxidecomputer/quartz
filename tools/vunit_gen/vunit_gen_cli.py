@@ -34,7 +34,7 @@ def codecs_from_inputs(i):
 
 def main():
     libs = {}
-    # Parse the json we go handed
+    # Parse the json we were handed
     with open(args.input) as fp:
         inputs = json.load(fp)
     # Load jinja templates
