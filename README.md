@@ -73,6 +73,8 @@ from the releases section, for windows there are also compiled binaries in the r
 able to use symlinks, and should consider setting `LongPathsEnabled` in regedit at
 `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem` to 1 and rebooting.
 
+- When building Xilinx design, Vivado will need to be installed and on your `$PATH`.
+
 ### vivado macros
 There are simulation-only XPM macros available in the `vnd/xpm/xpm_vhdl` submodule, provided
 by the https://github.com/fransschreuder/xpm_vhdl project.
