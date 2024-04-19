@@ -51,11 +51,11 @@ bluespec_library('QsfpModuleController',
     ],
     deps = [
         ':QsfpX32ControllerRegsPkg',
-        '//hdl:CommonFunctions',
-        '//hdl:PowerRail',
-        '//hdl/I2C:I2CCore',
-        'cobalt//hdl:Bidirection',
-        'cobalt//hdl:Debouncer',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/ip/bsv/I2C:I2CCore',
+        '//hdl/ip/bsv:Bidirection',
+        '//hdl/ip/bsv:Debouncer',
     ])
 
 
