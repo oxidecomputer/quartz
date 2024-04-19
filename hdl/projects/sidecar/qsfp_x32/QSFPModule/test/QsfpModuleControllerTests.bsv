@@ -481,6 +481,7 @@ module mkInitializationTest (Empty);
         bench.set_resetl(1);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
+        delay(1);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NotInitialized,
             "NotInitialized error should be present when attempting to communicate before t_init has elapsed.");
@@ -488,6 +489,7 @@ module mkInitializationTest (Empty);
         deassert_reset_and_await_init(bench);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
+        delay(1);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
             "NoError should be present when attempting to communicate after t_init has elapsed.");
@@ -495,6 +497,7 @@ module mkInitializationTest (Empty);
         bench.set_resetl(0);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
+        delay(1);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NotInitialized,
             "NotInitialized error should be present when resetl is asserted.");
@@ -521,6 +524,7 @@ module mkUninitializationAfterRemovalTest (Empty);
         add_and_initialize_module(bench);
         bench.command(read_cmd);
         await(!bench.i2c_busy());
+        delay(1);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
             "NoError should be present when attempting to communicate after t_init has elapsed.");
@@ -533,6 +537,7 @@ module mkUninitializationAfterRemovalTest (Empty);
         delay(3); // wait a few cycles for power to re-enable
         bench.command(read_cmd);
         await(!bench.i2c_busy());
+        delay(1);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NotInitialized,
             "NotInitialized error should be present when a module has been reseated but not initialized.");

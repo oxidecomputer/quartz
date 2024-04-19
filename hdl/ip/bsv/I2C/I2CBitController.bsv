@@ -284,7 +284,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
             {AwaitCommand, tagged Start}: begin
                 if (scl_fedge) begin
-                    // sda_out <= 1;
                     state   <= TransmitStart;
                     incoming_events.deq();
                 end
@@ -294,7 +293,7 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
     // Register the output signals to have a stable output, rather than a
     // combinatorial one.
-    (* fire_when_enabled *)
+    (* fire_when_enabled, no_implicit_conditions *)
     rule do_register_output_inversions;
         scl_out_en_inv  <= ~scl_out_en;
         sda_out_en_inv  <= ~sda_out_en;
