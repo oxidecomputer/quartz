@@ -26,7 +26,7 @@ set power_report [lindex $argv 5]
 set io_timing_report [lindex $argv 6]
 
 set_param general.maxThreads {{project.max_threads}}
-open_checkpoint {{project.input_checkpoint}}
+open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
 route_design -directive Explore
 report_timing_summary -file $timing_report

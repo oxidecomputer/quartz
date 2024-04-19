@@ -18,7 +18,7 @@ set timing_report [lindex $argv 1]
 set utilization_report [lindex $argv 2]
 
 set_param general.maxThreads {{project.max_threads}}
-open_checkpoint {{project.input_checkpoint}}
+open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
 phys_opt_design -directive AggressiveExplore
 report_timing_summary -file $timing_report

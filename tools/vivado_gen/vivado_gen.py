@@ -44,7 +44,7 @@ class Project:
         self.synth_args = synth_args
         self.report_file = report_file
         self.max_threads = max_threads
-        self.input_checkpoint = input_checkpoint
+        self.input_checkpoint = Path(input_checkpoint)
     
     @classmethod
     def from_dict(cls, inputs):

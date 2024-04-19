@@ -21,7 +21,7 @@ set drc_report [lindex $argv 3]
 
 
 set_param general.maxThreads {{project.max_threads}}
-open_checkpoint {{project.input_checkpoint}}
+open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
 opt_design -directive Explore
 report_timing_summary -file $timing_report

@@ -15,7 +15,7 @@ set output_bit [lindex $argv 0]
 
 
 set_param general.maxThreads {{project.max_threads}}
-open_checkpoint {{project.input_checkpoint}}
+open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
 #write_debug_probes -force $PROJ_DIR/${PROJ_NAME}.ltx
 write_bitstream -force $output_bit -bin_file
