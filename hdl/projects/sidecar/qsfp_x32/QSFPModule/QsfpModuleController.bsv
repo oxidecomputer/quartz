@@ -53,7 +53,6 @@ typedef struct {
     Integer i2c_frequency_hz;
     Integer power_good_timeout_ms;
     Integer t_init_ms;
-    Integer input_debounce_duration_ms;
 } Parameters;
 
 instance DefaultValue#(Parameters);
@@ -61,8 +60,7 @@ instance DefaultValue#(Parameters);
         system_frequency_hz: 50_000_000,
         i2c_frequency_hz: 100_000,
         power_good_timeout_ms: 10,
-        t_init_ms: 2000, // t_init is 2 seconds per SFF-8679
-        input_debounce_duration_ms: 5
+        t_init_ms: 2000 // t_init is 2 seconds per SFF-8679
     };
 endinstance
 
@@ -206,18 +204,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
 
     // We do some light debouncing on these input signals since any single-cycle
     // glitch could cause a fault.
-    Debouncer#(3, Bool) power_good_ <- mkDebouncer(
-        parameters.input_debounce_duration_ms,
-        parameters.input_debounce_duration_ms,
-        False);
-    Debouncer#(3, Bool) intl_ <- mkDebouncer(
-        parameters.input_debounce_duration_ms,
-        parameters.input_debounce_duration_ms,
-        True);
-    Debouncer#(3, Bool) modprsl_ <- mkDebouncer(
-        parameters.input_debounce_duration_ms,
-        parameters.input_debounce_duration_ms,
-        True);
+    Debouncer#(5, 5, Bool) power_good_ <- mkDebouncer(False);
+    Debouncer#(5, 5, Bool) intl_ <- mkDebouncer(True);
+    Debouncer#(5, 5, Bool) modprsl_ <- mkDebouncer(True);
 
     mkConnection(asIfc(tick_1ms_), asIfc(power_good_));
     mkConnection(asIfc(tick_1ms_), asIfc(intl_));

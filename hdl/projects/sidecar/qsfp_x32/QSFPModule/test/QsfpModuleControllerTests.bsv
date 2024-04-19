@@ -30,9 +30,8 @@ QsfpModuleController::Parameters qsfp_test_params =
     QsfpModuleController::Parameters {
         system_frequency_hz: i2c_test_params.core_clk_freq,
         i2c_frequency_hz: i2c_test_params.scl_freq,
-        power_good_timeout_ms: 5,
-        t_init_ms: 20, // normally 2000, but sped up for simulation
-        input_debounce_duration_ms: 2
+        power_good_timeout_ms: 10,
+        t_init_ms: 20 // normally 2000, but sped up for simulation
     };
 
 // Helper function to unpack the Value from an ActionValue and do an assertion.
@@ -118,7 +117,7 @@ module mkBench (Bench);
     Strobe#(16) tick_1khz   <-
         mkLimitStrobe(1, qsfp_test_params.system_frequency_hz / 1000, 0);
     mkFreeRunningStrobe(tick_1khz);
-    mkConnection(tick_1khz._read, controller.tick_1ms);
+    mkConnection(tick_1khz, controller.tick_1ms);
 
     // Instantiate a simple I2C model to act as the faux module target
     I2CPeripheralModel periph   <- mkI2CPeripheralModel(i2c_test_params.peripheral_addr);
@@ -295,7 +294,7 @@ module mkNoModuleTest (Empty);
                 reg_addr: 8'h00,
                 num_bytes: 1
             });
-        delay(2);
+        delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoModule,
             "NoModule error should be present when attempting to communicate with a device which is not present.");
@@ -321,7 +320,7 @@ module mkNoPowerTest (Empty);
                 reg_addr: 8'h00,
                 num_bytes: 1
             });
-        delay(2);
+        delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoPower,
             "NoPower error should be present when attempting to communicate before the hot swap is stable.");
@@ -347,16 +346,16 @@ module mkRemovePowerEnableTest (Empty);
                 reg_addr: 8'h00,
                 num_bytes: 1
             });
-        delay(2);
+        delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
             "NoPower should be present when attempting to communicate when the hot swap is stable.");
         bench.set_power_en(0);
-        delay(2);
+        delay(5);
         bench.set_hsc_pg(0);
         // PG is debounced and thus won't transition immediately
         await(!bench.hsc_pg);
-        delay(2);
+        delay(5);
         assert_eq(bench.hsc_en(), False, "Expect hot swap to no longer be enabled.");
         delay(5);
     endseq);
@@ -379,7 +378,7 @@ module mkPowerGoodTimeoutTest (Empty);
                 reg_addr: 8'h00,
                 num_bytes: 1
             });
-        delay(2);
+        delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             PowerFault,
             "PowerFault error should be present when attempting to communicate after the hot swap has timed out");
@@ -406,7 +405,7 @@ module mkPowerGoodLostTest (Empty);
                 reg_addr: 8'h00,
                 num_bytes: 1
             });
-        delay(2);
+        delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             PowerFault,
             "PowerFault error should be present when attempting to communicate after the hot swap has aborted");

@@ -1,29 +1,32 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Thu Apr 20 14:17:41 2023
+[*] Fri Apr 19 20:39:48 2024
 [*]
-[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkUninitializationAfterRemovalTest.vcd"
-[dumpfile_mtime] "Thu Apr 20 14:13:56 2023"
-[dumpfile_size] 863645
-[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\boards\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
-[timestart] 118326
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkI2CReadTest.vcd"
+[dumpfile_mtime] "Fri Apr 19 18:55:08 2024"
+[dumpfile_size] 11595623
+[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\projects\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
+[timestart] 15528
 [size] 2551 1360
 [pos] -1 -1
-*-5.925377 118720 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-7.160037 16220 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] main.
 [treeopen] main.top.
 [sst_width] 446
-[signals_width] 526
+[signals_width] 431
 [sst_expanded] 1
 [sst_vpaned_height] 414
 @200
 -DUT - QsfpModuleController
 -Pins
 @28
+main.top.bench_power_en_r
+main.top.bench_controller_hw_power_en
+main.top.bench_controller_power_en_sw
+main.top.bench_modprsl_r
 main.top.bench_controller_lpmode_
 main.top.bench_controller_resetl_
-main.top.bench_controller_modprsl_
-main.top.bench_controller_intl_
+main.top.bench_hsc_pg_r
 @200
 -
 @28
@@ -31,25 +34,59 @@ main.top.bench_controller_hot_swap_enabled_r
 main.top.bench_hsc_pg_r
 @200
 -
+@22
+main.top.bench_controller_hot_swap_state_r[2:0]
+@28
+main.top.bench_controller_hot_swap_enabled_r
+main.top.bench_controller_hot_swap_good
+main.top.bench_controller_hw_power_en
+@200
 -State
 @28
 main.top.bench_controller_i2c_attempt
 main.top.bench_controller_module_initialized_r
-@c00025
+@c00024
 main.top.bench_controller_error[2:0]
 @28
 (0)main.top.bench_controller_error[2:0]
 (1)main.top.bench_controller_error[2:0]
 (2)main.top.bench_controller_error[2:0]
-@1401205
+@1401200
 -group_end
 @200
 -
 -
 -I2CCore
+@28
+main.top.bench_controller_i2c_core_bit_ctrl_scl_in
+main.top.bench_controller_i2c_core_bit_ctrl_sda_in
+main.top.bench_controller_i2c_core_bit_ctrl_sda_out_en
+main.top.bench_controller_i2c_core_bit_ctrl_scl_out_en
+main.top.bench_controller_i2c_core_bit_ctrl_scl_out_en_inv
+@22
+main.top.bench_controller_i2c_core_state_r[3:0]
+main.top.bench_controller_i2c_core_tx_data[7:0]
+@28
+main.top.bench_controller_i2c_core_valid_command
+@200
 -FIFO: Next Command
 -FIFO: BitControl Incoming Events
+@28
+main.top.bench_controller_i2c_core_bit_ctrl_incoming_events.ENQ
+main.top.bench_controller_i2c_core_bit_ctrl_incoming_events.DEQ
+@22
+main.top.bench_controller_i2c_core_bit_ctrl_incoming_events.D_IN[10:0]
+main.top.bench_controller_i2c_core_bit_ctrl_incoming_events.D_OUT[10:0]
+@200
 -FIFO: BitControl Outgoing Events
+@28
+main.top.bench_controller_i2c_core_bit_ctrl_outgoing_events.ENQ
+main.top.bench_controller_i2c_core_bit_ctrl_outgoing_events.DEQ
+@22
+main.top.bench_controller_i2c_core_bit_ctrl_outgoing_events.D_IN[10:0]
+@23
+main.top.bench_controller_i2c_core_bit_ctrl_outgoing_events.D_OUT[10:0]
+@200
 -FIFO: RX Data
 -FIFO: TX Data
 -
@@ -58,6 +95,12 @@ main.top.bench_controller_error[2:0]
 -
 -
 -Model - I2CPeripheralModel
+@28
+main.top.bench_periph_scl_in
+main.top.bench_periph_sda_in
+main.top.bench_periph_sda_out
+main.top.bench_periph_state[2:0]
+@200
 -FIFO: Outgoing Events
 @28
 main.top.bench_periph_outgoing_events.CLK
