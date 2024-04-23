@@ -48,7 +48,9 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
         <- replicateM(mkConfigReg(defaultValue));
 
     PulseWire start_request    <- mkPulseWire();
-    Reg#(Vector#(3, Bit#(1))) read_dly     <- mkReg(replicate(0));
+    // Read delay needs to be at least the latency of getting the data from the
+    // QSFP I2C BRAMs.
+    Reg#(Vector#(4, Bit#(1))) read_dly     <- mkReg(replicate(0));
     Reg#(Vector#(1, Bit#(1))) write_dly    <- mkReg(replicate(0));
 
     (* fire_when_enabled *)
@@ -329,10 +331,10 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
             ret_byte = pack(qsfp_top.mod_statuses[14]);
         end else if (isBetween(spi_request.address, qsfpPort14ReadBufferOffset, readBufferNumEntries)) begin
             ret_byte = pack(qsfp_top.mod_read_buffers[14]);
-        end else if (spi_request.address == fromInteger(qsfpPort15StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[15]);
-        end else if (isBetween(spi_request.address, qsfpPort15ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[15]);
+        // end else if (spi_request.address == fromInteger(qsfpPort15StatusOffset)) begin
+        //     ret_byte = pack(qsfp_top.mod_statuses[15]);
+        // end else if (isBetween(spi_request.address, qsfpPort15ReadBufferOffset, readBufferNumEntries)) begin
+        //     ret_byte = pack(qsfp_top.mod_read_buffers[15]);
         end else begin
             ret_byte = 'hff;
         end

@@ -118,6 +118,7 @@ addrmap qsfp_modules_top {
             NotInitialized = 4'h4 {desc = "Module has not been out of reset for duration of t_init";};
             I2cAddressNack = 4'h5 {desc = "Module nack'd the address";};
             I2cByteNack = 4'h6 {desc = "Module nack'd a byte";};
+            I2cCoreBusy = 4'h7 {desc = "Another transaction is still in progress";};
         };
 
         field {

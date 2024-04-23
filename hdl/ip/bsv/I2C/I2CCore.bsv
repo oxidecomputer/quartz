@@ -90,6 +90,7 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     Wire#(Bool) valid_command           <- mkWire();
     Reg#(UInt#(8)) bytes_done           <- mkReg(0);
     Reg#(Bool) in_random_read           <- mkReg(False);
+    Reg#(Bool) busy_r                   <- mkReg(True);
 
     PulseWire next_send_data           <- mkPulseWire;
 
@@ -217,6 +218,11 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
         state_r         <= Idle;
     endrule
 
+    (* fire_when_enabled *)
+    rule do_busy_reg;
+        busy_r  <= state_r != Idle;
+    endrule
+
     interface pins = bit_ctrl.pins;
 
     interface Put send_command;
@@ -231,7 +237,7 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     interface Get received_data = toGet(rx_data_q);
 
     method error = error_r;
-    method busy = state_r != Idle;
+    method busy = busy_r;
 endmodule
 
 endpackage: I2CCore

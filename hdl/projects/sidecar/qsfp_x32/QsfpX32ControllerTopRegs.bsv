@@ -6,6 +6,7 @@
 
 package QsfpX32ControllerTopRegs;
 
+import ConfigReg::*;
 import DefaultValue::*;
 
 import CommonFunctions::*;
@@ -34,8 +35,15 @@ endinterface
 module mkQsfpX32ControllerTopRegs (QsfpX32ControllerTopRegs);
 
     Reg#(Bit#(1)) fpga_app  <- mkReg(0);
-    Reg#(LedCtrl) led_ctrl  <- mkReg(defaultValue);
     Reg#(Bit#(5)) fpga_ver  <- mkReg(0);
+
+    Reg#(LedCtrl) led_ctrl          <- mkReg(defaultValue);
+    ConfigReg#(LedCtrl) led_ctrl_r  <- mkConfigReg(defaultValue);
+
+    (* fire_when_enabled *)
+    rule do_spi_reg;
+        led_ctrl_r  <= led_ctrl;
+    endrule
 
     interface Registers registers;
         interface ReadOnly fpga_app_id  = valueToReadOnly(
@@ -51,8 +59,8 @@ module mkQsfpX32ControllerTopRegs (QsfpX32ControllerTopRegs);
 
     interface Pins pins;
         method fpga_app_id = fpga_app._write;
-        method led_controller_reset     = led_ctrl.reset;
-        method led_controller_output_en = led_ctrl.oe;
+        method led_controller_reset     = led_ctrl_r.reset;
+        method led_controller_output_en = led_ctrl_r.oe;
         method fpga_board_ver = fpga_ver._write;
     endinterface
 endmodule

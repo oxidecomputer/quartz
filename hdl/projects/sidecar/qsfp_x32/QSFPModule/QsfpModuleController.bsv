@@ -33,6 +33,7 @@ import DefaultValue::*;
 import DReg::*;
 import GetPut::*;
 import StmtFSM::*;
+import Vector::*;
 
 // Quartz
 import CommonFunctions::*;
@@ -149,8 +150,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // automatically synthesize them to BRAM not LUTRAM.
     BRAM_Configure read_bram_cfg = BRAM_Configure {
         memorySize: 256,                // 256 bytes
-        latency: 1,                     // address on read is registered
-        outFIFODepth: 3,                // latency + 2 for optimal pipeline
+        latency: 2,                     // address and data on read is registered
+        outFIFODepth: 4,                // latency + 2 for full pipeline
         loadFormat: tagged None,        // no load file used
         allowWriteResponseBypass: False // pipeline write response
     };
@@ -169,7 +170,9 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Buffer signals
     Wire#(Bit#(8)) read_buffer_read_addr        <- mkDWire(8'h00);
     ConfigReg#(Bit#(8)) read_buffer_read_data   <- mkConfigReg(8'h00);
+    Reg#(Bit#(8)) read_buffer_read_data_r       <- mkReg(8'h00);
     Reg#(Bit#(8)) read_buffer_write_addr        <- mkReg(0);
+    Reg#(Bit#(8)) read_buffer_read_addr_r       <- mkReg(0);
     Reg#(Bit#(8)) write_buffer_read_addr        <- mkReg(0);
     PulseWire read_from_write_buffer            <- mkPulseWire();
     PulseWire requested_from_write_buffer       <- mkPulseWire();
@@ -182,18 +185,18 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(Bool) module_initialized_r             <- mkReg(False);
 
     // Internal pin signals, named with _ to avoid collisions at the interface
-    Reg#(Bit#(1)) resetl_  <- mkReg(1);
-    Reg#(Bit#(1)) lpmode_  <- mkReg(0);
+    ConfigReg#(Bit#(1)) resetl_  <- mkConfigReg(1);
+    ConfigReg#(Bit#(1)) lpmode_  <- mkConfigReg(0);
 
+    ConfigReg#(Bit#(1)) power_en_sw    <- mkConfigReg(0);
     Reg#(Bool) hw_power_en          <- mkReg(False);
     Reg#(Bit#(1)) lpmode_hw_gated   <- mkReg(0);
 
-    Wire#(Bit#(1)) power_en_sw    <- mkWire();
-
     // Status
-    Reg#(QsfpStatusPort0Error) error    <- mkReg(NoError);
-    PulseWire clear_fault               <- mkPulseWire();
-    Reg#(PortStatus) port_status_r <- mkReg(defaultValue);
+    Reg#(QsfpStatusPort0Error) error            <- mkReg(NoError);
+    Reg#(Bool) i2c_busy_r                       <- mkReg(True);
+    PulseWire clear_fault                       <- mkPulseWire();
+    Reg#(Vector#(3, PortStatus)) port_status_r  <- mkReg(replicate(defaultValue));
 
     // Control - unused currently
     Reg#(PortControl) control   <- mkReg(defaultValue);
@@ -298,7 +301,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         read_buffer
             .portB
             .request
-            .put(makeRequest(False, read_buffer_read_addr, 8'h00));
+            .put(makeRequest(False, read_buffer_read_addr_r, 8'h00));
     endrule
 
     // PortB responds with the requested data, passing it back to SPI via
@@ -307,6 +310,12 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     rule do_read_buffer_portb_read;
         let rdata   <- read_buffer.portB.response.get();
         read_buffer_read_data  <= rdata;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_read_buffer_reg;
+        read_buffer_read_addr_r <= read_buffer_read_addr;
+        read_buffer_read_data_r <= read_buffer_read_data;
     endrule
 
     // The buffer data is only considered valid for the transaction, so reset
@@ -352,6 +361,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             error   <= NoPower;
         end else if (i2c_attempt && !module_initialized_r) begin
             error   <= NotInitialized;
+        // end else if (i2c_attempt && i2c_core.busy()) begin
+        //     error   <= I2cCoreBusy;
         end else if (i2c_attempt) begin
             new_i2c_command.send();
             error   <= NoError;
@@ -366,21 +377,27 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         end
     endrule
 
+    // Registering the I2C core's busy signal to help with timing
+    (* fire_when_enabled *)
+    rule do_i2c_busy_reg;
+        i2c_busy_r  <= i2c_core.busy();
+    endrule
+
     // Adding a register stage here to help out timing.
     // The mux going into the error register is pretty nasty (see do_i2c rule
     // above) and connecting it directly to the SPI peripheral would result in
     // missing timing occassionally.
     (* fire_when_enabled *)
     rule do_port_status_reg;
-        port_status_r <= PortStatus {
-            busy: pack(i2c_core.busy()),
+        port_status_r <= shiftInAt0(port_status_r, PortStatus {
+            busy: pack(i2c_busy_r),
             error: {0, pack(error)}
-        };
+        });
     endrule
 
     // Registers for SPI peripheral
     interface Registers registers;
-        interface ReadOnly port_status = valueToReadOnly(port_status_r);
+        interface ReadOnly port_status = valueToReadOnly(last(port_status_r));
         interface Reg port_control;
             method _read = control;
             method Action _write(PortControl _);
@@ -394,7 +411,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             endmethod
         endinterface
         interface ReadOnly read_buffer_byte =
-            valueToReadOnly(read_buffer_read_data);
+            valueToReadOnly(read_buffer_read_data_r);
     endinterface
 
     // Physical module pins

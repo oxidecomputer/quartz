@@ -138,6 +138,15 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     Reg#(PhySmiRegAddr) smi_reg_addr    <- mkReg(defaultValue);
     Reg#(PhySmiCtrl) smi_ctrl           <- mkDReg(defaultValue);
 
+    //
+    Reg#(PhyCtrl) phy_ctrl_r            <- mkReg(defaultValue);
+    Reg#(PhySmiWdata1) smi_wdata1_r    <- mkReg(defaultValue);
+    Reg#(PhySmiWdata0) smi_wdata0_r    <- mkReg(defaultValue);
+    Reg#(PhySmiPhyAddr) smi_phy_addr_r  <- mkReg(defaultValue);
+    Reg#(PhySmiRegAddr) smi_reg_addr_r  <- mkReg(defaultValue);
+    Reg#(PhySmiCtrl) smi_ctrl_r         <- mkDReg(defaultValue);
+    
+
     // True after the PHY has gone through initial sequencing
     Reg#(Bool) phy_ready        <- mkReg(False);
     PulseWire phy_abort         <- mkPulseWire();
@@ -211,7 +220,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             reset_ms_cntr.send();
             // Indicate to SW that the PHY is initialized
             phy_ready       <= True;
-        endseq, phy_ctrl.en == 1 && !pg_timed_out);
+        endseq, phy_ctrl_r.en == 1 && !pg_timed_out);
 
     // VSC8562 power down sequence (no special requirements noted in datasheet)
     FSM vsc8562_power_down_seq <- mkFSMWithPred(seq
@@ -223,7 +232,7 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
             endaction
             v2p5.set_enable(False);
             v1p0.set_enable(False);
-        endseq, phy_ctrl.en == 0 || pg_timed_out);
+        endseq, phy_ctrl_r.en == 0 || pg_timed_out);
 
     // This allows hardware to override COMA_MODE, REFCLK_EN, and RESET control
     // during initial power-on sequencing and then hand it over to software
@@ -231,9 +240,9 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_pin_control_comb;
             if (phy_ready) begin
-                coma_mode   <= phy_ctrl.coma_mode;
-                refclk_en   <= phy_ctrl.refclk_en;
-                reset_      <= phy_ctrl.reset;
+                coma_mode   <= phy_ctrl_r.coma_mode;
+                refclk_en   <= phy_ctrl_r.refclk_en;
+                reset_      <= phy_ctrl_r.reset;
             end else begin
                 coma_mode   <= pack(coma_mode_hw);
                 refclk_en   <= pack(refclk_en_hw);
@@ -242,12 +251,12 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     endrule
 
     (* fire_when_enabled *)
-    rule do_power_up_vsc8562(phy_ctrl.en == 1 && !phy_ready && !pg_timed_out);
+    rule do_power_up_vsc8562(phy_ctrl_r.en == 1 && !phy_ready && !pg_timed_out);
         vsc8562_power_on_seq.start();
     endrule
 
     (* fire_when_enabled *)
-    rule do_power_down_vsc8562(phy_ctrl.en == 0 || pg_timed_out);
+    rule do_power_down_vsc8562(phy_ctrl_r.en == 0 || pg_timed_out);
         vsc8562_power_on_seq.abort();
         vsc8562_power_down_seq.start();
     endrule
@@ -267,20 +276,30 @@ module mkVSC8562 #(Parameters parameters) (VSC8562);
     endrule
 
     (* fire_when_enabled *)
-    rule do_start_smi_transaction (phy_ready && smi_ctrl.start == 1);
+    rule do_start_smi_transaction (phy_ready && smi_ctrl_r.start == 1);
         smi.command.put(Command {
-            read: unpack(~smi_ctrl.rw),
-            phy_addr: smi_phy_addr.addr,
-            reg_addr: smi_reg_addr.addr,
-            write_data: {smi_wdata1.data, smi_wdata0.data}
+            read: unpack(~smi_ctrl_r.rw),
+            phy_addr: smi_phy_addr_r.addr,
+            reg_addr: smi_reg_addr_r.addr,
+            write_data: {smi_wdata1_r.data, smi_wdata0_r.data}
         });
     endrule
 
     (* fire_when_enabled *)
     rule do_handle_smi_read_data (phy_ready);
-        let read_data       <- smi.read_data.get();
+        let read_data      <- smi.read_data.get();
         smi_rdata1.data    <= read_data[15:8];
         smi_rdata0.data    <= read_data[7:0];
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_spi_reg;
+        phy_ctrl_r      <= phy_ctrl;
+        smi_wdata1_r    <= smi_wdata1;
+        smi_wdata0_r    <= smi_wdata0;
+        smi_phy_addr_r  <= smi_phy_addr;
+        smi_reg_addr_r  <= smi_reg_addr;
+        smi_ctrl_r      <= smi_ctrl;
     endrule
 
     interface Registers registers;
