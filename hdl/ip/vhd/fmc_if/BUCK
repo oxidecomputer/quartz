@@ -20,6 +20,7 @@ vhdl_unit(
     srcs = glob(["sims/*.vhd"]),
     deps = [
         ":stm32h7_fmc_model",
+        ":stm32h7_fmc_target",
     ],
     visibility = ['PUBLIC'],
 )

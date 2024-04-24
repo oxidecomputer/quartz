@@ -48,13 +48,13 @@ end entity;
 
 architecture model of stm32h7_fmc_model is
     type txn_type is (READ_TXN, WRITE_TXN);
-    signal delayed_wait : std_logic;
+    signal delayed_wait : std_logic := '0';
 begin
 
     wait_delay:process(clk)
     begin
         if rising_edge(clk) then
-            delayed_wait <= not nl;
+            delayed_wait <= not nwait;
         end if;
     end process;
 
@@ -84,9 +84,9 @@ begin
             addr := "0" & addr(addr'left downto 1);
             rem_data_cnt := pop_integer(request_msg);
             ne(0) <= '0';
+            nl <= '0';
             a <= addr(a'range);
             ad <= addr(ad'range);
-            nl <= '0';
             if kind = WRITE_TXN then
                 nwe <= '0'; -- write strobe starts at beginning
             end if;
@@ -104,6 +104,7 @@ begin
 
     begin
         bus_idle;
+        nl <= '1';
         receive(net, BUS_HANDLE.p_actor, request_msg);
         msg_type    := message_type(request_msg);
         -- All bus transactions begin with the FMC_CLK
@@ -114,20 +115,18 @@ begin
             -- activate address, chipsel, write, and latch
             transaction_start(WRITE_TXN);
             -- on next falling edge of clock, apply wdata
-            wait until falling_edge(clk);
-            data := pop_std_ulogic_vector(request_msg);
-            ad <= data;
-            wait until rising_edge(clk);
             while rem_data_cnt > 0 loop
                 wait on clk;
                 -- on every rising edge that delayed wait isn't asserted,
-                -- we've done a transfer
-                if rising_edge(clk) and delayed_wait = '0' then
+                -- we've done a transfer, so get the data, dec the counter,
+                -- apply to bus
+                if falling_edge(clk) and delayed_wait = '0' then
                     data := pop_std_ulogic_vector(request_msg);
                     rem_data_cnt := rem_data_cnt - 1;
                     ad <= data;
                 end if;
             end loop;
+            wait until falling_edge(clk);
 
         elsif msg_type = bus_burst_read_msg then
             reply_msg := new_msg;

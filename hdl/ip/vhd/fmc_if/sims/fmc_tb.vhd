@@ -7,12 +7,15 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 library vunit_lib;
 context vunit_lib.com_context;
 context vunit_lib.vunit_context;
+context vunit_lib.vc_context;
 
 use work.stm32h7_fmc_sim_pkg.all;
+use work.fmc_tb_pkg.all;
 
 entity fmc_tb is
   generic
@@ -32,7 +35,9 @@ begin
 
 
     variable address : std_logic_vector(25 downto 0) := (others => '0');
-    variable data : std_logic_vector(31 downto 0);
+    variable data : std_logic_vector(31 downto 0)  := (others => '0');
+    variable expected_data : std_logic_vector(31 downto 0)  := (others => '0');
+    variable buf : buffer_t;
 
   begin
     -- Always the first thing in the process, set up things for the VUnit test runner
@@ -45,18 +50,39 @@ begin
 
     
     while test_suite loop
-      if run("basic_fmc_test") then
-         fmc_read32(net, address, data);
-         wait for 1 us;
-         data := X"DEADBEEF";
-         fmc_write32(net, address, data);
+      if run("basic_fmc_write_test") then
+     
+        data := X"DEADBEEF";
+        -- Set up the buffer used by the AXI write target
+        buf := allocate(wmemory, 32 * 256, alignment => 256);
+        -- Only going to allow writes, and set the expected data
+        -- using the simulation interface
+        set_permissions(wmemory, to_integer(address), write_only);
+        set_expected_word(wmemory, to_integer(address), data);
+        -- Do the FMC -> AXI write transaction
+        fmc_write32(net, address, data);
+        wait for 500 ns;
+        check_expected_was_written(buf);
+      elsif run("basic_fmc_read_test") then
+        buf := allocate(rmemory, 32 * 256, alignment => 256);
+        -- Use the simulation interface to set the data we're going to read back
+        expected_data := X"DEADBEEF";
+        write_word(rmemory, base_address(buf), expected_data);
+        set_expected_word(rmemory, base_address(buf), data);
+        set_permissions(rmemory, base_address(buf), read_only);
+
+        data := read_word(rmemory, base_address(buf), 4);
+        check_equal(data, expected_data, "1st Read data did not match exptected");
+        fmc_read32(net, address, data);
+        check_equal(data, expected_data, "Read data did not match exptected");
+
       end if;
     end loop;
-    wait for 1 us;
+    wait for 2 us;
     test_runner_cleanup(runner);
     wait;
   end process;
 
-    -- Example total test timeout dog
-    test_runner_watchdog(runner, 10 ms);
+    -- -- Example total test timeout dog
+    -- test_runner_watchdog(runner, 10 ms);
 end tb;

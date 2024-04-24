@@ -23,13 +23,13 @@ entity stm32h7_fmc_target is
         --! Write full flag, sync to write clock domain
         chip_reset : in std_logic;
         fmc_clk  : in std_logic;
-        a    : out std_logic_vector(24 downto 16);
+        a    : in std_logic_vector(24 downto 16);
         ad   : inout std_logic_vector(15 downto 0);
-        ne   : out std_logic_vector(3 downto 0);
+        ne   : in std_logic_vector(3 downto 0);
         --todo missing byte enables?
-        noe  : out std_logic;
-        nwe  : out std_logic;
-        nl   : out std_logic;
+        noe  : in std_logic;
+        nwe  : in std_logic;
+        nl   : in std_logic;
         nwait : out std_logic;
         -- FPGA interface
         aclk : in std_logic;
@@ -98,9 +98,9 @@ architecture rtl of stm32h7_fmc_target is
     signal axi_fifo_txn_path_rd_ack : std_logic;
     signal axi_fifo_txn_path_rempty : std_logic;
 
-    signal ad_rdata_int : std_logic_vector(15 downto 0);
-
     signal axi_addr : unsigned(31 downto 0);
+    signal axi_fifo_wr_path_wdata : std_logic_vector(31 downto 0);
+    signal axi_fifo_wr_path_write : std_logic;
     
 
 
@@ -114,9 +114,10 @@ begin
         variable chip_selected : boolean;
     begin
         if chip_reset then
+            ad <= (others => 'Z');
             nwait <= '1';
             txn <= ('0', (others => '0'));
-            ad_rdata_int <= (others => '0');
+            axi_fifo_wr_path_wdata <= (others => '0');
         elsif rising_edge(fmc_clk) then
             -- some variable naming for more legibility
             chip_selected := ne(0) = '0';
@@ -124,6 +125,7 @@ begin
             -- single-cycle flags, unconditionally cleared
             axi_fifo_rd_path_rd_ack <= '0';
             axi_fifo_txn_path_write <= '0';
+            axi_fifo_wr_path_write <= '0';
 
             case fmc_state is
                 when IDLE =>
@@ -164,7 +166,8 @@ begin
                             nwait <= '1';
                             -- apply data to the bus even though we're going
                             -- to still have to bleed a wait cycle
-                            ad_rdata_int <= axi_fifo_rd_path_rdata(15 downto 0);
+                            ad <= axi_fifo_rd_path_rdata(15 downto 0);
+                            fmc_state <= READ_WAIT_CLEAR;
     
                         end if;
                     end if;
@@ -174,16 +177,16 @@ begin
                 when READ_WORD0 =>
                     -- data strobe at next edge
                     fmc_state <= READ_WORD1;
-                    ad_rdata_int <= axi_fifo_rd_path_rdata(31 downto 16);
+                    ad <= axi_fifo_rd_path_rdata(31 downto 16);
 
                 when READ_WORD1 =>
                     -- TODO: if we want to allow shorter transactions
                     -- we'd need to do the right thing here
                     -- pop the rdata fifo since we're done with it
                     axi_fifo_rd_path_rd_ack <= '1';
-
                     fmc_state <= READ_SETUP;
                     nwait <= '0';
+                    ad <= (others => 'Z');
 
                 when WRITE_SETUP =>
                     if not chip_selected then
@@ -191,11 +194,14 @@ begin
                     else
                         -- no waits needed until the fifo fills up
                         fmc_state <= WRITE_WORD0;
+                        axi_fifo_wr_path_wdata(15 downto 0) <= ad;
                     end if;
                 when WRITE_WORD0 =>
-                fmc_state <= WRITE_WORD1;
+                    fmc_state <= WRITE_WORD1;
+                    axi_fifo_wr_path_wdata(31 downto 16) <= ad;
                 when WRITE_WORD1 =>
-                fmc_state <= WRITE_SETUP;
+                    axi_fifo_wr_path_write <= '1';
+                    fmc_state <= WRITE_SETUP;
                 when TIMEOUT_CLEANUP => 
                     null;
             end case;
@@ -245,7 +251,7 @@ begin
           reset => not aresetn,
           write_en => rready and rvalid,
           wdata => rdata, -- AXI pins
-          wfull => axi_fifo_rd_path_wfull,
+          wfull => open,
           wusedwds => open,
           -- Read interface
           rclk => fmc_clk,
@@ -271,12 +277,12 @@ begin
           reset => chip_reset,
           write_en => axi_fifo_wr_path_write,
           wdata => axi_fifo_wr_path_wdata,
-          wfull => axi_fifo_wr_path_wfull,
+          wfull => open,
           wusedwds => open,
           -- Read interface
           rclk => aclk,
           rdata => axi_fifo_wr_path_rdata,
-          rdreq => axi_fifo_wr_path_rd_ack,
+          rdreq => wvalid and wready,
           rempty => axi_fifo_wr_path_rempty,
           rusedwds => open
         );
@@ -287,6 +293,12 @@ begin
     begin
         if not aresetn then
             axi_addr <= (others => '0');
+            axi_state <= IDLE;
+            rready <= '0';
+            arvalid <= '0';
+            bready <= '0';
+            awvalid <= '0';
+            wvalid <= '0';
         elsif rising_edge(aclk) then
             -- unconditionally clear single-cycle flags
             axi_fifo_txn_path_rd_ack <= '0';
@@ -299,7 +311,7 @@ begin
                       axi_addr <= resize(cur_txn.addr, axi_addr'length);
                       if cur_txn.read_writen then
                           axi_state <= AXI_READ_INIT;
-                      elsif not axi_fifo_wr_path_rempty then
+                      else
                           axi_state <= AXI_WRITE_INIT;
                       end if;
                     end if;
@@ -319,7 +331,10 @@ begin
 
                 when AXI_WRITE_INIT => 
                     awvalid <= '1';
-                    wvalid <= '1';
+                    if not axi_fifo_wr_path_rempty then
+                        wvalid <= '1';
+                        axi_state <= AXI_WRITE_WAIT;
+                    end if;
                     bready <= '1';
                 when AXI_WRITE_WAIT =>
                   if awready and awvalid then
@@ -338,7 +353,7 @@ begin
     end process;
 
     -- no fancy concurrency here, so just point at the same register
-    awaddr <= std_logic_vector(axi_addr);
-    araddr <= std_logic_vector(axi_addr);
+    awaddr <= std_logic_vector(axi_addr(25 downto 0));
+    araddr <= std_logic_vector(axi_addr(25 downto 0));
     wdata <= axi_fifo_wr_path_rdata;
 end rtl;
