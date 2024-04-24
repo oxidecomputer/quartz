@@ -63,4 +63,5 @@ bluesim_tests('SPITests',
     ],
     deps = [
         ':SPI',
+        '//hdl/ip/bsv:TestUtils',
     ])
