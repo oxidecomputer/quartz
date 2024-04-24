@@ -50,7 +50,6 @@ vu.add_json4vhdl()
 vu.add_osvvm()
 vu.add_random()
 vu.add_verification_components()
-
 # Create libraries
 {% for library in libraries %}
 {{library.name}} = vu.add_library("{{library.name}}")
@@ -67,5 +66,7 @@ vu.add_verification_components()
 {% endfor %}
 {% endif %}
 
+# Disable annoying ieee warnings across VUnit-supported simulators
+vu.set_sim_option("disable_ieee_warnings", True)
 # Run vunit function
 vu.main()
