@@ -148,6 +148,7 @@ begin
             -- data out
             -- tbd waits
             reply(net, request_msg, reply_msg);
+            wait on clk;
         else
             -- This shouldn't happen but will provide
             -- proper error reporting if it does

@@ -61,7 +61,11 @@ begin
         set_expected_word(wmemory, to_integer(address), data);
         -- Do the FMC -> AXI write transaction
         fmc_write32(net, address, data);
-        wait for 500 ns;
+        check_expected_was_written(buf);
+        -- Do a second transaction
+        data := X"ADEADBAD";
+        set_expected_word(wmemory, to_integer(address), data);
+        fmc_write32(net, address, data);
         check_expected_was_written(buf);
       elsif run("basic_fmc_read_test") then
         buf := allocate(rmemory, 4 * 2, alignment => 32);
@@ -75,7 +79,12 @@ begin
         check_equal(data, expected_data, "Sim I/F Read data did not match exptected");
         -- Now do the FMC transaction, and check that returned data matches
         fmc_read32(net, address, data);
-        --check_equal(data, expected_data, "Read data did not match exptected");
+        check_equal(data, expected_data, "Read data did not match exptected");
+        -- Do a second transaction
+        expected_data := X"ADEADBAD";
+        write_word(rmemory, base_address(buf), expected_data);
+        fmc_read32(net, address, data);
+        check_equal(data, expected_data, "Read data did not match exptected");
 
       end if;
     end loop;
@@ -85,5 +94,5 @@ begin
   end process;
 
     -- -- Example total test timeout dog
-    -- test_runner_watchdog(runner, 10 ms);
+    test_runner_watchdog(runner, 1 ms);
 end tb;
