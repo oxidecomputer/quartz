@@ -1,0 +1,90 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:revision: 1.0
+:revdate: 2024-04-24
+
+= FMC Target interface
+
+This core interfaces with an STM32H7's "FMC" peripheral to provide an AXI-Lite
+controller in an FPGA.  This provides  "local-bus" interface for SP-based
+software to access memory-mapped I/O in the FPGA. By choosing AXI-lite
+initially, we limit the scope of that is required to both make this work, and
+for what peripherals must support.
+
+This core was designed with FIFOs between the FMC and AXI clock domain to
+provide architectural easy in implementing a more performant solution, but this
+does come at increased latency as we're seeing ~6 clock cycles of latency
+through the FIFOs in a single direction, and reads need to round-trip.
+
+== Design Overview:
+
+There's a state machine that hand-shakes with the FMC wires. This state machine
+feeds the transaction FIFO, providing address and read/write control to the AXI
+state machine, as well as feeding the FMC->AXI write data FIFO in the case of
+write transactions and pulling from the read-data FIFO when the STM32 is doing
+reads.  The read and write fifos are connected to appropriate control signals in
+the AXI state machine as well as being wired up to the rdata and wdata AXI bus
+signals.
+
+The AXI state machine monitors the transaction FIFO (and the WDATA FIFO in the
+case of writes) and wiggles the AXI signals appropriately to issue the
+read/write transactions.
+
+== Sim Env
+
+The simulation environment has a model of the STM32's FMC peripheral with some
+associated simulation functions connected to the FMC target described here in
+this document. The AXI side of this is wired up to "off-the-shelf" AXI
+verification peripherals provided with VUnit so the testbench can control the
+memory "in" these peripherals in an out of band way. These verification
+peripherals also monitor for AXI protocol correctness. Note that these are
+actually fully fledges AXI peripherals but some features are stubbed out in the
+testbench to properly interop with our AXI-Lite controller interface.
+
+== Current status
+
+This has been simulated against FMC models for single 32-bit read/writes. No
+bursting is supported currently. Only 32bit access with no consecutive access is
+implemented.
+
+
+== Open Actions
+
+* Support multi-word transactions on FMC interface 
+
+* Support byte-enables FMC -
+AXI for <32bit access 
+
+* Clean up FMC model, especially around writes and
+figuring out blocking
+
+== Future Investigation/Next steps
+
+Bursting in an full AXI-compliant way could prove to be tricky. AXI would like
+to provide the burst-count up front and indication of the last data word at the
+end. The FMC burst is done when chip-select releases.
+
+To provide more efficient data movement, we should consider supporting bursts on
+the FMC interface that are factored into single AXI-Lite transactions on the AXI
+side. This reduces the effective theoreticaly max throughput a bit vs proper AXI
+bursting, but avoids the issues discussed below.
+
+=== Implications for read bursting
+
+Read bursts are especially tricky here, as we'd like to return data as
+efficiently as possible but have to fetch it from the peripherals. Doing proper
+AXI bursts, I think implies that we'd have to burst a max-size read all the time
+and then only return the appropriate data over the FMC interface. In general
+this is possible, but if we have peripherals with read side-effects like fifo
+outputs, this could be problematic. It's also a bit inefficient for random
+single word reads.
+
+=== Implications for write bursting:
+
+Write bursting would have to be done in a store and forward fashion so that we'd
+know the total size. This latency could be partially "hidden" from the SP, but
+if you have write/read patterns you'd need fancier logic to detect in-flight
+writes or stall until the writes are finished.
+
