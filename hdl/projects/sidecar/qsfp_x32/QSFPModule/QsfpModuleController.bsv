@@ -12,31 +12,32 @@ export mkQsfpModuleController;
 
 // useful structs and enums
 export Parameters(..);
-export RamWrite(..);
 export Pins(..);
 export Registers(..);
 
 // functions for doing mapping
 export get_pins;
 export get_registers;
-export get_read_addr;
-export get_read_data;
+export get_i2c_data;
 export get_status;
 export get_control;
 
 // BSV
 import BRAM::*;
 import BRAMCore::*;
+import BRAMFIFO::*;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
 import DReg::*;
+import FIFOF::*;
 import GetPut::*;
 import StmtFSM::*;
 
 // Quartz
 import Bidirection::*;
 import CommonFunctions::*;
+import CommonInterfaces::*;
 import I2CBitController::*;
 import I2CCommon::*;
 import I2CCore::*;
@@ -61,29 +62,10 @@ instance DefaultValue#(Parameters);
     };
 endinstance
 
-// A data/address pair to do a BRAM write
-typedef struct {
-    Bit#(8) data;
-    Bit#(8) address;
-} RamWrite deriving (Eq, Bits, FShow);
-
-// helper function to do BRAM accesses
-function BRAMRequest#(Bit#(8), Bit#(8)) makeRequest(Bool write,
-                                                    Bit#(8) addr, Bit#(8) data);
-    return BRAMRequest {
-        write: write,
-        responseOnWrite: False,
-        address: addr,
-        datain: data
-    };
-endfunction
-
 interface Registers;
     interface ReadOnly#(PortStatus) port_status;
     interface Reg#(PortControl) port_control;
-    // not in RDL, this is sideband BRAM access
-    interface Wire#(Bit#(8)) read_buffer_addr;
-    interface ReadOnly#(Bit#(8)) read_buffer_byte;
+    interface ReadVolatileReg#(Bit#(8)) i2c_data;
 endinterface
 
 interface Pins;
@@ -125,9 +107,6 @@ interface QsfpModuleController;
     // new I2C Command to feed to the I2C core
     interface Put#(Command) i2c_command;
 
-    // this is how the write buffer gets filled
-    interface Put#(RamWrite) i2c_write_data;
-
     // ticks for internal delay counters
     method Action tick_1ms(Bool val);
 endinterface
@@ -139,36 +118,22 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // I2C core for the module management interface
     I2CCore i2c_core    <-
         mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
-
-    // Block RAM configuration to store I2C transaction data
-    // While only 128 bytes are needed, they are sized to 256 so the tools will
-    // automatically synthesize them to BRAM not LUTRAM.
-    BRAM_Configure read_bram_cfg = BRAM_Configure {
-        memorySize: 256,                // 256 bytes
-        latency: 1,                     // address on read is registered
-        outFIFODepth: 3,                // latency + 2 for optimal pipeline
-        loadFormat: tagged None,        // no load file used
-        allowWriteResponseBypass: False // pipeline write response
-    };
-    // Do not change bramSize from 128 to 256, it appears to cause a synthesis
-    // issue. See https://github.com/oxidecomputer/quartz/issues/55
-    Integer bramSize = 128;
-    Bool hasOutputRegister = False;
+    Wire#(Bool) i2c_busy_w    <- mkWire();
+    mkConnection(i2c_busy_w._write, i2c_core.busy);
 
     // The read_buffer stores data read back from the module
-    // The write_buffer stores data to be written to the module
-    // portA for writes, portB for reads on both BRAMs
-    BRAM2Port#(Bit#(8), Bit#(8)) read_buffer  <- mkBRAM2Server(read_bram_cfg);
-    BRAM_DUAL_PORT#(Bit#(8), Bit#(8)) write_buffer <-
-        mkBRAMCore2(bramSize, hasOutputRegister);
+    FIFOF#(Bit#(8)) rdata_fifo      <- mkSizedBRAMFIFOF(128);
+    PulseWire rdata_fifo_deq        <- mkPulseWire();
+    PulseWire rdata_fifo_clear_req  <- mkPulseWire();
+    Reg#(Bool) rdata_fifo_clear_req_r  <- mkReg(False);
+    Reg#(Bit#(8)) rdata_r           <- mkReg('h00);
 
-    // Buffer signals
-    Wire#(Bit#(8)) read_buffer_read_addr        <- mkDWire(8'h00);
-    ConfigReg#(Bit#(8)) read_buffer_read_data   <- mkConfigReg(8'h00);
-    Reg#(Bit#(8)) read_buffer_write_addr        <- mkReg(0);
-    Reg#(Bit#(8)) write_buffer_read_addr        <- mkReg(0);
-    PulseWire read_from_write_buffer            <- mkPulseWire();
-    PulseWire requested_from_write_buffer       <- mkPulseWire();
+    // The write_buffer stores data to be written to the module
+    FIFOF#(Bit#(8)) wdata_fifo      <- mkSizedBRAMFIFOF(128);
+    PulseWire wdata_fifo_deq        <- mkPulseWire();
+    PulseWire wdata_fifo_clear_req  <- mkPulseWire();
+    Reg#(Bool) wdata_fifo_clear_req_r  <- mkReg(False);
+    Wire#(Bit#(8)) wdata_w          <- mkWire();
 
     // I2C control
     PulseWire new_i2c_command                   <- mkPulseWire();
@@ -186,7 +151,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Wire#(Bit#(1)) power_en_    <- mkWire();
 
     // Status
-    Reg#(QsfpStatusPort0Error) error    <- mkReg(NoError);
+    Reg#(QsfpPort0StatusError) error    <- mkReg(NoError);
     PulseWire clear_fault               <- mkPulseWire();
 
     // Control - unused currently
@@ -195,6 +160,16 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Delay
     Wire#(Bool) tick_1ms_               <- mkWire();
     Reg#(UInt#(11)) init_delay_counter  <- mkReg(0);
+
+    // I2C core puts read bytes into the buffer
+    mkConnection(i2c_core.received_data.get, rdata_fifo.enq);
+    // Expose the next entry for the SPI interface
+    mkConnection(rdata_fifo.first, rdata_r._write);
+
+    // SPI interface puts bytes into the buffer
+    mkConnection(wdata_w._read, wdata_fifo.enq);
+    // I2C core pulls bytes to write from the buffer
+    mkConnection(wdata_fifo.first, i2c_core.send_data.offer);
 
     // The hot swap expected a tick to correspond with its timeout
     (* fire_when_enabled *)
@@ -209,6 +184,30 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         end else if (!modprsl_) begin
             hot_swap.set_enable(power_en_ == 1);
         end
+    endrule
+
+    // Handle the FIFO clear requests
+    (* fire_when_enabled *)
+    rule do_rdata_fifo_clear_reg (!rdata_fifo_clear_req_r);
+        rdata_fifo_clear_req_r  <= rdata_fifo_clear_req;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_rdata_fifo_clear (rdata_fifo_clear_req_r && !i2c_busy_w 
+                                    && i2c_attempt);
+        rdata_fifo.clear();
+        rdata_fifo_clear_req_r <= False;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_wdata_fifo_clear_reg (!wdata_fifo_clear_req_r);
+        wdata_fifo_clear_req_r  <= wdata_fifo_clear_req;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_wdata_fifo_clear (wdata_fifo_clear_req_r && !i2c_busy_w);
+        wdata_fifo.clear();
+        wdata_fifo_clear_req_r <= False;
     endrule
 
     // Clear a hot swap controller fault
@@ -232,77 +231,16 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         init_delay_counter  <= 0;
     endrule
 
-    // The buffer data is only considered valid for the transaction, so reset
-    // the address at the start of a new read operation.
+    // When the SPI interface reads a byte, remove it from the read buffer
     (* fire_when_enabled *)
-    rule do_read_buffer_write_addr;
-        if (new_i2c_command || read_buffer_write_addr == 128) begin
-            read_buffer_write_addr  <= 0;
-        end else if (i2c_data_received) begin
-            if (read_buffer_write_addr < 128) begin
-                read_buffer_write_addr    <= read_buffer_write_addr + 1;
-            end else begin
-                read_buffer_write_addr    <= 0;
-            end
-        end
+    rule do_read_buffer_deq (rdata_fifo_deq);
+        rdata_fifo.deq();
     endrule
 
-    // I2C writes into read_buffer via PortA
+    // When the I2C core sends a byte, remove it from the write buffer
     (* fire_when_enabled *)
-    rule do_read_buffer_porta_write;
-        let wdata   <- i2c_core.received_data.get();
-        read_buffer
-            .portA
-            .request
-            .put(makeRequest(True, read_buffer_write_addr, wdata));
-        i2c_data_received.send();
-    endrule
-
-    // SPI interface changes read_buffer_read_addr, making a read request via
-    //PortB
-    (* fire_when_enabled *)
-    rule do_read_buffer_portb_write;
-        read_buffer
-            .portB
-            .request
-            .put(makeRequest(False, read_buffer_read_addr, 8'h00));
-    endrule
-
-    // PortB responds with the requested data, passing it back to SPI via
-    //read_buffer_read_data
-    (* fire_when_enabled *)
-    rule do_read_buffer_portb_read;
-        let rdata   <- read_buffer.portB.response.get();
-        read_buffer_read_data  <= rdata;
-    endrule
-
-    // The buffer data is only considered valid for the transaction, so reset
-    // the address at the start of a new  operation.
-    (* fire_when_enabled *)
-    rule do_reg_write_buffer_read_addr;
-        if (new_i2c_command) begin
-            write_buffer_read_addr    <= 0;
-        end else if (i2c_core.send_data.accepted) begin
-            if (write_buffer_read_addr < 128) begin
-                write_buffer_read_addr    <= write_buffer_read_addr + 1;
-            end else begin
-                write_buffer_read_addr    <= 0;
-            end
-        end
-    endrule
-
-    // I2C interface changes write_buffer_read_addr, making a read request via
-    // PortB
-    (* fire_when_enabled *)
-    rule do_write_buffer_portb_write;
-        write_buffer.b.put(False, write_buffer_read_addr, 8'h00);
-    endrule
-
-    // PortB responds with the requested data, passing it back to I2C via
-    // write_buffer_write_data
-    (* fire_when_enabled *)
-    rule do_write_buffer_portb_read;
-        i2c_core.send_data.offer(write_buffer.b.read());
+    rule do_wdata_fifo_deq (i2c_core.send_data.accepted);
+        wdata_fifo.deq();
     endrule
 
     // Since the error register is somewhat derived at this layer it needs to
@@ -336,23 +274,37 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // Registers for SPI peripheral
     interface Registers registers;
         interface ReadOnly port_status = valueToReadOnly(PortStatus {
-            busy: pack(i2c_core.busy()),
+            rdata_fifo_empty: pack(!rdata_fifo.notEmpty()),
+            wdata_fifo_empty: pack(!wdata_fifo.notEmpty()),
+            busy: pack(i2c_busy_w),
             error: {0, pack(error)}
         });
+
         interface Reg port_control;
             method _read = control;
-            method Action _write(PortControl _);
-                clear_fault.send();
+            method Action _write(PortControl v);
+                if (v.rdata_fifo_clear == 1) begin
+                    rdata_fifo_clear_req.send();
+                end
+
+                if (v.wdata_fifo_clear == 1) begin
+                    wdata_fifo_clear_req.send();
+                end
+
+                if (v.clear_fault == 1) begin
+                    clear_fault.send();
+                end
             endmethod
         endinterface
-        interface Wire read_buffer_addr;
-            method _read = read_buffer_read_addr;
-            method Action _write(Bit#(8) address);
-                read_buffer_read_addr   <= address;
+
+        interface ReadVolatileReg i2c_data;
+            method ActionValue#(Bit#(8)) _read;
+                rdata_fifo_deq.send();
+                return rdata_r;
             endmethod
+
+            method _write = wdata_w._write;
         endinterface
-        interface ReadOnly read_buffer_byte =
-            valueToReadOnly(read_buffer_read_data);
     endinterface
 
     // Physical module pins
@@ -379,13 +331,6 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
         endmethod
     endinterface
 
-    // external source writes into write_buffer via PortA
-    interface Put i2c_write_data;
-        method Action put(new_ram_write);
-            write_buffer.a.put(True, new_ram_write.address, new_ram_write.data);
-        endmethod
-    endinterface
-
     method resetl   = resetl_._write;
     method lpmode   = lpmode_._write;
     method modprsl  = modprsl_;
@@ -404,10 +349,8 @@ endmodule
 
 function Pins get_pins(QsfpModuleController m) = m.pins;
 function Registers get_registers(QsfpModuleController m) = m.registers;
-function Wire#(Bit#(8)) get_read_addr(QsfpModuleController m) =
-    m.registers.read_buffer_addr;
-function ReadOnly#(Bit#(8)) get_read_data(QsfpModuleController m) =
-    m.registers.read_buffer_byte;
+function ReadVolatileReg#(Bit#(8)) get_i2c_data(QsfpModuleController m) =
+    m.registers.i2c_data;
 function ReadOnly#(PortStatus) get_status(QsfpModuleController m) =
     m.registers.port_status;
 function Reg#(PortControl) get_control(QsfpModuleController m) =

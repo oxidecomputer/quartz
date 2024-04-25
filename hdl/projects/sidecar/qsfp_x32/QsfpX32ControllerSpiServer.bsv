@@ -12,6 +12,7 @@ import DefaultValue::*;
 import GetPut::*;
 import Vector::*;
 
+import CommonInterfaces::*;
 import RegCommon::*;
 
 import QsfpModulesTop::*;
@@ -23,18 +24,6 @@ typedef RegRequest#(16, 8) SpiRequest;
 typedef RegResp#(8) SpiResponse;
 
 typedef Server#(SpiRequest, SpiResponse) SpiServer;
-
-// helper to get an actual BRAM address from a request address
-function Bit#(8) getBRAMAddr(Bit#(16) request_addr, Integer memOffset);
-    UInt#(16) offset = fromInteger(memOffset);
-    return truncate(pack(unpack(request_addr) - offset));
-endfunction
-
-function Bool isBetween(Bit#(16) request_addr, Integer base, Integer offset);
-    Bit#(16) first = fromInteger(base);
-    Bit#(16) last = fromInteger(base + offset - 1);
-    return (request_addr >= first) && (request_addr <= last);
-endfunction
 
 module mkSpiServer #(VSC8562::Registers vsc8562,
                     QsfpX32ControllerTopRegs::Registers top,
@@ -58,362 +47,236 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
     endrule
 
     (* fire_when_enabled *)
-    rule do_spi_read_dly (spi_request.op == READ && unpack(|pack(read_dly)));
-        if (isBetween(spi_request.address, qsfpPort0ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[0]   <= getBRAMAddr(spi_request.address, qsfpPort0ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort1ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[1]   <= getBRAMAddr(spi_request.address, qsfpPort1ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort2ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[2]   <= getBRAMAddr(spi_request.address, qsfpPort2ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort3ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[3]   <= getBRAMAddr(spi_request.address, qsfpPort3ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort4ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[4]   <= getBRAMAddr(spi_request.address, qsfpPort4ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort5ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[5]   <= getBRAMAddr(spi_request.address, qsfpPort5ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort6ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[6]   <= getBRAMAddr(spi_request.address, qsfpPort6ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort7ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[7]   <= getBRAMAddr(spi_request.address, qsfpPort7ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort8ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[8]   <= getBRAMAddr(spi_request.address, qsfpPort8ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort9ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[9]   <= getBRAMAddr(spi_request.address, qsfpPort9ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort10ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[10]   <= getBRAMAddr(spi_request.address, qsfpPort10ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort11ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[11]   <= getBRAMAddr(spi_request.address, qsfpPort11ReadBufferOffset);
-        end  else if (isBetween(spi_request.address, qsfpPort12ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[12]   <= getBRAMAddr(spi_request.address, qsfpPort12ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort13ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[13]   <= getBRAMAddr(spi_request.address, qsfpPort13ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort14ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[14]   <= getBRAMAddr(spi_request.address, qsfpPort14ReadBufferOffset);
-        end else if (isBetween(spi_request.address, qsfpPort15ReadBufferOffset, readBufferNumEntries)) begin
-            qsfp_top.mod_read_addrs[15]   <= getBRAMAddr(spi_request.address, qsfpPort15ReadBufferOffset);
-        end
+    rule do_spi_read ((spi_request.op == READ || spi_request.op == READ_NO_ADDR_INCR)
+                        && unpack(last(read_dly)));
+        let reader = 
+            case (spi_request.address)
+                fromInteger(id0Offset): read(Id0'(defaultValue));
+                fromInteger(id1Offset): read(Id1'(defaultValue));
+                fromInteger(id2Offset): read(Id2'(defaultValue));
+                fromInteger(id3Offset): read(Id3'(defaultValue));
+                fromInteger(checksumScratchpad0Offset): read(checksum[0]);
+                fromInteger(checksumScratchpad1Offset): read(checksum[1]);
+                fromInteger(checksumScratchpad2Offset): read(checksum[2]);
+                fromInteger(checksumScratchpad3Offset): read(checksum[3]);
+                fromInteger(scratchpadOffset): read(scratchpad);
+
+                fromInteger(fpgaIdOffset): read(top.fpga_app_id);
+                fromInteger(ledCtrlOffset): read(top.led_ctrl);
+                fromInteger(fpgaBoardVerOffset): read(top.fpga_board_ver);
+
+                fromInteger(vsc8562PhyStatusOffset): read(vsc8562.phy_status);
+                fromInteger(vsc8562PhyCtrlOffset): read(vsc8562.phy_ctrl);
+                fromInteger(vsc8562PhyOscOffset): read(vsc8562.phy_osc);
+                fromInteger(vsc8562PhySmiStatusOffset): read(vsc8562.phy_smi_status);
+                fromInteger(vsc8562PhySmiRdata0Offset): read(vsc8562.phy_smi_rdata0);
+                fromInteger(vsc8562PhySmiRdata1Offset): read(vsc8562.phy_smi_rdata1);
+                fromInteger(vsc8562PhySmiWdata0Offset): read(vsc8562.phy_smi_wdata0);
+                fromInteger(vsc8562PhySmiWdata1Offset): read(vsc8562.phy_smi_wdata1);
+                fromInteger(vsc8562PhySmiPhyAddrOffset): read(vsc8562.phy_smi_phy_addr);
+                fromInteger(vsc8562PhySmiRegAddrOffset): read(vsc8562.phy_smi_reg_addr);
+                fromInteger(vsc8562PhySmiCtrlOffset): read(vsc8562.phy_smi_ctrl);
+                fromInteger(vsc8562PhyRailStatesOffset): read(vsc8562.phy_rail_states);
+
+                fromInteger(qsfpI2cBusAddrOffset): read(qsfp_top.i2c_bus_addr);
+                fromInteger(qsfpI2cRegAddrOffset): read(qsfp_top.i2c_reg_addr);
+                fromInteger(qsfpI2cNumBytesOffset): read(qsfp_top.i2c_num_bytes);
+                fromInteger(qsfpI2cBcast0Offset): read(qsfp_top.i2c_bcast0);
+                fromInteger(qsfpI2cBcast1Offset): read(qsfp_top.i2c_bcast1);
+                fromInteger(qsfpI2cBusy0Offset): read(qsfp_top.i2c_busy0);
+                fromInteger(qsfpI2cBusy1Offset): read(qsfp_top.i2c_busy1);
+                fromInteger(qsfpPort0StatusOffset): read(qsfp_top.mod_statuses[0]);
+                fromInteger(qsfpPort1StatusOffset): read(qsfp_top.mod_statuses[1]);
+                fromInteger(qsfpPort2StatusOffset): read(qsfp_top.mod_statuses[2]);
+                fromInteger(qsfpPort3StatusOffset): read(qsfp_top.mod_statuses[3]);
+                fromInteger(qsfpPort4StatusOffset): read(qsfp_top.mod_statuses[4]);
+                fromInteger(qsfpPort5StatusOffset): read(qsfp_top.mod_statuses[5]);
+                fromInteger(qsfpPort6StatusOffset): read(qsfp_top.mod_statuses[6]);
+                fromInteger(qsfpPort7StatusOffset): read(qsfp_top.mod_statuses[7]);
+                fromInteger(qsfpPort8StatusOffset): read(qsfp_top.mod_statuses[8]);
+                fromInteger(qsfpPort9StatusOffset): read(qsfp_top.mod_statuses[9]);
+                fromInteger(qsfpPort10StatusOffset): read(qsfp_top.mod_statuses[10]);
+                fromInteger(qsfpPort11StatusOffset): read(qsfp_top.mod_statuses[11]);
+                fromInteger(qsfpPort12StatusOffset): read(qsfp_top.mod_statuses[12]);
+                fromInteger(qsfpPort13StatusOffset): read(qsfp_top.mod_statuses[13]);
+                fromInteger(qsfpPort14StatusOffset): read(qsfp_top.mod_statuses[14]);
+                fromInteger(qsfpPort15StatusOffset): read(qsfp_top.mod_statuses[15]);
+                fromInteger(qsfpPort0ControlOffset): read(qsfp_top.mod_controls[0]);
+                fromInteger(qsfpPort1ControlOffset): read(qsfp_top.mod_controls[1]);
+                fromInteger(qsfpPort2ControlOffset): read(qsfp_top.mod_controls[2]);
+                fromInteger(qsfpPort3ControlOffset): read(qsfp_top.mod_controls[3]);
+                fromInteger(qsfpPort4ControlOffset): read(qsfp_top.mod_controls[4]);
+                fromInteger(qsfpPort5ControlOffset): read(qsfp_top.mod_controls[5]);
+                fromInteger(qsfpPort6ControlOffset): read(qsfp_top.mod_controls[6]);
+                fromInteger(qsfpPort7ControlOffset): read(qsfp_top.mod_controls[7]);
+                fromInteger(qsfpPort8ControlOffset): read(qsfp_top.mod_controls[8]);
+                fromInteger(qsfpPort9ControlOffset): read(qsfp_top.mod_controls[9]);
+                fromInteger(qsfpPort10ControlOffset): read(qsfp_top.mod_controls[10]);
+                fromInteger(qsfpPort11ControlOffset): read(qsfp_top.mod_controls[11]);
+                fromInteger(qsfpPort12ControlOffset): read(qsfp_top.mod_controls[12]);
+                fromInteger(qsfpPort13ControlOffset): read(qsfp_top.mod_controls[13]);
+                fromInteger(qsfpPort14ControlOffset): read(qsfp_top.mod_controls[14]);
+                fromInteger(qsfpPort15ControlOffset): read(qsfp_top.mod_controls[15]);
+                fromInteger(qsfpI2cCtrlOffset): read(qsfp_top.i2c_ctrl);
+                fromInteger(qsfpPowerEn0Offset): read(qsfp_top.power_en0);
+                fromInteger(qsfpPowerEn1Offset): read(qsfp_top.power_en1);
+                fromInteger(qsfpPowerGood0Offset): read(qsfp_top.power_good0);
+                fromInteger(qsfpPowerGood1Offset): read(qsfp_top.power_good1);
+                fromInteger(qsfpPowerGoodTimeout0Offset): read(qsfp_top.power_good_timeout0);
+                fromInteger(qsfpPowerGoodTimeout1Offset): read(qsfp_top.power_good_timeout1);
+                fromInteger(qsfpPowerGoodLost0Offset): read(qsfp_top.power_good_lost0);
+                fromInteger(qsfpPowerGoodLost1Offset): read(qsfp_top.power_good_lost1);
+                fromInteger(qsfpModResetl0Offset): read(qsfp_top.mod_resetl0);
+                fromInteger(qsfpModResetl1Offset): read(qsfp_top.mod_resetl1);
+                fromInteger(qsfpModLpmode0Offset): read(qsfp_top.mod_lpmode0);
+                fromInteger(qsfpModLpmode1Offset): read(qsfp_top.mod_lpmode1);
+                fromInteger(qsfpModModprsl0Offset): read(qsfp_top.mod_modprsl0);
+                fromInteger(qsfpModModprsl1Offset): read(qsfp_top.mod_modprsl1);
+                fromInteger(qsfpModIntl0Offset): read(qsfp_top.mod_intl0);
+                fromInteger(qsfpModIntl1Offset): read(qsfp_top.mod_intl1);
+                fromInteger(qsfpPort0I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[0]);
+                fromInteger(qsfpPort1I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[1]);
+                fromInteger(qsfpPort2I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[2]);
+                fromInteger(qsfpPort3I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[3]);
+                fromInteger(qsfpPort4I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[4]);
+                fromInteger(qsfpPort5I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[5]);
+                fromInteger(qsfpPort6I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[6]);
+                fromInteger(qsfpPort7I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[7]);
+                fromInteger(qsfpPort8I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[8]);
+                fromInteger(qsfpPort9I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[9]);
+                fromInteger(qsfpPort10I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[10]);
+                fromInteger(qsfpPort11I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[11]);
+                fromInteger(qsfpPort12I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[12]);
+                fromInteger(qsfpPort13I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[13]);
+                fromInteger(qsfpPort14I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[14]);
+                fromInteger(qsfpPort15I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[15]);
+
+                default: read(8'hff);
+            endcase;
+
+        let data <- reader;
+
+        spi_response    <= data;
     endrule
 
-    (* fire_when_enabled *)
-    rule do_spi_read (spi_request.op == READ && unpack(last(read_dly)));
-        Bit#(8) ret_byte;
-        if (spi_request.address == fromInteger(id0Offset)) begin
-            ret_byte = 'h01;
-        end else if (spi_request.address == fromInteger(id1Offset)) begin
-            ret_byte = 'hde;
-        end else if (spi_request.address == fromInteger(id2Offset)) begin
-            ret_byte = 'haa;
-        end else if (spi_request.address == fromInteger(id3Offset)) begin
-            ret_byte = 'h55;
-        end else if (spi_request.address == fromInteger(checksumScratchpad0Offset)) begin
-            ret_byte = pack(checksum[0]);
-        end else if (spi_request.address == fromInteger(checksumScratchpad1Offset)) begin
-            ret_byte = pack(checksum[1]);
-        end else if (spi_request.address == fromInteger(checksumScratchpad2Offset)) begin
-            ret_byte = pack(checksum[2]);
-        end else if (spi_request.address == fromInteger(checksumScratchpad3Offset)) begin
-            ret_byte = pack(checksum[3]);
-        end else if (spi_request.address == fromInteger(scratchpadOffset)) begin
-            ret_byte = pack(scratchpad);
-        end else if (spi_request.address == fromInteger(fpgaIdOffset)) begin
-            ret_byte = pack(top.fpga_app_id);
-        end else if (spi_request.address == fromInteger(ledCtrlOffset)) begin
-            ret_byte = pack(top.led_ctrl);
-        end else if (spi_request.address == fromInteger(fpgaBoardVerOffset)) begin
-            ret_byte = pack(top.fpga_board_ver);
-        end else if (spi_request.address == fromInteger(vsc8562PhyStatusOffset)) begin
-            ret_byte = pack(vsc8562.phy_status);
-        end else if (spi_request.address == fromInteger(vsc8562PhyCtrlOffset)) begin
-            ret_byte = pack(vsc8562.phy_ctrl);
-        end else if (spi_request.address == fromInteger(vsc8562PhyOscOffset)) begin
-            ret_byte = pack(vsc8562.phy_osc);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiStatusOffset)) begin
-            ret_byte = pack(vsc8562.phy_smi_status);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiRdata0Offset)) begin
-            ret_byte = pack(vsc8562.phy_smi_rdata0);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiRdata1Offset)) begin
-            ret_byte = pack(vsc8562.phy_smi_rdata1);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiWdata0Offset)) begin
-            ret_byte = pack(vsc8562.phy_smi_wdata0);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiWdata1Offset)) begin
-            ret_byte = pack(vsc8562.phy_smi_wdata1);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiPhyAddrOffset)) begin
-            ret_byte = pack(vsc8562.phy_smi_phy_addr);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiRegAddrOffset)) begin
-            ret_byte = pack(vsc8562.phy_smi_reg_addr);
-        end else if (spi_request.address == fromInteger(vsc8562PhySmiCtrlOffset)) begin
-            ret_byte = pack(vsc8562.phy_smi_ctrl);
-        end else if (spi_request.address == fromInteger(vsc8562PhyRailStatesOffset)) begin
-            ret_byte = pack(vsc8562.phy_rail_states);
-        end else if (spi_request.address == fromInteger(qsfpI2cBusAddrOffset)) begin
-            ret_byte = pack(qsfp_top.i2c_bus_addr);
-        end else if (spi_request.address == fromInteger(qsfpI2cRegAddrOffset)) begin
-            ret_byte = pack(qsfp_top.i2c_reg_addr);
-        end else if (spi_request.address == fromInteger(qsfpI2cNumBytesOffset)) begin
-            ret_byte = pack(qsfp_top.i2c_num_bytes);
-        end else if (spi_request.address == fromInteger(qsfpI2cBcast0Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_bcast0);
-        end else if (spi_request.address == fromInteger(qsfpI2cBcast1Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_bcast1);
-        end else if (spi_request.address == fromInteger(qsfpI2cBusy0Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_busy0);
-        end else if (spi_request.address == fromInteger(qsfpI2cBusy1Offset)) begin
-            ret_byte = pack(qsfp_top.i2c_busy1);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[0]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[1]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort2Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[2]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort3Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[3]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort4Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[4]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort5Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[5]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort6Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[6]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort7Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[7]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort8Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[8]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort9Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[9]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort10Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[10]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort11Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[11]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort12Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[12]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort13Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[13]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort14Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[14]);
-        end else if (spi_request.address == fromInteger(qsfpStatusPort15Offset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[15]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[0]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[1]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort2Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[2]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort3Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[3]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort4Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[4]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort5Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[5]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort6Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[6]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort7Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[7]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort8Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[8]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort9Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[9]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort10Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[10]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort11Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[11]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort12Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[12]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort13Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[13]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort14Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[14]);
-        end else if (spi_request.address == fromInteger(qsfpControlPort15Offset)) begin
-            ret_byte = pack(qsfp_top.mod_controls[15]);
-        end else if (spi_request.address == fromInteger(qsfpI2cCtrlOffset)) begin
-            ret_byte = pack(qsfp_top.i2c_ctrl);
-        end else if (spi_request.address == fromInteger(qsfpPowerEn0Offset)) begin
-            ret_byte = pack(qsfp_top.power_en0);
-        end else if (spi_request.address == fromInteger(qsfpPowerEn1Offset)) begin
-            ret_byte = pack(qsfp_top.power_en1);
-        end else if (spi_request.address == fromInteger(qsfpPowerGood0Offset)) begin
-            ret_byte = pack(qsfp_top.power_good0);
-        end else if (spi_request.address == fromInteger(qsfpPowerGood1Offset)) begin
-            ret_byte = pack(qsfp_top.power_good1);
-        end else if (spi_request.address == fromInteger(qsfpPowerGoodTimeout0Offset)) begin
-            ret_byte = pack(qsfp_top.power_good_timeout0);
-        end else if (spi_request.address == fromInteger(qsfpPowerGoodTimeout1Offset)) begin
-            ret_byte = pack(qsfp_top.power_good_timeout1);
-        end else if (spi_request.address == fromInteger(qsfpPowerGoodLost0Offset)) begin
-            ret_byte = pack(qsfp_top.power_good_lost0);
-        end else if (spi_request.address == fromInteger(qsfpPowerGoodLost1Offset)) begin
-            ret_byte = pack(qsfp_top.power_good_lost1);
-        end else if (spi_request.address == fromInteger(qsfpModResetl0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_resetl0);
-        end else if (spi_request.address == fromInteger(qsfpModResetl1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_resetl1);
-        end else if (spi_request.address == fromInteger(qsfpModLpmode0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_lpmode0);
-        end else if (spi_request.address == fromInteger(qsfpModLpmode1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_lpmode1);
-        end else if (spi_request.address == fromInteger(qsfpModModprsl0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_modprsl0);
-        end else if (spi_request.address == fromInteger(qsfpModModprsl1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_modprsl1);
-        end else if (spi_request.address == fromInteger(qsfpModIntl0Offset)) begin
-            ret_byte = pack(qsfp_top.mod_intl0);
-        end else if (spi_request.address == fromInteger(qsfpModIntl1Offset)) begin
-            ret_byte = pack(qsfp_top.mod_intl1);
-        end else if (spi_request.address == fromInteger(qsfpPort0StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[0]);
-        end else if (isBetween(spi_request.address, qsfpPort0ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[0]);
-        end else if (spi_request.address == fromInteger(qsfpPort1StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[1]);
-        end else if (isBetween(spi_request.address, qsfpPort1ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[1]);
-        end else if (spi_request.address == fromInteger(qsfpPort2StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[2]);
-        end else if (isBetween(spi_request.address, qsfpPort2ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[2]);
-        end else if (spi_request.address == fromInteger(qsfpPort3StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[3]);
-        end else if (isBetween(spi_request.address, qsfpPort3ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[3]);
-        end else if (spi_request.address == fromInteger(qsfpPort4StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[4]);
-        end else if (isBetween(spi_request.address, qsfpPort4ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[4]);
-        end else if (spi_request.address == fromInteger(qsfpPort5StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[5]);
-        end else if (isBetween(spi_request.address, qsfpPort5ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[5]);
-        end else if (spi_request.address == fromInteger(qsfpPort6StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[6]);
-        end else if (isBetween(spi_request.address, qsfpPort6ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[6]);
-        end else if (spi_request.address == fromInteger(qsfpPort7StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[7]);
-        end else if (isBetween(spi_request.address, qsfpPort7ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[7]);
-        end else if (spi_request.address == fromInteger(qsfpPort8StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[8]);
-        end else if (isBetween(spi_request.address, qsfpPort8ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[8]);
-        end else if (spi_request.address == fromInteger(qsfpPort9StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[9]);
-        end else if (isBetween(spi_request.address, qsfpPort9ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[9]);
-        end else if (spi_request.address == fromInteger(qsfpPort10StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[10]);
-        end else if (isBetween(spi_request.address, qsfpPort10ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[10]);
-        end else if (spi_request.address == fromInteger(qsfpPort11StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[11]);
-        end else if (isBetween(spi_request.address, qsfpPort11ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[11]);
-        end else if (spi_request.address == fromInteger(qsfpPort12StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[12]);
-        end else if (isBetween(spi_request.address, qsfpPort12ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[12]);
-        end else if (spi_request.address == fromInteger(qsfpPort13StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[13]);
-        end else if (isBetween(spi_request.address, qsfpPort13ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[13]);
-        end else if (spi_request.address == fromInteger(qsfpPort14StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[14]);
-        end else if (isBetween(spi_request.address, qsfpPort14ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[14]);
-        end else if (spi_request.address == fromInteger(qsfpPort15StatusOffset)) begin
-            ret_byte = pack(qsfp_top.mod_statuses[15]);
-        end else if (isBetween(spi_request.address, qsfpPort15ReadBufferOffset, readBufferNumEntries)) begin
-            ret_byte = pack(qsfp_top.mod_read_buffers[15]);
-        end else begin
-            ret_byte = 'hff;
-        end
-
-        spi_response    <= SpiResponse{readdata: ret_byte};
-    endrule
-
-    // Helper which adds a rule updating the provided register if a SPI request
-    // matches the given address.
-    function Rules do_spi_write(Integer address, ConfigReg#(t) r)
-            provisos (
-                Bits#(t, sz),
-                // Make sure the register type is <= 8 bits in width.
-                Add#(sz, x, 8));
-        return (rules
-                (* fire_when_enabled *)
-                rule do_spi_write (fromInteger(address) == spi_request.address && unpack(last(write_dly)));
-                    // Make `r` and `wdata` equal length.
-                    let r_bits = zeroExtend(pack(r));
-                    let wdata_bits = pack(spi_request.wdata);
-
-                    case (spi_request.op)
-                        WRITE: r <= unpack(truncate(wdata_bits));
-                        BITSET: r <= unpack(truncate(wdata_bits | r_bits));
-                        BITCLEAR: r <= unpack(truncate(~wdata_bits & r_bits));
-                    endcase
-                endrule
-            endrules);
-    endfunction
-
-    // Similar to the above helper, but for writing directly into a BRAM
-    function Rules do_spi_bram_write(Integer base_address, Integer offset, ConfigReg#(Bit#(8)) r_data, ConfigReg#(Bit#(8)) r_addr);
-        return (rules
-                (* fire_when_enabled *)
-                rule do_spi_write (isBetween(spi_request.address, base_address, offset) && unpack(last(write_dly)));
-                    // Make `r` and `wdata` equal length.
-                    let r_bits = zeroExtend(pack(r_data));
-                    let wdata_bits = pack(spi_request.wdata);
-
-                    case (spi_request.op)
-                        WRITE: r_data <= unpack(truncate(wdata_bits));
-                        BITSET: r_data <= unpack(truncate(wdata_bits | r_bits));
-                        BITCLEAR: r_data <= unpack(truncate(~wdata_bits & r_bits));
-                    endcase
-
-                    r_addr  <= getBRAMAddr(spi_request.address, offset);
-                endrule
-            endrules);
-    endfunction
-
-    // Update registers on SPI requests.
-    addRules(do_spi_write(checksumScratchpad0Offset, checksum[0]));
-    addRules(do_spi_write(checksumScratchpad1Offset, checksum[1]));
-    addRules(do_spi_write(checksumScratchpad2Offset, checksum[2]));
-    addRules(do_spi_write(checksumScratchpad3Offset, checksum[3]));
-    addRules(do_spi_write(scratchpadOffset, scratchpad));
-    addRules(do_spi_write(ledCtrlOffset, top.led_ctrl));
-    addRules(do_spi_write(vsc8562PhyCtrlOffset, vsc8562.phy_ctrl));
-    addRules(do_spi_write(vsc8562PhyOscOffset, vsc8562.phy_osc));
-    addRules(do_spi_write(vsc8562PhySmiWdata1Offset, vsc8562.phy_smi_wdata1));
-    addRules(do_spi_write(vsc8562PhySmiWdata0Offset, vsc8562.phy_smi_wdata0));
-    addRules(do_spi_write(vsc8562PhySmiPhyAddrOffset, vsc8562.phy_smi_phy_addr));
-    addRules(do_spi_write(vsc8562PhySmiRegAddrOffset, vsc8562.phy_smi_reg_addr));
-    addRules(do_spi_write(vsc8562PhySmiCtrlOffset, vsc8562.phy_smi_ctrl));
-    addRules(do_spi_write(qsfpI2cBusAddrOffset, qsfp_top.i2c_bus_addr));
-    addRules(do_spi_write(qsfpI2cRegAddrOffset, qsfp_top.i2c_reg_addr));
-    addRules(do_spi_write(qsfpI2cNumBytesOffset, qsfp_top.i2c_num_bytes));
-    addRules(do_spi_write(qsfpI2cBcast1Offset, qsfp_top.i2c_bcast1));
-    addRules(do_spi_write(qsfpI2cBcast0Offset, qsfp_top.i2c_bcast0));
-    addRules(do_spi_write(qsfpI2cCtrlOffset, qsfp_top.i2c_ctrl));
-    addRules(do_spi_write(qsfpPowerEn0Offset, qsfp_top.power_en0));
-    addRules(do_spi_write(qsfpPowerEn1Offset, qsfp_top.power_en1));
-    addRules(do_spi_write(qsfpModResetl0Offset, qsfp_top.mod_resetl0));
-    addRules(do_spi_write(qsfpModResetl1Offset, qsfp_top.mod_resetl1));
-    addRules(do_spi_write(qsfpModLpmode0Offset, qsfp_top.mod_lpmode0));
-    addRules(do_spi_write(qsfpModLpmode1Offset, qsfp_top.mod_lpmode1));
-    addRules(do_spi_write(qsfpControlPort0Offset, qsfp_top.mod_controls[0]));
-    addRules(do_spi_write(qsfpControlPort1Offset, qsfp_top.mod_controls[1]));
-    addRules(do_spi_write(qsfpControlPort2Offset, qsfp_top.mod_controls[2]));
-    addRules(do_spi_write(qsfpControlPort3Offset, qsfp_top.mod_controls[3]));
-    addRules(do_spi_write(qsfpControlPort4Offset, qsfp_top.mod_controls[4]));
-    addRules(do_spi_write(qsfpControlPort5Offset, qsfp_top.mod_controls[5]));
-    addRules(do_spi_write(qsfpControlPort6Offset, qsfp_top.mod_controls[6]));
-    addRules(do_spi_write(qsfpControlPort7Offset, qsfp_top.mod_controls[7]));
-    addRules(do_spi_write(qsfpControlPort8Offset, qsfp_top.mod_controls[8]));
-    addRules(do_spi_write(qsfpControlPort9Offset, qsfp_top.mod_controls[9]));
-    addRules(do_spi_write(qsfpControlPort10Offset, qsfp_top.mod_controls[10]));
-    addRules(do_spi_write(qsfpControlPort11Offset, qsfp_top.mod_controls[11]));
-    addRules(do_spi_write(qsfpControlPort12Offset, qsfp_top.mod_controls[12]));
-    addRules(do_spi_write(qsfpControlPort13Offset, qsfp_top.mod_controls[13]));
-    addRules(do_spi_write(qsfpControlPort14Offset, qsfp_top.mod_controls[14]));
-    addRules(do_spi_write(qsfpControlPort15Offset, qsfp_top.mod_controls[15]));
-    addRules(do_spi_bram_write(qsfpWriteBufferOffset, writeBufferNumEntries, qsfp_top.mod_write_data, qsfp_top.mod_write_addr));
+    rule do_spi_write(unpack(last(write_dly)));
+        case (spi_request.address)
+            fromInteger(checksumScratchpad0Offset):
+                update(spi_request.op, checksum[0], spi_request.wdata);
+            fromInteger(checksumScratchpad1Offset):
+                update(spi_request.op, checksum[1], spi_request.wdata);
+            fromInteger(checksumScratchpad2Offset):
+                update(spi_request.op, checksum[2], spi_request.wdata);
+            fromInteger(checksumScratchpad3Offset):
+                update(spi_request.op, checksum[3], spi_request.wdata);
+            fromInteger(scratchpadOffset):
+                update(spi_request.op, scratchpad, spi_request.wdata);
+            fromInteger(ledCtrlOffset):
+                update(spi_request.op, top.led_ctrl, spi_request.wdata);
+            fromInteger(vsc8562PhyCtrlOffset):
+                update(spi_request.op, vsc8562.phy_ctrl, spi_request.wdata);
+            fromInteger(vsc8562PhyOscOffset):
+                update(spi_request.op, vsc8562.phy_osc, spi_request.wdata);
+            fromInteger(vsc8562PhySmiWdata1Offset):
+                update(spi_request.op, vsc8562.phy_smi_wdata1, spi_request.wdata);
+            fromInteger(vsc8562PhySmiWdata0Offset):
+                update(spi_request.op, vsc8562.phy_smi_wdata0, spi_request.wdata);
+            fromInteger(vsc8562PhySmiPhyAddrOffset):
+                update(spi_request.op, vsc8562.phy_smi_phy_addr, spi_request.wdata);
+            fromInteger(vsc8562PhySmiRegAddrOffset):
+                update(spi_request.op, vsc8562.phy_smi_reg_addr, spi_request.wdata);
+            fromInteger(vsc8562PhySmiCtrlOffset):
+                update(spi_request.op, vsc8562.phy_smi_ctrl, spi_request.wdata);
+            fromInteger(qsfpI2cBusAddrOffset):
+                update(spi_request.op, qsfp_top.i2c_bus_addr, spi_request.wdata);
+            fromInteger(qsfpI2cRegAddrOffset):
+                update(spi_request.op, qsfp_top.i2c_reg_addr, spi_request.wdata);
+            fromInteger(qsfpI2cNumBytesOffset):
+                update(spi_request.op, qsfp_top.i2c_num_bytes, spi_request.wdata);
+            fromInteger(qsfpI2cBcast1Offset):
+                update(spi_request.op, qsfp_top.i2c_bcast1, spi_request.wdata);
+            fromInteger(qsfpI2cBcast0Offset):
+                update(spi_request.op, qsfp_top.i2c_bcast0, spi_request.wdata);
+            fromInteger(qsfpI2cCtrlOffset):
+                update(spi_request.op, qsfp_top.i2c_ctrl, spi_request.wdata);
+            fromInteger(qsfpPowerEn0Offset):
+                update(spi_request.op, qsfp_top.power_en0, spi_request.wdata);
+            fromInteger(qsfpPowerEn1Offset):
+                update(spi_request.op, qsfp_top.power_en1, spi_request.wdata);
+            fromInteger(qsfpModResetl0Offset):
+                update(spi_request.op, qsfp_top.mod_resetl0, spi_request.wdata);
+            fromInteger(qsfpModResetl1Offset):
+                update(spi_request.op, qsfp_top.mod_resetl1, spi_request.wdata);
+            fromInteger(qsfpModLpmode0Offset):
+                update(spi_request.op, qsfp_top.mod_lpmode0, spi_request.wdata);
+            fromInteger(qsfpModLpmode1Offset):
+                update(spi_request.op, qsfp_top.mod_lpmode1, spi_request.wdata);
+            fromInteger(qsfpPort0ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[0], spi_request.wdata);
+            fromInteger(qsfpPort1ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[1], spi_request.wdata);
+            fromInteger(qsfpPort2ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[2], spi_request.wdata);
+            fromInteger(qsfpPort3ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[3], spi_request.wdata);
+            fromInteger(qsfpPort4ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[4], spi_request.wdata);
+            fromInteger(qsfpPort5ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[5], spi_request.wdata);
+            fromInteger(qsfpPort6ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[6], spi_request.wdata);
+            fromInteger(qsfpPort7ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[7], spi_request.wdata);
+            fromInteger(qsfpPort8ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[8], spi_request.wdata);
+            fromInteger(qsfpPort9ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[9], spi_request.wdata);
+            fromInteger(qsfpPort10ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[10], spi_request.wdata);
+            fromInteger(qsfpPort11ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[11], spi_request.wdata);
+            fromInteger(qsfpPort12ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[12], spi_request.wdata);
+            fromInteger(qsfpPort13ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[13], spi_request.wdata);
+            fromInteger(qsfpPort14ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[14], spi_request.wdata);
+            fromInteger(qsfpPort15ControlOffset):
+                update(spi_request.op, qsfp_top.mod_controls[15], spi_request.wdata);
+            fromInteger(qsfpPort0I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[0]._write, spi_request.wdata);
+            fromInteger(qsfpPort1I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[1]._write, spi_request.wdata);
+            fromInteger(qsfpPort2I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[2]._write, spi_request.wdata);
+            fromInteger(qsfpPort3I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[3]._write, spi_request.wdata);
+            fromInteger(qsfpPort4I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[4]._write, spi_request.wdata);
+            fromInteger(qsfpPort5I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[5]._write, spi_request.wdata);
+            fromInteger(qsfpPort6I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[6]._write, spi_request.wdata);
+            fromInteger(qsfpPort7I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[7]._write, spi_request.wdata);
+            fromInteger(qsfpPort8I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[8]._write, spi_request.wdata);
+            fromInteger(qsfpPort9I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[9]._write, spi_request.wdata);
+            fromInteger(qsfpPort10I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[10]._write, spi_request.wdata);
+            fromInteger(qsfpPort11I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[11]._write, spi_request.wdata);
+            fromInteger(qsfpPort12I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[12]._write, spi_request.wdata);
+            fromInteger(qsfpPort13I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[13]._write, spi_request.wdata);
+            fromInteger(qsfpPort14I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[14]._write, spi_request.wdata);
+            fromInteger(qsfpPort15I2cDataOffset):
+                write(spi_request.op, qsfp_top.mod_i2c_data[15]._write, spi_request.wdata);
+        endcase
+    endrule 
 
     interface Put request;
         method Action put(new_spi_request);
@@ -423,5 +286,42 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
     endinterface
     interface Get response = toGet(asIfc(spi_response));
 endmodule
+
+// Turn the read of a register into an ActionValue.
+function ActionValue#(SpiResponse) read(t v)
+        provisos (Bits#(t, 8));
+    return actionvalue
+        return SpiResponse {readdata: pack(v)};
+    endactionvalue;
+endfunction
+
+function ActionValue#(SpiResponse) read_volatile(ActionValue#(t) av)
+        provisos (Bits#(t, 8));
+    return actionvalue
+        let v <- av;
+        return SpiResponse {readdata: pack(v)};
+    endactionvalue;
+endfunction
+
+function Action update(RegOps op, Reg#(t) r, Bit#(8) data)
+        provisos (Bits#(t, 8));
+    return action
+        let r_ = zeroExtend(pack(r));
+
+        case (op)
+            WRITE: r <= unpack(truncate(data));
+            WRITE_NO_ADDR_INCR: r <= unpack(truncate(data));
+            BITSET: r <= unpack(truncate(r_ | data));
+            BITCLEAR: r <= unpack(truncate(r_ & ~data));
+        endcase
+    endaction;
+endfunction
+
+function Action write(RegOps op, function Action f(t val), Bit#(8) data)
+        provisos (Bits#(t, 8));
+    return action
+        if (op == WRITE || op == WRITE_NO_ADDR_INCR) f(unpack(truncate(data)));
+    endaction;
+endfunction
 
 endpackage: QsfpX32ControllerSpiServer

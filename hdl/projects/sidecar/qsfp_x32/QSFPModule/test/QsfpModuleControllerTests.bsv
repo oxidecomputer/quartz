@@ -15,6 +15,7 @@ import StmtFSM::*;
 
 import Bidirection::*;
 import CommonFunctions::*;
+import CommonInterfaces::*;
 import I2CCommon::*;
 import I2CCore::*;
 import I2CPeripheralModel::*;
@@ -108,27 +109,18 @@ module mkBench (Bench);
     mkConnection(pack(controller.pins.sda.out_en), periph.sda_i_en);
     mkConnection(controller.pins.sda.in, periph.sda_o);
 
-    // A fifo of dummy data for the DUT to pull from
-    FIFO#(RamWrite) write_data_fifo  <- mkSizedFIFO(128);
+    // Used to make dummy data for the DUT to pull from
     Reg#(UInt#(8)) fifo_idx         <- mkReg(0);
-    mkConnection(controller.i2c_write_data, toGet(write_data_fifo));
 
     // Internal bench state
     Reg#(Command) command_r         <- mkReg(defaultValue);
     PulseWire new_command           <- mkPulseWire();
     Reg#(UInt#(8)) bytes_done       <- mkReg(0);
 
-    // lazy way to read data out, we probably shouldn't have this dependent on
-    // bytes_done
-    (* fire_when_enabled *)
-    rule do_test_read_addr(command_r.op == Read);
-        controller.registers.read_buffer_addr  <= pack(bytes_done)[7:0];
-    endrule
-
     // TODO: This should become a RAM that I can dynamically read/write to so I
     // can read values I expect to have written without relying on bytes_done
     rule do_fill_write_data_fifo(fifo_idx < 128);
-        write_data_fifo.enq(RamWrite{data: pack(fifo_idx), address: pack(fifo_idx)});
+        controller.registers.i2c_data <= pack(fifo_idx);
         fifo_idx    <= fifo_idx + 1;
     endrule
 
@@ -153,10 +145,13 @@ module mkBench (Bench);
     endseq, command_r.op == Write);
 
     // An FSM to execute an I2C read transaction to a module The controller
-    // should ignore the command if the module has not been initialized.
+    // should ignore the command if the module has not been initialized. After
+    // the bytes read are placed into the read data FIFO, drain it and validate
+    // all the bytes match.
     FSM read_seq <- mkFSMWithPred(seq
         controller.i2c_command.put(command_r);
         if (controller.module_initialized()) seq
+            // I2C transaction
             check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
             check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
 
@@ -173,6 +168,16 @@ module mkBench (Bench);
             check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
             check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
             bytes_done  <= 0;
+            await(!(unpack(controller.registers.port_status.busy)));
+
+            // drain read data FIFO
+            while (bytes_done < command_r.num_bytes) seq
+                action
+                    let d <- controller.registers.i2c_data;
+                    assert_eq(d, pack(bytes_done), "Expected data in FIFO to match");
+                endaction
+                bytes_done  <= bytes_done + 1;
+            endseq
         endseq
     endseq, command_r.op == Read);
 

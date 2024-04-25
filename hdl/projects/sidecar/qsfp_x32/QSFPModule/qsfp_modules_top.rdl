@@ -106,8 +106,17 @@ addrmap qsfp_modules_top {
 
     reg port_status {
         default sw = r;
+
         field {
-            desc = "'1' if the bus is busy.";
+            desc = "'1' if the I2C read data buffer is empty.";
+        } RDATA_FIFO_EMPTY[6:6] = 0;
+
+        field {
+            desc = "'1' if the I2C write data buffer is empty.";
+        } WDATA_FIFO_EMPTY[5:5] = 0;
+
+        field {
+            desc = "'1' if the I2C bus is busy.";
         } BUSY[4:4] = 0;
 
         enum error_types {
@@ -126,45 +135,53 @@ addrmap qsfp_modules_top {
         } ERROR[3:0] = 0;
     };
 
-    port_status STATUS_PORT0;
-    port_status STATUS_PORT1;
-    port_status STATUS_PORT2;
-    port_status STATUS_PORT3;
-    port_status STATUS_PORT4;
-    port_status STATUS_PORT5;
-    port_status STATUS_PORT6;
-    port_status STATUS_PORT7;
-    port_status STATUS_PORT8;
-    port_status STATUS_PORT9;
-    port_status STATUS_PORT10;
-    port_status STATUS_PORT11;
-    port_status STATUS_PORT12;
-    port_status STATUS_PORT13;
-    port_status STATUS_PORT14;
-    port_status STATUS_PORT15;
+    port_status PORT0_STATUS;
+    port_status PORT1_STATUS;
+    port_status PORT2_STATUS;
+    port_status PORT3_STATUS;
+    port_status PORT4_STATUS;
+    port_status PORT5_STATUS;
+    port_status PORT6_STATUS;
+    port_status PORT7_STATUS;
+    port_status PORT8_STATUS;
+    port_status PORT9_STATUS;
+    port_status PORT10_STATUS;
+    port_status PORT11_STATUS;
+    port_status PORT12_STATUS;
+    port_status PORT13_STATUS;
+    port_status PORT14_STATUS;
+    port_status PORT15_STATUS;
 
     reg port_control {
+        field {
+            desc ="Setting this bit will clear the I2C read data FIFO. This bit auto-clears.";
+        } RDATA_FIFO_CLEAR[2:2] = 0;
+
+        field {
+            desc ="Setting this bit will clear the I2C write data FIFO. This bit auto-clears.";
+        } WDATA_FIFO_CLEAR[1:1] = 0;
+
         field {
             desc ="Setting this bit will clear a fault state. Note that if the power supply is not Aborted or TimedOut, nothing will happen. This bit auto-clears.";
         } CLEAR_FAULT[0:0] = 0;
     };
 
-    port_control CONTROL_PORT0;
-    port_control CONTROL_PORT1;
-    port_control CONTROL_PORT2;
-    port_control CONTROL_PORT3;
-    port_control CONTROL_PORT4;
-    port_control CONTROL_PORT5;
-    port_control CONTROL_PORT6;
-    port_control CONTROL_PORT7;
-    port_control CONTROL_PORT8;
-    port_control CONTROL_PORT9;
-    port_control CONTROL_PORT10;
-    port_control CONTROL_PORT11;
-    port_control CONTROL_PORT12;
-    port_control CONTROL_PORT13;
-    port_control CONTROL_PORT14;
-    port_control CONTROL_PORT15;
+    port_control PORT0_CONTROL;
+    port_control PORT1_CONTROL;
+    port_control PORT2_CONTROL;
+    port_control PORT3_CONTROL;
+    port_control PORT4_CONTROL;
+    port_control PORT5_CONTROL;
+    port_control PORT6_CONTROL;
+    port_control PORT7_CONTROL;
+    port_control PORT8_CONTROL;
+    port_control PORT9_CONTROL;
+    port_control PORT10_CONTROL;
+    port_control PORT11_CONTROL;
+    port_control PORT12_CONTROL;
+    port_control PORT13_CONTROL;
+    port_control PORT14_CONTROL;
+    port_control PORT15_CONTROL;
 
     reg {
         name = "Ports 0 -> 7 HSC Enable. Clear bit to remove module power.";
@@ -371,68 +388,102 @@ addrmap qsfp_modules_top {
     } MOD_INTL1;
 
     //
-    // I2C Write and Read Buffers
-    // Status register colocated with the read buffer so we can grab the status
-    // and all the bits in the same transaction.
+    // I2C Data Buffers
     //
 
-    mem read_buffer {
-        mementries = 128;
-        memwidth = 8;
-    };
+    reg {
+        name = "Port 0 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT0_I2C_DATA @0x0080;
 
-    mem write_buffer {
-        mementries = 128;
-        memwidth = 8;
-    };
+    reg {
+        name = "Port 1 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT1_I2C_DATA;
 
-    port_status PORT0_STATUS @0x007F;
-    external read_buffer PORT0_READ_BUFFER @0x0080;
+    reg {
+        name = "Port 2 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT2_I2C_DATA;
 
-    port_status PORT1_STATUS @0x017F;
-    external read_buffer PORT1_READ_BUFFER @0x0180;
+    reg {
+        name = "Port 3 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT3_I2C_DATA;
 
-    port_status PORT2_STATUS @0x027F;
-    external read_buffer PORT2_READ_BUFFER @0x0280;
+    reg {
+        name = "Port 4 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT4_I2C_DATA;
 
-    port_status PORT3_STATUS @0x037F;
-    external read_buffer PORT3_READ_BUFFER @0x0380;
+    reg {
+        name = "Port 5 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT5_I2C_DATA;
 
-    port_status PORT4_STATUS @0x047F;
-    external read_buffer PORT4_READ_BUFFER @0x0480;
+    reg {
+        name = "Port 6 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT6_I2C_DATA;
 
-    port_status PORT5_STATUS @0x057F;
-    external read_buffer PORT5_READ_BUFFER @0x0580;
+    reg {
+        name = "Port 7 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT7_I2C_DATA;
 
-    port_status PORT6_STATUS @0x067F;
-    external read_buffer PORT6_READ_BUFFER @0x0680;
+    reg {
+        name = "Port 8 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT8_I2C_DATA;
 
-    port_status PORT7_STATUS @0x077F;
-    external read_buffer PORT7_READ_BUFFER @0x0780;
+    reg {
+        name = "Port 9 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT9_I2C_DATA;
 
-    port_status PORT8_STATUS @0x087F;
-    external read_buffer PORT8_READ_BUFFER @0x0880;
+    reg {
+        name = "Port 10 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT10_I2C_DATA;
 
-    port_status PORT9_STATUS @0x097F;
-    external read_buffer PORT9_READ_BUFFER @0x0980;
+    reg {
+        name = "Port 11 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT11_I2C_DATA;
 
-    port_status PORT10_STATUS @0x0A7F;
-    external read_buffer PORT10_READ_BUFFER @0x0A80;
+    reg {
+        name = "Port 12 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT12_I2C_DATA;
 
-    port_status PORT11_STATUS @0x0B7F;
-    external read_buffer PORT11_READ_BUFFER @0x0B80;
+    reg {
+        name = "Port 13 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT13_I2C_DATA;
 
-    port_status PORT12_STATUS @0x0C7F;
-    external read_buffer PORT12_READ_BUFFER @0x0C80;
+    reg {
+        name = "Port 14 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT14_I2C_DATA;
 
-    port_status PORT13_STATUS @0x0D7F;
-    external read_buffer PORT13_READ_BUFFER @0x0D80;
-
-    port_status PORT14_STATUS @0x0E7F;
-    external read_buffer PORT14_READ_BUFFER @0x0E80;
-
-    port_status PORT15_STATUS @0x0F7F;
-    external read_buffer PORT15_READ_BUFFER @0x0F80;
-
-    external write_buffer WRITE_BUFFER;
+    reg {
+        name = "Port 15 I2C data FIFOs. Reading this address pulls from the rdata FIFO, writing it pushes to the wdata FIFO.";
+        default sw = r;
+        field {} DATA[7:0];
+    } PORT15_I2C_DATA;
 };

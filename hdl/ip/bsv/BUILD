@@ -5,6 +5,11 @@ bluespec_library('CommonFunctions',
         'CommonFunctions.bsv',
     ])
 
+bluespec_library('CommonInterfaces',
+    sources = [
+        'CommonInterfaces.bsv',
+    ])
+
 bluespec_library('FanModule',
     sources = [
         'FanModule.bsv',

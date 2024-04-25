@@ -18,6 +18,7 @@ import Vector::*;
 // Quartz
 import Bidirection::*;
 import CommonFunctions::*;
+import CommonInterfaces::*;
 import I2CCore::*;
 
 // Cobalt
@@ -67,10 +68,7 @@ interface Registers;
     interface ReadOnly#(ModModprsl1) mod_modprsl1;
     interface ReadOnly#(ModIntl0) mod_intl0;
     interface ReadOnly#(ModIntl1) mod_intl1;
-    interface Reg#(Bit#(8)) mod_write_addr;
-    interface Reg#(Bit#(8)) mod_write_data;
-    interface Vector#(16, Wire#(Bit#(8))) mod_read_addrs;
-    interface Vector#(16, ReadOnly#(Bit#(8))) mod_read_buffers;
+    interface Vector#(16, ReadVolatileReg#(Bit#(8))) mod_i2c_data;
 endinterface
 
 interface QsfpModulesTop;
@@ -98,47 +96,64 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Reg#(ModLpmode0) mod_lpmode0    <- mkReg(defaultValue);
     Reg#(ModLpmode1) mod_lpmode1    <- mkReg(defaultValue);
 
-    // opting to register these since there will be a lot of fan out
-    ConfigReg#(Bit#(8)) mod_write_addr  <- mkConfigReg(0);
-    ConfigReg#(Bit#(8)) mod_write_data  <- mkConfigReg(0);
-    Reg#(Bool) issue_write              <- mkDReg(False);
-
     Vector#(16, Bool) i2c_broadcast_enabled =
         unpack({unpack(pack(i2c_bcast1)), unpack(pack(i2c_bcast0))});
+    Vector#(16, Reg#(Bool)) i2c_broadcast_enabled_r <- replicateM(mkReg(False));
 
-    // Vectorize all the low speed module signals for reading
+    // Vectorize all the low speed module signals mapping into local registers.
     Vector#(16, Bit#(1)) power_en_bits =
-    unpack({pack(power_en1), pack(power_en0)});
-    Vector#(16, Bit#(1)) pg_bits;
-    Vector#(16, Bit#(1)) pg_timeout_bits;
-    Vector#(16, Bit#(1)) pg_lost_bits;
+        unpack({pack(power_en1), pack(power_en0)});
+    Vector#(16, Reg#(Bit#(1))) power_en_bits_r <- replicateM(mkReg(1));
+
     Vector#(16, Bit#(1)) resetl_bits =
         unpack({pack(mod_resetl1), pack(mod_resetl0)});
+    Vector#(16, Reg#(Bit#(1))) resetl_bits_r <- replicateM(mkReg(1));
+
     Vector#(16, Bit#(1)) lpmode_bits =
         unpack({pack(mod_lpmode1), pack(mod_lpmode0)});
-    Vector#(16, Bit#(1)) modprsl_bits;
-    Vector#(16, Bit#(1)) intl_bits;
+    Vector#(16, Reg#(Bit#(1))) lpmode_bits_r <- replicateM(mkReg(1));
+
+
+    Vector#(16, Reg#(Bit#(1))) pg_bits_r          <- replicateM(mkReg(0));
+    Vector#(16, Reg#(Bit#(1))) pg_timeout_bits_r  <- replicateM(mkReg(0));
+    Vector#(16, Reg#(Bit#(1))) pg_lost_bits_r     <- replicateM(mkReg(0));
+
+    Vector#(16, Reg#(Bit#(1))) modprsl_bits_r <- replicateM(mkReg(1));
+    Vector#(16, Reg#(Bit#(1))) intl_bits_r    <- replicateM(mkReg(1));
 
     // Vectorize I2C status signals
     Vector#(16, Bit#(1)) i2c_busys;
 
     Wire#(Bool) tick_1ms_       <- mkWire();
 
-    // map modules into registers
+    // Local registers for module signals
+    (* fire_when_enabled *)
+    rule do_module_regs;
+         for (int i = 0; i < 16; i = i + 1) begin
+            // control
+            power_en_bits_r[i] <= power_en_bits[i];
+            resetl_bits_r[i] <= resetl_bits[i];
+            lpmode_bits_r[i] <= lpmode_bits[i];
+
+            // pin state readbacks
+            pg_bits_r[i]          <= pack(qsfp_ports[i].pg);
+            modprsl_bits_r[i]     <= pack(qsfp_ports[i].modprsl);
+            intl_bits_r[i]        <= pack(qsfp_ports[i].intl);
+
+            // fault state readbacks
+            pg_timeout_bits_r[i]  <= pack(qsfp_ports[i].pg_timeout);
+            pg_lost_bits_r[i]     <= pack(qsfp_ports[i].pg_lost);
+
+            i2c_broadcast_enabled_r[i] <= i2c_broadcast_enabled[i];
+        end
+    endrule
+
+    // Map all the module signals around
     for (int i = 0; i < 16; i = i + 1) begin
-        // pin state readbacks
-        pg_bits[i]          = pack(qsfp_ports[i].pg);
-        modprsl_bits[i]     = pack(qsfp_ports[i].modprsl);
-        intl_bits[i]        = pack(qsfp_ports[i].intl);
-
-        // fault state readbacks
-        pg_timeout_bits[i]  = pack(qsfp_ports[i].pg_timeout);
-        pg_lost_bits[i]     = pack(qsfp_ports[i].pg_lost);
-
         // software controlled bits
-        mkConnection(qsfp_ports[i].resetl, resetl_bits[i]);
-        mkConnection(qsfp_ports[i].lpmode, lpmode_bits[i]);
-        mkConnection(qsfp_ports[i].power_en, power_en_bits[i]);
+        mkConnection(qsfp_ports[i].resetl, resetl_bits_r[i]);
+        mkConnection(qsfp_ports[i].lpmode, lpmode_bits_r[i]);
+        mkConnection(qsfp_ports[i].power_en, power_en_bits_r[i]);
 
         // tick fan out
         mkConnection(qsfp_ports[i].tick_1ms, tick_1ms_);
@@ -159,25 +174,9 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         };
 
         for (int i = 0; i < 16; i = i + 1) begin
-            if (i2c_broadcast_enabled[i]) begin
+            if (i2c_broadcast_enabled_r[i]) begin
                 qsfp_ports[i].i2c_command.put(next_command);
             end
-        end
-    endrule
-
-    // Put I2C write data into all write buffers, regardless if broadcast is
-    // enabled. This makes the mental model for the programmer a bit more simple
-    // in that you do not need to ensure broadcast is enabled to a port before
-    // blasting in write data. If the port has i2c disabled, it won't receive
-    // the command anyway.
-    (* fire_when_enabled *)
-    rule do_i2c_write_data_broadcast(issue_write);
-        for (int i = 0; i < 16; i = i + 1) begin
-                qsfp_ports[i]
-                    .i2c_write_data
-                    .put(RamWrite {
-                        data: mod_write_data,
-                        address: mod_write_addr });
         end
     endrule
 
@@ -203,41 +202,27 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         interface Reg mod_lpmode0 = mod_lpmode0;
         interface Reg mod_lpmode1 = mod_lpmode1;
         interface ReadOnly power_good0 =
-            valueToReadOnly(unpack(pack(pg_bits)[7:0]));
+            valueToReadOnly(unpack(pack(map(readReg, pg_bits_r))[7:0]));
         interface ReadOnly power_good1 =
-            valueToReadOnly(unpack(pack(pg_bits)[15:8]));
+            valueToReadOnly(unpack(pack(map(readReg, pg_bits_r))[15:8]));
         interface ReadOnly mod_modprsl0 =
-            valueToReadOnly(unpack(pack(modprsl_bits)[7:0]));
+            valueToReadOnly(unpack(pack(map(readReg, modprsl_bits_r))[7:0]));
         interface ReadOnly mod_modprsl1 =
-            valueToReadOnly(unpack(pack(modprsl_bits)[15:8]));
+            valueToReadOnly(unpack(pack(map(readReg, modprsl_bits_r))[15:8]));
         interface ReadOnly mod_intl0 =
-            valueToReadOnly(unpack(pack(intl_bits)[7:0]));
+            valueToReadOnly(unpack(pack(map(readReg, intl_bits_r))[7:0]));
         interface ReadOnly mod_intl1 =
-            valueToReadOnly(unpack(pack(intl_bits)[15:8]));
+            valueToReadOnly(unpack(pack(map(readReg, intl_bits_r))[15:8]));
         interface ReadOnly power_good_timeout0 =
-            valueToReadOnly(unpack(pack(pg_timeout_bits)[7:0]));
+            valueToReadOnly(unpack(pack(map(readReg, pg_timeout_bits_r))[7:0]));
         interface ReadOnly power_good_timeout1 =
-            valueToReadOnly(unpack(pack(pg_timeout_bits)[15:8]));
+            valueToReadOnly(unpack(pack(map(readReg, pg_timeout_bits_r))[15:8]));
         interface ReadOnly power_good_lost0 =
-            valueToReadOnly(unpack(pack(pg_lost_bits)[7:0]));
+            valueToReadOnly(unpack(pack(map(readReg, pg_lost_bits_r))[7:0]));
         interface ReadOnly power_good_lost1 =
-            valueToReadOnly(unpack(pack(pg_lost_bits)[15:8]));
-        interface mod_read_addrs =
-            map(QsfpModuleController::get_read_addr, qsfp_ports);
-        interface mod_read_buffers =
-            map(QsfpModuleController::get_read_data, qsfp_ports);
-
-        // addr and data are written in the same cycle in the SpiServer anyway,
-        // so arbitrarily choose to pulse issue_write here versus in
-        // mod_write_data
-        interface Reg mod_write_addr;
-            method _read = mod_write_addr;
-            method Action _write(Bit#(8) new_addr);
-                mod_write_addr  <= new_addr;
-                issue_write     <= True;
-            endmethod
-        endinterface
-        interface Reg mod_write_data = mod_write_data;
+            valueToReadOnly(unpack(pack(map(readReg, pg_lost_bits_r))[15:8]));
+        interface mod_i2c_data =
+            map(QsfpModuleController::get_i2c_data, qsfp_ports);
     endinterface
 
     interface module_pins = map(QsfpModuleController::get_pins, qsfp_ports);
