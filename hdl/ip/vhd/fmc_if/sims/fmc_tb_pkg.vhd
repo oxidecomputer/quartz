@@ -18,9 +18,11 @@ context vunit_lib.vc_context;
 
 package fmc_tb_pkg is
 
+   constant rd_logger : logger_t := get_logger("axi_rd");
    constant rmemory : memory_t := new_memory;
    constant axi_read_target : axi_slave_t := new_axi_slave(address_fifo_depth => 1,
-                                                  memory => rmemory);
+                                                  memory => rmemory,
+                                                  logger => rd_logger);
 
    constant wmemory : memory_t := new_memory;
    constant axi_write_target : axi_slave_t := new_axi_slave(memory => wmemory);

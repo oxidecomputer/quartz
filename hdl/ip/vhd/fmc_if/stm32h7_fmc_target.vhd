@@ -118,6 +118,9 @@ begin
             nwait <= '1';
             txn <= ('0', (others => '0'));
             axi_fifo_wr_path_wdata <= (others => '0');
+            axi_fifo_rd_path_rd_ack <= '0';
+            axi_fifo_txn_path_write <= '0';
+            axi_fifo_wr_path_write <= '0';
         elsif rising_edge(fmc_clk) then
             -- some variable naming for more legibility
             chip_selected := ne(0) = '0';
@@ -299,6 +302,7 @@ begin
             bready <= '0';
             awvalid <= '0';
             wvalid <= '0';
+            axi_fifo_txn_path_rd_ack <= '0';
         elsif rising_edge(aclk) then
             -- unconditionally clear single-cycle flags
             axi_fifo_txn_path_rd_ack <= '0';

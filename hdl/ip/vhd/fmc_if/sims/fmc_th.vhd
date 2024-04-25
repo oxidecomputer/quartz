@@ -50,7 +50,6 @@ architecture th of fmc_th is
   signal bid    : std_logic_vector(3 downto 0);
   signal awid    : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
   signal rid    : std_logic_vector(3 downto 0);
-  signal arlen   : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(25, 8));
 begin
 
     -- set up a fastish, clock for the sim
@@ -69,8 +68,8 @@ begin
       arready => arready,
       arid    => arid,
       araddr  => araddr,
-      arlen   => "00000000",  -- must be 4 AXI3 or 8 AXI4
-      arsize  => "100",  -- 32bits, 4 bytes
+      arlen   => "00000000",  -- must be len4 AXI3 or len8 AXI4
+      arsize  => "010",  -- 4 byte transfer (2**AxSIZE = transfer byte count)
       arburst => "00",
 
       rvalid  => rvalid,
@@ -89,8 +88,8 @@ begin
         awready => awready,
         awid    => awid,
         awaddr  => awaddr,
-        awlen   => "00000000",  -- must be 4 AXI3 or 8 AXI4
-        awsize  => "100",  -- 32bits, 4 bytes
+        awlen   => "00000000",  -- must be len4 AXI3 or len8 AXI4
+        awsize  => "010",  -- 4 byte transfer (2**AxSIZE = transfer byte count)
         awburst => "00",
         wvalid  => wvalid,
         wready  => wready,
