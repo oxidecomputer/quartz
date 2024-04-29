@@ -97,10 +97,12 @@ architecture rtl of stm32h7_fmc_target is
     signal axi_fifo_txn_path_rdata : std_logic_vector(31 downto 0);
     signal axi_fifo_txn_path_rd_ack : std_logic;
     signal axi_fifo_txn_path_rempty : std_logic;
+    signal axi_fifo_txn_path_wfull : std_logic;
 
     signal axi_addr : unsigned(31 downto 0);
     signal axi_fifo_wr_path_wdata : std_logic_vector(31 downto 0);
     signal axi_fifo_wr_path_write : std_logic;
+    signal txn_stored : boolean;
     
 
 
@@ -121,6 +123,7 @@ begin
             axi_fifo_rd_path_rd_ack <= '0';
             axi_fifo_txn_path_write <= '0';
             axi_fifo_wr_path_write <= '0';
+            txn_stored <= false;
         elsif rising_edge(fmc_clk) then
             -- some variable naming for more legibility
             chip_selected := ne(0) = '0';
@@ -140,7 +143,7 @@ begin
                         -- recover byte addrs
                         txn.addr <= unsigned(a & ad & "0");
                         txn.read_writen <= nwe;
-                        axi_fifo_txn_path_write <= '1';
+
                         fmc_state <= ADDR_DELAY;
                     end if;
                 when ADDR_DELAY =>
@@ -149,18 +152,40 @@ begin
                     -- so that the next cycle will be checking
                     fmc_state <= ADDR_DELAY1;
                 when ADDR_DELAY1 =>
-                    if noe = '0' then
-                        fmc_state <= READ_SETUP;
+                    -- We need to immediately stall the bus at this point if we have a full txn fifo
+                    -- other stall conditions will be checked in the read/write setup phase
+                    -- since the conditions differ
+                    if axi_fifo_txn_path_wfull then
                         nwait <= '0';
-                    elsif nwe = '0' then
+                    end if;
+                    if txn.read_writen = '1' then
+                        fmc_state <= READ_SETUP;
+                        -- For reads, we unconditionally wait here since we have to
+                        -- do an axi transaction to even fetch the first data to return
+                        -- which takes more than 1 cycle :)
+                        nwait <= '0';
+                    else
                         fmc_state <= WRITE_SETUP;
                     end if;
                 when READ_SETUP =>
                     -- TODO: need a wait timeout mech here, we're potentially stalling
-                    -- the SP's bus here!!
+                    -- the SP's bus here!
+
+                    -- We need to issue this transaction 1x to the txn fifo
                     if not chip_selected then
                         fmc_state <= IDLE;
                     else
+                        -- We're going to be doing a read here we must be waited already 
+                        -- We need to immediately stall the bus at this point if we have a full txn fifo
+                        -- not that transactions are processed in order so any writes pending 
+                        -- will necessarily happen first. This is important since the writes could 
+                        -- have side-effects that affect the reads
+                        if not txn_stored and axi_fifo_txn_path_wfull = '0' then
+                            -- Store the transaction, set the stored flag so we don't
+                            -- do it again while we wait
+                            axi_fifo_txn_path_write <= '1';
+                            txn_stored <= true;
+                        end if;
                         -- Wait is held here until we've done the AXI transaction
                         -- to fetch the data and have the data back in the fifo
                         if not axi_fifo_rd_path_rempty then
@@ -175,6 +200,8 @@ begin
                         end if;
                     end if;
                 when READ_WAIT_CLEAR =>
+                    -- Clear the wait flag
+                    txn_stored <= false;
                     -- bleed the wait cycle
                     fmc_state <= READ_WORD0;
                 when READ_WORD0 =>
@@ -195,11 +222,18 @@ begin
                     if not chip_selected then
                         fmc_state <= IDLE;
                     else
-                        -- no waits needed until the fifo fills up
-                        fmc_state <= WRITE_WORD0;
-                        axi_fifo_wr_path_wdata(15 downto 0) <= ad;
+                        if not txn_stored and axi_fifo_txn_path_wfull = '0' then
+                            -- Store the transaction, set the stored flag so we don't
+                            -- do it again while we wait
+                            axi_fifo_txn_path_write <= '1';
+                            txn_stored <= true;
+                            -- no waits needed until the fifo fills up
+                            fmc_state <= WRITE_WORD0;
+                            axi_fifo_wr_path_wdata(15 downto 0) <= ad;
+                        end if;
                     end if;
                 when WRITE_WORD0 =>
+                    txn_stored <= false;
                     fmc_state <= WRITE_WORD1;
                     axi_fifo_wr_path_wdata(31 downto 16) <= ad;
                 when WRITE_WORD1 =>
@@ -227,7 +261,7 @@ begin
       reset => chip_reset,
       write_en => axi_fifo_txn_path_write,
       wdata => encode(txn),
-      wfull => open,
+      wfull => axi_fifo_txn_path_wfull,
       wusedwds => open,
       -- Read interface
       rclk => aclk,

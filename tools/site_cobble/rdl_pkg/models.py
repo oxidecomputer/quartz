@@ -18,9 +18,6 @@ class DuplicateEnumNameError(Exception):
     pass
 
 
-known_enum_names = set()
-
-
 class BaseModel:
     @classmethod
     def from_node(cls, node: RegNode, prefix_stack, repeated_type=False):

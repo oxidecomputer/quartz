@@ -18,6 +18,11 @@ provide architectural easy in implementing a more performant solution, but this
 does come at increased latency as we're seeing ~6 clock cycles of latency
 through the FIFOs in a single direction, and reads need to round-trip.
 
+This design is based around the FMC peripheral described in ST's RM0433
+figures 115 and 116. Note that it is currently believed that there is a
+datasheet error inserting an extra cycle in Fig 116, but we'll verify once
+we have hardware for inspection.
+
 == Design Overview:
 
 There's a state machine that hand-shakes with the FMC wires. This state machine
