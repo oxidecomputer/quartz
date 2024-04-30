@@ -1,0 +1,32 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "espi_regs_pkg",
+    src = "txn_layer/espi_spec_regs.rdl",
+    outputs = ["espi_regs_pkg.vhd", "espi_regs_.html"],
+    visibility = ['PUBLIC']
+)
+
+vhdl_unit(
+    name = "espi_top",
+    srcs = glob([
+        "link_layer/*.vhd",
+        "txn_layer/*.vhd",
+        "*.vhd"]),
+    deps = [
+        ":espi_regs_pkg",
+        "//hdl/ip/vhd/crc:crc8atm_8wide",
+        ],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+vunit_sim(
+    name = "espi_tb",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+        ":espi_top",
+        "//hdl/ip/vhd/vunit_components:qspi_controller_vc"
+    ],
+    visibility = ['PUBLIC'],
+)

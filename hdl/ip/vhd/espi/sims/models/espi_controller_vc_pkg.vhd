@@ -1,0 +1,352 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+--
+-- Copyright 2024 Oxide Computer Company
+
+-- Note: Documentation can be rendered in VSCode using the TerosHDL
+-- plugin: https://terostechnology.github.io/terosHDLdoc/
+
+--! A verification component that acts as a qspi controller
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
+
+library vunit_lib;
+    context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
+use work.qspi_vc_pkg.all;
+use work.espi_protocol_pkg.all;
+
+package espi_controller_vc_pkg is
+
+    constant tx_queue : queue_t := new_queue;
+    constant rx_queue : queue_t := new_queue;
+
+    impure function crc8 (
+        data: queue_t
+    ) return std_logic_vector;
+
+    procedure get_status (
+        variable response_code : inout std_logic_vector(7 downto 0);
+        variable status        : inout std_logic_vector(15 downto 0);
+        variable crc_ok        : inout boolean
+    );
+
+    procedure get_config (
+        constant address       : in natural;
+        variable data          : inout std_logic_vector(31 downto 0);
+        variable response_code : inout std_logic_vector(7 downto 0);
+        variable status        : inout std_logic_vector(15 downto 0);
+        variable crc_ok        : inout boolean
+    );
+
+    procedure set_config (
+        constant address       : in natural;
+        constant data          : in std_logic_vector(31 downto 0);
+        variable response_code : inout std_logic_vector(7 downto 0);
+        variable status        : inout std_logic_vector(15 downto 0);
+        variable crc_ok        : inout boolean
+    );
+
+    impure function check_queue_crc (
+        data: queue_t
+    ) return boolean;
+
+    function lsb_to_msb (
+        data: std_logic_vector
+    ) return std_logic_vector;
+
+end package;
+
+package body espi_controller_vc_pkg is
+
+    -- The non-parallel version of the crc from the datasheet
+    -- used to check our parallel hw implementation with a "known-good"
+    -- and alternately implemented algo.
+    impure function crc8 (
+        data: queue_t
+    ) return std_logic_vector is
+
+        -- create a copy so we don't destry the queue here
+        constant  crc_queue : queue_t                  := copy(data);
+        variable d : std_logic_vector(7 downto 0)      := (others => '0');
+        variable next_q : std_logic_vector(7 downto 0) := (others => '0');
+        variable last_q : std_logic_vector(7 downto 0) := (others => '0');
+
+    begin
+        while not is_empty(crc_queue) loop
+            d := To_StdLogicVector(pop_byte(crc_queue), 8);
+            for i in 0 to 7 loop
+                next_q(0) := last_q(7) xor d(7);
+                next_q(1) := last_q(7) xor d(7) xor last_q(0);
+                next_q(2) := last_q(7) xor d(7) xor last_q(1);
+                next_q(7 downto 3) := last_q(6 downto 2);
+                last_q := next_q;
+                d := shift_left(d, 1);
+            end loop;
+        end loop;
+        return last_q;
+    end;
+
+    procedure get_status (
+        variable response_code : inout std_logic_vector(7 downto 0);
+        variable status        : inout std_logic_vector(15 downto 0);
+        variable crc_ok        : inout boolean;
+        )
+        is
+
+        variable
+        tx_bytes            : integer := 2;
+        variable rx_bytes   : integer := 4;
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue   : queue_t := new_queue;
+
+        begin
+        -- Build and send a GET STATUS message
+        -- OPCODE_GET_STATUS  (1 byte)
+        push_byte
+        (
+        tx_queue,
+        to_integer
+        (
+        OPCODE_GET_STATUS
+        )
+        )
+        ;
+        -- CRC (1 byte)
+        push_byte
+        (
+        tx_queue,
+        to_integer
+        (
+        crc8
+        (
+        tx_queue
+        )
+        )
+        )
+        ;
+        -- Turn around
+        -- RESPONSE (no append) (1 byte)
+        -- STATUS (2 bytes)
+        -- CRC (1 byte)
+        enqueue_tx_data_bytes
+        (
+        net,
+        msg_target,
+        tx_bytes,
+        tx_queue
+        )
+        ;
+        enqueue_transaction
+        (
+        net,
+        msg_target,
+        tx_bytes,
+        rx_bytes
+        )
+        ;
+        get_rx_queue
+        (
+        net,
+        msg_target,
+        rx_queue
+        )
+        ;
+        crc_ok
+        :=
+        check_queue_crc
+        (
+        rx_queue
+        )
+        ; -- non-destructive to queue
+        response_code
+        :=
+        std_logic_vector
+        (
+        to_unsigned
+        (
+        pop_byte
+        (
+        rx_queue
+        ),
+        8
+        )
+        )
+        ;
+        -- Status comes in LSB first
+        status
+        (
+        7
+        downto
+        0
+        )
+        :=
+        std_logic_vector
+        (
+        to_unsigned
+        (
+        pop_byte
+        (
+        rx_queue
+        ),
+        8
+        )
+        )
+        ;
+        status
+        (
+        15
+        downto
+        8
+        )
+        :=
+        std_logic_vector
+        (
+        to_unsigned
+        (
+        pop_byte
+        (
+        rx_queue
+        ),
+        8
+        )
+        )
+        ;
+        -- done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
+        flush
+        (
+        rx_queue
+        )
+        ;
+        end
+        ;
+
+        procedure
+        get_config
+        (
+        constant
+        address                : in natural;
+        variable data          : inout std_logic_vector(31 downto 0);
+        variable response_code : inout std_logic_vector(7 downto 0);
+        variable status        : inout std_logic_vector(15 downto 0);
+        variable crc_ok        : inout boolean
+    ) is
+
+        variable tmp_address : std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(address, 16));
+        variable tx_bytes : integer                          := 4;
+        variable rx_bytes : integer                          := 8;
+        variable msg_target : actor_t                        := find("espi_vc");
+        variable rx_queue : queue_t                          := new_queue;
+
+    begin
+        -- Build and send a get config message
+        -- OPCODE_GET_CONFIG (1 byte)
+        push_byte(tx_queue, to_integer(opcode_get_configuration));
+        -- ADDRESS (2 bytes), MSB 1st
+        push_byte(tx_queue, to_integer(tmp_address(15 downto 8)));
+        push_byte(tx_queue, to_integer(tmp_address(7 downto 0)));
+        -- CRC (1 byte)
+        push_byte(tx_queue, to_integer(crc8(tx_queue)));
+        -- send transaction
+        enqueue_tx_data_bytes(net, msg_target,  tx_bytes, tx_queue);
+        enqueue_transaction(net, msg_target, tx_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        -- Response comes in 4 bytes, LSB first
+        for i in 0 to data'length / 8 - 1 loop
+            data(7 + i * 8 downto i * 8) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        end loop;
+        -- Status comes in LSB first
+        status(7 downto 0) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status(15 downto 8) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        -- done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
+        flush(rx_queue);
+    end;
+
+    procedure set_config (
+        constant address       : in natural;
+        constant data          : in std_logic_vector(31 downto 0);
+        variable response_code : inout std_logic_vector(7 downto 0);
+        variable status        : inout std_logic_vector(15 downto 0);
+        variable crc_ok        : inout boolean
+    ) is
+
+        variable tmp_address : std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(address, 16));
+        variable tx_bytes : integer                          := 8;  -- 1 opcode, 2 address, 4 data, 1 crc
+        variable rx_bytes : integer                          := 4;  -- response, 16bit status, 1 crc
+        variable msg_target : actor_t                        := find("espi_vc");
+        variable rx_queue : queue_t                          := new_queue;
+
+    begin
+        -- Build and send a get config message
+        -- OPCODE_SET_CONFIG (1 byte)
+        push_byte(tx_queue, to_integer(opcode_set_configuration));
+        -- ADDRESS (2 bytes), MSB 1st
+        push_byte(tx_queue, to_integer(tmp_address(15 downto 8)));
+        push_byte(tx_queue, to_integer(tmp_address(7 downto 0)));
+        -- DATA (4 bytes), LSB 1st
+        push_byte(tx_queue, to_integer(data(7 downto 0)));
+        push_byte(tx_queue, to_integer(data(15 downto 8)));
+        push_byte(tx_queue, to_integer(data(23 downto 16)));
+        push_byte(tx_queue, to_integer(data(31 downto 24)));
+        -- CRC (1 byte)
+        push_byte(tx_queue, to_integer(crc8(tx_queue)));
+        -- send transaction
+        enqueue_tx_data_bytes(net, msg_target,  tx_bytes, tx_queue);
+        enqueue_transaction(net, msg_target, tx_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        -- Status comes in LSB first
+        status(7 downto 0) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status(15 downto 8) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        -- done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
+        flush(rx_queue);
+    end;
+
+    function lsb_to_msb (
+        data: std_logic_vector
+    )
+        return std_logic_vector is
+
+        variable result : std_logic_vector(data'length - 1 downto 0);
+
+    begin
+        check_equal(data'length * 8, 0, "Data length must be a multiple of 8");
+        for i in 0 to data'length / 8 - 1 loop
+            result(7 + i * 8 downto i * 8) := data(data'length - i * 8 - 1 downto data'length - i * 8 - 8);
+        end loop;
+        return result;
+    end;
+
+    impure function check_queue_crc (
+        data: queue_t
+    ) return boolean is
+
+        -- create a copy so we don't destry the queue here
+        constant  copy_queue : queue_t := copy(data);
+        constant crc_queue : queue_t   := new_queue;
+        variable cur_byte : std_logic_vector(7 downto 0);
+        variable crc_byte : std_logic_vector(7 downto 0);
+
+    begin
+        while true loop
+            cur_byte := To_StdLogicVector(pop_byte(copy_queue), 8);
+            report "Data Byte: " & to_hstring(cur_byte);
+            -- Last element in queue is the CRC
+            if is_empty(copy_queue) then
+                crc_byte := crc8(crc_queue);
+                report "CRC Byte: " & to_hstring(crc_byte);
+                return crc_byte = cur_byte;
+            else
+                push_byte(crc_queue, to_integer(cur_byte));
+            end if;
+        end loop;
+    end;
+
+end package body;

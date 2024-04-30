@@ -33,7 +33,6 @@ begin
         -- reset_b uses the relative path form of external naming for example purposes.
         alias reset is <<signal .spi_nor_tb.th.reset : std_logic>>;
         alias cs_n  is <<signal .spi_nor_tb.th.cs_n : std_logic>>;
-
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);

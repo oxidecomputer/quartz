@@ -35,4 +35,3 @@ vivado*.log
  
 # DrawIO cruft
 **/*.svg.bkp
- *.dtmp
