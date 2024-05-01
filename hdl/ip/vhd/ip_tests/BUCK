@@ -10,5 +10,6 @@ vhdl_unit(
         "//hdl/ip/vhd/memories:memories_tb",
         "//hdl/ip/vhd/synchronizers:synchronizers_tb",
         "//hdl/ip/vhd/utilities:utilities_tb",
+        "//hdl/ip/vhd/fmc_if:fmc_tb",
     ]
 )

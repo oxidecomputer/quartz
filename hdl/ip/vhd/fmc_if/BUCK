@@ -1,0 +1,26 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "stm32h7_fmc_model",
+    srcs = glob(["model/*.vhd"]),
+    deps = [],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "stm32h7_fmc_target",
+    srcs = glob(["stm32h7*.vhd"]),
+    deps = ["//hdl/ip/vhd/fifos:dcfifo_xpm"],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "fmc_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":stm32h7_fmc_model",
+        ":stm32h7_fmc_target",
+    ],
+    visibility = ['PUBLIC'],
+)
