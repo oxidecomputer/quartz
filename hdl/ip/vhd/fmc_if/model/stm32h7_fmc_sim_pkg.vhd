@@ -63,6 +63,8 @@ package body stm32h7_fmc_sim_pkg is
         push_std_ulogic_vector(queue, data(15 downto 0));
         push_std_ulogic_vector(queue, data(31 downto 16));
         burst_write_bus(net, SP_BUS_HANDLE, address, BUTST_LENGTH, queue);
-        wait for 150 ns;  -- A bit of a hack until I figure out how to make this blocking
+        -- A bit of a hack until I figure out how to make this blocking
+        -- See https://github.com/VUnit/vunit/issues/1012
+        wait for 150 ns;  
     end;
 end package body;
