@@ -12,7 +12,7 @@ package stm32h7_fmc_target_pkg is
 
     type txn_type is
         record
-        read_writen : std_logic;
+        read_not_write : std_logic;
         addr : unsigned(25 downto 0);
     end record;
 
@@ -26,7 +26,7 @@ package body stm32h7_fmc_target_pkg is
     function encode(txn: txn_type) return std_logic_vector is
         variable vec : std_logic_vector(31 downto 0);
     begin
-        vec := "00000" & txn.read_writen & std_logic_vector(txn.addr);
+        vec := "00000" & txn.read_not_write & std_logic_vector(txn.addr);
         return vec;
     end function;
 
@@ -34,7 +34,7 @@ package body stm32h7_fmc_target_pkg is
         variable txn : txn_type;
     begin
         txn := (
-            read_writen => vec(26),
+            read_not_write => vec(26),
             addr => unsigned(vec(25 downto 0))
         );
         return txn;

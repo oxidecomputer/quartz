@@ -20,16 +20,22 @@ use work.stm32h7_fmc_target_pkg.all;
 entity stm32h7_fmc_target is
     port(
         -- Interface to the STM32H7's FMC periph
-        --! Write full flag, sync to write clock domain
         chip_reset : in std_logic;
+        --! fmc_clk from STM32's clock generator
         fmc_clk  : in std_logic;
+        --! non-multiplexed upper address bits from STM32
         a    : in std_logic_vector(24 downto 16);
+        --! multiplexed lower address bits/databits to/from STM32
         ad   : inout std_logic_vector(15 downto 0);
+        --! active-low byte lane enables
         ne   : in std_logic_vector(3 downto 0);
-        --todo missing byte enables?
+        --! active-low output enable
         noe  : in std_logic;
+        --! active-low write enable
         nwe  : in std_logic;
+        --! active-low address latch for address phase
         nl   : in std_logic;
+        --! active-low pipelined wait to STM32, asserted 1 cycle before stall
         nwait : out std_logic;
         -- FPGA interface
         aclk : in std_logic;
@@ -142,7 +148,7 @@ begin
                         -- Bus outputs right-shifted so we shift left here to 
                         -- recover byte addrs
                         txn.addr <= unsigned(a & ad & "0");
-                        txn.read_writen <= nwe;
+                        txn.read_not_write <= nwe;
 
                         fmc_state <= ADDR_DELAY;
                     end if;
@@ -158,7 +164,7 @@ begin
                     if axi_fifo_txn_path_wfull then
                         nwait <= '0';
                     end if;
-                    if txn.read_writen = '1' then
+                    if txn.read_not_write = '1' then
                         fmc_state <= READ_SETUP;
                         -- For reads, we unconditionally wait here since we have to
                         -- do an axi transaction to even fetch the first data to return
@@ -211,8 +217,16 @@ begin
 
                 when READ_WORD1 =>
                     -- TODO: if we want to allow shorter transactions
-                    -- we'd need to do the right thing here
-                    -- pop the rdata fifo since we're done with it
+                    -- we'd need to do the right thing here, which would
+                    -- be termingating early, and doing the read anyway.
+                    -- we can only do 32bit wide reads on the AXI side
+                    -- so care should be excersized by the user if there
+                    -- are read side-effects on the addresses next to this
+                    -- read since we'd be doing a 32bit axi read in this case
+                    -- and dropping the latter part on the floor since it wasn't
+                    -- requested.
+
+                    -- normal case: pop the rdata fifo since we're done with it
                     axi_fifo_rd_path_rd_ack <= '1';
                     fmc_state <= READ_SETUP;
                     nwait <= '0';
@@ -227,6 +241,7 @@ begin
                             -- do it again while we wait
                             axi_fifo_txn_path_write <= '1';
                             txn_stored <= true;
+                            nwait <= '1';
                             -- no waits needed until the fifo fills up
                             fmc_state <= WRITE_WORD0;
                             axi_fifo_wr_path_wdata(15 downto 0) <= ad;
@@ -239,6 +254,12 @@ begin
                 when WRITE_WORD1 =>
                     axi_fifo_wr_path_write <= '1';
                     fmc_state <= WRITE_SETUP;
+                    -- We need to immediately stall the bus at this point if we have a full txn fifo
+                    -- other stall conditions will be checked in the write setup phase
+                    -- since the conditions differ
+                    if axi_fifo_txn_path_wfull then
+                        nwait <= '0';
+                    end if;
                 when TIMEOUT_CLEANUP => 
                     null;
             end case;
@@ -347,7 +368,7 @@ begin
                       axi_fifo_txn_path_rd_ack <= '1';
                       cur_txn := decode(axi_fifo_txn_path_rdata);
                       axi_addr <= resize(cur_txn.addr, axi_addr'length);
-                      if cur_txn.read_writen then
+                      if cur_txn.read_not_write then
                           axi_state <= AXI_READ_INIT;
                       else
                           axi_state <= AXI_WRITE_INIT;

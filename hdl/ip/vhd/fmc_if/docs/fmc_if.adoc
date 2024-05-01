@@ -45,7 +45,7 @@ this document. The AXI side of this is wired up to "off-the-shelf" AXI
 verification peripherals provided with VUnit so the testbench can control the
 memory "in" these peripherals in an out of band way. These verification
 peripherals also monitor for AXI protocol correctness. Note that these are
-actually fully fledges AXI peripherals but some features are stubbed out in the
+full AXI peripherals but some features are stubbed out in the
 testbench to properly interop with our AXI-Lite controller interface.
 
 == Current status
@@ -59,15 +59,13 @@ implemented.
 
 * Support multi-word transactions on FMC interface 
 
-* Support byte-enables FMC -
-AXI for <32bit access 
+* Support byte-enables FMC - AXI for <32bit access 
 
-* Clean up FMC model, especially around writes and
-figuring out blocking
+* Clean up FMC model, especially around writes and figuring out blocking
 
 == Future Investigation/Next steps
 
-Bursting in an full AXI-compliant way could prove to be tricky. AXI would like
+Bursting in an fully AXI-compliant way could prove to be tricky. AXI would like
 to provide the burst-count up front and indication of the last data word at the
 end. The FMC burst is done when chip-select releases.
 
