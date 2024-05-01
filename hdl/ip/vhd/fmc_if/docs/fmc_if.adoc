@@ -14,7 +14,7 @@ initially, we limit the scope of that is required to both make this work, and
 for what peripherals must support.
 
 This core was designed with FIFOs between the FMC and AXI clock domain to
-provide architectural easy in implementing a more performant solution, but this
+provide architectural ease in implementing a more performant solution, but this
 does come at increased latency as we're seeing ~6 clock cycles of latency
 through the FIFOs in a single direction, and reads need to round-trip.
 
