@@ -118,7 +118,7 @@ module mkSpiRegDecode(SpiDecodeIF);
             // peripheral where the address is automatically incremented, we've
             // also added support for {READ,WRITE}_NO_ADDR_INCR opcodes where
             // we will not increment the address every byte.
-            if (operation == READ || operation == WRITE) begin
+            if (operation != READ_NO_ADDR_INCR && operation != WRITE_NO_ADDR_INCR) begin
                 address <= address + 1;
             end
 
