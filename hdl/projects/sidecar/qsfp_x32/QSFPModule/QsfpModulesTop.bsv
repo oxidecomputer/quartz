@@ -83,6 +83,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Vector#(16, QsfpModuleController) qsfp_ports <-
         replicateM(mkQsfpModuleController(defaultValue));
 
+    // SPI Interface
     Reg#(I2cBusAddr) i2c_bus_addr   <- mkReg(defaultValue);
     Reg#(I2cRegAddr) i2c_reg_addr   <- mkReg(defaultValue);
     Reg#(I2cNumBytes) i2c_num_bytes <- mkReg(defaultValue);
@@ -95,6 +96,9 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Reg#(ModResetl1) mod_resetl1    <- mkReg(defaultValue);
     Reg#(ModLpmode0) mod_lpmode0    <- mkReg(defaultValue);
     Reg#(ModLpmode1) mod_lpmode1    <- mkReg(defaultValue);
+
+    // Extra register stages
+    Reg#(I2cCtrl) i2c_ctrl_r        <- mkDReg(defaultValue);
 
     Vector#(16, Bool) i2c_broadcast_enabled =
         unpack({unpack(pack(i2c_bcast1)), unpack(pack(i2c_bcast0))});
@@ -146,6 +150,8 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
 
             i2c_broadcast_enabled_r[i] <= i2c_broadcast_enabled[i];
         end
+
+        i2c_ctrl_r  <= i2c_ctrl;
     endrule
 
     // Map all the module signals around
@@ -164,10 +170,10 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
 
     // Only do I2C transactions if they are enabled for the given port.
     (* fire_when_enabled *)
-    rule do_i2c_command_broadcast(i2c_ctrl.start == 1);
+    rule do_i2c_command_broadcast(i2c_ctrl_r.start == 1);
 
         Command next_command = Command {
-            op: unpack(i2c_ctrl.op),
+            op: unpack(i2c_ctrl_r.op),
             i2c_addr: i2c_bus_addr.addr,
             reg_addr: i2c_reg_addr.addr,
             num_bytes: unpack(i2c_num_bytes.count)
