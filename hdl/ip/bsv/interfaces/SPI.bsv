@@ -7,6 +7,7 @@
 package SPI;
 
 // BSV-provided
+import Assert::*;
 import Clocks::*;
 import ClientServer::*;
 import Connectable::*;
@@ -16,8 +17,9 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
-// Cobalt modules
+// Common modules
 import RegCommon::*;
+import TestUtils::*;
 
 interface SpiDecodeIF;
     interface Server#(SpiRx, Bit#(8)) spi_byte;
@@ -56,6 +58,7 @@ module mkSpiRegDecode(SpiDecodeIF);
     Reg#(RegOps) operation <- mkRegU();
     Reg#(Maybe#(Bit#(8))) reg_read_data <- mkReg(tagged Invalid);
     Reg#(Maybe#(Bit#(8))) reg_write_data <- mkReg(tagged Invalid);
+    Reg#(Bool) is_read <- mkReg(False);
 
     // comb signals
     RWire#(Bit#(8)) data <- mkRWire();
@@ -70,7 +73,7 @@ module mkSpiRegDecode(SpiDecodeIF);
         end else if (got_data) begin
             // Turn opcode byte into an actual opcode
             operation <= unpack(truncate(my_data));
-             state <= ADDR1;
+            state <= ADDR1;
         end
     endrule
 
@@ -81,6 +84,7 @@ module mkSpiRegDecode(SpiDecodeIF);
         end else if (got_data) begin
             state <= ADDR2;
             address <= {pack(my_data), address[7:0]};
+            is_read <= (operation == READ) || (operation == READ_NO_ADDR_INCR);
         end
     endrule
 
@@ -89,7 +93,7 @@ module mkSpiRegDecode(SpiDecodeIF);
     // at this address immediately since we'll need to shift it out starting
     // at the next SPI clock cycle
     rule do_addr2 (state == ADDR2);
-        let next_state = operation == READ ? DO_READ : WRITE_WAIT;
+        let next_state = is_read ? DO_READ : WRITE_WAIT;
         if (spi_deselected) begin
             state <= OPCODE;
         end else if (got_data) begin
@@ -101,17 +105,23 @@ module mkSpiRegDecode(SpiDecodeIF);
     // This is a single-cycle state where the Client request
     // is "executed" by sending the request to the register block
     // This is also the last state in which the current address is
-    // needed so we'll increment the address here for contiguous blocks
-    // of reads or writes.
+    // needed so we'll evaluate if we need to increment the address here for
+    // contiguous blocks of reads or writes.
     rule do_register_request (state == DO_READ || state == DO_WRITE);
         if (spi_deselected) begin
             state <= OPCODE;
         end else begin
-            let next_state = operation == READ ? READ_WAIT : WRITE_WAIT;
+            let next_state = is_read ? READ_WAIT : WRITE_WAIT;
             state <= next_state;
-            // We've consumed the curent address and we're done with it so increment
-            // to get ready for the next read or write
-            address <= address + 1;
+
+            // In addition to the standard READ and WRITE behavior of a SPI
+            // peripheral where the address is automatically incremented, we've
+            // also added support for {READ,WRITE}_NO_ADDR_INCR opcodes where
+            // we will not increment the address every byte.
+            if (operation == READ || operation == WRITE) begin
+                address <= address + 1;
+            end
+
             // Clear valid flag since this write data was consumed.
             reg_write_data <= tagged Invalid;
         end
@@ -120,7 +130,7 @@ module mkSpiRegDecode(SpiDecodeIF);
     // When doing reads or writes, we're going to auto-increment the address
     // Wait for the next byte to come in from the SPI block.
     rule do_wait (state == READ_WAIT || state == WRITE_WAIT);
-        let next_state = operation == READ ? DO_READ : DO_WRITE;
+        let next_state = is_read ? DO_READ : DO_WRITE;
         if (spi_deselected) begin
             state <= OPCODE;
         end else if (got_data) begin
@@ -224,46 +234,46 @@ module mkSpiPeripheralPinSync(SpiPeripheralSync);
 endmodule
 
 //
-// This is a server instance meant to be used in testing  the SPI
-// decode block by acting like a register server interface.
-//
-// It has a single register that stores the results of the last write
-// and can be operated on. The address written don't matter to this
-// block.
-// Any read will return the data currently in the single register.
+// This is a server instance meant to be used in testing  the SPI decode block 
+// by acting like a register server interface. It has 8 internal registers that
+// can be read and written to. The upper 13 address bits are masked off.
 //
 module mkTestRegResponder(Server#(RegRequest#(16, 8), RegResp#(8)));
+    // Pulses that are useful when looking at simulations
     PulseWire do_read <- mkPulseWire();
     PulseWire do_write <- mkPulseWire();
     PulseWire do_bitset <- mkPulseWire();
     PulseWire do_bitclear <- mkPulseWire();
-    Reg#(Bit#(8)) only_reg <- mkReg(06);
-
-    RWire#(Bit#(8)) rd_reg <- mkRWire();
+    // Mock registers
+    Vector#(8, Reg#(Bit#(8))) registers <- replicateM(mkReg('hff));
+    // Wire for the data being read
+    RWire#(Bit#(8)) rdata <- mkRWire();
 
     interface Put request;
-            method Action put(request);
-                if (request.op == WRITE) begin
-                    only_reg <= request.wdata;
-                    do_write.send();
-                end else if (request.op == BITSET) begin
-                    only_reg <= only_reg | request.wdata;
-                    do_bitset.send();
-                end else if (request.op == BITCLEAR) begin
-                    only_reg <= only_reg & (~request.wdata);
-                    do_bitclear.send();
-                end else if (request.op == READ) begin
-                    do_read.send();
-                    rd_reg.wset(only_reg);
-                end
+        method Action put(request);
+            // mask off the pieces of the address not represented internally
+            let address = request.address & 16'b111;
+            if (request.op == WRITE ||  request.op == WRITE_NO_ADDR_INCR) begin
+                registers[address] <= request.wdata;
+                do_write.send();
+            end else if (request.op == BITSET) begin
+                registers[address] <= registers[address] | request.wdata;
+                do_bitset.send();
+            end else if (request.op == BITCLEAR) begin
+                registers[address] <= registers[address] & (~request.wdata);
+                do_bitclear.send();
+            end else if (request.op == READ || request.op == READ_NO_ADDR_INCR) begin
+                do_read.send();
+                rdata.wset(registers[address]);
+            end
+        endmethod
+    endinterface
 
-            endmethod
-        endinterface
-        interface Get response;
-            method ActionValue#(RegResp#(8)) get() if (isValid(rd_reg.wget()));
-                return RegResp {readdata: fromMaybe(?, rd_reg.wget())};
-            endmethod
-        endinterface
+    interface Get response;
+        method ActionValue#(RegResp#(8)) get() if (isValid(rdata.wget()));
+            return RegResp {readdata: fromMaybe(?, rdata.wget())};
+        endmethod
+    endinterface
 endmodule
 
 // Test bench
@@ -272,79 +282,161 @@ module mkSpiDecodeTest(Empty);
     Server#(RegRequest#(16, 8), RegResp#(8)) fake_reg <- mkTestRegResponder();
     mkConnection(decode.reg_con, fake_reg);
 
-    let a_byte = tagged Valid ('hff);
-    let read_byte = SpiRx {spi_rx_byte:  tagged Valid (zeroExtend(pack(READ))), done: False};
-    let write_byte = SpiRx {spi_rx_byte:  tagged Valid (zeroExtend(pack(WRITE))), done: False};
-    let zero_byte = SpiRx {spi_rx_byte: tagged Valid 'hff, done:False};
-    let done_byte = SpiRx {spi_rx_byte: a_byte, done: True};
+    // internal test bench state
+    Reg#(UInt#(3)) count <- mkReg(0);
+    Vector#(8, Reg#(Bit#(8))) rdata_r <- replicateM(mkReg('hff));
 
     function SpiRx make_byte (Bit#(8) data, Bool last);
         return SpiRx {spi_rx_byte: tagged Valid (data), done: last};
     endfunction
 
-    // Simple function to do spi wites (or bitset, bitclears)
-    function Stmt do_write(RegOps opcode, Bit#(16) address, Bit#(8) data);
+    // Write a number of bytes
+    // For the sake of clarity, the function increments the data byte to
+    // differentiate between subsequent bytes.
+    function Stmt do_write(RegOps opcode, Bit#(16) address, Bit#(8) data, UInt#(3) n);
         return seq
-            decode.spi_byte.request.put(make_byte(zeroExtend(pack(opcode)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(address[15:8], False));  // Addr1
-            decode.spi_byte.request.put(make_byte(address[7:0], False));  // Addr2
-            decode.spi_byte.request.put(make_byte(data, False)); // Data word
-            decode.spi_byte.request.put(make_byte(data, True)); // Dummy data word
+            count <= 0;
+            // header
+            decode.spi_byte.request.put(make_byte(zeroExtend(pack(opcode)), False));
+            decode.spi_byte.request.put(make_byte(address[15:8], False));
+            decode.spi_byte.request.put(make_byte(address[7:0], False));
+            // data
+            while (count < n) seq
+                decode.spi_byte.request.put(make_byte(
+                    pack(unpack(data) + zeroExtend(count)), 
+                    False));
+                count <= count + 1;
+            endseq
+            // release the peripheral
+            decode.spi_byte.request.put(SpiRx {
+                spi_rx_byte: tagged Invalid,
+                done: True
+            });
+        endseq;
+    endfunction
+
+    // Read a number of bytes
+    function Stmt do_read(RegOps opcode, Bit#(16) address, UInt#(3) n);
+        return seq
+            count <= 0;
+            // header
+            decode.spi_byte.request.put(make_byte(zeroExtend(pack(opcode)), False));
+            decode.spi_byte.request.put(make_byte(address[15:8], False));
+            decode.spi_byte.request.put(make_byte(address[7:0], False));
+            // data
+            while (count < n) seq
+                // dummy data to clock out a read
+                decode.spi_byte.request.put(make_byte(0, False));
+                // store the read data
+                action
+                    let d <- decode.spi_byte.response.get();
+                    rdata_r[count] <= d;
+                endaction
+                count <= count + 1;
+            endseq
+            // release the peripheral
+            decode.spi_byte.request.put(SpiRx {
+                spi_rx_byte: tagged Invalid,
+                done: True
+            });
         endseq;
     endfunction
 
     // Simple function to test bitset
-    function Stmt do_bitset();
+    function Stmt test_bitset();
         return seq
-            decode.spi_byte.request.put(make_byte(zeroExtend(pack(WRITE)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr1
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr2
-            decode.spi_byte.request.put(make_byte('h05, False)); // Data word
-            decode.spi_byte.request.put(SpiRx {spi_rx_byte: tagged Invalid, done: True});
-            decode.spi_byte.request.put(make_byte(zeroExtend(pack(BITSET)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr1
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr2
-            decode.spi_byte.request.put(make_byte('h50, False)); // Data word
-            decode.spi_byte.request.put(SpiRx {spi_rx_byte: tagged Invalid, done: True});
+            // Write a 0x05 to a register
+            do_write(WRITE, 0, 'h05, 1);
+
+            // Set two additional bits
+            do_write(BITSET, 0, 'h50, 1);
+
+            // read data back out
+            do_read(READ, 0, 1);
+
+            // validate read data
+            assert_eq(rdata_r[0], 8'h55, "Read data should match what was written.");
         endseq;
     endfunction
     // Simple function to test bitclear
-    function Stmt do_bitclear();
+    function Stmt test_bitclear();
         return seq
-            decode.spi_byte.request.put(make_byte(zeroExtend(pack(WRITE)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr1
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr2
-            decode.spi_byte.request.put(make_byte('h05, False)); // Data word
-            decode.spi_byte.request.put(SpiRx {spi_rx_byte: tagged Invalid, done: True});
-            decode.spi_byte.request.put(make_byte(zeroExtend(pack(BITCLEAR)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr1
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr2
-            decode.spi_byte.request.put(make_byte('h05, False)); // Data word
-            decode.spi_byte.request.put(SpiRx {spi_rx_byte: tagged Invalid, done: True});
+            // Write a 0x05 to a register
+            do_write(WRITE, 0, 'h05, 1);
+
+            // Clear two of the bits
+            do_write(BITCLEAR, 0, 'h05, 1);
+
+            // read data back out
+            do_read(READ, 0, 1);
+
+            // validate read data
+            assert_eq(rdata_r[0], 8'h00, "Read data should match what was written.");
         endseq;
     endfunction
 
-    function Stmt do_read();
+    function Stmt test_write_read_byte();
         return seq
-             decode.spi_byte.request.put(make_byte(zeroExtend(pack(WRITE)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr1
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr2
-            decode.spi_byte.request.put(make_byte('h05, False)); // Data word
-            decode.spi_byte.request.put(SpiRx {spi_rx_byte: tagged Invalid, done: True});
+            // Write a 0x05 to a register
+            do_write(WRITE, 0, 'h05, 1);
 
-            decode.spi_byte.request.put(make_byte(zeroExtend(pack(READ)), False));  // OPCODE
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr1
-            decode.spi_byte.request.put(make_byte(0, False));  // Addr2
-            decode.spi_byte.request.put(make_byte(0, False)); // Data word
-            // We should read a 'h05
-            //$display(decode.spi_byte.response.get());
-            decode.spi_byte.request.put(SpiRx {spi_rx_byte: tagged Invalid, done: True});
+            // read 0x05 back out
+            do_read(READ, 0, 1);
+
+            // validate read data
+            assert_eq(rdata_r[0], 8'h05, "Read data should match what was written.");
         endseq;
     endfunction
 
-    mkAutoFSM(
-        do_read()
-    );
+    function Stmt test_write_read_bytes();
+        return seq
+            // Write a series of bytes
+            do_write(WRITE, 0, 'h05, 4);
+
+            // read 0x05 back out
+            do_read(READ, 0, 4);
+
+            // validate read data
+            count <= 0;
+            while (count < 4) seq
+                action
+                    let d = pack(unpack(8'h05) + zeroExtend(count));
+                    assert_eq(rdata_r[count], d, "Read data should match what was written.");
+                endaction
+                count <= count + 1;
+            endseq
+        endseq;
+    endfunction
+
+    function Stmt test_write_read_no_addr_incr_bytes();
+        return seq
+            // Write a series of bytes
+            do_write(WRITE_NO_ADDR_INCR, 0, 'h05, 4);
+
+            // read 0x05 back out
+            do_read(READ_NO_ADDR_INCR, 0, 4);
+
+            // In practice this is meant to target something like a
+            // memory-mapped FIFO, but for the sake of simplicity we're just
+            // overwriting the same register repeatedly and then reading that
+            // out.
+            count <= 0;
+            while (count < 4) seq
+                action
+                    assert_eq(rdata_r[count], 8'h08, "Read data should match last byte written.");
+                endaction
+                count <= count + 1;
+            endseq
+        endseq;
+    endfunction
+
+    mkAutoFSM(seq
+        test_bitset();
+        test_bitclear();
+        test_write_read_byte();
+        test_write_read_bytes();
+        test_write_read_no_addr_incr_bytes();
+    endseq);
 
 endmodule
 

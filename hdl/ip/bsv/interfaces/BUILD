@@ -52,6 +52,7 @@ bluespec_library('SPI',
     ],
     deps = [
         '//hdl/ip/bsv:RegCommon',
+        '//hdl/ip/bsv:TestUtils',
     ])
 
 bluesim_tests('SPITests',
