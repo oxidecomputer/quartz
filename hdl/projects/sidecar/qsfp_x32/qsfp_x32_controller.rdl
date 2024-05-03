@@ -24,7 +24,7 @@ addrmap qsfp_x32_controller {
 
         field {
             desc = "Byte 0 of ID";
-        } ID0[7:0] = 0;
+        } ID0[7:0] = 0x01;
     } ID0;
     reg {
         name = "Identification 1";
@@ -32,7 +32,7 @@ addrmap qsfp_x32_controller {
 
         field {
             desc = "Byte 1 of ID";
-        } ID1[7:0] = 0;
+        } ID1[7:0] = 0xde;
     } ID1;
     reg {
         name = "Identification 2";
@@ -40,7 +40,7 @@ addrmap qsfp_x32_controller {
 
         field {
             desc = "Byte 2 of ID";
-        } ID2[7:0] = 0;
+        } ID2[7:0] = 0xaa;
     } ID2;
     reg {
         name = "Identification 3";
@@ -48,7 +48,7 @@ addrmap qsfp_x32_controller {
 
         field {
             desc = "Byte 3 of ID";
-        } ID3[7:0] = 0;
+        } ID3[7:0] = 0x55;
     } ID3;
 
     reg {
@@ -132,5 +132,5 @@ addrmap qsfp_x32_controller {
     // QSFP Modules
     //
 
-    qsfp_modules_top QSFP @0x1000;
+    qsfp_modules_top QSFP @0x200;
 };

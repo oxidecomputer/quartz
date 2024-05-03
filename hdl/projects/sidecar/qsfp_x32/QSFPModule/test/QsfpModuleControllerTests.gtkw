@@ -1,21 +1,21 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Thu Apr 20 14:17:41 2023
+[*] Fri Apr 26 14:34:43 2024
 [*]
-[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkUninitializationAfterRemovalTest.vcd"
-[dumpfile_mtime] "Thu Apr 20 14:13:56 2023"
-[dumpfile_size] 863645
-[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\boards\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
-[timestart] 118326
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkI2CReadTest.vcd"
+[dumpfile_mtime] "Fri Apr 26 14:18:16 2024"
+[dumpfile_size] 27803510
+[savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\projects\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
+[timestart] 0
 [size] 2551 1360
 [pos] -1 -1
-*-5.925377 118720 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-21.543997 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] main.
 [treeopen] main.top.
 [sst_width] 446
 [signals_width] 526
 [sst_expanded] 1
-[sst_vpaned_height] 414
+[sst_vpaned_height] 404
 @200
 -DUT - QsfpModuleController
 -Pins
@@ -34,30 +34,83 @@ main.top.bench_hsc_pg_r
 -State
 @28
 main.top.bench_controller_i2c_attempt
+main.top.bench_controller_new_i2c_command
 main.top.bench_controller_module_initialized_r
-@c00025
+@c00024
 main.top.bench_controller_error[2:0]
 @28
 (0)main.top.bench_controller_error[2:0]
 (1)main.top.bench_controller_error[2:0]
 (2)main.top.bench_controller_error[2:0]
-@1401205
+@1401200
 -group_end
+@29
+main.top.bench_controller_rdata_fifo_deq
+@28
+main.top.bench_controller_wdata_fifo_deq
 @200
 -
 -
 -I2CCore
+@22
+main.top.bench_controller_i2c_core_state_r[3:0]
+@200
 -FIFO: Next Command
 -FIFO: BitControl Incoming Events
 -FIFO: BitControl Outgoing Events
 -FIFO: RX Data
 -FIFO: TX Data
 -
--BRAM: Write Data Buffer
--BRAM: Read Data Buffer
+-WDATA FIFO
+@28
+main.top.bench_controller_wdata_fifo_memory.CLKA
+main.top.bench_controller_wdata_fifo_memory.ENA
+main.top.bench_controller_wdata_fifo_memory.WEA
+@22
+main.top.bench_controller_wdata_fifo_memory.ADDRA[7:0]
+main.top.bench_controller_wdata_fifo_memory.DIA[7:0]
+@28
+main.top.bench_controller_wdata_fifo_memory.ENB
+main.top.bench_controller_wdata_fifo_memory.WEB
+@22
+main.top.bench_controller_wdata_fifo_memory.ADDRB[7:0]
+main.top.bench_controller_wdata_fifo_memory.DOB[7:0]
+@200
+-
+-RDATA FIFO
+@28
+main.top.bench_controller_rdata_fifo_memory.CLKA
+main.top.bench_controller_rdata_fifo_memory.ENA
+main.top.bench_controller_rdata_fifo_memory.WEA
+@24
+main.top.bench_controller_rdata_fifo_memory.ADDRA[7:0]
+@22
+main.top.bench_controller_rdata_fifo_memory.DIA[7:0]
+@24
+main.top.bench_controller_rdata_fifo_memory.DOA[7:0]
+@28
+main.top.bench_controller_rdata_fifo_memory.ENB
+main.top.bench_controller_rdata_fifo_memory.WEB
+@24
+main.top.bench_controller_rdata_fifo_memory.DOB[7:0]
+main.top.bench_controller_rdata_fifo_memory.ADDRB[7:0]
+@200
+-
+-Bench - Write Data FIFO
+@22
+main.top.bench_fifo_idx[7:0]
+@200
 -
 -
 -Model - I2CPeripheralModel
+@28
+main.top.bench_periph_scl_in
+main.top.bench_periph_sda_in
+@22
+main.top.bench_periph_shift_bits[15:0]
+@28
+main.top.bench_periph_state[2:0]
+@200
 -FIFO: Outgoing Events
 @28
 main.top.bench_periph_outgoing_events.CLK
