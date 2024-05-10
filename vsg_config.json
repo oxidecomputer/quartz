@@ -1,0 +1,6799 @@
+{
+  "indent": {
+    "tokens": {
+      "alias_declaration": {
+        "alias_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "architecture_body": {
+        "architecture_keyword": {
+          "after": 1,
+          "token": 0
+        },
+        "begin_keyword": {
+          "after": 1,
+          "token": 0
+        },
+        "end_keyword": {
+          "after": 0,
+          "token": 0
+        }
+      },
+      "assertion": {
+        "keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "report_keyword": {
+          "after": "current",
+          "token": "current"
+        },
+        "severity_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "assertion_statement": {
+        "label": {
+          "after": "current",
+          "token": "current"
+        },
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        }
+      },
+      "association_element": {
+        "formal_part": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "attribute_declaration": {
+        "attribute_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "attribute_specification": {
+        "attribute_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "block_statement": {
+        "begin_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "block_label": {
+          "after": "+1",
+          "token": "current"
+        },
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        }
+      },
+      "case_generate_alternative": {
+        "when_keyword": {
+          "after": "current",
+          "token": "-1"
+        }
+      },
+      "case_generate_statement": {
+        "end_keyword": {
+          "after": "-2",
+          "token": "-2"
+        },
+        "generate_label": {
+          "after": "+2",
+          "token": "current"
+        }
+      },
+      "case_statement": {
+        "case_keyword": {
+          "after": "+2",
+          "token": "current"
+        },
+        "case_label": {
+          "after": "current",
+          "token": "current"
+        },
+        "end_keyword": {
+          "after": "-2",
+          "token": "-2"
+        }
+      },
+      "case_statement_alternative": {
+        "when_keyword": {
+          "after": "current",
+          "token": "-1"
+        }
+      },
+      "component_declaration": {
+        "component_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        }
+      },
+      "component_instantiation_statement": {
+        "instantiation_label": {
+          "after": "+1",
+          "token": "current"
+        },
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        }
+      },
+      "concurrent_assertion_statement": {
+        "label_name": {
+          "after": "current",
+          "token": "current"
+        },
+        "semicolon": {
+          "after": "-1",
+          "token": "-1"
+        }
+      },
+      "concurrent_conditional_signal_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "concurrent_procedure_call_statement": {
+        "label_name": {
+          "after": "current",
+          "token": "current"
+        },
+        "postponed_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "concurrent_selected_signal_assignment": {
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        },
+        "with_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "concurrent_signal_assignment_statement": {
+        "label_name": {
+          "after": "current",
+          "token": "current"
+        },
+        "postponed_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "concurrent_simple_signal_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "conditional_variable_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "conditional_waveform_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "constant_declaration": {
+        "constant_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "context_declaration": {
+        "context_keyword": {
+          "after": "+1",
+          "token": 0
+        },
+        "end_keyword": {
+          "after": 0,
+          "token": 0
+        }
+      },
+      "entity_declaration": {
+        "begin_keyword": {
+          "after": 1,
+          "token": 0
+        },
+        "end_keyword": {
+          "after": 0,
+          "token": 0
+        },
+        "entity_keyword": {
+          "after": 1,
+          "token": 0
+        }
+      },
+      "enumeration_type_definition": {
+        "close_parenthesis": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "enumeration_literal": {
+          "after": "current",
+          "token": "current"
+        },
+        "open_parenthesis": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "exit_statement": {
+        "exit_keyword": {
+          "after": "current",
+          "token": "current"
+        },
+        "label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "file_declaration": {
+        "file_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "file_open_information": {
+        "is_keyword": {
+          "after": "current",
+          "token": "+1"
+        },
+        "open_keyword": {
+          "after": "current",
+          "token": "+1"
+        }
+      },
+      "for_generate_statement": {
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "generate_label": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "full_type_declaration": {
+        "type_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "function_specification": {
+        "close_parenthesis": {
+          "after": "current",
+          "token": "-1"
+        },
+        "function_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "impure_keyword": {
+          "after": "current",
+          "token": "current"
+        },
+        "pure_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "generate_statement_body": {
+        "begin_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "end_keyword": {
+          "after": "current",
+          "token": "-1"
+        }
+      },
+      "generic_clause": {
+        "close_parenthesis": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "generic_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "generic_map_aspect": {
+        "close_parenthesis": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "generic_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "identifier_list": {
+        "identifier": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "if_generate_statement": {
+        "else_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "elsif_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "generate_label": {
+          "after": "+1",
+          "token": "current"
+        },
+        "if_keyword": {
+          "after": "current",
+          "token": "-1"
+        }
+      },
+      "if_statement": {
+        "else_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "elsif_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "if_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "if_label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "incomplete_type_declaration": {
+        "type_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_constant_declaration": {
+        "constant_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_file_declaration": {
+        "file_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_function_specification": {
+        "function_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_incomplete_type_declaration": {
+        "type_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_package_declaration": {
+        "package_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_procedure_specification": {
+        "procedure_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_signal_declaration": {
+        "signal_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_unknown_declaration": {
+        "identifier": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "interface_variable_declaration": {
+        "variable_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "iteration_scheme": {
+        "for_keyword": {
+          "after": "current",
+          "token": "current"
+        },
+        "while_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "library_clause": {
+        "keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "loop_statement": {
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "loop_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "loop_label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "null_statement": {
+        "label": {
+          "after": "current",
+          "token": "current"
+        },
+        "null_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "package_body": {
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "package_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "package_declaration": {
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "package_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "port_clause": {
+        "close_parenthesis": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "port_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "port_map_aspect": {
+        "close_parenthesis": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "port_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "procedure_call": {
+        "procedure_name": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "procedure_call_statement": {
+        "label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "procedure_specification": {
+        "close_parenthesis": {
+          "after": "current",
+          "token": "-1"
+        },
+        "procedure_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "process_statement": {
+        "begin_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "postponed_keyword": {
+          "after": "current",
+          "token": "current"
+        },
+        "process_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "process_label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "protected_type_body": {
+        "body_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        }
+      },
+      "protected_type_declaration": {
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "protected_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "record_type_definition": {
+        "end_keyword": {
+          "after": "-1",
+          "token": "-1"
+        },
+        "record_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "report_statement": {
+        "report_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        },
+        "severity_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "return_statement": {
+        "return_keyword": {
+          "after": "+1",
+          "token": "current"
+        },
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        }
+      },
+      "selected_force_assignment": {
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        },
+        "with_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "selected_variable_assignment": {
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        },
+        "with_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "selected_waveform_assignment": {
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        },
+        "with_keyword": {
+          "after": "+1",
+          "token": "current"
+        }
+      },
+      "signal_assignment_statement": {
+        "label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "signal_declaration": {
+        "signal_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "simple_force_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "simple_release_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "simple_variable_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "simple_waveform_assignment": {
+        "target": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "subprogram_body": {
+        "begin_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "end_keyword": {
+          "after": "current",
+          "token": "-1"
+        },
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        }
+      },
+      "subprogram_declaration": {
+        "semicolon": {
+          "after": "-1",
+          "token": "current"
+        }
+      },
+      "subtype_declaration": {
+        "subtype_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "use_clause": {
+        "keyword": {
+          "after": "current",
+          "token": "current",
+          "token_after_library_clause": "+1",
+          "token_if_no_matching_library_clause": "current"
+        }
+      },
+      "variable_assignment_statement": {
+        "label": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "variable_declaration": {
+        "shared_keyword": {
+          "after": "current",
+          "token": "current"
+        },
+        "variable_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      },
+      "wait_statement": {
+        "label": {
+          "after": "current",
+          "token": "current"
+        },
+        "wait_keyword": {
+          "after": "current",
+          "token": "current"
+        }
+      }
+    }
+  },
+  "pragma": {
+    "patterns": {
+      "close": [
+        "^\\s*--\\s+synthesis\\s+translate_on\\s*$",
+        "^\\s*--vhdl_comp_on\\s*$",
+        "^\\s*--\\s+RTL_SYNTHESIS\\s+ON\\s*$"
+      ],
+      "open": [
+        "^\\s*--\\s+synthesis\\s+translate_off\\s*$",
+        "^\\s*--vhdl_comp_off\\s*$",
+        "^\\s*--\\s+RTL_SYNTHESIS\\s+OFF\\s*$"
+      ],
+      "single": [
+        "^\\s*--\\s+synthesis\\s+\\w+\\s*$",
+        "^\\s*--\\s+synthesis\\s+\\w+\\s+\\w+\\s*$",
+        "^\\s*--\\s+pragma\\s+\\w+\\s*$",
+        "^\\s*--\\s+pragma\\s+\\w+\\s+\\w+\\s*$",
+        "^\\s*--\\s+altera\\s+\\w+\\s*$",
+        "^\\s*--\\s+synopsys\\s+\\w+\\s*$",
+        "^\\s*--\\s+synopsys\\s+\\w+\\s+\\w+\\s*$",
+        "^\\s*--\\s+xilinx\\s+\\w+\\s*$",
+        "^\\s*--\\s+xilinx\\s+\\w+\\s+\\w+\\s*$"
+      ]
+    }
+  },
+  "rule": {
+    "global": {
+      "indentStyle": "spaces",
+      "indentSize": 4
+    },
+    "after_001": {
+      "disable": true,
+      "fixable": true,
+      "magnitude": 1,
+      "phase": 1,
+      "severity": "Error",
+      "units": "ns"
+    },
+    "after_002": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": true,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "after_003": {
+      "disable": true,
+      "fixable": true,
+      "magnitude": 1,
+      "phase": 1,
+      "severity": "Error",
+      "units": "ns"
+    },
+    "alias_declaration_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "alias_declaration_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "alias_declaration_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "alias_declaration_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "alias_declaration_103": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "alias_declaration_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "alias_declaration_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "alias_declaration_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "alias_declaration_502": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "alias_declaration_503": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "alias_declaration_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "a_"
+      ],
+      "severity": "Error"
+    },
+    "alias_declaration_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_a"
+      ]
+    },
+    "architecture_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "architecture_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "architecture_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "architecture_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "architecture_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "architecture_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "architecture_009": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_010": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "architecture_011": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "architecture_012": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "architecture_013": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "architecture_014": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "architecture_015": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "architecture_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "architecture_017": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "architecture_018": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "architecture_019": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_020": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_021": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_022": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "architecture_024": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "architecture_025": {
+      "disable": true,
+      "fixable": false,
+      "names": [],
+      "phase": 7,
+      "severity": "Error"
+    },
+    "architecture_026": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "include_type_is_keyword": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "architecture_027": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "architecture_028": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_029": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "architecture_030": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "architecture_031": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "architecture_032": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "architecture_033": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "architecture_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "architecture_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "architecture_600": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "architecture_601": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "assert_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "assert_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "assert_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "assert_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "assert_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "assert_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "assert_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "assert_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "assert_400": {
+      "alignment": "report",
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "assert_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "assert_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "assert_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "attribute_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "attribute_declaration_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "attribute_declaration_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "attribute_declaration_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "attribute_declaration_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "attribute_declaration_501": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "attribute_declaration_502": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "attribute_specification_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "attribute_specification_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "attribute_specification_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "attribute_specification_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "attribute_specification_501": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "attribute_specification_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "attribute_specification_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "block_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_002": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_007": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "block_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "block_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "block_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "block_202": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "block_203": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "block_204": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "block_205": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "block_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "block_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "block_302": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "block_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "block_401": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "block_402": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "block_500": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "block_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "block_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "block_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "block_504": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "block_505": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "block_506": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "block_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_blk"
+      ]
+    },
+    "block_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "blk_"
+      ],
+      "severity": "Error"
+    },
+    "block_comment_001": {
+      "allow_indenting": "yes",
+      "disable": true,
+      "fixable": false,
+      "header_alignment": "center",
+      "header_left": null,
+      "header_left_repeat": "-",
+      "header_right_repeat": null,
+      "header_string": null,
+      "max_header_column": 120,
+      "min_height": 3,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_comment_002": {
+      "allow_indenting": "yes",
+      "comment_left": null,
+      "disable": true,
+      "fixable": false,
+      "min_height": 3,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "block_comment_003": {
+      "allow_indenting": "yes",
+      "disable": true,
+      "fixable": false,
+      "footer_alignment": "center",
+      "footer_left": null,
+      "footer_left_repeat": "-",
+      "footer_right_repeat": null,
+      "footer_string": null,
+      "max_footer_column": 120,
+      "min_height": 3,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "case_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "case_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "case_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "case_004": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "case_005": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "case_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "case_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "case_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "case_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "case_011": {
+      "alignment": "report",
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "case_012": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "case_013": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "case_014": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_015": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_016": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_017": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_018": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_019": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "case_020": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "case_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "case_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "allow_comment"
+    },
+    "case_generate_alternative_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_generate_alternative_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_generate_statement_400": {
+      "blank_line_ends_group": "no",
+      "comment_line_ends_group": "no",
+      "compact_alignment": "yes",
+      "disable": true,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "case_generate_statement_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "case_generate_statement_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "comment_004": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "comment_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "comment_011": {
+      "disable": true,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "comment_012": {
+      "disable": true,
+      "fixable": false,
+      "keywords": [
+        "TODO",
+        "FIXME"
+      ],
+      "phase": 1,
+      "severity": "Warning"
+    },
+    "comment_100": {
+      "disable": false,
+      "exceptions": [
+        "--!",
+        "--=",
+        "--+",
+        "--|",
+        "---"
+      ],
+      "fixable": true,
+      "patterns": [
+        "--!",
+        "--|"
+      ],
+      "phase": 2,
+      "severity": "Error"
+    },
+    "component_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "component_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "component_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "component_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "component_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "component_006": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "component_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "component_008": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "component_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "component_010": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "component_011": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "component_012": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "component_013": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "component_014": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "component_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "component_017": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "component_018": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "component_019": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "component_020": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "component_021": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "concurrent_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "concurrent_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "concurrent_003": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "concurrent_004": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "concurrent_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "concurrent_006": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "generate_statement_ends_group": "yes",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "concurrent_008": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "concurrent_009": {
+      "align_else_keywords": "no",
+      "align_left": "no",
+      "align_paren": "yes",
+      "align_when_keywords": "no",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error",
+      "wrap_at_when": "yes"
+    },
+    "concurrent_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "concurrent_011": {
+      "disable": false,
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "new_line_after_assign": "no",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "concurrent_012": {
+      "assign_on_single_line": "yes",
+      "close_paren_new_line": "yes",
+      "disable": false,
+      "first_paren_new_line": "yes",
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "last_paren_new_line": "yes",
+      "new_line_after_comma": "yes",
+      "open_paren_new_line": "yes",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "concurrent_400": {
+      "aggregate_parens_ends_group": "no",
+      "blank_line_ends_group": "no",
+      "comment_line_ends_group": "no",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "ignore_single_line_aggregates": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "concurrent_401": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "conditional_expressions_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_expressions_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_expressions_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_expressions_103": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_expressions_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "conditional_expressions_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "conditional_waveforms_001": {
+      "allow_single_line": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "conditional_waveforms_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_waveforms_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_waveforms_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_waveforms_103": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "conditional_waveforms_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "conditional_waveforms_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "constant_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "constant_002": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "constant_004": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "constant_005": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "constant_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "constant_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "constant_010": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "constant_012": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "constant_013": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "constant_014": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "constant_015": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "c_"
+      ],
+      "severity": "Error"
+    },
+    "constant_016": {
+      "assign_on_single_line": "yes",
+      "close_paren_new_line": "yes",
+      "disable": false,
+      "first_paren_new_line": "yes",
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "last_paren_new_line": "yes",
+      "new_line_after_comma": "yes",
+      "open_paren_new_line": "yes",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "constant_017": {
+      "array_constraint": "ignore",
+      "disable": false,
+      "exceptions": [],
+      "fixable": true,
+      "phase": 1,
+      "record_constraint_close_paren": "ignore",
+      "record_constraint_comma": "ignore",
+      "record_constraint_element": "ignore",
+      "record_constraint_open_paren": "ignore",
+      "severity": "Error"
+    },
+    "constant_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "constant_101": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "constant_200": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "constant_400": {
+      "aggregate_parens_ends_group": "no",
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "ignore_single_line_aggregates": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "constant_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_c"
+      ]
+    },
+    "context_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "context_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "context_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "context_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "context_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_012": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "context_013": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "context_014": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "context_015": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "context_016": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "context_017": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "context_018": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "context_019": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "context_020": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "context_021": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_022": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_023": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "context_024": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "context_025": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "context_028": {
+      "severity": "Error"
+    },
+    "context_ref_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "context_ref_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "context_ref_003": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "context_ref_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "context_ref_006": {
+      "severity": "Error"
+    },
+    "context_ref_007": {
+      "severity": "Error"
+    },
+    "context_ref_008": {
+      "severity": "Error"
+    },
+    "context_ref_009": {
+      "severity": "Error"
+    },
+    "context_ref_500": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "context_ref_501": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "declarative_part_400": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "element_association_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "element_association_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "entity_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "entity_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_006": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_008": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "entity_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "entity_010": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_011": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_012": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "entity_013": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_014": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_015": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "entity_017": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "entity_018": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "entity_019": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_020": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "entity_021": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_022": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_023": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_024": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_025": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_026": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_027": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_028": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_029": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "entity_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "entity_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "entity_202": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "entity_203": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "entity_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "entity_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_600": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_specification_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_specification_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "entity_specification_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_specification_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "entity_specification_503": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "exit_statement_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "exponent_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "file_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "file_002": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "file_100": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "for_generate_statement_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "for_generate_statement_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "function_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_005": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "allow_comment"
+    },
+    "function_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "function_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_012": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "function_013": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_014": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_015": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "function_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "function_017": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_018": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "function_019": {
+      "disable": false,
+      "first_open_paren": "remove_new_line",
+      "fixable": true,
+      "ignore_single_line": "no",
+      "interface_element": "add_new_line",
+      "interface_list_semicolon": "remove_new_line",
+      "last_close_paren": "add_new_line",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "function_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "function_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "function_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "function_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "function_506": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "function_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "f_"
+      ],
+      "severity": "Error"
+    },
+    "function_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_f"
+      ]
+    },
+    "generate_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generate_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generate_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "generate_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "generate_005": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "generate_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generate_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generate_008": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generate_009": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generate_010": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generate_011": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generate_012": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "generate_013": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generate_014": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generate_015": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generate_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generate_017": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "gen_"
+      ],
+      "severity": "Error"
+    },
+    "generate_018": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generate_019": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generate_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "generate_401": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "generate_402": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "generate_403": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "generate_404": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "generate_405": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "generate_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generate_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generate_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_gen"
+      ]
+    },
+    "generate_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "gv_"
+      ],
+      "severity": "Error"
+    },
+    "generate_602": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_gv"
+      ]
+    },
+    "generic_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generic_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generic_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generic_005": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generic_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generic_007": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "generic_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "generic_009": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generic_010": {
+      "action": "new_line",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_013": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_014": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generic_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_017": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generic_018": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_019": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "generic_020": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "g_"
+      ],
+      "severity": "Error"
+    },
+    "generic_021": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_g"
+      ]
+    },
+    "generic_map_001": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "generic_map_002": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "generic_map_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_map_004": {
+      "action": "new_line",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_map_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_map_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 0,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generic_map_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "generic_map_008": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "generic_map_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_g"
+      ]
+    },
+    "generic_map_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "g_"
+      ],
+      "severity": "Error"
+    },
+    "ieee_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_002": {
+      "disable": true,
+      "fixable": true,
+      "parenthesis": "insert",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "if_004": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "if_005": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "if_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "if_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "if_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "if_009": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "if_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "if_012": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_013": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_014": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_015": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "if_020": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_021": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_022": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_023": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_024": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_025": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_026": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_027": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_028": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_029": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_030": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "if_031": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "if_034": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_035": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_036": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "if_generate_statement_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_generate_statement_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "if_generate_statement_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_generate_statement_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_generate_statement_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "if_generate_statement_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "instantiation_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "instantiation_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "instantiation_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 0,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "instantiation_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "instantiation_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "instantiation_008": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "instantiation_009": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "instantiation_010": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "instantiation_012": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "instantiation_019": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "instantiation_027": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "instantiation_028": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "instantiation_029": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "instantiation_031": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "instantiation_032": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "instantiation_033": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "instantiation_034": {
+      "disable": true,
+      "fixable": false,
+      "method": "component",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "instantiation_035": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "instantiation_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_inst"
+      ]
+    },
+    "instantiation_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "inst_"
+      ],
+      "severity": "Error"
+    },
+    "iteration_scheme_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "iteration_scheme_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "iteration_scheme_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "iteration_scheme_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "iteration_scheme_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "iteration_scheme_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "length_001": {
+      "disable": false,
+      "fixable": false,
+      "length": 120,
+      "phase": 7,
+      "severity": "Warning"
+    },
+    "length_002": {
+      "disable": false,
+      "fixable": false,
+      "length": 2000,
+      "phase": 7,
+      "severity": "Warning"
+    },
+    "length_003": {
+      "disable": false,
+      "fixable": false,
+      "length": 500,
+      "phase": 7,
+      "severity": "Warning"
+    },
+    "library_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "library_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "library_003": {
+      "allow_library_clause": "no",
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "library_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "library_005": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "library_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "library_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "library_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "library_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "library_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "library_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "library_500": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "logical_operator_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "loop_statement_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_006": {
+      "disable": true,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_007": {
+      "action": "add",
+      "disable": true,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "loop_statement_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "loop_statement_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "loop_statement_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "loop_statement_103": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "loop_statement_104": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "loop_statement_200": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "loop_statement_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "loop_statement_202": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "loop_statement_203": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "loop_statement_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "loop_statement_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "loop_statement_302": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "loop_statement_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "loop_statement_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "loop_statement_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "loop_statement_503": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "loop_statement_504": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "loop_statement_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "loop_"
+      ],
+      "severity": "Error"
+    },
+    "loop_statement_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_loop"
+      ]
+    },
+    "loop_statement_602": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "lv_"
+      ],
+      "severity": "Error"
+    },
+    "loop_statement_603": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_lv"
+      ]
+    },
+    "package_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "package_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "package_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "package_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "package_006": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_007": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "package_008": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "package_009": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "package_010": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "package_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "package_012": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "package_013": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "package_014": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "package_015": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "package_016": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_pkg"
+      ]
+    },
+    "package_017": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "pkg_"
+      ],
+      "severity": "Error"
+    },
+    "package_018": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_019": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "package_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "package_401": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "package_402": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "package_body_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "package_body_002": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "package_body_003": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "package_body_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "package_body_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "package_body_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "package_body_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "package_body_202": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "package_body_203": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "package_body_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "package_body_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "package_body_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "package_body_401": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "package_body_402": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "package_body_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_body_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_body_502": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "package_body_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_body_504": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_body_505": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_body_506": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "package_body_507": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "package_body_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_pkg"
+      ]
+    },
+    "package_body_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "pkg_"
+      ],
+      "severity": "Error"
+    },
+    "port_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "port_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "port_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "port_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "port_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error",
+      "spaces_after": 4,
+      "spaces_before": 1
+    },
+    "port_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error",
+      "spaces_after": 3,
+      "spaces_before": 1
+    },
+    "port_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error",
+      "spaces_after": 1,
+      "spaces_before": 1
+    },
+    "port_010": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "port_011": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "i_",
+        "o_",
+        "io_"
+      ],
+      "severity": "Error"
+    },
+    "port_012": {
+      "disable": true,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_013": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_014": {
+      "action": "new_line",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_015": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "port_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_017": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "port_018": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "port_019": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "port_020": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "port_021": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_022": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "port_023": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_024": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "port_025": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_i",
+        "_o",
+        "_io"
+      ]
+    },
+    "port_026": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_027": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "i_"
+      ],
+      "severity": "Error"
+    },
+    "port_601": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "o_"
+      ],
+      "severity": "Error"
+    },
+    "port_602": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "io_"
+      ],
+      "severity": "Error"
+    },
+    "port_603": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "b_"
+      ],
+      "severity": "Error"
+    },
+    "port_604": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "l_"
+      ],
+      "severity": "Error"
+    },
+    "port_605": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_i"
+      ]
+    },
+    "port_606": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_o"
+      ]
+    },
+    "port_607": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_io"
+      ]
+    },
+    "port_608": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_b"
+      ]
+    },
+    "port_609": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_l"
+      ]
+    },
+    "port_map_001": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "port_map_002": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "port_map_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_map_004": {
+      "action": "new_line",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_map_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_map_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "port_map_008": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_map_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_map_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "port_map_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "pragma_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "pragma_400": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "pragma_401": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "pragma_402": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "pragma_403": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "procedure_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_008": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_009": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_010": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "procedure_012": {
+      "action": "add",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "procedure_013": {
+      "disable": false,
+      "first_open_paren": "remove_new_line",
+      "fixable": true,
+      "ignore_single_line": "no",
+      "interface_element": "add_new_line",
+      "interface_list_semicolon": "remove_new_line",
+      "last_close_paren": "add_new_line",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "procedure_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "procedure_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "procedure_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "allow_comment"
+    },
+    "procedure_401": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "procedure_410": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "procedure_411": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "procedure_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_501": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "procedure_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_504": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_505": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_506": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "procedure_507": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_call_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "procedure_call_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "procedure_call_003": {
+      "association_element": "ignore",
+      "association_list_comma": "ignore",
+      "disable": false,
+      "first_open_paren": "ignore",
+      "fixable": true,
+      "ignore_single_line": "no",
+      "last_close_paren": "ignore",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "procedure_call_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "procedure_call_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "procedure_call_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_call_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_call_302": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "procedure_call_400": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "procedure_call_401": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "procedure_call_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "procedure_call_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "process_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "process_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "process_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "process_004": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "process_005": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "process_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "process_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "process_008": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "process_009": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "process_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "process_012": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_013": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "process_014": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "process_015": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_code"
+    },
+    "process_016": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_017": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "process_018": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_019": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "process_020": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "process_021": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "process_022": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "process_023": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "process_024": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "process_025": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "process_026": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "process_027": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "process_028": {
+      "align_to": "keyword",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "process_029": {
+      "clock": "event",
+      "disable": true,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_030": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_031": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "process_033": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "process_034": {
+      "blank_line_ends_group": "no",
+      "comment_line_ends_group": "no",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "no",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "process_035": {
+      "blank_line_ends_group": "no",
+      "comment_line_ends_group": "no",
+      "compact_alignment": "no",
+      "disable": false,
+      "fixable": true,
+      "include_lines_without_comments": "yes",
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "process_036": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "proc_"
+      ],
+      "severity": "Error"
+    },
+    "process_037": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_038": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_039": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "process_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "yes",
+      "loop_control_statements_ends_group": "yes",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "process_401": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "process_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_proc"
+      ]
+    },
+    "range_001": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "range_002": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "record_type_definition_001": {
+      "action": "same_line",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_005": {
+      "action": "remove",
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "record_type_definition_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "record_type_definition_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "record_type_definition_200": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "record_type_definition_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "no_blank_line"
+    },
+    "record_type_definition_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "record_type_definition_301": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "record_type_definition_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "record_type_definition_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "record_type_definition_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "report_statement_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "report_statement_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "report_statement_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "report_statement_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "report_statement_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "report_statement_400": {
+      "alignment": "report",
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "report_statement_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "report_statement_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "reserved_001": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error",
+      "standard": "all"
+    },
+    "selected_assignment_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_012": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "selected_assignment_100": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_103": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_104": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_105": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_106": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_107": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "selected_assignment_300": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "selected_assignment_400": {
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "selected_assignment_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "selected_assignment_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "selected_assignment_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "selected_assignment_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "sequential_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "sequential_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "sequential_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "sequential_004": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "sequential_006": {
+      "disable": false,
+      "fixable": false,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "sequential_007": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "sequential_008": {
+      "disable": false,
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "new_line_after_assign": "no",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "sequential_009": {
+      "assign_on_single_line": "yes",
+      "close_paren_new_line": "yes",
+      "disable": false,
+      "first_paren_new_line": "yes",
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "last_paren_new_line": "yes",
+      "new_line_after_comma": "yes",
+      "open_paren_new_line": "yes",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "sequential_400": {
+      "aggregate_parens_ends_group": "no",
+      "blank_line_ends_group": "no",
+      "comment_line_ends_group": "no",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "ignore_single_line_aggregates": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "sequential_401": {
+      "align_else_keywords": "no",
+      "align_left": "no",
+      "align_paren": "yes",
+      "align_when_keywords": "no",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error",
+      "wrap_at_when": "yes"
+    },
+    "sequential_402": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "signal_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "signal_002": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "signal_004": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "signal_005": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "signal_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "signal_007": {
+      "disable": true,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "signal_008": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "s_"
+      ],
+      "severity": "Error"
+    },
+    "signal_012": {
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "signal_014": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "signal_015": {
+      "consecutive": 2,
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "signal_017": {
+      "array_constraint": "ignore",
+      "disable": false,
+      "exceptions": [],
+      "fixable": true,
+      "phase": 1,
+      "record_constraint_close_paren": "ignore",
+      "record_constraint_comma": "ignore",
+      "record_constraint_element": "ignore",
+      "record_constraint_open_paren": "ignore",
+      "severity": "Error"
+    },
+    "signal_100": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "signal_101": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "signal_102": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "signal_200": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "signal_400": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "signal_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_s"
+      ]
+    },
+    "source_file_001": {
+      "disable": false,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "subprogram_body_201": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "subprogram_body_202": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "subprogram_body_203": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "subprogram_body_204": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "subprogram_body_205": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "subprogram_body_400": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "yes",
+      "loop_control_statements_ends_group": "yes",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "subprogram_body_401": {
+      "blank_line_ends_group": "yes",
+      "case_control_statements_ends_group": "no",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "if_control_statements_ends_group": "no",
+      "loop_control_statements_ends_group": "no",
+      "phase": 5,
+      "severity": "Error"
+    },
+    "subtype_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "subtype_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "subtype_004": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "st_"
+      ],
+      "severity": "Error"
+    },
+    "subtype_100": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "subtype_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "subtype_501": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "subtype_502": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "subtype_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_st"
+      ]
+    },
+    "type_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "type_002": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "type_004": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "type_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "type_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "type_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "type_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "type_009": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "type_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "allow_comment"
+    },
+    "type_011": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error",
+      "style": "require_blank_line"
+    },
+    "type_012": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "type_013": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "type_014": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "type_015": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "t_"
+      ],
+      "severity": "Error"
+    },
+    "type_016": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "type_017": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "type_018": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "type_100": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "type_200": {
+      "disable": true,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    },
+    "type_400": {
+      "blank_line_ends_group": "yes",
+      "comment_line_ends_group": "yes",
+      "compact_alignment": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "separate_generic_port_alignment": "yes",
+      "severity": "Error"
+    },
+    "type_500": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "type_501": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "type_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_t"
+      ]
+    },
+    "use_clause_500": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "use_clause_501": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "use_clause_502": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "use_clause_503": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "variable_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "variable_002": {
+      "case": "lower",
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "variable_004": {
+      "case": "lower",
+      "case_exceptions": [],
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "prefix_exceptions": [],
+      "severity": "Error",
+      "suffix_exceptions": []
+    },
+    "variable_005": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "variable_006": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "variable_007": {
+      "disable": true,
+      "fixable": false,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "variable_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 6,
+      "severity": "Error"
+    },
+    "variable_012": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "prefixes": [
+        "v_"
+      ],
+      "severity": "Error"
+    },
+    "variable_017": {
+      "array_constraint": "ignore",
+      "disable": false,
+      "exceptions": [],
+      "fixable": true,
+      "phase": 1,
+      "record_constraint_close_paren": "ignore",
+      "record_constraint_comma": "ignore",
+      "record_constraint_element": "ignore",
+      "record_constraint_open_paren": "ignore",
+      "severity": "Error"
+    },
+    "variable_100": {
+      "disable": true,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "variable_400": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "variable_600": {
+      "disable": true,
+      "exceptions": [],
+      "fixable": false,
+      "phase": 7,
+      "severity": "Error",
+      "suffixes": [
+        "_v"
+      ]
+    },
+    "variable_assignment_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "variable_assignment_002": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": 1,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "variable_assignment_003": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "variable_assignment_004": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "variable_assignment_006": {
+      "disable": false,
+      "fixable": false,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "variable_assignment_007": {
+      "disable": false,
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "new_line_after_assign": "no",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "variable_assignment_008": {
+      "assign_on_single_line": "yes",
+      "close_paren_new_line": "yes",
+      "disable": false,
+      "first_paren_new_line": "yes",
+      "fixable": true,
+      "ignore_single_line": "yes",
+      "last_paren_new_line": "yes",
+      "new_line_after_comma": "yes",
+      "open_paren_new_line": "yes",
+      "phase": 1,
+      "severity": "Error"
+    },
+    "variable_assignment_400": {
+      "align_else_keywords": "no",
+      "align_left": "no",
+      "align_paren": "yes",
+      "align_when_keywords": "no",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error",
+      "wrap_at_when": "yes"
+    },
+    "variable_assignment_401": {
+      "align_left": "no",
+      "align_paren": "yes",
+      "disable": false,
+      "fixable": true,
+      "phase": 5,
+      "severity": "Error"
+    },
+    "wait_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 4,
+      "severity": "Error"
+    },
+    "when_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "whitespace_001": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "whitespace_002": {
+      "disable": false,
+      "fixable": true,
+      "phase": 1,
+      "severity": "Error"
+    },
+    "whitespace_003": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_004": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_005": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_006": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_007": {
+      "disable": false,
+      "fixable": true,
+      "number_of_spaces": ">=1",
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_008": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_010": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_011": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_013": {
+      "disable": false,
+      "fixable": true,
+      "phase": 2,
+      "severity": "Error"
+    },
+    "whitespace_200": {
+      "blank_lines_allowed": 1,
+      "disable": false,
+      "fixable": true,
+      "phase": 3,
+      "severity": "Error"
+    }
+  }
+}

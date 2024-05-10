@@ -1,9 +1,9 @@
-load("//tools:hdl.bzl", "vhdl_unit")
-load("//tools:rdl.bzl", "rdl_file")
+load("//tools:hdl.bzl", "third_party", "sim_only_model")
 
-vhdl_unit(
-    name = "xpm",
-    library = "xpm",
-    srcs = glob(["xpm_vhdl/**/*.vhd"], exclude = ["**/simulation/*.vhd"]),
-    visibility = ['PUBLIC'],
+third_party(
+        name = "xpm",
+        library = "xpm",
+        is_synth = False,
+        srcs = glob(["xpm_vhdl/**/*.vhd"], exclude = ["**/simulation/*.vhd"]),
+        visibility = ['PUBLIC'],
 )

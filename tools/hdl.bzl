@@ -33,7 +33,9 @@ UnitTSet = transitive_set(
 # so we return a UnitTSet with the file and any deps (as TSets)
 HDLFileInfo = provider(
     fields={
-        "set": provider_field(UnitTSet)
+        "set_all": provider_field(UnitTSet),
+        # "set_synth": provider_field(UnitTSet),
+        # "set_no_third_party": provider_field(UnitTSet),
     })
 
 # Some build stages generate HDL that we'd like to do something
@@ -49,10 +51,15 @@ GenVHDLInfo = provider(
 
 def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     providers = []
+    # We have 2 classifications of HDL files that we care about in:
+    # dependency analysis
+    # We can have "models" that are simulation only. Take the XPM fifos
+    # for example. We'd need to strip the models out of the dep tree for
+    # synthesis, but leave them in the tree for 
 
     # Add specified deps to a TSet for these files
     # These are normal vhdl files as dependencies (ie they have an HDLFileInfo provider)
-    deps_tset = [x[HDLFileInfo].set for x in ctx.attrs.deps if x.get(HDLFileInfo)]
+    deps_tset = [x[HDLFileInfo].set_all for x in ctx.attrs.deps if x.get(HDLFileInfo)]
 
     # We may also have source files that are generated from something coming in
     # as a dependency.  These are expected to have a GenVHDLInfo provider attached.
@@ -89,7 +96,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
 
     providers.append(
         HDLFileInfo(
-            set=top_tset,
+            set_all=top_tset,
         )
     )
 
@@ -202,6 +209,19 @@ vhdl_unit = rule(
             ),
             default=False,
         ),
+        "is_synth": attrs.bool(
+            doc=(
+                "Set to false for simulation models or stuff that should be stripped\
+            from an FPGA build"
+            ),
+            default=True,
+        ),
+        "is_third_party": attrs.bool(
+            doc=(
+                " Set to true for code we don't own and thus can't format etc"
+            ),
+            default=False,
+        ),
         "codec_package": attrs.string(
             doc=(
                 "Set to True when you want to generate VUnit codec package\
@@ -227,3 +247,24 @@ vhdl_unit = rule(
         ),
     },
 )
+
+# A helper macro for declaring top-level simulations in BUCK files
+# This helper just sets the "is_tb" and "is_model" fields so the
+# user doesn't have to do so
+def vunit_sim(**kwargs):
+    kwargs.update({"is_tb": True, "is_synth": False})
+    vhdl_unit(**kwargs)
+
+# A helper macro for declaring top-level simulations in BUCK files
+# This helper just sets the "is_tb" and "is_model" fields so the
+# user doesn't have to do so
+def sim_only_model(**kwargs):
+    kwargs.update({"is_synth": False})
+    vhdl_unit(**kwargs)
+
+# A helper macro for declaring top-level simulations in BUCK files
+# This helper just sets the "is_tb" and "is_model" fields so the
+# user doesn't have to do so
+def third_party(**kwargs):
+    kwargs.update({"is_third_party": True})
+    vhdl_unit(**kwargs)
