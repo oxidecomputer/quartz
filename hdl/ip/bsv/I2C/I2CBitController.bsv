@@ -100,10 +100,10 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     Wire#(Bit#(1))  sda_in          <- mkWire();
     Reg#(Bool)      sda_changed     <- mkReg(False);
 
-    Reg#(Bit#(1)) scl_out_en_r      <- mkReg(0);
-    Reg#(Bit#(1)) sda_out_en_r      <- mkReg(0);
-    Reg#(Bit#(1)) scl_out_en_inv    <- mkReg(0);
-    Reg#(Bit#(1)) sda_out_en_inv    <- mkReg(0);
+    Reg#(Bit#(1)) scl_out_en_r  <- mkReg(0);
+    Reg#(Bit#(1)) sda_out_en_r  <- mkReg(0);
+    Reg#(Bit#(1)) scl_out_en_n  <- mkReg(0);
+    Reg#(Bit#(1)) sda_out_en_n  <- mkReg(0);
 
     Reg#(State) state           <- mkReg(AwaitStart);
     Reg#(Bool) scl_active       <- mkReg(False);
@@ -299,8 +299,8 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     // well to keep things aligned.
     (* fire_when_enabled *)
     rule do_register_output_inversions;
-        scl_out_en_inv  <= ~scl_out_en;
-        sda_out_en_inv  <= ~sda_out_en;
+        scl_out_en_n  <= ~scl_out_en;
+        sda_out_en_n  <= ~sda_out_en;
 
         scl_out_en_r    <= scl_out_en;
         sda_out_en_r    <= sda_out_en;
@@ -308,12 +308,12 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
     interface Pins pins;
         interface Bidirection scl;
-            method out      = scl_out_en_inv;
+            method out      = scl_out_en_n;
             method out_en   = unpack(scl_out_en_r);
             method in       = scl_in._write;
         endinterface
         interface Bidirection sda;
-            method out      = sda_out_en_inv;
+            method out      = sda_out_en_n;
             method out_en   = unpack(sda_out_en_r);
             method in       = sda_in._write;
         endinterface
