@@ -97,7 +97,7 @@ Parameters default_app_with_reset_button =
         mirror_link0_rx_as_link1_tx: False,
         system_type: tagged Invalid,
         button_behavior: ResetButton,
-        system_power_toggle_cool_down: 3000, // 3s if app tick at 1 kHz.
+        system_power_toggle_cool_down: 2000, // 2s if app tick at 1 kHz.
         system_power_fault_monitor_enable: True,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
         system_power_hotswap_controller_restart: True,
