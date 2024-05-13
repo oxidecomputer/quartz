@@ -47,7 +47,7 @@ pfexec apt -y install make
 # Install yosys from pre-built toolchain as specified
 #
 banner Yosys Install
-YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2022-12-22/oss-cad-suite-linux-x64-20221222.tgz"
+YOSYS_TOOLCHAIN="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2024-05-13/oss-cad-suite-linux-x64-20240513.tgz"
 wget -q $YOSYS_TOOLCHAIN
 tar zxf oss-cad-suite-linux-x64*
 
