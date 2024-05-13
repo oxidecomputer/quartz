@@ -1660,7 +1660,7 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "case_010": {
       "disable": false,
@@ -1740,14 +1740,14 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "case_201": {
       "disable": false,
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "allow_comment"
+      "style": "no_blank_line"
     },
     "case_generate_alternative_500": {
       "case": "lower",
@@ -2316,7 +2316,7 @@
       "blank_line_ends_group": "yes",
       "comment_line_ends_group": "yes",
       "compact_alignment": "yes",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "ignore_single_line_aggregates": "no",
       "phase": 5,
@@ -3164,7 +3164,7 @@
       "severity": "Error"
     },
     "generate_011": {
-      "action": "add",
+      "action": "remove",
       "disable": false,
       "fixable": true,
       "phase": 1,
@@ -4438,7 +4438,7 @@
       "case_control_statements_ends_group": "no",
       "comment_line_ends_group": "yes",
       "compact_alignment": "yes",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "if_control_statements_ends_group": "no",
       "loop_control_statements_ends_group": "no",
@@ -4450,7 +4450,7 @@
       "case_control_statements_ends_group": "no",
       "comment_line_ends_group": "yes",
       "compact_alignment": "yes",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "if_control_statements_ends_group": "no",
       "loop_control_statements_ends_group": "no",
@@ -5401,7 +5401,7 @@
       "severity": "Error"
     },
     "process_011": {
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "phase": 3,
       "severity": "Error",
@@ -5477,7 +5477,7 @@
       "severity": "Error"
     },
     "process_021": {
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "phase": 1,
       "severity": "Error",
@@ -5495,7 +5495,7 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "process_024": {
       "disable": false,
@@ -5516,14 +5516,14 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "process_027": {
       "disable": false,
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "process_028": {
       "align_to": "keyword",
@@ -5533,7 +5533,7 @@
       "severity": "Error"
     },
     "process_029": {
-      "clock": "event",
+      "clock": "edge",
       "disable": true,
       "fixable": true,
       "phase": 1,
@@ -5584,7 +5584,7 @@
       "blank_line_ends_group": "no",
       "comment_line_ends_group": "no",
       "compact_alignment": "no",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "include_lines_without_comments": "yes",
       "phase": 5,
@@ -5624,7 +5624,7 @@
       "case_control_statements_ends_group": "yes",
       "comment_line_ends_group": "yes",
       "compact_alignment": "yes",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "if_control_statements_ends_group": "yes",
       "loop_control_statements_ends_group": "yes",
@@ -6246,17 +6246,17 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "subprogram_body_204": {
       "disable": false,
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "subprogram_body_205": {
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "phase": 3,
       "severity": "Error",
@@ -6267,7 +6267,7 @@
       "case_control_statements_ends_group": "yes",
       "comment_line_ends_group": "yes",
       "compact_alignment": "yes",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "if_control_statements_ends_group": "yes",
       "loop_control_statements_ends_group": "yes",
@@ -6658,7 +6658,7 @@
     "variable_assignment_004": {
       "align_left": "no",
       "align_paren": "yes",
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "phase": 5,
       "severity": "Error"

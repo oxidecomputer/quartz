@@ -4,46 +4,46 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
-
 --! FMC controller model based on ST's RM0433 rev8
 --! figures 115 and 116 for simulation of the
 --! FPGA's target interface
---! Oxide's internal doc mirror link: 
+--! Oxide's internal doc mirror link:
 --! https://drive.google.com/file/d/1wPaZAHS3-0HdMkXOC8tvGYgOPOrM0qRQ/view?usp=drive_link
 
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
 
 library vunit_lib;
-context vunit_lib.vunit_context;
-context vunit_lib.com_context;
-
-use vunit_lib.bus_master_pkg.all;
+    context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
+    use vunit_lib.bus_master_pkg.all;
 
 entity stm32h7_fmc_model is
-    generic(
-        BUS_HANDLE : bus_master_t
+    generic (
+        bus_handle : bus_master_t
     );
-    port(
-        clk  : in std_logic;
-        a    : out std_logic_vector(address_length(BUS_HANDLE) - 1 downto 16);
-        ad   : inout std_logic_vector(data_length(BUS_HANDLE) - 1 downto 0);
-        ne   : out std_logic_vector(3 downto 0);
-        --todo missing byte enables?
-        noe  : out std_logic;
-        nwe  : out std_logic;
-        nl   : out std_logic;
-        nwait : in std_logic
+    port (
+        clk : in    std_logic;
+        a   : out   std_logic_vector(address_length(bus_handle) - 1 downto 16);
+        ad  : inout std_logic_vector(data_length(bus_handle) - 1 downto 0);
+        ne  : out   std_logic_vector(3 downto 0);
+        -- todo missing byte enables?
+        noe   : out   std_logic;
+        nwe   : out   std_logic;
+        nl    : out   std_logic;
+        nwait : in    std_logic
     );
 end entity;
 
 architecture model of stm32h7_fmc_model is
-    type txn_type is (READ_TXN, WRITE_TXN);
+
+    type   txn_type is (read_txn, write_txn);
     signal delayed_wait : std_logic := '0';
+
 begin
 
-    wait_delay:process(clk)
+    wait_delay : process (clk)
     begin
         if rising_edge(clk) then
             delayed_wait <= not nwait;
@@ -55,20 +55,23 @@ begin
         variable reply_msg   : msg_t;
         variable msg_type    : msg_type_t;
 
-        variable addr        : std_logic_vector(address_length(bus_handle) - 1 downto 0);
-        variable data        : std_logic_vector(data_length(bus_handle) - 1 downto 0);
+        variable addr         : std_logic_vector(address_length(bus_handle) - 1 downto 0);
+        variable data         : std_logic_vector(data_length(bus_handle) - 1 downto 0);
         variable rem_data_cnt : integer;
+
         procedure bus_idle is
         begin
-            ne <= (others => '1');
-            a <= (others => 'X');
-            ad <= (others => 'Z');
-            nl <= '1';
+            ne  <= (others => '1');
+            a   <= (others => 'X');
+            ad  <= (others => 'Z');
+            nl  <= '1';
             nwe <= '1';
             noe <= '1';
-        end procedure;
+        end;
 
-        procedure transaction_start(constant kind: txn_type) is
+        procedure transaction_start (
+            constant kind : txn_type
+        ) is
         begin
             addr := pop_std_ulogic_vector(request_msg);
             -- In 16 bit mode, so we need to shift the address to the right by one
@@ -87,18 +90,17 @@ begin
             nl <= '1';
             -- on next falling edge of clock, address clears
             wait until falling_edge(clk);
-            a <= (others => 'X');
+            a  <= (others => 'X');
             ad <= (others => 'Z');
             if kind = READ_TXN then
                 noe <= '0';
             end if;
-        end procedure;
-
+        end;
     begin
         bus_idle;
-        nl <= '1';
+        nl       <= '1';
         receive(net, BUS_HANDLE.p_actor, request_msg);
-        msg_type    := message_type(request_msg);
+        msg_type := message_type(request_msg);
         -- All bus transactions begin with the FMC_CLK
         -- low
         wait until falling_edge(clk);
@@ -113,13 +115,12 @@ begin
                 -- we've done a transfer, so get the data, dec the counter,
                 -- apply to bus
                 if falling_edge(clk) and delayed_wait = '0' then
-                    data := pop_std_ulogic_vector(request_msg);
+                    data         := pop_std_ulogic_vector(request_msg);
                     rem_data_cnt := rem_data_cnt - 1;
-                    ad <= data;
+                    ad           <= data;
                 end if;
             end loop;
             wait until falling_edge(clk);
-
         elsif msg_type = bus_burst_read_msg then
             reply_msg := new_msg;
             -- Figure 115
@@ -146,7 +147,6 @@ begin
             -- proper error reporting if it does
             unexpected_msg_type(msg_type);
         end if;
-
     end process;
 
 end model;

@@ -3,24 +3,25 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
 -- Copyright 2024 Oxide Computer Company
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
 
+library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
 use work.arbiter_pkg.arbiter_mode;
 
 entity arbiter_th is
 end entity;
 
 architecture th of arbiter_th is
-  signal clk   : std_logic := '0';
-  signal reset : std_logic := '1';
 
-  signal rr_requests: std_logic_vector(2 downto 0);
-  signal rr_grants: std_logic_vector(rr_requests'range);
+    signal clk   : std_logic := '0';
+    signal reset : std_logic := '1';
 
-  signal pri_requests: std_logic_vector(2 downto 0);
-  signal pri_grants: std_logic_vector(rr_requests'range);
+    signal rr_requests : std_logic_vector(2 downto 0);
+    signal rr_grants   : std_logic_vector(rr_requests'range);
+
+    signal pri_requests : std_logic_vector(2 downto 0);
+    signal pri_grants   : std_logic_vector(rr_requests'range);
 
 begin
 
@@ -31,47 +32,48 @@ begin
 
     rr_arb_dut: entity work.arbiter
         generic map(
-          MODE => ROUND_ROBIN
+            mode => ROUND_ROBIN
         )
         port map(
-            clk =>  clk,
-            reset =>  reset,
+            clk      => clk,
+            reset    => reset,
             requests => rr_requests,
-            grants  => rr_grants
+            grants   => rr_grants
         );
-    
+
     rr_arb_stim: entity work.sim_gpio
         generic map(
-            OUT_NUM_BITS => 3,
-            IN_NUM_BITS => 3,
-            ACTOR_NAME => "rr_arb_ctrl"
+            out_num_bits => 3,
+            in_num_bits  => 3,
+            actor_name   => "rr_arb_ctrl"
         )
         port map(
-            clk => clk,
-            gpio_in => rr_grants, 
+            clk      => clk,
+            gpio_in  => rr_grants,
             gpio_out => rr_requests
         );
 
     pri_arb_dut: entity work.arbiter
         generic map(
-          MODE => PRIORITY
+            mode => PRIORITY
         )
         port map(
-            clk =>  clk,
-            reset =>  reset,
+            clk      => clk,
+            reset    => reset,
             requests => pri_requests,
-            grants  => pri_grants
+            grants   => pri_grants
         );
-    
+
     pri_arb_stim: entity work.sim_gpio
         generic map(
-            OUT_NUM_BITS => 3,
-            IN_NUM_BITS => 3,
-            ACTOR_NAME => "pri_arb_ctrl"
+            out_num_bits => 3,
+            in_num_bits  => 3,
+            actor_name   => "pri_arb_ctrl"
         )
         port map(
-            clk => clk,
-            gpio_in => pri_grants, 
+            clk      => clk,
+            gpio_in  => pri_grants,
             gpio_out => pri_requests
         );
+
 end th;

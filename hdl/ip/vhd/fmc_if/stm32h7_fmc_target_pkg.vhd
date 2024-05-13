@@ -5,38 +5,52 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
 
 package stm32h7_fmc_target_pkg is
 
-    type txn_type is
-        record
+    type txn_type is record
         read_not_write : std_logic;
-        addr : unsigned(25 downto 0);
+        addr           : unsigned(25 downto 0);
     end record;
 
-    function encode(txn: txn_type) return std_logic_vector;
-    function decode(vec: std_logic_vector) return txn_type;
+    function encode (
+        txn: txn_type
+    ) return std_logic_vector;
+
+    function decode (
+        vec: std_logic_vector
+    ) return txn_type;
 
 end package;
 
 package body stm32h7_fmc_target_pkg is
 
-    function encode(txn: txn_type) return std_logic_vector is
+    function encode (
+        txn: txn_type
+    ) return std_logic_vector is
+
         variable vec : std_logic_vector(31 downto 0);
+
     begin
         vec := "00000" & txn.read_not_write & std_logic_vector(txn.addr);
         return vec;
-    end function;
+    end;
 
-    function decode(vec: std_logic_vector) return txn_type is
+    function decode (
+        vec: std_logic_vector
+    ) return txn_type is
+
         variable txn : txn_type;
+
     begin
-        txn := (
+        txn :=
+        (
             read_not_write => vec(26),
             addr => unsigned(vec(25 downto 0))
         );
         return txn;
-    end function;
+    end;
+
 end package body;

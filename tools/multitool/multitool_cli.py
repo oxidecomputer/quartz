@@ -51,8 +51,6 @@ def vhdl_format(args):
         encoding="utf-8"
     )
 
-
-
 # create the top-level parser
 parser = argparse.ArgumentParser(prog='quartz')
 subparsers = parser.add_subparsers(help='sub-command help')
