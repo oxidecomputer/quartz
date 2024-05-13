@@ -2,6 +2,7 @@ load("@prelude//toolchains:python.bzl", "system_python_bootstrap_toolchain", "sy
 load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
 
 load("vivado_toolchain.bzl", "vivado_toolchain")
+load("vsg_toolchain.bzl", "vsg_toolchain")
 
 system_cxx_toolchain(
     name = "cxx",
@@ -20,5 +21,10 @@ system_python_bootstrap_toolchain(
 
 vivado_toolchain(
     name = "vivado",
+    visibility = ["PUBLIC"],
+)
+
+vsg_toolchain(
+    name = "vsg",
     visibility = ["PUBLIC"],
 )

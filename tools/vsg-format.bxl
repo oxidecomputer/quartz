@@ -8,7 +8,7 @@
 # with vhdl ie (vhdl_unit) getting the sources for any of our
 # VHDL files, excluding any files marked as 3rd party
 def vsg_format(ctx):
-  # start with all the buck2 targets from the root
+    # start with all the buck2 targets from the root
     target_universe = ctx.target_universe("//...").target_set()
     # Get the deps
     targets = ctx.cquery().deps(target_universe)
@@ -21,8 +21,9 @@ def vsg_format(ctx):
     srcs = []
     for file in only_ours:
         srcs.extend([ctx.fs.project_rel_path(x) for x in file.sources()])
-
-    print(srcs)
+   
+    
+    ctx.output.print(srcs)
 
 
 

@@ -5116,7 +5116,7 @@
       "severity": "Error"
     },
     "procedure_012": {
-      "action": "add",
+      "action": "remove",
       "disable": false,
       "fixable": true,
       "phase": 1,
