@@ -9,6 +9,7 @@ bluespec_verilog('IgnitionTargetGimlet',
     modules = [
         'mkGimletRevBTargetWithResetButton',
         'mkGimletRevBTargetWithPowerButton',
+        'mkGimletRevBTarget'
     ],
     deps = [
         '//hdl/ip/bsv/ignition:Target',
@@ -39,6 +40,17 @@ yosys_design('ignition_target_rev_b_power_button_top',
         '//vnd/bluespec:Verilog.v',
     ])
 
+yosys_design('ignition_target_rev_b_top',
+    top_module = 'mkGimletRevBTarget',
+    sources = [
+        ':IgnitionTargetGimlet#mkGimletRevBTarget',
+        '//vnd/bluespec:Verilog.v#Verilog.v',
+    ],
+    deps = [
+        ':IgnitionTargetGimlet',
+        '//vnd/bluespec:Verilog.v',
+    ])
+
 nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_c_d_reset_button',
     env = 'ignition_target',
     design = ':ignition_target_rev_b_reset_button_top#' \
@@ -53,4 +65,12 @@ nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_c_d_power_button',
                 'ignition_target_rev_b_power_button_top.json',
     deps = [
         ':ignition_target_rev_b_power_button_top',
+    ])
+
+nextpnr_ice40_bitstream('ignition_target_gimlet_rev_b_c_d',
+    env = 'ignition_target',
+    design = ':ignition_target_rev_b_top#' \
+                'ignition_target_rev_b_top.json',
+    deps = [
+        ':ignition_target_rev_b_top',
     ])

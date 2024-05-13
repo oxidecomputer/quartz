@@ -4,6 +4,7 @@ export ButtonBehavior(..);
 export Parameters(..);
 export default_app_with_reset_button;
 export default_app_with_power_button;
+export default_app;
 
 export SystemPower(..);
 export Target(..);
@@ -63,7 +64,8 @@ endinterface
 
 typedef enum {
     ResetButton = 0,
-    PowerButton
+    PowerButton,
+    NoButton
 } ButtonBehavior deriving (Eq, FShow);
 
 // The behavior of an IgnitionTarget application can be tweaked. This is
@@ -109,6 +111,20 @@ Parameters default_app_with_power_button =
         mirror_link0_rx_as_link1_tx: False,
         system_type: tagged Invalid,
         button_behavior: PowerButton,
+        system_power_toggle_cool_down: 1000, // 1s if app tick at 1 kHz.
+        system_power_fault_monitor_enable: False,
+        system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
+        system_power_hotswap_controller_restart: False,
+        receiver_watchdog_enable: True,
+        protocol: defaultValue};
+
+Parameters default_app =
+    Parameters{
+        external_reset: True,
+        invert_leds: False,
+        mirror_link0_rx_as_link1_tx: False,
+        system_type: tagged Invalid,
+        button_behavior: NoButton,
         system_power_toggle_cool_down: 1000, // 1s if app tick at 1 kHz.
         system_power_fault_monitor_enable: False,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.

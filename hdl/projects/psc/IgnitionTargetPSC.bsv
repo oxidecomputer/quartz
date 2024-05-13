@@ -38,4 +38,17 @@ module mkPSCRevBResetButton (IgnitionTargetTop);
     return asIgnitionTargetTop(_top);
 endmodule
 
+(* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
+module mkPSCRevB (IgnitionTargetTop);
+    Parameters parameters = default_app;
+    parameters.invert_leds = True;
+    // PSC rev B has a broken PG in its power tree. Disable the power fault
+    // monitor to avoid the device never starting up.
+    parameters.system_power_fault_monitor_enable = False;
+
+    (* hide *) IgnitionTargetTopWithDebug _top <-
+        mkIgnitionTargetIOAndResetWrapper(parameters);
+    return asIgnitionTargetTop(_top);
+endmodule
+
 endpackage
