@@ -243,10 +243,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     //
 
     // P0
-    ReadOnly#(Bool) qsfp0_hsc_en        <- mkOutputSyncFor(controller.qsfp[0].hsc.en);
+    ReadOnly#(Bool) qsfp0_hsc_en        <- mkOutputSyncFor(controller.qsfp[0].power_en);
     ReadOnly#(Bit#(1)) qsfp0_lpmode     <- mkOutputSyncFor(controller.qsfp[0].lpmode);
     ReadOnly#(Bit#(1)) qsfp0_resetl     <- mkOutputSyncFor(controller.qsfp[0].resetl);
-    InputReg#(Bool, 2) qsfp0_hsc_pg     <- mkInputSyncFor(controller.qsfp[0].hsc.pg);
+    InputReg#(Bool, 2) qsfp0_hsc_pg     <- mkInputSyncFor(controller.qsfp[0].power_good);
     InputReg#(Bit#(1), 2) qsfp0_intl    <- mkInputSyncFor(controller.qsfp[0].intl);
     InputReg#(Bit#(1), 2) qsfp0_modprsl <- mkInputSyncFor(controller.qsfp[0].modprsl);
     ReadOnly#(Bool) qsfp0_scl_out_en    <- mkOutputSyncFor(controller.qsfp[0].scl.out_en);
@@ -261,10 +261,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp0_sda_in), qsfp0_sda._read);
 
     // P1
-    ReadOnly#(Bool) qsfp1_hsc_en        <- mkOutputSyncFor(controller.qsfp[1].hsc.en);
+    ReadOnly#(Bool) qsfp1_hsc_en        <- mkOutputSyncFor(controller.qsfp[1].power_en);
     ReadOnly#(Bit#(1)) qsfp1_lpmode     <- mkOutputSyncFor(controller.qsfp[1].lpmode);
     ReadOnly#(Bit#(1)) qsfp1_resetl     <- mkOutputSyncFor(controller.qsfp[1].resetl);
-    InputReg#(Bool, 2) qsfp1_hsc_pg     <- mkInputSyncFor(controller.qsfp[1].hsc.pg);
+    InputReg#(Bool, 2) qsfp1_hsc_pg     <- mkInputSyncFor(controller.qsfp[1].power_good);
     InputReg#(Bit#(1), 2) qsfp1_intl    <- mkInputSyncFor(controller.qsfp[1].intl);
     InputReg#(Bit#(1), 2) qsfp1_modprsl <- mkInputSyncFor(controller.qsfp[1].modprsl);
     ReadOnly#(Bool) qsfp1_scl_out_en    <- mkOutputSyncFor(controller.qsfp[1].scl.out_en);
@@ -279,10 +279,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp1_sda_in), qsfp1_sda._read);
 
     // P2
-    ReadOnly#(Bool) qsfp2_hsc_en        <- mkOutputSyncFor(controller.qsfp[2].hsc.en);
+    ReadOnly#(Bool) qsfp2_hsc_en        <- mkOutputSyncFor(controller.qsfp[2].power_en);
     ReadOnly#(Bit#(1)) qsfp2_lpmode     <- mkOutputSyncFor(controller.qsfp[2].lpmode);
     ReadOnly#(Bit#(1)) qsfp2_resetl     <- mkOutputSyncFor(controller.qsfp[2].resetl);
-    InputReg#(Bool, 2) qsfp2_hsc_pg     <- mkInputSyncFor(controller.qsfp[2].hsc.pg);
+    InputReg#(Bool, 2) qsfp2_hsc_pg     <- mkInputSyncFor(controller.qsfp[2].power_good);
     InputReg#(Bit#(1), 2) qsfp2_intl    <- mkInputSyncFor(controller.qsfp[2].intl);
     InputReg#(Bit#(1), 2) qsfp2_modprsl <- mkInputSyncFor(controller.qsfp[2].modprsl);
     ReadOnly#(Bool) qsfp2_scl_out_en    <- mkOutputSyncFor(controller.qsfp[2].scl.out_en);
@@ -297,10 +297,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp2_sda_in), qsfp2_sda._read);
 
     // P3
-    ReadOnly#(Bool) qsfp3_hsc_en        <- mkOutputSyncFor(controller.qsfp[3].hsc.en);
+    ReadOnly#(Bool) qsfp3_hsc_en        <- mkOutputSyncFor(controller.qsfp[3].power_en);
     ReadOnly#(Bit#(1)) qsfp3_lpmode     <- mkOutputSyncFor(controller.qsfp[3].lpmode);
     ReadOnly#(Bit#(1)) qsfp3_resetl     <- mkOutputSyncFor(controller.qsfp[3].resetl);
-    InputReg#(Bool, 2) qsfp3_hsc_pg     <- mkInputSyncFor(controller.qsfp[3].hsc.pg);
+    InputReg#(Bool, 2) qsfp3_hsc_pg     <- mkInputSyncFor(controller.qsfp[3].power_good);
     InputReg#(Bit#(1), 2) qsfp3_intl    <- mkInputSyncFor(controller.qsfp[3].intl);
     InputReg#(Bit#(1), 2) qsfp3_modprsl <- mkInputSyncFor(controller.qsfp[3].modprsl);
     ReadOnly#(Bool) qsfp3_scl_out_en    <- mkOutputSyncFor(controller.qsfp[3].scl.out_en);
@@ -315,10 +315,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp3_sda_in), qsfp3_sda._read);
 
     // P4
-    ReadOnly#(Bool) qsfp4_hsc_en        <- mkOutputSyncFor(controller.qsfp[4].hsc.en);
+    ReadOnly#(Bool) qsfp4_hsc_en        <- mkOutputSyncFor(controller.qsfp[4].power_en);
     ReadOnly#(Bit#(1)) qsfp4_lpmode     <- mkOutputSyncFor(controller.qsfp[4].lpmode);
     ReadOnly#(Bit#(1)) qsfp4_resetl     <- mkOutputSyncFor(controller.qsfp[4].resetl);
-    InputReg#(Bool, 2) qsfp4_hsc_pg     <- mkInputSyncFor(controller.qsfp[4].hsc.pg);
+    InputReg#(Bool, 2) qsfp4_hsc_pg     <- mkInputSyncFor(controller.qsfp[4].power_good);
     InputReg#(Bit#(1), 2) qsfp4_intl    <- mkInputSyncFor(controller.qsfp[4].intl);
     InputReg#(Bit#(1), 2) qsfp4_modprsl <- mkInputSyncFor(controller.qsfp[4].modprsl);
     ReadOnly#(Bool) qsfp4_scl_out_en    <- mkOutputSyncFor(controller.qsfp[4].scl.out_en);
@@ -333,10 +333,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp4_sda_in), qsfp4_sda._read);
 
     // P5
-    ReadOnly#(Bool) qsfp5_hsc_en        <- mkOutputSyncFor(controller.qsfp[5].hsc.en);
+    ReadOnly#(Bool) qsfp5_hsc_en        <- mkOutputSyncFor(controller.qsfp[5].power_en);
     ReadOnly#(Bit#(1)) qsfp5_lpmode     <- mkOutputSyncFor(controller.qsfp[5].lpmode);
     ReadOnly#(Bit#(1)) qsfp5_resetl     <- mkOutputSyncFor(controller.qsfp[5].resetl);
-    InputReg#(Bool, 2) qsfp5_hsc_pg     <- mkInputSyncFor(controller.qsfp[5].hsc.pg);
+    InputReg#(Bool, 2) qsfp5_hsc_pg     <- mkInputSyncFor(controller.qsfp[5].power_good);
     InputReg#(Bit#(1), 2) qsfp5_intl    <- mkInputSyncFor(controller.qsfp[5].intl);
     InputReg#(Bit#(1), 2) qsfp5_modprsl <- mkInputSyncFor(controller.qsfp[5].modprsl);
     ReadOnly#(Bool) qsfp5_scl_out_en    <- mkOutputSyncFor(controller.qsfp[5].scl.out_en);
@@ -351,10 +351,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp5_sda_in), qsfp5_sda._read);
 
     // P6
-    ReadOnly#(Bool) qsfp6_hsc_en        <- mkOutputSyncFor(controller.qsfp[6].hsc.en);
+    ReadOnly#(Bool) qsfp6_hsc_en        <- mkOutputSyncFor(controller.qsfp[6].power_en);
     ReadOnly#(Bit#(1)) qsfp6_lpmode     <- mkOutputSyncFor(controller.qsfp[6].lpmode);
     ReadOnly#(Bit#(1)) qsfp6_resetl     <- mkOutputSyncFor(controller.qsfp[6].resetl);
-    InputReg#(Bool, 2) qsfp6_hsc_pg     <- mkInputSyncFor(controller.qsfp[6].hsc.pg);
+    InputReg#(Bool, 2) qsfp6_hsc_pg     <- mkInputSyncFor(controller.qsfp[6].power_good);
     InputReg#(Bit#(1), 2) qsfp6_intl    <- mkInputSyncFor(controller.qsfp[6].intl);
     InputReg#(Bit#(1), 2) qsfp6_modprsl <- mkInputSyncFor(controller.qsfp[6].modprsl);
     ReadOnly#(Bool) qsfp6_scl_out_en    <- mkOutputSyncFor(controller.qsfp[6].scl.out_en);
@@ -369,10 +369,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp6_sda_in), qsfp6_sda._read);
 
     // P7
-    ReadOnly#(Bool) qsfp7_hsc_en        <- mkOutputSyncFor(controller.qsfp[7].hsc.en);
+    ReadOnly#(Bool) qsfp7_hsc_en        <- mkOutputSyncFor(controller.qsfp[7].power_en);
     ReadOnly#(Bit#(1)) qsfp7_lpmode     <- mkOutputSyncFor(controller.qsfp[7].lpmode);
     ReadOnly#(Bit#(1)) qsfp7_resetl     <- mkOutputSyncFor(controller.qsfp[7].resetl);
-    InputReg#(Bool, 2) qsfp7_hsc_pg     <- mkInputSyncFor(controller.qsfp[7].hsc.pg);
+    InputReg#(Bool, 2) qsfp7_hsc_pg     <- mkInputSyncFor(controller.qsfp[7].power_good);
     InputReg#(Bit#(1), 2) qsfp7_intl    <- mkInputSyncFor(controller.qsfp[7].intl);
     InputReg#(Bit#(1), 2) qsfp7_modprsl <- mkInputSyncFor(controller.qsfp[7].modprsl);
     ReadOnly#(Bool) qsfp7_scl_out_en    <- mkOutputSyncFor(controller.qsfp[7].scl.out_en);
@@ -387,10 +387,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp7_sda_in), qsfp7_sda._read);
 
     // P8
-    ReadOnly#(Bool) qsfp8_hsc_en        <- mkOutputSyncFor(controller.qsfp[8].hsc.en);
+    ReadOnly#(Bool) qsfp8_hsc_en        <- mkOutputSyncFor(controller.qsfp[8].power_en);
     ReadOnly#(Bit#(1)) qsfp8_lpmode     <- mkOutputSyncFor(controller.qsfp[8].lpmode);
     ReadOnly#(Bit#(1)) qsfp8_resetl     <- mkOutputSyncFor(controller.qsfp[8].resetl);
-    InputReg#(Bool, 2) qsfp8_hsc_pg     <- mkInputSyncFor(controller.qsfp[8].hsc.pg);
+    InputReg#(Bool, 2) qsfp8_hsc_pg     <- mkInputSyncFor(controller.qsfp[8].power_good);
     InputReg#(Bit#(1), 2) qsfp8_intl    <- mkInputSyncFor(controller.qsfp[8].intl);
     InputReg#(Bit#(1), 2) qsfp8_modprsl <- mkInputSyncFor(controller.qsfp[8].modprsl);
     ReadOnly#(Bool) qsfp8_scl_out_en    <- mkOutputSyncFor(controller.qsfp[8].scl.out_en);
@@ -405,10 +405,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp8_sda_in), qsfp8_sda._read);
 
     // P9
-    ReadOnly#(Bool) qsfp9_hsc_en        <- mkOutputSyncFor(controller.qsfp[9].hsc.en);
+    ReadOnly#(Bool) qsfp9_hsc_en        <- mkOutputSyncFor(controller.qsfp[9].power_en);
     ReadOnly#(Bit#(1)) qsfp9_lpmode     <- mkOutputSyncFor(controller.qsfp[9].lpmode);
     ReadOnly#(Bit#(1)) qsfp9_resetl     <- mkOutputSyncFor(controller.qsfp[9].resetl);
-    InputReg#(Bool, 2) qsfp9_hsc_pg     <- mkInputSyncFor(controller.qsfp[9].hsc.pg);
+    InputReg#(Bool, 2) qsfp9_hsc_pg     <- mkInputSyncFor(controller.qsfp[9].power_good);
     InputReg#(Bit#(1), 2) qsfp9_intl    <- mkInputSyncFor(controller.qsfp[9].intl);
     InputReg#(Bit#(1), 2) qsfp9_modprsl <- mkInputSyncFor(controller.qsfp[9].modprsl);
     ReadOnly#(Bool) qsfp9_scl_out_en    <- mkOutputSyncFor(controller.qsfp[9].scl.out_en);
@@ -423,10 +423,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp9_sda_in), qsfp9_sda._read);
 
     // P10
-    ReadOnly#(Bool) qsfp10_hsc_en       <- mkOutputSyncFor(controller.qsfp[10].hsc.en);
+    ReadOnly#(Bool) qsfp10_hsc_en       <- mkOutputSyncFor(controller.qsfp[10].power_en);
     ReadOnly#(Bit#(1)) qsfp10_lpmode    <- mkOutputSyncFor(controller.qsfp[10].lpmode);
     ReadOnly#(Bit#(1)) qsfp10_resetl    <- mkOutputSyncFor(controller.qsfp[10].resetl);
-    InputReg#(Bool, 2) qsfp10_hsc_pg    <- mkInputSyncFor(controller.qsfp[10].hsc.pg);
+    InputReg#(Bool, 2) qsfp10_hsc_pg    <- mkInputSyncFor(controller.qsfp[10].power_good);
     InputReg#(Bit#(1), 2) qsfp10_intl   <- mkInputSyncFor(controller.qsfp[10].intl);
     InputReg#(Bit#(1), 2) qsfp10_modprsl<- mkInputSyncFor(controller.qsfp[10].modprsl);
     ReadOnly#(Bool) qsfp10_scl_out_en   <- mkOutputSyncFor(controller.qsfp[10].scl.out_en);
@@ -441,10 +441,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp10_sda_in), qsfp10_sda._read);
 
     // P11
-    ReadOnly#(Bool) qsfp11_hsc_en       <- mkOutputSyncFor(controller.qsfp[11].hsc.en);
+    ReadOnly#(Bool) qsfp11_hsc_en       <- mkOutputSyncFor(controller.qsfp[11].power_en);
     ReadOnly#(Bit#(1)) qsfp11_lpmode    <- mkOutputSyncFor(controller.qsfp[11].lpmode);
     ReadOnly#(Bit#(1)) qsfp11_resetl    <- mkOutputSyncFor(controller.qsfp[11].resetl);
-    InputReg#(Bool, 2) qsfp11_hsc_pg    <- mkInputSyncFor(controller.qsfp[11].hsc.pg);
+    InputReg#(Bool, 2) qsfp11_hsc_pg    <- mkInputSyncFor(controller.qsfp[11].power_good);
     InputReg#(Bit#(1), 2) qsfp11_intl   <- mkInputSyncFor(controller.qsfp[11].intl);
     InputReg#(Bit#(1), 2) qsfp11_modprsl<- mkInputSyncFor(controller.qsfp[11].modprsl);
     ReadOnly#(Bool) qsfp11_scl_out_en   <- mkOutputSyncFor(controller.qsfp[11].scl.out_en);
@@ -459,10 +459,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp11_sda_in), qsfp11_sda._read);
 
     // P12
-    ReadOnly#(Bool) qsfp12_hsc_en       <- mkOutputSyncFor(controller.qsfp[12].hsc.en);
+    ReadOnly#(Bool) qsfp12_hsc_en       <- mkOutputSyncFor(controller.qsfp[12].power_en);
     ReadOnly#(Bit#(1)) qsfp12_lpmode    <- mkOutputSyncFor(controller.qsfp[12].lpmode);
     ReadOnly#(Bit#(1)) qsfp12_resetl    <- mkOutputSyncFor(controller.qsfp[12].resetl);
-    InputReg#(Bool, 2) qsfp12_hsc_pg    <- mkInputSyncFor(controller.qsfp[12].hsc.pg);
+    InputReg#(Bool, 2) qsfp12_hsc_pg    <- mkInputSyncFor(controller.qsfp[12].power_good);
     InputReg#(Bit#(1), 2) qsfp12_intl   <- mkInputSyncFor(controller.qsfp[12].intl);
     InputReg#(Bit#(1), 2) qsfp12_modprsl<- mkInputSyncFor(controller.qsfp[12].modprsl);
     ReadOnly#(Bool) qsfp12_scl_out_en   <- mkOutputSyncFor(controller.qsfp[12].scl.out_en);
@@ -477,10 +477,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp12_sda_in), qsfp12_sda._read);
 
     // P13
-    ReadOnly#(Bool) qsfp13_hsc_en       <- mkOutputSyncFor(controller.qsfp[13].hsc.en);
+    ReadOnly#(Bool) qsfp13_hsc_en       <- mkOutputSyncFor(controller.qsfp[13].power_en);
     ReadOnly#(Bit#(1)) qsfp13_lpmode    <- mkOutputSyncFor(controller.qsfp[13].lpmode);
     ReadOnly#(Bit#(1)) qsfp13_resetl    <- mkOutputSyncFor(controller.qsfp[13].resetl);
-    InputReg#(Bool, 2) qsfp13_hsc_pg    <- mkInputSyncFor(controller.qsfp[13].hsc.pg);
+    InputReg#(Bool, 2) qsfp13_hsc_pg    <- mkInputSyncFor(controller.qsfp[13].power_good);
     InputReg#(Bit#(1), 2) qsfp13_intl   <- mkInputSyncFor(controller.qsfp[13].intl);
     InputReg#(Bit#(1), 2) qsfp13_modprsl<- mkInputSyncFor(controller.qsfp[13].modprsl);
     ReadOnly#(Bool) qsfp13_scl_out_en   <- mkOutputSyncFor(controller.qsfp[13].scl.out_en);
@@ -495,10 +495,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp13_sda_in), qsfp13_sda._read);
 
     // P14
-    ReadOnly#(Bool) qsfp14_hsc_en       <- mkOutputSyncFor(controller.qsfp[14].hsc.en);
+    ReadOnly#(Bool) qsfp14_hsc_en       <- mkOutputSyncFor(controller.qsfp[14].power_en);
     ReadOnly#(Bit#(1)) qsfp14_lpmode    <- mkOutputSyncFor(controller.qsfp[14].lpmode);
     ReadOnly#(Bit#(1)) qsfp14_resetl    <- mkOutputSyncFor(controller.qsfp[14].resetl);
-    InputReg#(Bool, 2) qsfp14_hsc_pg    <- mkInputSyncFor(controller.qsfp[14].hsc.pg);
+    InputReg#(Bool, 2) qsfp14_hsc_pg    <- mkInputSyncFor(controller.qsfp[14].power_good);
     InputReg#(Bit#(1), 2) qsfp14_intl   <- mkInputSyncFor(controller.qsfp[14].intl);
     InputReg#(Bit#(1), 2) qsfp14_modprsl<- mkInputSyncFor(controller.qsfp[14].modprsl);
     ReadOnly#(Bool) qsfp14_scl_out_en   <- mkOutputSyncFor(controller.qsfp[14].scl.out_en);
@@ -513,10 +513,10 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     mkConnection(sync(qsfp14_sda_in), qsfp14_sda._read);
 
     // P15
-    ReadOnly#(Bool) qsfp15_hsc_en       <- mkOutputSyncFor(controller.qsfp[15].hsc.en);
+    ReadOnly#(Bool) qsfp15_hsc_en       <- mkOutputSyncFor(controller.qsfp[15].power_en);
     ReadOnly#(Bit#(1)) qsfp15_lpmode    <- mkOutputSyncFor(controller.qsfp[15].lpmode);
     ReadOnly#(Bit#(1)) qsfp15_resetl    <- mkOutputSyncFor(controller.qsfp[15].resetl);
-    InputReg#(Bool, 2) qsfp15_hsc_pg    <- mkInputSyncFor(controller.qsfp[15].hsc.pg);
+    InputReg#(Bool, 2) qsfp15_hsc_pg    <- mkInputSyncFor(controller.qsfp[15].power_good);
     InputReg#(Bit#(1), 2) qsfp15_intl   <- mkInputSyncFor(controller.qsfp[15].intl);
     InputReg#(Bit#(1), 2) qsfp15_modprsl<- mkInputSyncFor(controller.qsfp[15].modprsl);
     ReadOnly#(Bool) qsfp15_scl_out_en   <- mkOutputSyncFor(controller.qsfp[15].scl.out_en);
