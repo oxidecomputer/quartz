@@ -125,10 +125,10 @@ Parameters default_app =
         mirror_link0_rx_as_link1_tx: False,
         system_type: tagged Invalid,
         button_behavior: NoButton,
-        system_power_toggle_cool_down: 1000, // 1s if app tick at 1 kHz.
-        system_power_fault_monitor_enable: False,
+        system_power_toggle_cool_down: 3000, // 3s if app tick at 1 kHz.
+        system_power_fault_monitor_enable: True,
         system_power_fault_monitor_start_delay: 25, // 25ms if app tick at 1kHz.
-        system_power_hotswap_controller_restart: False,
+        system_power_hotswap_controller_restart: True,
         receiver_watchdog_enable: True,
         protocol: defaultValue};
 
