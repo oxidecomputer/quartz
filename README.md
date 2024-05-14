@@ -109,3 +109,14 @@ specifies vunit_lib as such, but your paths may differ.  The vscode extension wi
 home directory file and the workspace root file and merge them.
 
 An example of the home-directory .vhdl_ls.toml can be found [here](docs/README.md)
+
+## VHDL "auto" formatter
+We're using [vhdl-style-guide](https://vhdl-style-guide.readthedocs.io/) to provide
+consistent formatting. Our custom ruleset is in the repo root (vsg_config.json) and we provide a wrapper to run this tool against all of our 1st-party VHDL code.
+You can run `buck2 run //tools/multitool:multitool -- format` to auto-format our code 
+and you can run `buck2 run //tools/multitool:multitool -- format --no-fix` to see a
+report of the formatter without changing the code. This is especially useful when 
+trying to identify a target rule for adjustment or disablement.
+
+Right now, this has to be run manually by a user before code check-in, we'll look
+into editor automation as we stabilize the rules and have time to do so.
