@@ -676,7 +676,8 @@ module mkTarget #(Parameters parameters) (Target);
     method Action set_system_type(SystemType t) if (!isValid(system_type));
         system_type <= tagged Valid t;
 
-        if (parameters.button_behavior == ResetButton) begin
+        // Automatically power on unless the button is power control.
+        if (parameters.button_behavior != PowerButton) begin
             request.wset(SystemPowerOn);
         end
     endmethod
