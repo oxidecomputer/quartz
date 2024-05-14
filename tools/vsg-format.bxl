@@ -1,0 +1,35 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
+# This function queries the build graph and finds rules starting
+# with vhdl ie (vhdl_unit) getting the sources for any of our
+# VHDL files, excluding any files marked as 3rd party
+def vsg_format(ctx):
+    # start with all the buck2 targets from the root
+    target_universe = ctx.target_universe("//...").target_set()
+    # Get the deps
+    targets = ctx.cquery().deps(target_universe)
+    # Filter for vhdl files in the project
+    vhdl_files = ctx.cquery().kind("vhdl.*", targets)
+    only_ours = ctx.cquery().attrfilter("is_third_party", "False", vhdl_files)
+     # Eagerly analyze targets
+    ctx.analysis(only_ours)
+
+    srcs = []
+    for file in only_ours:
+        srcs.extend([ctx.fs.project_rel_path(x) for x in file.sources()])
+   
+    
+    ctx.output.print(srcs)
+
+
+
+vsg_format_gen = bxl_main(
+    impl = vsg_format,
+    cli_args = {
+        # cli args that you want to receive from the command line
+    },
+)

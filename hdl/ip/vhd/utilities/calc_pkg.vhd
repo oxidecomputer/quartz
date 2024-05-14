@@ -4,7 +4,7 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
--- Note: Documentation can be rendered in VSCode using the TerosHDL 
+-- Note: Documentation can be rendered in VSCode using the TerosHDL
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
 library ieee;
@@ -15,6 +15,7 @@ use ieee.numeric_std.all;
 --! parameterization of logic based on generics or other information
 --! known by the time elaboration happens
 package calc_pkg is
+
     --! This function does a log2ceil without using the math.real package
     --! It is generally used for generically sizing vectors based on the
     --! largest value they will contain. This gives us the number of bits
@@ -22,25 +23,41 @@ package calc_pkg is
     --! This is generally not synthesizable but can be used for constant
     --! calculations in synthesizable modules since the math will be
     --! executed at compile time in these cases.
-    function log2ceil(n : natural) return natural;
+    function log2ceil (
+        n : natural
+    ) return natural;
+
     --! This function provides a way of selecting between to naturals based
     --! on a condition. Frequently used during constant definition of parameterized
     --! modules, giving ternary-like selection in constant definition
-    function sel(cond : boolean; if_true: natural; if_false: natural) return natural;
-    function sel(cond : boolean; if_true: string; if_false: string) return string;
+    function sel (
+        cond : boolean;
+        if_true: natural;
+        if_false: natural
+    ) return natural;
 
+    function sel (
+        cond : boolean;
+        if_true: string;
+        if_false: string
+    ) return string;
 
 end package;
 
 package body calc_pkg is
-    function log2ceil(n : natural) return natural is
+
+    function log2ceil (
+        n : natural
+    ) return natural is
+
         variable bits_required : natural := 1;
-        variable count    : natural := 1;
+        variable count         : natural := 1;
+
     begin
         -- simple log calculation algo, see how many times we can
         -- multiply by two before getting larger than our input value
         while (count < n) loop
-            count    := count * 2;
+            count         := count * 2;
             bits_required := bits_required + 1;
         end loop;
         -- Beacuse 0 counts, as long as we have more than 1 bit required,
@@ -55,20 +72,30 @@ package body calc_pkg is
         end if;
     end log2ceil;
 
-    function sel(cond : boolean; if_true: natural; if_false: natural) return natural is
+    function sel (
+        cond : boolean;
+        if_true: natural;
+        if_false: natural
+    ) return natural is
     begin
         if cond then
             return if_true;
         else
             return if_false;
         end if;
-    end function;
-    function sel(cond : boolean; if_true: string; if_false: string) return string is
+    end;
+
+    function sel (
+        cond : boolean;
+        if_true: string;
+        if_false: string
+    ) return string is
     begin
         if cond then
             return if_true;
         else
             return if_false;
         end if;
-    end function;
+    end;
+
 end package body;

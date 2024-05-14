@@ -4,10 +4,9 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
-
 --! Common shared information for arbiters
 package arbiter_pkg is
 
-    type arbiter_mode is (PRIORITY, ROUND_ROBIN);
+    type arbiter_mode is (priority, round_robin);
 
 end package;

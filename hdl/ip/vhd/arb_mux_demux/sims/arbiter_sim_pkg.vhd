@@ -9,46 +9,52 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library vunit_lib;
-context vunit_lib.vunit_context;
-context vunit_lib.com_context;
-
+    context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
 use work.gpio_msg_pkg.all;
 
 package arbiter_sim_pkg is
 
-    procedure set_arb(
-        signal net : inout network_t;
+    procedure set_arb (
+        signal net          : inout network_t;
         variable msg_target :in actor_t;
-        variable data: in std_logic_vector
+        variable data       : in std_logic_vector
     );
-    procedure get_grant(
-        signal net : inout network_t;
+
+    procedure get_grant (
+        signal net          : inout network_t;
         variable msg_target :in actor_t;
-        variable data: out std_logic_vector
+        variable data       : out std_logic_vector
     );
 
 end package;
 
 package body arbiter_sim_pkg is
 
-    procedure set_arb(
-        signal net : inout network_t;
+    procedure set_arb (
+        signal net          : inout network_t;
         variable msg_target :in actor_t;
-        variable data: in std_logic_vector
+        variable data       : in std_logic_vector
     ) is
-        variable send_data: std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0) := (others => '0');
+
+        variable send_data : std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0) := (others => '0');
+
     begin
         send_data(data'range) := data;
         set_gpio(net, msg_target, send_data);
     end;
-    procedure get_grant(
-        signal net : inout network_t;
+
+    procedure get_grant (
+        signal net          : inout network_t;
         variable msg_target :in actor_t;
-        variable data: out std_logic_vector
+        variable data       : out std_logic_vector
     ) is
-        variable get_data: std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0) := (others => '0');
+
+        variable get_data : std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0) := (others => '0');
+
     begin
         get_gpio(net, msg_target, get_data);
         data := get_data(data'range);
     end;
-end package body;   
+
+end package body;

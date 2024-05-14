@@ -9,69 +9,70 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library vunit_lib;
-context vunit_lib.com_context;
-context vunit_lib.vunit_context;
-
+    context vunit_lib.com_context;
+    context vunit_lib.vunit_context;
 use work.memories_sim_pkg.all;
 
 entity memories_tb is
-  generic
-    (runner_cfg : string);
+    generic (
+
+        runner_cfg : string
+    );
 end entity;
 
 architecture tb of memories_tb is
+
 begin
-  th : entity work.memories_th;
 
-  bench : process
-    -- Note: External names are broken in GHDL llvm backends https://github.com/ghdl/ghdl/issues/2610
-    -- So this sim only works in other simulators, like nvc
-    -- reset_a uses the absolute path form (starting with a '.') and
-    -- reset_b uses the relative path form of external naming for example purposes.
-    alias reset_a is << signal th.reset_a : std_logic >> ;
-    alias reset_b is << signal th.reset_b : std_logic >> ;
+    th: entity work.memories_th;
 
-    variable write_data : std_logic_vector(7 downto 0);
-    variable read_data : std_logic_vector(7 downto 0);
-    variable dpr_addr : std_logic_vector(3 downto 0);
+    bench : process
+        -- Note: External names are broken in GHDL llvm backends https://github.com/ghdl/ghdl/issues/2610
+        -- So this sim only works in other simulators, like nvc
+        -- reset_a uses the absolute path form (starting with a '.') and
+        -- reset_b uses the relative path form of external naming for example purposes.
+        alias reset_a is << signal th.reset_a : std_logic >>;
+        alias reset_b is << signal th.reset_b : std_logic >>;
 
+        variable write_data : std_logic_vector(7 downto 0);
+        variable read_data  : std_logic_vector(7 downto 0);
+        variable dpr_addr   : std_logic_vector(3 downto 0);
+    begin
+        -- Always the first thing in the process, set up things for the VUnit test runner
+        test_runner_setup(runner, runner_cfg);
 
-  begin
-    -- Always the first thing in the process, set up things for the VUnit test runner
-    test_runner_setup(runner, runner_cfg);
+        -- Reach into the test harness, which generates and de-asserts reset and hold the
+        -- test cases off until we're out of reset. This runs for every test case
+        wait until reset_b = '0';
+        wait for 500 ns;  -- let the resets propagate and clear in the fifo
 
-    -- Reach into the test harness, which generates and de-asserts reset and hold the
-    -- test cases off until we're out of reset. This runs for every test case
-    wait until reset_b = '0';
-    wait for 500 ns;  -- let the resets propagate and clear in the fifo
+        while test_suite loop
+            if run("basic_dpr_test") then
+                -- load fifo with data
+                write_data := X"AA";
+                dpr_addr   := X"0";
+                write_dpr(net, dpr_addr, write_data);
+                write_data := X"55";
+                dpr_addr   := X"1";
+                write_dpr(net, dpr_addr, write_data);
+                wait for 1 us;
+                read_dpr(net, dpr_addr, read_data);
+                -- check read-side data
+                check_equal(read_data, write_data, "Mismatch detected");
 
-    
-    while test_suite loop
-      if run("basic_dpr_test") then
-         -- load fifo with data
-         write_data := X"AA";
-         dpr_addr := X"0";
-         write_dpr(net, dpr_addr, write_data);
-         write_data := X"55";
-         dpr_addr := X"1";
-         write_dpr(net, dpr_addr, write_data);
-         wait for 1 us;
-         read_dpr(net, dpr_addr, read_data);
-         --check read-side data
-         check_equal(read_data, write_data, "Mismatch detected");
-         
-         write_data := X"AA";
-         dpr_addr := X"0";
-         read_dpr(net, dpr_addr, read_data);
-         --check read-side data
-         check_equal(read_data, write_data, "Mismatch detected");
-      end if;
-    end loop;
-    wait for 1 us;
-    test_runner_cleanup(runner);
-    wait;
-  end process;
+                write_data := X"AA";
+                dpr_addr   := X"0";
+                read_dpr(net, dpr_addr, read_data);
+                -- check read-side data
+                check_equal(read_data, write_data, "Mismatch detected");
+            end if;
+        end loop;
+        wait for 1 us;
+        test_runner_cleanup(runner);
+        wait;
+    end process;
 
     -- Example total test timeout dog
     test_runner_watchdog(runner, 10 ms);
+
 end tb;

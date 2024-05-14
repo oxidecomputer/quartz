@@ -4,7 +4,7 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
--- Note: Documentation can be rendered in VSCode using the TerosHDL 
+-- Note: Documentation can be rendered in VSCode using the TerosHDL
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
 library ieee;
@@ -16,47 +16,94 @@ use ieee.math_real.all;
 --! the math locally, often used for generics or constants. This uses math_real, but
 --! can be used for constant determined at compile/elab time.
 package time_pkg is
+
     --! Determine clocks required at `clk_period_ns` to cross `desired_ms` time (in miliseconds)
-    function calc_ms(desired_ms : positive; clk_period_ns : positive; return_size : positive) return unsigned;
+    function calc_ms (
+        desired_ms : positive;
+        clk_period_ns : positive;
+        return_size : positive
+    ) return unsigned;
+
     --! Determine clocks required at `clk_period_ns` to cross `desired_us` time (in microseconds)
-    function calc_us(desired_us : positive; clk_period_ns : positive; return_size : positive) return unsigned;
+    function calc_us (
+        desired_us : positive;
+        clk_period_ns : positive;
+        return_size : positive
+    ) return unsigned;
+
     --! Determine clocks required at `clk_period_ns` to cross `desired_ns` time (in nanoseconds)
-    function calc_ns(desired_ns : positive; clk_period_ns : positive; return_size : positive) return unsigned;
+    function calc_ns (
+        desired_ns : positive;
+        clk_period_ns : positive;
+        return_size : positive
+    ) return unsigned;
 
     -- Not intended to be part of the public api, used by above functions
-    function private_internal_calc(desired: positive; clk_per_ns: positive; return_size: positive; sacle_factor: positive) return unsigned;
+    function private_internal_calc (
+        desired: positive;
+        clk_per_ns: positive;
+        return_size: positive;
+        sacle_factor: positive
+    ) return unsigned;
+
 end package;
 
 package body time_pkg is
+
     --------------------------------------------------------------------------------
     -- calc_Xx functions. Figure out how many clock periods it takes to represent
     -- the requested number in human-friendly units
-    function calc_us(desired_us : positive; clk_period_ns : positive; return_size : positive) return unsigned is
-        constant scale_factor: integer := 10**3; --(us to ns = 10^3)
+    function calc_us (
+        desired_us : positive;
+        clk_period_ns : positive;
+        return_size : positive
+    ) return unsigned is
+
+        constant scale_factor : integer := 10 ** 3; -- (us to ns = 10^3)
+
     begin
         return private_internal_calc(desired_us, clk_period_ns, return_size, scale_factor);
-    end function;
-   
-    function calc_ms(desired_ms : positive; clk_period_ns : positive; return_size : positive) return unsigned is
-        constant scale_factor: integer := 10**6; --(ms to ns = 10^6)
+    end;
+
+    function calc_ms (
+        desired_ms : positive;
+        clk_period_ns : positive;
+        return_size : positive
+    ) return unsigned is
+
+        constant scale_factor : integer := 10 ** 6; -- (ms to ns = 10^6)
+
     begin
         return private_internal_calc(desired_ms, clk_period_ns, return_size, scale_factor);
-    end function;
+    end;
 
+    function calc_ns (
+        desired_ns : positive;
+        clk_period_ns : positive;
+        return_size : positive
+    ) return unsigned is
 
-    function calc_ns(desired_ns : positive; clk_period_ns : positive; return_size : positive) return unsigned is
-        constant scale_factor: integer := 1; --(ns to ns = 1)
+        constant scale_factor : integer := 1; -- (ns to ns = 1)
+
     begin
         return private_internal_calc(desired_ns, clk_period_ns, return_size, scale_factor);
-    end function;
-    
+    end;
+
     -- Private helper function, not intended to be part of the public api, used by above functions
-    function private_internal_calc(desired: positive; clk_per_ns: positive; return_size: positive; sacle_factor: positive) return unsigned is
+    function private_internal_calc (
+        desired: positive;
+        clk_per_ns: positive;
+        return_size: positive;
+        sacle_factor: positive
+    ) return unsigned is
+
         variable ret_num : unsigned(return_size - 1 downto 0);
+
     begin
         -- Not all values work out evenly since we're dividing, so we round up the value as needed
-        -- to be greater than or equal to the requested value 
+        -- to be greater than or equal to the requested value
         ret_num := to_unsigned(natural(ceil(real(desired * sacle_factor) / real(clk_per_ns))), ret_num'length);
         return ret_num;
-    end function;
+    end;
+
 end package body;
