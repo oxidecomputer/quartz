@@ -16,10 +16,8 @@ def find_project_root():
     drive_root = os.path.splitdrive(os.path.abspath(current_path))[0] + os.sep
     while True:
         if Path(current_path) == Path(current_path).root:
-            #raise NoRootException('No ".buckroot" found for project')
             break
-
-        new_path, tail = os.path.split(current_path)
+        new_path, _ = os.path.split(current_path)
         root_path = Path(current_path) / ".buckroot"
         if root_path.exists():
             break

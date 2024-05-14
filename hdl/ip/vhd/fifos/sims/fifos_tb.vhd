@@ -5,8 +5,8 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library vunit_lib;
     context vunit_lib.com_context;
@@ -15,7 +15,6 @@ use work.fifos_sim_pkg.all;
 
 entity fifos_tb is
     generic (
-
         runner_cfg : string
     );
 end entity;

@@ -8,8 +8,8 @@
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 --! This is a module that synchronizes a bus (multiple bits) between
 --! two clock domains. This is implemented in flipflops only, and
@@ -71,7 +71,7 @@ begin
     -- Send a handshake over to the b domain when we latch the bus_a
     -- in the a domain.
     handshake_a_to_b: entity work.tacd(rtl)
-        port map(
+        port map (
             clk_launch      => clk_launch,
             pulse_in_launch => write_a_in_masked,
             clk_latch       => clk_latch,
@@ -82,7 +82,7 @@ begin
     -- bus in the b domain
     reverse_handshake_b_to_a: entity work.tacd
         port
-    map(
+    map (
             clk_launch      => clk_latch,
             pulse_in_launch => handshake_from_launch,
             clk_latch       => clk_launch,

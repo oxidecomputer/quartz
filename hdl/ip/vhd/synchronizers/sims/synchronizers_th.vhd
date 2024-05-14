@@ -5,8 +5,8 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity synchronizers_th is
 end entity;
@@ -42,10 +42,10 @@ begin
     -- Bus across clock domains
     dut_bacd_inst: entity work.bacd
         generic
-    map(
+    map (
             always_valid_in_b => false
         )
-        port map(
+        port map (
             reset_launch    => reset_a,
             clk_launch      => clk_a,
             write_launch    => bacd1_write,
@@ -58,12 +58,12 @@ begin
         );
 
     sim_gpio_inst: entity work.sim_gpio
-        generic map(
+        generic map (
             out_num_bits => 1,
             in_num_bits  => 1,
             actor_name   => "tacd_stim"
         )
-        port map(
+        port map (
             clk => clk_a,
             -- note that this is *technically* a cdc issue
             -- but this is in simulation and we're messing with
@@ -75,7 +75,7 @@ begin
 
     tacd_inst: entity work.tacd
         port
-    map(
+    map (
             clk_launch      => clk_a,
             pulse_in_launch => sim_gpio_out,
             clk_latch       => clk_b,

@@ -3,8 +3,8 @@
 -- File: simple_dual_two_clocks.vhd
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.calc_pkg.log2ceil;
 
 --! Simple dual port ram supporting dual clocks with symmetric read and

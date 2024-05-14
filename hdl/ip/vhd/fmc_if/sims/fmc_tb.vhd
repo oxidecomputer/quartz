@@ -5,9 +5,9 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
-    use ieee.numeric_std_unsigned.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 library vunit_lib;
     context vunit_lib.com_context;

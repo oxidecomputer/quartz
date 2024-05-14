@@ -1,9 +1,9 @@
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library xpm;
-    use xpm.vcomponents.all;
+use xpm.vcomponents.all;
 use work.calc_pkg.all;
 
 --! This block wraps a Xilinx XPM macro with Oxide's desired
@@ -72,7 +72,7 @@ begin
 
     xpm_fifo_async_inst: component xpm_fifo_async
         generic
-  map(
+  map (
             cascade_height      => 0,
             cdc_sync_stages     => CDC_STAGES,
             dout_reset_value    => "0",
@@ -92,7 +92,7 @@ begin
             write_data_width    => DATA_WIDTH,
             wr_data_count_width => log2ceil(FIFO_WRITE_DEPTH) + 1
         )
-        port map(
+        port map (
             -- 1-bit output: Almost Empty : When asserted, this signal indicates that
             -- only one more read can be performed before the FIFO goes to empty.
             almost_empty => open,

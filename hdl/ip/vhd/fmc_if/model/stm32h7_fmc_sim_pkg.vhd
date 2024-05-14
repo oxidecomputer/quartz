@@ -8,13 +8,13 @@
 --! figures 115 and 116
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
-    use vunit_lib.bus_master_pkg.all;
+use vunit_lib.bus_master_pkg.all;
 
 package stm32h7_fmc_sim_pkg is
 

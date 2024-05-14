@@ -17,13 +17,12 @@
 --! you a vector with the lowest (right-most) bit of <number> set
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.arbiter_pkg.arbiter_mode;
 
 entity arbiter is
     generic (
-
         --! Using arbiter_pkg.arbiter_mode enum, choose
         --! arbiter type
         mode : arbiter_mode

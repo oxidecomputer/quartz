@@ -5,8 +5,8 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 package stm32h7_fmc_target_pkg is
 

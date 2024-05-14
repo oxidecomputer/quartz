@@ -5,8 +5,8 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity fifos_th is
 end entity;
@@ -49,13 +49,12 @@ begin
     --------------------------------------------------------------------------------
     -- Simple show-ahead fifo for testing
     show_ahead_dcfifo_dut: entity work.dcfifo_xpm
-        generic map(
-
+        generic map (
             fifo_write_depth => 16,
             data_width       => 8,
             showahead_mode   => true
         )
-        port map(
+        port map (
             -- Write interface
             wclk => clk_a,
             -- Reset interface, sync to write clock domain
@@ -73,24 +72,24 @@ begin
         );
 
     write_side_gpios: entity work.sim_gpio
-        generic map(
+        generic map (
             out_num_bits => 9,
             in_num_bits  => 6,
             actor_name   => "write_side"
         )
-        port map(
+        port map (
             clk      => clk_a,
             gpio_in  => write_side_reads,
             gpio_out => write_side_control
         );
 
     read_side_gpios: entity work.sim_gpio
-        generic map(
+        generic map (
             out_num_bits => 1,
             in_num_bits  => 14,
             actor_name   => "read_side"
         )
-        port map(
+        port map (
             clk         => clk_b,
             gpio_in     => read_side_reads,
             gpio_out(0) => read_req

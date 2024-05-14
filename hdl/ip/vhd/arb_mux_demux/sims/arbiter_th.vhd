@@ -5,8 +5,8 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.arbiter_pkg.arbiter_mode;
 
 entity arbiter_th is
@@ -31,10 +31,10 @@ begin
     reset <= '0' after 200 ns;
 
     rr_arb_dut: entity work.arbiter
-        generic map(
+        generic map (
             mode => ROUND_ROBIN
         )
-        port map(
+        port map (
             clk      => clk,
             reset    => reset,
             requests => rr_requests,
@@ -42,22 +42,22 @@ begin
         );
 
     rr_arb_stim: entity work.sim_gpio
-        generic map(
+        generic map (
             out_num_bits => 3,
             in_num_bits  => 3,
             actor_name   => "rr_arb_ctrl"
         )
-        port map(
+        port map (
             clk      => clk,
             gpio_in  => rr_grants,
             gpio_out => rr_requests
         );
 
     pri_arb_dut: entity work.arbiter
-        generic map(
+        generic map (
             mode => PRIORITY
         )
-        port map(
+        port map (
             clk      => clk,
             reset    => reset,
             requests => pri_requests,
@@ -65,12 +65,12 @@ begin
         );
 
     pri_arb_stim: entity work.sim_gpio
-        generic map(
+        generic map (
             out_num_bits => 3,
             in_num_bits  => 3,
             actor_name   => "pri_arb_ctrl"
         )
-        port map(
+        port map (
             clk      => clk,
             gpio_in  => pri_grants,
             gpio_out => pri_requests

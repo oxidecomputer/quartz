@@ -11,13 +11,13 @@
 --! https://drive.google.com/file/d/1wPaZAHS3-0HdMkXOC8tvGYgOPOrM0qRQ/view?usp=drive_link
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
-    use vunit_lib.bus_master_pkg.all;
+use vunit_lib.bus_master_pkg.all;
 
 entity stm32h7_fmc_model is
     generic (

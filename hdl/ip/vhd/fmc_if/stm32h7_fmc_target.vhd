@@ -10,8 +10,8 @@
 --! figures 115 and 116
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.stm32h7_fmc_target_pkg.all;
 
 entity stm32h7_fmc_target is
@@ -261,13 +261,13 @@ begin
 
     -- transaction fifo from FMC to AXI interface
     txn_dcfifo_dut: entity work.dcfifo_xpm
-        generic map(
+        generic map (
 
             fifo_write_depth => 16,
             data_width       => 32,
             showahead_mode   => true
         )
-        port map(
+        port map (
             -- Write interface ()
             wclk => fmc_clk,
             -- Reset interface, sync to write clock domain
@@ -286,13 +286,13 @@ begin
 
     -- Read-data path from AXI to FMC interface
     rdata_dcfifo_dut: entity work.dcfifo_xpm
-        generic map(
+        generic map (
 
             fifo_write_depth => 16,
             data_width       => 32,
             showahead_mode   => true
         )
-        port map(
+        port map (
             -- Write interface ()
             wclk => aclk,
             -- Reset interface, sync to write clock domain
@@ -311,13 +311,13 @@ begin
 
     -- Write-data path from FMC to AXI interface
     wdata_dcfifo_dut: entity work.dcfifo_xpm
-        generic map(
+        generic map (
 
             fifo_write_depth => 16,
             data_width       => 32,
             showahead_mode   => true
         )
-        port map(
+        port map (
             -- Write interface ()
             wclk => fmc_clk,
             -- Reset interface, sync to write clock domain

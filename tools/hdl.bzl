@@ -51,12 +51,6 @@ GenVHDLInfo = provider(
 
 def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     providers = []
-    # We have 2 classifications of HDL files that we care about in:
-    # dependency analysis
-    # We can have "models" that are simulation only. Take the XPM fifos
-    # for example. We'd need to strip the models out of the dep tree for
-    # synthesis, but leave them in the tree for 
-
     # Add specified deps to a TSet for these files
     # These are normal vhdl files as dependencies (ie they have an HDLFileInfo provider)
     deps_tset = [x[HDLFileInfo].set_all for x in ctx.attrs.deps if x.get(HDLFileInfo)]

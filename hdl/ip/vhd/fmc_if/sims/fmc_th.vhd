@@ -5,8 +5,8 @@
 -- Copyright 2024 Oxide Computer Company
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.stm32h7_fmc_sim_pkg.all;
 use work.fmc_tb_pkg.all;
 
@@ -62,10 +62,10 @@ begin
 
     -- sim infrastructure from VUnit
     axi_read_sim_infra: entity vunit_lib.axi_read_slave
-        generic map(
+        generic map (
             axi_slave => axi_read_target
         )
-        port map(
+        port map (
             aclk => clk,
 
             arvalid => arvalid,
@@ -85,10 +85,10 @@ begin
         );
 
     axi_write_sim_infra: entity vunit_lib.axi_write_slave
-        generic map(
+        generic map (
             axi_slave => axi_write_target
         )
-        port map(
+        port map (
             aclk    => clk,
             awvalid => awvalid,
             awready => awready,
@@ -111,10 +111,10 @@ begin
     -- Our STM32 fmc model
 
     model: entity work.stm32h7_fmc_model
-        generic map(
+        generic map (
             bus_handle => SP_BUS_HANDLE
         )
-        port map(
+        port map (
             clk   => clk,
             a     => a,
             ad    => ad,
@@ -126,7 +126,7 @@ begin
         );
 
     dut: entity work.stm32h7_fmc_target
-        port map(
+        port map (
             -- Interface to the STM32H7's FMC periph
             --! Write full flag, sync to write clock domain
             chip_reset => reset,

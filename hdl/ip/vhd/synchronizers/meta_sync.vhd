@@ -8,8 +8,8 @@
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 -- Block Description
 --! A basic metastability and synchronization block

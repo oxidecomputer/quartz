@@ -8,9 +8,9 @@
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
-    use ieee.math_real.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
 
 --! Helper functions for turning time values into counter ticks without having to do
 --! the math locally, often used for generics or constants. This uses math_real, but

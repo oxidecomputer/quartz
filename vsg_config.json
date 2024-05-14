@@ -715,7 +715,7 @@
         "keyword": {
           "after": "current",
           "token": "current",
-          "token_after_library_clause": "+1",
+          "token_after_library_clause": "current",
           "token_if_no_matching_library_clause": "current"
         }
       },
@@ -3504,7 +3504,7 @@
     "generic_map_006": {
       "disable": false,
       "fixable": true,
-      "number_of_spaces": 0,
+      "number_of_spaces": 1,
       "phase": 2,
       "severity": "Error"
     },

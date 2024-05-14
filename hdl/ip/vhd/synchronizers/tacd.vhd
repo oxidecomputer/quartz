@@ -8,8 +8,8 @@
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
 library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 --! This is a module that synchronizes a rising edge between
 --! two clock domains. This is implemented with flipflops, and
