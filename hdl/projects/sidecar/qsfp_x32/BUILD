@@ -56,6 +56,7 @@ bluespec_library('QsfpModuleController',
         '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv/I2C:I2CCore',
         '//hdl/ip/bsv:Bidirection',
+        '//hdl/ip/bsv:Debouncer',
     ])
 
 
@@ -153,6 +154,9 @@ bluesim_tests('QsfpModuleControllerTests',
     env = '//bluesim_default',
     suite = 'QSFPModule/test/QsfpModuleControllerTests.bsv',
     modules = [
+        'mkIntLTest',
+        'mkModPrsLTest',
+        'mkNoLPModeWhenModuleIsUnpoweredTest',
         'mkNoModuleTest',
         'mkNoPowerTest',
         'mkRemovePowerEnableTest',

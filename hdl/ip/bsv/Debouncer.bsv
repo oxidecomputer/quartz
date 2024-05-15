@@ -109,6 +109,22 @@ instance Connectable#(PulseWire, Debouncer#(assert_duration,
     endmodule
 endinstance
 
+// Implementing connecting a Wire#(Bool) to a Debouncer as a convenience.
+instance Connectable#(Wire#(Bool), Debouncer#(assert_duration,
+                                            deassert_duration,
+                                            one_bit_type));
+    module mkConnection#(Wire#(Bool) w,
+                        Debouncer#(assert_duration,
+                                    deassert_duration,
+                                    one_bit_type) debouncer)
+                        (Empty);
+        (* fire_when_enabled *)
+        rule do_send (w);
+            debouncer.send();
+        endrule
+    endmodule
+endinstance
+
 // mkDebouncerTest
 //
 // This is a basic test suite which validates that the output does not follow
