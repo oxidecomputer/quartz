@@ -59,4 +59,15 @@ module mkSidecarRevBTargetWithPowerButton (IgnitionTargetTop);
     return asIgnitionTargetTop(_top);
 endmodule
 
+(* default_clock_osc = "clk_50mhz", default_reset = "design_reset_l" *)
+module mkSidecarRevBTarget (IgnitionTargetTop);
+    Parameters parameters = default_app;
+    parameters.invert_leds = True;
+    parameters.system_power_fault_monitor_enable = False;
+
+    (* hide *) IgnitionTargetTopWithDebug _top <-
+        mkIgnitionTargetIOAndResetWrapper(parameters);
+    return asIgnitionTargetTop(_top);
+endmodule
+
 endpackage
