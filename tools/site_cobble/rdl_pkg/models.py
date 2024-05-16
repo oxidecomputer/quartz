@@ -5,7 +5,7 @@
 # Copyright 2024 Oxide Computer Company
 
 import copy
-from typing import List
+from typing import List, Tuple
 
 from systemrdl import RegNode, FieldNode, MemNode
 
@@ -51,6 +51,49 @@ class BaseModel:
             if len(self.prefix) > 1
             else self.node.get_path_segment()
         )
+    
+    @property
+    def fields_by_bytes(self) -> List[List[Tuple[Tuple[int,int], "Field"]]]:
+        view_files_in_bytes = []
+        for byte_high_index in range(0, 4):
+            high = self.width - 1 - 8 * byte_high_index
+            low = self.width -1 - 8 * byte_high_index - 7
+            view_files_in_bytes.append(((high, low), self.fields_between_bits(high, low)))
+        return view_files_in_bytes
+
+    
+    def fields_between_bits(self, high: int, low: int) -> List["Field"]:
+        # loop fields throwing them away until we find one or more that is/are in our desired bit-range
+        # return a view of that field, possibly limited by our ranges
+        view_fields = []
+        for field in self.fields:
+            # Field is totally contained within given bit constraints
+            if field.high <= high and field.low >= low:
+                view_fields.append(field)
+            # Sliced high portion, so high is in range
+            # but the field's low is out of range
+            elif (field.high <= high and field.high >= low):
+                  new_field = copy.deepcopy(field)
+                  # Re-write low to this new value
+                  new_field.low = low;
+                  view_fields.append(new_field)
+            # Sliced low portion, so low is in range
+            # but the field's high is out of range
+            elif (field.low <= high and field.low > low):
+                new_field = copy.deepcopy(field)
+                new_field.high = high
+                view_fields.append(new_field)
+            # Field is larger than constraints but contains
+            # the whole constraint range so we need to chop
+            # high and low sides of the field
+            elif (high >= field.low and low <= field.high):
+                new_field = copy.deepcopy(field)
+                new_field.high = high
+                new_field.low = low
+                view_fields.append(new_field)
+        return view_fields
+
+
 
     def get_property(self, *args, **kwargs):
         """
@@ -108,9 +151,9 @@ class Register(BaseModel):
         a gaps variable, and the gaps and fields are concatenated and
         re-sorted by low index again at the end.
         """
-        if self.width != 8:
+        if self.width not in [8, 16, 32]:
             raise UnsupportedRegisterSizeError(
-                f"We only support 8bit registers at this time. Register {self.name} has a width of {self.width}"
+                f"We only support 8/16/32bit registers at this time. Register {self.name} has a width of {self.width}"
             )
 
         # sort fields descending by field.low bit
@@ -159,6 +202,12 @@ class BaseField:
             return str(self.low)
         else:
             return f"{self.high} downto {self.low}"
+    
+    def text_bitslice_str(self) -> str:
+        if self.high == self.low:
+            return str(self.low)
+        else:
+            return f"{self.high}..{self.low}"
 
     @property
     def width(self):
@@ -191,6 +240,9 @@ class BaseField:
 
     def has_encode(self):
         return False
+    
+    def __str__(self):
+        return f'{type(self)} ({self.name}): high: {self.high} low: {self.low}'
 
 
 class Field(BaseField):
