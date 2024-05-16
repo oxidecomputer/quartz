@@ -231,9 +231,6 @@
     </style>
     <div id="header">
         <h1>{{map_name}}</h1>
-        {# <h3>Base:  0xc8030000</h3> #}
-        {# <h3>IRQ Bit: 2</h3> #}
-        {# <h3>IRQ Base: 0xc0000010</h3> #}
         <!--$optional_header -->
     </div>
     <table class="register">
@@ -241,6 +238,7 @@
         <td class="RegisterName" colspan="3*">Register Name</td>
         <td class="Offset" colspan="2*">Byte Offset</td>
         <td class="Slice" colspan="1*">Slice</td>
+        {% if registers[0].width == 8 %}
         <td class="Bitfield" colspan="2*">Bit<br>7</td>
         <td class="Bitfield" colspan="2*">Bit<br>6</td>
         <td class="Bitfield" colspan="2*">Bit<br>5</td>
@@ -249,15 +247,25 @@
         <td class="Bitfield" colspan="2*">Bit<br>2</td>
         <td class="Bitfield" colspan="2*">Bit<br>1</td>
         <td class="Bitfield" colspan="2*">Bit<br>0</td>
-
-        {# <td class="Bitfield" colspan="2*">Bit<br>31/23/15/7</td> #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>30/22/14/6</td> #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>29/21/13/5</td> #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>28/20/12/4</td> #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>27/19/11/3</td> #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>26/18/10/2</td> #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>25/17/9/1</td>  #}
-        {# <td class="Bitfield" colspan="2*">Bit<br>24/16/8/0</td>  #}
+        {% elif registers[0].width == 16 %}
+        <td class="Bitfield" colspan="2*">Bit<br>15/7</td>
+        <td class="Bitfield" colspan="2*">Bit<br>14/6</td>
+        <td class="Bitfield" colspan="2*">Bit<br>13/5</td>
+        <td class="Bitfield" colspan="2*">Bit<br>12/4</td>
+        <td class="Bitfield" colspan="2*">Bit<br>11/3</td>
+        <td class="Bitfield" colspan="2*">Bit<br>10/2</td>
+        <td class="Bitfield" colspan="2*">Bit<br>9/1</td> 
+        <td class="Bitfield" colspan="2*">Bit<br>8/0</td> 
+        {% elif registers[0].width == 32 %}
+        <td class="Bitfield" colspan="2*">Bit<br>31/23/15/7</td>
+        <td class="Bitfield" colspan="2*">Bit<br>30/22/14/6</td>
+        <td class="Bitfield" colspan="2*">Bit<br>29/21/13/5</td>
+        <td class="Bitfield" colspan="2*">Bit<br>28/20/12/4</td>
+        <td class="Bitfield" colspan="2*">Bit<br>27/19/11/3</td>
+        <td class="Bitfield" colspan="2*">Bit<br>26/18/10/2</td>
+        <td class="Bitfield" colspan="2*">Bit<br>25/17/9/1</td> 
+        <td class="Bitfield" colspan="2*">Bit<br>24/16/8/0</td> 
+        {% endif %}
     </tr>
 
     {# Loop over registers #}
@@ -284,13 +292,14 @@
         <td class="Description" colspan="16">&nbsp;{{register.get_property("name")}}</td>
         {% endif %}
     </tr>
-    {# Loop over bytes/Fields #}
-    <!-- Loop over bytes in register !-->
-    <tr class="cat{{loop.index0}}" style="display: none">
+    {# Loop over fields in bytes#}
+    {% set outer_loop = loop %}
+    {% for slice, byte_view in register.fields_by_bytes %}
+    <tr class="cat{{outer_loop.index0}}" style="display: none">
         <td class="RegisterName" colspan="3*"></td>
         <td class="Offset" colspan="2*"></td>
-        <td class="bitdef" colspan="1*">&nbsp;7..0</td>
-            {% for field in register.fields %}
+        <td class="bitdef" colspan="1*">&nbsp;{{slice[0]}}..{{slice[1]}}</td>
+            {% for field in byte_view %}
                 {% if field.name == "-" %}
                 <td class="rsvdspandef" colspan="{{2 * field.width}}*">RSVD</td>
                 {% else %}
@@ -298,12 +307,7 @@
                 {% endif %}
             {% endfor %}
     </tr>
-    {# <tr class="cat{{loop.index0}}" style="display: none"> #}
-    {#     <td class="RegisterName" colspan="3*"></td> #}
-    {#     <td class="Offset" colspan="2*"></td> #}
-    {#     <td class="bitdef" colspan="1*">&nbsp;23..16</td> #}
-    {#             <td class="rsvdspandef" colspan="16*">RSVD</td>#}
-    {# </tr> #}
+    {% endfor %}
     {# This is the header for the expanded section #}
     <tr class="cat{{loop.index0}}" style="display: none">
         <td class="Blank" colspan="3*"></td>
@@ -319,7 +323,7 @@
     <tr class="cat{{outer_loop.index0}}" style="display: none">
         <td class="Blank" colspan="3*"></td>
         <td class="FieldDesc" colspan="2*">{{field.name}}</td>
-        <td class="FieldDesc" colspan="1*">{{field.bsv_bitslice_str() }}</td>
+        <td class="FieldDesc" colspan="1*">{{field.text_bitslice_str() }}</td>
         <td class="FieldDesc" colspan="2*">{{field.get_property('sw').name}}</td>
         <td class="FieldDesc" colspan="2*">{{field.reset_str}}</td>
         <td class="FieldDesc" colspan="14">{{field.desc}}
