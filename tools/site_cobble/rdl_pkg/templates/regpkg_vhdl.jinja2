@@ -158,7 +158,7 @@ package body {{module_name}} is
     begin
       {% for field in register.packed_fields %}
         {% if field.has_encode() %}
-        ret_rec.{{field.name}}:= encode(slv);
+        ret_rec.{{field.name}}:= encode(slv({{field.vhdl_bitslice_str()}}));
         {% elif field.width > 1 %}
         ret_rec.{{field.name}}:= unsigned(slv({{field.vhdl_bitslice_str()}}));
         {% else %}
