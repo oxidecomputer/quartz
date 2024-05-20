@@ -8,7 +8,17 @@ import argparse
 import json
 import subprocess
 import os
+import sys
 from pathlib import Path
+
+try:
+    import tomli_w
+except:
+    print("Error attempting to import tomli_w module."
+          " Check tools/requirements.txt and install deps as necessary"
+          " `pip install -r tools/requirements.txt"
+    )
+    sys.exit(1)
 
 # Brute-force finding the project's buck root folder
 def find_project_root():
@@ -49,14 +59,50 @@ def vhdl_format(args):
         encoding="utf-8"
     )
 
+
+def vhdl_ls_toml_gen(args):
+    root = find_project_root()
+    vhdlls_toml = root / "vhdl_ls.toml"
+    # Call buck2 and get the list of vhdl files that we own for
+    # formatting (ie no 3rd party things)
+    buck_bxl = subprocess.run(
+        ["buck2", "bxl", "//tools/vhdl-ls.bxl:vhdl_ls_toml_gen"], 
+        encoding="utf-8", 
+        check=True, 
+        capture_output=True
+    )
+    vhdl_lsp_dict = json.loads(buck_bxl.stdout)
+    if not args.print:
+        # dump toml
+        with open(vhdlls_toml, "wb") as f:
+            tomli_w.dump(vhdl_lsp_dict, f)
+    else:
+        print(json.dumps(vhdl_lsp_dict, indent=4))
+        
+
 # create the top-level parser
-parser = argparse.ArgumentParser(prog='quartz')
+parser = argparse.ArgumentParser(prog='multitool')
 subparsers = parser.add_subparsers(help='sub-command help')
 
 # create the parser for the "format" command
 format_parser = subparsers.add_parser('format', help='format help')
 format_parser.set_defaults(func=vhdl_format)
-format_parser.add_argument("--no-fix", action="store_true", default=False)
+format_parser.add_argument(
+    "--no-fix", 
+    action="store_true", 
+    default=False,
+    help="Don't fix files, just print erros and warnings to stdout"
+)
+
+# create the parser for the "lsp-toml" command
+format_parser = subparsers.add_parser('lsp-toml', help='format help')
+format_parser.set_defaults(func=vhdl_ls_toml_gen)
+format_parser.add_argument(
+    "--print", 
+    action="store_true", 
+    default=False,
+    help="Don't write the file, just pretty-print the json representation"
+)
 
 args = parser.parse_args()
 args.func(args)

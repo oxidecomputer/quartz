@@ -16,7 +16,23 @@ def vhdl_toml_gen(ctx):
     targets = ctx.cquery().deps(target_universe)
     # Filter for vhdl files in the project
     vhdl_files = ctx.cquery().kind("vhdl.*", targets)
-     # Eagerly analyze targets
+    # Unclear if this is the correct way to go about this from
+    # a buck perspective, but we need to get the generated
+    # vhdl packages from rdl stuff to make our editor function
+    # well. So we're going to get all the RDL targets, build them,
+    # ensure the artifact locally and add that to the list.
+    # Right now, this assumes the default work library
+    # Filter for rdl files in the project
+    rdl_files = ctx.cquery().kind("rdl.*", targets)
+    gen_vhdl_from_rdl = []
+    for target, value in ctx.build(rdl_files).items():
+         for art in value.artifacts():
+             if art.extension == ".vhd":
+                # Locally materialize this output since we want it local
+                a = ctx.output.ensure(art)
+                gen_vhdl_from_rdl.append(a)
+    
+    # Eagerly analyze vhdl build tree targets
     ctx.analysis(vhdl_files)
     
     # We're going to mutate this dict below to
@@ -51,6 +67,11 @@ def vhdl_toml_gen(ctx):
         files.extend(srcs)
         files_by_library_name.update({"{}".format(lib_name): {"files": files}})
     
+    # Now load the vhdl from RDL files into worklib
+    worklib_files = files_by_library_name.get("worklib", {"files": []}).get("files")
+    worklib_files.extend(gen_vhdl_from_rdl)
+
+
     # VHDL-LS wants a specific structure that was annoying to work with above so
     # we add the "libraries" layer here
     # BXL can only generate json natively, but we've matched the expected structure
