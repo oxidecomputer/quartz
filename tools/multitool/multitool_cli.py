@@ -14,7 +14,10 @@ from pathlib import Path
 try:
     import tomli_w
 except:
-    print("Error attempting to import tomli_w module. Try `pip install tomli-w`?")
+    print("Error attempting to import tomli_w module."
+          " Check tools/requirements.txt and install deps as necessary"
+          " `pip install -r tools/requirements.txt"
+    )
     sys.exit(1)
 
 # Brute-force finding the project's buck root folder
