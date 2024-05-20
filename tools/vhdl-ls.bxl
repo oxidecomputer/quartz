@@ -4,9 +4,6 @@
 #
 # Copyright 2024 Oxide Computer Company
 
-load(":hdl.bzl", "GenVHDLInfo")
-
-
 # This function queries the build graph and finds rules starting
 # with vhdl ie (vhdl_unit) getting the sources and libraries
 # which are passed to a tool that generates a .toml file for

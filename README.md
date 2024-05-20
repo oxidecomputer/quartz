@@ -100,6 +100,10 @@ on https://crates.io/crates/convfmt tool to convert the stdout json to a toml fi
 Using bxl, the following command queries the build graph for VHDL files, outputs a
 json blob to stdout which is then converted into vhdl_ls.toml.  Ideally we'd have an
 editor hook do this and have it be a little more standalone.
+you can now do the following:
+`buck2 run //tools/multitool:multitool -- lsp-toml`
+
+which is a pure-python equivalent to doing this:
 
 `buck2 bxl //tools/vhdl-ls.bxl:vhdl_ls_toml_gen | convfmt -f json -t toml > vhdl_ls.toml`
 
