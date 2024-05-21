@@ -76,7 +76,12 @@ def vhdl_toml_gen(ctx):
     # we add the "libraries" layer here
     # BXL can only generate json natively, but we've matched the expected structure
     # of the toml file so we can just run this through a converter
-    outjson = {"libraries": files_by_library_name}
+    # We default the editor's standards to the highest we support since the editor
+    # use-case doesn't make sense to limit and we don't know what our "top" is
+    outjson = {
+        "standard": "2019",
+        "libraries": files_by_library_name
+    }
     # Put it to std-out
     ctx.output.print_json(outjson)
 

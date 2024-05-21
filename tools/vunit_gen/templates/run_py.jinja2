@@ -39,6 +39,10 @@ if "-o" not in sys.argv:
 # via environment variables, and we don't have a great way of passing
 # those in via buck2
 os.environ["VUNIT_SIMULATOR"] = "{{simulator}}"
+# Our open-source simulators don't support mixed standard simulations
+# So we use the reduction provided to get the max standard needed for
+# this simulation and make everything use it
+os.environ["VUNIT_VHDL_STANDARD"] = "{{vhdl_standard}}"
 {% endif %}
 
 vu = VUnit.from_argv(compile_builtins=False)
@@ -52,9 +56,9 @@ vu.add_random()
 vu.add_verification_components()
 # Create libraries
 {% for library in libraries %}
-{{library.name}} = vu.add_library("{{library.name}}")
+{{library.name}} = vu.add_library("{{library.name}}", vhdl_standard="{{vhdl_standard}}")
 {% for file in library.files %}
-{{library.name}}.add_source_file("{{file}}")
+{{library.name}}.add_source_file("{{file}}", vhdl_standard="{{vhdl_standard}}")
 {% endfor %}
 {% endfor %}
 
