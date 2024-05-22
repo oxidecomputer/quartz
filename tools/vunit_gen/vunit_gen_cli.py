@@ -37,6 +37,7 @@ def main():
     # Parse the json we were handed
     with open(args.input) as fp:
         inputs = json.load(fp)
+
     # Load jinja templates
     env = Environment(
         loader=PackageLoader("vunit_gen"),
@@ -46,7 +47,7 @@ def main():
     template = env.get_template("run_py.jinja2")
     # Set up the default library
     libs.update({"lib": Library("lib")})
-    for x in inputs:
+    for x in inputs.get("files"):
         artifact = x.get("artifact")
         this_lib = x.get('library')
         # By default, libraries are blank and compiled into
@@ -69,6 +70,7 @@ def main():
     content = template.render(
         libraries=libs_list,
         simulator=args.simulator,
+        vhdl_standard=inputs.get("vhdl_std"),
         codec_packages=[],
         # vunit_out=args.vunit_out,
     )

@@ -27,7 +27,7 @@ read_verilog -sv {{source.path.absolute().as_posix()}}
 read_verilog {{source.path.absolute().as_posix()}}
 {% elif suffix in [".vhd"] %}
 {% set lib_cmd = "" if not source.library else "-library {} ".format(source.library) %}
-read_vhdl {{lib_cmd}}-vhdl2008 {{source.path.absolute().as_posix()}}
+read_vhdl {{lib_cmd}}-vhdl{{source.standard}} {{source.path.absolute().as_posix()}}
 {% elif suffix in [".xci"] %}
 read_ip {{source.path.absolute().as_posix()}}
 {% endif %}

@@ -10,7 +10,7 @@ load(
     "PythonToolchainInfo",
 )
 
-load(":hdl.bzl", "HDLFileInfo", "UnitTSet")
+load(":hdl.bzl", "HDLFileInfo", "VHDLFileInfo", "HDLFileInfoTSet")
 
 VivadoConstraintInfo = provider(
     fields={
@@ -61,9 +61,8 @@ def synthesize(ctx):
     # output of this is a checkpoint file
 
     # Get list of all sources from the dep tree via the tset in HDLFileInfo
-    source_files_tset = ctx.attrs.top[HDLFileInfo].set
+    source_files_tset = ctx.attrs.top[HDLFileInfo].set_all
     source_files = source_files_tset.project_as_json("json", ordering="postorder")
-    
     out_json = {
         "flow": "synthesis",
         "part": ctx.attrs.part,

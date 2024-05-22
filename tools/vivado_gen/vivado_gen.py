@@ -20,9 +20,10 @@ parser.add_argument("--output", dest="output", help="Explicit output list")
 args = parser.parse_args()
 
 class Source:
-    def __init__(self, path, library):
+    def __init__(self, path, library, standard):
         self.path = path
-        self.library = library 
+        self.library = library
+        self.standard = standard
 
 class Project:
     def __init__(self, 
@@ -51,7 +52,11 @@ class Project:
         srcs = inputs.get("sources", [])
         sources = []
         for file in srcs:
-            sources.append(Source(Path(file.get("artifact")), file.get("library")))
+            # Drop any non-synth files here
+            if not file.get("is_synth"):
+                print("Dropping non-synth file {}".format(file))
+                continue
+            sources.append(Source(Path(file.get("artifact")), file.get("library"), file.get("standard")))
         
         return cls(
             flow=inputs.get("flow"),
