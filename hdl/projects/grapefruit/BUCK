@@ -11,6 +11,6 @@ vivado_bitstream(
     name="grapefruit",
     top_entity_name="grapefruit_top",
     top= ":grapefruit_top",
-    part= "xc7s50csga324-1",
+    part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
 )
