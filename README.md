@@ -61,7 +61,12 @@ The docker image does not currently contain buck2 executables.
 For information on building `BUCK` files see [here](BUCK_RULES.md)
 
 ### Prerequisites
-- You need a copy of buck2 built locally. [Instructions](https://buck2.build/docs/getting_started/)
+- You need a copy of buck2 built locally. The official 
+[Instructions](https://buck2.build/docs/getting_started/) are here but note that the buck2 version
+is intrinsically tied to the checkout of the submodules, and as such, our currently supported
+buck2 version is installed like this:
+`cargo +nightly-2024-03-17 install --git https://github.com/facebook/buck2.git --rev 008ed92cdb27faee83b5c636c0e365ced4b5c5d3 buck2`
+See [this issue](https://github.com/facebook/buck2/issues/468) for more info
 - You'll need python3/pip installed and accessible on your path. We have python 3.10
 working in linux, and python 3.12 working in windows. Python 3.9 did not work in 
 windows at least, we have no other data points on other python versions.
