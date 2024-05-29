@@ -79,6 +79,8 @@ able to use symlinks, and should consider setting `LongPathsEnabled` in regedit 
 `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem` to 1 and rebooting.
 
 - When building Xilinx design, Vivado will need to be installed and on your `$PATH`.
+- Adjusting paths may require restarting of the buck2 background process so that it notices
+the changes. This can be done with `buck2 clean`
 
 ### vivado macros
 There are simulation-only XPM macros available in the `vnd/xpm/xpm_vhdl` submodule, provided
