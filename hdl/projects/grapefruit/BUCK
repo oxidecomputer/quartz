@@ -2,9 +2,34 @@ load("//tools:hdl.bzl", "vhdl_unit")
 load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
+rdl_file(
+    name = "gfruit_rdl",
+    src = "base_regs/gfruit_regs.rdl",
+    outputs = [
+        "grapefruit_regs_pkg.vhd", 
+        "grapefruit_reg_map.html", 
+        "grapefruit_reg_map.json",
+    ]
+)
+
+vhdl_unit (
+    name = "gfruit_regs",
+    srcs = glob(["base_regs/*.vhd"]),
+    deps = [":gfruit_rdl"],
+)
+vhdl_unit(
+    name = "reset_sync",
+    srcs = ["reset_sync/reset_sync.vhd"],
+    deps = ["//hdl/ip/vhd/synchronizers:async_reset_bridge"],
+)
+
 vhdl_unit(
     name = "grapefruit_top",
     srcs = ["grapefruit_top.vhd"],
+    deps = [
+        ":gfruit_regs",
+        ":reset_sync",
+    ],
 )
 
 vivado_bitstream(
@@ -13,4 +38,5 @@ vivado_bitstream(
     top= ":grapefruit_top",
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
+    pre_synth_tcl_files=glob(["*.tcl"]),
 )
