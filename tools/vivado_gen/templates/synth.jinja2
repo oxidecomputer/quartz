@@ -33,6 +33,11 @@ read_ip {{source.path.absolute().as_posix()}}
 {% endif %}
 {% endfor %}
 
+## source user tcl here
+{% for file in project.tcl_files %}
+source {{file.absolute().as_posix()}}
+{% endfor %}
+
 ## constraints here
 {% for file in project.constraints %}
 read_xdc {{file.absolute().as_posix()}}

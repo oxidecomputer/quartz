@@ -31,6 +31,7 @@ class Project:
         part: str,
         top_name: str,
         constraints: list,
+        tcl_files: list,
         sources: List[Source],
         synth_args: List[str],
         report_file: str,
@@ -41,6 +42,7 @@ class Project:
         self.part = part
         self.top_name = top_name
         self.constraints = [Path(x) for x in constraints]
+        self.tcl_files = [Path(x) for x in tcl_files]
         self.sources = sources
         self.synth_args = synth_args
         self.report_file = report_file
@@ -63,6 +65,7 @@ class Project:
             part=inputs.get("part"),
             top_name=inputs.get("top_name", ""),
             constraints=inputs.get("constraints", []),
+            tcl_files=inputs.get("tcl_files", []),
             sources=sources,
             synth_args=inputs.get("synth_args"),
             report_file=inputs.get("report_file"),
