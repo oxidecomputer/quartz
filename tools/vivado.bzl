@@ -70,7 +70,8 @@ def synthesize(ctx):
         "synth_args": "",
         "sources": source_files,
         "constraints": constraints,
-        "top_name": ctx.attrs.top_entity_name
+        "top_name": ctx.attrs.top_entity_name,
+        "tcl_files": ctx.attrs.tcl_files,
 
     }
 
@@ -89,6 +90,7 @@ def synthesize(ctx):
     # on cache. We need this step to run if the input file content, or
     # constraint file content changes
     vivado.hidden(ctx.attrs.constraints)
+    vivado.hidden(ctx.attrs.tcl_files)
     vivado.hidden(ctx.attrs.top.get(DefaultInfo).default_outputs)
     # Run vivado
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
@@ -286,6 +288,7 @@ vivado_bitstream = rule(
         "top": attrs.dep(doc="Expected top HDL unit"),
         "part": attrs.string(doc="Vivado-compatible FPGA string"),
         "constraints": attrs.list(attrs.source(doc="Part constraint files"), default=[]),
+        "tcl_files": attrs.list(attrs.source(doc="TCL files for project to source"), default=[]),
         "synth_args":  attrs.list(attrs.string(), default = []),
         "max_threads": attrs.int(doc="Max threads for Vivado", default=8),
         "_vivado_gen": attrs.exec_dep(
