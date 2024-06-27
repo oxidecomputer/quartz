@@ -65,13 +65,18 @@ def vhdl_ls_toml_gen(args):
     vhdlls_toml = root / "vhdl_ls.toml"
     # Call buck2 and get the list of vhdl files that we own for
     # formatting (ie no 3rd party things)
-    buck_bxl = subprocess.run(
+    # We capture stdout here because we need to parse the json but 
+    # allow the stderr to go to the console
+    buck_bxl = subprocess.Popen(
         ["buck2", "bxl", "//tools/vhdl-ls.bxl:vhdl_ls_toml_gen"], 
-        encoding="utf-8", 
-        check=True, 
-        capture_output=True
+        encoding="utf-8",
+        stdout=subprocess.PIPE
     )
-    vhdl_lsp_dict = json.loads(buck_bxl.stdout)
+    stdout, _ = buck_bxl.communicate()
+    if buck_bxl.returncode != 0:
+        sys.exit(buck_bxl.returncode)
+    
+    vhdl_lsp_dict = json.loads(stdout)
     if not args.print:
         # dump toml
         with open(vhdlls_toml, "wb") as f:
