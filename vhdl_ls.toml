@@ -1,3 +1,5 @@
+standard = "2019"
+
 [libraries.xpm]
 files = [
     "vnd/xpm/xpm_vhdl/src/xpm/xpm_VCOMP.vhd",

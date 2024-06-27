@@ -25,9 +25,16 @@ def vhdl_toml_gen(ctx):
     # Filter for rdl files in the project
     rdl_files = ctx.cquery().kind("rdl.*", targets)
     gen_vhdl_from_rdl = []
-    for target, value in ctx.build(rdl_files).items():
-         for art in value.artifacts():
-             if art.extension == ".vhd":
+    bld = ctx.build(rdl_files)
+    for target, value in bld.items():
+        # Buck documentation appears to be incorrect here in that failures() can't be
+        # evaluated without iterating for whatever reason (if `value.failures()` always
+        # trips)
+        for f in value.failures():
+            fail_no_stacktrace("Failed to build {} RDL file".format(target))
+
+        for art in value.artifacts():
+            if art.extension == ".vhd":
                 # Locally materialize this output since we want it local
                 a = ctx.output.ensure(art)
                 gen_vhdl_from_rdl.append(a)
