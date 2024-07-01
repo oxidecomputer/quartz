@@ -181,6 +181,23 @@ architecture rtl of grapefruit_top is
     signal reset_125m : std_logic;
     signal clk_200m : std_logic;
     signal reset_200m : std_logic;
+    signal reset_fmc: std_logic;
+
+    signal sp_awvalid : std_logic;
+    signal sp_awready : std_logic;
+    signal sp_awaddr : std_logic_vector(25 downto 0);
+    signal sp_wvalid : std_logic;
+    signal sp_wready : std_logic;
+    signal sp_wstrb : std_logic_vector(3 downto 0);
+    signal sp_wdata : std_logic_vector(31 downto 0);
+    signal sp_bvalid : std_logic;
+    signal sp_bready : std_logic;
+    signal sp_arvalid : std_logic;
+    signal sp_arready : std_logic;
+    signal sp_araddr : std_logic_vector(25 downto 0);
+    signal sp_rvalid : std_logic;
+    signal sp_rready : std_logic;
+    signal sp_rdata : std_logic_vector(31 downto 0);
 
 begin
 
@@ -205,7 +222,9 @@ begin
         clk_125m => clk_125m,
         reset_125m => reset_125m,
         clk_200m => clk_200m,
-        reset_200m => reset_200m
+        reset_200m => reset_200m,
+        sp_fmc_clk => fmc_sp_to_fpga_clk,
+        reset_fmc_clk => reset_fmc
     );
 
     tst : process (clk, reset_l)
@@ -219,5 +238,60 @@ begin
 
     fpga_spare_1v8(0) <= not counter(26);
 
+    stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
+     port map(
+        chip_reset => reset_fmc,
+        fmc_clk => fmc_sp_to_fpga_clk,
+        a(24 downto 20) => "00000",
+        a(19 downto 16) => fmc_sp_to_fpga_a,
+        ad => fmc_sp_to_fpga_da,
+        ne(3 downto 1) => "111",
+        ne(0) => fmc_sp_to_fpga_cs1_l,
+        noe => fmc_sp_to_fpga_oe_l,
+        nwe => fmc_sp_to_fpga_we_l,
+        nl => fmc_sp_to_fpga_adv_l,
+        nwait => fmc_sp_to_fpga_wait_l,
+        aclk => clk_125m,
+        aresetn => not reset_125m,
+        awvalid => sp_awvalid,
+        awready => sp_awready,
+        awaddr => sp_awaddr,
+        awprot => open,
+        wvalid => sp_wvalid,
+        wready => sp_wready,
+        wstrb => sp_wstrb,
+        wdata => sp_wdata,
+        bvalid => sp_bvalid,
+        bready => sp_bready, -- todo: bresp
+        arvalid => sp_arvalid,
+        araddr => sp_araddr,
+        arready => sp_arready,
+        rvalid => sp_rvalid,
+        rready => sp_rready, -- todo: rresp
+        rdata => sp_rdata
+    );
+
+    registers_inst: entity work.registers
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        awvalid => sp_awvalid,
+        awready => sp_awready,
+        awaddr => sp_awaddr(7 downto 0),
+        wvalid => sp_wvalid,
+        wready => sp_wready,
+        wdata => sp_wdata,
+        wstrb => sp_wstrb,
+        bvalid => sp_bvalid,
+        bready => sp_bready,
+        bresp => open,
+        arvalid => sp_arvalid,
+        arready => sp_arready,
+        araddr => sp_araddr(7 downto 0),
+        rvalid => sp_rvalid,
+        rready => sp_rready,
+        rresp => open,
+        rdata => sp_rdata
+    );
     
 end rtl;

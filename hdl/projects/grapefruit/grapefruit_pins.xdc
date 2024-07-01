@@ -19,6 +19,7 @@ set_property -dict { PACKAGE_PIN Y21 IOSTANDARD LVCMOS33 } [get_ports { nic_to_s
 set_property -dict { PACKAGE_PIN U20 IOSTANDARD LVCMOS33 } [get_ports { nic_to_sp_gpio0_present2 }];
 set_property -dict { PACKAGE_PIN V20 IOSTANDARD LVCMOS33 } [get_ports { rot_to_ignit_fault_l }];
 set_property -dict { PACKAGE_PIN F17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_clk }];
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets fmc_sp_to_fpga_clk_IBUF];  # ERROR: [Place 30-574] Poor placement for routing between an IO pin and BUFG. If this sub optimal condition is acceptable for this design
 set_property -dict { PACKAGE_PIN F18 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_oe_l }];
 set_property -dict { PACKAGE_PIN H17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_we_l }];
 set_property -dict { PACKAGE_PIN G17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_wait_l }];
