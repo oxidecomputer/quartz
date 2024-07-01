@@ -29,6 +29,7 @@ vhdl_unit(
     deps = [
         ":gfruit_regs",
         ":reset_sync",
+        "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
     ],
 )
 

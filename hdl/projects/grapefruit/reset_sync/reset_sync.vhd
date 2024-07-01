@@ -16,7 +16,9 @@ entity reset_sync is
         clk_125m : in std_logic;
         reset_125m : out std_logic;
         clk_200m : in std_logic;
-        reset_200m : out std_logic
+        reset_200m : out std_logic;
+        sp_fmc_clk: in std_logic;
+        reset_fmc_clk: out std_logic
     );
 end entity;
 
@@ -42,6 +44,16 @@ begin
         clk => clk_200m,
         reset_async => pll_locked_async,
         reset_sync => reset_200m
+    );
+
+    fmc_clk_sync: entity work.async_reset_bridge
+     generic map(
+        async_reset_active_level => '0'  -- locked = 1 means out of reset
+    )
+     port map(
+        clk => sp_fmc_clk,
+        reset_async => pll_locked_async,
+        reset_sync => reset_fmc_clk
     );
 
 end architecture;
