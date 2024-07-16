@@ -199,6 +199,9 @@ architecture rtl of grapefruit_top is
     signal sp_rready : std_logic;
     signal sp_rdata : std_logic_vector(31 downto 0);
 
+    signal fmc_internal_data_out : std_logic_vector(15 downto 0);
+    signal fmc_data_out_enable: std_logic;
+
 begin
 
     tst: process(clk, reset_l)
@@ -227,16 +230,18 @@ begin
         reset_fmc_clk => reset_fmc
     );
 
-    tst : process (clk, reset_l)
+    tst : process (clk_125m, reset_125m)
     begin
-        if reset_l = '0' then
+        if reset_125m then
             counter <= (others => '0');
-        elsif rising_edge(clk) then
+        elsif rising_edge(clk_125m) then
             counter <= counter + 1;
         end if;
     end process;
 
     fpga_spare_1v8(0) <= not counter(26);
+    fpga_spare_1v8(1) <= pll_locked_async;
+    fpga_spare_1v8(2) <= reset_l;
 
     stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
      port map(
@@ -244,7 +249,9 @@ begin
         fmc_clk => fmc_sp_to_fpga_clk,
         a(24 downto 20) => "00000",
         a(19 downto 16) => fmc_sp_to_fpga_a,
-        ad => fmc_sp_to_fpga_da,
+        addr_data_in => fmc_sp_to_fpga_da,
+        data_out => fmc_internal_data_out,
+        data_out_en => fmc_data_out_enable,
         ne(3 downto 1) => "111",
         ne(0) => fmc_sp_to_fpga_cs1_l,
         noe => fmc_sp_to_fpga_oe_l,
@@ -270,6 +277,10 @@ begin
         rready => sp_rready, -- todo: rresp
         rdata => sp_rdata
     );
+
+    -- tristate control for the FMC data bus
+    --fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+    fmc_sp_to_fpga_da <= (others => 'Z');
 
     registers_inst: entity work.registers
      port map(
