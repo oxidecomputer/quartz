@@ -64,7 +64,6 @@ begin
     arready <= not rvalid;
     axi_int_read_ready <= arvalid and arready;
 
-
     -- axi transaction mgmt
     axi_txn: process(clk, reset)
     begin
@@ -75,7 +74,7 @@ begin
         elsif rising_edge(clk) then
             -- bvalid set on every write,
             -- cleared after bvalid && bready
-            if axi_int_write_ready then
+            if awready then
                 bvalid <= '1';
             elsif bready then
                 bvalid <= '0';

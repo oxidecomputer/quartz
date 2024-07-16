@@ -39,5 +39,6 @@ vivado_bitstream(
     top= ":grapefruit_top",
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
-    pre_synth_tcl_files=glob(["*.tcl"]),
+     pre_synth_tcl_files=glob(["*ip.tcl"]),
+     post_synth_tcl_files=glob(["*ila.tcl"]),
 )
