@@ -279,8 +279,8 @@ begin
     );
 
     -- tristate control for the FMC data bus
-    --fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
-    fmc_sp_to_fpga_da <= (others => 'Z');
+    fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+    --fmc_sp_to_fpga_da <= (others => 'Z');
 
     registers_inst: entity work.registers
      port map(
