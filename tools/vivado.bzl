@@ -63,6 +63,7 @@ def synthesize(ctx):
     # Get list of all sources from the dep tree via the tset in HDLFileInfo
     source_files_tset = ctx.attrs.top[HDLFileInfo].set_all
     source_files = source_files_tset.project_as_json("json", ordering="postorder")
+
     out_json = {
         "flow": "synthesis",
         "part": ctx.attrs.part,
@@ -75,7 +76,7 @@ def synthesize(ctx):
         "post_synth_tcl_files": ctx.attrs.post_synth_tcl_files,
     }
 
-    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
+    vivado_flow_tcl, in_json_file = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create a report file
@@ -84,15 +85,22 @@ def synthesize(ctx):
     vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
     # Add output files to tclargs
     vivado.add("-tclargs", checkpoint.as_output(), report.as_output())
-    # because we're using the inputs to generate a tcl that *just* lists them,
-    # irrespective of their content, we make the inputs here hidden inputs
-    # so that if they change this step is re-run rather than just relying
-    # on cache. We need this step to run if the input file content, or
-    # constraint file content changes
-    vivado.hidden(ctx.attrs.constraints)
-    vivado.hidden(ctx.attrs.pre_synth_tcl_files)
-    vivado.hidden(ctx.attrs.post_synth_tcl_files)
-    vivado.hidden(ctx.attrs.top.get(DefaultInfo).default_outputs)
+  
+    # This was a tricky source of bugs. We need to make sure synthesis
+    # runs, *any* time the source files change (obviously).  However, the
+    # way we're doing this is generating .tcl file for vivado to run in
+    # non-project mode. This file's *contents* only change if the *list* of
+    # input files change. An individual's file content changing doesn't matter
+    # to the the file-list. This file list was regenerated on any input change,
+    # but if the resulting file was the same (ie same *list* of files) the
+    # next step would re-use the old file. This is not desired. To mitigate
+    # this, we make need to propagate the change information down to this step.
+    # The json file is generated in a helper function, but we do it with the
+    # "with_inputs=True" flag set, so we propagate that back here and add it
+    # as a hidden input to the synthesis step. This will guarantee that changes
+    # to file contents will be in caught and synthesis will re-run as expected.
+    vivado.hidden(in_json_file)
+
     # Run vivado
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=checkpoint))
@@ -118,8 +126,7 @@ def optimize(ctx, input_checkpoint):
         "debug_probes": enable_debug_probes
     }
 
-
-    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
+    vivado_flow_tcl, _ = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create a report file
@@ -161,7 +168,7 @@ def place(ctx, input_checkpoint, optimize=False):
         "input_checkpoint": input_checkpoint,
     }
 
-    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
+    vivado_flow_tcl, _ = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create a report file
@@ -196,7 +203,7 @@ def route(ctx, input_checkpoint):
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
-    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
+    vivado_flow_tcl, _ = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
     # create reports files
@@ -240,7 +247,7 @@ def bitstream(ctx, input_checkpoint):
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
-    vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
+    vivado_flow_tcl, _ = _vivado_tcl_gen_common(ctx, flow, out_json)
     
     # create a bitstream file
     bitstream = ctx.actions.declare_output("{}.bit".format(ctx.attrs.name))
@@ -255,7 +262,6 @@ def bitstream(ctx, input_checkpoint):
     # on cache. We need this step to run if the input file content, or
     # constraint file content changes
     vivado.hidden(input_checkpoint)
-    
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=bitstream))
     return providers
@@ -274,7 +280,7 @@ def _vivado_tcl_gen_common(ctx, flow, json):
 
     ctx.actions.run(cmd, category="vivado_tcl_{}_gen".format(flow))
 
-    return vivado_flow_tcl
+    return vivado_flow_tcl, in_json_file
     
 
 def _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl):
