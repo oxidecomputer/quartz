@@ -33,8 +33,8 @@ read_ip {{source.path.absolute().as_posix()}}
 {% endif %}
 {% endfor %}
 
-## source user tcl here
-{% for file in project.tcl_files %}
+## source pre-synth user tcl here
+{% for file in project.pre_synth_tcl_files %}
 source {{file.absolute().as_posix()}}
 {% endfor %}
 
@@ -48,4 +48,9 @@ set_param general.maxThreads {{project.max_threads}}
 eval "synth_design {{project.synth_args}} -top {{project.top_name}} -part {{project.part}}"
 report_timing_summary -file $report_file
 report_utilization -file $report_file
+
+## source post-synth user tcl here
+{% for file in project.post_synth_tcl_files %}
+source {{file.absolute().as_posix()}}
+{% endfor %}
 write_checkpoint -force $output_checkpoint

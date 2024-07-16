@@ -71,8 +71,8 @@ def synthesize(ctx):
         "sources": source_files,
         "constraints": constraints,
         "top_name": ctx.attrs.top_entity_name,
-        "tcl_files": ctx.attrs.tcl_files,
-
+        "pre_synth_tcl_files": ctx.attrs.pre_synth_tcl_files,
+        "post_synth_tcl_files": ctx.attrs.post_synth_tcl_files,
     }
 
     vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
@@ -90,7 +90,8 @@ def synthesize(ctx):
     # on cache. We need this step to run if the input file content, or
     # constraint file content changes
     vivado.hidden(ctx.attrs.constraints)
-    vivado.hidden(ctx.attrs.tcl_files)
+    vivado.hidden(ctx.attrs.pre_synth_tcl_files)
+    vivado.hidden(ctx.attrs.post_synth_tcl_files)
     vivado.hidden(ctx.attrs.top.get(DefaultInfo).default_outputs)
     # Run vivado
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
@@ -102,13 +103,22 @@ def optimize(ctx, input_checkpoint):
     flow = "optimize"
     name_and_flow = ctx.attrs.name + "_" + flow
     input_checkpoint = input_checkpoint[0].default_outputs[0]
-
     providers = []
+
+    if len(ctx.attrs.post_synth_tcl_files) != 0:
+        # create a debug probe output
+        debug_probes = ctx.actions.declare_output("{}.ltx".format("debug_probes"))
+        enable_debug_probes = True
+    else:
+        enable_debug_probes = False
     out_json = {
         "flow": flow,
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
+        "debug_probes": enable_debug_probes
     }
+
+
     vivado_flow_tcl = _vivado_tcl_gen_common(ctx, flow, out_json)
     # create a checkpoint file
     out_checkpoint = ctx.actions.declare_output("{}.dcp".format(name_and_flow))
@@ -126,6 +136,8 @@ def optimize(ctx, input_checkpoint):
         utilization_report.as_output(),
         drc.as_output()
     )
+    if len(ctx.attrs.post_synth_tcl_files) != 0:
+        vivado.add(debug_probes.as_output())
     # because we're using the inputs to generate a tcl that *just* lists them,
     # irrespective of their content, we make the checkpoint a hidden input
     # so that if it changesthis step is re-run rather than just relying
@@ -288,7 +300,8 @@ vivado_bitstream = rule(
         "top": attrs.dep(doc="Expected top HDL unit"),
         "part": attrs.string(doc="Vivado-compatible FPGA string"),
         "constraints": attrs.list(attrs.source(doc="Part constraint files"), default=[]),
-        "tcl_files": attrs.list(attrs.source(doc="TCL files for project to source"), default=[]),
+        "pre_synth_tcl_files": attrs.list(attrs.source(doc="TCL files for project to source for things like ip"), default=[]),
+        "post_synth_tcl_files": attrs.list(attrs.source(doc="TCL files for project to source for things like ILA probes (post-synthesis)"), default=[]),
         "synth_args":  attrs.list(attrs.string(), default = []),
         "max_threads": attrs.int(doc="Max threads for Vivado", default=8),
         "_vivado_gen": attrs.exec_dep(

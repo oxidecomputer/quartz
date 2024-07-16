@@ -12,18 +12,26 @@
 # [1]: output timing report
 # [2]: output utilization report
 # [3]: output drc report
+# [4]: debug probes file
 
 # Get tclargs here
 set output_checkpoint [lindex $argv 0]
 set timing_report [lindex $argv 1]
 set utilization_report [lindex $argv 2]
 set drc_report [lindex $argv 3]
-
+{% if project.debug_probes %}
+set dbg_probes [lindex $argv 4]
+{% endif %}
 
 set_param general.maxThreads {{project.max_threads}}
 open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
 opt_design -directive Explore
+{% if project.debug_probes %}
+# UG908 says: "If you are using non-project mode, you must manually call the 
+# write_debug_probes command immediately following the opt_design command."
+write_debug_probes $dbg_probes
+{% endif %}
 report_timing_summary -file $timing_report
 report_utilization -file $utilization_report
 write_checkpoint -force $output_checkpoint
