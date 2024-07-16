@@ -31,9 +31,11 @@ class Project:
         part: str,
         top_name: str,
         constraints: list,
-        tcl_files: list,
+        pre_synth_tcl_files: list,
+        post_synth_tcl_files: list,
         sources: List[Source],
         synth_args: List[str],
+        debug_probes: str,
         report_file: str,
         max_threads: int,
         input_checkpoint: str,
@@ -42,7 +44,9 @@ class Project:
         self.part = part
         self.top_name = top_name
         self.constraints = [Path(x) for x in constraints]
-        self.tcl_files = [Path(x) for x in tcl_files]
+        self.pre_synth_tcl_files = [Path(x) for x in pre_synth_tcl_files]
+        self.post_synth_tcl_files = [Path(x) for x in post_synth_tcl_files]
+        self.debug_probes = debug_probes
         self.sources = sources
         self.synth_args = synth_args
         self.report_file = report_file
@@ -65,7 +69,9 @@ class Project:
             part=inputs.get("part"),
             top_name=inputs.get("top_name", ""),
             constraints=inputs.get("constraints", []),
-            tcl_files=inputs.get("tcl_files", []),
+            pre_synth_tcl_files=inputs.get("pre_synth_tcl_files", []),
+            post_synth_tcl_files=inputs.get("post_synth_tcl_files", []),
+            debug_probes=inputs.get("debug_probes", ""),
             sources=sources,
             synth_args=inputs.get("synth_args"),
             report_file=inputs.get("report_file"),
