@@ -30,6 +30,7 @@ set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets fmc_sp_to_fpga_clk_IBUF];
 set_property -dict { PACKAGE_PIN F18 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_oe_l }];
 set_property -dict { PACKAGE_PIN H17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_we_l }];
 set_property -dict { PACKAGE_PIN G17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_wait_l }];
+set_property IOB TRUE [get_ports fmc_sp_to_fpga_wait_l]
 set_property -dict { PACKAGE_PIN J17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_cs1_l }];
 set_property -dict { PACKAGE_PIN H18 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_adv_l }];
 set_property -dict { PACKAGE_PIN G16 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_bl0_l }];
