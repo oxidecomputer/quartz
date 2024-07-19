@@ -46,7 +46,19 @@ def _vivado_bitstream(ctx):
     placer =  place(ctx, opt, False)
     placer_opt = place(ctx, placer, True)
     router = route(ctx, placer_opt)
-    return bitstream(ctx, router)
+    bits = bitstream(ctx, router)
+    return [
+        DefaultInfo(
+            default_output=bits[0].default_outputs[0],
+            sub_targets = {
+                "synth": synth,
+                "opt":  opt,
+                "place": placer,
+                "place_opt": placer_opt,
+                "route": router,
+            }
+        )
+    ]
 
 
 def synthesize(ctx):
