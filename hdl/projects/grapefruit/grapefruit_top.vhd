@@ -109,6 +109,15 @@ entity grapefruit_top is
         i3c_hpm_to_scm_dimm1_ghijkl_scl: inout std_logic;
         i3c_hpm_to_scm_dimm1_ghijkl_sda: inout std_logic;
 
+        i3c_scm_to_dimm0_abcdef_scl: inout std_logic;
+        i3c_scm_to_dimm0_abcdef_sda: inout std_logic;
+        i3c_scm_to_dimm0_ghijkl_scl: inout std_logic;
+        i3c_scm_to_dimm0_ghijkl_sda: inout std_logic;
+        i3c_scm_to_dimm1_abcdef_scl: inout std_logic;
+        i3c_scm_to_dimm1_abcdef_sda: inout std_logic;
+        i3c_scm_to_dimm1_ghijkl_scl: inout std_logic;
+        i3c_scm_to_dimm1_ghijkl_sda: inout std_logic;
+
         hdt_scm_to_hpm_tck: out std_logic;
         hdt_scm_to_spm_tms: out std_logic;
         hdt_scm_to_spm_dat: out std_logic;
@@ -304,5 +313,32 @@ begin
         rresp => open,
         rdata => sp_rdata
     );
+
+
+    -- Debug stuff for i3c
+    -- pin the enables low to enable the devices
+    i3c_sp5_to_fpga_oe_n_3v3 <= '0';
+    i3c_fpga_to_dimm_oe_n_3v3 <= '0';
+
+    i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
+    i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
+    i3c_hpm_to_scm_dimm0_ghijkl_scl <= not counter(26);
+    i3c_hpm_to_scm_dimm0_ghijkl_sda <= not counter(26);
+
+    i3c_hpm_to_scm_dimm1_abcdef_scl <= not counter(26);
+    i3c_hpm_to_scm_dimm1_abcdef_sda <= not counter(26);
+    i3c_hpm_to_scm_dimm1_ghijkl_scl <= not counter(26);
+    i3c_hpm_to_scm_dimm1_ghijkl_sda <= not counter(26);
+
+    i3c_scm_to_dimm0_abcdef_scl <= not counter(26);
+    i3c_scm_to_dimm0_abcdef_sda <= not counter(26);
+    i3c_scm_to_dimm0_ghijkl_scl <= not counter(26);
+    i3c_scm_to_dimm0_ghijkl_sda <= not counter(26);
+    
+    i3c_scm_to_dimm1_abcdef_scl <= not counter(26);
+    i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
+    i3c_scm_to_dimm1_ghijkl_scl <= not counter(26);
+    i3c_scm_to_dimm1_ghijkl_sda <= not counter(26);
+
     
 end rtl;

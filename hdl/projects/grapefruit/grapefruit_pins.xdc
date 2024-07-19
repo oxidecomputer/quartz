@@ -1,3 +1,9 @@
+# Configure I/O Bank 0 for 3.3V/2.5V operation set_property CFGBVS VCCO [current_design]
+set_property CFGBVS VCCO [current_design]
+
+# Configure I/O Bank 0 for 3.3V operation 
+set_property CONFIG_VOLTAGE 3.3 [current_design]
+
 set_property -dict { PACKAGE_PIN L8  IOSTANDARD LVCMOS33 } [get_ports { clk }]; # FPGA_50MHz_CLK2
 set_property -dict { PACKAGE_PIN N15 IOSTANDARD LVCMOS33 } [get_ports { reset_l }]; # SP_TO_FPGA_LOGIC_RESET_L
 set_property -dict { PACKAGE_PIN N21 IOSTANDARD LVCMOS33 } [get_ports { seq_reg_to_sp_V3P3_pg }];
@@ -19,7 +25,8 @@ set_property -dict { PACKAGE_PIN Y21 IOSTANDARD LVCMOS33 } [get_ports { nic_to_s
 set_property -dict { PACKAGE_PIN U20 IOSTANDARD LVCMOS33 } [get_ports { nic_to_sp_gpio0_present2 }];
 set_property -dict { PACKAGE_PIN V20 IOSTANDARD LVCMOS33 } [get_ports { rot_to_ignit_fault_l }];
 set_property -dict { PACKAGE_PIN F17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_clk }];
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets fmc_sp_to_fpga_clk_IBUF];  # ERROR: [Place 30-574] Poor placement for routing between an IO pin and BUFG. If this sub optimal condition is acceptable for this design
+# ERROR: [Place 30-574] Poor placement for routing between an IO pin and BUFG. If this sub optimal condition is acceptable for this design
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets fmc_sp_to_fpga_clk_IBUF];
 set_property -dict { PACKAGE_PIN F18 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_oe_l }];
 set_property -dict { PACKAGE_PIN H17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_we_l }];
 set_property -dict { PACKAGE_PIN G17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga_wait_l }];
@@ -124,6 +131,14 @@ set_property -dict { PACKAGE_PIN Y4 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_t
 set_property -dict { PACKAGE_PIN AA3 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_abcdef_sda }];
 set_property -dict { PACKAGE_PIN AB3 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_ghijkl_scl }];
 set_property -dict { PACKAGE_PIN AB2 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_ghijkl_sda }];
+set_property -dict { PACKAGE_PIN AA1 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_abcdef_scl }];
+set_property -dict { PACKAGE_PIN AB5 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_abcdef_sda }];
+set_property -dict { PACKAGE_PIN AB4 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_ghijkl_scl }];
+set_property -dict { PACKAGE_PIN V8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_ghijkl_sda }];
+set_property -dict { PACKAGE_PIN W8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm1_abcdef_scl }];
+set_property -dict { PACKAGE_PIN Y8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm1_abcdef_sda }];
+set_property -dict { PACKAGE_PIN AA8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm1_ghijkl_scl }];
+set_property -dict { PACKAGE_PIN W7 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm1_ghijkl_sda }];
 set_property -dict { PACKAGE_PIN H7 IOSTANDARD LVCMOS33 } [get_ports { hdt_scm_to_hpm_tck }];
 set_property -dict { PACKAGE_PIN J3 IOSTANDARD LVCMOS33 } [get_ports { hdt_scm_to_spm_tms }];
 set_property -dict { PACKAGE_PIN H2 IOSTANDARD LVCMOS33 } [get_ports { hdt_scm_to_spm_dat }];
@@ -175,7 +190,7 @@ set_property -dict { PACKAGE_PIN A9 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_t
 set_property -dict { PACKAGE_PIN B10 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda1 }];
 set_property -dict { PACKAGE_PIN A10 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl3 }];
 set_property -dict { PACKAGE_PIN C9 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda3 }];
-set_property -dict { PACKAGE_PIN C9 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl4 }];
+set_property -dict { PACKAGE_PIN C8 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl4 }];
 set_property -dict { PACKAGE_PIN A7 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda4 }];
 set_property -dict { PACKAGE_PIN A6 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl5 }];
 set_property -dict { PACKAGE_PIN B8 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda5 }];
