@@ -9,6 +9,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.axil_common_pkg.all;
+use work.axil26x32_pkg;
+use work.axil8x32_pkg;
+
 entity grapefruit_top is
     port (
         clk     : in    std_logic;
@@ -217,6 +221,12 @@ architecture rtl of grapefruit_top is
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
     signal fmc_data_out_enable: std_logic;
 
+    signal fmc_axi_if : axil26x32_pkg.axil_t;
+
+    constant responder_count : integer := 1;
+    constant config_array : axil_responder_cfg_array_t(0 downto 0) := (0 => (base_addr => x"00000000", addr_span_bits => 8));
+    signal responders : axil8x32_pkg.axil_array_t(0 downto 0);
+
 begin
 
     tst: process(clk, reset_l)
@@ -275,49 +285,30 @@ begin
         nwait => fmc_sp_to_fpga_wait_l,
         aclk => clk_125m,
         aresetn => not reset_125m,
-        awvalid => sp_awvalid,
-        awready => sp_awready,
-        awaddr => sp_awaddr,
-        awprot => open,
-        wvalid => sp_wvalid,
-        wready => sp_wready,
-        wstrb => sp_wstrb,
-        wdata => sp_wdata,
-        bvalid => sp_bvalid,
-        bready => sp_bready, -- todo: bresp
-        arvalid => sp_arvalid,
-        araddr => sp_araddr,
-        arready => sp_arready,
-        rvalid => sp_rvalid,
-        rready => sp_rready, -- todo: rresp
-        rdata => sp_rdata
+        axi_if => fmc_axi_if
+
+    );
+
+    -- Axi interconnect
+    axil_interconnect_inst: entity work.axil_interconnect
+     generic map(
+        config_array => config_array
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        initiator => fmc_axi_if,
+        responders => responders
     );
 
     -- tristate control for the FMC data bus
     fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
-    --fmc_sp_to_fpga_da <= (others => 'Z');
 
     registers_inst: entity work.registers
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        awvalid => sp_awvalid,
-        awready => sp_awready,
-        awaddr => sp_awaddr(7 downto 0),
-        wvalid => sp_wvalid,
-        wready => sp_wready,
-        wdata => sp_wdata,
-        wstrb => sp_wstrb,
-        bvalid => sp_bvalid,
-        bready => sp_bready,
-        bresp => open,
-        arvalid => sp_arvalid,
-        arready => sp_arready,
-        araddr => sp_araddr(7 downto 0),
-        rvalid => sp_rvalid,
-        rready => sp_rready,
-        rresp => open,
-        rdata => sp_rdata
+        axi_if => responders(0)
     );
 
 
