@@ -73,7 +73,10 @@ entity grapefruit_top is
 
         spi_fpga_to_flash_cs_l : out std_logic;
         spi_fpga_to_flash_clk : out std_logic;
-        spi_fpga_to_flash_dat : inout std_logic_vector(3 downto 0);
+        spi_fpga_to_flash_dat0 : out std_logic;
+        spi_fpga_to_flash_dat1 : in std_logic;
+        spi_fpga_to_flash_dat2 : in std_logic;
+        spi_fpga_to_flash_dat3 : in std_logic;
 
         spi_fpga_to_flash2_cs_l : out std_logic;
         spi_fpga_to_flash2_clk : out std_logic;
@@ -141,7 +144,10 @@ entity grapefruit_top is
         qspi0_hpm_to_scm_clk : in std_logic;
         qspi0_hpm_to_scm_cs0_l: in std_logic;
         qspi0_hpm_to_scm_cs1_l: in std_logic;
-        qspi0_hpm_to_scm_dat: inout std_logic_vector(3 downto 0);
+        qspi0_hpm_to_scm_dat0: in std_logic;
+        qspi0_hpm_to_scm_dat1: out std_logic;
+        qspi0_hpm_to_scm_dat2: in std_logic;
+        qspi0_hpm_to_scm_dat3: in std_logic;
         sgpip_scm_to_hpm_clk : out std_logic;
 
         sgpio_scm_to_hpm_dat: out std_logic_vector(1 downto 0);
@@ -314,6 +320,12 @@ begin
         rdata => sp_rdata
     );
 
+
+    -- Basic flash spi passthru fomr qspi0 to spi flash
+    spi_fpga_to_flash_cs_l <= qspi0_hpm_to_scm_cs0_l;
+    spi_fpga_to_flash_clk <= qspi0_hpm_to_scm_clk;
+    spi_fpga_to_flash_dat0 <= qspi0_hpm_to_scm_dat0;
+    qspi0_hpm_to_scm_dat1 <= spi_fpga_to_flash_dat1;
 
     -- Debug stuff for i3c
     -- pin the enables low to enable the devices

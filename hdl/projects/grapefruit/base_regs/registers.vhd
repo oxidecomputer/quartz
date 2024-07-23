@@ -48,7 +48,6 @@ entity registers is
 end entity;
 
 architecture rtl of registers is
-    constant OKAY : std_logic_vector(1 downto 0) := "00";
     signal id : id_type;
     signal sha : sha_type;
     signal checksum : cs_type;
