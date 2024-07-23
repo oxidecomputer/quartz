@@ -15,7 +15,11 @@ rdl_file(
 vhdl_unit (
     name = "gfruit_regs",
     srcs = glob(["base_regs/*.vhd"]),
-    deps = [":gfruit_rdl"],
+    deps = [
+        ":gfruit_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        ],
+    standard = "2019",
 )
 vhdl_unit(
     name = "reset_sync",
@@ -29,8 +33,11 @@ vhdl_unit(
     deps = [
         ":gfruit_regs",
         ":reset_sync",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
     ],
+    standard = "2019",
 )
 
 vivado_bitstream(
@@ -39,7 +46,6 @@ vivado_bitstream(
     top= ":grapefruit_top",
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
-     pre_synth_tcl_files=glob(["*ip.tcl"]),
-     #post_synth_tcl_files=glob(["*ila.tcl"]),
-
+    pre_synth_tcl_files=glob(["*ip.tcl"]),
+    #post_synth_tcl_files=glob(["*ila.tcl"]),
 )
