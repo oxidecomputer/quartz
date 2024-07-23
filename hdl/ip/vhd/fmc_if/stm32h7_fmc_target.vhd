@@ -9,6 +9,15 @@
 --! clock domain, and issues AXI transactions.
 --! figures 115 and 116
 
+-- ES0491 FMC Errata:
+-- Dummy read cycles inserted when reading synchronous memories
+-- Description
+-- When performing a burst read access from a synchronous memory, two dummy read accesses are performed at
+-- the end of the burst cycle whatever the type of burst access.
+-- The extra data values read are not used by the FMC and there is no functional failure.
+-- Workaround
+-- None
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
