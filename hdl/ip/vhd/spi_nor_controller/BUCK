@@ -1,0 +1,36 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "spi_nor_rdl",
+    src = "spi_nor_regs.rdl",
+    outputs = [
+        "spi_nor_regs_pkg.vhd", 
+        "spi_nor_reg_map.html", 
+        "spi_nor_reg_map.json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+
+vhdl_unit(
+    name = "spi_nor_top",
+    srcs = glob(["*.vhd"]),
+    standard = "2019",
+    deps = [
+        ":spi_nor_rdl",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        ],
+    visibility = ["PUBLIC"],
+)
+
+vunit_sim(
+    name = "spi_nor_top_sim",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":spi_nor_top",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        ],
+    visibility = ["PUBLIC"],
+)

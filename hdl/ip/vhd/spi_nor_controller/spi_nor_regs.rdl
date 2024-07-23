@@ -1,0 +1,123 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+// Copyright 2024 Oxide Computer Company
+//
+// This is SystemRDL description of the sw-accesible registers in the
+// grapefruit dev board FPGA.
+
+addrmap nor_flash_regs {
+    name = "SPI/QSPI NOR flash controller";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "SPI Control Register";
+        desc = "";
+        
+        field {
+            desc = "Set to one to reset RX FIFO. Cleared by hardware after reset.";
+        } rx_fifo_reset[15:15] =  0;
+        field {
+            desc = "Set to one to reset TX FIFO. Cleared by hardware after reset.";
+        } tx_fifo_reset[7:7] =  0;
+
+    } SPICR;
+    reg {
+        name = "SPI Status Register";
+        desc = "";
+        field {
+            default sw = r;
+            desc = "Show used FIFO words in TX_FIFO (word = 32bits/4 bytes),
+            max of 256 bytes, so 64 words";
+        } tx_used_wds[30:24] =  0;
+        field {
+            default sw = r;
+            desc = "Set to one to 1 when TX FIFO is full";
+        } tx_full[23:23] =  0;
+         field {
+            default sw = r;
+            desc = "Set to one to 1 when TX FIFO is empty";
+        } tx_empty[22:22] =  0;
+        field {
+            default sw = r;
+            desc = "Show used FIFO words in RX_FIFO (word = 32bits/4 bytes),
+            max of 256 bytes, so 64 words";
+        } rx_used_wds[14:8] =  0;
+        field {
+            default sw = r;
+            desc = "Set to one to 1 when RX FIFO is full";
+        } rx_full[7:7] =  0;
+         field {
+            default sw = r;
+            desc = "Set to one to 1 when RX FIFO is empty";
+        } rx_empty[6:6] =  0;
+
+        field {
+            default sw = r;
+            desc = "Set to one to 1 when hw is running the spi transaction, no new transactions
+            may be issued until it is finished. Technically represents cs_n being low.";
+        } busy[0:0] =  0;
+
+    } SPISR;
+    // address reg
+    reg {
+        name = "Target Address Register";
+        desc = "";
+        field {
+            desc = "Address to be used for 24 or 32bit accesses";
+        } addr[31:0] =  0;
+     } Addr;
+    // dummy cycles reg
+    reg {
+        name = "Dummy Cycles Register";
+        desc = "";
+        field {
+            desc = "Specify # of dummy cycles required for this instruction";
+        } count[7:0] =  0;
+     } DummyCycles;
+
+    reg {
+        name = "Data Byte Count Register";
+        desc = "";
+        field {
+            desc = "Specify # data bytes (not counting instruction, addr or dummy cycles to be transferred)";
+        } count[7:0] =  0;
+     } DataBytes;
+    
+    reg {
+        name = "SPI Instruction Register";
+        desc = "";
+        field {
+            desc = "SPI Opcode used in the instruction phase. Write side-effect: starts a new transaction.
+            This should be the last register written to during setup";
+        } opcode[7:0] =  0;
+    } Instr;
+
+    reg {
+        name = "TX FIFO Write Data Register";
+        desc = "";
+        field {
+            desc = "Writing stores data in fifo";
+        } fifo_data[31:0] =  0;
+     } tx_fifo_wdata;
+
+    reg {
+        name = "RX FIFO Read Data Register";
+        desc = "";
+        field {
+            desc = "Note: Reading side-effects the data by popping the fifo";
+        } fifo_data[31:0] =  0;
+     } rx_fifo_rdata;
+
+    // Example page program:
+    // write enable, instr: 06h, 0 dummy, 0 data size
+    // enter 4 byte address mode, instr: B7h, 0 dummy, 0 data size
+    // quad input page 32bit address program, instr: 34h, 0 dummy, n data size, leftovers filled with FFs
+    
+
+};

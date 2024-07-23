@@ -20,9 +20,7 @@ use work.axil26x32_pkg;
 
 entity axil_interconnect is
     generic (
-        NUM_RESPONDERS : integer := 1;
-        -- Responder blocks configuration
-        config_array : axil_responder_cfg_array_t(NUM_RESPONDERS - 1 downto 0)
+        config_array : axil_responder_cfg_array_t
     );
     port (
         -- Clock and reset
