@@ -21,6 +21,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
+
 use work.stm32h7_fmc_target_pkg.all;
 
 use work.axil26x32_pkg.all;
@@ -34,8 +36,10 @@ entity stm32h7_fmc_target is
         --! non-multiplexed upper address bits from STM32
         a : in    std_logic_vector(24 downto 16);
         --! multiplexed lower address bits/databits to/from STM32
-        ad : inout std_logic_vector(15 downto 0);
-        --! active-low byte lane enables
+        addr_data_in : in std_logic_vector(15 downto 0);
+        data_out : out std_logic_vector(15 downto 0);
+        data_out_en : out std_logic;
+        --! active-low chip selects
         ne : in    std_logic_vector(3 downto 0);
         --! active-low output enable
         noe : in    std_logic;
@@ -60,8 +64,9 @@ architecture rtl of stm32h7_fmc_target is
         addr_delay,
         addr_delay1,
         read_setup,
-        read_wait_clear,
+        read_word0_setup_delay,
         read_word0,
+        read_word1_setup_delay,
         read_word1,
         write_setup,
         write_word0,
@@ -78,7 +83,6 @@ architecture rtl of stm32h7_fmc_target is
     );
     signal fmc_state : fmc_state_type;
     signal axi_state : axi_state_type;
-
     signal txn : txn_type;
 
     signal axi_fifo_rd_path_rdata  : std_logic_vector(31 downto 0);
@@ -117,8 +121,6 @@ architecture rtl of stm32h7_fmc_target is
 
 
 begin
-
-   
     axi_if.write_address.valid <= awvalid;
     axi_if.write_address.addr  <= awaddr;
     axi_if.write_data.valid  <= wvalid;
@@ -134,8 +136,9 @@ begin
         variable chip_selected : boolean;
     begin
         if chip_reset then
-            ad <= (others => 'Z');
-            nwait <= '1';
+            data_out <= (others => '0');
+            data_out_en <= '0'; -- release bus
+            nwait <= '0';
             txn <= ('0', (others => '0'));
             axi_fifo_wr_path_wdata  <= (others => '0');
             axi_fifo_rd_path_rd_ack <= '0';
@@ -153,13 +156,14 @@ begin
 
             case fmc_state is
                 when idle =>
-                    nwait <= '1';
+                    nwait <= '0';
+                    data_out_en <= '0'; -- release bus
                     -- Look for a starting transition
                     -- ( chip sel and address latch)
                     if chip_selected and nl = '0' then
                         -- Bus outputs right-shifted so we shift left here to
                         -- recover byte addrs
-                        txn.addr <= unsigned(a & ad & "0");
+                        txn.addr <= unsigned(a & addr_data_in & "0");
                         txn.read_not_write <= nwe;
 
                         fmc_state <= addr_delay;
@@ -207,24 +211,35 @@ begin
                         -- Wait is held here until we've done the AXI transaction
                         -- to fetch the data and have the data back in the fifo
                         if not axi_fifo_rd_path_rempty then
-                            -- We've got a read response in the show-ahead fifo
-                            -- drop wait
-                            nwait <= '1';
-                            -- apply data to the bus even though we're going
-                            -- to still have to bleed a wait cycle
-                            ad        <= axi_fifo_rd_path_rdata(15 downto 0);
-                            fmc_state <= read_wait_clear;
+                            -- Register the data
+                            -- apply the data to the bus
+                            -- take away the wait
+                            data_out    <= axi_fifo_rd_path_rdata(15 downto 0);
+                            -- noe should always be active here, but this provides a safety net
+                            -- in case there is a bus-desync of some kind, we don't want to cross-drive with
+                            -- the sp
+                            data_out_en <= '1' and (not noe);
+                            fmc_state <= read_word0_setup_delay;
                         end if;
                     end if;
-                when read_wait_clear =>
-                    -- Clear the wait flag
-                    txn_stored <= false;
-                    -- bleed the wait cycle
+                when read_word0_setup_delay =>
+                    nwait       <= '1';
                     fmc_state <= read_word0;
+
                 when read_word0 =>
-                    -- data strobe at next edge
+                    nwait       <= '0';
+                    txn_stored <= false;
+                    data_out  <= axi_fifo_rd_path_rdata(31 downto 16);
+                    if not chip_selected then
+                        fmc_state <= idle;
+                        data_out_en <= '0'; -- release bus
+                        axi_fifo_rd_path_rd_ack <= '1'; -- clear the read word
+                    else  -- not done, move to next word
+                        fmc_state <= read_word1_setup_delay; 
+                    end if;
+                when read_word1_setup_delay =>
+                    nwait       <= '1';
                     fmc_state <= read_word1;
-                    ad        <= axi_fifo_rd_path_rdata(31 downto 16);
                 when read_word1 =>
                     -- TODO: if we want to allow shorter transactions
                     -- we'd need to do the right thing here, which would
@@ -238,9 +253,9 @@ begin
 
                     -- normal case: pop the rdata fifo since we're done with it
                     axi_fifo_rd_path_rd_ack <= '1';
-                    fmc_state               <= read_setup;
+                    fmc_state               <= idle;
                     nwait                   <= '0';
-                    ad                      <= (others => 'Z');
+                    data_out_en <= '0'; -- release bus
                 when write_setup =>
                     if not chip_selected then
                         fmc_state <= idle;
@@ -253,21 +268,22 @@ begin
                             nwait                   <= '1';
                             -- no waits needed until the fifo fills up
                             fmc_state                           <= write_word0;
-                            axi_fifo_wr_path_wdata(15 downto 0) <= ad;
                         end if;
                     end if;
                 when write_word0 =>
+                    axi_fifo_wr_path_wdata(15 downto 0) <= addr_data_in;
                     txn_stored                           <= false;
                     fmc_state                            <= write_word1;
-                    axi_fifo_wr_path_wdata(31 downto 16) <= ad;
                 when write_word1 =>
+                    axi_fifo_wr_path_wdata(31 downto 16) <= addr_data_in;
                     axi_fifo_wr_path_write <= '1';
-                    fmc_state              <= write_setup;
+                    nwait <= '0';
+                    fmc_state              <= idle;
                     -- We need to immediately stall the bus at this point if we have a full txn fifo
                     -- other stall conditions will be checked in the write setup phase
                     -- since the conditions differ
                     if axi_fifo_txn_path_wfull then
-                        nwait <= '0';
+                        
                     end if;
                 when timeout_cleanup =>
                     null;
@@ -399,16 +415,20 @@ begin
                         wvalid    <= '1';
                         axi_state <= axi_write_wait;
                     end if;
+                    if awready and awvalid then
+                        awvalid <= '0';
+                    end if;
                     bready <= '1';
                 when axi_write_wait =>
                     if awready and awvalid then
                         awvalid <= '0';
                     end if;
-                    if wvalid and wready then
+                    if wready and wvalid then
                         wvalid <= '0';
                     end if;
                     if bvalid then
                         axi_state <= idle;
+                        bready <= '0';
                     end if;
             end case;
 

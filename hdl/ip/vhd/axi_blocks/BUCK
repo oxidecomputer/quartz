@@ -13,5 +13,6 @@ vhdl_unit(
     deps = [
         ":axilite_common_pkgs",
     ],
+    standard = "2019",
     visibility = ['PUBLIC'],
 )
