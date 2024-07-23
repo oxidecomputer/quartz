@@ -39,6 +39,8 @@ architecture th of fmc_th is
     signal bid  : std_logic_vector(3 downto 0);
     signal awid : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
     signal rid  : std_logic_vector(3 downto 0);
+    signal data_out_tris: std_logic_vector(15 downto 0);
+    signal data_out_tris_en : std_logic;
 
     signal axi_if : axil_t;
 
@@ -114,6 +116,8 @@ begin
             nwait => nwait
         );
 
+    ad <= data_out_tris when data_out_tris_en = '1' else (others => 'Z');
+        
     dut: entity work.stm32h7_fmc_target
         port map (
             -- Interface to the STM32H7's FMC periph
@@ -121,7 +125,9 @@ begin
             chip_reset => reset,
             fmc_clk    => clk,
             a          => a(24 downto 16),
-            ad         => ad,
+            addr_data_in => ad,
+            data_out => data_out_tris,
+            data_out_en => data_out_tris_en,
             ne         => ne,
             -- todo missing byte enables?
             noe   => noe,

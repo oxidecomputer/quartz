@@ -12,7 +12,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
 use work.axil8x32_pkg;
-use work.axil24x32_pkg;
+use work.axil26x32_pkg;
 
 -- This is a somewhat naive implementation of an parameterized AXI-lite interconnect.
 -- It is intended to be function as an MVP implementation allowing for basic multi-responder
@@ -20,8 +20,9 @@ use work.axil24x32_pkg;
 
 entity axil_interconnect is
     generic (
+        NUM_RESPONDERS : integer := 1;
         -- Responder blocks configuration
-        config_array : axil_responder_cfg_array_t(0 downto 0);
+        config_array : axil_responder_cfg_array_t(NUM_RESPONDERS - 1 downto 0)
     );
     port (
         -- Clock and reset
@@ -29,7 +30,7 @@ entity axil_interconnect is
         reset : in std_logic;
 
         -- Responder I/F to the main initiator, which is a *target* interface
-        initiator : view axil24x32_pkg.axil_target;
+        initiator : view axil26x32_pkg.axil_target;
 
         -- Initiator I/Fs to the responder blocks, which is a *controller* interface
         responders : view (axil8x32_pkg.axil_controller) of axil8x32_pkg.axil_array_t(config_array'length - 1 downto 0)

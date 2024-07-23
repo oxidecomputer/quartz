@@ -43,12 +43,12 @@ architecture model of stm32h7_fmc_model is
 
 begin
 
-    wait_delay : process (clk)
-    begin
-        if rising_edge(clk) then
-            delayed_wait <= not nwait;
-        end if;
-    end process;
+    -- wait_delay : process (clk)
+    -- begin
+    --     if rising_edge(clk) then
+    --         delayed_wait <= not nwait;
+    --     end if;
+    -- end process;
 
     bfm : process
         variable request_msg : msg_t;
@@ -111,10 +111,10 @@ begin
             -- on next falling edge of clock, apply wdata
             while rem_data_cnt > 0 loop
                 wait on clk;
-                -- on every rising edge that delayed wait isn't asserted,
+                -- on every rising edge that wait isn't asserted,
                 -- we've done a transfer, so get the data, dec the counter,
                 -- apply to bus
-                if falling_edge(clk) and delayed_wait = '0' then
+                if falling_edge(clk) and nwait = '1' then
                     data         := pop_std_ulogic_vector(request_msg);
                     rem_data_cnt := rem_data_cnt - 1;
                     ad           <= data;
@@ -132,7 +132,7 @@ begin
             wait until rising_edge(clk);
             while rem_data_cnt > 0 loop
                 wait on clk;
-                if rising_edge(clk) and delayed_wait = '0' then
+                if rising_edge(clk) and nwait = '1' then
                     -- sample data, dec remaining data
                     push_std_ulogic_vector(reply_msg, ad);
                     rem_data_cnt := rem_data_cnt - 1;

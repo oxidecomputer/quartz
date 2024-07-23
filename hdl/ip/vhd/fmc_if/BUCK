@@ -14,6 +14,7 @@ vhdl_unit(
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs"
         ],
+    standard = "2019",
     visibility = ["PUBLIC"],
 )
 

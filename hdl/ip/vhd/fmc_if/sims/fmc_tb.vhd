@@ -40,6 +40,7 @@ begin
         variable data          : std_logic_vector(31 downto 0) := (others => '0');
         variable expected_data : std_logic_vector(31 downto 0) := (others => '0');
         variable buf           : buffer_t;
+        variable buf2           : buffer_t;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -79,11 +80,33 @@ begin
                 -- Now do the FMC transaction, and check that returned data matches
                 fmc_read32(net, address, data);
                 check_equal(data, expected_data, "Read data did not match exptected");
-                -- Do a second transaction
-                expected_data := X"ADEADBAD";
-                write_word(rmemory, base_address(buf), expected_data);
-                fmc_read32(net, address, data);
-                check_equal(data, expected_data, "Read data did not match exptected");
+                -- -- Do a second transaction
+                -- expected_data := X"ADEADBAD";
+                -- write_word(rmemory, base_address(buf), expected_data);
+                -- fmc_read32(net, address, data);
+                -- check_equal(data, expected_data, "Read data did not match exptected");
+            elsif run("basic_fmc_read_after_write") then
+                    data := X"DEADBEEF";
+                    -- Set up the buffer used by the AXI write target
+                    buf := allocate(wmemory, 4 * 2, alignment => 32);
+                    buf2 := allocate(rmemory, 4 * 2, alignment => 32);
+                    -- Only going to allow writes, and set the expected data
+                    -- using the simulation interface
+                    set_permissions(wmemory, to_integer(address), write_only);
+                    set_expected_word(wmemory, to_integer(address), data);
+                    -- Do the FMC -> AXI write transaction
+                    fmc_write32(net, address, data);
+                    check_expected_was_written(buf);
+                    -- Do a second transaction
+                    expected_data := X"ADEADBAD";
+                    set_expected_word(wmemory, to_integer(address), expected_data);
+                    fmc_write32(net, address, expected_data);
+                    check_expected_was_written(buf);
+
+                    write_word(rmemory, base_address(buf2), expected_data);
+                    set_permissions(rmemory, base_address(buf2), read_only);
+                    fmc_read32(net, address, data);
+                    check_equal(data, expected_data, "Read data did not match exptected");
             end if;
         end loop;
         wait for 2 us;
