@@ -17,7 +17,16 @@ vhdl_unit(
 )
 
 vhdl_unit(
-    name = "axilite_common",
-    srcs = glob(["axilite_if_pkg.vhd"]),
+    name = "axilite_common_pkgs",
+    srcs = glob(["*pkg.vhd"]),
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axil_interconnect",
+    srcs = glob(["axil_interconnect.vhd"]),
+    deps = [
+        ":axilite_common_pkgs",
+    ],
     visibility = ['PUBLIC'],
 )
