@@ -75,8 +75,8 @@ package axilite_if_pkg is
    end record;
 
    view rdat_controller of axil_read_data_t is
-      valid, data : out;
-      ready, resp : in;
+      valid, data, resp : in;
+      ready : out;
    end view;
    alias rdata_target is rdat_controller'converse;
 
@@ -98,5 +98,10 @@ package axilite_if_pkg is
    end view;
    alias axil_target is axil_controller'converse;
 
+   type axil_array_t is array (natural range <>) of axil_t ;
 
 end package;
+
+-- Some common sizes expected to be used
+package axil8x32_pkg is new work.axilite_if_pkg generic map(addr_width => 8);
+package axil24x32_pkg is new work.axilite_if_pkg generic map(addr_width => 24);
