@@ -72,7 +72,8 @@ working in linux, and python 3.12 working in windows. Python 3.9 did not work in
 windows at least, we have no other data points on other python versions.
 - You'll need to install required python packages `pip install -r tools/requirements.txt`
 - You'll need to have nvc (https://github.com/nickg/nvc). For linux, this can be obtained as a .deb
-from the releases section, for windows there are also compiled binaries in the releases section.
+from the releases section, for windows there are also compiled binaries in the releases section. 
+Current minimum supported version is 1.13.1
 
 :warning: **Windows Users**: You need to be in Developer Mode for buck2 to be
 able to use symlinks, and should consider setting `LongPathsEnabled` in regedit at

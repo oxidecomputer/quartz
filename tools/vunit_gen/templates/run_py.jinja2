@@ -72,5 +72,9 @@ vu.add_verification_components()
 
 # Disable annoying ieee warnings across VUnit-supported simulators
 vu.set_sim_option("disable_ieee_warnings", True)
+{% if simulator == "nvc" %}
+# Dump arrays of records, may have a perf penalty
+vu.set_sim_option("nvc.sim_flags", ["--dump-arrays"])
+{% endif %}
 # Run vunit function
 vu.main()
