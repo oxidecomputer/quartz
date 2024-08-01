@@ -51,6 +51,8 @@ files = [
     "hdl/ip/vhd/memories/sims/memories_sim_pkg.vhd",
     "hdl/ip/vhd/memories/sims/memories_tb.vhd",
     "hdl/ip/vhd/memories/sims/memories_th.vhd",
+    "hdl/ip/vhd/axi_blocks/axil_common_pkg.vhd",
+    "hdl/ip/vhd/axi_blocks/axilite_if_pkg.vhd",
     "hdl/ip/vhd/fifos/dcfifo_xpm.vhd",
     "hdl/ip/vhd/fmc_if/stm32h7_fmc_target.vhd",
     "hdl/ip/vhd/fmc_if/stm32h7_fmc_target_pkg.vhd",
@@ -67,4 +69,5 @@ files = [
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_sim_pkg.vhd",
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_tb.vhd",
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_th.vhd",
+    "hdl/ip/vhd/axi_blocks/axil_interconnect.vhd",
 ]

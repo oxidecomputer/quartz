@@ -10,7 +10,10 @@ vhdl_unit(
 vhdl_unit(
     name = "stm32h7_fmc_target",
     srcs = glob(["stm32h7*.vhd"]),
-    deps = ["//hdl/ip/vhd/fifos:dcfifo_xpm"],
+    deps = [
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs"
+        ],
     visibility = ["PUBLIC"],
 )
 
