@@ -11,12 +11,15 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 package axilite_if_pkg is
+   generic (
+      addr_width : integer
+   );
 
     -- Write address channel
     type axil_write_address_t is record
        valid : std_logic;
        ready : std_logic;
-       addr : std_logic_vector;
+       addr : std_logic_vector(addr_width - 1 downto 0);
     end record;
 
    view aw_controller of axil_write_address_t is
@@ -29,8 +32,8 @@ package axilite_if_pkg is
    type axil_write_data_t is record
       valid : std_logic;
       ready : std_logic;
-      data : std_logic_vector;
-      strb : std_logic_vector;
+      data : std_logic_vector(31 downto 0);
+      strb : std_logic_vector(3 downto 0);
    end record;
 
    view wdat_controller of axil_write_data_t is
@@ -43,7 +46,7 @@ package axilite_if_pkg is
    type axil_write_response_t is record
       valid : std_logic;
       ready : std_logic;
-      resp : std_logic_vector;
+      resp : std_logic_vector(1 downto 0);
    end record;
    
    view wresp_controller of axil_write_response_t is
@@ -57,7 +60,7 @@ package axilite_if_pkg is
    type axil_read_address_t is record
       valid : std_logic;
       ready : std_logic;
-      addr : std_logic_vector;
+      addr : std_logic_vector(addr_width - 1 downto 0);
    end record;
 
    view raddr_controller of axil_read_address_t is
@@ -70,8 +73,8 @@ package axilite_if_pkg is
    type axil_read_data_t is record
       valid : std_logic;
       ready : std_logic;
-      data : std_logic_vector;
-      resp : std_logic_vector;
+      data : std_logic_vector(31 downto 0);
+      resp : std_logic_vector(1 downto 0);
    end record;
 
    view rdat_controller of axil_read_data_t is
@@ -105,3 +108,4 @@ end package;
 -- Some common sizes expected to be used
 package axil8x32_pkg is new work.axilite_if_pkg generic map(addr_width => 8);
 package axil24x32_pkg is new work.axilite_if_pkg generic map(addr_width => 24);
+package axil26x32_pkg is new work.axilite_if_pkg generic map(addr_width => 26);

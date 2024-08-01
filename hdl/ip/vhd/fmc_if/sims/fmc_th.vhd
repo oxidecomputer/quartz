@@ -10,6 +10,8 @@ use ieee.numeric_std.all;
 use work.stm32h7_fmc_sim_pkg.all;
 use work.fmc_tb_pkg.all;
 
+use work.axil26x32_pkg.all;
+
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
@@ -31,27 +33,14 @@ architecture th of fmc_th is
     signal nl    : std_logic;
     signal nwait : std_logic := '1';
 
-    signal awvalid : std_logic;
-    signal awready : std_logic;
-    signal awaddr  : std_logic_vector(25 downto 0);
-    signal awprot  : std_logic_vector(2 downto 0);
-    signal wvalid  : std_logic;
-    signal wready  : std_logic;
-    signal wstrb   : std_logic_vector(3 downto 0);
-    signal wdata   : std_logic_vector(31 downto 0);
-    signal bvalid  : std_logic;
-    signal bready  : std_logic;
-    signal arvalid : std_logic;
-    signal araddr  : std_logic_vector(25 downto 0);
-    signal arready : std_logic;
-    signal rvalid  : std_logic;
-    signal rready  : std_logic;
     signal rdata   : std_logic_vector(31 downto 0);
 
     signal arid : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
     signal bid  : std_logic_vector(3 downto 0);
     signal awid : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
     signal rid  : std_logic_vector(3 downto 0);
+
+    signal axi_if : axil_t;
 
 begin
 
@@ -68,19 +57,19 @@ begin
         port map (
             aclk => clk,
 
-            arvalid => arvalid,
-            arready => arready,
+            arvalid => axi_if.read_address.valid,
+            arready => axi_if.read_address.ready,
             arid    => arid,
-            araddr  => araddr,
+            araddr  => axi_if.read_address.addr,
             arlen   => "00000000",
             arsize  => "010",
             arburst => "00",
 
-            rvalid => rvalid,
-            rready => rready,
+            rvalid => axi_if.read_data.valid,
+            rready => axi_if.read_data.ready,
             rid    => rid,
-            rdata  => rdata,
-            rresp  => open,
+            rdata  => axi_if.read_data.data,
+            rresp  => axi_if.read_data.resp,
             rlast  => open
         );
 
@@ -90,20 +79,20 @@ begin
         )
         port map (
             aclk    => clk,
-            awvalid => awvalid,
-            awready => awready,
+            awvalid => axi_if.write_address.valid,
+            awready => axi_if.write_address.ready,
             awid    => awid,
-            awaddr  => awaddr,
+            awaddr  => axi_if.write_address.addr,
             awlen   => "00000000",
             awsize  => "010",
             awburst => "00",
-            wvalid  => wvalid,
-            wready  => wready,
-            wdata   => wdata,
-            wstrb   => wstrb,
+            wvalid  => axi_if.write_data.valid,
+            wready  => axi_if.write_data.ready,
+            wdata   => axi_if.write_data.data,
+            wstrb   => axi_if.write_data.strb,
             wlast   => '1',
-            bvalid  => bvalid,
-            bready  => bready,
+            bvalid  => axi_if.write_response.valid,
+            bready  => axi_if.write_response.ready,
             bid     => bid,
             bresp   => open
         );
@@ -142,27 +131,8 @@ begin
             -- FPGA interface
             aclk    => clk,
             aresetn => not reset,
-            -- Write addr channel
-            awvalid => awvalid,
-            awready => awready,
-            awaddr  => awaddr,
-            awprot  => awprot,
-            -- Write data channel
-            wvalid => wvalid,
-            wready => wready,
-            wstrb  => wstrb,
-            wdata  => wdata,
-            -- Write response channel
-            bvalid => bvalid,
-            bready => bready,
-            -- Read address channel
-            arvalid => arvalid,
-            araddr  => araddr,
-            arready => arready,
-            -- Read data channel
-            rvalid => rvalid,
-            rready => rready,
-            rdata  => rdata
+            axi_if => axi_if
+          
 
         );
 

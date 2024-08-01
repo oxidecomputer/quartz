@@ -1,24 +1,9 @@
 load("//tools:hdl.bzl", "vhdl_unit")
- 
-vhdl_unit(
-     name = "axi_st_bytes_to_packets_cores",
-     srcs = glob(["bytes_to_packets/*.vhd"]),
-     visibility = ['PUBLIC'],
- )
- 
-vhdl_unit(
-     name = "uart_axi_mgr",
-     srcs = glob(["uart_axi_mgr/*.vhd"]),
-     deps = [
-         "//hdl/ip/vhd/uart:axi_st_uart",
-         ":axi_st_bytes_to_packets_cores",
-     ],
-     visibility = ['PUBLIC'],
-)
 
 vhdl_unit(
     name = "axilite_common_pkgs",
     srcs = glob(["*pkg.vhd"]),
+    standard = "2019",
     visibility = ['PUBLIC'],
 )
 

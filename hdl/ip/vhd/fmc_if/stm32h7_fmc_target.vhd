@@ -23,6 +23,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.stm32h7_fmc_target_pkg.all;
 
+use work.axil26x32_pkg.all;
+
 entity stm32h7_fmc_target is
     port (
         -- Interface to the STM32H7's FMC periph
@@ -46,27 +48,8 @@ entity stm32h7_fmc_target is
         -- FPGA interface
         aclk    : in    std_logic;
         aresetn : in    std_logic;
-        -- Write addr channel
-        awvalid : out   std_logic;
-        awready : in    std_logic;
-        awaddr  : out   std_logic_vector(25 downto 0);
-        awprot  : out   std_logic_vector(2 downto 0);
-        -- Write data channel
-        wvalid : out   std_logic;
-        wready : in    std_logic;
-        wstrb  : out   std_logic_vector(3 downto 0);
-        wdata  : out   std_logic_vector(31 downto 0);
-        -- Write response channel
-        bvalid : in    std_logic;
-        bready : out   std_logic;
-        -- Read address channel
-        arvalid : out   std_logic;
-        araddr  : out   std_logic_vector(25 downto 0);
-        arready : in    std_logic;
-        -- Read data channel
-        rvalid : in    std_logic;
-        rready : out   std_logic;
-        rdata  : in    std_logic_vector(31 downto 0)
+        -- AXI requester interface
+        axi_if : view axil_controller
     );
 end entity;
 
@@ -116,10 +99,35 @@ architecture rtl of stm32h7_fmc_target is
     signal axi_fifo_wr_path_write : std_logic;
     signal txn_stored             : boolean;
 
+    alias awready is axi_if.write_address.ready;
+    alias wready is axi_if.write_data.ready;
+    alias bvalid is axi_if.write_response.valid;
+    alias arready is axi_if.read_address.ready;
+    alias rvalid is axi_if.read_data.valid;
+    alias rdata is axi_if.read_data.data;
+
+    signal awvalid : std_logic;
+    signal awaddr  : std_logic_vector(25 downto 0);
+    signal wvalid : std_logic;
+    signal wdata : std_logic_vector(31 downto 0);
+    signal bready : std_logic;
+    signal arvalid : std_logic;
+    signal araddr : std_logic_vector(25 downto 0);
+    signal rready : std_logic;
+
+
 begin
 
-    wstrb  <= (others => '1');
-    awprot <= (others => '0');
+   
+    axi_if.write_address.valid <= awvalid;
+    axi_if.write_address.addr  <= awaddr;
+    axi_if.write_data.valid  <= wvalid;
+    axi_if.write_data.strb   <= (others => '1');
+    axi_if.write_data.data   <= wdata;
+    axi_if.write_response.ready <= bready;
+    axi_if.read_address.valid <= arvalid;
+    axi_if.read_address.addr  <= araddr;
+    axi_if.read_data.ready <= rready;
 
     -- State machine dealing with fmc interface
     fmc_if_sm : process (fmc_clk, chip_reset)
