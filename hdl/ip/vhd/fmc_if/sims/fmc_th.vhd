@@ -45,7 +45,7 @@ architecture th of fmc_th is
 begin
 
     -- set up a fastish, clock for the sim
-    -- environment and release reset after a bit of time
+    -- env and release reset after a bit of time
     clk   <= not clk after 4 ns;
     reset <= '0' after 200 ns;
 
