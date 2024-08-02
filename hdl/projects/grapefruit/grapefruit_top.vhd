@@ -201,31 +201,21 @@ architecture rtl of grapefruit_top is
     signal clk_200m : std_logic;
     signal reset_200m : std_logic;
     signal reset_fmc: std_logic;
-
-    signal sp_awvalid : std_logic;
-    signal sp_awready : std_logic;
-    signal sp_awaddr : std_logic_vector(25 downto 0);
-    signal sp_wvalid : std_logic;
-    signal sp_wready : std_logic;
-    signal sp_wstrb : std_logic_vector(3 downto 0);
-    signal sp_wdata : std_logic_vector(31 downto 0);
-    signal sp_bvalid : std_logic;
-    signal sp_bready : std_logic;
-    signal sp_arvalid : std_logic;
-    signal sp_arready : std_logic;
-    signal sp_araddr : std_logic_vector(25 downto 0);
-    signal sp_rvalid : std_logic;
-    signal sp_rready : std_logic;
-    signal sp_rdata : std_logic_vector(31 downto 0);
-
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
     signal fmc_data_out_enable: std_logic;
 
     signal fmc_axi_if : axil26x32_pkg.axil_t;
 
-    constant responder_count : integer := 1;
-    constant config_array : axil_responder_cfg_array_t(0 downto 0) := (0 => (base_addr => x"00000000", addr_span_bits => 8));
-    signal responders : axil8x32_pkg.axil_array_t(0 downto 0);
+    constant responder_count : integer := 2;
+
+    -- TODO: someday I'd like the rdl stuff to both generate this and the fabric maybe?
+    constant config_array : axil_responder_cfg_array_t(responder_count-1 downto 0) := 
+     (0 => (base_addr => x"00000000", addr_span_bits => 8),
+      1 => (base_addr => x"00000100", addr_span_bits => 8)
+      );
+    signal responders : axil8x32_pkg.axil_array_t(responder_count-1 downto 0);
+    signal spi_fpga_to_flash2_dat_o : std_logic_vector(3 downto 0);
+    signal spi_fpga_to_flash2_dat_oe : std_logic_vector(3 downto 0);
 
 begin
 
@@ -311,6 +301,26 @@ begin
         axi_if => responders(0)
     );
 
+    spi_nor_top_inst: entity work.spi_nor_top
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders(1),
+        cs_n => spi_fpga_to_flash2_cs_l,
+        sclk => spi_fpga_to_flash2_clk,
+        io => spi_fpga_to_flash2_dat,
+        io_o => spi_fpga_to_flash2_dat_o,
+        io_oe => spi_fpga_to_flash2_dat_oe
+    );
+
+
+    -- -- qspi tris buffer
+    process(all)
+    begin
+        for i in 0 to 3 loop
+            spi_fpga_to_flash2_dat(i) <= spi_fpga_to_flash2_dat_o(i) when spi_fpga_to_flash2_dat_oe(i) = '1' else 'Z';
+        end loop;
+    end process;
 
     -- Basic flash spi passthru fomr qspi0 to spi flash
     spi_fpga_to_flash_cs_l <= qspi0_hpm_to_scm_cs0_l;

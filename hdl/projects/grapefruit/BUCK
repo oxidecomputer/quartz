@@ -3,7 +3,7 @@ load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
 rdl_file(
-    name = "gfruit_rdl",
+    name = "base_regs_map",
     src = "base_regs/gfruit_regs.rdl",
     outputs = [
         "grapefruit_regs_pkg.vhd", 
@@ -12,11 +12,23 @@ rdl_file(
     ]
 )
 
+rdl_file(
+    name = "gfruit_top_regs",
+    src = "gfruit_top.rdl",
+    deps = [
+        ":base_regs_map",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_rdl",
+    ],
+    outputs = [
+        "gfruit_top_map.html",
+    ]
+)
+
 vhdl_unit (
-    name = "gfruit_regs",
+    name = "base_regs",
     srcs = glob(["base_regs/*.vhd"]),
     deps = [
-        ":gfruit_rdl",
+        ":base_regs_map",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         ],
     standard = "2019",
@@ -31,10 +43,12 @@ vhdl_unit(
     name = "grapefruit_top",
     srcs = ["grapefruit_top.vhd"],
     deps = [
-        ":gfruit_regs",
+        ":base_regs",
+        ":gfruit_top_regs",
         ":reset_sync",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
     ],
     standard = "2019",
@@ -47,5 +61,5 @@ vivado_bitstream(
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["*ip.tcl"]),
-    #post_synth_tcl_files=glob(["*ila.tcl"]),
+    post_synth_tcl_files=glob(["*ila.tcl"]),
 )
