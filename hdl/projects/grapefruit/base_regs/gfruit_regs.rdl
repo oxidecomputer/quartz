@@ -7,7 +7,7 @@
 // This is SystemRDL description of the sw-accesible registers in the
 // grapefruit dev board FPGA.
 
-addrmap gfruit_fpga {
+addrmap gfruit_base_regs {
     name = "Grapefruit FPGA";
     desc = "Register description of the Grapefruit FPGA";
 
