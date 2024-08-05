@@ -19,11 +19,12 @@ entity spi_txn_mgr is
         -- system register interface
         address : in unsigned(31 downto 0);
         dummy_cycles   : in unsigned(7 downto 0);
-        data_bytes : in unsigned(7 downto 0);
+        data_bytes : in unsigned(8 downto 0);
         instr: in std_logic_vector(7 downto 0);
         go_flag: in std_logic;
         -- link interface
         cs_n  : out    std_logic;
+        sclk  : in     std_logic;
         rx_byte_done : in boolean;
         rx_link_byte : in std_logic_vector(7 downto 0);
         tx_byte_done : in boolean;
@@ -40,7 +41,7 @@ entity spi_txn_mgr is
 end entity;
 
 architecture rtl of spi_txn_mgr is
-
+    attribute MARK_DEBUG : string;
 constant BYTES_24BIT_ADDR : integer := 3;
 constant BYTES_32BIT_ADDR : integer := 4;
 constant CS_CLK_DELAY_CNTS : integer := 2;
@@ -51,11 +52,13 @@ type reg_type is record
     state : state_t;
     txn : txn_info_t;
     csn : std_logic;
-    counter : integer range 0 to 255;
+    counter : integer range 0 to 512;
 end record;
 constant r_reset : reg_type := (idle, txn_info_t_reset, '1', 0);
 
 signal r, rin : reg_type;
+attribute MARK_DEBUG of r : signal is "TRUE";
+signal sclk_last : std_logic;
 -- Some helper functions
 -- This block gets the expected IO mode given the state and the transaction we're running
 function get_cur_io_mode(txn: txn_info_t; state: state_t ) return io_mode is
@@ -118,6 +121,7 @@ begin
         variable slk_fedge : boolean := false;
     begin
         v := r;
+        slk_fedge := sclk = '0' and sclk_last = '1';
 
         case r.state is
             when idle =>
@@ -174,13 +178,13 @@ begin
                 if tx_byte_done and r.counter = 0 then
                     if r.txn.uses_dummys then
                         v.state := dummy;
-                        v.counter := to_integer(dummy_cycles) - 1;
+                        v.counter := to_integer(dummy_cycles);
                     elsif r.txn.data_kind = write then
                         v.state := wdata;
-                        v.counter := to_integer(data_bytes)  - 1;
+                        v.counter := to_integer(data_bytes);
                     elsif r.txn.data_kind = read then
                         v.state := rdata;
-                        v.counter := to_integer(data_bytes)  - 1;
+                        v.counter := to_integer(data_bytes);
                     else
                         v.state := cs_deassert;
                         v.counter := CS_CLK_DELAY_CNTS;
@@ -193,10 +197,10 @@ begin
                -- after a dummy phase, we're going to be reading
                -- as that's the only reason to issue dummy cycles
                -- for anything else we'll just terminate the transaction
-               if slk_fedge and r.counter = 0 then
+               if slk_fedge and r.counter = 1 then
                     if r.txn.data_kind = read then
                         v.state := rdata;
-                        v.counter := to_integer(data_bytes) - 1;
+                        v.counter := to_integer(data_bytes);
                     else
                         v.state := cs_deassert;
                         v.counter := CS_CLK_DELAY_CNTS;
@@ -206,7 +210,10 @@ begin
                 end if;
 
             when wdata =>
-                if tx_byte_done and r.counter = 0 then
+                -- Data counter is 1 indexded to better align
+                -- with sw expectations so we're done when 
+                -- r.counter = 1
+                if tx_byte_done and r.counter = 1 then
                     -- We're done with the transaction
                     v.state := cs_deassert;
                     v.counter := CS_CLK_DELAY_CNTS;
@@ -215,7 +222,10 @@ begin
                 end if;
 
             when rdata =>
-                if rx_byte_done and r.counter = 0 then
+                -- Data counter is 1 indexded to better align
+                -- with sw expectations so we're done when 
+                -- r.counter = 1
+                if rx_byte_done and r.counter = 1 then
                     -- We're done with the transaction
                     v.state := cs_deassert;
                     v.counter := CS_CLK_DELAY_CNTS;
@@ -247,7 +257,9 @@ begin
     begin
         if reset then
             r <= r_reset;
+            sclk_last <= '0';
         elsif rising_edge(clk) then
+            sclk_last <= sclk;
             r <= rin;
         end if;
     end process;

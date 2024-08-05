@@ -91,34 +91,35 @@ begin
     -- *before* the byte-shifting is done.
     -- 2) We need to know when the last bit of the byte has been shifted
     serializer : process (clk, reset)
-        variable sclk_fedge        : boolean := false;
-        variable cs_n_assert       : boolean := false;
+        variable cs_n_assert_edge  : boolean := false;
     begin
         if reset then
-            tx_reg <= (tx_reg'high -1 => '1', others => '0');
+            tx_reg <= (others => '0');
             tx_byte_ack <= false;
             csn_last <= '1';
             is_last_bit <= false;
         elsif rising_edge(clk) then
             csn_last <= cs_n;
-            cs_n_assert := cs_n = '0' and csn_last = '1';
-            sclk_fedge := sclk = '0' and sclk_last = '1';
+            cs_n_assert_edge := cs_n = '0' and csn_last = '1';
             -- clear single-cycle flags
             tx_byte_ack <= false;
+            is_last_bit <= false;
 
-            if cs_n_assert then
+            if cs_n_assert_edge then
                 -- as the controller here, we need to pre-load data before the first
                 -- clock
                 tx_reg(8 downto 1) <= tx_byte;
                 tx_reg(tx_reg'low) <= '1';
                 tx_byte_ack <= true;
+                is_last_bit <= false;
 
             -- Main serializer logic, shift out on sclk_fedge
             -- when we're chip-selected and not doing turnaround
-            elsif in_tx_phases and sclk_fedge then
-                if shift_left(tx_reg, shift_amt * 2) = "100000000" then
+            elsif in_tx_phases and sclk_redge then
+                if shift_left(tx_reg, shift_amt) = "100000000" then
                     is_last_bit <= true;
                 end if;
+            elsif in_tx_phases and sclk_fedge then
                 -- if next-shift would be our sentinal value, load new data
                 if shift_left(tx_reg, shift_amt) = "100000000" then
                     -- tx_register is "empty" load a new one
@@ -126,17 +127,17 @@ begin
                     tx_reg(8 downto 1) <= tx_byte;
                     tx_reg(tx_reg'low) <= '1';
                     tx_byte_ack <= true;
-                    is_last_bit <= false;
                 -- mid-byte, shift
                 else
                     tx_reg       <= shift_left(tx_reg, shift_amt);
                 end if;
             elsif not in_tx_phases then
-                tx_reg <= (tx_reg'high -1 => '1', others => '0');
+                tx_reg <= (others => '0');
+                is_last_bit <= false;
             end if;
         end if;
     end process;
-    tx_byte_done <= is_last_bit and sclk = '0' and sclk_last = '1';
+    tx_byte_done <= is_last_bit;
 
      -- Based on state and qspi mode, deal with the tri-state controls
     -- of the spi pins
@@ -196,7 +197,6 @@ begin
     -- We know we're done with a byte when the MSB is '1'
     -- This bit can also function as the valid flag
     deserializer : process (clk, reset)
-        variable sclk_redge : boolean := false;
     begin
         if reset then
             -- Uses a 9 bit shift register with a sentinel
@@ -205,9 +205,6 @@ begin
             -- a byte)
             rx_reg <= (rx_reg'low => '1', others => '0');
         elsif rising_edge(clk) then
-            -- build up a couple of combo variables used to make the
-            -- code read better below
-            sclk_redge := sclk = '1' and sclk_last = '0';
 
             -- Do the sample/shift when requested and flag the
             -- valid bytes once we have them

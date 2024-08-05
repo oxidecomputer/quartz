@@ -85,8 +85,9 @@ addrmap nor_flash_regs {
         name = "Data Byte Count Register";
         desc = "";
         field {
-            desc = "Specify # data bytes (not counting instruction, addr or dummy cycles to be transferred)";
-        } count[7:0] =  0;
+            desc = "Specify # data bytes -1 (not counting instruction, addr or dummy cycles to be transferred),
+            max of 255 here representing 255 + 1 as that's the largest transaction the flash can support";
+        } count[8:0] =  0;
      } DataBytes;
     
     reg {

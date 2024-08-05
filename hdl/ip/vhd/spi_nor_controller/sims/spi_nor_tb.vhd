@@ -50,11 +50,12 @@ begin
         -- waveform inspection here.
         while test_suite loop
             if run("instr_only") then
-                write_instr(net, WRITE_ENABLE_OP);
+                write_data_size(net, 3);  -- read out 3 bytes
+                write_instr(net, READ_JEDEC_ID_OP);
             elsif run("write_24addr_no_dummy") then
-                write_data(net, x"AA55AA55");  -- do do words
-                write_data(net, x"55AA55AA");  -- do do words
-                write_data_size(net, 6);  -- write out 6 bytes
+                write_data(net, x"03020100");  -- do do words
+                write_data(net, x"07060504");  -- do do words
+                write_data_size(net, 8);  -- write out 6 bytes
                 write_instr(net, PAGE_PROGRAM_OP);
 
             elsif run("write_32addr_no_dummy") then
@@ -64,7 +65,7 @@ begin
                 write_instr(net, PAGE_PROGRAM_4BYTE_OP);
 
             elsif run("read_24addr_no_dummy") then
-                write_data_size(net, 6);  -- read out 6 bytes
+                write_data_size(net, 8);  -- read out 6 bytes
                 write_instr(net, READ_DATA_OP);
 
             elsif run("read_32addr_no_dummy") then
@@ -72,8 +73,8 @@ begin
                 write_instr(net, READ_DATA_4BYTE_OP);
 
             elsif run("read_24addr_dummy") then
-                write_data_size(net, 6);  -- read out 6 bytes
-                write_dummy(net, 8);  -- 8 dummy clocks
+                write_data_size(net, 1);  -- read out 6 bytes
+                write_dummy(net, 3);  -- 8 dummy clocks
                 write_instr(net, FAST_READ_4BYTE_OP);
 
             -- elsif run("read_32addr_dummy") then
