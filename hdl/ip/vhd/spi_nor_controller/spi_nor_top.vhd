@@ -106,6 +106,7 @@ begin
         go_flag => go_strobe,
         -- link i/f
         cs_n => cs_n,
+        sclk => sclk,
         rx_byte_done => rx_byte_done,
         rx_link_byte => link_rx_byte,
         tx_byte_done => tx_byte_done,
