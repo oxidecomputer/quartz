@@ -5,21 +5,25 @@
 # Copyright 2024 Oxide Computer Company
 
 # RDL files can have 0 or more dependencies on other RDL files
+# This block provides the following providers:
+# - RDLFileInfo: A provider that contains a TSet of all the RDL files
+# - HDLFileInfo: A provider that contains a TSet of all the generated VHDL files
+
 load(
     "@prelude//python:toolchain.bzl",
     "PythonToolchainInfo",
 )
-load(":hdl.bzl", "GenVHDLInfo")
-
-
-def project_as_args(value: Artifact):
-    return cmd_args(value)
-
-
-RDLTSet = transitive_set(args_projections={"args": project_as_args})
-
-# RDL files can have 0 or more dependencies on other RDL files
-RDLFileInfo = provider(fields={"set": provider_field(RDLTSet)})
+load(
+    ":hdl_common.bzl", 
+    "GenVHDLInfo", 
+    "RDLFileInfo", 
+    "RDLTSet", 
+    "HDLFileInfo",
+    "HDLFileInfoTSet", 
+    "VHDLFileInfo",
+    "RDLHtmlMaps",
+    "RDLJsonMaps",
+)
 
 
 def _rdl_file_impl(ctx):
@@ -50,9 +54,31 @@ def _rdl_file_impl(ctx):
             rdl_out_gen,
             category="rdl",
         )
-        for out in outs:
-            if out.extension in [".vhd", ".vhdl"]:
-                providers.append(GenVHDLInfo(src=out))
+
+        # Build TSets for the generated VHDL files as a list of VHDLFileInfo
+        # This is the way down-stream logic would like to consume them
+        gen_vhdl_tset = [
+            ctx.actions.tset(
+                HDLFileInfoTSet, 
+                value=VHDLFileInfo(src=x)
+            ) 
+            for x in outs if x.extension in [".vhd", ".vhdl"]
+        ]
+        # If we have one or more generated VHDL files, create an empty TSet with each
+        # of them as a child, and then build an HDLFileInfo provider with that TSet
+        # for use by downstream rules
+        if len(gen_vhdl_tset) > 0:
+            all_gen_vhdl = ctx.actions.tset(HDLFileInfoTSet, children=gen_vhdl_tset)
+            providers.append(HDLFileInfo(set_all=all_gen_vhdl))
+
+        html_maps = [x for x in outs if x.extension == ".html"]
+        if len(html_maps) > 0:
+            providers.append(RDLHtmlMaps(files=html_maps))
+        json_maps = [x for x in outs if x.extension == ".json"]
+        if len(json_maps) > 0:
+            providers.append(RDLJsonMaps(files=json_maps))
+
+        # Toss a basic default provider in here for the generated files
         providers.append(DefaultInfo(default_outputs=outs))
     else:
         providers.append(

@@ -10,7 +10,14 @@ load(
     "PythonToolchainInfo",
 )
 
-load(":hdl.bzl", "HDLFileInfo", "VHDLFileInfo", "HDLFileInfoTSet")
+load(
+    ":hdl_common.bzl", 
+    "HDLFileInfo", 
+    "VHDLFileInfo", 
+    "HDLFileInfoTSet",
+    "RDLHtmlMaps",
+    "RDLJsonMaps",
+)
 
 VivadoConstraintInfo = provider(
     fields={
@@ -70,6 +77,7 @@ def synthesize(ctx):
     # Deal with constraint files as inputs
     constraints = ctx.attrs.constraints
 
+
     # output of this is a checkpoint file
 
     # Get list of all sources from the dep tree via the tset in HDLFileInfo
@@ -113,6 +121,25 @@ def synthesize(ctx):
     # to file contents will be in caught and synthesis will re-run as expected.
     vivado.hidden(in_json_file)
 
+    # Dump some register map stuff
+    maps = []
+    json_maps = ctx.attrs.top.get(RDLJsonMaps)
+    if json_maps != None:
+            for file in json_maps.files:
+                new_file = ctx.actions.declare_output("maps", file.basename)
+                maps.append(ctx.actions.copy_file(new_file, file))
+    html_maps = ctx.attrs.top.get(RDLHtmlMaps)
+    if html_maps != None:
+            for file in html_maps.files:
+                new_file = ctx.actions.declare_output("maps", file.basename)
+                maps.append(ctx.actions.copy_file(new_file, file))
+
+    # This is a bit sketchy but we're declaring any maps as hidden inputs
+    # here to force the generation of these files since nothing downstream
+    # depends on them. Buck2 is too smart such that since nothing depends
+    # on them, it doesn't even build them 
+    # This is a bit of a hack but it works for now.
+    vivado.hidden(maps)
     # Run vivado
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=checkpoint))
