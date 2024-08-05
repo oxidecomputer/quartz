@@ -67,7 +67,7 @@ begin
     reset_reg : process (clk, reset_async)
     begin
         if reset_async = async_reset_active_level then
-            reset_flops <= (others => '0');
+            reset_flops <= (others => '1');
         elsif rising_edge(clk) then
             reset_flops                   <= shift_right(reset_flops, 1);
             reset_flops(reset_flops'left) <= '0';
