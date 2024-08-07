@@ -24,6 +24,10 @@ devcontainer.json
 /.Xil
 /.gen
 /.srcs
+clockinfo.txt
+clockInfo.txt
+vivado*.jou
+vivado*.log
 /clockinfo.txt
 **/*clockInfo.txt
 # Yep, even ignore Vivado core dump logs!
@@ -31,3 +35,4 @@ devcontainer.json
  
 # DrawIO cruft
 **/*.svg.bkp
+ *.dtmp
