@@ -317,6 +317,7 @@ endinstance
 typedef struct {
     UInt#(TLog#(n)) id;
     union tagged {
+        Bool OutputEnabled;
         ControllerMessage Message;
     } ev;
 } TransmitterEvent#(numeric type n) deriving (Bits, Eq, FShow);

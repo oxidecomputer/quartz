@@ -122,6 +122,47 @@ module mkReadIgnitionTransceiverStateTest (Empty);
     mkTestWatchdog(200);
 endmodule
 
+module mkSetIgnitionTransmitterOutputEnableModeTest (Empty);
+        match {.spi, .ignition} <- mkSpiServerBench();
+
+        let transmitter_disabled =
+                transceiver_state_value(Disabled, False, link_status_none);
+        let transmitter_enabled =
+                transceiver_state_value(AlwaysEnabled, True, link_status_none);
+
+        function set_transmitter_state(value) =
+                spi.request.put(SpiRequest {
+                    op: WRITE,
+                    address: 'h4000,
+                    wdata: value});
+
+        mkAutoFSM(seq
+            await(ignition.idle); // Complete init.
+            assert_read_of_eq(spi,
+                    'h4000,
+                    transmitter_disabled,
+                    "expected transmitter output enable mode");
+
+            set_transmitter_state(transmitter_enabled);
+            await(ignition.idle);
+
+            assert_read_of_eq(spi,
+                    'h4000,
+                    transmitter_enabled,
+                    "expected transmitter output enable mode");
+
+            set_transmitter_state(transmitter_disabled);
+            await(ignition.idle);
+
+            assert_read_of_eq(spi,
+                    'h4000,
+                    transmitter_disabled,
+                    "expected transmitter output enable mode");
+        endseq);
+
+        mkTestWatchdog(200);
+    endmodule
+
 module mkReadIgnitionTargetStatusTest (Empty);
     match {.spi, .ignition} <- mkSpiServerBench();
 

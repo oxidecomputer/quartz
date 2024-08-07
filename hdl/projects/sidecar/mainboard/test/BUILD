@@ -96,6 +96,7 @@ bluesim_tests('SpiServerTests',
         'mkReadIgnitionPresenceSummaryTest',
         'mkReadIgnitionTargetStatusTest',
         'mkReadIgnitionTransceiverStateTest',
+        'mkSetIgnitionTransmitterOutputEnableModeTest',
     ],
     deps = [
         '//hdl/ip/bsv:FanModule',

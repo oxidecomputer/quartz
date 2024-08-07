@@ -43,6 +43,7 @@ interface IgnitionControllerAndTargetBench;
     method Bool target_system_power_off();
     method Bool target_system_power_on();
 
+    method Bool controller_transmitter_output_enabled();
     method Bool controller_receiver_locked_timeout();
     interface Vector#(2, Bool) target_receiver_locked_timeout;
 
@@ -160,7 +161,7 @@ module mkIgnitionControllerAndTargetBench #(
     SampledSerialIO#(5) controller_io <-
         mkSampledSerialIOWithTxStrobe(
             controller_tx_strobe,
-            controller_txr.serial[0]);
+            controller_txr.serial[0].snd);
 
     mkConnection(controller_txr, controller_.txr);
     mkFreeRunningStrobe(controller_tx_strobe);
@@ -175,7 +176,7 @@ module mkIgnitionControllerAndTargetBench #(
             // Mimic the hardware implementation where the output buffer of the
             // Controller transmitter is only enabled if a Target is present or
             // the `always_transmit` bit has been set.
-            True); // TODO (arjen): fix initial high-z state
+            controller_txr.serial[0].fst);
 
     Link target_to_controller_link <-
         mkLink(
@@ -195,7 +196,7 @@ module mkIgnitionControllerAndTargetBench #(
 
     ReadOnly#(Bit#(1)) target_to_controller_link_status_led <-
         mkLinkStatusLED(
-            False, //controller_.status.target_present,
+            controller_.presence_summary[0],
             link_status_disconnected, //controller_txr.status,
             False, //controller_txr.receiver_locked_timeout,
             False);
@@ -204,17 +205,17 @@ module mkIgnitionControllerAndTargetBench #(
     // not stall the shared transmitter FIFO.
     (* fire_when_enabled *)
     rule do_discard_controller_1;
-        let _ <- controller_txr.serial[1].fst.get;
+        let _ <- controller_txr.serial[1].snd.fst.get;
     endrule
 
     (* fire_when_enabled *)
     rule do_discard_controller_2;
-        let _ <- controller_txr.serial[2].fst.get;
+        let _ <- controller_txr.serial[2].snd.fst.get;
     endrule
 
     (* fire_when_enabled *)
     rule do_discard_controller_3;
-        let _ <- controller_txr.serial[3].fst.get;
+        let _ <- controller_txr.serial[3].snd.fst.get;
     endrule
 
     // Generate single cycle timeout strobes on the positive edge for both
@@ -279,6 +280,7 @@ module mkIgnitionControllerAndTargetBench #(
     method target_system_power_off = (target_.system_power == Off);
     method target_system_power_on = (target_.system_power == On);
 
+    method controller_transmitter_output_enabled = controller_txr.serial[0].fst;
     method controller_receiver_locked_timeout =
             controller_receiver_locked_timeout_;
     interface Vector target_receiver_locked_timeout =

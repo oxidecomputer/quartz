@@ -196,9 +196,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     mkFreeRunningStrobe(controller_tx_strobe);
 
     Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <- mapM(
-            mkSampledSerialIOWithTxStrobeAndOutputEnable(
-                    controller_tx_strobe,
-                    True),
+            uncurry(mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe)),
             controller_txrs.serial);
 
     // Make Inouts for the two adapters connecting to the external Targets,

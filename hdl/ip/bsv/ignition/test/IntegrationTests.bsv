@@ -26,6 +26,7 @@ IgnitionControllerAndTargetBench::Parameters parameters =
     Parameters {
         controller: IgnitionController::Parameters {
             tick_period: 400,
+            transmitter_output_disable_timeout: 10,
             protocol: protocol_parameters},
         target: IgnitionTarget::Parameters{
             external_reset: True,
@@ -58,6 +59,12 @@ module mkControllerTargetPresentTest (Empty);
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
         par
             await(bench.controller.presence_summary[0]);
@@ -155,6 +162,12 @@ module mkTargetSystemPowerResetTest (Empty);
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
         par
             await(bench.controller.presence_summary[0]);
@@ -174,9 +187,9 @@ module mkTargetSystemPowerResetTest (Empty);
         // Request a Target system power reset.
         bench.controller.registers.request.put(
                 RegisterRequest {
-                    op: tagged Write ({extend(pack(SystemPowerReset)), 4'b0}),
                     id: 0,
-                    register: TargetSystemPowerRequestStatus});
+                    register: TargetSystemPowerRequestStatus,
+                    op: tagged Write ({extend(pack(SystemPowerReset)), 4'b0})});
 
         // Observe the request being accepted by the Target and the system
         // powering off.
@@ -245,6 +258,12 @@ module mkTargetLinkErrorEventsTest (Empty);
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
         // Wait for the Target to report Controller presence through a Status
         // message.
@@ -279,8 +298,8 @@ module mkTargetLinkErrorEventsTest (Empty);
 endmodule
 
 // Verify that the Controller transmitter output enable override allows the
-// Controller to start transmitting Hello messages before detecting the presence
-// of a Target.
+// Controller to start transmitting Hello messages before receiving from a
+// Target.
 module mkControllerAlwaysTransmitOverrideTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
@@ -288,38 +307,55 @@ module mkControllerAlwaysTransmitOverrideTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    // let controller_state = asReg(bench.controller.registers.controller_state);
-    // let controller_link_status = bench.controller.registers.controller_link_status;
-
     mkAutoFSM(seq
-        // Connect only the Controller->Target direction. This will keep the
-        // Controller from transmitting because it will not detect a Target to
-        // be present.
-        //bench.controller_to_target.set_state(Connected);
+        // Connect only the Controller->Target direction. This would normally
+        // keep the Controller from transmitting because it will not detect a
+        // Target on its receiver.
+        bench.controller_to_target.set_state(Connected);
 
-        // Set the Controller to always transmit and await for the Target to
-        // detect the controller.
-        //controller_state <= unpack('h02);
+        // Set the Controller to always transmit.
+        bench.controller.registers.request.put(
+                RegisterRequest {
+                    id: 0,
+                    register: TransceiverState,
+                    op: tagged Write ({2'h0, pack(AlwaysEnabled), 4'h0})});
 
-        // Assume the Controller has started sending Hello messages. Wait for
-        // the Controller to be marked present.
-        //await(bench.target.controller0_present);
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                {2'h0, pack(AlwaysEnabled), 1'b1, 3'h0},
+                "expected transmitter output enabled and receiver not aligned");
 
-        // Assert the Controller has still not heard from the Target.
-        //action
-            //let _controller_link_status <- controller_link_status;
+        // Await for the Transmitter output enable signal to be set and the
+        // Target to mark the Controller present after receiving Hello messages.
+        await(bench.controller_transmitter_output_enabled);
+        await_set(bench.target.controller0_present);
 
-            // assert_not_set(
-            //     _controller_link_status.receiver_aligned,
-            //     "expected receiver not aligned");
-            // assert_not_set(
-            //     _controller_link_status.receiver_locked,
-            //     "expected receiver not locked");
-        //endaction
+        // Assert the Controller receiver is still in a disconnected state.
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                link_status_disconnected,
+                "expected receiver not aligned");
 
-        // assert_not_set(
-        //         controller_state.target_present,
-        //         "expected no Target present");
+        assert_false(
+                bench.controller.presence_summary[0],
+                "expected Target not present");
+
+        // Set the Controller to wait for a Target before transmitting.
+        bench.controller.registers.request.put(
+                RegisterRequest {
+                    id: 0,
+                    register: TransceiverState,
+                    op: tagged Write
+                            ({2'h0, pack(EnabledWhenReceiverAligned), 4'h0})});
+
+        // Wait for the disable timeout and the output enable to signal to be
+        // unset.
+        await(!bench.controller_transmitter_output_enabled);
+
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                {2'h0, pack(EnabledWhenReceiverAligned), 1'b0, 3'h0},
+                "expected transmitter output disabled and receiver not aligned");
     endseq);
 endmodule
 
@@ -389,6 +425,11 @@ module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write 'h20});
         endaction
 
         par

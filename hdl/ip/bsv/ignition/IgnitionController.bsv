@@ -11,11 +11,13 @@ export CounterAddress(..);
 export CounterId(..);
 export Counter(..);
 export Counters(..);
+export TransmitterOutputEnableMode(..);
 
 export mkController;
 export read_controller_register_into;
 export clear_controller_counter;
 export read_controller_counter_into;
+export transceiver_state_value;
 
 import BRAMCore::*;
 import BRAMFIFO::*;
@@ -41,12 +43,14 @@ import IgnitionTransmitter::*;
 
 typedef struct {
     Integer tick_period;
+    Integer transmitter_output_disable_timeout;
     IgnitionProtocol::Parameters protocol;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         tick_period: 1000,
+        transmitter_output_disable_timeout: 100,
         protocol: defaultValue};
 endinstance
 
@@ -120,6 +124,13 @@ typedef UInt#(8) Counter;
 
 typedef Server#(RegisterRequest#(n), Bit#(8)) Registers#(numeric type n);
 typedef Server#(CounterAddress#(n), Counter) Counters#(numeric type n);
+
+typedef enum {
+    Disabled = 0,
+    EnabledWhenReceiverAligned = 1,
+    EnabledWhenTargetPresent = 2,
+    AlwaysEnabled = 3
+} TransmitterOutputEnableMode deriving (Bits, Eq, FShow);
 
 // An interface for a Controller with `n` "channels" which processes events
 // submitted by a receiver, answers requests from upstack software and generates
@@ -247,7 +258,6 @@ module mkController #(
     //
     FIFOF#(Bit#(8)) software_response <- mkFIFOF();
     FIFOF#(TransmitterEvent#(n)) transmitter_events <- mkFIFOF();
-    FIFOF#(Bool) transmitter_output_enabled_events <- mkFIFOF();
 
     let event_handler_idle =
             !(software_request.notEmpty ||
@@ -899,16 +909,63 @@ module mkController #(
                 software_request.first.op,
                 software_request.first.register)) matches
             {tagged Read, TransceiverState}:
-                respond_with(transceiver);
+                respond_with(pack(transceiver)[5:0]);
 
             {tagged Write .b, TransceiverState}: begin
-                let request = TransceiverRegister'(unpack(truncate(b)));
+                TransceiverRegister request = unpack(extend(b));
+                TransceiverRegister transceiver_ = transceiver;
 
-                // Update the transceiver register. A change to the transmitter
-                // output enable mode is applied by on the next tick event. See
-                // `do_handle_tick_event`.
-                transceiver.transmitter_output_mode <=
-                        request.transmitter_output_mode;
+                transceiver_.transmitter_output_enable_mode =
+                        request.transmitter_output_enable_mode;
+
+                case (request.transmitter_output_enable_mode)
+                    Disabled: begin
+                        transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                        transceiver_.transmitter_output_enabled = False;
+                    end
+
+                    EnabledWhenReceiverAligned:
+                        if (transceiver.receiver_status.receiver_aligned) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                            transceiver_.transmitter_output_enabled = True;
+                        end
+                        else if (transceiver.transmitter_output_enabled) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                                fromInteger(parameters.transmitter_output_disable_timeout);
+                        end
+
+                    EnabledWhenTargetPresent:
+                        if (presence.present) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                            transceiver_.transmitter_output_enabled = True;
+                        end
+                        else if (transceiver.transmitter_output_enabled) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                                fromInteger(parameters.transmitter_output_disable_timeout);
+                        end
+
+                    AlwaysEnabled: begin
+                        transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                        transceiver_.transmitter_output_enabled = True;
+                    end
+                endcase
+
+                if (transceiver.transmitter_output_enabled &&
+                        !transceiver_.transmitter_output_enabled) begin
+                    $display("%5t [Controller %02d] Transmitter output disabled",
+                            $time,
+                            current_controller);
+                end
+                else if (!transceiver.transmitter_output_enabled &&
+                        transceiver_.transmitter_output_enabled) begin
+                    $display("%5t [Controller %02d] Transmitter output enabled",
+                            $time,
+                            current_controller);
+                end
+
+                // Update the transceiver register. Any changes are applied on
+                // the next tick event. See `do_handle_tick_event`.
+                transceiver <= transceiver_;
             end
 
             {tagged Read, ControllerState}:
@@ -978,9 +1035,10 @@ module mkController #(
         let target_timeout = False;
         let hello_sent = False;
 
-        // Copy the `presence` register so indiviual fields can be updated as
-        // appropriate.
+        // Copy the `presence` and `transceiver` registers so indiviual fields
+        // can be updated as appropriate.
         let presence_ = presence;
+        let transceiver_ = transceiver;
 
         // Update the presence history if a Status message timeout occures.
         if (presence.status_message_timeout_ticks_remaining == 0) begin
@@ -1017,14 +1075,51 @@ module mkController #(
         presence <= presence_;
         presence_summary_r[current_controller] <= presence_.present;
 
+        // Count down until the next Hello.
+        if (hello_timer.ticks_remaining == 0) begin
+            hello_timer.ticks_remaining <=
+                    fromInteger(parameters.protocol.hello_interval);
+        end
+        else begin
+            hello_timer.ticks_remaining <= hello_timer.ticks_remaining - 1;
+        end
+
+        // Count down the transmitter disable timeout if the counter is active.
+        if (transceiver.transmitter_output_disable_timeout_ticks_remaining != 0) begin
+            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                transceiver.transmitter_output_disable_timeout_ticks_remaining - 1;
+        end
+        // Start the disable timeout counter if the Target has been declared not
+        // present.
+        else if (transceiver.transmitter_output_enable_mode ==
+                        EnabledWhenTargetPresent &&
+                    presence.present &&
+                    !presence_.present) begin
+            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                fromInteger(parameters.transmitter_output_disable_timeout);
+        end
+
+        // Disable the transmitter output if the transmitter disable output
+        // timer expires. A count of one is used as the timeout here since this
+        // does not have to be precise and allows a value of zero to indicate
+        // the counter is not active.
+        if (transceiver.transmitter_output_enabled &&
+                transceiver.transmitter_output_disable_timeout_ticks_remaining == 1) begin
+            $display("%5t [Controller %02d] Transmitter output disabled",
+                    $time,
+                    current_controller);
+
+            transceiver_.transmitter_output_enabled = False;
+        end
+
+        // Write back the transceiver state.
+        transceiver <= transceiver_;
+
         // Transmit an Hello message if the Hello timer expires.
         if (hello_timer.ticks_remaining == 0) begin
             $display("%5t [Controller %02d] Hello",
                     $time,
                     current_controller);
-
-            hello_timer.ticks_remaining <=
-                    fromInteger(parameters.protocol.hello_interval);
 
             transmitter_events.enq(
                     TransmitterEvent {
@@ -1033,21 +1128,17 @@ module mkController #(
 
             hello_sent = True;
         end
-        // Count down the Hello timer.
+        // Transmit an OutputEnable event otherwise. These are sent every tick
+        // so that even if a state change in the output enable is requested
+        // during the same tick as the Hello message above the state will
+        // converge at most one tick later.
         else begin
-            hello_timer.ticks_remaining <= hello_timer.ticks_remaining - 1;
+            transmitter_events.enq(
+                    TransmitterEvent {
+                        id: current_controller,
+                        ev: tagged OutputEnabled
+                            transceiver_.transmitter_output_enabled});
         end
-
-        // Update the transmitter output enable based on its enable mode and
-        // Target presence.
-        case (transceiver.transmitter_output_mode)
-            Disabled:
-                transmitter_output_enabled_events.enq(False);
-            EnabledWhenTargetPresent:
-                transmitter_output_enabled_events.enq(presence.present);
-            AlwaysEnabled:
-                transmitter_output_enabled_events.enq(True);
-        endcase
 
         // Enqueue a request to update the appropriate counters.
         if (status_timeout || target_timeout || hello_sent) begin
@@ -1105,6 +1196,25 @@ module mkController #(
                 // Write back the presence state.
                 presence <= presence_;
                 presence_summary_r[current_controller] <= presence_.present;
+
+                // Update the transmitter output enabled state if configured.
+                // The actual TransmitterEvent will be sent on the next tick.
+                // See the Tick handler.
+                TransceiverRegister transceiver_ = transceiver;
+
+                if (transceiver.transmitter_output_enable_mode ==
+                            EnabledWhenTargetPresent &&
+                        !presence.present &&
+                        presence_.present) begin
+                    $display("%5t [Controller %02d] Transmitter output enabled",
+                            $time,
+                            current_controller);
+
+                    transceiver_.transmitter_output_enabled = True;
+                    transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                end
+
+                transceiver <= transceiver_;
 
                 enq_countable_application_events(
                         CountableApplicationEvents {
@@ -1216,14 +1326,45 @@ module mkController #(
                         $time,
                         current_controller);
 
-                transceiver.receiver_status <= link_status_none;
+                TransceiverRegister transceiver_ = transceiver;
+
+                transceiver_.receiver_status = link_status_none;
+
+                if (transceiver.transmitter_output_enable_mode ==
+                            EnabledWhenReceiverAligned &&
+                        transceiver.transmitter_output_enabled) begin
+                    // A ReceiverReset means the receiver is not aligned anymore
+                    // and the disable timeout counter should be started.
+                    transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                        fromInteger(parameters.transmitter_output_disable_timeout);
+                end
+
+                // Write back the transceiver state.
+                transceiver <= transceiver_;
 
                 enq_countable_transceiver_events(
                         countable_transceiver_events_receiver_reset);
             end
 
             tagged ReceiverStatusChange .current_status: begin
-                transceiver.receiver_status <= current_status;
+                TransceiverRegister transceiver_ = transceiver;
+
+                transceiver_.receiver_status = current_status;
+
+                if (transceiver.transmitter_output_enable_mode ==
+                            EnabledWhenReceiverAligned &&
+                        !transceiver.transmitter_output_enabled &&
+                        current_status.receiver_aligned) begin
+                    $display("%5t [Controller %02d] Transmitter output enabled",
+                            $time,
+                            current_controller);
+
+                    transceiver_.transmitter_output_enabled = True;
+                    transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                end
+
+                // Write back the transceiver state.
+                transceiver <= transceiver_;
 
                 enq_countable_transceiver_events(
                         determine_transceiver_events(
@@ -1253,11 +1394,6 @@ module mkController #(
         // Complete the receiver event.
         receiver_events.deq();
         event_handler_state <= AwaitingEvent;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_discard_transmitter_output_enabled_events;
-        transmitter_output_enabled_events.deq();
     endrule
 
     interface ControllerTransceiverClient txr;
@@ -1332,16 +1468,10 @@ typedef struct {
     Maybe#(t) data;
 } RegisterFileRequest#(numeric type n, type t) deriving (Bits, Eq, FShow);
 
-typedef enum {
-    Disabled = 0,
-    EnabledWhenTargetPresent = 1,
-    AlwaysEnabled = 2
-} TransmitterOutputMode deriving (Bits, Eq, FShow);
-
 typedef struct {
     ControllerId#(n) id;
     union tagged {
-        TransmitterOutputMode SetTransmitterOutputMode;
+        TransmitterOutputEnableMode SetTransmitterOutputEnableMode;
         SystemPowerRequest SystemPowerRequest;
     } ev;
 } SoftwareEvent#(numeric type n) deriving (Bits, Eq, FShow);
@@ -1447,8 +1577,9 @@ typedef struct {
 } PresenceRegister deriving (Bits, FShow);
 
 typedef struct {
-    TransmitterOutputMode transmitter_output_mode;
-    Bit#(1) reserved;
+    UInt#(8) transmitter_output_disable_timeout_ticks_remaining;
+    TransmitterOutputEnableMode transmitter_output_enable_mode;
+    Bool transmitter_output_enabled;
     LinkStatus receiver_status;
 } TransceiverRegister deriving (Bits, FShow);
 
@@ -1521,6 +1652,12 @@ function Stmt read_controller_counter_into(
             counter <= count;
         endaction
     endseq;
+
+function Bit#(8) transceiver_state_value(
+        TransmitterOutputEnableMode mode,
+        Bool transmitter_status,
+        LinkStatus receiver_status) =
+    {2'h0, pack(mode), pack(transmitter_status), pack(receiver_status)};
 
 // Given a bit_vector_t with zero or more bits indicating requests and a
 // bit_vector_t with exactly one bit set indicating the preferred (next) request
