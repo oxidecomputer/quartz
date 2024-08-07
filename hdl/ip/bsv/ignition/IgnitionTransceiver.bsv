@@ -369,7 +369,7 @@ endmodule
 // } TransmitterEvent#(numeric type n) deriving (Bits, FShow);
 
 interface ControllerTransceiver#(numeric type n);
-    interface Vector#(n, GetPut#(Bit#(1))) serial;
+    interface Vector#(n, Tuple2#(Bool, GetPut#(Bit#(1)))) serial;
     interface Get#(ReceiverEvent#(n)) rx;
     interface Put#(TransmitterEvent#(n)) tx;
 endinterface
@@ -390,21 +390,39 @@ module mkControllerTransceiver (ControllerTransceiver#(n))
     Vector#(n, Serializer) serializers <- replicateM(mkSerializer);
     Vector#(n, ControllerTransmitter)
             transmitters <- replicateM(mkControllerTransmitter);
+    Vector#(n, Reg#(Bool))
+            transmitter_output_enabled <- replicateM(mkReg(False));
 
     zipWithM(mkConnection, transmitters, serializers);
 
     for (Integer i = 0; i < valueOf(n); i = i + 1) begin
         (* fire_when_enabled *)
-        rule do_mux_tx_event (tx_ev.first.id == fromInteger(i));
-            transmitters[i].message.put(tx_ev.first.ev.Message);
+        rule do_mux_message_event (
+                    tx_ev.first.id == fromInteger(i) &&&
+                    tx_ev.first.ev matches tagged Message .message);
+            transmitters[i].message.put(message);
+            tx_ev.deq;
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_mux_output_enabled_event (
+                    tx_ev.first.id == fromInteger(i) &&&
+                    tx_ev.first.ev matches tagged OutputEnabled .enabled);
+            transmitter_output_enabled[tx_ev.first.id] <= enabled;
             tx_ev.deq;
         endrule
     end
 
-    function GetPut#(Bit#(1)) to_serial(Serializer s, Deserializer d) =
-            tuple2(s.serial, d.serial);
+    function Tuple2#(Bool, GetPut#(Bit#(1)))
+            to_serial(Bool oe, Serializer s, Deserializer d) =
+                tuple2(oe, tuple2(s.serial, d.serial));
 
-    interface Vector serial = zipWith(to_serial, serializers, deserializers);
+    interface Vector serial =
+            zipWith3(
+                to_serial,
+                readVReg(transmitter_output_enabled),
+                serializers,
+                deserializers);
     interface Get rx = receiver.events;
     interface Put tx = toPut(tx_ev);
 endmodule

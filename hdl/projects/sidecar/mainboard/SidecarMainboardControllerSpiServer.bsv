@@ -438,13 +438,23 @@ module mkIgnitionRegistersPage
                         tagged Invalid;
                 endcase;
 
-            if (maybe_register matches tagged Valid .register) begin
+            if (maybe_register matches tagged Valid .register &&&
+                        request.op == READ) begin
                 await_response <= True;
                 registers.request.put(
                         RegisterRequest {
                             id: controller,
                             register: register,
                             op: tagged Read});
+            end
+            else if
+                    (maybe_register matches tagged Valid .register &&&
+                        request.op == WRITE) begin
+                registers.request.put(
+                        RegisterRequest {
+                            id: controller,
+                            register: register,
+                            op: tagged Write request.wdata});
             end
             else begin
                 response <= SpiResponse {readdata: 'h00};
@@ -540,5 +550,7 @@ function Action write(RegOps op, function Action f(t val), Bit#(8) data)
         if (op == WRITE) f(unpack(truncate(data)));
     endaction;
 endfunction
+
+
 
 endpackage
