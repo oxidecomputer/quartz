@@ -4,6 +4,7 @@ import Assert::*;
 import ClientServer::*;
 import Connectable::*;
 import DefaultValue::*;
+import FIFO::*;
 import GetPut::*;
 import StmtFSM::*;
 
@@ -31,6 +32,28 @@ module mkPeriodicHelloTest (Empty);
             4 * parameters.protocol.hello_interval);
     Reg#(Bool) first_hello_interval <- mkReg(True);
 
+    // The Controller will emit OutputEnabled events for transmitters. This test
+    // is not interested in these events, so discard them.
+    FIFO#(TransmitterEvent#(4)) tx <- mkLFIFO();
+
+    (* fire_when_enabled *)
+    rule do_filter_tx_output_enabled_events;
+        let ev <- bench.controller.txr.tx.get;
+
+        case (ev.ev) matches
+            tagged OutputEnabled .*: noAction;
+            default: tx.enq(ev);
+        endcase
+    endrule
+
+    function assert_controller_message_eq(id, expected, msg) =
+        assert_get_eq(
+            fifoToGet(tx),
+            TransmitterEvent {
+                id: id,
+                ev: tagged Message expected},
+            msg);
+
     mkAutoFSM(seq
         // Reset HelloSent count.
         bench.clear_counter(0, HelloSent);
@@ -40,16 +63,16 @@ module mkPeriodicHelloTest (Empty);
 
         repeat(4) seq
             // Expect the next Hello messages ..
-            bench.assert_controller_message_eq(
+            assert_controller_message_eq(
                 0, tagged Hello,
                 "expected Hello from Controller 0");
-            bench.assert_controller_message_eq(
+            assert_controller_message_eq(
                 1, tagged Hello,
                 "expected Hello from Controller 1");
-            bench.assert_controller_message_eq(
+            assert_controller_message_eq(
                 2, tagged Hello,
                 "expected Hello from Controller 2");
-            bench.assert_controller_message_eq(
+            assert_controller_message_eq(
                 3, tagged Hello,
                 "expected Hello from Controller 3");
 

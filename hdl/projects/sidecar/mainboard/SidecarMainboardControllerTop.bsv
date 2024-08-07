@@ -307,7 +307,7 @@ typedef SampledSerialIOTxInout#(5) IgnitionIO;
 
 module mkIgnitionIOs #(
         Integer bank_id,
-        Vector#(n, GetPut#(Bit#(1))) txrs)
+        Vector#(n, Tuple2#(Bool, GetPut#(Bit#(1)))) txrs)
             (Vector#(n, IgnitionIO));
     // The modulo 5 causes the strobe instances for different banks to be offset
     // in phase. This avoids all transceivers switching at once and instead
@@ -317,7 +317,7 @@ module mkIgnitionIOs #(
     mkFreeRunningStrobe(tx_strobe);
 
     Vector#(n, IgnitionIO) io <- mapM(
-        mkSampledSerialIOWithTxStrobeInout(tx_strobe, True),
+        uncurry(mkSampledSerialIOWithTxStrobeInout(tx_strobe)),
         txrs);
 
     return io;
@@ -526,7 +526,7 @@ module mkSidecarMainboardControllerTop
     // Cubbies
     //
 
-    Vector#(8, GetPut#(Bit#(1)))
+    Vector#(8, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank2 = vec(
             ignition_txr.serial[15],
             ignition_txr.serial[14],
@@ -536,7 +536,7 @@ module mkSidecarMainboardControllerTop
             ignition_txr.serial[10],
             ignition_txr.serial[9],
             ignition_txr.serial[19]);
-    Vector#(6, GetPut#(Bit#(1)))
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank3_0 = vec(
             ignition_txr.serial[18],
             ignition_txr.serial[17],
@@ -544,7 +544,7 @@ module mkSidecarMainboardControllerTop
             ignition_txr.serial[8],
             ignition_txr.serial[4],
             ignition_txr.serial[7]);
-    Vector#(6, GetPut#(Bit#(1)))
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank3_1 = vec(
             ignition_txr.serial[1],
             ignition_txr.serial[0],
@@ -552,7 +552,7 @@ module mkSidecarMainboardControllerTop
             ignition_txr.serial[5],
             ignition_txr.serial[3],
             ignition_txr.serial[2]);
-    Vector#(6, GetPut#(Bit#(1)))
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank6_0 = vec(
             ignition_txr.serial[20],
             ignition_txr.serial[21],
@@ -560,7 +560,7 @@ module mkSidecarMainboardControllerTop
             ignition_txr.serial[23],
             ignition_txr.serial[24],
             ignition_txr.serial[25]);
-    Vector#(6, GetPut#(Bit#(1)))
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank6_1 = vec(
             ignition_txr.serial[30],
             ignition_txr.serial[31],
@@ -573,7 +573,7 @@ module mkSidecarMainboardControllerTop
     // PSC 0/1, Sidecar B, local Target
     //
 
-    Vector#(4, GetPut#(Bit#(1)))
+    Vector#(4, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank7 = vec(
             ignition_txr.serial[32],
             ignition_txr.serial[33],
