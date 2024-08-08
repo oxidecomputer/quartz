@@ -10,6 +10,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
+use work.flash_channel_pkg.all;
 
 entity espi_target_top is
     port (
@@ -32,6 +33,9 @@ architecture rtl of espi_target_top is
     signal data_to_host    : data_channel;
     signal data_from_host  : data_channel;
     signal regs_if         : cmd_reg_if;
+    signal flash_req       : flash_channel_req_t;
+    signal flash_resp      : flash_channel_resp_t;
+    signal alert_needed    : boolean;
 
 begin
 
@@ -48,6 +52,7 @@ begin
             io_o           => io_o,
             io_oe          => io_oe,
             qspi_mode      => qspi_mode,
+            alert_needed  => alert_needed,
             is_crc_byte    => is_crc_byte,
             data_to_host   => data_to_host,
             data_from_host => data_from_host
@@ -62,7 +67,8 @@ begin
             regs_if         => regs_if,
             chip_sel_active => chip_sel_active,
             data_to_host    => data_to_host,
-            data_from_host  => data_from_host
+            data_from_host  => data_from_host,
+            alert_needed    => alert_needed
         );
 
     -- register blocks
@@ -73,5 +79,19 @@ begin
             regs_if   => regs_if,
             qspi_mode => qspi_mode
         );
+
+    -- flash access channel logic
+   flash_channel_inst: entity work.flash_channel
+    port map(
+       clk => clk,
+       reset => reset,
+       request => flash_req,
+       response => flash_resp,
+       flash_np_free => open,
+       flash_c_avail => open,
+       flash_fifo_data => (others => '0'),
+       flash_fifo_rdack => open,
+       flash_fifo_rempty => '1'
+   );
 
 end rtl;

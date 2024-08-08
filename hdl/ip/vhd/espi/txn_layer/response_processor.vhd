@@ -26,6 +26,8 @@ entity response_processor is
         live_status : in status_t;
         response_crc : in std_logic_vector(7 downto 0);
 
+        alert_needed : out boolean
+
     );
 end entity;
 
@@ -47,12 +49,17 @@ architecture rtl of response_processor is
         cur_data: std_logic_vector(7 downto 0);
         reg_data: std_logic_vector(31 downto 0);
         response_done: boolean;
+        has_responded: boolean;
     end record;
 
     signal r, rin : reg_type;
 begin
 
     response_done <= r.response_done;
+
+    -- We need to issue alterts when the live status does not match the last-sent
+    -- status
+    alert_needed <= true when r.has_responded and live_status /= r.status else false;
     -- Response classes:
     -- Get Stats -> response, status, crc
     -- Set Config -> response, status, crc
@@ -92,6 +99,9 @@ begin
                             v.status := live_status;
                         when opcode_get_configuration =>
                             v.state := send_config;
+                        when opcode_put_flash_np =>
+                            v.state := STATUS;
+                            v.status := live_status;
                         when others =>
                             assert false report "Not implemented yet" severity FAILURE;
                     end case;
@@ -123,6 +133,7 @@ begin
                     v.response_done := true;
                     v.state := IDLE;
                 end if;
+                v.has_responded := true;
         end case;
 
         -- Status words
@@ -141,7 +152,7 @@ begin
     response_processor_reg: process(clk, reset)
     begin
         if reset then
-            r <= (IDLE, '0', rec_reset, 0, (others => '0'), (others => '0'), false);
+            r <= (IDLE, '0', rec_reset, 0, (others => '0'), (others => '0'), false, false);
         elsif rising_edge(clk) then
             r <= rin;
         end if;

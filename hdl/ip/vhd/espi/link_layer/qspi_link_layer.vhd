@@ -10,6 +10,8 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 
+use work.espi_regs_pkg.all;
+
 -- This block provides a relatively simple qspi shifter primative
 -- that shifts data in/out byte-byte.  eSPI has the concept of
 -- a "turnaround" cycle which is a 2 sclk period to allow the
@@ -34,6 +36,7 @@ entity qspi_link_layer is
         -- Asserted by command processor during the
         -- transmission of the last command byte (the CRC)
         is_crc_byte : in    boolean;
+        alert_needed : in boolean;
         -- "Streaming" data recieved after deserialization
         data_to_host       : view st_sink;
         -- "Streaming" data to serialize and transmit
@@ -56,10 +59,66 @@ architecture rtl of qspi_link_layer is
     signal in_turnaround     : boolean;
     signal ta_cnts    : integer range 0 to 2 := 0;
     signal response_phase    : boolean;
-
     signal data_ready_to_host : std_logic;
+    type cs_monitor_t is (no_alert_allowed, alert_allowed);
+    signal cs_monitor_state : cs_monitor_t;
+    type alert_state_t is (idle, alert);
+    signal alert_state : alert_state_t;
+    signal cs_cntr : natural range 0 to 3 := 0;
+    constant cs_deassert_delay : natural := 2;
 
 begin
+
+    -- We have some fairly slow minimum delay timings for the alert pin
+    -- this block monitors the chip select and provides an alert_allowed
+    -- window for the alert processor.
+    cs_mon:process(clk, reset)
+    begin
+        if reset then
+            cs_monitor_state <= no_alert_allowed;
+            cs_cntr <= 0;
+        elsif rising_edge(clk) then
+            case cs_monitor_state is 
+                when no_alert_allowed =>
+                    if cs_n = '1' then
+                        cs_cntr <= cs_cntr + 1;
+                    else 
+                        cs_cntr <= 0;
+                    end if;
+                    if cs_cntr >= cs_deassert_delay then
+                        cs_monitor_state <= alert_allowed;
+                    end if;
+                when alert_allowed =>
+                    if cs_n = '0' then
+                        cs_monitor_state <= no_alert_allowed;
+                        cs_cntr <= 0;
+                    end if;
+            end case;
+        end if;
+    end process;
+
+
+    alert_processor: process(clk, reset)
+    begin
+        if reset then
+            alert_state <= idle;
+        elsif rising_edge(clk) then
+            -- If we have an alert to send, we can send it by pulling
+            --io[1] low, but only when cs is not asserted.
+            case alert_state is
+                when idle =>
+                    if alert_needed and cs_monitor_state = alert_allowed then
+                        alert_state <= alert;
+                    end if;
+                when alert =>
+                    if cs_n = '0' or cs_monitor_state = no_alert_allowed then
+                        alert_state <= idle;
+                    end if;
+            end case;
+           
+        end if;
+    end process;
+
 
     -- Simple book-keeping for the transaction
     transaction_regs : process (clk, reset)
@@ -141,7 +200,13 @@ begin
                         io_oe <= (others => '1');
                 end case;
             else
+                -- default to not driving unless there's an alert
                 io_oe <= (others => '0');
+                if alert_state = alert then
+                    -- we want to issue an alert now so we need to drive the alert pin
+                    io_oe <= (1 => '1', others => '0');
+                end if;
+
             end if;
         end if;
     end process;
@@ -238,7 +303,8 @@ begin
                tx_reg(tx_reg'high-1) when cur_qspi_mode = DUAL else
                '1'; -- not used due to oe-gate
 
-    io_o(1) <= tx_reg(tx_reg'high) when cur_qspi_mode = SINGLE else
+    io_o(1) <= '0' when alert_state = alert else
+               tx_reg(tx_reg'high) when cur_qspi_mode = SINGLE else
                tx_reg(tx_reg'high) when cur_qspi_mode = DUAL else
                tx_reg(tx_reg'high-2) when cur_qspi_mode = QUAD else
                '1'; -- not used due to oe-gate

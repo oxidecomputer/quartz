@@ -37,6 +37,11 @@ architecture rtl of command_processor is
         idle,
         opcode,
         parse_cycle_header,
+        idle, 
+        opcode, 
+        parse_common_cycle_header,
+        parse_addr_header,
+        parse_data,
         parse_get_cfg_hdr,
         parse_set_cfg_hdr,
         data,
@@ -50,10 +55,49 @@ architecture rtl of command_processor is
         crc_good   : boolean;
         crc_bad    : boolean;
         cmd_header : espi_cmd_header;
+        ch_addr    : std_logic_vector(31 downto 0);
         cfg_addr   : std_logic_vector(15 downto 0);
         cfg_data   : std_logic_vector(31 downto 0);
         hdr_idx    : integer range 0 to 7;
+        rem_addr_bytes : integer range 0 to 7;
+        rem_data_bytes : integer range 0 to 2048;
     end record;
+
+    constant reg_reset: reg_type := (idle, false, false, rec_reset, (others => '0'), (others => '0'), (others => '0'), 0, 0, 0);
+
+    type parse_info_t is record
+        next_state : pkt_state_t;
+        cmd_addr_bytes : natural range 0 to 7;
+        cmd_payload_bytes : natural range 0 to 1023;
+    end record;
+
+    function next_hdr_state_by_put_header(header: espi_cmd_header) return parse_info_t is
+        variable next_state : parse_info_t := (parse_addr_header, 4, 0);
+    begin
+        -- Only need to enumerate non 32bit address cases and anything with a payload
+        -- otherwise the default goes
+        -- We should only be calling this function on put* kinds of opcodes
+        case header.opcode.value is
+            when opcode_put_flash_np =>
+                case header.cycle_kind is
+                    when flash_write =>
+                        -- Note that while we'll rx this payload, we will not
+                        -- act upon it, as we do not allow flash writes over eSPI
+                        next_state.next_state := parse_addr_header;
+                        next_state.cmd_payload_bytes := to_integer(header.length);
+                    when flash_erase =>
+                        -- Note that while we'll rx this payload, we will not
+                        -- act upon it, as we do not allow flash writes over eSPI
+                        next_state.next_state := parse_addr_header;
+                        next_state.cmd_payload_bytes := 0;
+                    when others =>
+                        null;
+                end case;
+            when others =>
+                null;
+        end case; 
+        return next_state;
+    end function;
 
     signal r, rin : reg_type;
 
@@ -70,16 +114,22 @@ begin
 
     command_processor_comb: process(all)
         variable v : reg_type;
+        variable parse_info: parse_info_t;
     begin
         v := r;
         -- These are single cycle flags
         v.crc_good := false;
         v.crc_bad := false;
+
+        -- Command parsing state machine
         case r.state is
             when idle =>
                 if chip_sel_active then
                     v.state := opcode;
                 end if;
+            -- First byte up is the opcode! We can make some determinations
+            -- based solely on the opcode, but for some opcodes will need
+            -- further parsing to determine the complete next state.
             when opcode =>
                 if data_from_host.valid then
                     v.cmd_header.opcode.value := data_from_host.data;
@@ -88,31 +138,38 @@ begin
                     -- Now we need to decide where we're going
                     -- options are CRC or HEADER based on opcode
                     case v.cmd_header.opcode.value is
-                        -- Opcodes with no additional data following
+                        -- Opcodes with no additional data following, these
+                        -- can just go immediately to the CRC phase
                         when opcode_get_status |
-                             opcode_reset =>
+                             opcode_reset |
+                             opcode_get_flash_c =>
                             v.state := crc;
+                        -- Config register opcodes, get and set
                         when opcode_get_configuration =>
                             v.state := parse_get_cfg_hdr;
                         when opcode_set_configuration =>
                             v.state := parse_set_cfg_hdr;
+                        -- Opcodes with cycle type headers following
                         when others =>
-                            v.state := parse_cycle_header;
+                            v.state := parse_common_cycle_header;
                     end case;
                 end if;
+            -- Special-cased the configuration registers as they don't follow
+            -- the generic parsing pattern
             when parse_get_cfg_hdr =>
                 -- GET CONFIGURATION has a 16bit address following it
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
                     by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
+                    -- Done, so move to CRC
                     if r.hdr_idx = addr_low_idx then
                         v.hdr_idx := 0;
                         v.state := crc;
                     end if;
                 end if;
             when parse_set_cfg_hdr =>
-                -- SET CONFIGURATION has a 16bit address and a
-                -- 32bit data word following it.
+                -- SET CONFIGURATION has a 16bit address (MSB first) and a
+                -- 32bit data word (LSB first) following it.
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
                     case r.hdr_idx is
@@ -138,6 +195,12 @@ begin
                 -- befdore CRC. Anything transferred here goes into the buffer
                 -- and at CRC we'll mark the descriptor valid to start response
                 -- processing.
+            -- The more fun command parsing. The first 3 bytes of these commands are
+            -- always the same, cycle type (1 byte), tag/length[11:8] (1 byte), and
+            -- length[7:0] (1 byte). The next bytes are opcode/type specific, with some 
+            -- having variable address byte lenths and some having data while some have
+            -- no data and are just requests for data.
+            when parse_common_cycle_header =>
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
                     case r.hdr_idx is
@@ -148,12 +211,50 @@ begin
                             v.cmd_header.length(11 downto 8) := data_from_host.data(3 downto 0);
                         when len_low_idx =>
                             v.cmd_header.length(7 downto 0) := data_from_host.data;
+                            -- Need to determine where to go next
+                            parse_info := next_hdr_state_by_put_header(v.cmd_header);
+                            v.state := parse_info.next_state;
+                            v.rem_addr_bytes := parse_info.cmd_addr_bytes;
+                            v.rem_data_bytes := parse_info.cmd_payload_bytes;
+                           
                         when others =>
-                            -- this should be unreachable given we transition
-                            -- out by TBD, not yet implemented!!!
+                            -- we should never get here, but we didn't cover all the 
+                            -- cycle type cases so we need to have something here
                             null;
                     end case;
                 end if;
+            when parse_addr_header =>
+                if data_from_host.valid then
+                    v.hdr_idx := v.hdr_idx + 1;
+                    v.rem_addr_bytes := r.rem_addr_bytes - 1;
+                    -- todo we're skipping 64bit address support for now, it can be here
+                    -- but nothing is stored. Do we need to store it?
+                    if r.rem_addr_bytes <= 4 then
+                        by_byte_msb_first(v.ch_addr, data_from_host.data, 4-r.rem_addr_bytes);
+                    end if;
+                    if v.rem_addr_bytes = 0 then
+                        if r.rem_data_bytes = 0 then
+                            v.state := crc;
+                        else
+                            v.state := parse_data;
+                        end if;
+                    end if;
+                end if;
+
+
+            -- not much to do here. In theory, we have already indicated that the 
+            -- appropriate channel has room so we sit here until the data phase has
+            -- finished. Muxes elsewhere should direct this datat to appropriate buffers
+            when parse_data =>
+                v.hdr_idx := 0;
+                if data_from_host.valid then
+                    v.rem_data_bytes := r.rem_data_bytes - 1;
+                end if;
+                if v.rem_data_bytes = 0 then
+                    v.state := crc;
+                end if;
+            
+            -- Yay! we made it to the last cmd byte, now we can check the CRC
             when crc =>
                 if data_from_host.valid then
                     -- If we have a crc failure and we're
@@ -191,7 +292,7 @@ begin
     command_processor_reg: process(clk, reset)
     begin
         if reset then
-            r <= (idle, false, false, rec_reset, (others => '0'), (others => '0'), 0);
+            r <= reg_reset;
         elsif rising_edge(clk) then
             r <= rin;
         end if;

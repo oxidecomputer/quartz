@@ -51,6 +51,20 @@ package espi_controller_vc_pkg is
         variable crc_ok        : inout boolean
     );
 
+    procedure put_flash_read(
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: in integer;
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    );
+
+    impure function get_status_from_queue_and_flush(
+        queue: queue_t;
+    ) return std_logic_vector;
+
+    
+
     impure function check_queue_crc (
         data: queue_t
     ) return boolean;
@@ -59,6 +73,9 @@ package espi_controller_vc_pkg is
         data: std_logic_vector
     ) return std_logic_vector;
 
+    -- function lsb_to_msb(
+    --     data: std_logic_vector
+    -- ) return std_logic_vector;
 end package;
 
 package body espi_controller_vc_pkg is
@@ -92,6 +109,20 @@ package body espi_controller_vc_pkg is
     end;
 
     procedure get_status (
+    impure function get_status_from_queue_and_flush(
+        queue: queue_t;
+    ) return std_logic_vector is
+        variable status : std_logic_vector(15 downto 0);
+    begin
+        -- Status comes LSB first
+        status(7 downto 0) := To_Std_Logic_Vector(pop_byte(queue), 8);
+        status(15 downto 8) := To_Std_Logic_Vector(pop_byte(queue), 8);
+        --done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
+        flush(queue);
+        return status;
+    end;
+
+    procedure get_status(
         variable response_code : inout std_logic_vector(7 downto 0);
         variable status        : inout std_logic_vector(15 downto 0);
         variable crc_ok        : inout boolean;
@@ -224,6 +255,14 @@ package body espi_controller_vc_pkg is
         ;
         end
         ;
+        enqueue_tx_data_bytes(net, msg_target,  tx_bytes, tx_queue);
+        enqueue_transaction(net, msg_target, tx_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status := get_status_from_queue_and_flush(rx_queue);
+
+    end;
 
         procedure
         get_config
@@ -266,6 +305,8 @@ package body espi_controller_vc_pkg is
         status(15 downto 8) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
         -- done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
         flush(rx_queue);
+        status := get_status_from_queue_and_flush(rx_queue);
+
     end;
 
     procedure set_config (
@@ -307,6 +348,7 @@ package body espi_controller_vc_pkg is
         status(15 downto 8) := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
         -- done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
         flush(rx_queue);
+        status := get_status_from_queue_and_flush(rx_queue);
     end;
 
     function lsb_to_msb (
@@ -316,13 +358,65 @@ package body espi_controller_vc_pkg is
 
         variable result : std_logic_vector(data'length - 1 downto 0);
 
+    procedure put_flash_read(
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: in integer;
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    ) is
+        variable payload_len : std_logic_vector(11 downto 0) := std_logic_vector(to_unsigned(num_bytes, 12));
+        variable tx_bytes : integer   := 9;  -- 1 opcode, 7 hdr, 1 crc
+        variable rx_bytes : integer   := 4;  -- response, 16bit status, 1 crc
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue : queue_t := new_queue;
     begin
         check_equal(data'length * 8, 0, "Data length must be a multiple of 8");
         for i in 0 to data'length / 8 - 1 loop
             result(7 + i * 8 downto i * 8) := data(data'length - i * 8 - 1 downto data'length - i * 8 - 8);
         end loop;
         return result;
+        -- Build and send a flash read message
+        -- OPCODE_PUT_FLASH_NP (1 byte)
+        push_byte(tx_queue, to_integer(opcode_put_flash_np));
+        -- cycle type (1 byte)
+        push_byte(tx_queue, to_integer(flash_read));
+        -- tag/length high
+        push_byte(tx_queue, to_integer("0000" & payload_len(11 downto 8)));
+        -- length low
+        push_byte(tx_queue, to_integer(payload_len(7 downto 0)));
+        -- ADDRESS (4 bytes), MSB 1st
+        push_byte(tx_queue, to_integer(address(31 downto 24)));
+        push_byte(tx_queue, to_integer(address(23 downto 16)));
+        push_byte(tx_queue, to_integer(address(15 downto 8)));
+        push_byte(tx_queue, to_integer(address(7 downto 0)));
+        -- CRC (1 byte)
+        push_byte(tx_queue, to_integer(crc8(tx_queue)));
+        -- send transaction
+        enqueue_tx_data_bytes(net, msg_target,  tx_bytes, tx_queue);
+        enqueue_transaction(net, msg_target, tx_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status := get_status_from_queue_and_flush(rx_queue);
+        
     end;
+
+    -- function lsb_to_msb(
+    --         data: std_logic_vector
+    --     ) 
+    --     return std_logic_vector is
+    --         variable result : std_logic_vector(data'length - 1 downto 0);
+
+    -- begin
+    --     check_equal(data'length * 8, 0, "Data length must be a multiple of 8");
+    --     for i in 0 to data'length / 8 - 1 loop
+    --         result(7 + i*8 downto i*8) := data(data'length - i*8 - 1 downto data'length - i*8 - 8);
+    --     end loop;
+    --     return result;
+
+    -- end;
+
 
     impure function check_queue_crc (
         data: queue_t

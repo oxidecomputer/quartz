@@ -9,8 +9,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
+use work.espi_base_types_pkg.all;
+
 package espi_protocol_pkg is
 
+    -- ESPI Header decodes
     -- Command opcodes
     constant opcode_put_pc : std_logic_vector(7 downto 0)                  := "00000000";
     constant opcode_get_pc : std_logic_vector(7 downto 0)                  := "00000001";
@@ -26,10 +29,24 @@ package espi_protocol_pkg is
     constant opcode_get_oob : std_logic_vector(7 downto 0)                 := "00000111";
     constant opcode_put_flash_c : std_logic_vector(7 downto 0)             := "00001000";
     constant opcode_get_flash_np : std_logic_vector(7 downto 0)            := "00001001";
+    constant opcode_put_flash_np : std_logic_vector(7 downto 0)            := "00001010";
+    constant opcode_get_flash_c : std_logic_vector(7 downto 0)             := "00001011";
     constant opcode_get_status : std_logic_vector(7 downto 0)              := "00100101";
     constant opcode_set_configuration : std_logic_vector(7 downto 0)       := "00100010";
     constant opcode_get_configuration : std_logic_vector(7 downto 0)       := "00100001";
     constant opcode_reset : std_logic_vector(7 downto 0)                   := "11111111";
+    -- Cycle Types/Kinds. Note these are generally unique within a defined opcode
+    -- but multiple opcodes may also re-use some of these
+    -- eSPI Channel
+    constant mem_read_32 : std_logic_vector(7 downto 0) := "00000000";
+    constant mem_read_64 : std_logic_vector(7 downto 0) := "00000010";
+    -- Flash channel (from  server addendum)
+    constant flash_read : std_logic_vector(7 downto 0) := "00000000";
+    constant success_no_data : std_logic_vector(7 downto 0) := "00000110";
+    
+    -- We won't actually write/erase, our behavior catching this is TBD
+    constant flash_write: std_logic_vector(7 downto 0) := "00000001";
+    constant flash_erase: std_logic_vector(7 downto 0) := "00000010";
 
     -- Header Indices for general eSPI packages
     constant cycle_type_idx : integer := 0;
@@ -44,9 +61,7 @@ package espi_protocol_pkg is
     constant data_byte0_idx : integer := 5;
 
     -- Cycle Types
-    -- eSPI Channel
-    constant mem_read_32 : std_logic_vector(7 downto 0) := "00000000";
-    constant mem_read_64 : std_logic_vector(7 downto 0) := "00000010";
+    
     -- constant MEM_WRITE_32
     -- constant MEM_WRITE_64
     -- constant MESSAGE
@@ -58,6 +73,15 @@ package espi_protocol_pkg is
     -- constant OOB
     -- --
     -- constant FLASH_READ
+
+    -- Flash cycle types
+    -- Unused: corresponds to erase or write
+    --constant flash_success_no_data : std_logic_vector(7 downto 0) := "00000110";
+
+    constant split_mid_complete: std_logic_vector(1 downto 0) := "00";
+    constant split_first_complete: std_logic_vector(1 downto 0) := "01";
+    constant split_last_complete: std_logic_vector(1 downto 0) := "10";
+    constant split_only_complete: std_logic_vector(1 downto 0) := "11";
 
     constant accept : std_logic_vector(1 downto 0)      := "00";
     constant no_response : std_logic_vector(1 downto 0) := "11";

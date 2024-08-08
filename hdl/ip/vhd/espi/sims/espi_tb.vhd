@@ -84,6 +84,15 @@ begin
                 check(crc_ok, "CRC Check failed");
                 -- Expect the reset value of gen-cap here
                 check_equal(data_32, exp_data_32, "General Capabilities did not match expected value");
+            elsif run("read_flash") then
+                put_flash_read(X"00000000", 32, response_code, status,  crc_ok);
+                check(crc_ok, "CRC Check failed");
+
+                -- would normally wait for the completion alert now
+                wait for 100 us;
+
+
+
             end if;
         end loop;
         wait for 10 us;

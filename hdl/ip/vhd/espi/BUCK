@@ -13,10 +13,12 @@ vhdl_unit(
     srcs = glob([
         "link_layer/*.vhd",
         "txn_layer/*.vhd",
+        "flash_channel/*.vhd",
         "*.vhd"]),
     deps = [
         ":espi_regs_pkg",
         "//hdl/ip/vhd/crc:crc8atm_8wide",
+        "//hdl/ip/vhd/memories:dual_clock_simple_dpr",
         ],
     standard = "2019",
     visibility = ['PUBLIC']

@@ -18,13 +18,14 @@ entity txn_layer_top is
         reset : in    std_logic;
 
         -- register layer connections
-
+        
         regs_if : view    bus_side;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
         chip_sel_active : in    boolean;
         data_to_host    : view st_source;
+        alert_needed    : out   boolean;
         -- "Streaming" data to serialize and transmit
         data_from_host : view st_sink
     );
@@ -99,17 +100,17 @@ begin
         );
 
     response_processor_inst: entity work.response_processor
-        port map (
-            clk            => clk,
-            reset          => reset,
-            command_header => command_header,
-            response_done  => response_done,
-            regs_if        => resp_regs_if,
-            clear_tx_crc   => clear_tx_crc,
-            data_to_host   => data_to_host,
-            live_status    => live_status,
-            response_crc   => tx_running_crc
-        );
+     port map(
+        clk => clk,
+        reset => reset,
+        command_header => command_header,
+        response_done   => response_done,
+        regs_if        => resp_regs_if,
+        clear_tx_crc => clear_tx_crc,
+        data_to_host => data_to_host,
+        live_status => live_status,
+        response_crc => tx_running_crc
+    );
 
     resp_regs_if.write       <= regs_if.write;
     resp_regs_if.read        <= regs_if.read;

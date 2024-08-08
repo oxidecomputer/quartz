@@ -21,6 +21,7 @@ package qspi_vc_pkg is
     constant enqueue_tx_bytes : msg_type_t := new_msg_type("enqueue_tx_bytes");
     constant get_rx_bytes : msg_type_t     := new_msg_type("get_rx_bytes");
     constant enqueue_txn      : msg_type_t := new_msg_type("enqueue_txn");
+    constant alert_status     : msg_type_t := new_msg_type("alert_status");
 
     -- bfm types
     type qspi_mode_t is (single, dual, quad);
@@ -83,6 +84,12 @@ package qspi_vc_pkg is
         signal net     : inout network_t;
         constant actor : actor_t;
         variable data  : inout queue_t
+    );
+
+    procedure has_pending_alert(
+        signal net     : inout network_t;
+        constant actor : actor_t;
+        variable alert : out boolean
     );
 
 end package;
@@ -184,6 +191,20 @@ package body qspi_vc_pkg is
         for i in 1 to count loop
             push_byte(data, pop(reply_msg));
         end loop;
+    end;
+
+    procedure has_pending_alert(
+        signal net     : inout network_t;
+        constant actor : actor_t;
+        variable alert : out boolean
+    )is
+        variable request_msg : msg_t := new_msg(alert_status);
+        variable reply_msg: msg_t;
+
+    begin
+        send(net, actor, request_msg);
+        receive_reply(net, request_msg, reply_msg);
+        alert := pop(reply_msg);
     end;
 
 end package body;

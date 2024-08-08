@@ -23,6 +23,13 @@ package espi_base_types_pkg is
         length: std_logic_vector(11 downto 0);
         valid: boolean;
     end record;
+
+    type cycle_kind_info_t is record
+        -- How many payload bytes are expected for this cycle kind/opcode combo
+        cmd_payload_bytes: unsigned(7 downto 0);
+        -- How many addr bytes are expected for this cycle kind/opcode combo
+        cmd_addr_bytes: unsigned(3 downto 0);
+    end record;
     function rec_reset return espi_cmd_header;
 
     type mem_request_header is record

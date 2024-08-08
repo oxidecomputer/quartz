@@ -88,6 +88,8 @@ files = [
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_th.vhd",
     "hdl/ip/vhd/crc/crc8atm_8wide.vhd",
     "hdl/ip/vhd/espi/espi_target_top.vhd",
+    "hdl/ip/vhd/espi/flash_channel/flash_channel.vhd",
+    "hdl/ip/vhd/espi/flash_channel/flash_channel_pkg.vhd",
     "hdl/ip/vhd/espi/link_layer/qspi_link_layer.vhd",
     "hdl/ip/vhd/espi/link_layer/qspi_link_layer_pkg.vhd",
     "hdl/ip/vhd/espi/txn_layer/command_processor.vhd",
