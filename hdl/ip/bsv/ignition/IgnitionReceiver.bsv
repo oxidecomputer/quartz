@@ -582,6 +582,7 @@ endinstance
 interface ControllerReceiver #(numeric type n);
     interface Vector#(n, DeserializerClient) rx;
     interface Get#(ReceiverEvent#(n)) events;
+    method Action tick_1khz();
 endinterface
 
 interface DeserializerChannel #(numeric type n);
@@ -665,6 +666,10 @@ module mkControllerReceiver (ControllerReceiver#(n))
                 NumAlias#(TLog#(n), id_sz));
     Vector#(n, DeserializerChannel#(n))
             channels <- mapM(mkDeserializerChannel, genVector);
+    Vector#(n, Reg#(Bool)) channels_locked <- replicateM(mkReg(False));
+
+    Reg#(UInt#(9)) watchdog_ticks_remaining <- mkRegU();
+    Reg#(Bool) watchdog_fired <- mkDReg(False);
 
     // Use a regular FIFO here but of size two, allowing it to act as a skid
     // buffer. This decouples the demux pipeline from the receiver logic,
@@ -1228,11 +1233,30 @@ module mkControllerReceiver (ControllerReceiver#(n))
             channels[id].set_search_for_comma(!receive_state_2_next.aligned);
             channels[id].set_invert_polarity(
                     receive_state_2_next.polarity_inverted);
+
+            channels_locked[id] <=
+                    receive_state_2_next.aligned &&
+                    receive_state_2_next.locked;
         end
     endrule
 
+    for (Integer id = 0; id < valueOf(n); id = id + 1) begin
+        (* fire_when_enabled *)
+        rule do_channel_locked_watchdog
+                (watchdog_fired && !channels_locked[fromInteger(id)]);
+            channels[fromInteger(id)].request_reset();
+        endrule
+    end
+
     interface Vector rx = map(deserializer_client, channels);
     interface Get events = toGet(receiver_events);
+
+    method Action tick_1khz();
+        // This automatically rolls over from 0, restarting the watchdog
+        // timer.
+        watchdog_ticks_remaining <= watchdog_ticks_remaining - 1;
+        watchdog_fired <= (watchdog_ticks_remaining == 0);
+    endmethod
 endmodule
 
 typedef struct {

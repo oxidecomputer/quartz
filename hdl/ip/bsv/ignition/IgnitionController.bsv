@@ -929,7 +929,8 @@ module mkController #(
                             transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
                             transceiver_.transmitter_output_enabled = True;
                         end
-                        else if (transceiver.transmitter_output_enabled) begin
+                        else if (transceiver.transmitter_output_enabled &&
+                                    transceiver.transmitter_output_disable_timeout_ticks_remaining == 0) begin
                             transceiver_.transmitter_output_disable_timeout_ticks_remaining =
                                 fromInteger(parameters.transmitter_output_disable_timeout);
                         end
@@ -939,7 +940,8 @@ module mkController #(
                             transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
                             transceiver_.transmitter_output_enabled = True;
                         end
-                        else if (transceiver.transmitter_output_enabled) begin
+                        else if (transceiver.transmitter_output_enabled &&
+                                    transceiver.transmitter_output_disable_timeout_ticks_remaining == 0) begin
                             transceiver_.transmitter_output_disable_timeout_ticks_remaining =
                                 fromInteger(parameters.transmitter_output_disable_timeout);
                         end
@@ -949,6 +951,11 @@ module mkController #(
                         transceiver_.transmitter_output_enabled = True;
                     end
                 endcase
+
+                $display("%5t [Controller %02d] Transmitter output enable mode ",
+                        $time,
+                        current_controller,
+                        fshow(transceiver_.transmitter_output_enable_mode));
 
                 if (transceiver.transmitter_output_enabled &&
                         !transceiver_.transmitter_output_enabled) begin
@@ -1332,7 +1339,8 @@ module mkController #(
 
                 if (transceiver.transmitter_output_enable_mode ==
                             EnabledWhenReceiverAligned &&
-                        transceiver.transmitter_output_enabled) begin
+                        transceiver.transmitter_output_enabled &&
+                        transceiver.transmitter_output_disable_timeout_ticks_remaining == 0) begin
                     // A ReceiverReset means the receiver is not aligned anymore
                     // and the disable timeout counter should be started.
                     transceiver_.transmitter_output_disable_timeout_ticks_remaining =
