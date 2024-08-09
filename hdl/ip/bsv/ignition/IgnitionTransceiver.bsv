@@ -372,6 +372,7 @@ interface ControllerTransceiver#(numeric type n);
     interface Vector#(n, Tuple2#(Bool, GetPut#(Bit#(1)))) serial;
     interface Get#(ReceiverEvent#(n)) rx;
     interface Put#(TransmitterEvent#(n)) tx;
+    method Action tick_1khz();
 endinterface
 
 interface ControllerTransceiverClient#(numeric type n);
@@ -425,6 +426,7 @@ module mkControllerTransceiver (ControllerTransceiver#(n))
                 deserializers);
     interface Get rx = receiver.events;
     interface Put tx = toPut(tx_ev);
+    method tick_1khz = receiver.tick_1khz;
 endmodule
 
 module mkControllerTransceiver36 (ControllerTransceiver#(36));
