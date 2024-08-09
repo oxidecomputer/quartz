@@ -155,6 +155,7 @@ module mkIgnitionControllerAndTargetBench #(
     ControllerTransceiver#(4) controller_txr <- mkControllerTransceiver();
 
     mkConnection(asIfc(tick), asIfc(controller_.tick_1mhz));
+    mkConnection(asIfc(tick), asIfc(controller_txr.tick_1khz));
 
     // Set this TX strobe ~180 degrees out of phase from Target TX.
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 3);

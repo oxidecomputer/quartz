@@ -93,6 +93,7 @@ interface MainboardController #(numeric type n_ignition_controllers);
     interface Registers registers;
     interface Controller#(n_ignition_controllers) ignition_controller;
     interface ReadOnly#(Status) status;
+    method Bool ignition_tick_1khz();
 endinterface
 
 module mkMainboardController #(Parameters parameters)
@@ -223,6 +224,8 @@ module mkMainboardController #(Parameters parameters)
     interface Controller ignition_controller = ignition;
 
     interface ReadOnly status = regToReadOnly(status_r);
+
+    method ignition_tick_1khz = tick_1khz;
 endmodule
 
 endpackage

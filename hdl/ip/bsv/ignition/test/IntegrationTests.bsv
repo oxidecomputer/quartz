@@ -68,7 +68,7 @@ module mkControllerTargetPresentTest (Empty);
         endaction
         par
             await(bench.controller.presence_summary[0]);
-            await_set(bench.target.controller0_present);
+            await(bench.target.controller0_present);
         endpar
 
         assert_controller_register_eq(
@@ -92,40 +92,63 @@ module mkTargetRoTFaultTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    // let controller_state = bench.controller.registers.controller_state;
-    // let target_system_status = bench.controller.registers.target_system_status;
-    // let target_system_faults = bench.controller.registers.target_system_faults;
+    Reg#(SystemFaults) target_system_events <- mkReg(defaultValue);
+
+    function read_controller_0_register_into(id, d) =
+            read_controller_register_into(bench.controller, 0, id, asIfc(d));
+
+    function read_controller_0_registers_while(predicate) =
+            seq
+                while(predicate) seq
+                    read_controller_0_register_into(
+                            TargetSystemEvents,
+                            target_system_events);
+                    // Avoid a tight loop reading the registers otherwise the
+                    // Controller will not make progress due to this interface
+                    // having the highest priority.
+                    repeat(3) bench.await_tick();
+                endseq
+            endseq;
 
     mkAutoFSM(seq
-        // action
-        //     bench.controller_to_target.set_state(Connected);
-        //     bench.target_to_controller.set_state(Connected);
-        // endaction
-        // par
-        //     await_set(controller_state.target_present);
-        //     await_set(target_system_status.controller0_detected);
-        // endpar
+        action
+            bench.controller_to_target.set_state(Connected);
+            bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
+        endaction
+        par
+            await(bench.controller.presence_summary[0]);
+            await(bench.target.controller0_present);
+        endpar
 
-        // // Assert no target system faults and set an RoT fault.
-        // assert_eq(
-        //     target_system_faults,
-        //     defaultValue,
-        //     "expected no target system faults");
-        // bench.set_target_system_faults(system_faults_rot);
+        // Assert no Target system faults and set an RoT fault.
+        assert_controller_register_eq(
+                bench.controller, 0, TargetSystemEvents,
+                system_faults_none,
+                "expected no target system faults");
+        bench.set_target_system_faults(system_faults_rot);
 
-        // // Assert the fault is observed by the Controller.
-        // await_set(target_system_faults.rot_fault);
-        // assert_set(target_system_faults.rot_fault, "expected RoT fault");
+        // Assert the fault is observed by the Controller.
+        read_controller_0_registers_while(!target_system_events.rot);
+        assert_controller_register_eq(
+                bench.controller, 0, TargetSystemEvents,
+                system_faults_rot,
+                "expected an RoT faults");
 
-        // // Resolve the RoT fault.
-        // bench.set_target_system_faults(system_faults_none);
+        // Resolve the RoT fault.
+        bench.set_target_system_faults(system_faults_none);
 
-        // // Assert the RoT fault cleared.
-        // await_not_set(target_system_faults.rot_fault);
-        // assert_eq(
-        //     target_system_faults,
-        //     defaultValue,
-        //     "expected no target system faults");
+        // Assert the RoT fault cleared.
+        read_controller_0_registers_while(target_system_events.rot);
+        assert_controller_register_eq(
+                bench.controller, 0, TargetSystemEvents,
+                system_faults_none,
+                "expected no target system faults");
     endseq);
 endmodule
 
@@ -369,31 +392,20 @@ module mkReceiversLockedTimeoutTest (Empty);
         mkIgnitionControllerAndTargetBench(parameters, 1000);
 
     mkAutoFSM(seq
+        clear_controller_counter(bench.controller, 0, ControllerReceiverReset);
+
         // The link between Controller and Target is not connected, causing both
         // receivers never to reach locked state.
-
-        // Reset the controller link status register, clearing any events.
-        // action
-        //     let _ <- bench.controller.registers.controller_link_status;
-        // endaction
-
         par
-            // repeat(4) seq
-            //     await(bench.controller_receiver_locked_timeout);
-
-            //     // Wait for the receiver reset event bit to be set in the link
-            //     // status register.
-            //     // action
-            //     //     let link_status <-
-            //     //             bench.controller.registers.controller_link_status;
-
-            //     //     await_set(link_status.receiver_reset_event);
-            //     // endaction
-            // endseq
-
             repeat(4) await(bench.target_receiver_locked_timeout[0]);
             repeat(4) await(bench.target_receiver_locked_timeout[1]);
         endpar
+
+        assert_controller_counter_eq(
+                bench.controller,
+                0, ControllerReceiverReset,
+                3,
+                "expected Controller reset events");
     endseq);
 endmodule
 
@@ -417,9 +429,12 @@ module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
         !bench.controller_receiver_locked_timeout,
         "expected no Controller receiver locked timeout");
 
-    continuousAssert(
-        !bench.target_receiver_locked_timeout[0],
-        "expected no receiver locked timeout for Target link 0");
+    (* fire_when_enabled *)
+    rule do_assert_target_receiver_locked_timeout
+            (bench.controller_transmitter_output_enabled);
+        assert_true(!bench.target_receiver_locked_timeout[0],
+                "expected no receiver locked timeout for Target link 0");
+    endrule
 
     mkAutoFSM(seq
         action
@@ -429,7 +444,7 @@ module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
                     RegisterRequest {
                         id: 0,
                         register: TransceiverState,
-                        op: tagged Write 'h20});
+                        op: tagged Write ({2'h0, pack(AlwaysEnabled), 4'h0})});
         endaction
 
         par

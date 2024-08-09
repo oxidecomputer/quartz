@@ -522,6 +522,12 @@ module mkSidecarMainboardControllerTop
 
     mkConnection(ignition_txr, controller.ignition_controller.txr);
 
+    // Connect the transceiver watchdog timer.
+    (* fire_when_enabled *)
+    rule do_ignition_txr_watchdog (controller.ignition_tick_1khz);
+        ignition_txr.tick_1khz();
+    endrule
+
     //
     // Cubbies
     //
