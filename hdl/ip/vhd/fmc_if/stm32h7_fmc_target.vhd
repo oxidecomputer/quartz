@@ -59,6 +59,8 @@ end entity;
 
 architecture rtl of stm32h7_fmc_target is
 
+    attribute MARK_DEBUG : string;
+
     type fmc_state_type is (
         idle,
         addr_delay,
@@ -69,6 +71,7 @@ architecture rtl of stm32h7_fmc_target is
         read_word1_setup_delay,
         read_word1,
         write_setup,
+        write_wait_delay,
         write_word0,
         write_word1,
         timeout_cleanup
@@ -82,8 +85,10 @@ architecture rtl of stm32h7_fmc_target is
         axi_write_wait
     );
     signal fmc_state : fmc_state_type;
+    attribute MARK_DEBUG of fmc_state : signal is "TRUE";
     signal axi_state : axi_state_type;
     signal txn : txn_type;
+    attribute MARK_DEBUG of txn : signal is "TRUE";
 
     signal axi_fifo_rd_path_rdata  : std_logic_vector(31 downto 0);
     signal axi_fifo_rd_path_rd_ack : std_logic;
@@ -119,6 +124,8 @@ architecture rtl of stm32h7_fmc_target is
     signal araddr : std_logic_vector(25 downto 0);
     signal rready : std_logic;
 
+    signal int_toggle : std_logic;
+
 
 begin
     axi_if.write_address.valid <= awvalid;
@@ -145,6 +152,7 @@ begin
             axi_fifo_txn_path_write <= '0';
             axi_fifo_wr_path_write  <= '0';
             txn_stored              <= false;
+            int_toggle              <= '0';
         elsif rising_edge(fmc_clk) then
             -- some variable naming for more legibility
             chip_selected := ne(0) = '0';
@@ -267,9 +275,11 @@ begin
                             txn_stored              <= true;
                             nwait                   <= '1';
                             -- no waits needed until the fifo fills up
-                            fmc_state                           <= write_word0;
+                            fmc_state                           <= write_wait_delay;
                         end if;
                     end if;
+                when write_wait_delay =>
+                    fmc_state                           <= write_word0;
                 when write_word0 =>
                     axi_fifo_wr_path_wdata(15 downto 0) <= addr_data_in;
                     txn_stored                           <= false;
