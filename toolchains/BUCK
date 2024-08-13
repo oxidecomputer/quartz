@@ -4,6 +4,8 @@ load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
 load("vivado_toolchain.bzl", "vivado_toolchain")
 load("vsg_toolchain.bzl", "vsg_toolchain")
 
+load("yosys_toolchain.bzl", "icepack_toolchain", "nextpnr_ice40_toolchain")
+
 system_cxx_toolchain(
     name = "cxx",
     visibility = ["PUBLIC"],
@@ -26,5 +28,15 @@ vivado_toolchain(
 
 vsg_toolchain(
     name = "vsg",
+    visibility = ["PUBLIC"],
+)
+
+icepack_toolchain(
+    name = "icepack",
+    visibility = ["PUBLIC"],
+)
+
+nextpnr_ice40_toolchain(
+    name = "nextpnr-ice40",
     visibility = ["PUBLIC"],
 )
