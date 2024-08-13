@@ -1,0 +1,13 @@
+python_binary(
+    name = 'yosys_gen',
+    main = 'yosys_gen_cli.py',
+    deps = [':yosys_gen_lib'],
+    visibility = ["PUBLIC"],
+)
+
+python_library(
+    name = 'yosys_gen_lib',
+    srcs = glob(["*.py"]),
+    base_module = "yosys_gen",
+    resources = glob(["templates/*.jinja2"])
+)

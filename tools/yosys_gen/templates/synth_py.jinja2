@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+# Generated run.py from buck2
+import subprocess
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--output", dest="output", help="Explicit output python")
+
+args = parser.parse_args()
+files_str = (
+{% for source in project.sources %}
+{% set suffix = source.path.suffix %}
+{% if suffix in [".vhd"] %}
+"{{source.path.absolute().as_posix()}}"
+{% endif %}
+{% endfor %}
+)
+
+cmd = [
+    "yosys",
+    "-m",
+    "ghdl",
+    "-p",
+    f'ghdl --std=08 {files_str} -e {{project.top_entity_name}}; {{project.synth_family}} -json {args.output}',
+]
+
+a = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)

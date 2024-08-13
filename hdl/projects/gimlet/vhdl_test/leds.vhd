@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity leds is
   port (clk : in std_logic;
-        led1, led2, led3, led4, led5, led6, led7, led8 : out std_logic);
+        led1, led2, led3, led4, led5 : out std_logic);
 end leds;
 
 architecture spin1 of leds is
@@ -13,9 +13,6 @@ architecture spin1 of leds is
   signal leds : std_ulogic_vector (1 to 5);
 begin
   (led1, led2, led3, led4, led5) <= leds;
-  led6 <= '0';
-  led7 <= '0';
-  led8 <= '0';
 
   process (clk)
     variable cnt : unsigned (1 downto 0) := "00";
