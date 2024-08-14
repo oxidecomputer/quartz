@@ -54,15 +54,17 @@ def _vivado_bitstream(ctx):
     placer_opt = place(ctx, placer, True)
     router = route(ctx, placer_opt)
     bits = bitstream(ctx, router)
+    compressed = compress_bitstream(ctx, bits)
     return [
         DefaultInfo(
-            default_output=bits[0].default_outputs[0],
+            default_output=compressed[0].default_outputs[0],
             sub_targets = {
                 "synth": synth,
                 "opt":  opt,
                 "place": placer,
                 "place_opt": placer_opt,
                 "route": router,
+                "bitstream": compressed,
             }
         )
     ]
@@ -195,6 +197,7 @@ def optimize(ctx, input_checkpoint):
     providers.append(DefaultInfo(default_output=out_checkpoint))
     return providers
 
+
 def place(ctx, input_checkpoint, optimize=False):
     flow = "place_optimize" if optimize else "place"
     name_and_flow = ctx.attrs.name + "_" + flow
@@ -231,6 +234,7 @@ def place(ctx, input_checkpoint, optimize=False):
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=out_checkpoint))
     return providers
+
 
 def route(ctx, input_checkpoint):
     flow = "route"
@@ -275,6 +279,7 @@ def route(ctx, input_checkpoint):
     providers.append(DefaultInfo(default_output=out_checkpoint))
     return providers
 
+
 def bitstream(ctx, input_checkpoint):
     flow = "bitstream"
     name_and_flow = ctx.attrs.name + "_" + flow
@@ -304,6 +309,16 @@ def bitstream(ctx, input_checkpoint):
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
     providers.append(DefaultInfo(default_output=bitstream))
     return providers
+
+
+def compress_bitstream(ctx, bitstream_providers):
+
+    compressed = ctx.actions.declare_output("{}.bz2".format(ctx.attrs.name))
+    bz2compress = cmd_args(ctx.attrs._bz2compress[RunInfo])
+    bz2compress.add("--input", bitstream_providers[0].default_outputs[0])
+    bz2compress.add("--output", compressed.as_output())
+    ctx.actions.run(bz2compress, category="bitstream_compress")
+    return [DefaultInfo(default_output=compressed)]
 
 
 def _vivado_tcl_gen_common(ctx, flow, json):
@@ -352,6 +367,10 @@ vivado_bitstream = rule(
         "_vivado_gen": attrs.exec_dep(
                 doc="Generate a Vivado tcl for this project",
                 default="root//tools/vivado_gen:vivado_gen",
+            ),
+        "_bz2compress": attrs.exec_dep(
+                doc="bz2 compressor",
+                default="root//tools/bz2compress:bz2compress",
             ),
         "_toolchain": attrs.toolchain_dep(
             doc="Vivado",

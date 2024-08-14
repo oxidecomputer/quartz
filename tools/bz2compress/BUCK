@@ -1,0 +1,12 @@
+python_binary(
+    name = 'bz2compress',
+    main = 'bz2compress.py',
+    deps = [':bz2compress_lib'],
+    visibility = ["PUBLIC"],
+)
+
+python_library(
+    name = 'bz2compress_lib',
+    srcs = glob(["*.py"]),
+    base_module = "bz2compress"
+)
