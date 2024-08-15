@@ -17,7 +17,7 @@ entity spi_link is
         clk : in std_logic;
         reset : in std_logic;
         -- system interface
-        cur_io_mode  : in io_mode;
+        req_io_mode  : in io_mode;
         divisor : in unsigned(15 downto 0);
         in_tx_phases : in boolean;
         in_rx_phases : in boolean;
@@ -46,6 +46,7 @@ signal sclk_last         : std_logic;
 signal shift_amt         : integer range 1 to 4;
 signal csn_last          : std_logic;
 signal is_last_bit       : boolean;
+signal cur_io_mode  : io_mode;
 
 begin
 
@@ -61,8 +62,16 @@ begin
     begin
         if reset then
             sclk_last <= '0';
+            cur_io_mode <= single;
         elsif rising_edge(clk) then
             sclk_last <= sclk;
+            if cs_n = '0' and sclk_fedge then
+                -- only update the io mode on the falling edge
+                -- so that we're done with the current bit
+                cur_io_mode <= req_io_mode;
+            elsif cs_n = '1' then
+                cur_io_mode <= req_io_mode;
+            end if;
         end if;
     end process;
 
