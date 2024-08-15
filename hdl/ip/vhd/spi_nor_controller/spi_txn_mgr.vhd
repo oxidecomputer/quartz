@@ -245,7 +245,7 @@ begin
         -- out what state we're going to be in next
         if v.state = cs_assert then
             v.csn := '0';
-        elsif v.state = cs_deassert and r.counter = 1 then
+        elsif v.state = cs_deassert and v.counter = 1 then
             v.csn := '1';
         end if;
 

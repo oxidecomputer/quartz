@@ -73,7 +73,7 @@ begin
         reset => reset,
 
         
-        cur_io_mode => cur_io_mode,
+        req_io_mode => cur_io_mode,
         divisor => div_val,
         in_tx_phases => in_tx_phases,
         in_rx_phases => in_rx_phases,
