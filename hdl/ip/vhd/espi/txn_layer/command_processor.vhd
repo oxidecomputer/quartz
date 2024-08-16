@@ -11,6 +11,7 @@ use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
+use work.flash_channel_pkg.all;
 
 entity command_processor is
     port (
@@ -22,6 +23,10 @@ entity command_processor is
         regs_if        : view bus_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
+
+        -- flash channel requests
+         -- flash channel requests
+        flash_req : view flash_chan_req_source;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
@@ -36,9 +41,6 @@ architecture rtl of command_processor is
     type   pkt_state_t is (
         idle,
         opcode,
-        parse_cycle_header,
-        idle, 
-        opcode, 
         parse_common_cycle_header,
         parse_addr_header,
         parse_data,
@@ -51,28 +53,32 @@ architecture rtl of command_processor is
     signal clear_rx_crc : std_logic;
 
     type reg_type is record
-        state      : pkt_state_t;
-        crc_good   : boolean;
-        crc_bad    : boolean;
-        cmd_header : espi_cmd_header;
-        ch_addr    : std_logic_vector(31 downto 0);
-        cfg_addr   : std_logic_vector(15 downto 0);
-        cfg_data   : std_logic_vector(31 downto 0);
-        hdr_idx    : integer range 0 to 7;
+        state          : pkt_state_t;
+        crc_good       : boolean;
+        crc_bad        : boolean;
+        cmd_header     : espi_cmd_header;
+        ch_addr        : std_logic_vector(31 downto 0);
+        cfg_addr       : std_logic_vector(15 downto 0);
+        cfg_data       : std_logic_vector(31 downto 0);
+        hdr_idx        : integer range 0 to 7;
         rem_addr_bytes : integer range 0 to 7;
         rem_data_bytes : integer range 0 to 2048;
     end record;
 
-    constant reg_reset: reg_type := (idle, false, false, rec_reset, (others => '0'), (others => '0'), (others => '0'), 0, 0, 0);
+    constant reg_reset : reg_type := (idle, false, false, rec_reset, (others => '0'), (others => '0'), (others => '0'), 0, 0, 0);
 
     type parse_info_t is record
-        next_state : pkt_state_t;
-        cmd_addr_bytes : natural range 0 to 7;
+        next_state        : pkt_state_t;
+        cmd_addr_bytes    : natural range 0 to 7;
         cmd_payload_bytes : natural range 0 to 1023;
     end record;
 
-    function next_hdr_state_by_put_header(header: espi_cmd_header) return parse_info_t is
+    function next_hdr_state_by_put_header (
+        header: espi_cmd_header
+    ) return parse_info_t is
+
         variable next_state : parse_info_t := (parse_addr_header, 4, 0);
+
     begin
         -- Only need to enumerate non 32bit address cases and anything with a payload
         -- otherwise the default goes
@@ -95,14 +101,19 @@ architecture rtl of command_processor is
                 end case;
             when others =>
                 null;
-        end case; 
+        end case;
         return next_state;
-    end function;
+    end;
 
     signal r, rin : reg_type;
 
 begin
 
+    -- pass through the flash channel requests here
+    flash_req.espi_hdr <= r.cmd_header;
+    flash_req.sp5_flash_address <= r.ch_addr;
+    flash_req.flash_np_enqueue_req <= r.cmd_header.valid when r.cmd_header.opcode.value = opcode_put_flash_np and r.cmd_header.cycle_kind = flash_read else false;
+    
     regs_if.write <= '1' when r.cmd_header.opcode.value = opcode_set_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.read  <= '1' when r.cmd_header.opcode.value = opcode_get_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.addr  <= r.cfg_addr;
@@ -113,8 +124,8 @@ begin
     command_header <= r.cmd_header;
 
     command_processor_comb: process(all)
-        variable v : reg_type;
-        variable parse_info: parse_info_t;
+        variable v          : reg_type;
+        variable parse_info : parse_info_t;
     begin
         v := r;
         -- These are single cycle flags
@@ -190,14 +201,9 @@ begin
                         v.state := crc;
                     end if;
                 end if;
-            when parse_cycle_header =>
-                -- Need to figure out by opcode when we know total length
-                -- befdore CRC. Anything transferred here goes into the buffer
-                -- and at CRC we'll mark the descriptor valid to start response
-                -- processing.
             -- The more fun command parsing. The first 3 bytes of these commands are
             -- always the same, cycle type (1 byte), tag/length[11:8] (1 byte), and
-            -- length[7:0] (1 byte). The next bytes are opcode/type specific, with some 
+            -- length[7:0] (1 byte). The next bytes are opcode/type specific, with some
             -- having variable address byte lenths and some having data while some have
             -- no data and are just requests for data.
             when parse_common_cycle_header =>
@@ -216,9 +222,8 @@ begin
                             v.state := parse_info.next_state;
                             v.rem_addr_bytes := parse_info.cmd_addr_bytes;
                             v.rem_data_bytes := parse_info.cmd_payload_bytes;
-                           
                         when others =>
-                            -- we should never get here, but we didn't cover all the 
+                            -- we should never get here, but we didn't cover all the
                             -- cycle type cases so we need to have something here
                             null;
                     end case;
@@ -230,7 +235,7 @@ begin
                     -- todo we're skipping 64bit address support for now, it can be here
                     -- but nothing is stored. Do we need to store it?
                     if r.rem_addr_bytes <= 4 then
-                        by_byte_msb_first(v.ch_addr, data_from_host.data, 4-r.rem_addr_bytes);
+                        by_byte_msb_first(v.ch_addr, data_from_host.data, 4 - r.rem_addr_bytes);
                     end if;
                     if v.rem_addr_bytes = 0 then
                         if r.rem_data_bytes = 0 then
@@ -241,8 +246,7 @@ begin
                     end if;
                 end if;
 
-
-            -- not much to do here. In theory, we have already indicated that the 
+            -- not much to do here. In theory, we have already indicated that the
             -- appropriate channel has room so we sit here until the data phase has
             -- finished. Muxes elsewhere should direct this datat to appropriate buffers
             when parse_data =>
@@ -253,7 +257,7 @@ begin
                 if v.rem_data_bytes = 0 then
                     v.state := crc;
                 end if;
-            
+
             -- Yay! we made it to the last cmd byte, now we can check the CRC
             when crc =>
                 if data_from_host.valid then

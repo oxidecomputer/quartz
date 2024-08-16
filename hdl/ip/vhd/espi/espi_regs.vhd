@@ -24,7 +24,8 @@ entity espi_regs is
 
         regs_if : view regs_side;
 
-        qspi_mode : out   qspi_mode_t
+        qspi_mode            : out   qspi_mode_t;
+        flash_channel_enable : out   boolean
     );
 end entity;
 
@@ -33,6 +34,7 @@ architecture rtl of espi_regs is
     signal device_id        : device_id_type;
     signal gen_capabilities : general_capabilities_type;
     signal ch0_capabilities : ch0_capabilities_type;
+    signal ch3_capabilities : ch3_capabilities_type;
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
 
@@ -40,6 +42,8 @@ begin
 
     regs_if.rdata_valid <= readdata_valid;
     regs_if.rdata       <= readdata;
+
+    flash_channel_enable <= ch3_capabilities.flash_channel_enable = '1';
     -- Write-side of the spec-defined registers
     write_reg: process(clk, reset)
     begin
@@ -47,6 +51,7 @@ begin
             device_id <= rec_reset;
             gen_capabilities <= rec_reset;
             ch0_capabilities <= rec_reset;
+            ch3_capabilities <= rec_reset;
         elsif rising_edge(clk) then
             if regs_if.addr = GENERAL_CAPABILITIES_OFFSET and regs_if.write = '1' then
                 gen_capabilities <= unpack(regs_if.wdata);
@@ -65,6 +70,20 @@ begin
                 -- clean up RO fields by keeping current val
                 ch0_capabilities.max_payload_support <= ch0_capabilities.max_payload_support;
                 ch0_capabilities.chan_rdy <= ch0_capabilities.chan_rdy;
+            end if;
+
+            if regs_if.addr = CH3_CAPABILITIES_OFFSET and regs_if.write = '1' then
+                ch3_capabilities <= unpack(regs_if.wdata);
+                -- clean up RO fields by keeping current val
+                ch3_capabilities.flash_cap <= ch3_capabilities.flash_cap;
+                ch3_capabilities.flash_share_mode <= ch3_capabilities.flash_share_mode;
+                ch3_capabilities.flash_max_payload_supported <= ch3_capabilities.flash_max_payload_supported;
+                ch3_capabilities.flash_block_erase_size <= ch3_capabilities.flash_block_erase_size;
+                ch3_capabilities.flash_channel_ready <= ch3_capabilities.flash_channel_ready;
+            else
+                -- TODO: we may want to tie this out to the flash enable mux eventually, but for now
+                -- it's fine
+                ch3_capabilities.flash_channel_ready <= ch3_capabilities.flash_channel_enable;
             end if;
         end if;
     end process;

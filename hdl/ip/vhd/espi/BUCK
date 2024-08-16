@@ -3,7 +3,7 @@ load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
     name = "espi_regs_pkg",
-    src = "txn_layer/espi_spec_regs.rdl",
+    src = "espi_spec_regs.rdl",
     outputs = ["espi_regs_pkg.vhd", "espi_regs_.html"],
     visibility = ['PUBLIC']
 )

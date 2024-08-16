@@ -26,6 +26,7 @@ entity spi_nor_regs is
         data_bytes   : out   databytes_type;
         instr        : out   instr_type;
         go_strobe    : out   std_logic;
+        sp5_flash_offset: out sp5flashoffset_type;
 
         -- TX FIFO Interface
         tx_fifo_write_data : out   std_logic_vector(31 downto 0);
@@ -128,8 +129,45 @@ begin
                         null;
                 end case;
             end if;
+
+        -- can accept a new write if we're not
+        -- responding to write already or
+        -- the write is not in progress
+        awready <= not awready and
+                   (axi_if.write_address.valid and axi_if.write_data.valid) and
+                   (not bvalid or bready);
+    end if;
+end process;
+
+write_logic: process(clk, reset)
+begin
+    if reset then
+        spicr <= rec_reset;
+        dummy_cycles <= rec_reset;
+        data_bytes <= rec_reset;
+        instr <= rec_reset;
+        addr <= rec_reset;
+        sp5_flash_offset <= rec_reset;
+        go_strobe <= '0';
+    elsif rising_edge(clk) then
+        go_strobe <= '0';  -- self clearing
+        spicr.tx_fifo_reset <= '0';  -- self clearing
+        spicr.rx_fifo_reset <= '0';  -- self clearing
+        if wready then
+            case to_integer(axi_if.write_address.addr) is
+                when SPICR_OFFSET => spicr <= unpack(axi_if.write_data.data);
+                when DUMMYCYCLES_OFFSET => dummy_cycles <= unpack(axi_if.write_data.data);
+                when INSTR_OFFSET => 
+                    instr <= unpack(axi_if.write_data.data);
+                    go_strobe <= '1';
+                when DATABYTES_OFFSET => data_bytes <= unpack(axi_if.write_data.data);
+                when ADDR_OFFSET => addr <= unpack(axi_if.write_data.data);
+                when SP5FLASHOFFSET_OFFSET => sp5_flash_offset <= unpack(axi_if.write_data.data);
+                when others => null;
+            end case;
         end if;
-    end process;
+    end if;
+end process;
 
     tx_fifo_write_data <= axi_if.write_data.data;
     tx_fifo_write      <= '1' when wready = '1' and to_integer(axi_if.write_address.addr) = TX_FIFO_WDATA_OFFSET else '0';
@@ -161,6 +199,25 @@ begin
                         rdata <= (others => '0');
                 end case;
             end if;
+rx_fifo_read_ack <= '1' when  axi_if.read_data.ready = '1' and rvalid = '1' and to_integer(axi_if.read_address.addr) = RX_FIFO_RDATA_OFFSET else '0';
+   
+read_logic: process(clk, reset)
+begin
+    if reset then
+        rdata <= (others => '0');
+    elsif rising_edge(clk) then
+        if (not axi_if.read_address.valid) or arready then
+            case to_integer(axi_if.read_address.addr) is
+                when SPICR_OFFSET => rdata <= pack(spicr);
+                when SPISR_OFFSET => rdata <= pack(spisr);
+                when DUMMYCYCLES_OFFSET => rdata <= pack(dummy_cycles);
+                when DATABYTES_OFFSET => rdata <= pack(data_bytes);
+                when INSTR_OFFSET => rdata <= pack(instr);
+                when ADDR_OFFSET => rdata <= pack(addr);
+                when RX_FIFO_RDATA_OFFSET => rdata <= rx_fifo_read_data;
+                when SP5FLASHOFFSET_OFFSET => rdata <= pack(sp5_flash_offset);
+                when others => rdata <= (others => '0');
+            end case;
         end if;
     end process;
 

@@ -41,8 +41,8 @@ architecture rtl of spi_link is
 
     signal tx_reg        : std_logic_vector(8 downto 0);
     signal rx_reg        : std_logic_vector(8 downto 0);
-    attribute mark_debug of tx_reg : signal is "TRUE";
-    attribute mark_debug of rx_reg : signal is "TRUE";
+    attribute mark_debug of tx_reg        : signal is "TRUE";
+    attribute mark_debug of rx_reg        : signal is "TRUE";
     signal tx_byte_ack   : boolean;
     signal sclk_last     : std_logic;
     signal shift_amt     : integer range 1 to 4;
@@ -50,6 +50,7 @@ architecture rtl of spi_link is
     signal is_last_bit   : boolean;
     signal cur_io_mode   : io_mode;
     signal dbg_sclk_cnts : unsigned(31 downto 0);
+    attribute mark_debug of dbg_sclk_cnts : signal is "TRUE";
 
 begin
 
@@ -69,6 +70,11 @@ begin
             dbg_sclk_cnts <= (others => '0');
         elsif rising_edge(clk) then
             sclk_last <= sclk;
+            -- This is a simple sclk counter that is used for debugging
+            -- purposes. I can be tricky to figure out where in the
+            -- transaction you are, when using the ila, so this counter
+            -- provides a way to know how many sclk cycles have passed
+            -- on this chip-select cycle.
             if cs_n = '0' and sclk_redge then
                 dbg_sclk_cnts <= dbg_sclk_cnts + 1;
             elsif cs_n = '1' then

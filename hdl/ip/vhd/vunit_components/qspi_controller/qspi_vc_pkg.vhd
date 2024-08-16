@@ -86,7 +86,7 @@ package qspi_vc_pkg is
         variable data  : inout queue_t
     );
 
-    procedure has_pending_alert(
+    procedure has_pending_alert (
         signal net     : inout network_t;
         constant actor : actor_t;
         variable alert : out boolean
@@ -191,20 +191,23 @@ package body qspi_vc_pkg is
         for i in 1 to count loop
             push_byte(data, pop(reply_msg));
         end loop;
+        delete(reply_msg);
     end;
 
-    procedure has_pending_alert(
+    procedure has_pending_alert (
         signal net     : inout network_t;
         constant actor : actor_t;
         variable alert : out boolean
-    )is
+    ) is
+
         variable request_msg : msg_t := new_msg(alert_status);
-        variable reply_msg: msg_t;
+        variable reply_msg   : msg_t;
 
     begin
         send(net, actor, request_msg);
         receive_reply(net, request_msg, reply_msg);
         alert := pop(reply_msg);
+        delete(reply_msg);
     end;
 
 end package body;

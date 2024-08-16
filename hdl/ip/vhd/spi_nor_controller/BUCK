@@ -15,7 +15,12 @@ rdl_file(
 
 vhdl_unit(
     name = "spi_nor_top",
-    srcs = glob(["*.vhd"]),
+    srcs = glob([
+        "*.vhd",
+        "link/*.vhd",
+        "spi_txn/*.vhd",
+        "espi_txn/*.vhd",
+    ]),
     standard = "2019",
     deps = [
         ":spi_nor_rdl",

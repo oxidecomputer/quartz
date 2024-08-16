@@ -253,7 +253,7 @@ addrmap eSPI_Spec {
             011b: 256 bytes max payload size.
             100b – 111b: Reserved.
             ";
-            sw = rw;
+            sw = r;
 
         } flash_max_payload_supported[7:5] =  0x3;
 
@@ -270,7 +270,7 @@ addrmap eSPI_Spec {
             101b: 256 Kbytes
             110b – 111b: Reserved
             ";
-            sw = rw;
+            sw = r;
 
         } flash_block_erase_size[4:2] =  0x1;
 

@@ -18,6 +18,11 @@ addrmap nor_flash_regs {
     reg {
         name = "SPI Control Register";
         desc = "";
+        field {
+            desc = "Set to one to allow eSPI <-> SP5 interface read from flash. Hubris should
+            not attempt any flash accesses with this bit set. This bit also enforces the
+            flash offset in ";
+        } sp5_owns_flash[31:31] =  0;
         
         field {
             desc = "Set to one to reset RX FIFO. Cleared by hardware after reset.";
@@ -115,10 +120,11 @@ addrmap nor_flash_regs {
         } fifo_data[31:0] =  0;
      } rx_fifo_rdata;
 
-    // Example page program:
-    // write enable, instr: 06h, 0 dummy, 0 data size
-    // enter 4 byte address mode, instr: B7h, 0 dummy, 0 data size
-    // quad input page 32bit address program, instr: 34h, 0 dummy, n data size, leftovers filled with FFs
-    
-
+    reg {
+        name = "SP5 Flash offset address";
+        desc = "Allows hubris to control which flash page is accessed by the eSPI block";
+        field {
+            desc = "Address added to raw eSPI transactions to generate physical flash address";
+        } offset[31:0] =  0;
+    } SP5FlashOffset;
 };

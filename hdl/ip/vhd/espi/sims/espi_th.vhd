@@ -24,6 +24,12 @@ architecture th of espi_th is
     signal   io_oe      : std_logic_vector(3 downto 0);
     constant qspi_actor : qspi_vc_t := new_qspi_vc("espi_vc");
 
+    signal flash_cfifo_data   : std_logic_vector(31 downto 0);
+    signal flash_cfifo_write  : std_logic;
+    signal flash_rfifo_data   : std_logic_vector(7 downto 0);
+    signal flash_rfifo_rdack  : std_logic;
+    signal flash_rfifo_rempty : std_logic;
+
 begin
 
     -- set up a fastish clock for the sim
@@ -49,7 +55,23 @@ begin
             sclk  => sclk,
             io    => io,
             io_o  => io_o,
-            io_oe => io_oe
+            io_oe => io_oe,
+            flash_cfifo_data   => flash_cfifo_data,
+            flash_cfifo_write  => flash_cfifo_write,
+            flash_rfifo_data   => flash_rfifo_data,
+            flash_rfifo_rdack  => flash_rfifo_rdack,
+            flash_rfifo_rempty => flash_rfifo_rempty
+        );
+
+    fake_flash_txn_mgr_inst: entity work.fake_flash_txn_mgr
+        port map (
+            clk                 => clk,
+            reset               => reset,
+            espi_cmd_fifo_data  => flash_cfifo_data,
+            espi_cmd_fifo_write => flash_cfifo_write,
+            flash_rdata         => flash_rfifo_data,
+            flash_rdata_empty   => flash_rfifo_rempty,
+            flash_rdata_rdack   => flash_rfifo_rdack
         );
 
     io_tris: process(all)

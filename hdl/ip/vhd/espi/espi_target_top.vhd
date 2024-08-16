@@ -21,7 +21,15 @@ entity espi_target_top is
         sclk  : in    std_logic;
         io    : in    std_logic_vector(3 downto 0);
         io_o  : out   std_logic_vector(3 downto 0);
-        io_oe : out   std_logic_vector(3 downto 0)
+        io_oe : out   std_logic_vector(3 downto 0);
+        -- Interface out to the flash block
+        -- Read Command FIFO
+        flash_cfifo_data : out std_logic_vector(31 downto 0);
+        flash_cfifo_write: out std_logic;
+        -- Read Data FIFO
+        flash_rfifo_data : in std_logic_vector(7 downto 0);
+        flash_rfifo_rdack : out std_logic;
+        flash_rfifo_rempty: in std_logic;
     );
 end entity;
 
@@ -36,6 +44,9 @@ architecture rtl of espi_target_top is
     signal flash_req       : flash_channel_req_t;
     signal flash_resp      : flash_channel_resp_t;
     signal alert_needed    : boolean;
+    signal flash_np_free  : std_logic;
+    signal flash_c_avail : std_logic;
+    signal flash_channel_enable : boolean;
 
 begin
 
@@ -68,16 +79,22 @@ begin
             chip_sel_active => chip_sel_active,
             data_to_host    => data_to_host,
             data_from_host  => data_from_host,
-            alert_needed    => alert_needed
+            alert_needed    => alert_needed,
+            flash_req       => flash_req,
+            flash_resp      => flash_resp,
+             -- flash channel status
+            flash_np_free => flash_np_free,
+            flash_c_avail => flash_c_avail
         );
 
     -- register blocks
     espi_regs_inst: entity work.espi_regs
         port map (
-            clk       => clk,
-            reset     => reset,
-            regs_if   => regs_if,
-            qspi_mode => qspi_mode
+            clk            => clk,
+            reset          => reset,
+            regs_if        => regs_if,
+            qspi_mode      => qspi_mode,
+            flash_channel_enable => flash_channel_enable
         );
 
     -- flash access channel logic
@@ -87,11 +104,14 @@ begin
        reset => reset,
        request => flash_req,
        response => flash_resp,
-       flash_np_free => open,
-       flash_c_avail => open,
-       flash_fifo_data => (others => '0'),
-       flash_fifo_rdack => open,
-       flash_fifo_rempty => '1'
+       enabled => flash_channel_enable,
+       flash_np_free => flash_np_free,
+       flash_c_avail => flash_c_avail,
+       flash_cfifo_data => flash_cfifo_data,
+       flash_cfifo_write => flash_cfifo_write,
+       flash_rfifo_data => flash_rfifo_data,
+       flash_rfifo_rdack => flash_rfifo_rdack,
+       flash_rfifo_rempty => flash_rfifo_rempty
    );
 
 end rtl;

@@ -8,6 +8,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
+use work.flash_channel_pkg.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
@@ -18,8 +19,14 @@ entity txn_layer_top is
         reset : in    std_logic;
 
         -- register layer connections
-        
+
         regs_if : view    bus_side;
+        -- flash channel status
+        flash_np_free : in    std_logic;
+        flash_c_avail : in    std_logic;
+        -- flash channel requests/responses
+        flash_req : view flash_chan_req_source;
+        flash_resp: view flash_chan_resp_sink;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
@@ -91,6 +98,7 @@ begin
             clk             => clk,
             reset           => reset,
             regs_if         => regs_if,
+            flash_req       => flash_req,
             running_crc     => rx_running_crc,
             command_header  => command_header,
             response_done   => response_done,
@@ -100,17 +108,19 @@ begin
         );
 
     response_processor_inst: entity work.response_processor
-     port map(
-        clk => clk,
-        reset => reset,
-        command_header => command_header,
-        response_done   => response_done,
-        regs_if        => resp_regs_if,
-        clear_tx_crc => clear_tx_crc,
-        data_to_host => data_to_host,
-        live_status => live_status,
-        response_crc => tx_running_crc
-    );
+        port map (
+            clk            => clk,
+            reset          => reset,
+            command_header => command_header,
+            response_done  => response_done,
+            regs_if        => resp_regs_if,
+            clear_tx_crc   => clear_tx_crc,
+            data_to_host   => data_to_host,
+            live_status    => live_status,
+            response_crc   => tx_running_crc,
+            flash_resp     => flash_resp,
+            alert_needed   => alert_needed
+        );
 
     resp_regs_if.write       <= regs_if.write;
     resp_regs_if.read        <= regs_if.read;
@@ -118,7 +128,13 @@ begin
     resp_regs_if.wdata       <= regs_if.wdata;
     resp_regs_if.rdata       <= regs_if.rdata;
     resp_regs_if.rdata_valid <= regs_if.rdata_valid;
-    -- TODO: need to flesh this out
-    live_status <= rec_reset;
+
+    process(all)
+    begin
+        -- default to reset, override with other status bits
+        live_status <= rec_reset;
+        live_status.flash_c_avail <= flash_c_avail;
+        live_status.flash_np_free <= flash_np_free;
+    end process;
 
 end rtl;

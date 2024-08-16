@@ -18,18 +18,24 @@ entity flash_channel is
         clk : in std_logic;
         reset : in std_logic;
 
+        enabled: in boolean;
+
         -- eSPI Transaction interface
         request: view flash_chan_req_sink;
-        response: view flash_channel_resp_source;
+        response: view flash_chan_resp_source;
 
         -- eSPI Status interface
         flash_np_free : out std_logic;
         flash_c_avail : out std_logic;
 
         -- Flash block interface
-        flash_fifo_data : in std_logic_vector(7 downto 0);
-        flash_fifo_rdack : out std_logic;
-        flash_fifo_rempty: in std_logic;
+        -- command fifo
+        flash_cfifo_data : out std_logic_vector(31 downto 0);
+        flash_cfifo_write: out std_logic;
+        -- readback fifo
+        flash_rfifo_data : in std_logic_vector(7 downto 0);
+        flash_rfifo_rdack : out std_logic;
+        flash_rfifo_rempty: in std_logic;
 
     );
 end;
@@ -41,8 +47,17 @@ architecture rtl of flash_channel is
     signal dpr_waddr : std_logic_vector(11 downto 0);
     signal dpr_raddr : std_logic_vector(11 downto 0);
 
+    function add_wrap(a : natural; max: natural) return natural is
+    begin
+        if a =  max then
+            return 0;
+        else
+            return a + 1;
+        end if;
+    end function;
 
-    type cmd_state_t is (idle, issue_flash_cmd, wait_for_data);
+
+    type cmd_state_t is (idle, issue_flash_addr, issue_flash_len, wait_for_data);
     type complete_state_t is (idle, read_dpr);
 
     type reg_type is record
@@ -66,10 +81,14 @@ architecture rtl of flash_channel is
 begin
 
     -- Always write straight from the FIFO to the dpr so any dpr write is a fifo read ack also
-    flash_fifo_rdack <= r.dpr_write_en;
-    flash_np_free <= r.flash_np_free;
-    flash_c_avail <= r.flash_c_avail;
+    flash_rfifo_rdack <= r.dpr_write_en;
+    flash_np_free <= r.flash_np_free when enabled else '0';
+    flash_c_avail <= r.flash_c_avail when enabled else '0';
 
+    flash_cfifo_data <= r.cmd_queue(r.issue_desc).sp5_addr when r.flash_cmd_state = issue_flash_addr else 
+                        resize(r.cmd_queue(r.issue_desc).xfr_size_bytes, flash_cfifo_data'length) when r.flash_cmd_state = issue_flash_len else
+                        (others => '0');
+    flash_cfifo_write <= '1' when r.flash_cmd_state = issue_flash_addr or r.flash_cmd_state = issue_flash_len else '0';
 
     -- Let's put a 4kB buffer here as a starting point and see how it goes, this would allow 4 1024Byte max size tansactions
     -- or we could shrink and say 2 2kB etc. We know we're only going read on this interface so we don't ahve to worry so much about
@@ -83,16 +102,20 @@ begin
      port map(
         wclk => clk,
         waddr => dpr_waddr,
-        wdata => flash_fifo_data,
+        wdata => flash_rfifo_data,
         wren => r.dpr_write_en,
         rclk => clk,
         raddr => dpr_raddr,
         rdata => response.data
     );
     response.valid <= '1' when r.compl_state = read_dpr else '0';
+    response.tag <= r.cmd_queue(r.tail_desc).tag;
+    response.length <= r.cmd_queue(r.tail_desc).xfr_size_bytes;
+    response.cycle_type <= "00001111"; -- successful completion of with data, only complettion for a split txn
+
 
     dpr_waddr <= To_Std_Logic_Vector(r.cmd_queue(r.issue_desc).id * max_txn_size  + r.flash_side_cntr, 12);
-    dpr_raddr <= To_Std_Logic_Vector(r.cmd_queue(r.tail_desc).id * max_txn_size  + r.flash_side_cntr, 12);
+    dpr_raddr <= To_Std_Logic_Vector(r.cmd_queue(r.tail_desc).id * max_txn_size  + r.compl_side_cntr, 12);
 
     -- We have two state machines running here as both need to be able to update
     -- the descriptor queues.
@@ -130,7 +153,7 @@ begin
             v.cmd_queue(r.head_desc).tag := request.espi_hdr.tag;
             v.cmd_queue(r.head_desc).flash_issued := false;
             v.cmd_queue(r.head_desc).done := false;
-            v.head_desc := r.head_desc + 1;
+            v.head_desc := add_wrap(r.head_desc, desc_index_t'high);
 
         end if;
 
@@ -168,7 +191,7 @@ begin
             when idle =>
                 -- have active command that hasn't been issued to flash
                 if flash_issue_needed then
-                    v.flash_cmd_state := issue_flash_cmd;
+                    v.flash_cmd_state := issue_flash_addr;
                     
                 end if;
             -- issue to flash, and wait until we get all the data back
@@ -176,8 +199,10 @@ begin
             -- on command to the flash controller at a time so we'll spin
             -- here until it finishes. When it finishes, we should have
             -- all the data back in the DPR and we can call it done.
-            when issue_flash_cmd =>
+            when issue_flash_addr =>
                 -- Send the address to the flash controller
+                v.flash_cmd_state := issue_flash_len;
+            when issue_flash_len =>
                 v.flash_cmd_state := wait_for_data;
                 v.flash_side_cntr := 0;
                 v.cmd_queue(r.issue_desc).flash_issued := true;
@@ -187,8 +212,8 @@ begin
                     v.cmd_queue(r.issue_desc).done := true;
                     v.flash_cmd_state := idle;
                     v.flash_side_cntr := 0;
-                    v.issue_desc := r.issue_desc + 1;
-                elsif not flash_fifo_rempty then
+                    v.issue_desc := add_wrap(r.issue_desc, desc_index_t'high);
+                elsif not flash_rfifo_rempty then
                     v.dpr_write_en := '1';
                     v.flash_side_cntr := r.flash_side_cntr + 1;
                 end if;
@@ -211,7 +236,7 @@ begin
                     v.cmd_queue(r.tail_desc).active := false;
                     v.cmd_queue(r.tail_desc).done := false;
                     v.cmd_queue(r.tail_desc).flash_issued := false;
-                    v.tail_desc := r.tail_desc + 1;
+                    v.tail_desc := add_wrap(r.tail_desc, desc_index_t'high);
                     v.compl_state := idle;
                 elsif response.ready = '1' and response.valid = '1' then
                     v.compl_side_cntr := r.compl_side_cntr + 1;

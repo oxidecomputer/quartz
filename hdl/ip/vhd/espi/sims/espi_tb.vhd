@@ -38,6 +38,8 @@ begin
         variable data_32         : std_logic_vector(31 downto 0);
         variable exp_data_32     : std_logic_vector(31 downto 0);
         variable crc_ok          : boolean;
+        variable pending_alert   : boolean;
+        variable flash_cap_reg   : ch3_capabilities_type := rec_reset;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -84,15 +86,34 @@ begin
                 check(crc_ok, "CRC Check failed");
                 -- Expect the reset value of gen-cap here
                 check_equal(data_32, exp_data_32, "General Capabilities did not match expected value");
+            elsif run("check_alert_works") then
+                 -- Enable the flash channel
+                 flash_cap_reg.flash_channel_enable := '1';
+                 set_config(CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+     
+                 -- Put a non-posted read request into the flash channel
+                 -- We expect something to happen here and the alert get set when the completion
+                 -- status is written back, so we check the crc here and then wait for the alert
+                put_flash_read(X"00000000", 32, response_code, status,  crc_ok);
+                --  check(crc_ok, "CRC Check failed");
+                --  wait_for_alert;
+                --  get_any_pending_alert(pending_alert);
+                --  check(pending_alert, "Expected an alert to be pending");
+                --  get_status(response_code, status,  crc_ok);
+                --  check(pending_alert = false, "After get status, expected no alert to be pending");
             elsif run("read_flash") then
+                -- Enable the flash channel
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                -- Put a non-posted read request into the flash channel
+                -- We expect something to happen here and the alert get set when the completion
+                -- status is written back, so we check the crc here and then wait for the alert
                 put_flash_read(X"00000000", 32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
+                wait_for_alert;
 
                 -- would normally wait for the completion alert now
-                wait for 100 us;
-
-
-
+                wait for 300 us;
             end if;
         end loop;
         wait for 10 us;

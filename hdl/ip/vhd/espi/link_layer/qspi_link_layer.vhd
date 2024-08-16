@@ -62,7 +62,7 @@ architecture rtl of qspi_link_layer is
     signal data_ready_to_host : std_logic;
     type cs_monitor_t is (no_alert_allowed, alert_allowed);
     signal cs_monitor_state : cs_monitor_t;
-    type alert_state_t is (idle, alert);
+    type alert_state_t is (idle, wait_for_allowed, alert);
     signal alert_state : alert_state_t;
     signal cs_cntr : natural range 0 to 3 := 0;
     constant cs_deassert_delay : natural := 2;
@@ -108,6 +108,12 @@ begin
             case alert_state is
                 when idle =>
                     if alert_needed and cs_monitor_state = alert_allowed then
+                        alert_state <= alert;
+                    elsif alert_needed then
+                        alert_state <= wait_for_allowed;
+                    end if;
+                when wait_for_allowed =>
+                    if cs_monitor_state = alert_allowed then
                         alert_state <= alert;
                     end if;
                 when alert =>

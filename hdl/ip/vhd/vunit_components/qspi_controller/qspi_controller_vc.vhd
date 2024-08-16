@@ -53,7 +53,7 @@ architecture model of qspi_controller_vc is
     signal tx_rem_bytes    : natural              := 0;
     signal rx_rem_bytes    : natural              := 0;
     signal debug_rx_byte   : unsigned(7 downto 0) := (others => '0');
-    signal alert_pending   : boolean := false;
+    signal alert_pending   : boolean              := false;
 
 begin
 
@@ -121,18 +121,17 @@ begin
         elsif msg_type = alert_status then
             reply_msg := new_msg;
             push(reply_msg, alert_pending);
-            reply(net, request_msg, reply_msg);  
+            reply(net, request_msg, reply_msg);
         else
             unexpected_msg_type(msg_type);
         end if;
     end process;
 
-    transaction_sm: process
     -- Monitor here, and clear after every transaction
     -- Alerts are represented by IO(1) going low when not
     -- chip selected and should be cleared after every transaction
     -- since the status is reported in each transaction
-    alert_monitor : process(all)
+    alert_monitor: process(all)
     begin
         if ss_n(0) = '1' and io(1) = '0' then
             alert_pending <= true;
@@ -141,8 +140,7 @@ begin
         end if;
     end process;
 
-
-    transaction_sm : process
+    transaction_sm: process
     begin
         wait on txn_go;
         -- enable the sclk

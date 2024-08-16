@@ -8,7 +8,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
-
 use work.espi_base_types_pkg.all;
 
 package espi_protocol_pkg is
@@ -41,12 +40,12 @@ package espi_protocol_pkg is
     constant mem_read_32 : std_logic_vector(7 downto 0) := "00000000";
     constant mem_read_64 : std_logic_vector(7 downto 0) := "00000010";
     -- Flash channel (from  server addendum)
-    constant flash_read : std_logic_vector(7 downto 0) := "00000000";
+    constant flash_read : std_logic_vector(7 downto 0)      := "00000000";
     constant success_no_data : std_logic_vector(7 downto 0) := "00000110";
-    
+
     -- We won't actually write/erase, our behavior catching this is TBD
-    constant flash_write: std_logic_vector(7 downto 0) := "00000001";
-    constant flash_erase: std_logic_vector(7 downto 0) := "00000010";
+    constant flash_write : std_logic_vector(7 downto 0) := "00000001";
+    constant flash_erase : std_logic_vector(7 downto 0) := "00000010";
 
     -- Header Indices for general eSPI packages
     constant cycle_type_idx : integer := 0;
@@ -61,7 +60,7 @@ package espi_protocol_pkg is
     constant data_byte0_idx : integer := 5;
 
     -- Cycle Types
-    
+
     -- constant MEM_WRITE_32
     -- constant MEM_WRITE_64
     -- constant MESSAGE
@@ -76,17 +75,18 @@ package espi_protocol_pkg is
 
     -- Flash cycle types
     -- Unused: corresponds to erase or write
-    --constant flash_success_no_data : std_logic_vector(7 downto 0) := "00000110";
+    -- constant flash_success_no_data : std_logic_vector(7 downto 0) := "00000110";
 
-    constant split_mid_complete: std_logic_vector(1 downto 0) := "00";
-    constant split_first_complete: std_logic_vector(1 downto 0) := "01";
-    constant split_last_complete: std_logic_vector(1 downto 0) := "10";
-    constant split_only_complete: std_logic_vector(1 downto 0) := "11";
+    constant split_mid_complete : std_logic_vector(1 downto 0)   := "00";
+    constant split_first_complete : std_logic_vector(1 downto 0) := "01";
+    constant split_last_complete : std_logic_vector(1 downto 0)  := "10";
+    constant split_only_complete : std_logic_vector(1 downto 0)  := "11";
 
     constant accept : std_logic_vector(1 downto 0)      := "00";
     constant no_response : std_logic_vector(1 downto 0) := "11";
     -- TODO: support response modifiers
     constant accept_code : std_logic_vector(7 downto 0) := "00001000";
+    constant defer_code : std_logic_vector(7 downto 0) := "00000001";
 
     -- function min_bytes_before_turn_by_opcode(opcode: std_logic_vector) return natural;
     -- function bytes_to_clocks(bytes: natural; mode: qspi_mode_t) return natural;
