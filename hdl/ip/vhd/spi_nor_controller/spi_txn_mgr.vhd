@@ -118,10 +118,10 @@ begin
     -- main controller state machine
     controller: process(all)
         variable v : reg_type;
-        variable slk_fedge : boolean := false;
+        variable slk_redge : boolean := false;
     begin
         v := r;
-        slk_fedge := sclk = '0' and sclk_last = '1';
+        slk_redge := sclk = '1' and sclk_last = '0';
 
         case r.state is
             when idle =>
@@ -197,7 +197,7 @@ begin
                -- after a dummy phase, we're going to be reading
                -- as that's the only reason to issue dummy cycles
                -- for anything else we'll just terminate the transaction
-               if slk_fedge and r.counter = 1 then
+               if slk_redge and r.counter = 1 then
                     if r.txn.data_kind = read then
                         v.state := rdata;
                         v.counter := to_integer(data_bytes);
@@ -205,7 +205,7 @@ begin
                         v.state := cs_deassert;
                         v.counter := CS_CLK_DELAY_CNTS;
                     end if;
-                elsif slk_fedge then
+                elsif slk_redge then
                     v.counter := r.counter - 1;
                 end if;
 

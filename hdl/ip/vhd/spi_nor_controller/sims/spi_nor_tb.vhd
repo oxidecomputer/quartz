@@ -83,7 +83,12 @@ begin
                 write_data(net, x"07060504");  -- do do words
                 write_instr(net, QUAD_INPUT_PAGE_PROGRAM_OP);
 
-            -- elsif run("read_32addr_dummy") then
+            elsif run("read_2x_32addr_dummy") then
+                write_dummy(net, 8);  -- 8 dummy clocks
+                write_data_size(net, 27);  -- read out 27 bytes
+                write_instr(net, FAST_READ_4BYTE_QUAD_OP);
+                wait for 25 us;
+                write_instr(net, FAST_READ_4BYTE_QUAD_OP);
             end if;
         end loop;
 

@@ -38,15 +38,19 @@ entity spi_link is
 end spi_link;
 
 architecture rtl of spi_link is
+    attribute MARK_DEBUG : string;
 
 signal tx_reg            : std_logic_vector(8 downto 0);
 signal rx_reg            : std_logic_vector(8 downto 0);
+attribute MARK_DEBUG of tx_reg : signal is "TRUE";
+attribute MARK_DEBUG of rx_reg : signal is "TRUE";
 signal tx_byte_ack       : boolean;
 signal sclk_last         : std_logic;
 signal shift_amt         : integer range 1 to 4;
 signal csn_last          : std_logic;
 signal is_last_bit       : boolean;
 signal cur_io_mode  : io_mode;
+signal dbg_sclk_cnts : unsigned(31 downto 0);
 
 begin
 
@@ -63,8 +67,15 @@ begin
         if reset then
             sclk_last <= '0';
             cur_io_mode <= single;
+            dbg_sclk_cnts <= (others => '0');
         elsif rising_edge(clk) then
             sclk_last <= sclk;
+            if cs_n = '0' and sclk_redge then
+                dbg_sclk_cnts <= dbg_sclk_cnts + 1;
+            elsif cs_n = '1' then
+                dbg_sclk_cnts <= (others => '0');
+            end if;
+    
             if cs_n = '0' and sclk_fedge then
                 -- only update the io mode on the falling edge
                 -- so that we're done with the current bit
