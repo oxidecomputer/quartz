@@ -86,7 +86,7 @@ begin
     -- Unary OR reduction, active when any bit is active
     req_f_edge <= or req_vec_f_edge;
 
-    the_arbiter : process (clk)
+    the_arbiter: process(clk)
     begin
         if reset then
             grants_int    <= zeros;

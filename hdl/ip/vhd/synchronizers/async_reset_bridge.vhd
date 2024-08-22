@@ -64,7 +64,7 @@ begin
 
     -- Since we're using async reset here, this can't turn into an SRL16 so we
     -- don't need any special control attributes here
-    reset_reg : process (clk, reset_async)
+    reset_reg: process(clk, reset_async)
     begin
         if reset_async = async_reset_active_level then
             reset_flops <= (others => '1');

@@ -91,7 +91,7 @@ begin
 
     --! `clk_a` domain flops where we latch the new data when requested
     --! and start the handshake across
-    regs_in_a : process (clk_launch, reset_launch)
+    regs_in_a: process(clk_launch, reset_launch)
     begin
         if reset_launch then
             write_in_progress <= '0';
@@ -114,7 +114,7 @@ begin
     end process;
 
     -- Register
-    regs_b : process (clk_latch, reset_latch)
+    regs_b: process(clk_latch, reset_latch)
     begin
         if reset_latch then
             bus_latch_reg_internal <= (others => '0');
@@ -125,7 +125,7 @@ begin
 
     extra_reg_gen : if always_valid_in_b generate
 
-        extra_regs_b : process (clk_latch, reset_latch)
+        extra_regs_b: process(clk_latch, reset_latch)
         begin
             if reset_latch then
                 datavalid_latch <= '0';

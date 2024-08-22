@@ -53,7 +53,7 @@ architecture rtl of dual_clock_simple_dpr is
 begin
 
     -- Write side interface
-    wr : process (wclk)
+    wr: process(wclk)
     begin
         if rising_edge(wclk) then
             if wren = '1' then
@@ -66,7 +66,7 @@ begin
 
     out_reg : if reg_output = true generate
 
-        rd : process (rclk)
+        rd: process(rclk)
         begin
             if rising_edge(rclk) then
                 rdata <= ram(to_integer(unsigned(raddr)));

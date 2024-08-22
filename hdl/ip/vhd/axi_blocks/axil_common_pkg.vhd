@@ -4,7 +4,6 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -14,7 +13,7 @@ package axil_common_pkg is
 
     -- Interconnect configuration
     type axil_responder_config is record
-        base_addr : std_logic_vector(31 downto 0);
+        base_addr      : std_logic_vector(31 downto 0);
         addr_span_bits : integer;
     end record;
 
@@ -22,9 +21,8 @@ package axil_common_pkg is
 
     type int_array is array (natural range <>) of integer;
 
-    constant OKAY : std_logic_vector(1 downto 0) := "00";
+    constant OKAY : std_logic_vector(1 downto 0)   := "00";
     constant EXOKAY : std_logic_vector(1 downto 0) := "01";
     constant SLVERR : std_logic_vector(1 downto 0) := "10";
-
 
 end package;

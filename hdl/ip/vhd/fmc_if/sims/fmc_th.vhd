@@ -9,7 +9,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.stm32h7_fmc_sim_pkg.all;
 use work.fmc_tb_pkg.all;
-
 use work.axil26x32_pkg.all;
 
 library vunit_lib;
@@ -33,13 +32,13 @@ architecture th of fmc_th is
     signal nl    : std_logic;
     signal nwait : std_logic := '1';
 
-    signal rdata   : std_logic_vector(31 downto 0);
+    signal rdata : std_logic_vector(31 downto 0);
 
-    signal arid : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
-    signal bid  : std_logic_vector(3 downto 0);
-    signal awid : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
-    signal rid  : std_logic_vector(3 downto 0);
-    signal data_out_tris: std_logic_vector(15 downto 0);
+    signal arid             : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
+    signal bid              : std_logic_vector(3 downto 0);
+    signal awid             : std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(0, 4));
+    signal rid              : std_logic_vector(3 downto 0);
+    signal data_out_tris    : std_logic_vector(15 downto 0);
     signal data_out_tris_en : std_logic;
 
     signal axi_if : axil_t;
@@ -117,18 +116,18 @@ begin
         );
 
     ad <= data_out_tris when data_out_tris_en = '1' else (others => 'Z');
-        
+
     dut: entity work.stm32h7_fmc_target
         port map (
             -- Interface to the STM32H7's FMC periph
             --! Write full flag, sync to write clock domain
-            chip_reset => reset,
-            fmc_clk    => clk,
-            a          => a(24 downto 16),
+            chip_reset   => reset,
+            fmc_clk      => clk,
+            a            => a(24 downto 16),
             addr_data_in => ad,
-            data_out => data_out_tris,
-            data_out_en => data_out_tris_en,
-            ne         => ne,
+            data_out     => data_out_tris,
+            data_out_en  => data_out_tris_en,
+            ne           => ne,
             -- todo missing byte enables?
             noe   => noe,
             nwe   => nwe,
@@ -137,8 +136,7 @@ begin
             -- FPGA interface
             aclk    => clk,
             aresetn => not reset,
-            axi_if => axi_if
-          
+            axi_if  => axi_if
 
         );
 

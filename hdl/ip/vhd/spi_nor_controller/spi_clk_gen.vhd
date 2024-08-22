@@ -4,7 +4,6 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -12,26 +11,28 @@ use ieee.numeric_std_unsigned.all;
 
 entity spi_clk_gen is
     port (
-        clk : in std_logic;
-        reset : in std_logic;
-        divisor: in unsigned(15 downto 0);
-        enable : in boolean;
-        sclk : out std_logic
+        clk     : in    std_logic;
+        reset   : in    std_logic;
+        divisor : in    unsigned(15 downto 0);
+        enable  : in    boolean;
+        sclk    : out   std_logic
     );
 end entity;
 
 architecture rtl of spi_clk_gen is
-    signal div_cnts : unsigned(15 downto 0) := (others => '0');
-    signal strobe : boolean := false;
-    signal internal_enable : boolean := false;
-    signal enable_last : boolean := false;
+
+    signal div_cnts        : unsigned(15 downto 0) := (others => '0');
+    signal strobe          : boolean               := false;
+    signal internal_enable : boolean               := false;
+    signal enable_last     : boolean               := false;
+
 begin
 
     -- Pretty simple spi generator.
     -- start with a rising edge
     -- generate requested clock
 
-    div_strobe: process(clk, reset) 
+    div_strobe: process(clk, reset)
     begin
         if reset then
             div_cnts <= (others => '0');
@@ -51,13 +52,12 @@ begin
     end process;
 
     sclk_gen: process(clk, reset)
-        variable nxt_sclk: std_logic;
+        variable nxt_sclk : std_logic;
     begin
         if reset then
             sclk <= '0';
             internal_enable <= false;
             enable_last <= false;
-
         elsif rising_edge(clk) then
             enable_last <= enable;
             if enable  and not enable_last  then
@@ -72,12 +72,10 @@ begin
                     nxt_sclk := not sclk;
                 end if;
                 sclk <= nxt_sclk;  -- assign value to output
-
             else
                 sclk <= '0';
             end if;
         end if;
     end process;
-
 
 end rtl;

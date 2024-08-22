@@ -1653,7 +1653,7 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "no_code"
+      "style": "no_blank_line"
     },
     "case_009": {
       "disable": false,
@@ -1667,7 +1667,7 @@
       "fixable": true,
       "phase": 3,
       "severity": "Error",
-      "style": "require_blank_line"
+      "style": "no_blank_line"
     },
     "case_011": {
       "alignment": "report",
@@ -2198,9 +2198,9 @@
       "severity": "Error"
     },
     "constant_004": {
-      "case": "lower",
+      "case": "upper_or_lower",
       "case_exceptions": [],
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "phase": 6,
       "prefix_exceptions": [],
@@ -5343,7 +5343,7 @@
     "process_002": {
       "disable": false,
       "fixable": true,
-      "number_of_spaces": 1,
+      "number_of_spaces": 0,
       "phase": 2,
       "severity": "Error"
     },
@@ -5500,7 +5500,7 @@
     "process_024": {
       "disable": false,
       "fixable": true,
-      "number_of_spaces": 1,
+      "number_of_spaces": 0,
       "phase": 2,
       "severity": "Error"
     },
@@ -6493,7 +6493,7 @@
       "severity": "Error"
     },
     "type_501": {
-      "disable": false,
+      "disable": true,
       "fixable": true,
       "phase": 6,
       "severity": "Error"

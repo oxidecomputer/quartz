@@ -4,29 +4,27 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
-
 use work.spi_nor_pkg.all;
 
 entity spi_link is
     port (
-        clk : in std_logic;
-        reset : in std_logic;
+        clk   : in    std_logic;
+        reset : in    std_logic;
         -- system interface
-        req_io_mode  : in io_mode;
-        divisor : in unsigned(15 downto 0);
-        in_tx_phases : in boolean;
-        in_rx_phases : in boolean;
-        rx_byte      : out std_logic_vector(7 downto 0);
-        rx_byte_done : out boolean;
-        tx_byte      : in std_logic_vector(7 downto 0);
-        tx_byte_done : out boolean;
-        sclk_redge   : out boolean;
-        sclk_fedge   : out boolean;
+        req_io_mode  : in    io_mode;
+        divisor      : in    unsigned(15 downto 0);
+        in_tx_phases : in    boolean;
+        in_rx_phases : in    boolean;
+        rx_byte      : out   std_logic_vector(7 downto 0);
+        rx_byte_done : out   boolean;
+        tx_byte      : in    std_logic_vector(7 downto 0);
+        tx_byte_done : out   boolean;
+        sclk_redge   : out   boolean;
+        sclk_fedge   : out   boolean;
 
         -- qspi interface
         cs_n  : in    std_logic;
@@ -35,32 +33,33 @@ entity spi_link is
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0)
     );
-end spi_link;
+end entity;
 
 architecture rtl of spi_link is
-    attribute MARK_DEBUG : string;
 
-signal tx_reg            : std_logic_vector(8 downto 0);
-signal rx_reg            : std_logic_vector(8 downto 0);
-attribute MARK_DEBUG of tx_reg : signal is "TRUE";
-attribute MARK_DEBUG of rx_reg : signal is "TRUE";
-signal tx_byte_ack       : boolean;
-signal sclk_last         : std_logic;
-signal shift_amt         : integer range 1 to 4;
-signal csn_last          : std_logic;
-signal is_last_bit       : boolean;
-signal cur_io_mode  : io_mode;
-signal dbg_sclk_cnts : unsigned(31 downto 0);
+    attribute mark_debug : string;
+
+    signal tx_reg        : std_logic_vector(8 downto 0);
+    signal rx_reg        : std_logic_vector(8 downto 0);
+    attribute mark_debug of tx_reg : signal is "TRUE";
+    attribute mark_debug of rx_reg : signal is "TRUE";
+    signal tx_byte_ack   : boolean;
+    signal sclk_last     : std_logic;
+    signal shift_amt     : integer range 1 to 4;
+    signal csn_last      : std_logic;
+    signal is_last_bit   : boolean;
+    signal cur_io_mode   : io_mode;
+    signal dbg_sclk_cnts : unsigned(31 downto 0);
 
 begin
 
     shift_amt <= 1 when cur_io_mode = SINGLE else
-        2 when cur_io_mode = DUAL else
-        4 when cur_io_mode = QUAD else
-        1;
+                 2 when cur_io_mode = DUAL else
+                 4 when cur_io_mode = QUAD else
+                 1;
 
     rx_byte_done <= rx_reg(rx_reg'high) = '1';
-    rx_byte <= rx_reg(7 downto 0);
+    rx_byte      <= rx_reg(7 downto 0);
 
     clk_edge: process(clk, reset)
     begin
@@ -75,7 +74,7 @@ begin
             elsif cs_n = '1' then
                 dbg_sclk_cnts <= (others => '0');
             end if;
-    
+
             if cs_n = '0' and sclk_fedge then
                 -- only update the io mode on the falling edge
                 -- so that we're done with the current bit
@@ -92,14 +91,14 @@ begin
     -- spi clock gen block
     clk_gen: entity work.spi_clk_gen
         port map (
-            clk => clk,
-            reset => reset,
+            clk     => clk,
+            reset   => reset,
             divisor => divisor,
-            enable => in_tx_phases or in_rx_phases,
-            sclk => sclk
+            enable  => in_tx_phases or in_rx_phases,
+            sclk    => sclk
         );
 
-    -- This is the main "output" serializer. The internal 
+    -- This is the main "output" serializer. The internal
     -- register is 9 bits wide using a sentinel value in the
     -- LSB so that we don't need bit counters here.
     -- We know we're done with a byte when the MSB is '1'
@@ -110,8 +109,8 @@ begin
     -- 1) We need to ack bytes from fifos/other data inputs. This happens
     -- *before* the byte-shifting is done.
     -- 2) We need to know when the last bit of the byte has been shifted
-    serializer : process (clk, reset)
-        variable cs_n_assert_edge  : boolean := false;
+    serializer: process(clk, reset)
+        variable cs_n_assert_edge : boolean := false;
     begin
         if reset then
             tx_reg <= (others => '0');
@@ -159,7 +158,7 @@ begin
     end process;
     tx_byte_done <= is_last_bit;
 
-     -- Based on state and qspi mode, deal with the tri-state controls
+    -- Based on state and qspi mode, deal with the tri-state controls
     -- of the spi pins
     oe_control: process(clk, reset)
     begin
@@ -204,19 +203,18 @@ begin
 
     io_o(1) <= tx_reg(tx_reg'high) when cur_io_mode = DUAL else
                tx_reg(tx_reg'high-2) when cur_io_mode = QUAD else
-               '1'; -- not used due to oe-gate
+               '1';                     -- not used due to oe-gate
     io_o(2) <= tx_reg(tx_reg'high - 1); -- only used in quad mode
     io_o(3) <= tx_reg(tx_reg'high) when cur_io_mode = QUAD else
-              '1'; -- only used in quad mode, but need to not be 0 in 
-              -- single or dual modes to not act as a HOLD
+               '1';                     -- only used in quad mode, but need to not be 0 in
+    -- single or dual modes to not act as a HOLD
 
-
-    -- This is the main "input" deserializer. The internal 
+    -- This is the main "input" deserializer. The internal
     -- register is 9 bits wide using a sentinel value in the
     -- LSB so that we don't need bit counters here.
     -- We know we're done with a byte when the MSB is '1'
     -- This bit can also function as the valid flag
-    deserializer : process (clk, reset)
+    deserializer: process(clk, reset)
     begin
         if reset then
             -- Uses a 9 bit shift register with a sentinel
@@ -225,7 +223,6 @@ begin
             -- a byte)
             rx_reg <= (rx_reg'low => '1', others => '0');
         elsif rising_edge(clk) then
-
             -- Do the sample/shift when requested and flag the
             -- valid bytes once we have them
             if in_rx_phases and sclk_redge then
@@ -250,4 +247,5 @@ begin
             end if;
         end if;
     end process;
+
 end rtl;

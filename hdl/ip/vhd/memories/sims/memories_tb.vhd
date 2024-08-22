@@ -26,7 +26,7 @@ begin
 
     th: entity work.memories_th;
 
-    bench : process
+    bench: process
         -- Note: External names are broken in GHDL llvm backends https://github.com/ghdl/ghdl/issues/2610
         -- So this sim only works in other simulators, like nvc
         -- reset_a uses the absolute path form (starting with a '.') and
