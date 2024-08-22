@@ -24,7 +24,7 @@ architecture tb of utilities_tb is
 
 begin
 
-    bench : process
+    bench: process
         variable calc_result : unsigned(31 downto 0);
         variable tmp_flip    : std_logic_vector(7 downto 0);
     begin

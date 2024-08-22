@@ -50,7 +50,7 @@ begin
     --     end if;
     -- end process;
 
-    bfm : process
+    bfm: process
         variable request_msg : msg_t;
         variable reply_msg   : msg_t;
         variable msg_type    : msg_type_t;

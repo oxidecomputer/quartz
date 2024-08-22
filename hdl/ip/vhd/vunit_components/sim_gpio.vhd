@@ -35,7 +35,7 @@ architecture model of sim_gpio is
 
 begin
 
-    main : process
+    main: process
         variable self                   : actor_t;
         variable data                   : std_logic_vector(GPIO_MESAGE_DATA_WDITH - 1 downto 0);
         variable msg_type               : msg_type_t;

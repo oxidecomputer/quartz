@@ -22,9 +22,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
-
 use work.stm32h7_fmc_target_pkg.all;
-
 use work.axil26x32_pkg.all;
 
 entity stm32h7_fmc_target is
@@ -36,9 +34,9 @@ entity stm32h7_fmc_target is
         --! non-multiplexed upper address bits from STM32
         a : in    std_logic_vector(24 downto 16);
         --! multiplexed lower address bits/databits to/from STM32
-        addr_data_in : in std_logic_vector(15 downto 0);
-        data_out : out std_logic_vector(15 downto 0);
-        data_out_en : out std_logic;
+        addr_data_in : in    std_logic_vector(15 downto 0);
+        data_out     : out   std_logic_vector(15 downto 0);
+        data_out_en  : out   std_logic;
         --! active-low chip selects
         ne : in    std_logic_vector(3 downto 0);
         --! active-low output enable
@@ -59,7 +57,7 @@ end entity;
 
 architecture rtl of stm32h7_fmc_target is
 
-    attribute MARK_DEBUG : string;
+    attribute mark_debug : string;
 
     type fmc_state_type is (
         idle,
@@ -85,10 +83,10 @@ architecture rtl of stm32h7_fmc_target is
         axi_write_wait
     );
     signal fmc_state : fmc_state_type;
-    attribute MARK_DEBUG of fmc_state : signal is "TRUE";
+    attribute mark_debug of fmc_state : signal is "TRUE";
     signal axi_state : axi_state_type;
-    signal txn : txn_type;
-    attribute MARK_DEBUG of txn : signal is "TRUE";
+    signal txn       : txn_type;
+    attribute mark_debug of txn       : signal is "TRUE";
 
     signal axi_fifo_rd_path_rdata  : std_logic_vector(31 downto 0);
     signal axi_fifo_rd_path_rd_ack : std_logic;
@@ -109,37 +107,37 @@ architecture rtl of stm32h7_fmc_target is
     signal txn_stored             : boolean;
 
     alias awready is axi_if.write_address.ready;
-    alias wready is axi_if.write_data.ready;
-    alias bvalid is axi_if.write_response.valid;
+    alias wready  is axi_if.write_data.ready;
+    alias bvalid  is axi_if.write_response.valid;
     alias arready is axi_if.read_address.ready;
-    alias rvalid is axi_if.read_data.valid;
-    alias rdata is axi_if.read_data.data;
+    alias rvalid  is axi_if.read_data.valid;
+    alias rdata   is axi_if.read_data.data;
 
     signal awvalid : std_logic;
     signal awaddr  : std_logic_vector(25 downto 0);
-    signal wvalid : std_logic;
-    signal wdata : std_logic_vector(31 downto 0);
-    signal bready : std_logic;
+    signal wvalid  : std_logic;
+    signal wdata   : std_logic_vector(31 downto 0);
+    signal bready  : std_logic;
     signal arvalid : std_logic;
-    signal araddr : std_logic_vector(25 downto 0);
-    signal rready : std_logic;
+    signal araddr  : std_logic_vector(25 downto 0);
+    signal rready  : std_logic;
 
     signal int_toggle : std_logic;
 
-
 begin
-    axi_if.write_address.valid <= awvalid;
-    axi_if.write_address.addr  <= awaddr;
-    axi_if.write_data.valid  <= wvalid;
-    axi_if.write_data.strb   <= (others => '1');
-    axi_if.write_data.data   <= wdata;
+
+    axi_if.write_address.valid  <= awvalid;
+    axi_if.write_address.addr   <= awaddr;
+    axi_if.write_data.valid     <= wvalid;
+    axi_if.write_data.strb      <= (others => '1');
+    axi_if.write_data.data      <= wdata;
     axi_if.write_response.ready <= bready;
-    axi_if.read_address.valid <= arvalid;
-    axi_if.read_address.addr  <= araddr;
-    axi_if.read_data.ready <= rready;
+    axi_if.read_address.valid   <= arvalid;
+    axi_if.read_address.addr    <= araddr;
+    axi_if.read_data.ready      <= rready;
 
     -- State machine dealing with fmc interface
-    fmc_if_sm : process (fmc_clk, chip_reset)
+    fmc_if_sm: process(fmc_clk, chip_reset)
         variable chip_selected : boolean;
     begin
         if chip_reset then
@@ -161,7 +159,6 @@ begin
             axi_fifo_rd_path_rd_ack <= '0';
             axi_fifo_txn_path_write <= '0';
             axi_fifo_wr_path_write <= '0';
-
             case fmc_state is
                 when idle =>
                     nwait <= '0';
@@ -233,7 +230,6 @@ begin
                 when read_word0_setup_delay =>
                     nwait       <= '1';
                     fmc_state <= read_word0;
-
                 when read_word0 =>
                     nwait       <= '0';
                     txn_stored <= false;
@@ -243,7 +239,7 @@ begin
                         data_out_en <= '0'; -- release bus
                         axi_fifo_rd_path_rd_ack <= '1'; -- clear the read word
                     else  -- not done, move to next word
-                        fmc_state <= read_word1_setup_delay; 
+                        fmc_state <= read_word1_setup_delay;
                     end if;
                 when read_word1_setup_delay =>
                     nwait       <= '1';
@@ -293,12 +289,10 @@ begin
                     -- other stall conditions will be checked in the write setup phase
                     -- since the conditions differ
                     if axi_fifo_txn_path_wfull then
-                        
                     end if;
                 when timeout_cleanup =>
                     null;
             end case;
-
         end if;
     end process;
 
@@ -378,7 +372,7 @@ begin
         );
 
     -- State machine dealing with AXI interface
-    axi_sm : process (aclk, aresetn)
+    axi_sm: process(aclk, aresetn)
         variable cur_txn : txn_type;
     begin
         if not aresetn then
@@ -393,7 +387,6 @@ begin
         elsif rising_edge(aclk) then
             -- unconditionally clear single-cycle flags
             axi_fifo_txn_path_rd_ack <= '0';
-
             case axi_state is
                 when idle =>
                     if not axi_fifo_txn_path_rempty then
@@ -441,7 +434,6 @@ begin
                         bready <= '0';
                     end if;
             end case;
-
         end if;
     end process;
 

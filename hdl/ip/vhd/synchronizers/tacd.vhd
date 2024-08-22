@@ -80,7 +80,7 @@ begin
 
     --! Input edge detector and toggled line registers in the
     --! `clk_launch` domain
-    clk_launch_regs : process (clk_launch)
+    clk_launch_regs: process(clk_launch)
     begin
         if rising_edge(clk_launch) then
             pulse_in_launch_last <= pulse_in_launch;
@@ -96,7 +96,7 @@ begin
 
     --! 2 flipflops to sync the toggling line into `clk_latch` then run
     --! that into a final flipflop for the `clk_latch` domain edge detector
-    clk_latch_sync_reg : process (clk_latch)
+    clk_latch_sync_reg: process(clk_latch)
     begin
         if rising_edge(clk_latch) then
             b_sr    <= SHIFT_RIGHT(b_sr, 1);

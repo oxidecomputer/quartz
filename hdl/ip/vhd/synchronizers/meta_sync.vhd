@@ -53,7 +53,7 @@ begin
 
     multi_reg_gen : if stages > 1 generate
 
-        sync_regs : process (clk)
+        sync_regs: process(clk)
         begin
             if rising_edge(clk) then
                 sr    <= shift_right(sr, 1);
@@ -64,7 +64,7 @@ begin
     else
     generate
 
-        sync_regs : process (clk)
+        sync_regs: process(clk)
         begin
             if rising_edge(clk) then
                 sr(0) <= async_input;
