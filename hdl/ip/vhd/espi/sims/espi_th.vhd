@@ -49,13 +49,13 @@ begin
 
     dut: entity work.espi_target_top
         port map (
-            clk   => clk,
-            reset => reset,
-            cs_n  => ss_n(0),
-            sclk  => sclk,
-            io    => io,
-            io_o  => io_o,
-            io_oe => io_oe,
+            clk                => clk,
+            reset              => reset,
+            cs_n               => ss_n(0),
+            sclk               => sclk,
+            io                 => io,
+            io_o               => io_o,
+            io_oe              => io_oe,
             flash_cfifo_data   => flash_cfifo_data,
             flash_cfifo_write  => flash_cfifo_write,
             flash_rfifo_data   => flash_rfifo_data,

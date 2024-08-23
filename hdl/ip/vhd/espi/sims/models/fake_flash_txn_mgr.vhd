@@ -38,14 +38,14 @@ entity fake_flash_txn_mgr is
         -- Raw flash read_data
         flash_rdata       : out   std_logic_vector(7 downto 0);
         flash_rdata_empty : out   std_logic;
-        flash_rdata_rdack : in   std_logic
+        flash_rdata_rdack : in    std_logic
     );
 end entity;
 
 architecture model of fake_flash_txn_mgr is
 
     constant cmd_queue : queue_t              := new_queue;
-    signal addr      : std_logic_vector(31 downto 0);
+    signal   addr      : std_logic_vector(31 downto 0);
     signal   cmd_idx   : natural range 0 to 1 := 0;
 
 begin
@@ -76,20 +76,26 @@ begin
     fake_flash_reads: process
         variable addr : std_logic_vector(31 downto 0);
         variable len  : std_logic_vector(11 downto 0);
+        variable top  : std_logic_vector(11 downto 0);
+        variable data : std_logic_vector(11 downto 0);
     begin
-        loop
-           wait until rising_edge(clk);
-           exit when not is_empty(cmd_queue);
-           wait until rising_edge(clk);
-        end loop;
         flash_rdata_empty <= '1';
+        flash_rdata <= (others => 'X');
+        loop
+            exit when not is_empty(cmd_queue);
+            wait until rising_edge(clk);
+        end loop;
         addr := pop(cmd_queue);
         len := pop(cmd_queue);
+        top := len;
+        flash_rdata_empty <= '0';
         while len > 0 loop
-            flash_rdata_empty <= '0';
-            flash_rdata <= len(7 downto 0);
-            wait until rising_edge(flash_rdata_rdack);
-            len := len - 1;
+            data := top - len;
+            flash_rdata <= data(7 downto 0);
+            if rising_edge(clk) and flash_rdata_rdack = '1' then
+                len := len - 1;
+            end if;
+            wait on clk;
         end loop;
     end process;
 

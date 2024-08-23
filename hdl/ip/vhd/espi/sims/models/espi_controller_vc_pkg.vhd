@@ -59,6 +59,14 @@ package espi_controller_vc_pkg is
         variable crc_ok : inout boolean
     );
 
+    procedure get_flash_c(
+        constant num_bytes : in integer;
+        variable data_queue: out queue_t;
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    );
+
     procedure get_any_pending_alert(
         variable alert : out boolean
     );
@@ -261,6 +269,42 @@ package body espi_controller_vc_pkg is
         get_rx_queue(net, msg_target, rx_queue);
         crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
         response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status := get_status_from_queue_and_flush(rx_queue);
+        
+    end;
+
+    procedure get_flash_c(
+        constant num_bytes : in integer;
+        variable data_queue: out queue_t;
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    ) is
+        variable dummy_data : std_logic_vector(7 downto 0) := (others => '0');
+        variable tx_bytes : integer   := 2;  -- 1 opcode, 1 crc
+        variable rx_bytes : integer   := 4 + num_bytes + 3;  -- response, 16bit status, 1 crc, num_bytes, 3 bytes header
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue : queue_t := new_queue;
+    begin
+        -- Build and send a flash read message
+        -- OPCODE_GET_FLASH_C(1 byte)
+        push_byte(tx_queue, to_integer(opcode_get_flash_c));
+        -- CRC (1 byte)
+        push_byte(tx_queue, to_integer(crc8(tx_queue)));
+        -- send transaction
+        enqueue_tx_data_bytes(net, msg_target,  tx_bytes, tx_queue);
+        enqueue_transaction(net, msg_target, tx_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        -- pop headers
+        dummy_data := To_Std_Logic_Vector(pop_byte(rx_queue), 8);
+        dummy_data := To_Std_Logic_Vector(pop_byte(rx_queue), 8);
+        dummy_data := To_Std_Logic_Vector(pop_byte(rx_queue), 8);
+
+        for i in 0 to num_bytes -1 loop
+                push_byte(data_queue, pop_byte(rx_queue));
+        end loop;
         status := get_status_from_queue_and_flush(rx_queue);
         
     end;

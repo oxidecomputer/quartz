@@ -25,7 +25,7 @@ entity command_processor is
         response_done  : in    boolean;
 
         -- flash channel requests
-         -- flash channel requests
+        -- flash channel requests
         flash_req : view flash_chan_req_source;
 
         -- Link-layer connections
@@ -60,12 +60,13 @@ architecture rtl of command_processor is
         ch_addr        : std_logic_vector(31 downto 0);
         cfg_addr       : std_logic_vector(15 downto 0);
         cfg_data       : std_logic_vector(31 downto 0);
+        valid_redge    : boolean;
         hdr_idx        : integer range 0 to 7;
         rem_addr_bytes : integer range 0 to 7;
         rem_data_bytes : integer range 0 to 2048;
     end record;
 
-    constant reg_reset : reg_type := (idle, false, false, rec_reset, (others => '0'), (others => '0'), (others => '0'), 0, 0, 0);
+    constant reg_reset : reg_type := (idle, false, false, rec_reset, (others => '0'), (others => '0'), (others => '0'), false, 0, 0, 0);
 
     type parse_info_t is record
         next_state        : pkt_state_t;
@@ -110,10 +111,11 @@ architecture rtl of command_processor is
 begin
 
     -- pass through the flash channel requests here
-    flash_req.espi_hdr <= r.cmd_header;
-    flash_req.sp5_flash_address <= r.ch_addr;
-    flash_req.flash_np_enqueue_req <= r.cmd_header.valid when r.cmd_header.opcode.value = opcode_put_flash_np and r.cmd_header.cycle_kind = flash_read else false;
-    
+    flash_req.espi_hdr             <= r.cmd_header;
+    flash_req.sp5_flash_address    <= r.ch_addr;
+    flash_req.flash_np_enqueue_req <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_put_flash_np and r.cmd_header.cycle_kind = flash_read else false;
+    flash_req.flash_get_req        <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_get_flash_c else false;
+
     regs_if.write <= '1' when r.cmd_header.opcode.value = opcode_set_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.read  <= '1' when r.cmd_header.opcode.value = opcode_get_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.addr  <= r.cfg_addr;
@@ -131,6 +133,7 @@ begin
         -- These are single cycle flags
         v.crc_good := false;
         v.crc_bad := false;
+        v.valid_redge := false;
 
         -- Command parsing state machine
         case r.state is
@@ -269,12 +272,14 @@ begin
                     else
                         v.crc_good := true;
                         v.cmd_header.valid := true;
+                        v.valid_redge := true;
                     end if;
                     if v.crc_bad and regs_if.enforce_crcs then
                         v.state := idle;
                     else
                         v.state := response;
                         v.cmd_header.valid := true;
+                        v.valid_redge := true;
                     end if;
                 end if;
             when response =>

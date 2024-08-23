@@ -68,6 +68,13 @@ begin
             data_to_host   => data_to_host,
             data_from_host => data_from_host
         );
+    -- TODO: think about more robust in-system testbench for all of this.
+    -- Ideally, I'd like to use the SP to simulate the SP5 transactions.
+    -- The easiest way here is to insert/inject into the post-serialized
+    -- data stream with FIFOs and a mux. This would allow us to send
+    -- arbitrary data and get arbitrary responses and do fancier stuff in software.
+    -- I'd also like to put a DPR as a packet logger here to capture espi data
+    -- for debugging/analysis.
 
     -- txn layer blocks
     transaction: entity work.txn_layer_top

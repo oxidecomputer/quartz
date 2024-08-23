@@ -25,8 +25,8 @@ entity txn_layer_top is
         flash_np_free : in    std_logic;
         flash_c_avail : in    std_logic;
         -- flash channel requests/responses
-        flash_req : view flash_chan_req_source;
-        flash_resp: view flash_chan_resp_sink;
+        flash_req  : view flash_chan_req_source;
+        flash_resp : view flash_chan_resp_sink;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;

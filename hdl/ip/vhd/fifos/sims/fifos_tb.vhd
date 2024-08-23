@@ -53,7 +53,6 @@ begin
                 pop_fifo(net, read_data);
                 -- check read-side data
                 check_equal(read_data, write_data, "Mismatch detected");
-
             elsif run("basic_mixed_fifo_test") then
                 -- load fifo with data
                 write_data := X"01";

@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity grapefruit_top is
     port (
-        clk   : in    std_logic;
+        clk     : in    std_logic;
         reset_l : in    std_logic;
 
         ledn : out   std_logic
@@ -17,7 +17,7 @@ architecture rtl of grapefruit_top is
 
 begin
 
-    tst : process (clk, reset_l)
+    tst: process(clk, reset_l)
     begin
         if reset_l = '0' then
             counter <= (others => '0');

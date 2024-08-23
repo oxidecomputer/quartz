@@ -64,6 +64,7 @@ architecture rtl of flash_channel is
         flash_cmd_state : cmd_state_t;
         compl_state : complete_state_t;
         flash_side_cntr : integer range 0 to 1024;
+        flash_write_addr_offset : integer range 0 to 1024;
         compl_side_cntr : integer range 0 to 1024;
         cmd_queue: command_queue_t;
         dpr_write_en: std_logic;
@@ -73,7 +74,7 @@ architecture rtl of flash_channel is
         flash_np_free : std_logic;
         flash_c_avail: std_logic;
     end record;
-    constant reg_reset : reg_type := (idle, idle, 0, 0, (others => descriptor_init), '0', 0, 0, 0, '0', '0');
+    constant reg_reset : reg_type := (idle, idle, 0, 0, 0, (others => descriptor_init), '0', 0, 0, 0, '0', '0');
 
     signal r, rin : reg_type;
 
@@ -114,7 +115,7 @@ begin
     response.cycle_type <= "00001111"; -- successful completion of with data, only complettion for a split txn
 
 
-    dpr_waddr <= To_Std_Logic_Vector(r.cmd_queue(r.issue_desc).id * max_txn_size  + r.flash_side_cntr, 12);
+    dpr_waddr <= To_Std_Logic_Vector(r.cmd_queue(r.issue_desc).id * max_txn_size  + r.flash_write_addr_offset, 12);
     dpr_raddr <= To_Std_Logic_Vector(r.cmd_queue(r.tail_desc).id * max_txn_size  + r.compl_side_cntr, 12);
 
     -- We have two state machines running here as both need to be able to update
@@ -134,7 +135,6 @@ begin
     command_processor_comb : process (all)
         variable v : reg_type;
         variable flash_issue_needed : boolean;
-        variable any_done_descriptors : boolean;
     begin
         v := r;
 
@@ -160,8 +160,8 @@ begin
         for i in num_descriptors - 1 downto 0 loop
             -- set default, fall-through states
             v.flash_np_free := '0';
+            v.flash_c_avail := '0';
             flash_issue_needed := false;
-            any_done_descriptors := false;
 
             -- Not active means it's free
             -- we can just check the head descriptor and if it's not active, we have at 
@@ -176,7 +176,7 @@ begin
             end if;
 
             if r.cmd_queue(r.tail_desc).done = true then
-                any_done_descriptors := true;
+                v.flash_c_avail := '1';
             end if;
         end loop;
 
@@ -215,6 +215,7 @@ begin
                     v.issue_desc := add_wrap(r.issue_desc, desc_index_t'high);
                 elsif not flash_rfifo_rempty then
                     v.dpr_write_en := '1';
+                    v.flash_write_addr_offset := r.flash_side_cntr;
                     v.flash_side_cntr := r.flash_side_cntr + 1;
                 end if;
         end case;

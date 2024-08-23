@@ -29,7 +29,6 @@ entity response_processor is
         -- flash channel responses
         flash_resp : view flash_chan_resp_sink;
 
-
         alert_needed : out   boolean
     );
 end entity;
@@ -37,13 +36,13 @@ end entity;
 architecture rtl of response_processor is
 
     type response_state_t is (
-        IDLE,
-        RESPONSE_CODE,
-        SEND_CONFIG,
-        RESPONSE_HEADER,
-        RESPONSE_PAYLOAD,
-        STATUS,
-        CRC
+        idle,
+        response_code,
+        send_config,
+        response_header,
+        response_payload,
+        status,
+        crc
     );
 
     type reg_type is record
@@ -51,11 +50,27 @@ architecture rtl of response_processor is
         status_idx    : std_logic;
         status        : status_t;
         resp_idx      : integer range 0 to 255;
+        payload_cnt   : std_logic_vector(11 downto 0);
         cur_data      : std_logic_vector(7 downto 0);
         reg_data      : std_logic_vector(31 downto 0);
         response_done : boolean;
         has_responded : boolean;
+        resp_ack      : std_logic;
     end record;
+
+    constant reg_reset : reg_type :=
+    (
+        IDLE,
+        '0',
+        rec_reset,
+        0,
+        (others => '0'),
+        (others => '0'),
+        (others => '0'),
+        false,
+        false,
+        '0'
+    );
 
     type response_hdr_t is record
         cycle_type : std_logic_vector(7 downto 0);
@@ -70,10 +85,10 @@ architecture rtl of response_processor is
 begin
 
     response_chan_mux.cycle_type <= flash_resp.cycle_type;
-    response_chan_mux.tag <= flash_resp.tag;
-    response_chan_mux.length <= flash_resp.length;
+    response_chan_mux.tag        <= flash_resp.tag;
+    response_chan_mux.length     <= flash_resp.length;
 
-    flash_resp.ready <= '1' when data_to_host.ready = '1' and r.state = RESPONSE_PAYLOAD else '0';
+    flash_resp.ready <= r.resp_ack;
 
     response_done <= r.response_done;
 
@@ -91,6 +106,7 @@ begin
         variable v : reg_type;
     begin
         v := r;
+        v.resp_ack := '0';
 
         v.response_done := false;
         -- latch any current data here
@@ -140,6 +156,7 @@ begin
                     end if;
                 end if;
             when RESPONSE_HEADER =>
+                v.payload_cnt := response_chan_mux.length;
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := response_chan_mux.cycle_type;
@@ -157,10 +174,11 @@ begin
                     end if;
                 end if;
             when RESPONSE_PAYLOAD =>
+                v.cur_data := flash_resp.data;
                 if data_to_host.ready then
-                    v.cur_data := flash_resp.data;
-                    v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 255 then
+                    v.resp_ack := '1';
+                    v.payload_cnt := r.payload_cnt - 1;
+                    if r.payload_cnt = 0 then
                         v.state := STATUS;
                     end if;
                 end if;
@@ -197,7 +215,7 @@ begin
     response_processor_reg: process(clk, reset)
     begin
         if reset then
-            r <= (IDLE, '0', rec_reset, 0, (others => '0'), (others => '0'), false, false);
+            r <= reg_reset;
         elsif rising_edge(clk) then
             r <= rin;
         end if;

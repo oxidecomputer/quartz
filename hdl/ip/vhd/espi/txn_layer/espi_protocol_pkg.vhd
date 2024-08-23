@@ -86,7 +86,7 @@ package espi_protocol_pkg is
     constant no_response : std_logic_vector(1 downto 0) := "11";
     -- TODO: support response modifiers
     constant accept_code : std_logic_vector(7 downto 0) := "00001000";
-    constant defer_code : std_logic_vector(7 downto 0) := "00000001";
+    constant defer_code : std_logic_vector(7 downto 0)  := "00000001";
 
     -- function min_bytes_before_turn_by_opcode(opcode: std_logic_vector) return natural;
     -- function bytes_to_clocks(bytes: natural; mode: qspi_mode_t) return natural;
