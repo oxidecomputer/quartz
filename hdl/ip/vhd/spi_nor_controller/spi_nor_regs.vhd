@@ -19,14 +19,14 @@ entity spi_nor_regs is
         axi_if : view axil_target;
 
         -- system interface
-        addr         : out   addr_type;
-        spicr        : out   spicr_type;
-        spisr        : in    spisr_type;
-        dummy_cycles : out   dummycycles_type;
-        data_bytes   : out   databytes_type;
-        instr        : out   instr_type;
-        go_strobe    : out   std_logic;
-        sp5_flash_offset: out sp5flashoffset_type;
+        addr             : out   addr_type;
+        spicr            : out   spicr_type;
+        spisr            : in    spisr_type;
+        dummy_cycles     : out   dummycycles_type;
+        data_bytes       : out   databytes_type;
+        instr            : out   instr_type;
+        go_strobe        : out   std_logic;
+        sp5_flash_offset : out   sp5flashoffset_type;
 
         -- TX FIFO Interface
         tx_fifo_write_data : out   std_logic_vector(31 downto 0);
@@ -99,6 +99,7 @@ begin
         end if;
     end process;
 
+-- vsg_off
 write_logic: process(clk, reset)
 begin
     if reset then
@@ -117,7 +118,7 @@ begin
             case to_integer(axi_if.write_address.addr) is
                 when SPICR_OFFSET => spicr <= unpack(axi_if.write_data.data);
                 when DUMMYCYCLES_OFFSET => dummy_cycles <= unpack(axi_if.write_data.data);
-                when INSTR_OFFSET => 
+                when INSTR_OFFSET =>
                     instr <= unpack(axi_if.write_data.data);
                     go_strobe <= '1';
                 when DATABYTES_OFFSET => data_bytes <= unpack(axi_if.write_data.data);
@@ -128,12 +129,15 @@ begin
         end if;
     end if;
 end process;
+-- vsg_on
 
     tx_fifo_write_data <= axi_if.write_data.data;
     tx_fifo_write      <= '1' when wready = '1' and to_integer(axi_if.write_address.addr) = TX_FIFO_WDATA_OFFSET else '0';
 
     rx_fifo_read_ack <= '1' when axi_if.read_data.ready = '1' and rvalid = '1' and to_integer(axi_if.read_address.addr) = RX_FIFO_RDATA_OFFSET else '0';
    
+
+-- vsg_off
 read_logic: process(clk, reset)
 begin
     if reset then
@@ -152,6 +156,8 @@ begin
                 when others => rdata <= (others => '0');
             end case;
         end if;
-    end process;
+    end if;
+end process;
+-- vsg_on
 
 end rtl;

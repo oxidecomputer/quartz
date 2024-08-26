@@ -13,11 +13,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
-use work.espi_regs_pkg.all;
+use work.espi_spec_regs_pkg.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 
-entity espi_regs is
+entity espi_spec_regs is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -29,7 +29,7 @@ entity espi_regs is
     );
 end entity;
 
-architecture rtl of espi_regs is
+architecture rtl of espi_spec_regs is
 
     signal device_id        : device_id_type;
     signal gen_capabilities : general_capabilities_type;

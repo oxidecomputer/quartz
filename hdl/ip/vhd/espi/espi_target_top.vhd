@@ -53,21 +53,22 @@ begin
     chip_sel_active <= cs_n = '0';
 
     -- link layer
-    links: entity work.qspi_link_layer
-        port map (
-            clk            => clk,
-            reset          => reset,
-            cs_n           => cs_n,
-            sclk           => sclk,
-            io             => io,
-            io_o           => io_o,
-            io_oe          => io_oe,
-            qspi_mode      => qspi_mode,
-            alert_needed  => alert_needed,
-            is_crc_byte    => is_crc_byte,
-            data_to_host   => data_to_host,
-            data_from_host => data_from_host
-        );
+    link_layer_top_inst: entity work.link_layer_top
+     port map(
+        clk => clk,
+        reset => reset,
+        cs_n => cs_n,
+        sclk => sclk,
+        io => io,
+        io_o => io_o,
+        io_oe => io_oe,
+        debug_active => false,
+        qspi_mode => qspi_mode,
+        is_crc_byte => is_crc_byte,
+        alert_needed => alert_needed,
+        data_to_host => data_to_host,
+        data_from_host => data_from_host
+    );
     -- TODO: think about more robust in-system testbench for all of this.
     -- Ideally, I'd like to use the SP to simulate the SP5 transactions.
     -- The easiest way here is to insert/inject into the post-serialized
@@ -95,7 +96,7 @@ begin
         );
 
     -- register blocks
-    espi_regs_inst: entity work.espi_regs
+    espi_regs_inst: entity work.espi_spec_regs
         port map (
             clk            => clk,
             reset          => reset,

@@ -14,7 +14,7 @@ library vunit_lib;
 use work.qspi_vc_pkg.all;
 use work.espi_controller_vc_pkg.all;
 use work.espi_base_types_pkg.all;
-use work.espi_regs_pkg.all;
+use work.espi_spec_regs_pkg.all;
 
 entity espi_tb is
     generic (

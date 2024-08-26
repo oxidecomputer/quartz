@@ -10,7 +10,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 
-use work.espi_regs_pkg.all;
+use work.espi_spec_regs_pkg.all;
 
 -- This block provides a relatively simple qspi shifter primative
 -- that shifts data in/out byte-byte.  eSPI has the concept of
@@ -37,9 +37,9 @@ entity qspi_link_layer is
         -- transmission of the last command byte (the CRC)
         is_crc_byte : in    boolean;
         alert_needed : in boolean;
-        -- "Streaming" data recieved after deserialization
-        data_to_host       : view st_sink;
         -- "Streaming" data to serialize and transmit
+        data_to_host       : view st_sink;
+        -- "Streaming" bytes after receipt and deserialization
         data_from_host     : view st_source;
     );
 end entity;

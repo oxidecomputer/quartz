@@ -2,9 +2,16 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "espi_regs_pkg",
+    name = "espi_spec_regs_pkg",
     src = "espi_spec_regs.rdl",
-    outputs = ["espi_regs_pkg.vhd", "espi_regs_.html"],
+    outputs = ["espi_spec_regs_pkg.vhd", "espi_spec_regs.html"],
+    visibility = ['PUBLIC']
+)
+
+rdl_file(
+    name = "espi_regs_pkg",
+    src = "sys_regs/espi_regs.rdl",
+    outputs = ["espi_regs_pkg.vhd", "espi_regs.html"],
     visibility = ['PUBLIC']
 )
 
@@ -14,10 +21,15 @@ vhdl_unit(
         "link_layer/*.vhd",
         "txn_layer/*.vhd",
         "flash_channel/*.vhd",
+        "sys_regs/*.vhd",
         "*.vhd"]),
     deps = [
+        ":espi_spec_regs_pkg",
         ":espi_regs_pkg",
         "//hdl/ip/vhd/crc:crc8atm_8wide",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
+        "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         "//hdl/ip/vhd/memories:dual_clock_simple_dpr",
         ],
     standard = "2019",

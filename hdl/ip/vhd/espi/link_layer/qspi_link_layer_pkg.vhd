@@ -29,6 +29,7 @@ package qspi_link_layer_pkg is
 
     alias st_sink is st_source'converse;
 
+
     function get_shift_amt_by_mode (
         constant mode : qspi_mode_t
     ) return natural;
