@@ -35,6 +35,7 @@ files = [
 [libraries.worklib]
 files = [
     "hdl/projects/grapefruit/grapefruit_top.vhd",
+    "hdl/projects/gimlet/vhdl_test/leds.vhd",
     "hdl/ip/vhd/vunit_components/gpio_msg_pkg.vhd",
     "hdl/ip/vhd/vunit_components/sim_gpio.vhd",
     "hdl/ip/vhd/utilities/calc_pkg.vhd",
@@ -80,5 +81,6 @@ files = [
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_sim_pkg.vhd",
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_tb.vhd",
     "hdl/ip/vhd/arb_mux_demux/sims/arbiter_th.vhd",
+    "hdl/ip/vhd/fifos/dcfifo_mixed_xpm.vhd",
     "buck-out/v2/gen/root/904931f735703749/hdl/ip/vhd/spi_nor_controller/__spi_nor_rdl__/spi_nor_regs_pkg.vhd",
 ]

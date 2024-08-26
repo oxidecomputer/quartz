@@ -53,6 +53,24 @@ begin
                 pop_fifo(net, read_data);
                 -- check read-side data
                 check_equal(read_data, write_data, "Mismatch detected");
+
+            elsif run("basic_mixed_fifo_test") then
+                -- load fifo with data
+                write_data := X"01";
+                push_mixed_fifo(net);
+                wait for 1 us;
+                pop_mixed_fifo(net, read_data);
+                -- check read-side data
+                check_equal(read_data, std_logic_vector'(X"DD"), "Mismatch detected");
+                pop_mixed_fifo(net, read_data);
+                -- check read-side data
+                check_equal(read_data, std_logic_vector'(X"CC"), "Mismatch detected");
+                pop_mixed_fifo(net, read_data);
+                -- check read-side data
+                check_equal(read_data, std_logic_vector'(X"BB"), "Mismatch detected");
+                pop_mixed_fifo(net, read_data);
+                -- check read-side data
+                check_equal(read_data, std_logic_vector'(X"AA"), "Mismatch detected");
             end if;
         end loop;
         wait for 1 us;
