@@ -42,6 +42,10 @@ package calc_pkg is
         if_false: string
     ) return string;
 
+    --! Mixed width usedwds calculation
+    --! Mixed fifos have different usedwds sizes for read and write
+    function usedwds_size (bit_width : natural; byte_depth : natural) return natural;
+
 end package;
 
 package body calc_pkg is
@@ -96,6 +100,11 @@ package body calc_pkg is
         else
             return if_false;
         end if;
+    end;
+
+    function usedwds_size (bit_width : natural; byte_depth : natural) return natural is
+    begin
+        return log2ceil(byte_depth / (bit_width * 8));
     end;
 
 end package body;
