@@ -79,6 +79,10 @@ begin
                 write_instr(net, FAST_READ_4BYTE_QUAD_OP);
                 wait for 25 us;
                 write_instr(net, FAST_READ_4BYTE_QUAD_OP);
+            elsif run("erase_64") then
+                write_addr(net, x"aabbccdd");  -- erase the whole chip
+                write_instr(net, BLOCK_ERASE_64K_4BYTE_OP);
+                wait for 25 us;
             end if;
         end loop;
 
