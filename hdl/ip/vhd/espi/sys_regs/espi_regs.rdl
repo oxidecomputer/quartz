@@ -1,0 +1,86 @@
+// Copyright 2024 Oxide Computer Company
+// This is SystemRDL description of the sw-accesible registers in the Gimlet
+// Sequencer FPGA.
+
+addrmap espi_regs {
+    name = "espi system registers";
+    desc = "Registers accessible on the Axi bus for debug and testing of the espi target";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Control Register";
+        desc = "";
+        field {
+            desc = "Set to one to allow eSPI <-> SP5 interface read from flash. Hubris should
+            not attempt any flash accesses with this bit set. This bit also enforces the
+            flash offset in ";
+        } sp5_owns_flash[31:31] =  0;   
+        field {
+            desc = "Set to one to reset the command FIFO. Cleared by hardware after reset.";
+        } cmd_fifo_reset[15:15] =  0;
+        field {
+            desc = "Set to one to reset response FIFO. Cleared by hardware after reset.";
+        } resp_fifo_reset[7:7] =  0;
+    } control;
+
+    reg {
+        name = "Debug Status Register";
+        desc = "";
+        field {
+            default sw = r;
+            desc = "Show used words in command FIFO (word = 32bits/4 bytes),
+            max of 256 bytes, so 64 words";
+        } cmd_used_wds[30:24] =  0;
+        field {
+            default sw = r;
+            desc = "Set to one to 1 when command FIFO is full";
+        } cmd_full[23:23] =  0;
+         field {
+            default sw = r;
+            desc = "Set to one to 1 when command FIFO is empty";
+        } cmd_empty[22:22] =  0;
+        field {
+            default sw = r;
+            desc = "Show used FIFO words in response FIFO (word = 32bits/4 bytes),
+            max of 256 bytes, so 64 words";
+        } resp_used_wds[14:8] =  0;
+        field {
+            default sw = r;
+            desc = "Set to one to 1 when response FIFO is full";
+        } resp_full[7:7] =  0;
+         field {
+            default sw = r;
+            desc = "Set to one to 1 when response FIFO is empty";
+        } resp_empty[6:6] =  0;
+
+        field {
+            desc = "Set to one to 1 when hw detects a CRC mismatch, sticky since last cleared, cleared by writing";
+        } crc_err[1:1] =  0;
+
+        field {
+            default sw = r;
+            desc = "Set to one to 1 when hw is running the spi transaction, no new transactions
+            may be issued until it is finished. Technically represents cs_n being low.";
+        } busy[0:0] =  0;
+
+    } status;
+
+    reg {
+        name = "Command FIFO Write Data Register";
+        desc = "";
+        field {
+            desc = "Writing stores data in fifo";
+        } fifo_data[31:0] =  0;
+     } cmd_fifo_wdata;
+
+    reg {
+        name = "Response FIFO Read Data Register";
+        desc = "";
+        field {
+            desc = "Note: Reading side-effects the data by popping the fifo";
+        } fifo_data[31:0] =  0;
+    } resp_fifo_rdata;
+};

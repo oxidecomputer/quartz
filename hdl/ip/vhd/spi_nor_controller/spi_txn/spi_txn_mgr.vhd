@@ -15,11 +15,12 @@ entity spi_txn_mgr is
         clk   : in    std_logic;
         reset : in    std_logic;
         -- system register interface
-        address      : in    unsigned(31 downto 0);
-        dummy_cycles : in    unsigned(7 downto 0);
-        data_bytes   : in    unsigned(8 downto 0);
-        instr        : in    std_logic_vector(7 downto 0);
-        go_flag      : in    std_logic;
+        spi_cmd : in    spi_nor_cmd_t;
+        -- address : in unsigned(31 downto 0);
+        -- dummy_cycles   : in unsigned(7 downto 0);
+        -- data_bytes : in unsigned(8 downto 0);
+        -- instr: in std_logic_vector(7 downto 0);
+        -- go_flag: in std_logic;
         -- link interface
         cs_n         : out   std_logic;
         sclk         : in    std_logic;
@@ -117,8 +118,8 @@ begin
 
     -- Set up a bunch of muxes, and other signals that are used in the modules below
     -- mux into the serializer: we are sending static data sometimes, and fifo data sometimes
-    tx_link_byte <= instr when (r.state = instruction or r.state = cs_assert) else
-                    std_logic_vector(address(8 * r.counter + 7 downto 8 * r.counter)) when r.state = addr else
+    tx_link_byte <= spi_cmd.instr when (r.state = instruction or r.state = cs_assert) else
+                    spi_cmd.addr(8 * r.counter + 7 downto 8 * r.counter) when r.state = addr else
                     tx_fifo_data when r.state = wdata else
                     (others => '1');
     -- we only want to FIFO ack when we were reading from the fifo, not the static data
@@ -133,10 +134,10 @@ begin
         slk_redge := sclk = '1' and sclk_last = '0';
         case r.state is
             when idle =>
-                if go_flag then
+                if spi_cmd.go_flag then
                     v.state := cs_assert;
                     -- build up transaction info based on opcode
-                    v.txn := get_txn_info(instr);
+                    v.txn := get_txn_info(spi_cmd.instr);
                     v.counter := CS_CLK_DELAY_CNTS;
                 end if;
             when cs_assert =>
@@ -161,9 +162,9 @@ begin
                         when none =>
                             if r.txn.uses_dummys then
                                 v.state := dummy;
-                                v.counter := to_integer(dummy_cycles);
+                                v.counter := to_integer(spi_cmd.dummy_cycles);
                             else
-                                v.counter := to_integer(data_bytes);
+                                v.counter := to_integer(spi_cmd.data_bytes);
                                 case r.txn.data_kind is
                                     when read =>
                                         v.state := rdata;
@@ -185,13 +186,13 @@ begin
                 if tx_byte_done and r.counter = 0 then
                     if r.txn.uses_dummys then
                         v.state := dummy;
-                        v.counter := to_integer(dummy_cycles);
+                        v.counter := to_integer(spi_cmd.dummy_cycles);
                     elsif r.txn.data_kind = write then
                         v.state := wdata;
-                        v.counter := to_integer(data_bytes);
+                        v.counter := to_integer(spi_cmd.data_bytes);
                     elsif r.txn.data_kind = read then
                         v.state := rdata;
-                        v.counter := to_integer(data_bytes);
+                        v.counter := to_integer(spi_cmd.data_bytes);
                     else
                         v.state := cs_deassert;
                         v.counter := CS_CLK_DELAY_CNTS;
@@ -206,7 +207,7 @@ begin
                 if slk_redge and r.counter = 1 then
                     if r.txn.data_kind = read then
                         v.state := rdata;
-                        v.counter := to_integer(data_bytes);
+                        v.counter := to_integer(spi_cmd.data_bytes);
                     else
                         v.state := cs_deassert;
                         v.counter := CS_CLK_DELAY_CNTS;

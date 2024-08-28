@@ -30,12 +30,11 @@ architecture th of spi_nor_th is
     signal   io           : std_logic_vector(3 downto 0);
     signal   io_o         : std_logic_vector(3 downto 0);
     signal   io_oe        : std_logic_vector(3 downto 0);
-    constant config_array : axil_responder_cfg_array_t(1 downto 0) :=
+    constant config_array : axil_responder_cfg_array_t(0 downto 0) :=
     (
-        0 => (base_addr => x"00000000", addr_span_bits => 8),
-        1 => (base_addr => x"00000100", addr_span_bits => 8)
+        0 => (base_addr => x"00000100", addr_span_bits => 8)
     );
-    signal   responders   : axil8x32_pkg.axil_array_t(1 downto 0);
+    signal   responders   : axil8x32_pkg.axil_array_t(0 downto 0);
 
 begin
 
@@ -80,14 +79,19 @@ begin
 
     spi_nor_top_inst: entity work.spi_nor_top
         port map (
-            clk    => clk,
-            reset  => reset,
-            axi_if => responders(1),
-            cs_n   => cs_n,
-            sclk   => sclk,
-            io     => io,
-            io_o   => io_o,
-            io_oe  => io_oe
+            clk                  => clk,
+            reset                => reset,
+            axi_if               => responders(0),
+            cs_n                 => cs_n,
+            sclk                 => sclk,
+            io                   => io,
+            io_o                 => io_o,
+            io_oe                => io_oe,
+            espi_cmd_fifo_rdata  => (others => '0'),
+            espi_cmd_fifo_rdack  => open,
+            espi_cmd_fifo_rempty => '1',
+            espi_data_fifo_wdata => open,
+            espi_data_fifo_write => open
         );
 
     io_tris: process(all)

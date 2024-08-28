@@ -81,6 +81,18 @@ package spi_nor_pkg is
         opcode: std_logic_vector
     ) return txn_info_t;
 
+    -- unsupported opcodes:
+    -- All dual/dual I/O opcodes 0xBB, 0xBC, 0xEB, 0xEC
+    -- No set burst wrap 0x77
+    -- No Read MFG Dual/Quad I/O 0x92, 0x94
+    type spi_nor_cmd_t is record
+        addr         : std_logic_vector(31 downto 0);
+        data_bytes   : std_logic_vector(8 downto 0);
+        dummy_cycles : std_logic_vector(7 downto 0);
+        instr        : std_logic_vector(7 downto 0);
+        go_flag      : std_logic;
+    end record;
+
 end package;
 
 package body spi_nor_pkg is

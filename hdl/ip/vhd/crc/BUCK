@@ -1,0 +1,7 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "crc8atm_8wide",
+    srcs = ["crc8atm_8wide.vhd"],
+    visibility = ['PUBLIC']
+)

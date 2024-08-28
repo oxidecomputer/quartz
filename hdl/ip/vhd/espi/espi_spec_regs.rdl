@@ -1,0 +1,366 @@
+// Copyright 2024 Oxide Computer Company
+// This is SystemRDL description of the sw-accesible registers in the Gimlet
+// Sequencer FPGA.
+
+addrmap eSPI_Spec {
+    name = "espi spec registers";
+    desc = "Registers defined by the espi specification";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Device Identification";
+        default sw = r;
+        
+        field {
+            desc = "Version ID";
+        } id[7:0] =  0x01;
+
+    } device_id @0x04;
+
+    reg {
+        name = "General Capabilities";
+        default sw = r;
+
+        enum io_mode_select {
+            Single = 2'h00 {desc = "";};
+            Dual = 2'h01 {desc = "";};
+            Quad = 2'h02 {desc = "";};
+            Reserved = 2'h03 {desc = "";};
+        };
+
+        enum io_mode_support {
+            Single = 2'h00 {desc = "Single I/O Only";};
+            Dual = 2'h01 {desc = "Single and Dual I/O";};
+            Quad = 2'h02 {desc = "Single and Qual I/O Only";};
+            Any = 2'h03 {desc = "Single, Dual and Quad I/O";};
+        };
+
+        enum op_freq {
+            Twenty = 3'h00 {desc = "20MHz";};
+            TwentyFive = 3'h01 {desc = "25MHz";};
+            ThirtyThree = 3'h02 {desc = "33MHz";};
+            Fifty = 3'h03 {desc = "50MHz";};
+            SixtySix = 3'h04 {desc = "66MHz";};
+            RSVD0 = 3'h05 {desc = "";};
+            RSVD1 = 3'h06 {desc = "";};
+            RSVD2 = 3'h07 {desc = "";};
+        };
+
+        field {
+            desc = "CRC Checking Enable";
+            sw = rw;
+        } crc_en[31:31] = 0x0;
+        field {
+            desc = "Response Modifier Enable";
+            sw = rw;
+        } resp_mod_en[30:30] = 0x0;
+        field {
+            desc = "Alert Mode";
+            sw = rw;
+        } alert_mode[28:28] = 0x0;
+        field {
+            desc = "I/O Mode Select";
+            sw = rw;
+            encode = io_mode_select;
+        } io_mode_sel[27:26] = 0x0;
+        field {
+            desc = "I/O Mode Support";
+            sw = r;
+            encode = io_mode_support;
+        } io_mode_support[25:24] = io_mode_support::Any;
+        field {
+            desc = "Open Drain Alert# Select";
+            sw = rw;
+        } alert_select[23:23] = 0x0;
+        field {
+            desc = "Operating Frequency Select";
+            sw = rw;
+            encode = op_freq;
+        } op_freq_select[22:20] = op_freq::Twenty;
+        field {
+            desc = "Open Drain Alert# Support";
+            sw = r;
+        } alert_support[19:19] = 0x0;
+        field {
+            desc = "Operating Frequency Support";
+            sw = r;
+            encode = op_freq;
+        } op_freq_support[18:16] = op_freq::SixtySix;
+        field {
+            desc = "Maximum Wait State allowed";
+            sw = rw;
+        } max_wait[15:12] = 0x0;
+        field {
+            desc = "Flash Channel Supported";
+            sw = r;
+        } flash_support[3:3] = 0x0;
+        field {
+            desc = "OOB Message Channel Supported";
+            sw = r;
+        } oob_support[2:2] = 0x1;
+        field {
+            desc = "Virtual Wire Channel Supported";
+            sw = r;
+        } virt_wire_support[1:1] = 0x0;
+        field {
+            desc = "Peripheral Channel Supported";
+            sw = r;
+        } periph_support[0:0] = 0x0;
+    } general_capabilities;
+
+    reg {
+        name = "Maximum Read Request Size";
+        default sw = rw;
+        
+        field {
+            desc = "Max Payload Selected bytes:
+            000b: reserved.
+            001b: 64bytes max,
+            010b: 128bytes max,
+            011b: 256bytes max,
+            100b: 512bytes max,
+            101b: 1024bytes max,
+            110b: 2048bytes max,
+            110b: 4096bytes max";
+        } max_read_request_size[14:12] =  0x01;
+
+        field {
+            desc = "Max Payload Size:
+            001b: 64bytes max,
+            010b: 128bytes max
+            011b: 256bytes max";
+        } max_payload_size[10:8] =  0x01;
+
+        field {
+            desc = "Max Payload Size Supported:
+            001b: 64bytes max,
+            010b: 128bytes max
+            011b: 256bytes max";
+        } max_payload_support[6:4] =  0x03;
+
+        field {
+            desc = "Bus Master Enable";
+        } bus_master_en[2:2] =  0x0;
+
+        field {
+            desc = "Channel Ready";
+            sw = r;
+        } chan_rdy[1:1] =  0x0;
+
+        field {
+            desc = "Channel Enable";
+        } chan_en[0:0] =  0x1;
+
+    } ch0_capabilities @0x10;
+
+    reg {
+        name = "Channel 2(OOB) Capabilities";
+        default sw = rw;
+        
+        field {
+            desc = "Max Payload Selected bytes:
+            001b: 64bytes max,
+            010b: 128bytes max
+            011b: 256bytes max";
+        } max_payload_select[10:8] =  0x01;
+
+        field {
+            desc = "Max Payload Supported bytes:
+            001b: 64bytes max,
+            010b: 128bytes max
+            011b: 256bytes max";
+            sw = r;
+        } max_payload_support[6:4] =  0x03;
+
+        field {
+            desc = "OOB Message Channel Ready";
+            sw = r;
+        } oob_ready[1:1] =  0x0;
+
+         field {
+            desc = "OOB Message Channel Enabled";
+            sw = rw;
+        } oob_en[0:0] =  0x0;
+
+    } ch2_capabilities @0x30;
+
+    reg {
+        name = "Channel 3(Flash) Capabilities";
+        field {
+            desc = "Flash Sharing Capability Supported:
+            00b: Slave attached: Not supported, master attached: Supported,
+            01b: Slave attached: Not supported, master attached: Supported,
+            10b: Slave attached: Supported, master attached: Not supported,
+            11b: Slave attached: Supported, master attached: Supported,
+            ";
+            sw = r;
+
+        } flash_cap[17:16] =  0x2; // Only slave attached sharing supported
+
+        field {
+            desc = "Flash Access Channel Maximum Read Request Size:
+            000b: Reserved.
+            001b: 64 bytes max read request size.
+            010b: 128 bytes max read request size.
+            011b: 256 bytes max read request size.
+            100b: 512 bytes max read request size.
+            101b: 1024 bytes max read request size.
+            110b: 2048 bytes max read request size.
+            111b: 4096 bytes max read request size.
+            ";
+            sw = rw;
+
+        } max_rd_req[14:12] =  0x1;
+
+        field {
+            desc = "Flash Sharing Mode:
+            0b: Master attached flash sharing.
+            1b: Slave attached flash sharing.
+
+            If the slave supports only a single flash sharing scheme,
+            this bit is allowed to be implemented as a Read-Only (RO)
+            bit with the value indicates the supported flash sharing
+            scheme.
+            ";
+            sw = r;
+
+        } flash_share_mode[11:11] =  0x1;
+
+        field {
+            desc = "Flash Access Channel Maximum Payload Size Selected:
+            The value set by the eSPI master must never be more
+            than the value advertised in the Max Payload Size
+            Supported field.
+            000b: Reserved.
+            001b: 64 bytes max payload size.
+            010b: 128 bytes max payload size.
+            011b: 256 bytes max payload size.
+            100b – 111b: Reserved.
+            ";
+            sw = rw;
+
+        } flash_max_payload_selected[10:8] =  0x1;
+
+        field {
+            desc = "Flash Access Channel Maximum Payload Size Supported:
+            This field advertises the Maximum Payload Size supported by the slave.
+            000b: Reserved.
+            001b: 64 bytes max payload size.
+            010b: 128 bytes max payload size.
+            011b: 256 bytes max payload size.
+            100b – 111b: Reserved.
+            ";
+            sw = r;
+
+        } flash_max_payload_supported[7:5] =  0x3;
+
+        field {
+            desc = "Flash Access Channel Maximum Payload Size Supported:
+            This field advertises the Maximum Payload Size supported by the slave.
+            ** Note that the erase block does nothing in the Oxide implementation
+            as we do not allow the big CPU to modify flash at all
+            000b: Reserved
+            001b: 4 Kbytes
+            010b: 64 Kbytes
+            011b: Both 4 Kbytes and 64 Kbytes are supported
+            100b: 128 Kbytes
+            101b: 256 Kbytes
+            110b – 111b: Reserved
+            ";
+            sw = r;
+
+        } flash_block_erase_size[4:2] =  0x1;
+
+        field {
+            desc = "Flash Access Channel Ready:
+            When this bit is a ‘1’, it indicates that the slave is ready to accept 
+            transactions on the Flash Access channel. eSPI master should poll this bit 
+            after the channel is enabled before running any transaction on this channel to
+            the slave.
+            0b: Channel is not ready.
+            1b: Channel is ready.
+            ";
+            sw = r;
+
+        } flash_channel_ready[1:1] =  0x0;
+
+        field {
+            desc = "Flash Access Channel Enable:
+            This bit is set to ‘1’ by eSPI master to enable the Flash Access channel.
+            Clearing this bit from ‘1’ to ‘0’ triggers a reset to the Flash
+            Access channel such as during error handling. The
+            channel remains disabled until this bit is set to ‘1’ again.
+            The channel is by default disabled after the eSPI Reset#.
+            ";
+            sw = rw;
+
+        } flash_channel_enable[0:0] =  0x0;
+    } ch3_capabilities @0x40;
+
+    reg {
+        name = "Channel 3 Capabilities and Configurations 2";
+        field {
+            desc = "Target RPMC Supported: This field indicates the total
+            number of Replay Protected Monotonic Counters (RPMC)
+            supported by the Slave. It is a 1-based field.
+            0h: Slave does not support RPMC
+            1h: Slave supports up to 1 RPMC
+            2h: Slave supports up to 2 RPMC
+            ...
+            3Fh: Slave supports up to 63 RPMC
+            ";
+            sw = r;
+
+        } rpmc_sup[21:16] =  0x0;
+
+        field {
+            desc = "Target Flash Erase Block Size for Master’s Regions:
+            This field indicates the sizes of the erase commands the
+            master may issue. If multiple bits are set then the master
+            may issue an erase using any of the indicated sizes.
+            If multiple regions are accessible by the master, this field
+            advertises the common erase block sizes for these
+            regions.
+            ** Note that the erase block does nothing in the Oxide implementation
+            This field is only applicable when slave attached flash
+            sharing scheme is selected.
+            Bit 0: 1 Kbytes EBS supported
+            Bit 1: 2 Kbytes EBS supported
+            Bit 2: 4 Kbytes EBS supported
+            Bit 3: 8 Kbytes EBS supported
+            Bit 4: 16 Kbytes EBS supported
+            Bit 5: 32 Kbytes EBS supported
+            Bit 6: 64 Kbytes EBS supported
+            Bit 7: 128 Kbytes EBS supported
+            ";
+            sw = r;
+
+        } ebs_sup[15:8] =  0x0;
+
+        field {
+            desc = "Target Maximum Read Request Size Supported:
+                This field indicates the maximum read request size
+                supported by the slave as the Target on the Flash Access
+                channel.
+                This field is only applicable when slave attached flash
+                sharing scheme is selected.
+                2:0
+                RO
+                HwInit
+                000b, 001b: 64 bytes max read request size.
+                010b: 128 bytes max read request size.
+                011b: 256 bytes max read request size.
+                100b: 512 bytes max read request size.
+                101b: 1024 bytes max read request size.
+                110b: 2048 bytes max read request size.
+                111b: 4096 bytes max read request size.
+            ";
+            sw = r;
+
+        } tgt_rd_size_support[2:0] =  0x3;  // default to 256bytes
+
+    } ch3_capabilities2 @0x44;
+};

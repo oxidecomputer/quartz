@@ -26,7 +26,7 @@ package fifos_sim_pkg is
     );
 
     procedure push_mixed_fifo (
-        signal net    : inout network_t
+        signal net : inout network_t
     );
 
     procedure pop_mixed_fifo (
@@ -77,7 +77,7 @@ package body fifos_sim_pkg is
     end;
 
     procedure push_mixed_fifo (
-        signal net    : inout network_t
+        signal net : inout network_t
     ) is
 
         variable msg_target : actor_t;

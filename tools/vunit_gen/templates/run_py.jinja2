@@ -76,5 +76,7 @@ vu.set_sim_option("disable_ieee_warnings", True)
 # Dump arrays of records, may have a perf penalty
 vu.set_sim_option("nvc.sim_flags", ["--dump-arrays"])
 {% endif %}
+# saved here for when we upgrade VUnit
+#vu.set_sim_option("nvc.global_flags", ["--ignore-time"])
 # Run vunit function
 vu.main()
