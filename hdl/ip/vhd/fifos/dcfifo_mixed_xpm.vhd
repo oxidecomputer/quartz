@@ -64,11 +64,12 @@ entity dcfifo_mixed_xpm is
 end entity;
 
 architecture xpm of dcfifo_mixed_xpm is
+    constant read_depth : natural := wfifo_write_depth * wdata_width / rdata_width;
 
     constant read_mode         : string  := sel(showahead_mode, "fwft", "std");
     constant read_latency      : integer := sel(showahead_mode, 0, 1);
     constant prog_empty_thresh : integer := sel(showahead_mode, 3 + 2, 3);
-    constant prog_full_thresh  : integer := sel(showahead_mode, 3 + 2 + cdc_stages, 3 + cdc_stages);
+    constant prog_full_thresh  : integer := sel(showahead_mode, 3 + 2*(wfifo_write_depth/read_depth) + cdc_stages, 3 + cdc_stages);
 
 begin
 
