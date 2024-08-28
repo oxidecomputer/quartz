@@ -17,10 +17,6 @@ entity grapefruit_top is
     port (
         clk     : in    std_logic;
         reset_l : in    std_logic;
-
-        ledn : out   std_logic
-        clk   : in    std_logic;
-        reset_l : in    std_logic; -- SP_TO_FPGA_LOGIC_RESET_L
         seq_reg_to_sp_V3P3_pg: out std_logic;
         seq_reg_to_sp_v1p2_pg: out std_logic;
         sp5_to_sp_present_l : out std_logic;
@@ -77,10 +73,7 @@ entity grapefruit_top is
 
         spi_fpga_to_flash_cs_l : out std_logic;
         spi_fpga_to_flash_clk : out std_logic;
-        spi_fpga_to_flash_dat0 : out std_logic;
-        spi_fpga_to_flash_dat1 : in std_logic;
-        spi_fpga_to_flash_dat2 : in std_logic;
-        spi_fpga_to_flash_dat3 : in std_logic;
+        spi_fpga_to_flash_dat : inout std_logic_vector(3 downto 0);
 
         spi_fpga_to_flash2_cs_l : out std_logic;
         spi_fpga_to_flash2_clk : out std_logic;
@@ -219,10 +212,6 @@ architecture rtl of grapefruit_top is
 
 begin
 
-    tst: process(clk, reset_l)
-    -- Generate the clock signals for the necessary domains
-    -- 200MHz is targetted for the eSPI interface so we can run fabric
-    -- at ~3x the 66MHz SPI clock rate
     pll: entity work.gfruit_pll
         port map ( 
           clk_50m => clk,
@@ -306,11 +295,17 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(1),
-        cs_n => spi_fpga_to_flash2_cs_l,
-        sclk => spi_fpga_to_flash2_clk,
-        io => spi_fpga_to_flash2_dat,
+        cs_n => spi_fpga_to_flash_cs_l, --spi_fpga_to_flash2_cs_l,
+        sclk => spi_fpga_to_flash_clk, --spi_fpga_to_flash2_clk,
+        io => spi_fpga_to_flash_dat,
         io_o => spi_fpga_to_flash2_dat_o,
-        io_oe => spi_fpga_to_flash2_dat_oe
+        io_oe => spi_fpga_to_flash2_dat_oe,
+        espi_cmd_fifo_rdata => (others => '0'),
+        espi_cmd_fifo_rdack => open,
+        espi_cmd_fifo_rempty => '1', 
+        espi_data_fifo_wdata => open,
+        espi_data_fifo_write => open
+
     );
 
 
@@ -318,15 +313,15 @@ begin
     process(all)
     begin
         for i in 0 to 3 loop
-            spi_fpga_to_flash2_dat(i) <= spi_fpga_to_flash2_dat_o(i) when spi_fpga_to_flash2_dat_oe(i) = '1' else 'Z';
+            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash2_dat_o(i) when spi_fpga_to_flash2_dat_oe(i) = '1' else 'Z';
         end loop;
     end process;
 
     -- Basic flash spi passthru fomr qspi0 to spi flash
-    spi_fpga_to_flash_cs_l <= qspi0_hpm_to_scm_cs0_l;
-    spi_fpga_to_flash_clk <= qspi0_hpm_to_scm_clk;
-    spi_fpga_to_flash_dat0 <= qspi0_hpm_to_scm_dat0;
-    qspi0_hpm_to_scm_dat1 <= spi_fpga_to_flash_dat1;
+    -- spi_fpga_to_flash_cs_l <= qspi0_hpm_to_scm_cs0_l;
+    -- spi_fpga_to_flash_clk <= qspi0_hpm_to_scm_clk;
+    -- spi_fpga_to_flash_dat0 <= qspi0_hpm_to_scm_dat0;
+    -- qspi0_hpm_to_scm_dat1 <= spi_fpga_to_flash_dat1;
 
     -- Debug stuff for i3c
     -- pin the enables low to enable the devices

@@ -90,10 +90,10 @@ set_property -dict { PACKAGE_PIN B15 IOSTANDARD LVCMOS33 } [get_ports { seq_rev_
 set_property -dict { PACKAGE_PIN C16 IOSTANDARD LVCMOS33 } [get_ports { seq_rev_id[0] }];
 set_property -dict { PACKAGE_PIN C17 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_cs_l }];
 set_property -dict { PACKAGE_PIN E15 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_clk }];
-set_property -dict { PACKAGE_PIN A16 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat3 }];
-set_property -dict { PACKAGE_PIN A14 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat2 }];
-set_property -dict { PACKAGE_PIN B14 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat1 }];
-set_property -dict { PACKAGE_PIN E16 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat0 }];
+set_property -dict { PACKAGE_PIN A16 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat[3] }];
+set_property -dict { PACKAGE_PIN A14 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat[2] }];
+set_property -dict { PACKAGE_PIN B14 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat[1] }];
+set_property -dict { PACKAGE_PIN E16 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash_dat[0] }];
 set_property -dict { PACKAGE_PIN A18 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash2_cs_l }];
 set_property -dict { PACKAGE_PIN A19 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash2_clk }];
 set_property -dict { PACKAGE_PIN A20 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga_to_flash2_dat[3] }];
