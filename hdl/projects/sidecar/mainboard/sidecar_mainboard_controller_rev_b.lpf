@@ -222,7 +222,7 @@ IOBUF PORT "pcie_host_to_fpga_smbdat" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS3
 LOCATE COMP "pcie_host_to_fpga_smbclk" SITE "B4";
 IOBUF PORT "pcie_host_to_fpga_smbclk" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_perst" SITE "C5";
-IOBUF PORT "pcie_host_to_fpga_perst" PULLMODE=NONE IO_TYPE=LVCMOS33;
+IOBUF PORT "pcie_host_to_fpga_perst" PULLMODE=UP IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_host_to_fpga_pwren" SITE "D5";
 IOBUF PORT "pcie_host_to_fpga_pwren" PULLMODE=NONE IO_TYPE=LVCMOS33;
 

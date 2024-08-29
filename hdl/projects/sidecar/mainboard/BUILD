@@ -120,7 +120,7 @@ yosys_design('sidecar_mainboard_controller_top',
     ])
 
 
-nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_c',
+nextpnr_ecp5_bitstream('sidecar_mainboard_controller_rev_c_d',
     env = 'sidecar_mainboard_controller',
     design = ':sidecar_mainboard_controller_top#sidecar_mainboard_controller_top.json',
     deps = [
