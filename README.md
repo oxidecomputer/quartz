@@ -100,11 +100,6 @@ To run a simulation, pick one of the testbench targets and `buck2 run <target>` 
 There is basic support for generating vhdl_ls.toml files from the BUCK files.  This is tested and
 is working with the https://github.com/VHDL-LS/rust_hdl_vscode vscode extension.
 
-Right now, the management of this file relies on a user re-generating it as new files are
-added to the BUCK files.  To generate the file in the workspace root (note that this relies
-on https://crates.io/crates/convfmt tool to convert the stdout json to a toml file. 
-`cargo install convfmt` to install).
-
 Using bxl, the following command queries the build graph for VHDL files, outputs a
 json blob to stdout which is then converted into vhdl_ls.toml.  Ideally we'd have an
 editor hook do this and have it be a little more standalone.
@@ -115,10 +110,9 @@ which is a pure-python equivalent to doing this:
 
 `buck2 bxl //tools/vhdl-ls.bxl:vhdl_ls_toml_gen | convfmt -f json -t toml > vhdl_ls.toml`
 
-Note that the vunit sources are not currently enumerated in BUCK files as their installation
-location can vary.  I have solved this by creating a .vhdl_ls.toml in my *home* directory that
-specifies vunit_lib as such, but your paths may differ.  The vscode extension will read both the 
-home directory file and the workspace root file and merge them.
+The vunit sources are not currently enumerated in BUCK files as their installation
+location can vary, but multitool -- lsp-toml now attempts to discover an add these
+so a .vhdl_ls.toml in your home directory is no longer required or recommended.
 
 An example of the home-directory .vhdl_ls.toml can be found [here](docs/README.md)
 

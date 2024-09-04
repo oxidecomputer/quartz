@@ -9,6 +9,9 @@ __pycache__
 # VUnit ignores
 /vunit_out
 
+# VHDL-LS ignores
+/vhdl_ls.toml
+
 devcontainer.json
 
 # VS Code settings
