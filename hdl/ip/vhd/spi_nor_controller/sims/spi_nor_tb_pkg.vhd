@@ -4,9 +4,6 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
---! Bus master model based on ST's RM0433
---! figures 115 and 116
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

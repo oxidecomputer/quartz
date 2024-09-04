@@ -7,7 +7,16 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+
+library vunit_lib;
+    context vunit_lib.com_context;
+    context vunit_lib.vunit_context;
+    context vunit_lib.vc_context;
+
 use work.qspi_vc_pkg.all;
+use work.axil_common_pkg.all;
+use work.axil8x32_pkg;
+use work.espi_tb_pkg.all;
 
 entity espi_th is
 end entity;
@@ -29,6 +38,7 @@ architecture th of espi_th is
     signal flash_rfifo_data   : std_logic_vector(7 downto 0);
     signal flash_rfifo_rdack  : std_logic;
     signal flash_rfifo_rempty : std_logic;
+    signal axi_if      : axil8x32_pkg.axil_t;
 
 begin
 
@@ -47,6 +57,31 @@ begin
             io   => io
         );
 
+    axi_lite_master_inst: entity vunit_lib.axi_lite_master
+        generic map (
+            bus_handle => bus_handle
+        )
+        port map (
+            aclk    => clk,
+            arready => axi_if.read_address.ready,
+            arvalid => axi_if.read_address.valid,
+            araddr  => axi_if.read_address.addr,
+            rready  => axi_if.read_data.ready,
+            rvalid  => axi_if.read_data.valid,
+            rdata   => axi_if.read_data.data,
+            rresp   => axi_if.read_data.resp,
+            awready => axi_if.write_address.ready,
+            awvalid => axi_if.write_address.valid,
+            awaddr  => axi_if.write_address.addr,
+            wready  => axi_if.write_data.ready,
+            wvalid  => axi_if.write_data.valid,
+            wdata   => axi_if.write_data.data,
+            wstrb   => axi_if.write_data.strb,
+            bvalid  => axi_if.write_response.valid,
+            bready  => axi_if.write_response.ready,
+            bresp   => axi_if.write_response.resp
+        );
+
     dut: entity work.espi_target_top
         port map (
             clk                => clk,
@@ -56,6 +91,7 @@ begin
             io                 => io,
             io_o               => io_o,
             io_oe              => io_oe,
+            axi_if             => axi_if,
             flash_cfifo_data   => flash_cfifo_data,
             flash_cfifo_write  => flash_cfifo_write,
             flash_rfifo_data   => flash_rfifo_data,

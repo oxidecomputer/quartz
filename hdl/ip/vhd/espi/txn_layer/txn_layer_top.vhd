@@ -33,6 +33,7 @@ entity txn_layer_top is
         chip_sel_active : in    boolean;
         data_to_host    : view st_source;
         alert_needed    : out   boolean;
+        response_done   : out   boolean;
         -- "Streaming" data to serialize and transmit
         data_from_host : view st_sink
     );
@@ -48,7 +49,6 @@ architecture rtl of txn_layer_top is
     signal live_status    : status_t;
     signal command_header : espi_cmd_header;
     signal resp_regs_if   : resp_reg_if;
-    signal response_done  : boolean;
 
 begin
 
@@ -78,7 +78,7 @@ begin
             clk     => clk,
             reset   => reset,
             data_in => data_from_host.data,
-            enable  => data_from_host.valid,
+            enable  => data_from_host.valid and data_from_host.ready,
             clear   => clear_rx_crc,
             crc_out => rx_running_crc
         );
@@ -100,6 +100,7 @@ begin
             regs_if         => regs_if,
             flash_req       => flash_req,
             running_crc     => rx_running_crc,
+            clear_rx_crc    => clear_rx_crc,
             command_header  => command_header,
             response_done   => response_done,
             is_crc_byte     => is_crc_byte,

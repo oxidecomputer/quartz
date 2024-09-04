@@ -20,6 +20,7 @@ entity command_processor is
 
         -- register layer connections
         running_crc    : in    std_logic_vector(7 downto 0);
+        clear_rx_crc   : out   std_logic;
         regs_if        : view bus_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
@@ -50,7 +51,6 @@ architecture rtl of command_processor is
         crc,
         response
     );
-    signal clear_rx_crc : std_logic;
 
     type reg_type is record
         state          : pkt_state_t;
@@ -120,6 +120,7 @@ begin
     regs_if.read  <= '1' when r.cmd_header.opcode.value = opcode_get_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.addr  <= r.cfg_addr;
     regs_if.wdata <= r.cfg_data;
+    data_from_host.ready <= '1';
 
     clear_rx_crc <= '1' when r.state = idle else '0';
 
@@ -174,7 +175,7 @@ begin
                 -- GET CONFIGURATION has a 16bit address following it
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
-                    by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
+                    v.cfg_addr := by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
                     -- Done, so move to CRC
                     if r.hdr_idx = addr_low_idx then
                         v.hdr_idx := 0;
@@ -189,10 +190,10 @@ begin
                     case r.hdr_idx is
                         when addr_high_idx to addr_low_idx =>
                             -- MSB first, addr phase
-                            by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
+                            v.cfg_addr := by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
                         when data_byte3_idx to data_byte0_idx =>
                             -- LSB First, data phase
-                            by_byte_lsb_first(v.cfg_data, data_from_host.data, r.hdr_idx - 2);
+                            v.cfg_data := by_byte_lsb_first(v.cfg_data, data_from_host.data, r.hdr_idx - 2);
                         when others =>
                             -- this should be unreachable given we transition
                             -- out by idx count below
@@ -238,7 +239,7 @@ begin
                     -- todo we're skipping 64bit address support for now, it can be here
                     -- but nothing is stored. Do we need to store it?
                     if r.rem_addr_bytes <= 4 then
-                        by_byte_msb_first(v.ch_addr, data_from_host.data, 4 - r.rem_addr_bytes);
+                        v.ch_addr := by_byte_msb_first(v.ch_addr, data_from_host.data, 4 - r.rem_addr_bytes);
                     end if;
                     if v.rem_addr_bytes = 0 then
                         if r.rem_data_bytes = 0 then

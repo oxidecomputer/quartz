@@ -52,6 +52,7 @@ architecture rtl of response_processor is
         resp_idx      : integer range 0 to 255;
         payload_cnt   : std_logic_vector(11 downto 0);
         cur_data      : std_logic_vector(7 downto 0);
+        cur_valid     : std_logic;
         reg_data      : std_logic_vector(31 downto 0);
         response_done : boolean;
         has_responded : boolean;
@@ -66,6 +67,7 @@ architecture rtl of response_processor is
         0,
         (others => '0'),
         (others => '0'),
+        '0',
         (others => '0'),
         false,
         false,
@@ -107,6 +109,7 @@ begin
     begin
         v := r;
         v.resp_ack := '0';
+        v.cur_valid := '0';
 
         v.response_done := false;
         -- latch any current data here
@@ -156,6 +159,7 @@ begin
                     end if;
                 end if;
             when RESPONSE_HEADER =>
+
                 v.payload_cnt := response_chan_mux.length;
                 case r.resp_idx is
                     when 0 =>
@@ -193,6 +197,7 @@ begin
                     end if;
                 end if;
             when CRC =>
+                v.cur_data := response_crc;
                 if data_to_host.ready then
                     v.response_done := true;
                     v.state := IDLE;
@@ -205,9 +210,8 @@ begin
         elsif r.state = STATUS then
             v.cur_data := pack(r.status)(15 downto 8);
         end if;
-        -- CRC
-        if r.state = CRC then
-            v.cur_data := response_crc;
+        if r.state /= IDLE then
+            v.cur_valid := '1';
         end if;
         rin <= v;
     end process;
@@ -223,6 +227,6 @@ begin
 
     clear_tx_crc       <= '1' when r.state = IDLE else '0';
     data_to_host.data  <= r.cur_data;
-    data_to_host.valid <= '1' when r.state /= IDLE else '0';
+    data_to_host.valid <= r.cur_valid;
 
 end rtl;

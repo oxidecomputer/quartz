@@ -97,6 +97,17 @@ package espi_protocol_pkg is
     -- function header_length_by_opcode (
     --     opcode: std_logic_vector
     -- ) return natural;
+    function by_byte_msb_first (
+        constant data : std_logic_vector;
+        constant byte : std_logic_vector(7 downto 0);
+        idx           : natural
+    ) return std_logic_vector;
+
+    function by_byte_lsb_first (
+        constant data : std_logic_vector;
+        constant byte : std_logic_vector(7 downto 0);
+        idx           : natural
+    ) return std_logic_vector;
 
     function payload_length (
         length_field: std_logic_vector
@@ -114,17 +125,17 @@ package espi_protocol_pkg is
     ) return natural;
 
     -- assumes index counts up as we go
-    procedure by_byte_msb_first (
-        variable data : inout std_logic_vector;
-        constant byte : in std_logic_vector(7 downto 0);
-        idx           : in natural
-    );
+    -- procedure by_byte_msb_first (
+    --     variable data : inout std_logic_vector;
+    --     constant byte : in std_logic_vector(7 downto 0);
+    --     idx           : in natural
+    -- );
 
-    procedure by_byte_lsb_first (
-        variable data : inout std_logic_vector;
-        constant byte : in std_logic_vector(7 downto 0);
-        idx           : in natural
-    );
+    -- procedure by_byte_lsb_first (
+    --     variable data : inout std_logic_vector;
+    --     constant byte : in std_logic_vector(7 downto 0);
+    --     idx           : in natural
+    -- );
 
 end package;
 
@@ -209,9 +220,7 @@ package body espi_protocol_pkg is
                 bytes := 1; -- only opcode needed
             when OPCODE_PUT_IORD_SHORT_MASK =>
                 bytes := 1; -- only opcode needed
-            when OPCODE_PUT_IOWR_SHORT_MASK =>
-                bytes := 1; -- only opcode needed
-            when OPCODE_PUT_MEMRD32_SHORT_MASK =>
+            when OPCODE_PUT_IOWR_SHORT_MASK => -- also covers the OPCODE_PUT_MEMRD32_SHORT_MASK
                 bytes := 1; -- only opcode needed
             when OPCODE_PUT_MEMWR32_SHORT_MASK =>
                 bytes := 1; -- only opcode needed
@@ -252,34 +261,40 @@ package body espi_protocol_pkg is
         return bytes;
     end;
 
-    procedure by_byte_msb_first (
-        variable data : inout std_logic_vector;
-        constant byte : in std_logic_vector(7 downto 0);
-        idx           : in natural
-    ) is
+    function by_byte_msb_first (
+        constant data : std_logic_vector;
+        constant byte : std_logic_vector(7 downto 0);
+        idx           : natural
+    ) return std_logic_vector is
 
         variable msb : natural;
         variable lsb : natural;
+        variable ret_data : std_logic_vector(data'range);
 
     begin
         msb := data'high - idx * 8;
         lsb := data'high - idx * 8 - 7;
-        data(msb downto lsb) := byte;
+        ret_data := data;
+        ret_data(msb downto lsb) := byte;
+        return ret_data;
     end;
 
-    procedure by_byte_lsb_first (
-        variable data : inout std_logic_vector;
-        constant byte : in std_logic_vector(7 downto 0);
-        idx           : in natural
-    ) is
+    function by_byte_lsb_first (
+        constant data : std_logic_vector;
+        constant byte : std_logic_vector(7 downto 0);
+        idx           : natural
+    ) return std_logic_vector is
 
         variable msb : natural;
         variable lsb : natural;
+        variable ret_data : std_logic_vector(data'range);
 
     begin
         msb := 7 + idx * 8;
         lsb := idx * 8;
-        data(msb downto lsb) := byte;
+        ret_data := data;
+        ret_data(msb downto lsb) := byte;
+        return ret_data;
     end;
 
 end package body;

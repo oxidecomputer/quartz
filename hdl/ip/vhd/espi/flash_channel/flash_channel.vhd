@@ -46,6 +46,7 @@ architecture rtl of flash_channel is
     subtype desc_index_t is natural range 0 to num_descriptors - 1;
     signal dpr_waddr : std_logic_vector(11 downto 0);
     signal dpr_raddr : std_logic_vector(11 downto 0);
+    signal readdata : std_logic_vector(7 downto 0);
 
     function add_wrap(a : natural; max: natural) return natural is
     begin
@@ -107,8 +108,9 @@ begin
         wren => r.dpr_write_en,
         rclk => clk,
         raddr => dpr_raddr,
-        rdata => response.data
+        rdata => readdata
     );
+    response.data <= readdata;
     response.valid <= '1' when r.compl_state = read_dpr else '0';
     response.tag <= r.cmd_queue(r.tail_desc).tag;
     response.length <= r.cmd_queue(r.tail_desc).xfr_size_bytes;

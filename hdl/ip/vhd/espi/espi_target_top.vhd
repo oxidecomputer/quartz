@@ -12,11 +12,15 @@ use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.flash_channel_pkg.all;
 
+use work.axil8x32_pkg.all;
+
 entity espi_target_top is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
-
+        -- Axilite interface
+        axi_if : view axil_target;
+        -- phy interface
         cs_n  : in    std_logic;
         sclk  : in    std_logic;
         io    : in    std_logic_vector(3 downto 0);
@@ -47,10 +51,10 @@ architecture rtl of espi_target_top is
     signal flash_np_free  : std_logic;
     signal flash_c_avail : std_logic;
     signal flash_channel_enable : boolean;
+    signal dbg_chan : dbg_chan_t;
+    signal response_done : boolean;
 
 begin
-
-    chip_sel_active <= cs_n = '0';
 
     -- link layer
     link_layer_top_inst: entity work.link_layer_top
@@ -62,20 +66,24 @@ begin
         io => io,
         io_o => io_o,
         io_oe => io_oe,
-        debug_active => false,
+        dbg_chan => dbg_chan,
         qspi_mode => qspi_mode,
         is_crc_byte => is_crc_byte,
+        response_done => response_done,
+        chip_sel_active => chip_sel_active,
         alert_needed => alert_needed,
         data_to_host => data_to_host,
         data_from_host => data_from_host
     );
-    -- TODO: think about more robust in-system testbench for all of this.
-    -- Ideally, I'd like to use the SP to simulate the SP5 transactions.
-    -- The easiest way here is to insert/inject into the post-serialized
-    -- data stream with FIFOs and a mux. This would allow us to send
-    -- arbitrary data and get arbitrary responses and do fancier stuff in software.
-    -- I'd also like to put a DPR as a packet logger here to capture espi data
-    -- for debugging/analysis.
+
+    -- system (axi-lite) register block
+   espi_sys_regs_inst: entity work.espi_regs
+    port map(
+       clk => clk,
+       reset => reset,
+       axi_if => axi_if,
+       dbg_chan => dbg_chan
+   );
 
     -- txn layer blocks
     transaction: entity work.txn_layer_top
@@ -90,12 +98,13 @@ begin
             alert_needed    => alert_needed,
             flash_req       => flash_req,
             flash_resp      => flash_resp,
+            response_done   => response_done,
              -- flash channel status
             flash_np_free => flash_np_free,
             flash_c_avail => flash_c_avail
         );
 
-    -- register blocks
+    -- espi-internal register block
     espi_regs_inst: entity work.espi_spec_regs
         port map (
             clk            => clk,

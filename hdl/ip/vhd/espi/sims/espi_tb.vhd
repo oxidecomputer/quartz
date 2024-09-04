@@ -15,7 +15,8 @@ use work.qspi_vc_pkg.all;
 use work.espi_controller_vc_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_spec_regs_pkg.all;
-
+use work.espi_dbg_vc_pkg.all;
+use work.espi_tb_pkg.all;
 entity espi_tb is
     generic (
 
@@ -41,6 +42,7 @@ begin
         variable pending_alert   : boolean;
         variable flash_cap_reg   : ch3_capabilities_type := rec_reset;
         variable my_queue        : queue_t               := new_queue;
+        variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -48,16 +50,25 @@ begin
         -- Reach into the test harness, which generates and de-asserts reset and hold the
         -- test cases off until we're out of reset. This runs for every test case
         wait until sim_reset = '0';
+        wait for 500 ns;
 
         while test_suite loop
-            if run("status_check") then
-                get_status(response_code, status,  crc_ok);
+            if run("qspi_status_check") then
+                get_status(net, response_code, status, crc_ok);
                 check(crc_ok, "CRC Check failed");
                 -- Expect the reset value of status here
                 expected_status := pack(status_t'(rec_reset));
                 check_equal(status, expected_status, "Status did not match reset value");
+            elsif run("dbg_status_check") then
+                enable_debug_mode(net);
+                dbg_send_get_status_cmd(net);
+                wait for 2 us;
+                dbg_get_response(net, 4, response);
+                check(response.crc_ok, "CRC Check failed");
+                expected_status := pack(status_t'(rec_reset));
+                check_equal(response.status, expected_status, "Status did not match reset value");
             elsif run("get_config") then
-                get_config(GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
                 -- Expect matching data here
                 exp_data_32 := pack(general_capabilities_type'(rec_reset));
@@ -67,7 +78,7 @@ begin
                 expected_status := pack(status_t'(rec_reset));
                 check_equal(status, expected_status, "Status did not match reset value");
             elsif run("set_config") then
-                get_config(GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
                 -- Expect matching data here
                 exp_data_32 := pack(general_capabilities_type'(rec_reset));
@@ -80,22 +91,22 @@ begin
                 -- Now set the CRC Checking Enable bit to 1
                 data_32(31) := '1'; -- alter state
                 wait for 100 ns;
-                set_config(GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
+                set_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 exp_data_32 := data_32;
                 wait for 100 ns;
-                get_config(GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
                 -- Expect the reset value of gen-cap here
                 check_equal(data_32, exp_data_32, "General Capabilities did not match expected value");
             elsif run("check_alert_works") then
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';
-                set_config(CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
 
                 -- Put a non-posted read request into the flash channel
                 -- We expect something to happen here and the alert get set when the completion
                 -- status is written back, so we check the crc here and then wait for the alert
-                put_flash_read(X"00000000", 32, response_code, status,  crc_ok);
+                put_flash_read(net, X"00000000", 32, response_code, status,  crc_ok);
             --  check(crc_ok, "CRC Check failed");
             --  wait_for_alert;
             --  get_any_pending_alert(pending_alert);
@@ -105,15 +116,15 @@ begin
             elsif run("read_flash") then
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';
-                set_config(CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
                 -- Put a non-posted read request into the flash channel
                 -- We expect something to happen here and the alert get set when the completion
                 -- status is written back, so we check the crc here and then wait for the alert
-                put_flash_read(X"00000000", 32, response_code, status,  crc_ok);
+                put_flash_read(net, X"00000000", 32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
-                wait_for_alert;
+                wait_for_alert(net);
 
-                get_flash_c(32, my_queue, response_code, status,  crc_ok);
+                get_flash_c(net, 32, my_queue, response_code, status,  crc_ok);
                 -- TODO: the data's not coming back right.
                 for i in 0 to 31 loop
                     report "Flash Byte: " & to_hstring(to_unsigned(pop_byte(my_queue), 8));
