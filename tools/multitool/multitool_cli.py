@@ -60,6 +60,34 @@ def vhdl_format(args):
     )
 
 
+def vunit_files():
+    # This is kind of an ugly hack since vunit doesn't provide an API for this
+    # see https://github.com/VUnit/vunit/issues/699
+    try:
+        import vunit
+        vunit_install_dir = Path(vunit.__file__).parent
+        print(vunit_install_dir)
+    except:
+        print("Error attempting to import vunit module."
+              " Check tools/requirements.txt and install deps as necessary"
+              " `pip install -r tools/requirements.txt"
+        )
+        sys.exit(1)
+
+    vunit_vhdl = vunit_install_dir / "vhdl"
+    ret = {}
+    ret["vunit_lib"] = []
+    ret["osvvm"] = []
+    for file in vunit_vhdl.rglob("*.vhd"):
+        if "osvvm" in str(file):
+            lib = "osvvm"
+        else:
+            lib = "vunit_lib"
+        ret[lib].append(str(file.resolve()))
+    return ret
+    
+
+
 def vhdl_ls_toml_gen(args):
     root = find_project_root()
     vhdlls_toml = root / "vhdl_ls.toml"
@@ -76,13 +104,28 @@ def vhdl_ls_toml_gen(args):
     if buck_bxl.returncode != 0:
         sys.exit(buck_bxl.returncode)
     
+    # Get known libraries and files from buck via the bxk's stdout
     vhdl_lsp_dict = json.loads(stdout)
+
+    # A bit of a hack to also figure out where the vunit included files are
+    # and jack them into the toml file also
+    vunit_dict = vunit_files()
+    # set these lists up into the expected format
+    vunit = {"vunit_lib": {"files": vunit_dict["vunit_lib"]}}
+    osvvm = {"osvvm": {"files": vunit_dict["osvvm"]}}
+
+    # Update the running structure with these new libraries
+    vhdl_lsp_dict["libraries"].update(vunit)
+    vhdl_lsp_dict["libraries"].update(osvvm)
+
+    # Write the toml file (or print if someone asked for that)
     if not args.print:
         # dump toml
         with open(vhdlls_toml, "wb") as f:
             tomli_w.dump(vhdl_lsp_dict, f)
     else:
         print(json.dumps(vhdl_lsp_dict, indent=4))
+   
         
 
 # create the top-level parser
