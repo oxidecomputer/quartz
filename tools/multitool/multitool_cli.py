@@ -125,8 +125,43 @@ def vhdl_ls_toml_gen(args):
             tomli_w.dump(vhdl_lsp_dict, f)
     else:
         print(json.dumps(vhdl_lsp_dict, indent=4))
-   
-        
+
+class VunitProject:
+    def __init__(self, name, path):
+        self.name = name
+        self.path = path
+        self.year = 2024
+        self.half_period = "4 ns"
+        self.reset_time = "200 ns"
+        self.reset_delay = "500 ns"
+        self.sim_wdog = "10 ms"
+
+def vunit_tb_gen(args):
+    from jinja2 import Environment, PackageLoader
+
+     # Build jinja env
+    env = Environment(
+        loader=PackageLoader("multitool"),
+        lstrip_blocks=True,
+        trim_blocks=True,
+    )
+
+    project = VunitProject(args.name, args.path)
+
+    templates = [
+        (env.get_template("vunit_tb.jinja2"), f"{project.name}_tb.vhd"),
+        (env.get_template("vunit_th.jinja2"), f"{project.name}_th.vhd"),
+    ]
+
+    for template, filename in templates:
+        # Now render the template and write it out
+        content = template.render(
+            project=project,
+        )
+        fout = Path(args.path) / filename
+        with open(fout, mode="w", encoding="utf-8") as message:
+            message.write(content)
+
 
 # create the top-level parser
 parser = argparse.ArgumentParser(prog='multitool')
@@ -143,13 +178,27 @@ format_parser.add_argument(
 )
 
 # create the parser for the "lsp-toml" command
-format_parser = subparsers.add_parser('lsp-toml', help='format help')
+format_parser = subparsers.add_parser('lsp-toml', help='LSP toml help')
 format_parser.set_defaults(func=vhdl_ls_toml_gen)
 format_parser.add_argument(
     "--print", 
     action="store_true", 
     default=False,
     help="Don't write the file, just pretty-print the json representation"
+)
+
+# create the parser for the "tb-gen" command
+format_parser = subparsers.add_parser('tb-gen', help='tb-gen help')
+format_parser.set_defaults(func=vunit_tb_gen)
+format_parser.add_argument(
+    "--name", 
+    action="store", 
+    help="name of testbench entity without _tb or _th suffix"
+)
+format_parser.add_argument(
+    "--path", 
+    action="store", 
+    help="Folder path for the testbench files to live"
 )
 
 args = parser.parse_args()
