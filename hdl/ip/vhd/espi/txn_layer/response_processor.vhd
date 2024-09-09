@@ -12,6 +12,7 @@ use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
 use work.flash_channel_pkg.all;
+use work.uart_channel_pkg.all;
 
 entity response_processor is
     port (
@@ -28,6 +29,8 @@ entity response_processor is
 
         -- flash channel responses
         flash_resp : view flash_chan_resp_sink;
+        -- uart channel responses
+        sp_to_host_espi : view uart_resp_sink;
 
         alert_needed : out   boolean
     );
@@ -39,7 +42,8 @@ architecture rtl of response_processor is
         idle,
         response_code,
         send_config,
-        response_header,
+        response_flash_header,
+        response_uart_header,
         response_payload,
         status,
         crc
@@ -56,6 +60,7 @@ architecture rtl of response_processor is
         reg_data      : std_logic_vector(31 downto 0);
         response_done : boolean;
         has_responded : boolean;
+        is_flash_response : boolean;
         resp_ack      : std_logic;
     end record;
 
@@ -71,6 +76,7 @@ architecture rtl of response_processor is
         (others => '0'),
         false,
         false,
+        false,
         '0'
     );
 
@@ -83,14 +89,30 @@ architecture rtl of response_processor is
     signal r, rin : reg_type;
 
     signal response_chan_mux : response_hdr_t;
+    signal resp_data : std_logic_vector(7 downto 0);
 
 begin
 
-    response_chan_mux.cycle_type <= flash_resp.cycle_type;
-    response_chan_mux.tag        <= flash_resp.tag;
-    response_chan_mux.length     <= flash_resp.length;
+    resp_mux: process(all)
+    begin
+        if r.is_flash_response then
+           response_chan_mux.cycle_type <= flash_resp.cycle_type;
+           response_chan_mux.tag        <= flash_resp.tag;
+           response_chan_mux.length     <= flash_resp.length;
+           flash_resp.ready <= r.resp_ack;
+           sp_to_host_espi.st.ready <= '0';
+           resp_data <= flash_resp.data;
+        else  -- UART response
+           response_chan_mux.cycle_type <= message_with_data;
+           response_chan_mux.tag        <= (others => '0');
+           response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 1024);  -- cap to tx max
+           flash_resp.ready             <= '0';
+           resp_data <= sp_to_host_espi.st.data;
+           sp_to_host_espi.st.ready <= r.resp_ack;
+        end if;
+    end process;
 
-    flash_resp.ready <= r.resp_ack;
+    
 
     response_done <= r.response_done;
 
@@ -141,7 +163,15 @@ begin
                             v.state := STATUS;
                             v.status := live_status;
                         when opcode_get_flash_c =>
-                            v.state := RESPONSE_HEADER;
+                            v.is_flash_response := true;
+                            v.state := RESPONSE_FLASH_HEADER;
+                            v.status := live_status;
+                        when opcode_put_pc =>
+                            v.state := STATUS;
+                            v.status := live_status;
+                        when opcode_get_pc =>
+                            v.is_flash_response := false;
+                            v.state := RESPONSE_UART_HEADER;
                             v.status := live_status;
                         when others =>
                             assert false
@@ -158,7 +188,7 @@ begin
                         v.state := STATUS;
                     end if;
                 end if;
-            when RESPONSE_HEADER =>
+            when RESPONSE_FLASH_HEADER =>
 
                 v.payload_cnt := response_chan_mux.length;
                 case r.resp_idx is
@@ -177,8 +207,27 @@ begin
                         v.state := RESPONSE_PAYLOAD;
                     end if;
                 end if;
+            when RESPONSE_UART_HEADER =>
+
+                v.payload_cnt := response_chan_mux.length;
+                case r.resp_idx is
+                    when 0 =>
+                        v.cur_data := response_chan_mux.cycle_type;
+                    when 1 =>
+                        v.cur_data := response_chan_mux.tag & response_chan_mux.length(11 downto 8);
+                    when 2 =>
+                        v.cur_data := response_chan_mux.length(7 downto 0);
+                    when others =>
+                       v.cur_data := (others => '0'); -- message code field
+                end case;
+                if data_to_host.ready then
+                    v.resp_idx := r.resp_idx + 1;
+                    if r.resp_idx = 3 then
+                        v.state := RESPONSE_PAYLOAD;
+                    end if;
+                end if;
             when RESPONSE_PAYLOAD =>
-                v.cur_data := flash_resp.data;
+                v.cur_data := resp_data;
                 if data_to_host.ready then
                     v.resp_ack := '1';
                     v.payload_cnt := r.payload_cnt - 1;
@@ -201,6 +250,7 @@ begin
                 if data_to_host.ready then
                     v.response_done := true;
                     v.state := IDLE;
+                    v.is_flash_response := false;
                 end if;
                 v.has_responded := true;
         end case;

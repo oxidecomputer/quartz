@@ -9,6 +9,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
+use work.espi_regs_pkg.all;
+
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
@@ -47,6 +49,28 @@ package espi_dbg_vc_pkg is
         signal net : inout network_t;
         constant expected_resp_bytes : integer;
         variable resp  : inout resp_t
+    );
+    procedure dbg_send_uart_data_cmd(
+        signal net : inout network_t;
+        payload : queue_t
+    );
+
+    procedure dbg_get_uart_data_cmd(
+        signal net : inout network_t;
+    );
+
+    procedure dbg_pop_resp_fifo(
+        signal net : inout network_t;
+        constant num_reads : natural
+    );
+    procedure dbg_wait_for_start(
+        signal net : inout network_t
+    );
+    procedure dbg_wait_for_done(
+        signal net : inout network_t
+    );
+    procedure dbg_wait_for_alert(
+        signal net : inout network_t
     );
 
 end package;
@@ -167,5 +191,77 @@ package body espi_dbg_vc_pkg is
         -- Status comes LSB first, so older is lower.  very last byte is crc
         resp.status := last_3_bytes(1) & last_3_bytes(2);
     end procedure;
+
+    procedure dbg_send_uart_data_cmd(
+        signal net : inout network_t;
+        payload : queue_t
+    ) is
+        variable cmd : cmd_t := build_put_uart_data_cmd(payload);
+    begin
+        dbg_send_cmd(net, cmd);
+    end procedure;
+
+    procedure dbg_get_uart_data_cmd(
+        signal net : inout network_t;
+    ) is
+        variable cmd : cmd_t := build_get_uart_data_cmd;
+    begin
+        dbg_send_cmd(net, cmd);
+    end procedure;
+
+    procedure dbg_pop_resp_fifo(
+        signal net : inout network_t;
+        constant num_reads : natural
+    ) is
+        variable readdata: std_logic_vector(31 downto 0) := (others => '0');
+    begin
+        for i in 0 to num_reads - 1 loop
+            read_bus(net, bus_handle, To_StdLogicVector(RESP_FIFO_RDATA_OFFSET, bus_handle.p_address_length), readdata);
+        end loop;
+    end procedure;
+
+    procedure dbg_wait_for_start(
+        signal net : inout network_t
+    ) is
+        variable readdata : std_logic_vector(31 downto 0) := (others => '0');
+        variable status_reg : status_type := rec_reset;
+    begin
+        loop
+            read_bus(net, bus_handle, To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length), readdata);
+            status_reg := unpack(readdata);
+            exit when status_reg.busy = '1';
+        end loop;
+    end procedure;
+
+    procedure dbg_wait_for_done(
+        signal net : inout network_t
+    ) is
+        variable readdata : std_logic_vector(31 downto 0) := (others => '0');
+        variable status_reg : status_type := rec_reset;
+    begin
+        -- We want to call this immediately after sending a command but it's possible nothing has
+        -- started yet so if we're not running already we wait for the system to start, and then wait for
+        -- it to finish.
+        dbg_wait_for_start(net);
+        loop
+            read_bus(net, bus_handle, To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length), readdata);
+            status_reg := unpack(readdata);
+            exit when status_reg.busy = '0';
+        end loop;
+    end procedure;
+
+    procedure dbg_wait_for_alert(
+        signal net : inout network_t
+    ) is
+        variable readdata : std_logic_vector(31 downto 0) := (others => '0');
+        variable flags_reg : flags_type := rec_reset;
+    begin
+        loop
+            read_bus(net, bus_handle, To_StdLogicVector(FLAGS_OFFSET, bus_handle.p_address_length), readdata);
+            flags_reg := unpack(readdata);
+            exit when flags_reg.alert = '1';
+        end loop;
+    end procedure;
+
 
 end package body;

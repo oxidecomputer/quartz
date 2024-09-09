@@ -68,6 +68,7 @@ architecture rtl of dbg_link_faker is
     signal cmd_size_fifo_empty : std_logic;
     signal cmd_size_rdata : std_logic_vector(31 downto 0);
     signal cmd_fifo_wusedwds: std_logic_vector(log2ceil(1024) downto 0);
+    signal rusedwds: std_logic_vector(log2ceil(1024) downto 0);
     signal resp_fifo_wusedwds: std_logic_vector(log2ceil(1024) downto 0);
 
 begin
@@ -77,6 +78,7 @@ begin
     dbg_chan.rdstatus.usedwds <= resize(resp_fifo_wusedwds, dbg_chan.wstatus.usedwds'length);
     dbg_chan.rd.data <= resp_fifo_read_data;
     cs_active <= r.cs_asserted;
+    dbg_chan.alert_pending <= '1' when alert_needed else '0';
 
     -- Timer: the fastest byte transfer that can be done is 2 clocks at 66MHz (in quad mode) so we'll
     -- generate a strobe at that speed when enabled to provide effective rate-limiting to the design.
@@ -119,7 +121,7 @@ begin
         rdata => cmd_fifo_rdata,
         rdreq => r.cmd_rdack,
         rempty => cmd_fifo_empty,
-        rusedwds => open
+        rusedwds => rusedwds
     );
 
     dbg_cmd_sizefifo: entity work.dcfifo_xpm
@@ -171,6 +173,7 @@ begin
             when cs_start =>
                 v.cs_asserted := true;
                 v.cntr := r.cntr + 1;
+                v.idx := (others => '0');
                 if r.cntr = cs_delay then
                     v.cntr := cmd_size_rdata(v.cntr'high downto 0);
                     v.state := cmd;
@@ -185,7 +188,7 @@ begin
                    v.cntr := r.cntr - 1;
                    -- move pointer to next byte
                    v.idx := r.idx + 1;
-                   if r.cntr = 1 then
+                   if r.cntr = 0 then
                        v.state := resp;
                    end if;
                    
@@ -229,7 +232,7 @@ begin
     -- Response FIFO.
     -- when we're enabled, any target response data gets written into the response fifo.
     -- software is resonsible for reading the data out of the fifo at an appropriate rate.
-    resp_fifo_write <= data_to_host.ready and data_to_host.valid when dbg_chan.enabled and r.state = resp else '0';
+    resp_fifo_write <= data_to_host.ready and data_to_host.valid when dbg_chan.enabled else '0';
     resp_fifo: entity work.dcfifo_mixed_xpm
      generic map(
         wfifo_write_depth => 4096,

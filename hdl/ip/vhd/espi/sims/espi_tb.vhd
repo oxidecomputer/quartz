@@ -42,10 +42,14 @@ begin
         variable pending_alert   : boolean;
         variable flash_cap_reg   : ch3_capabilities_type := rec_reset;
         variable my_queue        : queue_t               := new_queue;
+        variable cmd             : cmd_t;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
+        
+        -- shared variable in _tb_pkg
+        rnd.InitSeed(rnd'instance_name);
 
         -- Reach into the test harness, which generates and de-asserts reset and hold the
         -- test cases off until we're out of reset. This runs for every test case
@@ -62,7 +66,7 @@ begin
             elsif run("dbg_status_check") then
                 enable_debug_mode(net);
                 dbg_send_get_status_cmd(net);
-                wait for 2 us;
+                dbg_wait_for_done(net);
                 dbg_get_response(net, 4, response);
                 check(response.crc_ok, "CRC Check failed");
                 expected_status := pack(status_t'(rec_reset));
@@ -132,6 +136,34 @@ begin
 
                 -- would normally wait for the completion alert now
                 wait for 300 us;
+            elsif run("dbg_uart") then
+                enable_debug_mode(net);
+                -- Send UART data which will then be looped back and rx'd
+                my_queue := build_rand_byte_queue(32);
+                dbg_send_uart_data_cmd(net, my_queue);
+                dbg_wait_for_done(net);
+                -- 4 junk bytes at the top of the response for the accept of the command
+                dbg_pop_resp_fifo(net, 1);  -- 32bit read = 4 bytes
+                wait for 100 us; -- let uart data propagate
+                dbg_wait_for_alert(net);
+                -- technically we'd get status here, and if we supported completions we'd return it here
+                -- response size is going to be 4 bytes for response_code/status/crc
+                -- plus the payload which is 32 bytes + 4 header bytes
+                -- bringing total to 40 bytes
+                dbg_get_uart_data_cmd(net);
+                dbg_wait_for_done(net);
+                dbg_get_response(net, 40 , response);
+                check(response.crc_ok, "CRC Check failed");
+        
+   
+                -- -- wait for the loopback to happen
+                -- dbg_send_get_status_cmd(net);
+                wait for 100 us;
+                -- dbg_get_response(net, 4, response);
+                -- check(response.crc_ok, "CRC Check failed");
+                -- expected_status := pack(status_t'(rec_reset));
+                -- check_equal(response.status, expected_status, "Status did not match reset value");
+                --
             end if;
         end loop;
         wait for 10 us;

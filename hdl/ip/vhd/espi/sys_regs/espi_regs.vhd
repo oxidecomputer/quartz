@@ -39,16 +39,13 @@ architecture rtl of espi_regs is
     signal   control_reg        : control_type;
     signal   status_reg         : status_type;
     signal   fifo_status_reg    : fifo_status_type;
+    signal   flags_reg          : flags_type;
 
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
-    status_reg.cmd_full   <= dbg_chan.wstatus.full;
-    status_reg.cmd_empty <= dbg_chan.wstatus.empty;
-    status_reg.resp_used_wds <= dbg_chan.rdstatus.usedwds;
-    status_reg.resp_full <= dbg_chan.rdstatus.full;
-    status_reg.resp_empty <= dbg_chan.rdstatus.empty;
-    status_reg.crc_err <= '0';
+    fifo_status_reg.resp_used_wds <= dbg_chan.rdstatus.usedwds;
     status_reg.busy <= dbg_chan.busy;
+    flags_reg.alert <= dbg_chan.alert_pending;
 
     -- unpack the record
     axi_if.write_response.resp  <= OKAY;
@@ -128,7 +125,10 @@ begin
         elsif rising_edge(clk) then
             if (not axi_if.read_address.valid) or arready then
                 case to_integer(axi_if.read_address.addr) is
+                    when FLAGS_OFFSET => rdata <= pack(flags_reg);
                     when CONTROL_OFFSET => rdata <= pack(control_reg);
+                    when STATUS_OFFSET => rdata <= pack(status_reg);
+                    when FIFO_STATUS_OFFSET => rdata <= pack(fifo_status_reg);
                     when RESP_FIFO_RDATA_OFFSET => rdata <= dbg_chan.rd.data;
                     when others =>
                         rdata <= (others => '0');

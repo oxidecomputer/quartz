@@ -11,6 +11,7 @@ use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.flash_channel_pkg.all;
+use work.uart_channel_pkg.all;
 
 use work.axil8x32_pkg.all;
 
@@ -34,6 +35,13 @@ entity espi_target_top is
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
+        -- Interfaces to the UART block
+        to_sp_uart_data : out std_logic_vector(7 downto 0);
+        to_sp_uart_valid: out std_logic;
+        to_sp_uart_ready: in std_logic;
+        from_sp_uart_data : in std_logic_vector(7 downto 0);
+        from_sp_uart_valid: in std_logic;
+        from_sp_uart_ready: out std_logic
     );
 end entity;
 
@@ -53,6 +61,12 @@ architecture rtl of espi_target_top is
     signal flash_channel_enable : boolean;
     signal dbg_chan : dbg_chan_t;
     signal response_done : boolean;
+    signal pc_free : std_logic;
+    signal pc_avail : std_logic;
+    signal np_free : std_logic;
+    signal np_avail : std_logic;
+    signal host_to_sp_espi : st_uart_t;
+    signal sp_to_host_espi : uart_resp_t;
 
 begin
 
@@ -101,7 +115,13 @@ begin
             response_done   => response_done,
              -- flash channel status
             flash_np_free => flash_np_free,
-            flash_c_avail => flash_c_avail
+            flash_c_avail => flash_c_avail,
+            host_to_sp_espi => host_to_sp_espi,
+            sp_to_host_espi => sp_to_host_espi,
+            pc_free => pc_free,
+            pc_avail => pc_avail,
+            np_free => np_free,
+            np_avail => np_avail
         );
 
     -- espi-internal register block
@@ -129,6 +149,25 @@ begin
        flash_rfifo_data => flash_rfifo_data,
        flash_rfifo_rdack => flash_rfifo_rdack,
        flash_rfifo_rempty => flash_rfifo_rempty
+   );
+
+   -- uart channel logic
+   uart_channel_top_inst: entity work.uart_channel_top
+    port map(
+       clk => clk,
+       reset => reset,
+       host_to_sp_espi => host_to_sp_espi,
+       sp_to_host_espi => sp_to_host_espi,
+       to_sp_uart_data => to_sp_uart_data,
+       to_sp_uart_valid => to_sp_uart_valid,
+       to_sp_uart_ready => to_sp_uart_ready,
+       from_sp_uart_data => from_sp_uart_data,
+       from_sp_uart_valid => from_sp_uart_valid,
+       from_sp_uart_ready => from_sp_uart_ready,
+       pc_free => pc_free,
+       pc_avail => pc_avail,
+       np_free => np_free,
+       np_avail => np_avail
    );
 
 end rtl;

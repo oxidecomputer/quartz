@@ -12,6 +12,7 @@ use work.flash_channel_pkg.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
+use work.uart_channel_pkg.all;
 
 entity txn_layer_top is
     port (
@@ -27,6 +28,14 @@ entity txn_layer_top is
         -- flash channel requests/responses
         flash_req  : view flash_chan_req_source;
         flash_resp : view flash_chan_resp_sink;
+        -- uart channel requests/responses
+        host_to_sp_espi : view uart_data_source;
+        sp_to_host_espi : view uart_resp_sink;
+        -- uart channel status
+        pc_free : in std_logic;
+        pc_avail : in std_logic;
+        np_free : in std_logic;
+        np_avail: in std_logic;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
@@ -99,6 +108,7 @@ begin
             reset           => reset,
             regs_if         => regs_if,
             flash_req       => flash_req,
+            host_to_sp_espi => host_to_sp_espi,
             running_crc     => rx_running_crc,
             clear_rx_crc    => clear_rx_crc,
             command_header  => command_header,
@@ -120,6 +130,7 @@ begin
             live_status    => live_status,
             response_crc   => tx_running_crc,
             flash_resp     => flash_resp,
+            sp_to_host_espi => sp_to_host_espi,
             alert_needed   => alert_needed
         );
 
@@ -136,6 +147,10 @@ begin
         live_status <= rec_reset;
         live_status.flash_c_avail <= flash_c_avail;
         live_status.flash_np_free <= flash_np_free;
+        live_status.pc_avail <= pc_avail;
+        live_status.pc_free <= pc_free;
+        live_status.np_avail <= np_avail;
+        live_status.np_free <= np_free;
     end process;
 
 end rtl;

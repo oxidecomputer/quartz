@@ -12,6 +12,7 @@ use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
 use work.flash_channel_pkg.all;
+use work.uart_channel_pkg.all;
 
 entity command_processor is
     port (
@@ -24,10 +25,10 @@ entity command_processor is
         regs_if        : view bus_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
-
-        -- flash channel requests
         -- flash channel requests
         flash_req : view flash_chan_req_source;
+        -- uart channel put interface here
+        host_to_sp_espi : view uart_data_source;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
@@ -47,7 +48,6 @@ architecture rtl of command_processor is
         parse_data,
         parse_get_cfg_hdr,
         parse_set_cfg_hdr,
-        data,
         crc,
         response
     );
@@ -100,6 +100,14 @@ architecture rtl of command_processor is
                     when others =>
                         null;
                 end case;
+            when opcode_put_pc =>
+                case header.cycle_kind is
+                    when message_with_data =>
+                        next_state.next_state := parse_data;
+                        next_state.cmd_payload_bytes := to_integer(header.length);
+                    when others =>
+                        null;
+                end case;
             when others =>
                 null;
         end case;
@@ -110,6 +118,8 @@ architecture rtl of command_processor is
 
 begin
 
+    host_to_sp_espi.data <= data_from_host.data;
+    host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and r.cmd_header.cycle_kind = message_with_data and r.state = parse_data else '0';
     -- pass through the flash channel requests here
     flash_req.espi_hdr             <= r.cmd_header;
     flash_req.sp5_flash_address    <= r.ch_addr;
@@ -157,6 +167,7 @@ begin
                         -- can just go immediately to the CRC phase
                         when opcode_get_status |
                              opcode_reset |
+                             opcode_get_pc |
                              opcode_get_flash_c =>
                             v.state := crc;
                         -- Config register opcodes, get and set
@@ -255,7 +266,7 @@ begin
             -- finished. Muxes elsewhere should direct this datat to appropriate buffers
             when parse_data =>
                 v.hdr_idx := 0;
-                if data_from_host.valid then
+                if data_from_host.valid and data_from_host.ready then
                     v.rem_data_bytes := r.rem_data_bytes - 1;
                 end if;
                 if v.rem_data_bytes = 0 then

@@ -4,8 +4,12 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
---! Bus master model based on ST's RM0433
---! figures 115 and 116
+-- This package contains types and helper functions for building testbenches
+-- around the espi protocol. Functions and procedures in this block are "generic"
+-- in that they can be used for testing the espi block by either the qspi VC or
+-- via the in-band registers and FIFO interface.
+-- These pieces are used to build the payload shifted over the espi VC or out
+-- the debug FIFOs.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -17,14 +21,29 @@ library vunit_lib;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
+library osvvm;
+    use osvvm.RandomPkg.all;
+
 use work.espi_protocol_pkg.all;
 
 package espi_tb_pkg is
+
+    shared variable rnd : RandomPType;
+
+    -- AXI-Lite bus handle for the axi master in the testbench
+    constant bus_handle : bus_master_t := new_bus(data_length => 32,
+    address_length => 8);
+
+    -- Represent a "command" as a queue of bytes and a size
+    -- annoyingly VUnit's queue method does not have a proper way
+    -- of getting the size of the queue in terms of "entries"
     type cmd_t is record
         queue : queue_t;
         num_bytes: natural range 0 to 2047;
     end record;
 
+    -- Represent a "response" as a queue of bytes and a size
+    -- with some of the common stuff broken out
     type resp_t is record
         queue : queue_t;
         num_bytes: natural range 0 to 2047;
@@ -32,11 +51,11 @@ package espi_tb_pkg is
         status : std_logic_vector(15 downto 0);
         crc_ok : boolean;
     end record;
-
-    constant bus_handle : bus_master_t := new_bus(data_length => 32,
-                                                  address_length => 8);
     
+    -- This is a helper function to build the CRC byte for a given queue
+    -- Non-destructive to the input queue due to an internal copy.
     impure function crc8(data: queue_t) return std_logic_vector;
+
     -- These functions build the command bytes into a queue and
     -- returns the queue and the number of bytes in the queue
     -- for additional processing in the testbench such as
@@ -47,8 +66,12 @@ package espi_tb_pkg is
                                          constant data : std_logic_vector) return cmd_t;
     impure function build_put_flash_np_cmd(constant address : in std_logic_vector(31 downto 0);
                                            constant num_bytes: integer) return cmd_t;
+    impure function build_put_uart_data_cmd(constant payload : queue_t) return cmd_t;
+    impure function build_get_uart_data_cmd return cmd_t;
     -- Need procedures to build expected responses
     impure function check_queue_crc (data: queue_t) return boolean;
+
+    impure function build_rand_byte_queue(constant size: natural) return queue_t;
 
 end package;
 
@@ -190,6 +213,65 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(address(15 downto 8)));
         push_byte(cmd.queue, to_integer(address(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 4;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_put_uart_data_cmd(
+        constant payload : queue_t
+    ) return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+        variable payload_copy : queue_t := copy(payload);
+        variable input_queue_entries : natural;
+        variable msg_length : std_logic_vector(11 downto 0);
+    begin
+        -- OPCODE_PUT_PC (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_put_pc));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- cycle type (1 byte) -- message with data
+        push_byte(cmd.queue, to_integer(message_with_data));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- annoying vunit queue limitation: we don't know the number of entries
+        -- by reverse engineering the queue you find that each push_byte results in
+        -- 2 bytes in the queue so we can use that information. Unclear if this is
+        -- guaranteed to be stable in VUnit. The alternative here would be copying
+        -- the input queue and popping bytes until empty to get the size.
+        input_queue_entries := length(payload) / 2;
+        msg_length := To_Std_Logic_Vector(input_queue_entries, 12);
+        -- tag/length high
+        push_byte(cmd.queue, to_integer(X"0" & msg_length(11 downto 8)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- length low
+        push_byte(cmd.queue, to_integer(msg_length(7 downto 0)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- payload
+        while not is_empty(payload_copy) loop
+            push_byte(cmd.queue, pop_byte(payload_copy));
+            cmd.num_bytes := cmd.num_bytes + 1;
+        end loop;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_rand_byte_queue(constant size: natural) return queue_t is
+        variable q : queue_t := new_queue;
+    begin
+        for i in 0 to size - 1 loop
+            push_byte(q, rnd.RandInt(255));
+        end loop;
+        return q;
+    end function;
+
+    impure function build_get_uart_data_cmd return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        -- OPCODE_GET_PC (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_get_pc));
+        cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
         push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;

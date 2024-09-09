@@ -38,7 +38,7 @@ addrmap espi_regs {
     } control;
 
     reg {
-        name = "Fifo Status Register";
+        name = "Status Register";
         desc = "";
 
         field {

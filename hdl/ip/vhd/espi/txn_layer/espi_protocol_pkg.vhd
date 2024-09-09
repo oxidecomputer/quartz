@@ -47,6 +47,8 @@ package espi_protocol_pkg is
     constant flash_write : std_logic_vector(7 downto 0) := "00000001";
     constant flash_erase : std_logic_vector(7 downto 0) := "00000010";
 
+    constant message_with_data : std_logic_vector(7 downto 0) := "00010001";
+
     -- Header Indices for general eSPI packages
     constant cycle_type_idx : integer := 0;
     constant tag_len_idx : integer    := 1;

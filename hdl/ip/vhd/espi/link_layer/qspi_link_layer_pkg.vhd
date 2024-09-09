@@ -71,6 +71,7 @@ package qspi_link_layer_pkg is
         size: fifo_wr;
         rdstatus: fifo_status;
         enabled: boolean;
+        alert_pending: std_logic;
         busy: std_logic;
     end record;
 
@@ -81,6 +82,7 @@ package qspi_link_layer_pkg is
         size: view fifo_wr_source;
         rdstatus: view fifo_status_sink;
         enabled: out;
+        alert_pending : in;
         busy: in;
     end view;
     alias dbg_periph_if is dbg_regs_if'converse;
