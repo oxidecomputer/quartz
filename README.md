@@ -96,7 +96,11 @@ but if you want to see a list of all available buck2 targets you can do: `buck2 
 To run a simulation, pick one of the testbench targets and `buck2 run <target>` you may do
 `-- <vunit args>` if you need to pass arguments into VUnit.
 
-## VHDL editor environment
+## multitool
+multitool is a collection of quality of live utilities built in-tree for regular use, but whose
+function is small enough to not warrant a self-contained project.
+
+### lsp file generation
 There is basic support for generating vhdl_ls.toml files from the BUCK files.  This is tested and
 is working with the https://github.com/VHDL-LS/rust_hdl_vscode vscode extension.
 
@@ -106,17 +110,16 @@ editor hook do this and have it be a little more standalone.
 you can now do the following:
 `buck2 run //tools/multitool:multitool -- lsp-toml`
 
-which is a pure-python equivalent to doing this:
-
-`buck2 bxl //tools/vhdl-ls.bxl:vhdl_ls_toml_gen | convfmt -f json -t toml > vhdl_ls.toml`
-
 The vunit sources are not currently enumerated in BUCK files as their installation
 location can vary, but multitool -- lsp-toml now attempts to discover an add these
 so a .vhdl_ls.toml in your home directory is no longer required or recommended.
 
-An example of the home-directory .vhdl_ls.toml can be found [here](docs/README.md)
+### testbench boilerplate generation
+This generates some basic testbench and test harness boiler plate with some basic 
+assumptions built in, but once generated you can modify as needed for your project
+`buck2 run //tools/multitool:multitool -- tb-gen --name <testbench_name> --path <path to sims folder>`
 
-## VHDL "auto" formatter
+### VHDL "auto" formatter
 We're using [vhdl-style-guide](https://vhdl-style-guide.readthedocs.io/) to provide
 consistent formatting. Our custom ruleset is in the repo root (vsg_config.json) and we provide a wrapper to run this tool against all of our 1st-party VHDL code.
 You can run `buck2 run //tools/multitool:multitool -- format` to auto-format our code 
