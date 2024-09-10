@@ -36,7 +36,7 @@ begin
         -- Reach into the test harness, which generates and de-asserts reset and hold the
         -- test cases off until we're out of reset. This runs for every test case
         wait until reset = '0';
-        wait for 500 ns;  -- let the resets propagate
+        wait for {{project.reset_delay}};  -- let the resets propagate
 
         while test_suite loop
             if run("") then
