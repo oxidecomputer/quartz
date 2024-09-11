@@ -12,25 +12,27 @@ package I2CPeripheralModel;
 
 import Connectable::*;
 import ConfigReg::*;
+import Countdown::*;
 import FIFO::*;
 import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
 import Bidirection::*;
+import Strobe::*;
 
 import I2CCommon::*;
 
 
 interface I2CPeripheralModel;
+    method Bit#(1) scl_o;
     method Action scl_i(Bit#(1) scl_i_next);
     method Bit#(1) sda_o;
-    method Action sda_i_en(Bit#(1) sda_i_en);
     method Action sda_i(Bit#(1) sda_i_next);
 
-    interface Put#(ModelEvent) send;
     interface Get#(ModelEvent) receive;
     method Action nack_next();
+    method Action stretch_next(Bool timeout);
 endinterface
 
 typedef union tagged {
@@ -51,7 +53,8 @@ typedef enum {
     TransmitByte        = 3,
     ReceiveAck          = 4,
     TransmitAck         = 5,
-    AwaitStop           = 6
+    AwaitStop           = 6,
+    SclStretch          = 7
 } ModelState deriving (Eq, Bits, FShow);
 
 /*
@@ -59,9 +62,16 @@ typedef enum {
 
     I2C address assigned at instantiation (i2c_address)
 */
-module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
+module mkI2CPeripheralModel #(Bit#(7) i2c_address,
+                            Integer core_clk_period_ns,
+                            Integer max_scl_stretch_us) 
+                        (I2CPeripheralModel);
     // The peripheral's 7-bit I2C address
     Reg#(Bit#(7)) peripheral_address    <- mkReg(i2c_address);
+
+    // calculate number of ticks until we generate an error
+    // ex: 500 us * 1000 / 20 ns = 25000
+    Integer scl_stretch_limit = max_scl_stretch_us * 1000 / core_clk_period_ns;
 
     // The register map
     Reg#(Vector#(256, Bit#(8))) memory_map <- mkReg(map(fromInteger, genVector()));
@@ -70,9 +80,9 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
     FIFO#(ModelEvent) outgoing_events    <- mkFIFO1();
 
     Reg#(Bit#(1)) sda_out       <- mkReg(1);
-    Reg#(Bit#(1)) sda_in_en     <- mkReg(1);
     Reg#(Bit#(1)) sda_in        <- mkReg(1);
     Reg#(Bit#(1)) sda_prev      <- mkReg(1);
+    Reg#(Bit#(1)) scl_out       <- mkReg(1);
     Reg#(Bit#(1)) scl_in        <- mkReg(1);
     Reg#(Bit#(1)) scl_in_prev   <- mkReg(1);
     PulseWire scl_redge         <- mkPulseWire();
@@ -96,6 +106,9 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
     Reg#(Bool) do_write         <- mkReg(False);
     Reg#(Bool) nack_next_       <- mkReg(False);
 
+    Countdown#(16) scl_stretch_countdown    <- mkCountdownBy1();
+    Reg#(Bool) countdown_reset  <- mkReg(False);
+    Reg#(Bool) back_to_rx  <- mkReg(False);
 
     (* fire_when_enabled *)
     rule do_detect_scl_fedge;
@@ -125,6 +138,17 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
     (* fire_when_enabled *)
     rule do_detect_stop(scl_in == 1 && sda_redge);
         stop_detected.send();
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_countdown_reset(!countdown_reset);
+        countdown_reset <= True;
+        scl_stretch_countdown <= 0;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_scl_stretch_tick(state == SclStretch && scl_in == 1);
+        scl_stretch_countdown.send();
     endrule
 
     (* fire_when_enabled *)
@@ -167,7 +191,6 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
 
     (* fire_when_enabled *)
     rule do_receive_byte (state == ReceiveByte);
-
         if (stop_detected) begin
             state <= AwaitStartByte;
             outgoing_events.enq(tagged ReceivedStop);
@@ -182,33 +205,41 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
                 end
             endcase
         end else begin
-            case (last(shift_bits)) matches
-                tagged Valid .bit_: begin
-                    state       <= TransmitAck;
-                    outgoing_events.enq(tagged ReceivedData pack(map(bit_from_maybe, shift_bits)));
+            if (scl_stretch_countdown.count() > 0) begin
+                state <= SclStretch;
+                back_to_rx  <= True;
+            end else begin
+                case (last(shift_bits)) matches
+                    tagged Valid .bit_: begin
+                        state       <= TransmitAck;
+                        outgoing_events.enq(tagged ReceivedData pack(map(bit_from_maybe, shift_bits)));
 
-                    if (!addr_set) begin
-                        addr_set    <= True;
-                        cur_addr    <= unpack(pack(map(bit_from_maybe, shift_bits)));
-                    end else if (!is_read) begin
-                        let wdata        = pack(map(bit_from_maybe, shift_bits));
-                        cur_data        <= wdata;
-                        is_sequential   <= True;
-                        if (is_sequential) begin
-                            cur_addr                    <= cur_addr + 1;
-                            memory_map[cur_addr + 1]    <= wdata;
-                        end else begin
-                            memory_map[cur_addr]        <= wdata;
+                        if (!addr_set) begin
+                            addr_set    <= True;
+                            cur_addr    <= unpack(pack(map(bit_from_maybe, shift_bits)));
+                        end else if (!is_read) begin
+                            let wdata        = pack(map(bit_from_maybe, shift_bits));
+                            cur_data        <= wdata;
+                            is_sequential   <= True;
+                            if (is_sequential) begin
+                                cur_addr                    <= cur_addr + 1;
+                                memory_map[cur_addr + 1]    <= wdata;
+                            end else begin
+                                memory_map[cur_addr]        <= wdata;
+                            end
                         end
                     end
-                end
-            endcase
+                endcase
+            end
         end
     endrule
 
     (* fire_when_enabled *)
     rule do_transmit_byte (state == TransmitByte);
-        if (scl_in_fedge) begin
+        if (scl_stretch_countdown.count() > 0) begin
+            state <= SclStretch;
+            back_to_rx <= False;
+        end else if (scl_in_fedge) begin
             case (last(shift_bits)) matches
                 tagged Valid .bit_: begin
                     sda_out <= bit_;
@@ -254,8 +285,22 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
                 state       <= TransmitByte;
             end else begin
                 shift_bits  <= shift_bits_reset;
-                state       <= ReceiveByte;
+                state <= ReceiveByte;
             end
+        end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_scl_stretch (state == SclStretch);
+        if (scl_stretch_countdown) begin
+            scl_out <= 1;
+            if (back_to_rx) begin
+                state   <= ReceiveByte;
+            end else begin
+                state   <= TransmitByte;
+            end
+        end else begin
+            scl_out <= 0;
         end
     endrule
 
@@ -274,26 +319,40 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address) (I2CPeripheralModel);
         end
     endmethod
 
+    method Bit#(1) scl_o();
+        return scl_out;
+    endmethod
+
     method Action sda_i(Bit#(1) sda_i_next) = sda_in._write(sda_i_next);
 
-    method Action sda_i_en(Bit#(1) sda_i_en_next) = sda_in_en._write(sda_i_en_next);
-
     method Bit#(1) sda_o();
-        return sda_out & ~sda_in_en;
+        return sda_out;
     endmethod
 
     method Action nack_next();
         nack_next_ <= True;
     endmethod
 
+    method Action stretch_next(Bool timeout) if (countdown_reset);
+        if (timeout) begin
+            scl_stretch_countdown <= fromInteger(scl_stretch_limit + 1);
+        end else begin
+            // With all the variance there can be with how the controller logic
+            // is wired relative to this peripheral model just lop off a chunk
+            // of time to make sure we don't mistakenly timeout.
+            scl_stretch_countdown <= fromInteger(scl_stretch_limit - 20);
+        end
+    endmethod
+
     interface Get receive = toGet(outgoing_events);
 endmodule
 
+/// Connectable instantiation to connect the model to an I2C interface.
 instance Connectable#(Pins, I2CPeripheralModel);
     module mkConnection #(Pins pins, I2CPeripheralModel model) (Empty);
         mkConnection(pins.scl.out, model.scl_i);
+        mkConnection(pins.scl.in, model.scl_o);
         mkConnection(pins.sda.out, model.sda_i);
-        mkConnection(pack(pins.sda.out_en), model.sda_i_en);
         mkConnection(pins.sda.in, model.sda_o);
     endmodule
 endinstance

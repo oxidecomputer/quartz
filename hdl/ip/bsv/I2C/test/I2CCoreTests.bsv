@@ -40,15 +40,41 @@ function Action check_byte(I2CCore dut, Bit#(8) expected, String message) =
         dynamicAssert(rdata == expected, message);
     endaction;
 
+typedef struct {
+    Command cmd;
+    Bool stretch_clk_valid;
+    Bool stretch_clk_invalid;
+} TestCommand deriving (Bits, Eq, FShow);
+
+instance DefaultValue #(TestCommand);
+    defaultValue = TestCommand {
+        cmd: Command {
+            op: Read,
+            i2c_addr: 7'h7f,
+            reg_addr: 8'hff,
+            num_bytes: 8'h00
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
+    };
+endinstance
+
 interface Bench;
-    method Action command (Command cmd);
+    method Action command (TestCommand cmd);
     method Bool busy();
+    method Bool stretching_seen();
+    method Bool stretching_timeout();
 endinterface
 
 module mkBench (Bench);
     // Crate a core and a peripheral model, wire them together
-    I2CCore dut                 <- mkI2CCore(test_params.core_clk_freq, test_params.scl_freq);
-    I2CPeripheralModel periph   <- mkI2CPeripheralModel(test_params.peripheral_addr);
+    I2CCore dut                 <- mkI2CCore(test_params.core_clk_freq_hz,
+                                            test_params.scl_freq_hz,
+                                            test_params.core_clk_period_ns,
+                                            test_params.max_scl_stretch_us);
+    I2CPeripheralModel periph   <- mkI2CPeripheralModel(test_params.peripheral_addr,
+                                            test_params.core_clk_period_ns,
+                                            test_params.max_scl_stretch_us);
 
     mkConnection(dut.pins, periph);
 
@@ -132,18 +158,32 @@ module mkBench (Bench);
         bytes_done  <= 0;
     endseq, command_r.op == RandomRead);
 
-    method busy = !write_seq.done() || !read_seq.done() || !rand_read_seq.done() || new_command;
+    rule do_handle_stretch_timeout(dut.scl_stretch_timeout);
+        write_seq.abort();
+        read_seq.abort();
+        rand_read_seq.abort();
+    endrule
 
-    method Action command(Command cmd) if (write_seq.done() && read_seq.done() && rand_read_seq.done());
-        command_r   <= cmd;
+    method busy = !write_seq.done() || !read_seq.done() || !rand_read_seq.done() || new_command;
+    method stretching_seen = dut.scl_stretch_seen;
+    method stretching_timeout = dut.scl_stretch_timeout;
+
+    method Action command(TestCommand c) if (write_seq.done() && read_seq.done() && rand_read_seq.done());
+        command_r   <= c.cmd;
         new_command.send();
 
-        if (cmd.op == Write) begin
+        if (c.cmd.op == Write) begin
             write_seq.start();
-        end else if (cmd.op == Read) begin
+        end else if (c.cmd.op == Read) begin
             read_seq.start();
         end else begin
             rand_read_seq.start();
+        end
+
+        if (c.stretch_clk_valid) begin
+            periph.stretch_next(False);
+        end else if (c.stretch_clk_invalid) begin
+            periph.stretch_next(True);
         end
     endmethod
 endmodule
@@ -151,17 +191,22 @@ endmodule
 module mkI2CCoreOneByteWriteTest (Empty);
     Bench bench <- mkBench();
 
-    Command cmd = Command {
-        op: Write,
-        i2c_addr: test_params.peripheral_addr,
-        reg_addr: 8'hA5,
-        num_bytes: 1
+    TestCommand cmd = TestCommand {
+        cmd: Command {
+            op: Write,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 1
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
         delay(200);
         bench.command(cmd);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have seen SCL stretching");
         delay(200);
     endseq);
 endmodule
@@ -169,17 +214,22 @@ endmodule
 module mkI2CCoreOneByteReadTest (Empty);
     Bench bench <- mkBench();
 
-    Command read_cmd = Command {
-        op: Read,
-        i2c_addr: test_params.peripheral_addr,
-        reg_addr: 8'hA5,
-        num_bytes: 1
+    TestCommand read_cmd = TestCommand {
+        cmd: Command {
+            op: Read,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 1
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
         delay(200);
         bench.command(read_cmd);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have seen SCL stretching");
         delay(200);
     endseq);
 endmodule
@@ -187,17 +237,22 @@ endmodule
 module mkI2CCoreSequentialWriteTest (Empty);
     Bench bench <- mkBench();
 
-    Command cmd = Command {
-        op: Write,
-        i2c_addr: test_params.peripheral_addr,
-        reg_addr: 8'h5A,
-        num_bytes: 128
+    TestCommand cmd = TestCommand {
+        cmd: Command {
+            op: Write,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'h5A,
+            num_bytes: 128
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
         delay(200);
         bench.command(cmd);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have seen SCL stretching");
         delay(200);
     endseq);
 endmodule
@@ -205,17 +260,22 @@ endmodule
 module mkI2CCoreSequentialReadTest (Empty);
     Bench bench <- mkBench();
 
-    Command read_cmd = Command {
-        op: Read,
-        i2c_addr: test_params.peripheral_addr,
-        reg_addr: 8'h00,
-        num_bytes: 128
+    TestCommand read_cmd = TestCommand {
+        cmd: Command {
+            op: Read,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'h00,
+            num_bytes: 128
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
         delay(200);
         bench.command(read_cmd);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have seen SCL stretching");
         delay(200);
     endseq);
 endmodule
@@ -223,18 +283,26 @@ endmodule
 module mkI2CCoreRandomReadTest (Empty);
     Bench bench <- mkBench();
 
-    Command write_cmd = Command {
-        op: Write,
-        i2c_addr: test_params.peripheral_addr,
-        reg_addr: 8'hA5,
-        num_bytes: 8
+    TestCommand write_cmd = TestCommand {
+        cmd: Command {
+            op: Write,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 8
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
-    Command rand_read_cmd = Command {
-        op: RandomRead,
-        i2c_addr: test_params.peripheral_addr,
-        reg_addr: 8'hA5,
-        num_bytes: 8
+    TestCommand rand_read_cmd = TestCommand {
+        cmd: Command {
+            op: RandomRead,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 8
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
@@ -242,6 +310,67 @@ module mkI2CCoreRandomReadTest (Empty);
         bench.command(write_cmd);
         bench.command(rand_read_cmd);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have seen SCL stretching");
+        delay(200);
+    endseq);
+endmodule
+
+module mkI2CCoreSclStretchTest (Empty);
+    Bench bench <- mkBench();
+
+    TestCommand write_cmd = TestCommand {
+        cmd: Command {
+            op: Write,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 1
+        },
+        stretch_clk_valid: True,
+        stretch_clk_invalid: False
+    };
+
+    TestCommand read_cmd = TestCommand {
+        cmd: Command {
+            op: RandomRead,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 1
+        },
+        stretch_clk_valid: True,
+        stretch_clk_invalid: False
+    };
+
+    mkAutoFSM(seq
+        delay(200);
+        bench.command(write_cmd);
+        bench.command(read_cmd);
+        await(!bench.busy());
+        dynamicAssert(bench.stretching_seen, "Should have seen SCL stretching");
+        dynamicAssert(!bench.stretching_timeout, "Should not have seen a SCL timeout");
+        delay(200);
+    endseq);
+endmodule
+
+module mkI2CCoreSclStretchTimeoutTest (Empty);
+    Bench bench <- mkBench();
+
+    TestCommand read_cmd = TestCommand {
+        cmd: Command {
+            op: RandomRead,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'hA5,
+            num_bytes: 1
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: True
+    };
+
+    mkAutoFSM(seq
+        delay(200);
+        bench.command(read_cmd);
+        await(!bench.busy());
+        dynamicAssert(bench.stretching_seen, "Should have seen SCL stretching");
+        dynamicAssert(bench.stretching_timeout, "Should have seen a SCL timeout");
         delay(200);
     endseq);
 endmodule

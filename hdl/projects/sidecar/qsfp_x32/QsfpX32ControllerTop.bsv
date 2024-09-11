@@ -777,14 +777,14 @@ module mkQsfpX32ControllerTop (QsfpControllerTop);
     method Bit#(1) fpga_to_leds0_oe_l       = ~led_oe;
     method fpga_app_id_r                    = sync(fpga_app_id);
     method Bit#(8) debug_fpga_io            = {
-                        1'b0,   // Bit 7, J31 pin 10
-                        1'b0,   // Bit 6, J31 pin 9
-                        1'b0,   // Bit 5, J31 pin 8
-                        1'b0,   // Bit 4, J31 pin 7
-                        1'b0,   // Bit 3, J31 pin 4
-                        1'b0,   // Bit 2, J31 pin 3
-                        1'b0,   // Bit 1, J31 pin 2
-                        1'b0};  // Bit 0, J31 pin 1
+                        qsfp3_sda._read,   // Bit 7, J31 pin 10
+                        qsfp3_scl._read,   // Bit 6, J31 pin 9
+                        qsfp2_sda._read,   // Bit 5, J31 pin 8
+                        qsfp2_scl._read,   // Bit 4, J31 pin 7
+                        qsfp1_sda._read,   // Bit 3, J31 pin 4
+                        qsfp1_scl._read,   // Bit 2, J31 pin 3
+                        qsfp0_sda._read,   // Bit 1, J31 pin 2
+                        qsfp0_scl._read};  // Bit 0, J31 pin 1
     method fpga_board_ver                   = sync(fpga_board_ver_in);
 endmodule
 

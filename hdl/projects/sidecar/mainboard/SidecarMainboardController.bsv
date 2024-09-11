@@ -32,11 +32,13 @@ import TofinoDebugPort::*;
 
 typedef struct {
     Integer system_frequency_hz;
+    Integer system_period_ns;
     Integer clock_generator_power_good_timeout;
     Integer vsc7448_power_good_timeout;
     Integer front_io_power_good_timeout;
     Bit#(7) tofino_i2c_address;
     Integer tofino_i2c_frequency_hz;
+    Integer tofino_i2c_stretch_timeout_us;
     Tofino2Sequencer::Parameters tofino_sequencer;
 } Parameters;
 
@@ -44,6 +46,7 @@ instance DefaultValue#(Parameters);
     defaultValue =
         Parameters {
             system_frequency_hz: 50_000_000,
+            system_period_ns: 20,
             clock_generator_power_good_timeout: 10,
             vsc7448_power_good_timeout: 10,
             // The EN->PG time of the front IO hot swap controller was
@@ -53,6 +56,10 @@ instance DefaultValue#(Parameters);
             front_io_power_good_timeout: 75,
             tofino_i2c_address: 7'b1011_011, // 5Bh
             tofino_i2c_frequency_hz: 100_000,
+            // The Tofino has not been observed to clock stretch, but we need a
+            // value to give the I2CCore connected to the debug port. Choosing
+            // 1 ms arbitrarily.
+            tofino_i2c_stretch_timeout_us: 1000,
             tofino_sequencer: defaultValue};
 endinstance
 
@@ -127,8 +134,10 @@ module mkMainboardController #(Parameters parameters)
     TofinoDebugPort tofino_debug_port <-
         mkTofinoDebugPort(
             parameters.system_frequency_hz,
+            parameters.system_period_ns,
             parameters.tofino_i2c_frequency_hz,
-            parameters.tofino_i2c_address);
+            parameters.tofino_i2c_address,
+            parameters.tofino_i2c_stretch_timeout_us);
 
     //
     // VSC7748 sequencer

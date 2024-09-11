@@ -23,15 +23,19 @@ function Bit#(1) bit_from_maybe(Maybe#(Bit#(1)) b) = fromMaybe(0, b);
 
 // Common code for tests
 typedef struct {
-    Integer core_clk_freq;
-    Integer scl_freq;
+    Integer core_clk_freq_hz;
+    Integer scl_freq_hz;
+    Integer core_clk_period_ns;
+    Integer max_scl_stretch_us;
     Bit#(7) peripheral_addr;
 } I2CTestParams;
 
 instance DefaultValue #(I2CTestParams);
     defaultValue = I2CTestParams {
-        core_clk_freq: 50_000,
-        scl_freq: 100,
+        core_clk_freq_hz: 50_000_000,
+        scl_freq_hz: 100_000,
+        core_clk_period_ns: 20,
+        max_scl_stretch_us: 5,
         peripheral_addr: 7'b1010110
     };
 endinstance

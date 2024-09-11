@@ -29,10 +29,12 @@ import QsfpX32ControllerRegsPkg::*;
 I2CTestParams i2c_test_params = defaultValue;
 QsfpModuleController::Parameters qsfp_test_params =
     QsfpModuleController::Parameters {
-        system_frequency_hz: i2c_test_params.core_clk_freq,
-        i2c_frequency_hz: i2c_test_params.scl_freq,
+        system_frequency_hz: i2c_test_params.core_clk_freq_hz,
+        core_clk_period_ns: i2c_test_params.core_clk_period_ns,
+        i2c_frequency_hz: i2c_test_params.scl_freq_hz,
         power_good_timeout_ms: 10,
-        t_init_ms: 20 // normally 2000, but sped up for simulation
+        t_init_ms: 20, // normally 2000, but sped up for simulation
+        t_clock_hold_us: i2c_test_params.max_scl_stretch_us
     };
 
 // Helper function to unpack the Value from an ActionValue and do an assertion.
@@ -51,7 +53,7 @@ interface Bench;
     interface Registers registers;
 
     // Handle starting the next I2C transaction
-    method Action command (Command cmd);
+    method Action command (Command cmd, Bool stretch_valid, Bool stretch_timeout);
 
     // A way to expose if the I2C read/write is finished
     method Bool i2c_busy();
@@ -121,10 +123,15 @@ module mkBench (Bench);
     mkConnection(tick_1khz._read, controller.tick_1ms);
 
     // Instantiate a simple I2C model to act as the faux module target
-    I2CPeripheralModel periph   <- mkI2CPeripheralModel(i2c_test_params.peripheral_addr);
+    I2CPeripheralModel periph   <-
+        mkI2CPeripheralModel(i2c_test_params.peripheral_addr,
+                        qsfp_test_params.core_clk_period_ns,
+                        qsfp_test_params.t_clock_hold_us);
+
+    // Connect I2C busses since TriStates cannot be simulated
     mkConnection(controller.pins.scl.out, periph.scl_i);
+    mkConnection(controller.pins.scl.in, periph.scl_o);
     mkConnection(controller.pins.sda.out, periph.sda_i);
-    mkConnection(pack(controller.pins.sda.out_en), periph.sda_i_en);
     mkConnection(controller.pins.sda.in, periph.sda_o);
 
     // Used to make dummy data for the DUT to pull from
@@ -199,11 +206,17 @@ module mkBench (Bench);
         endseq
     endseq, command_r.op == Read);
 
+    rule do_handle_stretch_timeout(unpack(controller.registers.port_status.error[2:0]) == I2cSclStretchTimeout);
+        write_seq.abort();
+        read_seq.abort();
+    endrule
+
     interface registers = controller.registers;
 
     method i2c_busy = !write_seq.done() || !read_seq.done() || new_command;
 
-    method Action command(Command cmd) if (write_seq.done() && read_seq.done());
+    method Action command(Command cmd, Bool stretch_valid, Bool stretch_timeout)
+                        if (write_seq.done() && read_seq.done());
         command_r   <= cmd;
         new_command.send();
 
@@ -211,6 +224,12 @@ module mkBench (Bench);
             write_seq.start();
         end else if (cmd.op == Read) begin
             read_seq.start();
+        end
+
+        if (stretch_valid) begin
+            periph.stretch_next(False);
+        end else if (stretch_timeout) begin
+            periph.stretch_next(True);
         end
     endmethod
 
@@ -302,7 +321,7 @@ module mkNoModuleTest (Empty);
                 i2c_addr: i2c_test_params.peripheral_addr,
                 reg_addr: 8'h00,
                 num_bytes: 1
-            });
+            }, False, False);
         delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoModule,
@@ -328,7 +347,7 @@ module mkNoPowerTest (Empty);
                 i2c_addr: i2c_test_params.peripheral_addr,
                 reg_addr: 8'h00,
                 num_bytes: 1
-            });
+            }, False, False);
         delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoPower,
@@ -354,7 +373,7 @@ module mkRemovePowerEnableTest (Empty);
                 i2c_addr: i2c_test_params.peripheral_addr,
                 reg_addr: 8'h00,
                 num_bytes: 1
-            });
+            }, False, False);
         delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
@@ -386,7 +405,7 @@ module mkPowerGoodTimeoutTest (Empty);
                 i2c_addr: i2c_test_params.peripheral_addr,
                 reg_addr: 8'h00,
                 num_bytes: 1
-            });
+            }, False, False);
         delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             PowerFault,
@@ -413,7 +432,7 @@ module mkPowerGoodLostTest (Empty);
                 i2c_addr: i2c_test_params.peripheral_addr,
                 reg_addr: 8'h00,
                 num_bytes: 1
-            });
+            }, False, False);
         delay(5);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             PowerFault,
@@ -438,8 +457,11 @@ module mkI2CReadTest (Empty);
     mkAutoFSM(seq
         delay(5);
         add_and_initialize_module(bench);
-        bench.command(read_cmd);
+        bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            False,
+            "Should not have observed and SCL stretching.");
         delay(5);
     endseq);
 endmodule
@@ -460,8 +482,11 @@ module mkI2CWriteTest (Empty);
     mkAutoFSM(seq
         delay(5);
         add_and_initialize_module(bench);
-        bench.command(write_cmd);
+        bench.command(write_cmd, False, False);
         await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            False,
+            "Should not have observed and SCL stretching.");
         delay(5);
     endseq);
 endmodule
@@ -488,7 +513,7 @@ module mkInitializationTest (Empty);
         delay(5);
         insert_and_power_module(bench);
         bench.set_resetl(1);
-        bench.command(read_cmd);
+        bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
@@ -496,7 +521,7 @@ module mkInitializationTest (Empty);
             "NotInitialized error should be present when attempting to communicate before t_init has elapsed.");
 
         deassert_reset_and_await_init(bench);
-        bench.command(read_cmd);
+        bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
@@ -504,7 +529,7 @@ module mkInitializationTest (Empty);
             "NoError should be present when attempting to communicate after t_init has elapsed.");
 
         bench.set_resetl(0);
-        bench.command(read_cmd);
+        bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
@@ -531,7 +556,7 @@ module mkUninitializationAfterRemovalTest (Empty);
 
     mkAutoFSM(seq
         add_and_initialize_module(bench);
-        bench.command(read_cmd);
+        bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
@@ -543,7 +568,7 @@ module mkUninitializationAfterRemovalTest (Empty);
         bench.set_modprsl(0);
         await(bench.modprsl == 0);
         delay(3); // wait a few cycles for power to re-enable
-        bench.command(read_cmd);
+        bench.command(read_cmd, False, False);
 
         await(!bench.i2c_busy());
         delay(3);
@@ -610,6 +635,64 @@ module mkModPrsLTest (Empty);
         bench.set_modprsl(0);
         await(bench.modprsl == 0);
         assert_not_set(bench.modprsl, "ModPrsL should be low after debounce");
+    endseq);
+endmodule
+
+// mkI2CSclStretchTest
+//
+// This test reads an entire page 8 bytes of module memory and the module will
+// stretch SCL.
+module mkI2CSclStretchTest (Empty);
+    Bench bench <- mkBench();
+
+    Command read_cmd = Command {
+        op: Read,
+        i2c_addr: i2c_test_params.peripheral_addr,
+        reg_addr: 8'h00,
+        num_bytes: 8
+    };
+
+    mkAutoFSM(seq
+        delay(5);
+        add_and_initialize_module(bench);
+        bench.command(read_cmd, True, False);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            True,
+            "Should have observed and SCL stretching.");
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            NoError,
+            "NoError should be present when a transaction completed successfully.");
+        delay(5);
+    endseq);
+endmodule
+
+// mkI2CSclStretchTimeoutTest
+//
+// This test reads an entire page 8 bytes of module memory and the module will
+// stretch SCL for too long and the I2C core should timeout.
+module mkI2CSclStretchTimeoutTest (Empty);
+    Bench bench <- mkBench();
+
+    Command read_cmd = Command {
+        op: Read,
+        i2c_addr: i2c_test_params.peripheral_addr,
+        reg_addr: 8'h00,
+        num_bytes: 8
+    };
+
+    mkAutoFSM(seq
+        delay(5);
+        add_and_initialize_module(bench);
+        bench.command(read_cmd, False, True);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            True,
+            "Should have observed and SCL stretching.");
+        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+            I2cSclStretchTimeout,
+            "I2cSclStretchTimeout error should be present when a module stretching SCL too long.");
+        delay(5);
     endseq);
 endmodule
 

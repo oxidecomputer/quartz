@@ -166,6 +166,8 @@ bluesim_tests('QsfpModuleControllerTests',
         'mkI2CWriteTest',
         'mkInitializationTest',
         'mkUninitializationAfterRemovalTest',
+        'mkI2CSclStretchTimeoutTest',
+        'mkI2CSclStretchTest',
     ],
     deps = [
         '//hdl/ip/bsv:Strobe',

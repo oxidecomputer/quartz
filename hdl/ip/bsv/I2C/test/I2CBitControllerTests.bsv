@@ -33,6 +33,8 @@ typedef struct {
     Bit#(8) register_addr;
     I2CBytes data;
     UInt#(2) read_length;
+    Bool stretch_clk_valid;
+    Bool stretch_clk_invalid;
 } Command deriving (Bits, Eq, FShow);
 
 instance DefaultValue #(Command);
@@ -41,7 +43,9 @@ instance DefaultValue #(Command);
         peripheral_addr: 7'h7F,
         register_addr: 8'hFF,
         data: no_data,
-        read_length: 1
+        read_length: 1,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 endinstance
 
@@ -65,15 +69,19 @@ function Action check_controller_event(I2CBitController controller,
 
 interface Bench;
     method Bool busy();
-
+    method Bool stretching_seen();
+    method Bool stretching_timeout();
     method Action command(Command cmd);
-    method Bool error();
-    method Action clear();
 endinterface
 
 module mkBench (Bench);
-    I2CBitController dut <- mkI2CBitController(test_params.core_clk_freq, test_params.scl_freq);
-    I2CPeripheralModel periph <- mkI2CPeripheralModel(test_params.peripheral_addr);
+    I2CBitController dut <- mkI2CBitController(test_params.core_clk_freq_hz,
+                                            test_params.scl_freq_hz,
+                                            test_params.core_clk_period_ns,
+                                            test_params.max_scl_stretch_us);
+    I2CPeripheralModel periph <- mkI2CPeripheralModel(test_params.peripheral_addr,
+                                            test_params.core_clk_period_ns,
+                                            test_params.max_scl_stretch_us);
 
     mkConnection(dut.pins, periph);
 
@@ -81,6 +89,7 @@ module mkBench (Bench);
     Reg#(Vector#(3,Bit#(8))) prev_written_bytes <- mkReg(replicate(0));
     Reg#(UInt#(2)) bytes_done                   <- mkReg(0);
     Reg#(Bool) is_last_byte                     <- mkReg(False);
+    Reg#(Bool) stretch_timeout                  <- mkReg(False);
 
     FSM write_seq <- mkFSMWithPred(seq
         dut.send.put(tagged Start);
@@ -100,18 +109,18 @@ module mkBench (Bench);
 
         bytes_done <= 0;
         while (command_r.data[0] != tagged Invalid) seq
-                dut.send.put(tagged Write fromMaybe(8'h00, command_r.data[0]));
-                check_peripheral_event(periph, tagged ReceivedData fromMaybe(8'h00, command_r.data[0]), "Expected to receive data that was sent");
-                check_controller_event(dut, tagged Ack, "Expected an ACK on the command");
-                prev_written_bytes[bytes_done]   <= fromMaybe(8'h00, command_r.data[0]);
-                bytes_done                       <= bytes_done + 1;
-                command_r.data                   <= shiftOutFrom0(tagged Invalid, command_r.data, 1);
+            dut.send.put(tagged Write fromMaybe(8'h00, command_r.data[0]));
+
+            check_peripheral_event(periph, tagged ReceivedData fromMaybe(8'h00, command_r.data[0]), "Expected to receive data that was sent");
+            check_controller_event(dut, tagged Ack, "Expected an ACK on the command");
+            prev_written_bytes[bytes_done]   <= fromMaybe(8'h00, command_r.data[0]);
+            bytes_done                       <= bytes_done + 1;
+            command_r.data                   <= shiftOutFrom0(tagged Invalid, command_r.data, 1);
         endseq
 
         dut.send.put(tagged Stop);
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-
-    endseq, command_r.op == Write);
+    endseq, command_r.op == Write && !stretch_timeout);
 
     FSM read_seq <- mkFSMWithPred(seq
         dut.send.put(tagged Start);
@@ -144,8 +153,7 @@ module mkBench (Bench);
 
         dut.send.put(tagged Stop);
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-
-    endseq, command_r.op == Read);
+    endseq, command_r.op == Read && !stretch_timeout);
 
     FSM rnd_read_seq <- mkFSMWithPred(seq
         dut.send.put(tagged Start);
@@ -195,7 +203,13 @@ module mkBench (Bench);
 
         dut.send.put(tagged Stop);
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-    endseq, command_r.op == RandomRead);
+    endseq, command_r.op == RandomRead && !dut.scl_stretch_timeout);
+
+    rule do_handle_stretch_timeout(dut.scl_stretch_timeout);
+        write_seq.abort();
+        read_seq.abort();
+        rnd_read_seq.abort();
+    endrule
 
     method busy = !write_seq.done() || !read_seq.done() || !rnd_read_seq.done();
 
@@ -208,10 +222,16 @@ module mkBench (Bench);
         end else begin
             rnd_read_seq.start();
         end
+
+        if (cmd.stretch_clk_valid) begin
+            periph.stretch_next(False);
+        end else if (cmd.stretch_clk_invalid) begin
+            periph.stretch_next(True);
+        end
     endmethod
 
-    method error = dut.error;
-    method Action clear = dut.clear;
+    method stretching_seen = dut.scl_stretch_seen;
+    method stretching_timeout = dut.scl_stretch_timeout;
 endmodule
 
 module mkI2CBitControlOneByteWriteTest (Empty);
@@ -222,7 +242,9 @@ module mkI2CBitControlOneByteWriteTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hA5,
         data: vec(tagged Valid 8'h3C, tagged Invalid, tagged Invalid),
-        read_length: 0
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
@@ -241,13 +263,16 @@ module mkI2CBitControlSequentialWriteTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'h9D,
         data: vec(tagged Valid 8'hDE, tagged Valid 8'hAD, tagged Valid 8'hBE),
-        read_length: 0
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
         delay(200);
         bench.command(payload);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have observed stretching.");
         delay(200);
     endseq);
 endmodule
@@ -260,7 +285,9 @@ module mkI2CBitControlOneByteReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hA5,
         data: vec(tagged Valid 8'h3C, tagged Invalid, tagged Invalid),
-        read_length: 0
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     Command read = Command {
@@ -268,7 +295,9 @@ module mkI2CBitControlOneByteReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hFF,
         data: no_data,
-        read_length: 1
+        read_length: 1,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
@@ -276,6 +305,7 @@ module mkI2CBitControlOneByteReadTest (Empty);
         bench.command(write_read_addr);
         bench.command(read);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have observed stretching.");
         delay(200);
     endseq);
 endmodule
@@ -288,7 +318,9 @@ module mkI2CBitControlSequentialReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hA5,
         data: vec(tagged Valid 8'hAB, tagged Valid 8'hAD, tagged Valid 8'hBE),
-        read_length: 0
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     Command write_read_addr = Command {
@@ -296,7 +328,9 @@ module mkI2CBitControlSequentialReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hA5,
         data: no_data,
-        read_length: 0
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     Command read = Command {
@@ -304,7 +338,9 @@ module mkI2CBitControlSequentialReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hFF,
         data: no_data,
-        read_length: 3
+        read_length: 3,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
@@ -313,6 +349,7 @@ module mkI2CBitControlSequentialReadTest (Empty);
         bench.command(write_read_addr);
         bench.command(read);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have observed stretching.");
         delay(200);
     endseq);
 endmodule
@@ -325,7 +362,9 @@ module mkI2CBitControlRandomReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hA5,
         data: vec(tagged Valid 8'hAB, tagged Valid 8'hAD, tagged Valid 8'hBE),
-        read_length: 0
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     Command random_read = Command {
@@ -333,7 +372,9 @@ module mkI2CBitControlRandomReadTest (Empty);
         peripheral_addr: test_params.peripheral_addr,
         register_addr: 8'hA5,
         data: no_data,
-        read_length: 3
+        read_length: 3,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
     };
 
     mkAutoFSM(seq
@@ -341,6 +382,75 @@ module mkI2CBitControlRandomReadTest (Empty);
         bench.command(write_data);
         bench.command(random_read);
         await(!bench.busy());
+        dynamicAssert(!bench.stretching_seen, "Should not have observed stretching.");
+        delay(200);
+    endseq);
+endmodule
+
+module mkI2CBitControlSclStretchTest (Empty);
+    Bench bench <- mkBench();
+
+    Command write_data = Command {
+        op: Write,
+        peripheral_addr: test_params.peripheral_addr,
+        register_addr: 8'hA5,
+        data: vec(tagged Valid 8'hAB, tagged Valid 8'hAD, tagged Valid 8'hBE),
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
+    };
+
+    Command random_read_stretch = Command {
+        op: RandomRead,
+        peripheral_addr: test_params.peripheral_addr,
+        register_addr: 8'hA5,
+        data: no_data,
+        read_length: 3,
+        stretch_clk_valid: True,
+        stretch_clk_invalid: False
+    };
+
+    mkAutoFSM(seq
+        delay(200);
+        bench.command(write_data);
+        bench.command(random_read_stretch);
+        await(!bench.busy());
+        dynamicAssert(bench.stretching_seen, "Should have observed stretching.");
+        dynamicAssert(!bench.stretching_timeout, "Should not have observed a stretch timeout.");
+        delay(200);
+    endseq);
+endmodule
+
+module mkI2CBitControlSclStretchTimeoutTest (Empty);
+    Bench bench <- mkBench();
+
+    Command write_data = Command {
+        op: Write,
+        peripheral_addr: test_params.peripheral_addr,
+        register_addr: 8'hA5,
+        data: vec(tagged Valid 8'hAB, tagged Valid 8'hAD, tagged Valid 8'hBE),
+        read_length: 0,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
+    };
+
+    Command random_read_stretch_long = Command {
+        op: RandomRead,
+        peripheral_addr: test_params.peripheral_addr,
+        register_addr: 8'hA5,
+        data: no_data,
+        read_length: 3,
+        stretch_clk_valid: False,
+        stretch_clk_invalid: True
+    };
+
+    mkAutoFSM(seq
+        delay(200);
+        bench.command(write_data);
+        bench.command(random_read_stretch_long);
+        await(!bench.busy());
+        dynamicAssert(bench.stretching_seen, "Should have observed stretching.");
+        dynamicAssert(bench.stretching_timeout, "Should have observed a stretch timeout.");
         delay(200);
     endseq);
 endmodule
