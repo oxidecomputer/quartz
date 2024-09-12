@@ -1,0 +1,28 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "axi_st_uart",
+    srcs = ["base_uart/axi_st_uart.vhd"],
+    deps = [
+        "//hdl/ip/vhd/utilities:calc_pkg",
+        "//hdl/ip/vhd/synchronizers:meta_sync",
+        ],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axi_fifo_uart",
+    srcs = ["fifo_uart/axi_fifo_st_uart.vhd"],
+    deps = [
+        ":axi_st_uart",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
+        ],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "uart_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [":axi_fifo_uart"],
+    visibility = ['PUBLIC'],
+)
