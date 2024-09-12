@@ -132,10 +132,10 @@ begin
             rx_fifo_write => rx_fifo_write8
         );
     -- Hubris spi command intrface
-    hubris_cmd.addr <= std_logic_vector(addr_reg.addr);
-    hubris_cmd.data_bytes <= std_logic_vector(data_bytes_reg.count);
-    hubris_cmd.dummy_cycles <= std_logic_vector(dummy_cycles_reg.count);
-    hubris_cmd.instr <= std_logic_vector(instr_reg.opcode);
+    hubris_cmd.addr <= addr_reg.addr;
+    hubris_cmd.data_bytes <= data_bytes_reg.count;
+    hubris_cmd.dummy_cycles <= dummy_cycles_reg.count;
+    hubris_cmd.instr <= instr_reg.opcode;
     hubris_cmd.go_flag <= go_strobe;
     -- Mux between espi and register interface for read data (rx fifos)
     reg_fifo_write_allowed <= '1' when spicr_reg.sp5_owns_flash = '0' else '0';
@@ -184,11 +184,11 @@ begin
             -- Write interface ()
             wclk => clk,
             -- Reset interface, sync to write clock domain
-            reset              => tx_fifo_reset,
-            write_en           => tx_fifo_write_reg,
-            wdata              => tx_fifo_wdata_reg,
-            wfull              => spisr_reg.tx_full,
-            unsigned(wusedwds) => spisr_reg.tx_used_wds,
+            reset    => tx_fifo_reset,
+            write_en => tx_fifo_write_reg,
+            wdata    => tx_fifo_wdata_reg,
+            wfull    => spisr_reg.tx_full,
+            wusedwds => spisr_reg.tx_used_wds,
             -- Read interface
             rclk     => clk,
             rdata    => tx_fifo_data32,
@@ -225,11 +225,11 @@ begin
             wfull    => open,
             wusedwds => open,
             -- Read interface
-            rclk               => clk,
-            rdata              => rx_fifo_rdata_reg,
-            rdreq              => rx_fifo_read_ack_reg,
-            rempty             => spisr_reg.rx_empty,
-            unsigned(rusedwds) => spisr_reg.rx_used_wds
+            rclk     => clk,
+            rdata    => rx_fifo_rdata_reg,
+            rdreq    => rx_fifo_read_ack_reg,
+            rempty   => spisr_reg.rx_empty,
+            rusedwds => spisr_reg.rx_used_wds
         );
 
     spisr_reg.rx_full <= '1' when spisr_reg.rx_used_wds = 64 else '0';

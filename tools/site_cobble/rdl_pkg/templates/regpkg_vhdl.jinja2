@@ -76,8 +76,7 @@ package {{module_name}} is
         {% if field.has_encode() %}
       {{field.name}}  : {{reg_name}}_{{field.name|lower}};
         {% elif field.width > 1 %}
-        {# Todo: fix for slv by custom property? #}
-      {{field.name}}{{' : unsigned(%s downto 0);' % (field.width-1)}}
+      {{field.name}}{{' : std_logic_vector(%s downto 0);' % (field.width-1)}}
         {% elif field.width == 1 %}
       {{field.name}}    : std_logic;
         {%endif%}
@@ -161,7 +160,7 @@ package body {{module_name}} is
         {% if field.has_encode() %}
         ret_rec.{{field.name}}:= encode(slv({{field.vhdl_bitslice_str()}}));
         {% elif field.width > 1 %}
-        ret_rec.{{field.name}}:= unsigned(slv({{field.vhdl_bitslice_str()}}));
+        ret_rec.{{field.name}}:= slv({{field.vhdl_bitslice_str()}});
         {% else %}
         ret_rec.{{field.name}}:= slv({{field.vhdl_bitslice_str()}});
         {% endif %}
@@ -216,7 +215,7 @@ package body {{module_name}} is
           {% if  field.has_encode() %}
         ret_rec.{{field.name}} := encode(vec({{ns.bit -1}} downto {{ns.bit-field.width}}));
           {% elif field.width > 1 %}
-        ret_rec.{{field.name}} := unsigned(vec({{ns.bit -1}} downto {{ns.bit-field.width}}));
+        ret_rec.{{field.name}} := vec({{ns.bit -1}} downto {{ns.bit-field.width}});
           {% else %}
         ret_rec.{{field.name}} := vec({{ns.bit -1}});
           {% endif %}
