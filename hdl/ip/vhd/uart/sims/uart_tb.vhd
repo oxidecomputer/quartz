@@ -60,6 +60,17 @@ begin
                 report "Sent byte 0x" & to_hstring(tx_byte);
                 pop_stream(net, rx_uart_stream, rx_byte);
                 check_equal(rx_byte, tx_byte, "Tx/Rx byte mismatch");
+            elsif run("send_two_bytes") then
+                tx_byte := rnd_stimuli.RandSlv(8);
+                push_stream(net, tx_uart_stream, tx_byte);
+                report "Sent byte 0x" & to_hstring(tx_byte);
+                pop_stream(net, rx_uart_stream, rx_byte);
+                check_equal(rx_byte, tx_byte, "Tx/Rx byte mismatch");
+                tx_byte := rnd_stimuli.RandSlv(8);
+                push_stream(net, tx_uart_stream, tx_byte);
+                report "Sent byte 0x" & to_hstring(tx_byte);
+                pop_stream(net, rx_uart_stream, rx_byte);
+                check_equal(rx_byte, tx_byte, "Tx/Rx byte mismatch");
             end if;
         end loop;
 
