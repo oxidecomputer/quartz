@@ -120,6 +120,8 @@ begin
       when IDLE =>
         -- Look for a start bit, and move to run state
         if rx_pin_syncd = START_LEVEL then
+          v.bit_num := 0;
+          v.sample_cnts := (others => '0');
           v.state := RUN;
         end if;
 
