@@ -18,6 +18,7 @@ rdl_file(
     deps = [
         ":base_regs_map",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_rdl",
+        "//hdl/ip/vhd/espi:espi_regs_pkg",
     ],
     outputs = [
         "gfruit_top_map.html",
@@ -46,6 +47,8 @@ vhdl_unit(
         ":base_regs",
         ":gfruit_top_regs",
         ":reset_sync",
+        "//hdl/ip/vhd/espi:espi_top",
+        "//hdl/ip/vhd/uart:axi_fifo_uart",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",

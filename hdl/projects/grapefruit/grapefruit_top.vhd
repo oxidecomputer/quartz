@@ -199,16 +199,47 @@ architecture rtl of grapefruit_top is
 
     signal fmc_axi_if : axil26x32_pkg.axil_t;
 
-    constant responder_count : integer := 2;
+    constant BAUD_3M_AT_125M : integer := 5;
+    constant responder_count : integer := 3;
 
     -- TODO: someday I'd like the rdl stuff to both generate this and the fabric maybe?
     constant config_array : axil_responder_cfg_array_t(responder_count-1 downto 0) := 
      (0 => (base_addr => x"00000000", addr_span_bits => 8),
-      1 => (base_addr => x"00000100", addr_span_bits => 8)
+      1 => (base_addr => x"00000100", addr_span_bits => 8),
+      2 => (base_addr => x"00000200", addr_span_bits => 8)
       );
     signal responders : axil8x32_pkg.axil_array_t(responder_count-1 downto 0);
-    signal spi_fpga_to_flash2_dat_o : std_logic_vector(3 downto 0);
-    signal spi_fpga_to_flash2_dat_oe : std_logic_vector(3 downto 0);
+    signal spi_fpga_to_flash_dat_o : std_logic_vector(3 downto 0);
+    signal spi_fpga_to_flash_dat_oe : std_logic_vector(3 downto 0);
+    signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
+    signal espi_cmd_fifo_rdack : std_logic;
+    signal espi_cmd_fifo_rempty : std_logic;
+    signal espi_data_fifo_write : std_logic;
+    signal espi_data_fifo_wdata : std_logic_vector(7 downto 0);
+    signal flash_cfifo_data : std_logic_vector(31 downto 0);
+    signal flash_cfifo_write : std_logic;
+    signal flash_rfifo_data : std_logic_vector(7 downto 0);
+    signal flash_rfifo_rdack : std_logic;
+    signal flash_rfifo_rempty : std_logic;
+    signal host_espi_to_sp_uart_data : std_logic_vector(7 downto 0);
+    signal host_espi_to_sp_uart_valid : std_logic;
+    signal host_espi_to_sp_uart_ready : std_logic;
+    signal from_sp_uart_to_host_espi_valid : std_logic;
+    signal from_sp_uart_to_host_espi_ready : std_logic;
+    signal from_sp_uart_to_host_espi_data : std_logic_vector(7 downto 0);
+    signal console_from_sp_rx_ready : std_logic;
+    signal console_from_sp_rx_data : std_logic_vector(7 downto 0);
+    signal console_from_sp_rx_valid : std_logic;
+    signal console_to_sp_tx_ready : std_logic;
+    signal console_to_sp_tx_data : std_logic_vector(7 downto 0);
+    signal console_to_sp_tx_valid : std_logic;
+    signal espi_io_o : std_logic_vector(3 downto 0);
+    signal espi_io_oe : std_logic_vector(3 downto 0);
+    signal ipcc_sp_to_fpga_data: std_logic;
+    signal ipcc_fpga_to_sp_data: std_logic;
+    signal ipcc_sp_to_fpga_cts_l: std_logic;
+    signal ipcc_fpga_to_sp_rts_l: std_logic;
+    constant ipcc_dbg_en : std_logic := '0';
 
 begin
 
@@ -295,25 +326,197 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(1),
-        cs_n => spi_fpga_to_flash_cs_l, --spi_fpga_to_flash2_cs_l,
-        sclk => spi_fpga_to_flash_clk, --spi_fpga_to_flash2_clk,
+        cs_n => spi_fpga_to_flash_cs_l,
+        sclk => spi_fpga_to_flash_clk,
         io => spi_fpga_to_flash_dat,
-        io_o => spi_fpga_to_flash2_dat_o,
-        io_oe => spi_fpga_to_flash2_dat_oe,
-        espi_cmd_fifo_rdata => (others => '0'),
-        espi_cmd_fifo_rdack => open,
-        espi_cmd_fifo_rempty => '1', 
-        espi_data_fifo_wdata => open,
-        espi_data_fifo_write => open
+        io_o => spi_fpga_to_flash_dat_o,
+        io_oe => spi_fpga_to_flash_dat_oe,
+        espi_cmd_fifo_rdata => espi_cmd_fifo_rdata,
+        espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
+        espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
+        espi_data_fifo_wdata => espi_data_fifo_wdata,
+        espi_data_fifo_write => espi_data_fifo_write
 
     );
 
+     -- eSPI block -> SPI NOR  
+    espi_spinor_cmd_fifo: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 256,
+        data_width => 32,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk_125m,  -- eSPI clock
+        reset => reset_125m,
+        write_en => flash_cfifo_write,
+        wdata => flash_cfifo_data,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk_125m,  -- SPI Nor Clock
+        rdata => espi_cmd_fifo_rdata,
+        rdreq => espi_cmd_fifo_rdack,
+        rempty => espi_cmd_fifo_rempty,
+        rusedwds => open
+    );
+    -- SPI NOR -> eSPI block
+    espi_spinor_data_fifo: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 256,
+        data_width => 8,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk_125m,  -- spi nor clock
+        reset => reset_125m,
+        write_en => espi_data_fifo_write,
+        wdata => espi_data_fifo_wdata,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk_125m, -- espi clock
+        rdata => flash_rfifo_data,
+        rdreq => flash_rfifo_rdack,
+        rempty => flash_rfifo_rempty,
+        rusedwds => open
+    );
 
-    -- -- qspi tris buffer
+    -- eSPI
+    -- ideally we'll want to be in 200MHz but we're going 
+    -- to get it working in 125MHz first
+    espi_target_top_inst: entity work.espi_target_top
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders(2),
+        cs_n => espi_hpm_to_scm_cs_l,
+        sclk => espi_hpm_to_scm_clk,
+        io => espi_hpm_to_scm_dat,
+        io_o => espi_io_o,
+        io_oe => espi_io_oe,
+        flash_cfifo_data => flash_cfifo_data,
+        flash_cfifo_write => flash_cfifo_write,
+        flash_rfifo_data => flash_rfifo_data,
+        flash_rfifo_rdack => flash_rfifo_rdack,
+        flash_rfifo_rempty => flash_rfifo_rempty,
+        to_sp_uart_data => host_espi_to_sp_uart_data,
+        to_sp_uart_valid => host_espi_to_sp_uart_valid,
+        to_sp_uart_ready => host_espi_to_sp_uart_ready,
+        from_sp_uart_data => from_sp_uart_to_host_espi_data,
+        from_sp_uart_valid => from_sp_uart_to_host_espi_valid,
+        from_sp_uart_ready => from_sp_uart_to_host_espi_ready
+    );
+
+   espi_tris:process(all)
+    begin
+        for i in 0 to 3 loop
+            espi_hpm_to_scm_dat(i) <= espi_io_o(i) when espi_io_oe(i) = '1' else 'Z';
+        end loop;
+    end process;
+
+     -- spi NOR qspi tris buffer
     process(all)
     begin
         for i in 0 to 3 loop
-            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash2_dat_o(i) when spi_fpga_to_flash2_dat_oe(i) = '1' else 'Z';
+            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash_dat_o(i) when spi_fpga_to_flash_dat_oe(i) = '1' else 'Z';
+        end loop;
+    end process;
+
+    -- UARTs
+    -- SP UART #0  -- Expected to be console uart?
+    sp_uart0: entity work.axi_fifo_st_uart
+     generic map(
+        CLK_DIV => BAUD_3M_AT_125M,
+        parity => false,
+        use_hw_handshake => true,
+        fifo_depth => 256,
+        full_threshold => 256
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        rx_pin => uart0_sp_to_fpga_dat,
+        tx_pin => uart0_fpga_to_sp_dat,
+        rts_pin => uart0_fpga_to_sp_rts_l,
+        cts_pin => uart0_sp_to_fpga_rts_l,
+        axi_clk => clk_125m,
+        rx_ready => console_from_sp_rx_ready,
+        rx_data => console_from_sp_rx_data,
+        rx_valid => console_from_sp_rx_valid,
+        tx_data => console_to_sp_tx_data,
+        tx_valid => console_to_sp_tx_valid,
+        tx_ready => console_to_sp_tx_ready
+    );
+
+    -- IPCC UART over eSPI
+    sp_uart1: entity work.axi_fifo_st_uart
+     generic map(
+        CLK_DIV => BAUD_3M_AT_125M,
+        parity => false,
+        use_hw_handshake => true,
+        fifo_depth => 4096,
+        full_threshold => 4096
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        rx_pin => ipcc_sp_to_fpga_data,
+        tx_pin => ipcc_fpga_to_sp_data,
+        rts_pin => ipcc_fpga_to_sp_rts_l,
+        cts_pin => ipcc_sp_to_fpga_cts_l,
+        axi_clk => clk_125m,
+        rx_ready => from_sp_uart_to_host_espi_ready,
+        rx_data => from_sp_uart_to_host_espi_data,
+        rx_valid => from_sp_uart_to_host_espi_valid,
+        tx_data => host_espi_to_sp_uart_data,
+        tx_valid => host_espi_to_sp_uart_valid,
+        tx_ready => host_espi_to_sp_uart_ready
+    );
+
+    -- debug stuff
+    -- inputs
+    ipcc_sp_to_fpga_data <= uart_local_sp_to_fpga_dat when ipcc_dbg_en else uart1_sp_to_fpga_dat;
+    ipcc_sp_to_fpga_cts_l <= uart_local_sp_to_fpga_rts_l when ipcc_dbg_en else uart1_sp_to_fpga_rts_l;
+    -- outputs to debug, can leave always enabled for now
+    uart_local_fpga_to_sp_dat <= ipcc_fpga_to_sp_data;
+    uart1_fpga_to_sp_rts_l <= ipcc_fpga_to_sp_rts_l;
+    -- outputs to sp
+    uart1_fpga_to_sp_dat <= ipcc_fpga_to_sp_data when not ipcc_dbg_en else '1';
+    uart1_fpga_to_sp_rts_l <= ipcc_fpga_to_sp_rts_l when not ipcc_dbg_en else '0';  --default to block or not?
+    
+    -- 1 Host UART expected to be console uart
+    -- wrapped uart-uart no espi interaction
+    host_uart0: entity work.axi_fifo_st_uart
+     generic map(
+        CLK_DIV => BAUD_3M_AT_125M,
+        parity => false,
+        use_hw_handshake => true,
+        fifo_depth => 256,
+        full_threshold => 256
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        rx_pin => uart0_sp5_to_fpga_data,
+        tx_pin => uart0_fpga_to_sp5_data,
+        rts_pin => uart0_fpga_to_sp5_rts_l,
+        cts_pin => uart0_sp5_to_fpga_rts_l,
+        axi_clk => clk_125m,
+        rx_ready => console_to_sp_tx_ready,
+        rx_data => console_to_sp_tx_data,
+        rx_valid => console_to_sp_tx_valid,
+        tx_data => console_from_sp_rx_data,
+        tx_valid => console_from_sp_rx_valid,
+        tx_ready => console_from_sp_rx_ready
+    );
+
+    -- SPI passthru mux
+
+
+    -- spi NOR qspi tris buffer
+    process(all)
+    begin
+        for i in 0 to 3 loop
+            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash_dat_o(i) when spi_fpga_to_flash_dat_oe(i) = '1' else 'Z';
         end loop;
     end process;
 
