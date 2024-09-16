@@ -22,6 +22,7 @@ vhdl_unit(
         "txn_layer/*.vhd",
         "flash_channel/*.vhd",
         "sys_regs/*.vhd",
+        "uart_channel/*.vhd",
         "*.vhd"]),
     deps = [
         ":espi_spec_regs_pkg",
@@ -31,6 +32,7 @@ vhdl_unit(
         "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         "//hdl/ip/vhd/memories:dual_clock_simple_dpr",
+        "//hdl/ip/vhd/uart:axi_fifo_uart",
         ],
     standard = "2019",
     visibility = ['PUBLIC']
@@ -40,7 +42,7 @@ vunit_sim(
     srcs = glob(["sims/**/*.vhd"]),
     deps = [
         ":espi_top",
-        "//hdl/ip/vhd/vunit_components:qspi_controller_vc"
+        "//hdl/ip/vhd/vunit_components:qspi_controller_vc",
     ],
     visibility = ['PUBLIC'],
 )

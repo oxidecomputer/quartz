@@ -6,3 +6,77 @@
 :revdate: 2024-04-24
 
 = eSPI Target Core
+
+This block implements an eSPI target core. It is intended to provide SAFS (Slave attached Flash Storage)
+boot functionality for an SP5-class AMD processor. It is intended to support single, dual and quad I/O Modes
+at 66MHz which is the espi-spec maximum frequency. The actual internal fabric is intended to run at >3x the
+SPI frequency so we shoot for 200MHz here.
+
+== Overview
+image::espi_block.drawio.svg[align="center"]
+
+=== Link Layer
+
+This block deals with the physical layer of the eSPI interface and contains the serializer/deserializer
+and qspi I/O.  Sampled data is sent to the command processor (transaction layer) with a byte-wide streaming
+interface.  Responses from the response processor (transaction layer) are received via a byte-wide streaming
+interface and shipped out the serializer.
+
+We can enable a debug interface that muxes the streaming interfaces away from the serdes blocks and connects
+them to FIFOs that are accessible via the AXI bus. This allows software to inject eSPI commands and capture
+eSPI responses without needing an eSPI master connected in the system. With some minor modifications, this 
+could also be used to log eSPI traffic when a real eSPI master is connected for debugging purposes.
+
+=== Transaction Layer
+
+At the transaction layer, the command processor is responsible for "parsing" the input stream and taking
+action based on the command. The response processor is responsible for generating the response stream.
+
+There are CRC blocks for the tx and rx paths. The CRC is calculated on the fly and is shipped out at the
+appropriate time. Note that the eSPI master must *enable* CRC enforcement in the slave in order for this
+block to actually enforce CRCs, otherwise it will accept any correctly formed packet.
+
+=== Uart Channel
+Use the posted peripheral interface to send and receive data on a uart channel. Right now we support a single
+UART channel, but this could be expanded to support 2 channels using two different tags. We have a simplified
+design here in that the data streams directly to a FIFO which may be undesirable if we are expecting CRC issues
+in which case we'd need an additional buffer an only process data once the crc is verified.
+
+=== Flash Channel
+We implement the read commands of SAFS. We do not implement the write commands. The flash channel is a non-posted
+block with 4 1024kB queue entries. It issues read requests to the eSPI flash block and then waits for the response,
+once flash response data is enqueued it will alert the host that completed data is available and the host can
+issue a non-posted GET to read the data.
+
+== Simulation Environment
+The simulation environment provides both a qspi master verification component
+that wiggles the qspi lines like a spi master would, but can also leverage
+the built-in debug interface to send arbitrary commands to the eSPI target
+and get responses back at the byte-streaming layer. This logic can be utilized
+for hardware-in-the-loop testing of the eSPI target core.
+
+The "flash" block is a simple fake interface that behaves like our spi nor
+controller with respect to reading so that we didn't have to build in a hard dependency
+on that block here.
+
+We do pull the FIFO'd UART in because it was simple to do so and then put the
+UART in loopback mode so that tx => rx.
+
+== Things not implemented
+We don't adapt the response code and send data back after get_status currently. This would be 
+a minor modification and efficiency improvement but is not strictly necessary for basic functionality.
+
+=== Flash Write over eSPI interface
+In our system our security model is such that we provide a read-only flash interface to the SP5 processor.
+Any attempts to write the flash from the SP5 will be returned with a FATAL ERROR. This is a security feature
+of our sleds, and not something we plan to support. The SP will be able to read/write flash and then will hand
+off the flash to the SP5 and this espi interface.
+
+=== UART interface
+We provide a UART interface using the Peripheral channel and MESSAGE_WTIH_DATA cycle type for bidrectional
+communication. The block alerts the host via the alert mechanism when data is available to be read. There 
+are no thresholds or timeouts here so one or more bytes sitting in the FIFO causes an alert, but we 
+always send the maximum available data (up to the max message size). We can evaluate adding
+some thresholding if that would help efficiency we can add those if necessary.
+
+

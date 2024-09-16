@@ -11,54 +11,35 @@ addrmap espi_regs {
     default hw = r;
 
     reg {
+        name = "Flags Register";
+        desc = "";
+
+        field {
+            default sw = woclr;
+            desc = "Sticky bit for alert, set to 1 when alert is needed, cleared by writing 1";
+        } alert[0:0] =  0;
+    } flags;
+
+    reg {
         name = "Control Register";
         desc = "";
         field {
-            desc = "Set to one to allow eSPI <-> SP5 interface read from flash. Hubris should
-            not attempt any flash accesses with this bit set. This bit also enforces the
-            flash offset in ";
-        } sp5_owns_flash[31:31] =  0;   
-        field {
             desc = "Set to one to reset the command FIFO. Cleared by hardware after reset.";
-        } cmd_fifo_reset[15:15] =  0;
+        } cmd_fifo_reset[3:3] =  0;
+         field {
+            desc = "Set to one to reset the command size FIFO. Cleared by hardware after reset.";
+        } cmd_size_fifo_reset[2:2] =  0;
         field {
             desc = "Set to one to reset response FIFO. Cleared by hardware after reset.";
-        } resp_fifo_reset[7:7] =  0;
+        } resp_fifo_reset[1:1] =  0;
+        field {
+            desc = "Set to one mux in the debug FIFOs and ignore the real eSPI interface";
+        } dbg_mode_en[0:0] =  0;   
     } control;
 
     reg {
-        name = "Debug Status Register";
+        name = "Status Register";
         desc = "";
-        field {
-            default sw = r;
-            desc = "Show used words in command FIFO (word = 32bits/4 bytes),
-            max of 256 bytes, so 64 words";
-        } cmd_used_wds[30:24] =  0;
-        field {
-            default sw = r;
-            desc = "Set to one to 1 when command FIFO is full";
-        } cmd_full[23:23] =  0;
-         field {
-            default sw = r;
-            desc = "Set to one to 1 when command FIFO is empty";
-        } cmd_empty[22:22] =  0;
-        field {
-            default sw = r;
-            desc = "Show used FIFO words in response FIFO (word = 32bits/4 bytes),
-            max of 256 bytes, so 64 words";
-        } resp_used_wds[14:8] =  0;
-        field {
-            default sw = r;
-            desc = "Set to one to 1 when response FIFO is full";
-        } resp_full[7:7] =  0;
-         field {
-            default sw = r;
-            desc = "Set to one to 1 when response FIFO is empty";
-        } resp_empty[6:6] =  0;
-
-        field {
-            desc = "Set to one to 1 when hw detects a CRC mismatch, sticky since last cleared, cleared by writing";
-        } crc_err[1:1] =  0;
 
         field {
             default sw = r;
@@ -67,6 +48,22 @@ addrmap espi_regs {
         } busy[0:0] =  0;
 
     } status;
+
+    reg {
+        name = "Fifo Status Register";
+        desc = "";
+        field {
+            default sw = r;
+            desc = "Show used words in command FIFO (word = 32bits/4 bytes),
+            1024 words so 4kB";
+        } cmd_used_wds[31:16] =  0;
+
+        field {
+            default sw = r;
+            desc = "Show used FIFO words in response FIFO (word = 32bits/4 bytes),
+            1024 words so 4kB";
+        } resp_used_wds[15:0] =  0;
+    } fifo_status;
 
     reg {
         name = "Command FIFO Write Data Register";
@@ -83,4 +80,14 @@ addrmap espi_regs {
             desc = "Note: Reading side-effects the data by popping the fifo";
         } fifo_data[31:0] =  0;
     } resp_fifo_rdata;
+
+    reg {
+        name = "Command FIFO Byte Count FIFO";
+        desc = "";
+        field {
+            desc = "store command byte size in fifo. Beacause we are sending 4bytes at a time into the fifo, but only reading
+            1 byte at a time, we need to store the number of cmd bytes in the fifo. This allows queueing up multiple commands
+            if desired. left over data bytes are discarded if this fifo is empty and there are <4 bytes left in cmd_fifo";
+        } fifo_data[7:0] =  0;
+     } cmd_size_fifo_wdata;
 };

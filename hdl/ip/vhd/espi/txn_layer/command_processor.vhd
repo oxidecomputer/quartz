@@ -12,6 +12,7 @@ use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
 use work.flash_channel_pkg.all;
+use work.uart_channel_pkg.all;
 
 entity command_processor is
     port (
@@ -20,13 +21,14 @@ entity command_processor is
 
         -- register layer connections
         running_crc    : in    std_logic_vector(7 downto 0);
+        clear_rx_crc   : out   std_logic;
         regs_if        : view bus_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
-
-        -- flash channel requests
         -- flash channel requests
         flash_req : view flash_chan_req_source;
+        -- uart channel put interface here
+        host_to_sp_espi : view uart_data_source;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
@@ -46,11 +48,9 @@ architecture rtl of command_processor is
         parse_data,
         parse_get_cfg_hdr,
         parse_set_cfg_hdr,
-        data,
         crc,
         response
     );
-    signal clear_rx_crc : std_logic;
 
     type reg_type is record
         state          : pkt_state_t;
@@ -100,6 +100,14 @@ architecture rtl of command_processor is
                     when others =>
                         null;
                 end case;
+            when opcode_put_pc =>
+                case header.cycle_kind is
+                    when message_with_data =>
+                        next_state.next_state := parse_data;
+                        next_state.cmd_payload_bytes := to_integer(header.length);
+                    when others =>
+                        null;
+                end case;
             when others =>
                 null;
         end case;
@@ -110,6 +118,8 @@ architecture rtl of command_processor is
 
 begin
 
+    host_to_sp_espi.data <= data_from_host.data;
+    host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and r.cmd_header.cycle_kind = message_with_data and r.state = parse_data else '0';
     -- pass through the flash channel requests here
     flash_req.espi_hdr             <= r.cmd_header;
     flash_req.sp5_flash_address    <= r.ch_addr;
@@ -120,6 +130,7 @@ begin
     regs_if.read  <= '1' when r.cmd_header.opcode.value = opcode_get_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.addr  <= r.cfg_addr;
     regs_if.wdata <= r.cfg_data;
+    data_from_host.ready <= '1';
 
     clear_rx_crc <= '1' when r.state = idle else '0';
 
@@ -156,6 +167,7 @@ begin
                         -- can just go immediately to the CRC phase
                         when opcode_get_status |
                              opcode_reset |
+                             opcode_get_pc |
                              opcode_get_flash_c =>
                             v.state := crc;
                         -- Config register opcodes, get and set
@@ -174,7 +186,7 @@ begin
                 -- GET CONFIGURATION has a 16bit address following it
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
-                    by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
+                    v.cfg_addr := by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
                     -- Done, so move to CRC
                     if r.hdr_idx = addr_low_idx then
                         v.hdr_idx := 0;
@@ -189,10 +201,10 @@ begin
                     case r.hdr_idx is
                         when addr_high_idx to addr_low_idx =>
                             -- MSB first, addr phase
-                            by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
+                            v.cfg_addr := by_byte_msb_first(v.cfg_addr, data_from_host.data, r.hdr_idx);
                         when data_byte3_idx to data_byte0_idx =>
                             -- LSB First, data phase
-                            by_byte_lsb_first(v.cfg_data, data_from_host.data, r.hdr_idx - 2);
+                            v.cfg_data := by_byte_lsb_first(v.cfg_data, data_from_host.data, r.hdr_idx - 2);
                         when others =>
                             -- this should be unreachable given we transition
                             -- out by idx count below
@@ -238,7 +250,7 @@ begin
                     -- todo we're skipping 64bit address support for now, it can be here
                     -- but nothing is stored. Do we need to store it?
                     if r.rem_addr_bytes <= 4 then
-                        by_byte_msb_first(v.ch_addr, data_from_host.data, 4 - r.rem_addr_bytes);
+                        v.ch_addr := by_byte_msb_first(v.ch_addr, data_from_host.data, 4 - r.rem_addr_bytes);
                     end if;
                     if v.rem_addr_bytes = 0 then
                         if r.rem_data_bytes = 0 then
@@ -254,7 +266,7 @@ begin
             -- finished. Muxes elsewhere should direct this datat to appropriate buffers
             when parse_data =>
                 v.hdr_idx := 0;
-                if data_from_host.valid then
+                if data_from_host.valid and data_from_host.ready then
                     v.rem_data_bytes := r.rem_data_bytes - 1;
                 end if;
                 if v.rem_data_bytes = 0 then

@@ -11,12 +11,17 @@ use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.flash_channel_pkg.all;
+use work.uart_channel_pkg.all;
+
+use work.axil8x32_pkg.all;
 
 entity espi_target_top is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
-
+        -- Axilite interface
+        axi_if : view axil_target;
+        -- phy interface
         cs_n  : in    std_logic;
         sclk  : in    std_logic;
         io    : in    std_logic_vector(3 downto 0);
@@ -30,6 +35,13 @@ entity espi_target_top is
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
+        -- Interfaces to the UART block
+        to_sp_uart_data : out std_logic_vector(7 downto 0);
+        to_sp_uart_valid: out std_logic;
+        to_sp_uart_ready: in std_logic;
+        from_sp_uart_data : in std_logic_vector(7 downto 0);
+        from_sp_uart_valid: in std_logic;
+        from_sp_uart_ready: out std_logic
     );
 end entity;
 
@@ -47,10 +59,16 @@ architecture rtl of espi_target_top is
     signal flash_np_free  : std_logic;
     signal flash_c_avail : std_logic;
     signal flash_channel_enable : boolean;
+    signal dbg_chan : dbg_chan_t;
+    signal response_done : boolean;
+    signal pc_free : std_logic;
+    signal pc_avail : std_logic;
+    signal np_free : std_logic;
+    signal np_avail : std_logic;
+    signal host_to_sp_espi : st_uart_t;
+    signal sp_to_host_espi : uart_resp_t;
 
 begin
-
-    chip_sel_active <= cs_n = '0';
 
     -- link layer
     link_layer_top_inst: entity work.link_layer_top
@@ -62,20 +80,24 @@ begin
         io => io,
         io_o => io_o,
         io_oe => io_oe,
-        debug_active => false,
+        dbg_chan => dbg_chan,
         qspi_mode => qspi_mode,
         is_crc_byte => is_crc_byte,
+        response_done => response_done,
+        chip_sel_active => chip_sel_active,
         alert_needed => alert_needed,
         data_to_host => data_to_host,
         data_from_host => data_from_host
     );
-    -- TODO: think about more robust in-system testbench for all of this.
-    -- Ideally, I'd like to use the SP to simulate the SP5 transactions.
-    -- The easiest way here is to insert/inject into the post-serialized
-    -- data stream with FIFOs and a mux. This would allow us to send
-    -- arbitrary data and get arbitrary responses and do fancier stuff in software.
-    -- I'd also like to put a DPR as a packet logger here to capture espi data
-    -- for debugging/analysis.
+
+    -- system (axi-lite) register block
+   espi_sys_regs_inst: entity work.espi_regs
+    port map(
+       clk => clk,
+       reset => reset,
+       axi_if => axi_if,
+       dbg_chan => dbg_chan
+   );
 
     -- txn layer blocks
     transaction: entity work.txn_layer_top
@@ -90,12 +112,19 @@ begin
             alert_needed    => alert_needed,
             flash_req       => flash_req,
             flash_resp      => flash_resp,
+            response_done   => response_done,
              -- flash channel status
             flash_np_free => flash_np_free,
-            flash_c_avail => flash_c_avail
+            flash_c_avail => flash_c_avail,
+            host_to_sp_espi => host_to_sp_espi,
+            sp_to_host_espi => sp_to_host_espi,
+            pc_free => pc_free,
+            pc_avail => pc_avail,
+            np_free => np_free,
+            np_avail => np_avail
         );
 
-    -- register blocks
+    -- espi-internal register block
     espi_regs_inst: entity work.espi_spec_regs
         port map (
             clk            => clk,
@@ -120,6 +149,25 @@ begin
        flash_rfifo_data => flash_rfifo_data,
        flash_rfifo_rdack => flash_rfifo_rdack,
        flash_rfifo_rempty => flash_rfifo_rempty
+   );
+
+   -- uart channel logic
+   uart_channel_top_inst: entity work.uart_channel_top
+    port map(
+       clk => clk,
+       reset => reset,
+       host_to_sp_espi => host_to_sp_espi,
+       sp_to_host_espi => sp_to_host_espi,
+       to_sp_uart_data => to_sp_uart_data,
+       to_sp_uart_valid => to_sp_uart_valid,
+       to_sp_uart_ready => to_sp_uart_ready,
+       from_sp_uart_data => from_sp_uart_data,
+       from_sp_uart_valid => from_sp_uart_valid,
+       from_sp_uart_ready => from_sp_uart_ready,
+       pc_free => pc_free,
+       pc_avail => pc_avail,
+       np_free => np_free,
+       np_avail => np_avail
    );
 
 end rtl;

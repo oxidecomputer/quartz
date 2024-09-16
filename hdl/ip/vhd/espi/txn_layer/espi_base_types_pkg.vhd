@@ -164,7 +164,7 @@ package body espi_base_types_pkg is
         ret.oob_free := '0';
         ret.vwire_free := '1';
         ret.np_free := '0';
-        ret.pc_free := '0';
+        ret.pc_free := '1';
         return ret;
     end function;
 end package body;
