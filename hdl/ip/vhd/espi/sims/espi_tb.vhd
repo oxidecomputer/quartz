@@ -154,16 +154,6 @@ begin
                 dbg_wait_for_done(net);
                 dbg_get_response(net, 40 , response);
                 check(response.crc_ok, "CRC Check failed");
-        
-   
-                -- -- wait for the loopback to happen
-                -- dbg_send_get_status_cmd(net);
-                wait for 100 us;
-                -- dbg_get_response(net, 4, response);
-                -- check(response.crc_ok, "CRC Check failed");
-                -- expected_status := pack(status_t'(rec_reset));
-                -- check_equal(response.status, expected_status, "Status did not match reset value");
-                --
             end if;
         end loop;
         wait for 10 us;
