@@ -222,8 +222,6 @@ package body espi_protocol_pkg is
                 bytes := 1; -- only opcode needed
             when OPCODE_PUT_IORD_SHORT_MASK =>
                 bytes := 1; -- only opcode needed
-            when OPCODE_PUT_IOWR_SHORT_MASK => -- also covers the OPCODE_PUT_MEMRD32_SHORT_MASK
-                bytes := 1; -- only opcode needed
             when OPCODE_PUT_MEMWR32_SHORT_MASK =>
                 bytes := 1; -- only opcode needed
             when others =>
@@ -269,15 +267,12 @@ package body espi_protocol_pkg is
         idx           : natural
     ) return std_logic_vector is
 
-        variable msb : natural;
-        variable lsb : natural;
         variable ret_data : std_logic_vector(data'range);
 
     begin
-        msb := data'high - idx * 8;
-        lsb := data'high - idx * 8 - 7;
         ret_data := data;
-        ret_data(msb downto lsb) := byte;
+        -- can't use intermediate variables here for #VivadoReasons
+        ret_data(data'high - idx * 8 downto data'high - idx * 8 - 7) := byte;
         return ret_data;
     end;
 
@@ -287,15 +282,12 @@ package body espi_protocol_pkg is
         idx           : natural
     ) return std_logic_vector is
 
-        variable msb : natural;
-        variable lsb : natural;
         variable ret_data : std_logic_vector(data'range);
 
     begin
-        msb := 7 + idx * 8;
-        lsb := idx * 8;
         ret_data := data;
-        ret_data(msb downto lsb) := byte;
+        -- can't use intermediate variables here for #VivadoReasons
+        ret_data(7 + idx * 8 downto idx * 8) := byte;
         return ret_data;
     end;
 
