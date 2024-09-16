@@ -6,9 +6,9 @@
 
 # Super simple read/write example
 
-target = "fe80::c1d:76ff:fea8:34f6"
+target = "fe80::c1d:76ff:fea8:34f5"
 port = 11114
-ifname = "enx000ec6456e79"
+ifname = "eno1"
 
 import udp_if
 
