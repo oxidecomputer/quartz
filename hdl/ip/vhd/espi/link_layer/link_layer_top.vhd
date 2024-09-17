@@ -29,6 +29,7 @@ entity link_layer_top is
         is_crc_byte : in    boolean;
         alert_needed : in boolean;
         response_done: in boolean;
+        aborted_due_to_bad_crc : in boolean;
         chip_sel_active : out boolean;
         -- "Streaming" data to serialize and transmit
         data_to_host       : view st_sink;
@@ -73,6 +74,7 @@ begin
             clk => clk,
             reset => reset,
             response_done => response_done,
+            aborted_due_to_bad_crc => aborted_due_to_bad_crc,
             cs_active => dbg_chip_sel_active,
             alert_needed => dbg_alert_needed,
             data_to_host => dbg_data_to_host,

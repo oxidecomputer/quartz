@@ -25,6 +25,7 @@ entity command_processor is
         regs_if        : view bus_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
+        aborted_due_to_bad_crc : out boolean;
         -- flash channel requests
         flash_req : view flash_chan_req_source;
         -- uart channel put interface here
@@ -131,6 +132,8 @@ begin
     regs_if.addr  <= r.cfg_addr;
     regs_if.wdata <= r.cfg_data;
     data_from_host.ready <= '1';
+
+    aborted_due_to_bad_crc <= r.crc_bad and regs_if.enforce_crcs;
 
     clear_rx_crc <= '1' when r.state = idle else '0';
 
@@ -287,7 +290,10 @@ begin
                         v.valid_redge := true;
                     end if;
                     if v.crc_bad and regs_if.enforce_crcs then
-                        v.state := idle;
+                        -- We go back to response and wait for the
+                        -- chip sel to de-assert
+                        v.state := response;
+                        v.cmd_header.valid := false;
                     else
                         v.state := response;
                         v.cmd_header.valid := true;

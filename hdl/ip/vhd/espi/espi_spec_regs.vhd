@@ -42,6 +42,7 @@ begin
 
     regs_if.rdata_valid <= readdata_valid;
     regs_if.rdata       <= readdata;
+    regs_if.enforce_crcs <= gen_capabilities.crc_en = '1';
 
     flash_channel_enable <= ch3_capabilities.flash_channel_enable = '1';
     -- Write-side of the spec-defined registers
