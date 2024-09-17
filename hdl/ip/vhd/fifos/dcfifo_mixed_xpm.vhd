@@ -82,6 +82,7 @@ begin
             ecc_mode            => "no_ecc",
             fifo_memory_type    => "auto",
             fifo_write_depth    => wfifo_write_depth,
+            fifo_read_latency   => read_latency,
             full_reset_value    => 0,
             prog_empty_thresh   => PROG_EMPTY_THRESH,
             prog_full_thresh    => PROG_FULL_THRESH,
