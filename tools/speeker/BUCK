@@ -1,0 +1,7 @@
+
+python_library(
+    name = 'udp_if',
+    srcs = glob(["*.py"]),
+    base_module = "speeker",
+    visibility = ['PUBLIC'],
+)
