@@ -48,7 +48,7 @@ architecture rtl of axil_interconnect is
 
 begin
 
-    write_done <= '1' when initiator.write_data.valid = '1' and initiator.write_data.ready = '1' else
+    write_done <= '1' when initiator.write_response.valid = '1' and initiator.write_response.ready = '1' else
                  '0';
     read_done <= '1' when initiator.read_data.valid = '1' and initiator.read_data.ready = '1' else
                 '0';
@@ -65,16 +65,16 @@ begin
         elsif rising_edge(clk) then
             if initiator.write_address.valid = '1' then
                 for i in 0 to config_array'length - 1 loop
-                    if (to_integer(unsigned(initiator.write_address.addr)) >= to_integer(unsigned(config_array(i).base_addr))) and
-                       (to_integer(unsigned(initiator.write_address.addr)) < to_integer(unsigned(config_array(i).base_addr) + 2**config_array(i).addr_span_bits)) then
+                    if (to_integer(initiator.write_address.addr) >= to_integer(config_array(i).base_addr)) and
+                       (to_integer(initiator.write_address.addr) < to_integer(config_array(i).base_addr) + 2**config_array(i).addr_span_bits) then
                         responder_sel <= i;
                     end if;
                 end loop;
                 in_txn <= true;
             elsif initiator.read_address.valid = '1' then
                 for i in 0 to config_array'length - 1 loop
-                    if (to_integer(unsigned(initiator.read_address.addr)) >= to_integer(unsigned(config_array(i).base_addr))) and
-                       (to_integer(unsigned(initiator.read_address.addr)) < to_integer(unsigned(config_array(i).base_addr) + 2**config_array(i).addr_span_bits)) then
+                    if (to_integer(initiator.read_address.addr)) >= to_integer(config_array(i).base_addr) and
+                       (to_integer(initiator.read_address.addr)) < to_integer(config_array(i).base_addr + 2**config_array(i).addr_span_bits) then
                         responder_sel <= i;
                     end if;
                 end loop;
