@@ -31,7 +31,7 @@ entity axil_interconnect is
         initiator : view axil26x32_pkg.axil_target;
 
         -- Initiator I/Fs to the responder blocks, which is a *controller* interface
-        responders : view (axil8x32_pkg.axil_controller) of axil8x32_pkg.axil_array_t(config_array'length - 1 downto 0)
+        responders : view (axil8x32_pkg.axil_controller) of axil8x32_pkg.axil_array_t(config_array'range)
 
     );
 end entity;
