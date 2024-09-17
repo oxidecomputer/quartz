@@ -8,10 +8,12 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
+use work.time_pkg.all;
 
 entity grapefruit_top is
     port (
@@ -150,7 +152,7 @@ entity grapefruit_top is
         sgpio_scm_to_hpm_dat: out std_logic_vector(1 downto 0);
         sgpio_hpm_to_scm_dat: in std_logic_vector(1 downto 0);
         sgpio_scm_to_hpm_ld: out std_logic_vector(1 downto 0);
-        sgpio_scm_to_hpm_reset_l: in std_logic;
+        sgpio_scm_to_hpm_reset_l: out std_logic;
         sgpio_hpm_to_scm_intr_l: out std_logic;
 
         qspi1_scm_to_hpm_clk : out std_logic;
@@ -200,15 +202,14 @@ architecture rtl of grapefruit_top is
     signal fmc_axi_if : axil26x32_pkg.axil_t;
 
     constant BAUD_3M_AT_125M : integer := 5;
-    constant responder_count : integer := 3;
 
     -- TODO: someday I'd like the rdl stuff to both generate this and the fabric maybe?
-    constant config_array : axil_responder_cfg_array_t(responder_count-1 downto 0) := 
+    constant config_array : axil_responder_cfg_array_t := 
      (0 => (base_addr => x"00000000", addr_span_bits => 8),
       1 => (base_addr => x"00000100", addr_span_bits => 8),
       2 => (base_addr => x"00000200", addr_span_bits => 8)
       );
-    signal responders : axil8x32_pkg.axil_array_t(responder_count-1 downto 0);
+    signal responders : axil8x32_pkg.axil_array_t(config_array'range);
     signal spi_fpga_to_flash_dat_o : std_logic_vector(3 downto 0);
     signal spi_fpga_to_flash_dat_oe : std_logic_vector(3 downto 0);
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
@@ -240,6 +241,14 @@ architecture rtl of grapefruit_top is
     signal ipcc_sp_to_fpga_cts_l: std_logic;
     signal ipcc_fpga_to_sp_rts_l: std_logic;
     constant ipcc_dbg_en : std_logic := '0';
+    signal hpm_to_scm_stby_rdy_syncd : std_logic;
+
+    type state_type is (idle, standby, standby_delay, pbtn_asserted, done);
+    signal ruby_state : state_type;
+    signal ruby_cntr : std_logic_vector(31 downto 0);
+
+    constant STANDBY_TIME : std_logic_vector(31 downto 0) := calc_ms(100, 8, 32); --100ms
+    constant PBTN_TIME : std_logic_vector(31 downto 0) :=  calc_ms(20, 8, 32); --20ms
 
 begin
 
@@ -530,6 +539,78 @@ begin
     -- pin the enables low to enable the devices
     i3c_sp5_to_fpga_oe_n_3v3 <= '0';
     i3c_fpga_to_dimm_oe_n_3v3 <= '0';
+
+    scm_to_hpm_virtual_reseat <= '0';
+    scm_to_hpm_fw_recovery <= '0';
+    scm_to_hpm_dbreq_l <= '1';
+    hpm_to_scm_pcie_rst_buf_l <= '1';
+    scm_to_hpm_rot_cpu_rst_l <= '1';
+    sgpio_scm_to_hpm_reset_l <= '1';
+    scm_to_hpm_stby_en <= '1';
+    scm_to_hpm_stby_rst_l <= '0';
+    scm_to_hpm_pwrbtn_l <= '1';
+    sgpio_hpm_to_scm_intr_l <= '1';
+
+
+    meta_sync_inst: entity work.meta_sync
+     port map(
+        async_input => hpm_to_scm_stby_rdy,
+        clk => clk,
+        sycnd_output => hpm_to_scm_stby_rdy_syncd
+    );
+
+    -- ruby_seq:process(clk_125m, reset_125m)
+    -- begin
+
+    --     if reset_125m then
+    --         scm_to_hpm_stby_en <= '0';
+    --         scm_to_hpm_stby_rst_l <= '0';
+    --         scm_to_hpm_pwrbtn_l <= '1';
+    --         ruby_cntr <= (others => '0');
+    --     elsif rising_edge(clk_125m) then
+    --         case ruby_state is
+    --             when idle =>
+    --                scm_to_hpm_stby_en <= '1';
+    --                scm_to_hpm_stby_rst_l <= '0';
+    --                if ruby_cntr = STANDBY_TIME then
+    --                     ruby_cntr <= (others => '0');
+    --                     ruby_state <= standby;
+    --                 else
+    --                     ruby_cntr <= ruby_cntr + 1;
+    --                 end if;
+    --             when standby =>
+    --                 if hpm_to_scm_stby_rdy_syncd = '1' then
+    --                     scm_to_hpm_stby_rst_l <= '1';
+    --                     ruby_state <= standby_delay;
+    --                 end if;
+    --             when standby_delay =>
+    --                 if ruby_cntr = STANDBY_TIME then
+    --                     ruby_cntr <= (others => '0');
+    --                     ruby_state <= pbtn_asserted;
+    --                     scm_to_hpm_pwrbtn_l <= '0';
+    --                 else
+    --                     ruby_cntr <= ruby_cntr + 1;
+    --                 end if;
+
+    --             when pbtn_asserted =>
+    --                 if ruby_cntr = PBTN_TIME then
+    --                     ruby_cntr <= (others => '0');
+    --                     ruby_state <= done;
+    --                     scm_to_hpm_pwrbtn_l <= '1';
+    --                 else
+    --                     ruby_cntr <= ruby_cntr + 1;
+    --                 end if;
+
+    --             when done =>
+    --                 null;
+
+    --         end case;
+
+    --     end if;
+
+
+    -- end process;
+    
 
     i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
     i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);

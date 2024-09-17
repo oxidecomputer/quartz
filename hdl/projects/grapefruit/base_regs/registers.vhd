@@ -26,13 +26,12 @@ entity registers is
 end entity;
 
 architecture rtl of registers is
-    signal id : id_type;
-    signal sha : sha_type;
+    signal id : id_type := rec_reset;
+    signal sha : sha_type := unpack(std_logic_vector'(X"00000002"));
     signal checksum : cs_type;
     signal scratchpad : scratchpad_type;
     signal axi_int_read_ready : std_logic;
     signal awready : std_logic;
-    signal wready : std_logic;
     signal bvalid : std_logic;
     alias bready is axi_if.write_response.ready;
     signal arready : std_logic;
@@ -97,8 +96,6 @@ begin
     write_logic: process(clk, reset)
     begin
         if reset then
-            id <= rec_reset;
-            sha <= rec_reset;
             checksum <= rec_reset;
             scratchpad <= rec_reset;
         elsif rising_edge(clk) then

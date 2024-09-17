@@ -53,6 +53,7 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
+        "//hdl/ip/vhd/utilities:time_pkg",
     ],
     standard = "2019",
 )
@@ -65,4 +66,19 @@ vivado_bitstream(
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["*ip.tcl"]),
     post_synth_tcl_files=glob(["*ila.tcl"]),
+)
+
+python_library(
+    name = 'drivers',
+    srcs = glob(["integration/drivers/*.py"]),
+)
+
+python_test(
+    name = 'test',
+    srcs = glob(["integration/tests/*.py"]),
+    deps = [
+        ":drivers",
+        '//tools/speeker:udp_if'
+        ],
+    visibility = ["PUBLIC"],
 )
