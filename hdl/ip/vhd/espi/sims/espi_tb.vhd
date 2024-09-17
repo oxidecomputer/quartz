@@ -7,16 +7,21 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 library vunit_lib;
-    context vunit_lib.com_context;
     context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
+    context vunit_lib.vc_context;
+
 use work.qspi_vc_pkg.all;
 use work.espi_controller_vc_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_spec_regs_pkg.all;
 use work.espi_dbg_vc_pkg.all;
 use work.espi_tb_pkg.all;
+
+use work.espi_regs_pkg.all;
 entity espi_tb is
     generic (
 
@@ -71,6 +76,50 @@ begin
                 check(response.crc_ok, "CRC Check failed");
                 expected_status := pack(status_t'(rec_reset));
                 check_equal(response.status, expected_status, "Status did not match reset value");
+
+                -- Do it a 2nd time
+                dbg_send_get_status_cmd(net);
+                dbg_wait_for_done(net);
+                dbg_get_response(net, 4, response);
+                check(response.crc_ok, "CRC Check failed");
+                expected_status := pack(status_t'(rec_reset));
+                check_equal(response.status, expected_status, "Status did not match reset value");
+            elsif run("crc_enforcement") then
+                enable_debug_mode(net);
+                --Enable CRC enforcement
+                cmd := build_set_config_cmd(GENERAL_CAPABILITIES_OFFSET, GENERAL_CAPABILITIES_CRC_EN_MASK);
+                dbg_send_cmd(net, cmd);
+                dbg_wait_for_done(net);
+                dbg_get_response(net, 4, response);
+                check(response.crc_ok, "CRC Check failed");
+                expected_status := pack(status_t'(rec_reset));
+                check_equal(response.status, expected_status, "Status did not match reset value");
+                exp_data_32 := (others => '0');
+                -- Should have an empty response queue
+                read_bus(net, bus_handle, To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Response queue not empty before bad crc command");
+
+                -- Issue a command with a bad CRC
+                dbg_send_get_status_cmd(net, bad_crc => true);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                -- Expect no responses
+                read_bus(net, bus_handle, To_StdLogicVector(FIFO_STATUS_OFFSET, bus_handle.p_address_length), data_32);
+                exp_data_32 := (others => '0');
+                check_equal(data_32, exp_data_32, "Expected no response to bad CRC command");
+
+                -- dbg_get_response(net, 4, response);
+                -- check(response.crc_ok, "CRC Check failed");
+                -- expected_status := pack(status_t'(rec_reset));
+                -- check_equal(response.status, expected_status, "Status did not match reset value");
+
+                -- -- Do it a 2nd time
+                -- dbg_send_get_status_cmd(net);
+                -- dbg_wait_for_done(net);
+                -- dbg_get_response(net, 4, response);
+                -- check(response.crc_ok, "CRC Check failed");
+                -- expected_status := pack(status_t'(rec_reset));
+                -- check_equal(response.status, expected_status, "Status did not match reset value");
             elsif run("get_config") then
                 get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
@@ -162,6 +211,6 @@ begin
     end process;
 
     -- Example total test timeout dog
-    test_runner_watchdog(runner, 10 ms);
+    test_runner_watchdog(runner, 1 ms);
 
 end tb;

@@ -54,18 +54,27 @@ package espi_tb_pkg is
     
     -- This is a helper function to build the CRC byte for a given queue
     -- Non-destructive to the input queue due to an internal copy.
-    impure function crc8(data: queue_t) return std_logic_vector;
+    impure function crc8(data: queue_t; gen_invalid_crc: boolean := false) return std_logic_vector;
 
     -- These functions build the command bytes into a queue and
     -- returns the queue and the number of bytes in the queue
     -- for additional processing in the testbench such as
     -- commanding the qspi VC or using the debug axi interface
-    impure function build_get_status_cmd return cmd_t;
-    impure function build_get_config_cmd(constant address : natural) return cmd_t;
-    impure function build_set_config_cmd(constant address : natural;
-                                         constant data : std_logic_vector) return cmd_t;
-    impure function build_put_flash_np_cmd(constant address : in std_logic_vector(31 downto 0);
-                                           constant num_bytes: integer) return cmd_t;
+    impure function build_get_status_cmd(constant bad_crc : boolean := false) return cmd_t;
+    impure function build_get_config_cmd(
+        constant address : natural;
+        constant bad_crc : boolean := false
+    ) return cmd_t;
+    impure function build_set_config_cmd(
+        constant address : natural;
+        constant data : std_logic_vector;
+        constant bad_crc : boolean := false
+    ) return cmd_t;
+    impure function build_put_flash_np_cmd(
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: integer;
+        constant bad_crc : boolean := false
+        ) return cmd_t;
     impure function build_put_uart_data_cmd(constant payload : queue_t) return cmd_t;
     impure function build_get_uart_data_cmd return cmd_t;
     -- Need procedures to build expected responses
@@ -81,7 +90,8 @@ package body espi_tb_pkg is
     -- used to check our parallel hw implementation with a "known-good"
     -- and alternately implemented algo.
     impure function crc8 (
-        data: queue_t
+        data: queue_t;
+        gen_invalid_crc: boolean := false
     ) return std_logic_vector is
 
         -- create a copy so we don't destry the input queue here
@@ -102,6 +112,9 @@ package body espi_tb_pkg is
                 d := shift_left(d, 1);
             end loop;
         end loop;
+        if gen_invalid_crc then
+            last_q := not last_q;
+        end if;
         return last_q;
     end;
 
@@ -131,20 +144,23 @@ package body espi_tb_pkg is
     -- This builds the command bytes into a queue and
     -- returns the queue and the number of bytes in the queue
     -- for additional processing
-    impure function build_get_status_cmd return cmd_t is
+    impure function build_get_status_cmd (
+        constant bad_crc : boolean := false
+    ) return cmd_t is
         variable cmd : cmd_t := (new_queue, 0);
     begin
         -- OPCODE_GET_STATUS  (1 byte)
         push_byte(cmd.queue, to_integer(OPCODE_GET_STATUS));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
 
     impure function build_get_config_cmd(
-        constant address : natural
+        constant address : natural;
+        constant bad_crc : boolean := false
     ) return cmd_t is
         variable tmp_address : std_logic_vector(15 downto 0) := To_Std_Logic_Vector(address, 16);
         variable cmd : cmd_t := (new_queue, 0);
@@ -157,14 +173,15 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(tmp_address(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 2;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
     
     impure function build_set_config_cmd(
         constant address : natural;
-        constant data : std_logic_vector
+        constant data : std_logic_vector;
+        constant bad_crc : boolean := false
     ) return cmd_t is
         variable tmp_address : std_logic_vector(15 downto 0) := To_Std_Logic_Vector(address, 16);
         variable cmd : cmd_t := (new_queue, 0);
@@ -183,14 +200,15 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(data(31 downto 24)));
         cmd.num_bytes := cmd.num_bytes + 4;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
 
     impure function build_put_flash_np_cmd(
         constant address : in std_logic_vector(31 downto 0);
-        constant num_bytes: integer
+        constant num_bytes: integer;
+        constant bad_crc : boolean := false
     ) return cmd_t is
         variable payload_len : std_logic_vector(11 downto 0) := To_Std_Logic_Vector(num_bytes, 12);
         variable cmd : cmd_t := (new_queue, 0);
@@ -214,7 +232,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(address(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 4;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;

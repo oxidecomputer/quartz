@@ -43,7 +43,8 @@ package espi_dbg_vc_pkg is
         cmd : cmd_t
     );
     procedure dbg_send_get_status_cmd(
-        signal net : inout network_t
+        signal net : inout network_t;
+        constant bad_crc : boolean := false
     );
     procedure dbg_get_response(
         signal net : inout network_t;
@@ -151,9 +152,10 @@ package body espi_dbg_vc_pkg is
     end procedure;
 
     procedure dbg_send_get_status_cmd(
-        signal net : inout network_t
+        signal net : inout network_t;
+        constant bad_crc : boolean := false
     ) is
-        variable cmd : cmd_t := build_get_status_cmd;
+        variable cmd : cmd_t := build_get_status_cmd(bad_crc);
     begin
         dbg_send_cmd(net, cmd);
     end procedure;
