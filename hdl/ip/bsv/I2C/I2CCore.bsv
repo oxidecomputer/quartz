@@ -103,8 +103,10 @@ module mkI2CCore#(Integer core_clk_freq,
     Wire#(Bool) valid_command           <- mkWire();
     Reg#(UInt#(8)) bytes_done           <- mkReg(0);
     Reg#(Bool) in_random_read           <- mkReg(False);
+    Reg#(Bool) in_write_ack_poll        <- mkReg(False);
+    Reg#(Bool) write_acked              <- mkReg(False);
 
-    PulseWire next_send_data           <- mkPulseWire;
+    PulseWire next_send_data            <- mkPulseWire;
 
     // relabel this net for brevity
     let timed_out = bit_ctrl.scl_stretch_timeout;
@@ -126,7 +128,7 @@ module mkI2CCore#(Integer core_clk_freq,
     rule do_register_command(state_r == Idle && !valid_command && !timed_out);
         cur_command <= tagged Valid next_command.first;
         error_r     <= tagged Invalid;
-        state_r <= SendStart;
+        state_r     <= SendStart;
     endrule
 
     (* fire_when_enabled *)
@@ -153,10 +155,14 @@ module mkI2CCore#(Integer core_clk_freq,
 
         case (ack_nack) matches
             tagged Ack: begin
+                // Begin a Read
                 if (cmd.op == Read || in_random_read) begin
                     bytes_done  <= 1;
                     bit_ctrl.send.put(tagged Read (cmd.num_bytes == 1));
                     state_r <= Reading;
+                end else if (in_write_ack_poll) begin
+                    write_acked <= True;
+                    state_r     <= Stop;
                 end else begin
                     bit_ctrl.send.put(tagged Write cmd.reg_addr);
                     state_r <= AwaitWriteAck;
@@ -165,7 +171,10 @@ module mkI2CCore#(Integer core_clk_freq,
 
             tagged Nack: begin
                 state_r <= Stop;
-                error_r <= tagged Valid AddressNack;
+
+                if (!in_write_ack_poll) begin
+                    error_r <= tagged Valid AddressNack;
+                end
             end
         endcase
     endrule
@@ -233,16 +242,25 @@ module mkI2CCore#(Integer core_clk_freq,
     (* fire_when_enabled *)
     rule do_stop (state_r == Stop && valid_command && !timed_out);
         bit_ctrl.send.put(tagged Stop);
-        state_r     <= Done;
+
+        let cmd     = fromMaybe(?, cur_command);
+        if (cmd.op == Write && !isValid(error_r) && !write_acked) begin
+            state_r             <= SendStart;
+            in_write_ack_poll   <= True;
+        end else begin
+            state_r     <= Done;
+        end
     endrule
 
     (* fire_when_enabled *)
     rule do_done (state_r == Done && valid_command && !timed_out);
         next_command.deq();
-        bytes_done      <= 0;
-        in_random_read  <= False;
-        cur_command     <= tagged Invalid;
-        state_r         <= Idle;
+        bytes_done          <= 0;
+        in_random_read      <= False;
+        in_write_ack_poll   <= False;
+        write_acked         <= False;
+        cur_command         <= tagged Invalid;
+        state_r             <= Idle;
     endrule
 
     interface pins = bit_ctrl.pins;

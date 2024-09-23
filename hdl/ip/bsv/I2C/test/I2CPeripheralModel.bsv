@@ -31,7 +31,7 @@ interface I2CPeripheralModel;
     method Action sda_i(Bit#(1) sda_i_next);
 
     interface Get#(ModelEvent) receive;
-    method Action nack_next();
+    method Action nack_response(Bool ack);
     method Action stretch_next(Bool timeout);
 endinterface
 
@@ -104,7 +104,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     Reg#(Bool) is_sequential    <- mkReg(False);
     Reg#(Bool) do_read          <- mkReg(False);
     Reg#(Bool) do_write         <- mkReg(False);
-    Reg#(Bool) nack_next_       <- mkReg(False);
+    Reg#(Bool) nack_response_   <- mkReg(False);
 
     Countdown#(16) scl_stretch_countdown    <- mkCountdownBy1();
     Reg#(Bool) countdown_reset  <- mkReg(False);
@@ -274,8 +274,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
 
     (* fire_when_enabled *)
     rule do_transmit_ack (state == TransmitAck);
-        sda_out     <= pack(nack_next_);
-        nack_next_  <= False;
+        sda_out     <= pack(nack_response_);
         do_write    <= False;
         do_read     <= False;
         if (scl_redge) begin
@@ -329,9 +328,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
         return sda_out;
     endmethod
 
-    method Action nack_next();
-        nack_next_ <= True;
-    endmethod
+    method Action nack_response(Bool ack) = nack_response_._write(ack);
 
     method Action stretch_next(Bool timeout) if (countdown_reset);
         if (timeout) begin

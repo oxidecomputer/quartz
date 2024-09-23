@@ -84,6 +84,10 @@ module mkBench (Bench);
     PulseWire new_command       <- mkPulseWire();
     Reg#(UInt#(8)) bytes_done   <- mkReg(0);
 
+    // A counter to simulate cycles of ack polling after a write
+    Reg#(UInt#(8)) ack_poll_cntr    <- mkReg(0);
+    Reg#(Bool) write_done           <- mkReg(False);
+
     // TODO: This should become a RAM that I can dynamically read/write to so I
     // can read values I expect to have written without relying on bytes_done
     (* fire_when_enabled *)
@@ -97,6 +101,8 @@ module mkBench (Bench);
     endrule
 
     FSM write_seq <- mkFSMWithPred(seq
+        ack_poll_cntr   <= 2;
+        write_done      <= False;
         dut.send_command.put(command_r);
         check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
         check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
@@ -110,6 +116,25 @@ module mkBench (Bench);
 
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
         bytes_done  <= 0;
+
+        // do post-write ack polling to make sure the peripheral finished the write
+        while (!write_done) seq
+            periph.nack_response(ack_poll_cntr == 0);
+            check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+            action
+                let e <- periph.receive.get();
+                case(e) matches
+                    tagged AddressMatch: begin
+                        write_done  <= True;
+                    end
+                    tagged AddressMismatch: begin
+                        // peripheral nack'd, indicating the write is not finsihed
+                        ack_poll_cntr <= ack_poll_cntr - 1;
+                    end
+                endcase
+            endaction
+        endseq
+        check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
     endseq, command_r.op == Write);
 
     FSM read_seq <- mkFSMWithPred(seq
