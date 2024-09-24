@@ -394,10 +394,8 @@ module mkIgnitionGeneralPage
     method read = response;
 endmodule
 
-module mkIgnitionRegistersPage
-        #(IgnitionController::Registers#(n) registers)
-            (RegisterPage)
-                provisos (Add#(TLog#(n), a__, 6));
+module mkIgnitionRegistersPage #(RegisterServer#(n) registers) (RegisterPage)
+            provisos (Add#(TLog#(n), a__, 6));
     Reg#(Bool) await_response <- mkReg(False);
     Reg#(SpiResponse) response <- mkConfigRegU();
 
@@ -467,10 +465,8 @@ module mkIgnitionRegistersPage
     method read = response;
 endmodule
 
-module mkIgnitionCountersPage
-        #(IgnitionController::Counters#(n) counters)
-            (RegisterPage)
-                provisos (Add#(TLog#(n), a__, 6));
+module mkIgnitionCountersPage #(CounterServer#(n) counters) (RegisterPage)
+            provisos (Add#(TLog#(n), a__, 6));
     Reg#(Bool) await_response <- mkReg(False);
     Reg#(SpiResponse) response <- mkConfigRegU();
 
