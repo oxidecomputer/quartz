@@ -51,6 +51,8 @@ bluespec_library('I2CPeripheralModel',
     ],
     deps = [
         ':I2CCommon',
+        '//hdl/ip/bsv:Countdown',
+        '//hdl/ip/bsv:Strobe'
     ])
 
 bluesim_tests('I2CBitControllerTests',
@@ -62,6 +64,8 @@ bluesim_tests('I2CBitControllerTests',
         'mkI2CBitControlSequentialWriteTest',
         'mkI2CBitControlSequentialReadTest',
         'mkI2CBitControlRandomReadTest',
+        'mkI2CBitControlSclStretchTest',
+        'mkI2CBitControlSclStretchTimeoutTest',
     ],
     deps = [
         ':I2CBitController',
@@ -78,6 +82,8 @@ bluesim_tests('I2CCoreTests',
         'mkI2CCoreSequentialWriteTest',
         'mkI2CCoreSequentialReadTest',
         'mkI2CCoreRandomReadTest',
+        'mkI2CCoreSclStretchTest',
+        'mkI2CCoreSclStretchTimeoutTest',
     ],
     deps = [
         ':I2CBitController',

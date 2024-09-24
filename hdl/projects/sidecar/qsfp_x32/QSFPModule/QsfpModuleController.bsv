@@ -49,17 +49,21 @@ import QsfpX32ControllerRegsPkg::*;
 
 typedef struct {
     Integer system_frequency_hz;
+    Integer core_clk_period_ns;
     Integer i2c_frequency_hz;
     Integer power_good_timeout_ms;
     Integer t_init_ms;
+    Integer t_clock_hold_us;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
+        core_clk_period_ns: 20,
         i2c_frequency_hz: 100_000,
         power_good_timeout_ms: 10,
-        t_init_ms: 2000 // t_init is 2 seconds per SFF-8679
+        t_init_ms: 2000, // t_init is 2 seconds per SFF-8679
+        t_clock_hold_us: 500 // t_clock_hold is 500 microseconds per SFF-8636
     };
 endinstance
 
@@ -116,7 +120,11 @@ endinterface
 module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // I2C core for the module management interface
     I2CCore i2c_core    <-
-        mkI2CCore(parameters.system_frequency_hz, parameters.i2c_frequency_hz);
+        mkI2CCore(parameters.system_frequency_hz,
+                parameters.i2c_frequency_hz,
+                parameters.core_clk_period_ns,
+                parameters.t_clock_hold_us);
+
     Wire#(Bool) i2c_busy_w    <- mkWire();
     mkConnection(i2c_busy_w._write, i2c_core.busy);
 
@@ -295,6 +303,11 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             end else if (err == ByteNack) begin
                 error   <= I2cByteNack;
             end
+        end else if (i2c_core.scl_stretch_timeout() && module_initialized_r) begin
+            // we gate this on the module being initialized as that means we've
+            // actually powered the module (and therefore, the I2C pullups) and
+            // released it from reset for it to stretch in the first place.
+            error <= I2cSclStretchTimeout;
         end
     endrule
 
@@ -305,6 +318,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     (* fire_when_enabled *)
     rule do_port_status_reg;
         port_status_r <= PortStatus {
+            stretching_seen: pack(i2c_core.scl_stretch_seen()),
             rdata_fifo_empty: pack(!rdata_fifo.notEmpty()),
             wdata_fifo_empty: pack(!wdata_fifo.notEmpty()),
             busy: pack(i2c_core.busy()),

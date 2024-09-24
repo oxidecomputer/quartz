@@ -73,10 +73,23 @@ interface I2CCore;
     interface Get#(Bit#(8)) received_data;
     method Maybe#(Error) error;
     method Bool busy;
+
+    // clock stretching state kept sideband
+    method Bool scl_stretch_seen();
+    method Bool scl_stretch_timeout();
 endinterface
 
-module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
-    I2CBitController bit_ctrl   <- mkI2CBitController(core_clk_freq, i2c_scl_freq);
+module mkI2CCore#(Integer core_clk_freq,
+                    Integer i2c_scl_freq,
+                    Integer core_clk_period_ns,
+                    Integer max_scl_stretch_us
+                ) (I2CCore);
+    I2CBitController bit_ctrl   <- mkI2CBitController(
+                                        core_clk_freq,
+                                        i2c_scl_freq,
+                                        core_clk_period_ns,
+                                        max_scl_stretch_us
+                                    );
 
     // FIFOs for Put/Get interfaces
     FIFO#(Command) next_command <- mkFIFO1();
@@ -90,29 +103,42 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     Wire#(Bool) valid_command           <- mkWire();
     Reg#(UInt#(8)) bytes_done           <- mkReg(0);
     Reg#(Bool) in_random_read           <- mkReg(False);
+    Reg#(Bool) in_write_ack_poll        <- mkReg(False);
+    Reg#(Bool) write_acked              <- mkReg(False);
 
-    PulseWire next_send_data           <- mkPulseWire;
+    PulseWire next_send_data            <- mkPulseWire;
+
+    // relabel this net for brevity
+    let timed_out = bit_ctrl.scl_stretch_timeout;
 
     (* fire_when_enabled, no_implicit_conditions *)
     rule do_valid_command;
         valid_command   <= isValid(cur_command);
     endrule
 
+    // when the bit controller has timed out, clear core state
     (* fire_when_enabled *)
-    rule do_register_command(state_r == Idle && !valid_command);
-        cur_command <= tagged Valid next_command.first;
-        error_r     <= tagged Invalid;
-        state_r <= SendStart;
+    rule do_handle_stretch_timeout(timed_out);
+        next_command.clear();
+        error_r <= tagged Invalid;
+        state_r <= Idle;
     endrule
 
     (* fire_when_enabled *)
-    rule do_send_start (state_r == SendStart && valid_command);
+    rule do_register_command(state_r == Idle && !valid_command && !timed_out);
+        cur_command <= tagged Valid next_command.first;
+        error_r     <= tagged Invalid;
+        state_r     <= SendStart;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_send_start (state_r == SendStart && valid_command && !timed_out);
         bit_ctrl.send.put(tagged Start);
         state_r <= SendAddr;
     endrule
 
     (* fire_when_enabled *)
-    rule do_send_addr (state_r == SendAddr && valid_command);
+    rule do_send_addr (state_r == SendAddr && valid_command && !timed_out);
         let cmd = fromMaybe(?, cur_command);
         let is_read = (cmd.op == Read) || in_random_read;
         let addr_byte = {cmd.i2c_addr, pack(is_read)};
@@ -121,16 +147,22 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     endrule
 
     (* fire_when_enabled *)
-    rule do_await_addr_ack (state_r == AwaitAddrAck && valid_command);
+    rule do_await_addr_ack (state_r == AwaitAddrAck
+                            && valid_command
+                            && !timed_out);
         let ack_nack <- bit_ctrl.receive.get();
         let cmd = fromMaybe(?, cur_command);
 
         case (ack_nack) matches
             tagged Ack: begin
+                // Begin a Read
                 if (cmd.op == Read || in_random_read) begin
                     bytes_done  <= 1;
                     bit_ctrl.send.put(tagged Read (cmd.num_bytes == 1));
                     state_r <= Reading;
+                end else if (in_write_ack_poll) begin
+                    write_acked <= True;
+                    state_r     <= Stop;
                 end else begin
                     bit_ctrl.send.put(tagged Write cmd.reg_addr);
                     state_r <= AwaitWriteAck;
@@ -139,20 +171,25 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
 
             tagged Nack: begin
                 state_r <= Stop;
-                error_r <= tagged Valid AddressNack;
+
+                if (!in_write_ack_poll) begin
+                    error_r <= tagged Valid AddressNack;
+                end
             end
         endcase
     endrule
 
     (* fire_when_enabled *)
-    rule do_writing (state_r == Writing && valid_command);
+    rule do_writing (state_r == Writing && valid_command && !timed_out);
         bit_ctrl.send.put(tagged Write tx_data);
         next_send_data.send();
         state_r <= AwaitWriteAck;
     endrule
 
     (* fire_when_enabled *)
-    rule do_await_writing_ack (state_r == AwaitWriteAck && valid_command);
+    rule do_await_writing_ack (state_r == AwaitWriteAck
+                                && valid_command
+                                && !timed_out);
         let ack_nack <- bit_ctrl.receive.get();
         let cmd = fromMaybe(?, cur_command);
 
@@ -178,7 +215,7 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
     endrule
 
     (* fire_when_enabled *)
-    rule do_reading (state_r == Reading && valid_command);
+    rule do_reading (state_r == Reading && valid_command && !timed_out);
         let rdata   <- bit_ctrl.receive.get();
         let cmd     = fromMaybe(?, cur_command);
 
@@ -196,25 +233,34 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
         endcase
     endrule
 
-    rule do_next_read (state_r == NextRead && valid_command);
+    rule do_next_read (state_r == NextRead && valid_command && !timed_out);
         let cmd     = fromMaybe(?, cur_command);
         bit_ctrl.send.put(tagged Read (cmd.num_bytes == bytes_done));
         state_r <= Reading;
     endrule
 
     (* fire_when_enabled *)
-    rule do_stop (state_r == Stop && valid_command);
+    rule do_stop (state_r == Stop && valid_command && !timed_out);
         bit_ctrl.send.put(tagged Stop);
-        state_r     <= Done;
+
+        let cmd     = fromMaybe(?, cur_command);
+        if (cmd.op == Write && !isValid(error_r) && !write_acked) begin
+            state_r             <= SendStart;
+            in_write_ack_poll   <= True;
+        end else begin
+            state_r     <= Done;
+        end
     endrule
 
     (* fire_when_enabled *)
-    rule do_done (state_r == Done && valid_command);
+    rule do_done (state_r == Done && valid_command && !timed_out);
         next_command.deq();
-        bytes_done      <= 0;
-        in_random_read  <= False;
-        cur_command     <= tagged Invalid;
-        state_r         <= Idle;
+        bytes_done          <= 0;
+        in_random_read      <= False;
+        in_write_ack_poll   <= False;
+        write_acked         <= False;
+        cur_command         <= tagged Invalid;
+        state_r             <= Idle;
     endrule
 
     interface pins = bit_ctrl.pins;
@@ -232,6 +278,8 @@ module mkI2CCore#(Integer core_clk_freq, Integer i2c_scl_freq) (I2CCore);
 
     method error = error_r;
     method busy = state_r != Idle;
+    method scl_stretch_seen = bit_ctrl.scl_stretch_seen;
+    method scl_stretch_timeout = bit_ctrl.scl_stretch_timeout;
 endmodule
 
 endpackage: I2CCore

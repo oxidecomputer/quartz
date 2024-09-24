@@ -11,6 +11,7 @@ export Event(..);
 export I2CBitController(..);
 export mkI2CBitController;
 
+import ConfigReg::*;
 import FIFO::*;
 import GetPut::*;
 import StmtFSM::*;
@@ -46,8 +47,10 @@ interface I2CBitController;
     interface Pins pins;
     interface Put#(Event) send;
     interface Get#(Event) receive;
-    method Bool error();
-    method Action clear();
+
+    // clock stretching information sent sideband from the state machine events
+    method Bool scl_stretch_seen();
+    method Bool scl_stretch_timeout();
 endinterface
 
 //
@@ -61,14 +64,29 @@ endinterface
 // OUT_EN = 1, OUT = 0 drives the bus low
 // OUT_EN = 0, OUT = 1 puts the tristate in high impedance, letting the bus
 // pull-ups pull the bus high
+// - Clock stretching is supported
 //
-module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBitController);
+module mkI2CBitController #(
+        Integer core_clk_freq_hz,
+        Integer i2c_scl_freq_hz,
+        Integer core_clk_period_ns,
+        Integer max_scl_stretch_us)
+    (I2CBitController);
     // generate strobe to toggle scl at a desired period
     // ex: 50MHz / 100KHz / 2 = 250
-    Integer scl_half_period_limit = core_clk_freq / i2c_scl_freq / 2;
+    Integer scl_half_period_limit = core_clk_freq_hz / i2c_scl_freq_hz / 2;
 
     // Counts to scl_half_period_limit and then pulses
-    Strobe#(8) scl_toggle_strobe    <- mkLimitStrobe(1, scl_half_period_limit, 0);
+    Strobe#(8) scl_toggle_strobe <- mkLimitStrobe(1, scl_half_period_limit, 0);
+
+    // Calculate number of ticks until we generate an error. We subtract 1 us
+    // because we don't sample for stretching until we're already that duration
+    // into it. See scl_stretch_sample_strobe.
+    // ex: (500 - 1) us * 1000 / 20 ns = 24000
+    Integer scl_stretch_limit = (max_scl_stretch_us - 1) * 1000 / core_clk_period_ns;
+
+    // Counts the number of ticks to scl_stretch_limit and then pulses
+    Strobe#(16) scl_stretch_timeout_cntr <- mkLimitStrobe(1, scl_stretch_limit, 0);
 
     // Counts the number of core_clk periods between the scl/sda transitions for
     // START and STOP conditions.
@@ -80,11 +98,15 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     // TODO: parameterize this
     Strobe#(8) setup_strobe <- mkLimitStrobe(1, 250, 0);
     Strobe#(8) hold_strobe <- mkLimitStrobe(1, 250, 0);
-    Reg#(Bool) setup_done   <- mkReg(False);
+    Reg#(Bool) setup_done <- mkReg(False);
 
     // Delays the transition of SDA after the falling edge of SCL
     // Aside from START/STOP, SDA should not change while SCL is high
     Strobe#(3) sda_transition_strobe <- mkLimitStrobe(1, 7, 0);
+
+    // After we release SCL, wait 50 cycles (1us / 20ns) and see if the line was
+    // held low by a peripheral.
+    Strobe#(6) scl_stretch_sample_strobe <- mkLimitStrobe(1, 50, 0);
 
     // Buffers for Events
     FIFO#(Event) incoming_events    <- mkFIFO1();
@@ -105,24 +127,81 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     Reg#(Bit#(1)) scl_out_en_n  <- mkReg(0);
     Reg#(Bit#(1)) sda_out_en_n  <- mkReg(0);
 
-    Reg#(State) state           <- mkReg(AwaitStart);
-    Reg#(Bool) scl_active       <- mkReg(False);
+    ConfigReg#(State) state     <- mkConfigReg(AwaitStart);
+    ConfigReg#(Bool) scl_active <- mkConfigReg(False);
     Reg#(ShiftBits) shift_bits  <- mkReg(shift_bits_reset);
     Reg#(Bool) read_finished    <- mkReg(False);
     Reg#(Bool) ack_sending      <- mkReg(False);
+    PulseWire begin_transaction <- mkPulseWire();
+
+    Reg#(Bool) scl_stretching           <- mkReg(False);
+    Reg#(Bool) scl_stretch_sample_delay <- mkReg(False);
+    Reg#(Bool) scl_stretch_seen_r       <- mkReg(False);
+    Reg#(Bool) scl_stretch_timeout_r    <- mkReg(False);
+
+    // When we release SCL, start counting before we sample to see if a
+    // peripheral is attempting to stretch.
+    (* fire_when_enabled *)
+    rule do_start_scl_sample_delay(scl_redge && !scl_stretch_sample_strobe);
+        scl_stretch_sample_delay <= True;
+    endrule
+
+    // Counter to time when we should sample SCL to see if its beeing stretched
+    (* fire_when_enabled *)
+    rule do_scl_sample_delay(scl_stretch_sample_delay);
+        scl_stretch_sample_strobe.send();
+    endrule
+
+    // After the delay we know SCL is being stretched if we aren't the ones
+    // holding it low.
+    (* fire_when_enabled *)
+    rule do_sample_scl_stretch(scl_stretch_sample_strobe && scl_in == 0);
+        scl_stretching              <= scl_out_en == 0;
+        scl_stretch_sample_delay    <= False;
+    endrule
+
+    // If SCL is high then no one is holding it
+    (* fire_when_enabled *)
+    rule do_clear_scl_stretch(scl_in == 1);
+        scl_stretching <= False;
+    endrule
+
+    // Register if we've seen any stretching and expose that externally
+    (* fire_when_enabled *)
+    rule do_stretching_reg;
+        if (begin_transaction) begin
+            scl_stretch_seen_r <= False;
+        end else if (!scl_stretch_seen_r) begin
+            scl_stretch_seen_r <= scl_stretching;
+        end
+    endrule
+
+    // Counter to see if the peripheral has held SCL for too long
+    (* fire_when_enabled *)
+    rule do_scl_stretch_tick;
+        if (scl_stretching) begin
+            scl_stretch_timeout_cntr.send();
+        end else begin
+            scl_stretch_timeout_cntr <= 0;
+        end
+    endrule
 
     (* fire_when_enabled *)
-    rule do_setup_delay((state == TransmitStart || state == TransmitStop) && scl_out_en == 0 && sda_out_en == 0);
+    rule do_setup_delay((state == TransmitStart || state == TransmitStop)
+                        && scl_out_en == 0
+                        && sda_out_en == 0);
         setup_strobe.send();
     endrule
 
     (* fire_when_enabled *)
-    rule do_hold_delay((state == TransmitStart || state == TransmitStop) && scl_out_en == 0 && sda_out_en == 1);
+    rule do_hold_delay((state == TransmitStart || state == TransmitStop)
+                        && scl_out_en == 0
+                        && sda_out_en == 1);
         hold_strobe.send();
     endrule
 
     (* fire_when_enabled *)
-    rule do_tick_scl_toggle(scl_active);
+    rule do_tick_scl_toggle(scl_active && !scl_stretching);
         scl_toggle_strobe.send();
     endrule
 
@@ -133,7 +212,9 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     endrule
 
     (* fire_when_enabled *)
-    rule do_scl_toggle((scl_toggle_strobe || hold_strobe) && scl_active);
+    rule do_scl_toggle((scl_toggle_strobe || hold_strobe)
+                        && scl_active
+                        && !scl_stretching);
         scl_out_en_next    <= ~scl_out_en;
 
         if (~scl_out_en == 0 && scl_out_en == 1) begin
@@ -165,7 +246,18 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
         sda_transition_strobe.send();
     endrule
 
-    rule do_next;
+    // A peripheral has held SCL too long. Clear all controller state and wait
+    // for new orders.
+    (* fire_when_enabled *)
+    rule do_scl_stretch_timeout(scl_stretch_timeout_cntr);
+        state                   <= AwaitStart;
+        scl_stretch_timeout_r   <= True;
+        incoming_events.clear();
+    endrule
+
+    // Since a SCL stretch timeout needs to highjack core state, this rule
+    // cannot fire the same cycle.
+    rule do_next(!scl_stretch_timeout_cntr);
         // Poll fifo for an event. If nothing is there, the rule will not fire.
         let e = incoming_events.first;
 
@@ -173,8 +265,10 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
         case (tuple2(state, e)) matches
 
             {AwaitStart, tagged Start}: begin
-                sda_out_en  <= 0;
-                state       <= TransmitStart;
+                begin_transaction.send();
+                sda_out_en              <= 0;
+                state                   <= TransmitStart;
+                scl_stretch_timeout_r   <= False;
                 incoming_events.deq();
             end
 
@@ -213,7 +307,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
             end
 
             {ReceiveAck, .*}: begin
-
                 if (scl_redge) begin
                     state       <= AwaitCommand;
                     incoming_events.deq();
@@ -286,7 +379,6 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
 
             {AwaitCommand, tagged Start}: begin
                 if (scl_fedge) begin
-                    // sda_out <= 1;
                     state   <= TransmitStart;
                     incoming_events.deq();
                 end
@@ -320,9 +412,12 @@ module mkI2CBitController #(Integer core_clk_freq, Integer i2c_scl_freq) (I2CBit
     endinterface
 
     interface Put send;
-        method put = incoming_events.enq;
+        method put if (!scl_stretch_timeout_cntr) = incoming_events.enq;
     endinterface
     interface Get receive = toGet(outgoing_events);
+
+    method scl_stretch_seen     = scl_stretch_seen_r;
+    method scl_stretch_timeout  = scl_stretch_timeout_r;
 endmodule
 
 endpackage: I2CBitController

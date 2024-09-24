@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Fri Apr 26 14:34:43 2024
+[*] Mon Sep 16 21:06:14 2024
 [*]
-[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkI2CReadTest.vcd"
-[dumpfile_mtime] "Fri Apr 26 14:18:16 2024"
-[dumpfile_size] 27803510
+[dumpfile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\build\vcd\QsfpModuleControllerTests_mkI2CSclStretchTimeoutTest.vcd"
+[dumpfile_mtime] "Mon Sep 16 17:50:10 2024"
+[dumpfile_size] 71544432
 [savefile] "\\wsl$\Ubuntu-20.04\home\aaron\Oxide\git\quartz\hdl\projects\sidecar\qsfp_x32\QSFPModule\test\QsfpModuleControllerTests.gtkw"
-[timestart] 0
-[size] 2551 1360
+[timestart] 15988190
+[size] 2558 1360
 [pos] -1 -1
-*-21.543997 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-13.036575 16052670 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] main.
 [treeopen] main.top.
 [sst_width] 446
@@ -22,8 +22,6 @@
 @28
 main.top.bench_controller_lpmode_
 main.top.bench_controller_resetl_
-main.top.bench_controller_modprsl_
-main.top.bench_controller_intl_
 @200
 -
 @28
@@ -44,9 +42,8 @@ main.top.bench_controller_error[2:0]
 (2)main.top.bench_controller_error[2:0]
 @1401200
 -group_end
-@29
-main.top.bench_controller_rdata_fifo_deq
 @28
+main.top.bench_controller_rdata_fifo_deq
 main.top.bench_controller_wdata_fifo_deq
 @200
 -
@@ -54,6 +51,12 @@ main.top.bench_controller_wdata_fifo_deq
 -I2CCore
 @22
 main.top.bench_controller_i2c_core_state_r[3:0]
+@28
+main.top.bench_controller_i2c_core_bit_ctrl_scl_stretch_seen_r
+@29
+main.top.bench_controller_i2c_core_bit_ctrl_scl_stretch_timeout_r
+@28
+main.top.bench_controller_i2c_core_bit_ctrl_scl_stretching
 @200
 -FIFO: Next Command
 -FIFO: BitControl Incoming Events
@@ -105,11 +108,24 @@ main.top.bench_fifo_idx[7:0]
 -Model - I2CPeripheralModel
 @28
 main.top.bench_periph_scl_in
+main.top.bench_periph_scl_out
 main.top.bench_periph_sda_in
+main.top.bench_periph_sda_out
+main.top.bench_periph_addr_set
 @22
 main.top.bench_periph_shift_bits[15:0]
-@28
+@800024
 main.top.bench_periph_state[2:0]
+@28
+(0)main.top.bench_periph_state[2:0]
+(1)main.top.bench_periph_state[2:0]
+(2)main.top.bench_periph_state[2:0]
+@1001200
+-group_end
+@22
+main.top.bench_periph_scl_stretch_countdown_count_r[15:0]
+@28
+main.top.bench_periph_scl_stretch_countdown_q
 @200
 -FIFO: Outgoing Events
 @28

@@ -110,10 +110,16 @@ typedef struct {
 
 module mkTofinoDebugPort #(
         Integer system_frequency_hz,
+        Integer system_period_ns,
         Integer i2c_frequency_hz,
-        Bit#(7) tofino_i2c_address)
+        Bit#(7) tofino_i2c_address,
+        Integer tofino_i2c_stretch_timeout_us)
             (TofinoDebugPort);
-    I2CCore i2c <- mkI2CCore(system_frequency_hz, i2c_frequency_hz);
+    I2CCore i2c <- mkI2CCore(system_frequency_hz,
+                                i2c_frequency_hz,
+                                system_period_ns,
+                                tofino_i2c_stretch_timeout_us
+                            );
     ConfigReg#(Maybe#(Error)) error <- mkConfigReg(tagged Invalid);
 
     // Buffer and connections to the module interface.

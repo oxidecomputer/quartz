@@ -108,6 +108,10 @@ addrmap qsfp_modules_top {
         default sw = r;
 
         field {
+            desc = "'1' if the module stretched SCL during the last transaction.";
+        } STRETCHING_SEEN[7:7] = 0;
+
+        field {
             desc = "'1' if the I2C read data buffer is empty.";
         } RDATA_FIFO_EMPTY[6:6] = 0;
 
@@ -127,6 +131,7 @@ addrmap qsfp_modules_top {
             NotInitialized = 4'h4 {desc = "Module has not been out of reset for duration of t_init";};
             I2cAddressNack = 4'h5 {desc = "Module nack'd the address";};
             I2cByteNack = 4'h6 {desc = "Module nack'd a byte";};
+            I2cSclStretchTimeout = 4'h7 {desc = "Module stretched SCL longer than T_clock_hold";};
         };
 
         field {
