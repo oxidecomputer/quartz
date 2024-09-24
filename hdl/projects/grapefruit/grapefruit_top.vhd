@@ -147,8 +147,8 @@ entity grapefruit_top is
         qspi0_hpm_to_scm_dat1: out std_logic;
         qspi0_hpm_to_scm_dat2: in std_logic;
         qspi0_hpm_to_scm_dat3: in std_logic;
-        sgpip_scm_to_hpm_clk : out std_logic;
-
+        
+        sgpio_scm_to_hpm_clk : out std_logic;
         sgpio_scm_to_hpm_dat: out std_logic_vector(1 downto 0);
         sgpio_hpm_to_scm_dat: in std_logic_vector(1 downto 0);
         sgpio_scm_to_hpm_ld: out std_logic_vector(1 downto 0);
@@ -207,7 +207,8 @@ architecture rtl of grapefruit_top is
     constant config_array : axil_responder_cfg_array_t := 
      (0 => (base_addr => x"00000000", addr_span_bits => 8),
       1 => (base_addr => x"00000100", addr_span_bits => 8),
-      2 => (base_addr => x"00000200", addr_span_bits => 8)
+      2 => (base_addr => x"00000200", addr_span_bits => 8),
+      3 => (base_addr => x"00000300", addr_span_bits => 8)
       );
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
     signal spi_fpga_to_flash_dat_o : std_logic_vector(3 downto 0);
@@ -242,14 +243,7 @@ architecture rtl of grapefruit_top is
     signal ipcc_fpga_to_sp_rts_l: std_logic;
     constant ipcc_dbg_en : std_logic := '0';
     signal hpm_to_scm_stby_rdy_syncd : std_logic;
-
-    type state_type is (idle, standby, standby_delay, pbtn_asserted, done);
-    signal ruby_state : state_type;
-    signal ruby_cntr : std_logic_vector(31 downto 0);
-
-    constant STANDBY_TIME : std_logic_vector(31 downto 0) := calc_ms(100, 8, 32); --100ms
-    constant PBTN_TIME : std_logic_vector(31 downto 0) :=  calc_ms(20, 8, 32); --20ms
-
+   
 begin
 
     pll: entity work.gfruit_pll
@@ -547,7 +541,7 @@ begin
     scm_to_hpm_rot_cpu_rst_l <= '1';
     sgpio_scm_to_hpm_reset_l <= '1';
     scm_to_hpm_stby_en <= '1';
-    scm_to_hpm_stby_rst_l <= '0';
+    scm_to_hpm_stby_rst_l <= hpm_to_scm_stby_rdy_syncd;
     scm_to_hpm_pwrbtn_l <= '1';
     sgpio_hpm_to_scm_intr_l <= '1';
 
@@ -559,58 +553,19 @@ begin
         sycnd_output => hpm_to_scm_stby_rdy_syncd
     );
 
-    -- ruby_seq:process(clk_125m, reset_125m)
-    -- begin
-
-    --     if reset_125m then
-    --         scm_to_hpm_stby_en <= '0';
-    --         scm_to_hpm_stby_rst_l <= '0';
-    --         scm_to_hpm_pwrbtn_l <= '1';
-    --         ruby_cntr <= (others => '0');
-    --     elsif rising_edge(clk_125m) then
-    --         case ruby_state is
-    --             when idle =>
-    --                scm_to_hpm_stby_en <= '1';
-    --                scm_to_hpm_stby_rst_l <= '0';
-    --                if ruby_cntr = STANDBY_TIME then
-    --                     ruby_cntr <= (others => '0');
-    --                     ruby_state <= standby;
-    --                 else
-    --                     ruby_cntr <= ruby_cntr + 1;
-    --                 end if;
-    --             when standby =>
-    --                 if hpm_to_scm_stby_rdy_syncd = '1' then
-    --                     scm_to_hpm_stby_rst_l <= '1';
-    --                     ruby_state <= standby_delay;
-    --                 end if;
-    --             when standby_delay =>
-    --                 if ruby_cntr = STANDBY_TIME then
-    --                     ruby_cntr <= (others => '0');
-    --                     ruby_state <= pbtn_asserted;
-    --                     scm_to_hpm_pwrbtn_l <= '0';
-    --                 else
-    --                     ruby_cntr <= ruby_cntr + 1;
-    --                 end if;
-
-    --             when pbtn_asserted =>
-    --                 if ruby_cntr = PBTN_TIME then
-    --                     ruby_cntr <= (others => '0');
-    --                     ruby_state <= done;
-    --                     scm_to_hpm_pwrbtn_l <= '1';
-    --                 else
-    --                     ruby_cntr <= ruby_cntr + 1;
-    --                 end if;
-
-    --             when done =>
-    --                 null;
-
-    --         end case;
-
-    --     end if;
-
-
-    -- end process;
-    
+    gfruit_sgpio_inst: entity work.gfruit_sgpio
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders(3),
+        sclk => sgpio_scm_to_hpm_clk,
+        sgpio0_do => sgpio_scm_to_hpm_dat(0),
+        sgpio0_di => sgpio_hpm_to_scm_dat(0),
+        sgpio0_ld => sgpio_scm_to_hpm_ld(0),
+        sgpio1_do => sgpio_scm_to_hpm_dat(1),
+        sgpio1_di => sgpio_hpm_to_scm_dat(1),
+        sgpio1_ld => sgpio_scm_to_hpm_ld(1)
+    );
 
     i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
     i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);

@@ -167,7 +167,7 @@ set_property -dict { PACKAGE_PIN M1 IOSTANDARD LVCMOS33 } [get_ports { qspi0_hpm
 set_property -dict { PACKAGE_PIN M2 IOSTANDARD LVCMOS33 } [get_ports { qspi0_hpm_to_scm_dat2 }];
 set_property -dict { PACKAGE_PIN K1 IOSTANDARD LVCMOS33 } [get_ports { qspi0_hpm_to_scm_dat1 }];
 set_property -dict { PACKAGE_PIN L1 IOSTANDARD LVCMOS33 } [get_ports { qspi0_hpm_to_scm_dat0 }];
-set_property -dict { PACKAGE_PIN N4 IOSTANDARD LVCMOS33 } [get_ports { sgpip_scm_to_hpm_clk }];
+set_property -dict { PACKAGE_PIN N4 IOSTANDARD LVCMOS33 } [get_ports { sgpio_scm_to_hpm_clk }];
 set_property -dict { PACKAGE_PIN P2 IOSTANDARD LVCMOS33 } [get_ports { sgpio_scm_to_hpm_dat[1] }];
 set_property -dict { PACKAGE_PIN P1 IOSTANDARD LVCMOS33 } [get_ports { sgpio_scm_to_hpm_dat[0] }];
 set_property -dict { PACKAGE_PIN P8 IOSTANDARD LVCMOS33 } [get_ports { sgpio_hpm_to_scm_dat[1] }];
