@@ -6,11 +6,11 @@ export ControllerId(..);
 export RegisterId(..);
 export RegisterRequest_$op(..);
 export RegisterRequest(..);
-export Registers(..);
+export RegisterServer(..);
 export CounterAddress(..);
 export CounterId(..);
 export Counter(..);
-export Counters(..);
+export CounterServer(..);
 export TransmitterOutputEnableMode(..);
 
 export mkController;
@@ -32,9 +32,9 @@ import GetPut::*;
 import StmtFSM::*;
 import Vector::*;
 
-import CounterRAM::*;
-
+import IgnitionControllerCounters::*;
 import IgnitionControllerRegisters::*;
+import IgnitionControllerShared::*;
 import IgnitionProtocol::*;
 import IgnitionReceiver::*;
 import IgnitionTransceiver::*;
@@ -53,8 +53,6 @@ instance DefaultValue#(Parameters);
         transmitter_output_disable_timeout: 100,
         protocol: defaultValue};
 endinstance
-
-typedef UInt#(TLog#(n)) ControllerId#(numeric type n);
 
 typedef enum {
     TransceiverState = 0,
@@ -76,54 +74,7 @@ typedef struct {
     } op;
 } RegisterRequest#(numeric type n) deriving (Bits, FShow);
 
-typedef enum {
-    TargetPresent,
-    TargetTimeout,
-    StatusReceived,
-    StatusTimeout,
-    HelloSent,
-    SystemPowerRequestSent,
-    ControllerReceiverReset,
-    ControllerReceiverAligned,
-    ControllerReceiverLocked,
-    ControllerReceiverPolarityInverted,
-    ControllerEncodingError,
-    ControllerDecodingError,
-    ControllerOrderedSetInvalid,
-    ControllerMessageVersionInvalid,
-    ControllerMessageTypeInvalid,
-    ControllerMessageChecksumInvalid,
-    TargetLink0ReceiverReset,
-    TargetLink0ReceiverAligned,
-    TargetLink0ReceiverLocked,
-    TargetLink0ReceiverPolarityInverted,
-    TargetLink0EncodingError,
-    TargetLink0DecodingError,
-    TargetLink0OrderedSetInvalid,
-    TargetLink0MessageVersionInvalid,
-    TargetLink0MessageTypeInvalid,
-    TargetLink0MessageChecksumInvalid,
-    TargetLink1ReceiverReset,
-    TargetLink1ReceiverAligned,
-    TargetLink1ReceiverLocked,
-    TargetLink1ReceiverPolarityInverted,
-    TargetLink1EncodingError,
-    TargetLink1DecodingError,
-    TargetLink1OrderedSetInvalid,
-    TargetLink1MessageVersionInvalid,
-    TargetLink1MessageTypeInvalid,
-    TargetLink1MessageChecksumInvalid
-} CounterId deriving (Bits, Eq, FShow);
-
-typedef struct {
-    ControllerId#(n) controller;
-    CounterId counter;
-} CounterAddress#(numeric type n) deriving (Bits, Eq, FShow);
-
-typedef UInt#(8) Counter;
-
-typedef Server#(RegisterRequest#(n), Bit#(8)) Registers#(numeric type n);
-typedef Server#(CounterAddress#(n), Counter) Counters#(numeric type n);
+typedef Server#(RegisterRequest#(n), Bit#(8)) RegisterServer#(numeric type n);
 
 typedef enum {
     Disabled = 0,
@@ -143,12 +94,14 @@ interface Controller #(numeric type n);
     interface ControllerTransceiverClient#(n) txr;
 
     // Software interface
-    interface Registers#(n) registers;
-    interface Counters#(n) counters;
+    interface RegisterServer#(n) registers;
+    interface CounterServer#(n) counters;
     // A bit vector indicating which channels have a `Target` present.
     method Vector#(n, Bool) presence_summary();
 
-    // Debug
+    // Flag indicating whether or not the Controller is idle, meaning it is not
+    // processing software requests, tick events, receiver events or
+    // incrementing counters.
     (* always_ready *) method Bool idle();
 endinterface
 
@@ -251,10 +204,10 @@ module mkController #(
     FIFOF#(ReceiverEvent#(n)) receiver_events <- mkGFIFOF(False, True);
 
     //
-    // Output FIFOs holding the results produced when processing software
-    // requests, tick- and receiver events. Note that these FIFOs are implicitly
-    // guarded causing the event handler rules and downstream events to block if
-    // they are not emptied by upstream logic in a timely fashion.
+    // Output FIFOs holding software responses and transmitter events (outgoing
+    // messages). Note that these FIFOs implicitly guard the event handler rules
+    // causing the handler to block if they are not emptied by downstream logic
+    // in a timely fashion.
     //
     FIFOF#(Bit#(8)) software_response <- mkFIFOF();
     FIFOF#(TransmitterEvent#(n)) transmitter_events <- mkFIFOF();
@@ -319,69 +272,7 @@ module mkController #(
     // which channels to query for data.
     Vector#(n, Reg#(Bool)) presence_summary_r <- replicateM(mkConfigReg(False));
 
-    //
-    // Event counter state
-    //
-    // While processing software requests and tick- and receiver events the
-    // event handler observes the occurance of countable events (apologies for
-    // overloading the term "event" here). Examples include decoding- or parse
-    // errors observed by the receiver, the number of times a Target has become
-    // present or timed out, the number of messages sent by the Controller, etc.
-    // Counters associated with these events are stored per Controller using a
-    // BRAM (see `event_counters` below), which exposes a single producer port
-    // used to read/modify/write their values one at the time.
-    //
-    // A single event processed by the event handler however may require several
-    // counters to be incremented. And since the hander is expected to process
-    // events at a fixed three-cycle rate and it only needs to increment any
-    // counter by one, the event handler instead emits bit vectors (stored in
-    // the `countable_*_events` FIFOs below) indicating which counters need to
-    // be incremented.
-    //
-    // While the event handler has already completed the event, these countable
-    // events vectors are then sequentially decoded into their respective
-    // counter address and merged into a single BRAM backed FIFO (see
-    // `increment_event_counter`). This FIFO is then emptied incrementing each
-    // counter using the producer port of the counters BRAM.
-    //
-    // Decoding from the countable event vectors to individual counter addresses
-    // is done somewhat in parallel but merged at one counter/cycle into the
-    // final BRAM based FIFO. Bursts of vectors can be absorbed, but in order to
-    // guarantee not blocking the event handler the countable_*_events FIFOs use
-    // an unguarded enq side, allowing the event handler to overwrite previous
-    // vectors if they are not drained quickly enough. This will cause the
-    // counters to be undercount, but the overall Controller state will remain
-    // consistent.
-    //
-    // The counters in BRAM are saturating and will natarally
-    // undercount if software is not collecting them in time which makes event
-    // vectors being dropped under a high workload an acceptable decision. As
-    // such the counters have "at least n observed occurances" semantics.
-    //
-    FIFOF#(CountableApplicationEventsWithId#(n))
-            countable_application_events <- mkGFIFOF(True, False);
-    FIFOF#(CountableTransceiverEventsWithId#(n))
-            countable_transceiver_events <- mkGFIFOF(True, False);
-    FIFOF#(CountableTransceiverEventsWithId#(n))
-            countable_target_link0_events <- mkGFIFOF(True, False);
-    FIFOF#(CountableTransceiverEventsWithId#(n))
-            countable_target_link1_events <- mkGFIFOF(True, False);
-
-    FIFOF#(CounterAddress#(n))
-            increment_application_event_counter <- mkGLFIFOF(False, True);
-    FIFOF#(CounterAddress#(n))
-            increment_transceiver_event_counter <- mkGLFIFOF(False, True);
-    FIFOF#(CounterAddress#(n))
-            increment_target_link0_event_counter <- mkGLFIFOF(False, True);
-    FIFOF#(CounterAddress#(n))
-            increment_target_link1_event_counter <- mkGLFIFOF(False, True);
-    FIFOF#(CounterAddress#(n))
-            increment_event_counter <- mkSizedBRAMFIFOF(255);
-
-    // Saturating 8 bit counters in BRAM, incremented by 1 per request.
-    let n_counters = valueOf(TExp#(SizeOf#(CounterAddress#(n))));
-    CounterRAM#(CounterAddress#(n), 8, 1)
-            event_counters <- mkCounterRAM(n_counters);
+    ControllerCounters#(n) event_counters <- mkControllerCounters();
 
     // Event handler state
     Reg#(EventHandlerState) event_handler_state <- mkReg(AwaitingEvent);
@@ -488,346 +379,16 @@ module mkController #(
     end
 
     //
-    // Event counters rules
-    //
-
-    Reg#(ControllerId#(n)) countable_application_events_id <- mkRegU();
-    Reg#(CountableApplicationEvents)
-            countable_application_events_remaining <- mkReg(0);
-
-    (* fire_when_enabled *)
-    rule do_deq_countable_application_events
-            (countable_application_events_remaining == 0);
-        countable_application_events_id <=
-                countable_application_events.first.id;
-        countable_application_events_remaining <=
-                countable_application_events.first.events;
-
-        countable_application_events.deq();
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_decode_countable_application_events
-            (countable_application_events_remaining != 0);
-        Reg#(CountableApplicationEvents) events =
-                countable_application_events_remaining;
-
-        function increment(counter) =
-            increment_application_event_counter.enq(
-                    CounterAddress {
-                        controller: countable_application_events_id,
-                        counter: counter});
-
-        if (events.status_received) begin
-            events.status_received <= False;
-            increment(StatusReceived);
-        end
-        else if (events.status_timeout) begin
-            events.status_timeout <= False;
-            increment(StatusTimeout);
-        end
-        else if (events.target_present) begin
-            events.target_present <= False;
-            increment(TargetPresent);
-        end
-        else if (events.target_timeout) begin
-            events.target_timeout <= False;
-            increment(TargetTimeout);
-        end
-        else if (events.hello_sent) begin
-            events.hello_sent <= False;
-            increment(HelloSent);
-        end
-        else if (events.system_power_request_sent) begin
-            events.system_power_request_sent <= False;
-            increment(SystemPowerRequestSent);
-        end
-    endrule
-
-    Reg#(ControllerId#(n)) countable_transceiver_events_id <- mkRegU();
-    Reg#(CountableTransceiverEvents)
-            countable_transceiver_events_remaining <- mkReg(0);
-
-    (* fire_when_enabled *)
-    rule do_deq_countable_transceiver_events
-            (countable_transceiver_events_remaining == 0);
-        countable_transceiver_events_id <=
-                countable_transceiver_events.first.id;
-        countable_transceiver_events_remaining <=
-                countable_transceiver_events.first.events;
-
-        countable_transceiver_events.deq();
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_decode_countable_transceiver_events
-            (countable_transceiver_events_remaining != 0);
-        Reg#(CountableTransceiverEvents) events =
-                countable_transceiver_events_remaining;
-
-        function increment(counter) =
-            increment_transceiver_event_counter.enq(
-                    CounterAddress {
-                        controller: countable_transceiver_events_id,
-                        counter: counter});
-
-        if (events.encoding_error) begin
-            events.encoding_error <= False;
-            increment(ControllerEncodingError);
-        end
-        else if (events.decoding_error) begin
-            events.decoding_error <= False;
-            increment(ControllerDecodingError);
-        end
-        else if (events.ordered_set_invalid) begin
-            events.ordered_set_invalid <= False;
-            increment(ControllerOrderedSetInvalid);
-        end
-        else if (events.message_version_invalid) begin
-            events.message_version_invalid <= False;
-            increment(ControllerMessageVersionInvalid);
-        end
-        else if (events.message_type_invalid) begin
-            events.message_type_invalid <= False;
-            increment(ControllerMessageTypeInvalid);
-        end
-        else if (events.message_checksum_invalid) begin
-            events.message_checksum_invalid <= False;
-            increment(ControllerMessageChecksumInvalid);
-        end
-        else if (events.aligned) begin
-            events.aligned <= False;
-            increment(ControllerReceiverAligned);
-        end
-        else if (events.locked) begin
-            events.locked <= False;
-            increment(ControllerReceiverLocked);
-        end
-        else if (events.polarity_inverted) begin
-            events.polarity_inverted <= False;
-            increment(ControllerReceiverPolarityInverted);
-        end
-        else if (events.reset) begin
-            events.reset <= False;
-            increment(ControllerReceiverReset);
-        end
-    endrule
-
-    Reg#(ControllerId#(n)) countable_target_link0_events_id <- mkRegU();
-    Reg#(CountableTransceiverEvents)
-            countable_target_link0_events_remaining <- mkReg(0);
-
-    (* fire_when_enabled *)
-    rule do_deq_countable_link0_events
-            (countable_target_link0_events_remaining == 0);
-        countable_target_link0_events_id <=
-                countable_target_link0_events.first.id;
-        countable_target_link0_events_remaining <=
-                countable_target_link0_events.first.events;
-
-        countable_target_link0_events.deq();
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_decode_countable_target_link0_events
-            (countable_target_link0_events_remaining != 0);
-        Reg#(CountableTransceiverEvents) events =
-                countable_target_link0_events_remaining;
-
-        function increment(counter) =
-            increment_target_link0_event_counter.enq(
-                    CounterAddress {
-                        controller: countable_target_link0_events_id,
-                        counter: counter});
-
-        if (events.encoding_error) begin
-            events.encoding_error <= False;
-            increment(TargetLink0EncodingError);
-        end
-        else if (events.decoding_error) begin
-            events.decoding_error <= False;
-            increment(TargetLink0DecodingError);
-        end
-        else if (events.ordered_set_invalid) begin
-            events.ordered_set_invalid <= False;
-            increment(TargetLink0OrderedSetInvalid);
-        end
-        else if (events.message_version_invalid) begin
-            events.message_version_invalid <= False;
-            increment(TargetLink0MessageVersionInvalid);
-        end
-        else if (events.message_type_invalid) begin
-            events.message_type_invalid <= False;
-            increment(TargetLink0MessageTypeInvalid);
-        end
-        else if (events.message_checksum_invalid) begin
-            events.message_checksum_invalid <= False;
-            increment(TargetLink0MessageChecksumInvalid);
-        end
-        else if (events.aligned) begin
-            events.aligned <= False;
-            increment(TargetLink0ReceiverAligned);
-        end
-        else if (events.locked) begin
-            events.locked <= False;
-            increment(TargetLink0ReceiverLocked);
-        end
-        else if (events.polarity_inverted) begin
-            events.polarity_inverted <= False;
-            increment(TargetLink0ReceiverPolarityInverted);
-        end
-        else if (events.reset) begin
-            events.reset <= False;
-            increment(TargetLink0ReceiverReset);
-        end
-    endrule
-
-    Reg#(ControllerId#(n)) countable_target_link1_events_id <- mkRegU();
-    Reg#(CountableTransceiverEvents)
-            countable_target_link1_events_remaining <- mkReg(0);
-
-    (* fire_when_enabled *)
-    rule do_deq_countable_link1_events
-            (countable_target_link1_events_remaining == 0);
-        countable_target_link1_events_id <=
-                countable_target_link1_events.first.id;
-        countable_target_link1_events_remaining <=
-                countable_target_link1_events.first.events;
-
-        countable_target_link1_events.deq();
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_decode_countable_target_link1_events
-            (countable_target_link1_events_remaining != 0);
-        Reg#(CountableTransceiverEvents) events =
-                countable_target_link1_events_remaining;
-
-        function increment(counter) =
-            increment_target_link1_event_counter.enq(
-                    CounterAddress {
-                        controller: countable_target_link1_events_id,
-                        counter: counter});
-
-        if (events.encoding_error) begin
-            events.encoding_error <= False;
-            increment(TargetLink1EncodingError);
-        end
-        else if (events.decoding_error) begin
-            events.decoding_error <= False;
-            increment(TargetLink1DecodingError);
-        end
-        else if (events.ordered_set_invalid) begin
-            events.ordered_set_invalid <= False;
-            increment(TargetLink1OrderedSetInvalid);
-        end
-        else if (events.message_version_invalid) begin
-            events.message_version_invalid <= False;
-            increment(TargetLink1MessageVersionInvalid);
-        end
-        else if (events.message_type_invalid) begin
-            events.message_type_invalid <= False;
-            increment(TargetLink1MessageTypeInvalid);
-        end
-        else if (events.message_checksum_invalid) begin
-            events.message_checksum_invalid <= False;
-            increment(TargetLink1MessageChecksumInvalid);
-        end
-        else if (events.aligned) begin
-            events.aligned <= False;
-            increment(TargetLink1ReceiverAligned);
-        end
-        else if (events.locked) begin
-            events.locked <= False;
-            increment(TargetLink1ReceiverLocked);
-        end
-        else if (events.polarity_inverted) begin
-            events.polarity_inverted <= False;
-            increment(TargetLink1ReceiverPolarityInverted);
-        end
-        else if (events.reset) begin
-            events.reset <= False;
-            increment(TargetLink1ReceiverReset);
-        end
-    endrule
-
-    Reg#(Vector#(4, Bool))
-            increment_event_counter_source_select_base <- mkReg(unpack(1));
-
-    (* fire_when_enabled *)
-    rule do_merge_increment_counter_requests;
-        let pending = vec(
-                increment_application_event_counter.notEmpty,
-                increment_transceiver_event_counter.notEmpty,
-                increment_target_link0_event_counter.notEmpty,
-                increment_target_link1_event_counter.notEmpty);
-
-        let source_select =
-                round_robin_select(
-                    pending,
-                    increment_event_counter_source_select_base);
-
-        function Action deq_from(FIFOF#(CounterAddress#(n)) source) =
-            action
-                increment_event_counter.enq(source.first);
-                source.deq();
-                increment_event_counter_source_select_base <=
-                        rotateR(source_select);
-            endaction;
-
-        if (source_select[0])
-            deq_from(increment_application_event_counter);
-        else if (source_select[1])
-            deq_from(increment_transceiver_event_counter);
-        else if (source_select[2])
-            deq_from(increment_target_link0_event_counter);
-        else if (source_select[3])
-            deq_from(increment_target_link1_event_counter);
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_increment_counter;
-        increment_event_counter.deq();
-        event_counters.producer.request.put(
-                CounterWriteRequest {
-                    id: increment_event_counter.first,
-                    op: Add,
-                    amount: 1});
-    endrule
-
-    let event_counting_idle =
-            !(countable_application_events.notEmpty ||
-                countable_transceiver_events.notEmpty ||
-                countable_target_link0_events.notEmpty ||
-                countable_target_link1_events.notEmpty ||
-                increment_application_event_counter.notEmpty ||
-                increment_transceiver_event_counter.notEmpty ||
-                increment_target_link0_event_counter.notEmpty ||
-                increment_target_link1_event_counter.notEmpty ||
-                increment_event_counter.notEmpty) &&
-            countable_application_events_remaining == 0 &&
-            countable_transceiver_events_remaining == 0 &&
-            countable_target_link0_events_remaining == 0 &&
-            countable_target_link1_events_remaining == 0 &&
-            event_counters.producer.idle;
-
-    //
     // Event handler rules
     //
 
-    function Action enq_countable_application_events(
+    function Action count_application_events(
             CountableApplicationEvents events) =
-        countable_application_events.enq(
-                CountableApplicationEventsWithId {
-                    id: current_controller,
-                    events: events});
+        event_counters.count_application_events(current_controller, events);
 
-    function Action enq_countable_transceiver_events(
+    function Action count_transceiver_events(
             CountableTransceiverEvents events) =
-        countable_transceiver_events.enq(
-                CountableTransceiverEventsWithId {
-                    id: current_controller,
-                    events: events});
+        event_counters.count_transceiver_events(current_controller, events);
 
     (* fire_when_enabled *)
     rule do_start_event_handler (
@@ -1011,7 +572,7 @@ module mkController #(
                                 id: current_controller,
                                 ev: tagged Message tagged Request request});
 
-                    enq_countable_application_events(
+                    count_application_events(
                             CountableApplicationEvents {
                                 status_received: False,
                                 status_timeout: False,
@@ -1149,7 +710,7 @@ module mkController #(
 
         // Enqueue a request to update the appropriate counters.
         if (status_timeout || target_timeout || hello_sent) begin
-            enq_countable_application_events(
+            count_application_events(
                     CountableApplicationEvents {
                         status_received: False,
                         status_timeout: status_timeout,
@@ -1223,7 +784,7 @@ module mkController #(
 
                 transceiver <= transceiver_;
 
-                enq_countable_application_events(
+                count_application_events(
                         CountableApplicationEvents {
                             status_received: True,
                             status_timeout: False,
@@ -1236,32 +797,30 @@ module mkController #(
                 let previous = presence.current_status_message;
                 let current = presence_.current_status_message;
 
-                countable_target_link0_events.enq(
-                        CountableTransceiverEventsWithId {
-                            id: current_controller,
-                            events: determine_transceiver_events(
-                                target_link0_status[previous],
-                                target_link0_status[current],
-                                target_link0_events[current],
-                                // Attempt to detect receiver resets by
-                                // comparing the current and previous receiver
-                                // status. This is not an accurate count since
-                                // this will only count instances where the
-                                // status changes as a result of the reset.
-                                // Subsequent resets may happen without the
-                                // status changing, which will go unnoticed
-                                // here. But for the purposes of remote
-                                // monitoring the Target this is good enough.
-                                True)});
+                event_counters.count_target_link0_events(
+                        current_controller,
+                        determine_transceiver_events(
+                            target_link0_status[previous],
+                            target_link0_status[current],
+                            target_link0_events[current],
+                            // Attempt to detect receiver resets by
+                            // comparing the current and previous receiver
+                            // status. This is not an accurate count since
+                            // this will only count instances where the
+                            // status changes as a result of the reset.
+                            // Subsequent resets may happen without the
+                            // status changing, which will go unnoticed
+                            // here. But for the purposes of remote
+                            // monitoring the Target this is good enough.
+                            True));
 
-                countable_target_link1_events.enq(
-                        CountableTransceiverEventsWithId {
-                            id: current_controller,
-                            events: determine_transceiver_events(
-                                target_link1_status[previous],
-                                target_link1_status[current],
-                                target_link1_events[current],
-                                True)});
+                event_counters.count_target_link1_events(
+                        current_controller,
+                        determine_transceiver_events(
+                            target_link1_status[previous],
+                            target_link1_status[current],
+                            target_link1_events[current],
+                            True));
             end
 
             tagged StatusMessageFragment .field: begin
@@ -1350,7 +909,7 @@ module mkController #(
                 // Write back the transceiver state.
                 transceiver <= transceiver_;
 
-                enq_countable_transceiver_events(
+                count_transceiver_events(
                         countable_transceiver_events_receiver_reset);
             end
 
@@ -1374,7 +933,7 @@ module mkController #(
                 // Write back the transceiver state.
                 transceiver <= transceiver_;
 
-                enq_countable_transceiver_events(
+                count_transceiver_events(
                         determine_transceiver_events(
                             transceiver.receiver_status,
                             current_status,
@@ -1390,7 +949,7 @@ module mkController #(
             end
 
             tagged ReceiverEvent .events: begin
-                enq_countable_transceiver_events(
+                count_transceiver_events(
                         determine_transceiver_events(
                             defaultValue,
                             defaultValue,
@@ -1414,23 +973,13 @@ module mkController #(
         interface Get response = toGet(software_response);
     endinterface
 
-    interface Server counters;
-        interface Put request;
-            method put(address) =
-                    event_counters.consumer.request.put(
-                        CounterReadRequest {
-                            id: address,
-                            clear: True});
-        endinterface
-
-        interface Get response = event_counters.consumer.response;
-    endinterface
+    interface Server counters = event_counters.counters;
 
     method presence_summary = readVReg(presence_summary_r);
 
     method tick_1mhz = tick.send;
 
-    method idle = init_complete && event_handler_idle && event_counting_idle;
+    method idle = init_complete && event_handler_idle && event_counters.idle;
 endmodule
 
 interface RegisterFile#(numeric type n, type t);
@@ -1483,99 +1032,6 @@ typedef struct {
         SystemPowerRequest SystemPowerRequest;
     } ev;
 } SoftwareEvent#(numeric type n) deriving (Bits, Eq, FShow);
-
-typedef struct {
-    Bool reset;
-    Bool polarity_inverted;
-    Bool locked;
-    Bool aligned;
-    Bool message_checksum_invalid;
-    Bool message_type_invalid;
-    Bool message_version_invalid;
-    Bool ordered_set_invalid;
-    Bool decoding_error;
-    Bool encoding_error;
-} CountableTransceiverEvents deriving (Bits, Eq, FShow);
-
-instance Literal#(CountableTransceiverEvents);
-    function CountableTransceiverEvents fromInteger(Integer x) =
-            unpack(fromInteger(x));
-    function Bool inLiteralRange(CountableTransceiverEvents e, Integer x) =
-            fromInteger(x) <= pack(CountableTransceiverEvents'(unpack('1)));
-endinstance
-
-function CountableTransceiverEvents determine_transceiver_events(
-        LinkStatus past_status,
-        LinkStatus current_status,
-        LinkEvents link_events,
-        Bool infer_reset) =
-    CountableTransceiverEvents {
-        reset:
-            (infer_reset &&
-                past_status.polarity_inverted &&
-                !current_status.polarity_inverted) ||
-            (infer_reset &&
-                past_status.receiver_locked &&
-                !current_status.receiver_locked) ||
-            (infer_reset &&
-                past_status.receiver_aligned &&
-                !current_status.receiver_aligned),
-        polarity_inverted:
-            !past_status.polarity_inverted &&
-                current_status.polarity_inverted,
-        locked:
-            !past_status.receiver_locked &&
-                current_status.receiver_locked,
-        aligned:
-            !past_status.receiver_aligned &&
-                current_status.receiver_aligned,
-        message_checksum_invalid: link_events.message_checksum_invalid,
-        message_type_invalid: link_events.message_type_invalid,
-        message_version_invalid: link_events.message_version_invalid,
-        ordered_set_invalid: link_events.ordered_set_invalid,
-        decoding_error: link_events.decoding_error,
-        encoding_error: link_events.encoding_error};
-
-CountableTransceiverEvents countable_transceiver_events_receiver_reset =
-        CountableTransceiverEvents {
-            reset: True,
-            polarity_inverted: False,
-            locked: False,
-            aligned: False,
-            message_checksum_invalid: False,
-            message_type_invalid: False,
-            message_version_invalid: False,
-            ordered_set_invalid: False,
-            decoding_error: False,
-            encoding_error: False};
-
-typedef struct {
-    Bool system_power_request_sent;
-    Bool hello_sent;
-    Bool target_timeout;
-    Bool target_present;
-    Bool status_timeout;
-    Bool status_received;
-} CountableApplicationEvents deriving (Bits, Eq, FShow);
-
-instance Literal#(CountableApplicationEvents);
-    function CountableApplicationEvents fromInteger(Integer x) =
-            unpack(fromInteger(x));
-    function Bool inLiteralRange(CountableApplicationEvents e, Integer x) =
-            fromInteger(x) <= pack(e);
-endinstance
-
-typedef struct {
-    ControllerId#(n) id;
-    events_type events;
-} CountableEventsWithId#(numeric type n, type events_type)
-    deriving (Bits, FShow);
-
-typedef CountableEventsWithId#(n, CountableTransceiverEvents)
-        CountableTransceiverEventsWithId#(numeric type n);
-
-typedef CountableEventsWithId#(n, CountableApplicationEvents)
-        CountableApplicationEventsWithId#(numeric type n);
 
 typedef struct {
     UInt#(1) current_status_message;
@@ -1666,19 +1122,5 @@ function Bit#(8) transceiver_state_value(
         Bool transmitter_status,
         LinkStatus receiver_status) =
     {2'h0, pack(mode), pack(transmitter_status), pack(receiver_status)};
-
-// Given a bit_vector_t with zero or more bits indicating requests and a
-// bit_vector_t with exactly one bit set indicating the preferred (next) request
-// to select, round-robin select the next request.
-function bit_vector_t round_robin_select(
-        bit_vector_t pending,
-        bit_vector_t base)
-            provisos (Bits#(bit_vector_t, sz));
-    let _base = extend(pack(base));
-    let _pending = {pack(pending), pack(pending)};
-
-    match {.left, .right} = split(_pending & ~(_pending - _base));
-    return unpack(left | right);
-endfunction
 
 endpackage
