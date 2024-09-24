@@ -57,7 +57,7 @@ begin
         begin
             if rising_edge(clk) then
                 sr    <= shift_right(sr, 1);
-                sr(1) <= async_input;
+                sr(sr'left) <= async_input;
             end if;
         end process;
 
@@ -67,7 +67,7 @@ begin
         sync_regs: process(clk)
         begin
             if rising_edge(clk) then
-                sr(0) <= async_input;
+                sr(sr'left) <= async_input;
             end if;
         end process;
 
