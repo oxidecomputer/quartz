@@ -55,7 +55,7 @@ class BaseModel:
     @property
     def fields_by_bytes(self) -> List[List[Tuple[Tuple[int,int], "Field"]]]:
         view_files_in_bytes = []
-        for byte_high_index in range(0, 4):
+        for byte_high_index in range(0, self.node.size):
             high = self.width - 1 - 8 * byte_high_index
             low = self.width -1 - 8 * byte_high_index - 7
             view_files_in_bytes.append(((high, low), self.fields_between_bits(high, low)))
