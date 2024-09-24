@@ -1,0 +1,23 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "sgpio_top",
+    srcs = glob([
+        "*.vhd"
+    ]),
+    deps = [
+        "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/utilities:calc_pkg",
+        ],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "sgpio_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":sgpio_top",
+    ],
+    visibility = ['PUBLIC'],
+)
