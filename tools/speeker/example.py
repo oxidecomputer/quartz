@@ -17,32 +17,3 @@ con = udp_if.UDPMem(target, ifname, port)
 for addr in range(0x60000200, 0x60000220, 4):
     a = con.read32(addr)
     print(f"{addr:#x}: {a:#x}")
-
-# a = con.read32(0x60000000)
-# print(f"0x0: {a:#x}")
-# b = con.read32(0x60000008)
-# print(f"0x8: {b:#x}")
-# # write to scratchpad
-# con.write32(0x60000008, 0xabadbeef)
-# a = con.read32(0x60000008)
-# print(f"0x8: {a:#x}")
-# # # set back to default
-# con.write32(0x60000008, b)
-# b = con.read32(0x60000008)
-# print(f"0x8: {b:#x}")
-
-# while True:
-#     a = con.read32(0x60000000)
-#     con.write32(0x60000008, 0xabadbeef)
-#     #print(f"0x0: {a:#x}")
-#     a = con.read32(0x60000208)
-#     print(f"0x0: {a:#x}")
-#     con.write32(0x60000200, 0x0)
-    #a = con.read32(0x60000000)
-    #print(f"0x0: {a:#x}")
-
-# #con.write32(0x60000500, 0x0)
-#a = con.read32(0x60000200)
-# print(f"0x0: {a:#x}")
-# a = con.read32(0x60000400)
-# print(f"0x0: {a:#x}")

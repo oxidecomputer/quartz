@@ -160,12 +160,6 @@ begin
                 -- We expect something to happen here and the alert get set when the completion
                 -- status is written back, so we check the crc here and then wait for the alert
                 put_flash_read(net, X"00000000", 32, response_code, status,  crc_ok);
-            --  check(crc_ok, "CRC Check failed");
-            --  wait_for_alert;
-            --  get_any_pending_alert(pending_alert);
-            --  check(pending_alert, "Expected an alert to be pending");
-            --  get_status(response_code, status,  crc_ok);
-            --  check(pending_alert = false, "After get status, expected no alert to be pending");
             elsif run("read_flash") then
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';

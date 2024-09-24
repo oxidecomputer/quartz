@@ -13,10 +13,21 @@ rdl_file(
 )
 
 rdl_file(
+    name = "gfruit_sgpio_regs",
+    src = "sgpio/gfruit_sgpio.rdl",
+    outputs = [
+        "sgpio_regs_pkg.vhd", 
+        "sgpio_reg_map.html", 
+        "sgpio_reg_map.json",
+    ]
+)
+
+rdl_file(
     name = "gfruit_top_regs",
     src = "gfruit_top.rdl",
     deps = [
         ":base_regs_map",
+        ":gfruit_sgpio_regs",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_rdl",
         "//hdl/ip/vhd/espi:espi_regs_pkg",
     ],
@@ -34,6 +45,18 @@ vhdl_unit (
         ],
     standard = "2019",
 )
+
+vhdl_unit (
+    name = "gfruit_sgpio",
+    srcs = glob(["sgpio/*.vhd"]),
+    deps = [
+        ":gfruit_sgpio_regs",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        "//hdl/ip/vhd/sgpio:sgpio_top",
+        ],
+    standard = "2019",
+)
+
 vhdl_unit(
     name = "reset_sync",
     srcs = ["reset_sync/reset_sync.vhd"],
@@ -46,6 +69,7 @@ vhdl_unit(
     deps = [
         ":base_regs",
         ":gfruit_top_regs",
+        ":gfruit_sgpio",
         ":reset_sync",
         "//hdl/ip/vhd/espi:espi_top",
         "//hdl/ip/vhd/uart:axi_fifo_uart",

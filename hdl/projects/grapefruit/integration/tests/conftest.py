@@ -7,7 +7,7 @@ import hdl.projects.grapefruit.integration.drivers as drivers
 @pytest.fixture
 def target():
     """Build a basic UDP target from mem peek/poking"""
-    target_ip = "fe80::c1d:76ff:fea8:34f5"
+    target_ip = "fe80::0c1d:62ff:fee0:308f"
     port = 11114
     ifname = "eno1"
     return udp_if.UDPMem(target_ip, ifname, port)

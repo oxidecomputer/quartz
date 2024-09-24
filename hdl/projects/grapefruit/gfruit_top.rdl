@@ -4,4 +4,5 @@ addrmap top_level_map {
     gfruit_base_regs base @ 0x0;
     nor_flash_regs spi_nor @ 0x0100;
     espi_regs espi @ 0x0200;
+    gfruit_sgpio sgpio @ 0x0300;
 };
