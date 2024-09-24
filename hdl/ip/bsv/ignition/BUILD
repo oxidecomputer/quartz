@@ -67,7 +67,8 @@ bluespec_library('TargetWrapper',
 bluespec_library('Controller',
     sources = [
         'IgnitionController.bsv',
-        'IgnitionEventCounter.bsv',
+        'IgnitionControllerCounters.bsv',
+        'IgnitionControllerShared.bsv',
     ],
     deps = [
         ':ControllerRegisters',
