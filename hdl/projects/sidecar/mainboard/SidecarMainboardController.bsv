@@ -110,6 +110,11 @@ module mkMainboardController #(Parameters parameters)
     mkFreeRunningStrobe(tick_1khz);
     mkConnection(asIfc(tick_1khz), asIfc(tick_2hz));
 
+    Strobe#(6) tick_1mhz <-
+        mkLimitStrobe(1, (parameters.system_frequency_hz / 1_000_000), 0);
+
+    mkFreeRunningStrobe(tick_1mhz);
+
     //
     // Clock Generator sequencer
     //
@@ -130,6 +135,7 @@ module mkMainboardController #(Parameters parameters)
         mkPCIeEndpointController(tofino_sequencer);
 
     mkConnection(asIfc(tick_1khz), asIfc(tofino_sequencer.tick_1ms));
+    mkConnection(asIfc(tick_1mhz), asIfc(pcie_endpoint.tick_1us));
 
     TofinoDebugPort tofino_debug_port <-
         mkTofinoDebugPort(

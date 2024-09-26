@@ -48,6 +48,7 @@ bluespec_library('PCIeEndpointController',
         ':SidecarMainboardControllerReg',
         ':Tofino2Sequencer',
         '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:Debouncer',
     ])
 
 bluespec_library('SidecarMainboardController',
