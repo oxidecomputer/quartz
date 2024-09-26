@@ -294,11 +294,13 @@ def bitstream(ctx, input_checkpoint):
     vivado_flow_tcl, _ = _vivado_tcl_gen_common(ctx, flow, out_json)
     
     # create a bitstream file
-    bitstream = ctx.actions.declare_output("{}.bit".format(ctx.attrs.name))
+    bitstream_bit = ctx.actions.declare_output("{}.bit".format(ctx.attrs.name))
+    bitstream_bin = ctx.actions.declare_output("{}.bin".format(ctx.attrs.name))
     vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl)
     # Add output files to tclargs
     vivado.add("-tclargs", 
-        bitstream.as_output(),
+        bitstream_bit.as_output(),
+        bitstream_bin.as_output(),
     )
     # because we're using the inputs to generate a tcl that *just* lists them,
     # irrespective of their content, we make the checkpoint a hidden input
@@ -307,7 +309,7 @@ def bitstream(ctx, input_checkpoint):
     # constraint file content changes
     vivado.hidden(input_checkpoint)
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
-    providers.append(DefaultInfo(default_output=bitstream))
+    providers.append(DefaultInfo(default_output=bitstream_bin))
     return providers
 
 
