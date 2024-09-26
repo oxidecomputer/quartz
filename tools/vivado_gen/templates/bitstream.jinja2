@@ -9,13 +9,18 @@
 #
 # Expects 1 argument: 
 # [0]: output bitfile
+# [1]: output binfile
 
 # Get tclargs here
 set output_bit [lindex $argv 0]
+set output_bin [lindex $argv 1]
 
 
 set_param general.maxThreads {{project.max_threads}}
 open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
 #write_debug_probes -force $PROJ_DIR/${PROJ_NAME}.ltx
+# This is a bit funky with buck2 in that this command writes out both the
+# .bit and the .bin. We take both names in as arguments to make buck2 happy
+# and assume the share the same name with different extensions.
 write_bitstream -force $output_bit -bin_file
