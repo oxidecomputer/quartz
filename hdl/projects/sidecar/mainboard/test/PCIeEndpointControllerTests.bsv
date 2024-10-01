@@ -20,7 +20,8 @@ module mkResetHostControlTest (Empty);
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
 
     // fake strobe to speed up simulation, make 5 ticks = 1 us
-    Strobe#(6) tick_1us <-  mkLimitStrobe(1, 5, 0);
+    let pci_perst_tick_duration = 5;
+    Strobe#(6) tick_1us <-  mkLimitStrobe(1, pci_perst_tick_duration, 0);
     mkFreeRunningStrobe(tick_1us);
     mkConnection(asIfc(tick_1us), asIfc(endpoint.tick_1us));
 
@@ -35,7 +36,7 @@ module mkResetHostControlTest (Empty);
     endrule
 
     mkAutoFSM(seq
-        delay(5 * 201); // there's a 200 us debounce
+        delay(pci_perst_tick_duration * 201); // there's a 200 us debounce
         assert_not_set(
             ctrl.override_host_reset,
             "expected no software override of PERST from host");
@@ -49,7 +50,7 @@ module mkResetHostControlTest (Empty);
         // Deassert reset from the host and wait a cycle for the change to
         // propagate.
         reset_from_host <= False;
-        delay(5 * 201); // there's a 200 us debounce
+        delay(pci_perst_tick_duration * 201); // there's a 200 us debounce
 
         assert_not_set(
             status.host_reset,
@@ -70,7 +71,8 @@ module mkResetSoftwareControlTest (Empty);
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
 
     // fake strobe to speed up simulation, make 5 ticks = 1 us
-    Strobe#(6) tick_1us <-  mkLimitStrobe(1, 5, 0);
+    let pci_perst_tick_duration = 5;
+    Strobe#(6) tick_1us <-  mkLimitStrobe(1, pci_perst_tick_duration, 0);
     mkFreeRunningStrobe(tick_1us);
     mkConnection(asIfc(tick_1us), asIfc(endpoint.tick_1us));
 
@@ -85,7 +87,7 @@ module mkResetSoftwareControlTest (Empty);
     endrule
 
     mkAutoFSM(seq
-        delay(5 * 201); // there's a 200 us debounce
+        delay(pci_perst_tick_duration * 201); // there's a 200 us debounce
         assert_not_set(
             ctrl.reset,
             "expected reset not set by software");

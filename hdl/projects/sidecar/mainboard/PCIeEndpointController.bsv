@@ -54,9 +54,6 @@ module mkPCIeEndpointController
     // For more details see https://github.com/oxidecomputer/quartz/issues/202
     Debouncer#(200, 200, Bool) perst <- mkDebouncer(True);
 
-    PulseWire tick_1us_ <- mkPulseWire();
-    mkConnection(asIfc(tick_1us_), asIfc(perst));
-
     (* fire_when_enabled *)
     rule do_perst_debounce_reg;
         host_reset <= perst;
@@ -110,7 +107,11 @@ module mkPCIeEndpointController
                 power_fault: pack(power_fault)});
     endinterface
 
-    interface PulseWire tick_1us = tick_1us_;
+    interface PulseWire tick_1us;
+        method Action send;
+            perst.send();
+        endmethod
+    endinterface
 endmodule
 
 endpackage
