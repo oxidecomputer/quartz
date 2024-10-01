@@ -211,8 +211,6 @@ architecture rtl of grapefruit_top is
       3 => (base_addr => x"00000300", addr_span_bits => 8)
       );
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
-    signal spi_fpga_to_flash_dat_o : std_logic_vector(3 downto 0);
-    signal spi_fpga_to_flash_dat_oe : std_logic_vector(3 downto 0);
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
     signal espi_cmd_fifo_rdack : std_logic;
     signal espi_cmd_fifo_rempty : std_logic;
@@ -533,13 +531,12 @@ begin
             -- SPI NOR control pins driven from spi-nor hw block
             spi_fpga_to_flash_cs_l <= spi_nor_block_cs_l;
             spi_fpga_to_flash_clk <= spi_nor_block_clk;
-            spi_fpga_to_flash_dat_oe <= spi_nor_block_data_oe;
-            spi_fpga_to_flash_dat_o <= spi_nor_block_data_o;
+            spi_fpga_to_flash_dat_pins_oe <= spi_nor_block_data_oe;
+            spi_nor_block_data_post_mux_o <= spi_nor_block_data_o;
             --eSPI pins driven from the eSPI block
             espi_cs_l <= espi_hpm_to_scm_cs_l;
             espi_io_pins_oe <= espi_io_oe;
             espi_io_post_mux_o <= espi_io_o;
-            spi_fpga_to_flash_dat_pins_oe <= spi_fpga_to_flash_dat_oe;
         end if;
     end process;
     -- espi and spiNor tris buffer

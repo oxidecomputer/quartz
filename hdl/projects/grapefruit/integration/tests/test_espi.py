@@ -82,5 +82,14 @@ def test_bad_crc_ignored(espi_block):
     # Reset crc enforcement
     espi_block.set_crc_enforcement(False)
 
+def test_flash_read(espi_block, spi_nor_block):
+    # read known data pattern in flash from offset 0
+    # via spi_nor_block
+    # flip mux to espi
+    # do an espi read of the same data
+    # verify the same
+    # flip mux back to spi control
+    pass
+
 
 pytest.main(["-rx", __file__])

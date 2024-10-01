@@ -1,7 +1,8 @@
 import pytest
 
 import speeker.udp_if as udp_if
-import hdl.projects.grapefruit.integration.drivers as drivers
+import hdl.projects.grapefruit.integration.drivers.espi_dbg as espi_dbg
+import hdl.projects.grapefruit.integration.drivers.spi_nor as spi_nor
 
 
 @pytest.fixture
@@ -15,6 +16,12 @@ def target():
 @pytest.fixture
 def espi_block(target):
     """Take the basic target and apply to espi and enable debug mode"""
-    espi_bl = drivers.espi_dbg.OxideEspiDebug(target)
+    espi_bl = espi_dbg.OxideEspiDebug(target)
     espi_bl.enable_debug_mode()
-    return drivers.espi_dbg.OxideEspiDebug(target)
+    return espi_bl
+
+@pytest.fixture
+def spi_nor_block(target):
+    """Take the basic target and apply to espi and enable debug mode"""
+    spi_nor_bl = spi_nor.OxideSpiNorDebug(target)
+    return spi_nor_bl
