@@ -70,7 +70,7 @@ addrmap eSPI_Spec {
             desc = "I/O Mode Support";
             sw = r;
             encode = io_mode_support;
-        } io_mode_support[25:24] = io_mode_support::Any;
+        } io_mode_support[25:24] = io_mode_support::Single;
         field {
             desc = "Open Drain Alert# Select";
             sw = rw;
@@ -88,7 +88,7 @@ addrmap eSPI_Spec {
             desc = "Operating Frequency Support";
             sw = r;
             encode = op_freq;
-        } op_freq_support[18:16] = op_freq::SixtySix;
+        } op_freq_support[18:16] = op_freq::Twenty;
         field {
             desc = "Maximum Wait State allowed";
             sw = rw;
@@ -96,23 +96,23 @@ addrmap eSPI_Spec {
         field {
             desc = "Flash Channel Supported";
             sw = r;
-        } flash_support[3:3] = 0x0;
+        } flash_support[3:3] = 0x1;
         field {
             desc = "OOB Message Channel Supported";
             sw = r;
-        } oob_support[2:2] = 0x1;
+        } oob_support[2:2] = 0x0;
         field {
             desc = "Virtual Wire Channel Supported";
             sw = r;
-        } virt_wire_support[1:1] = 0x0;
+        } virt_wire_support[1:1] = 0x1;
         field {
             desc = "Peripheral Channel Supported";
             sw = r;
-        } periph_support[0:0] = 0x0;
+        } periph_support[0:0] = 0x1;
     } general_capabilities;
 
     reg {
-        name = "Maximum Read Request Size";
+        name = "Channel 0 Capabilities";
         default sw = rw;
         
         field {
@@ -155,6 +155,29 @@ addrmap eSPI_Spec {
         } chan_en[0:0] =  0x1;
 
     } ch0_capabilities @0x10;
+
+     reg {
+        name = "Channel 1 Capabilities";
+        default sw = rw;
+        
+        field {
+            desc = "";
+        } wire_count_sel[21:16] =  0x0;
+
+        field {
+            desc = "Maximum Virtual Wire Count Supported";
+        } wire_max_supported[13:8] =  0x7;
+
+        field {
+            desc = "Channel Ready";
+            sw = r;
+        } chan_rdy[1:1] =  0x0;
+
+        field {
+            desc = "Channel Enable";
+        } chan_en[0:0] =  0x1;
+
+    } ch1_capabilities @0x20;
 
     reg {
         name = "Channel 2(OOB) Capabilities";

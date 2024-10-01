@@ -60,6 +60,7 @@ package espi_tb_pkg is
     -- returns the queue and the number of bytes in the queue
     -- for additional processing in the testbench such as
     -- commanding the qspi VC or using the debug axi interface
+    impure function build_reset_cmd return cmd_t;
     impure function build_get_status_cmd(constant bad_crc : boolean := false) return cmd_t;
     impure function build_get_config_cmd(
         constant address : natural;
@@ -75,6 +76,9 @@ package espi_tb_pkg is
         constant num_bytes: integer;
         constant bad_crc : boolean := false
         ) return cmd_t;
+        impure function build_get_flash_c_cmd(
+        constant bad_crc : boolean := false
+    ) return cmd_t;
     impure function build_put_uart_data_cmd(constant payload : queue_t) return cmd_t;
     impure function build_get_uart_data_cmd return cmd_t;
     -- Need procedures to build expected responses
@@ -129,13 +133,16 @@ package body espi_tb_pkg is
     begin
         while true loop
             cur_byte := To_StdLogicVector(pop_byte(copy_queue), 8);
-            report "Data Byte: " & to_hstring(cur_byte);
             -- Last element in queue is the CRC
             if is_empty(copy_queue) then
                 crc_byte := crc8(crc_queue);
-                report "CRC Byte: " & to_hstring(crc_byte);
+                report "Received CRC Byte: " & to_hstring(cur_byte);
+                report "Calculated (Expected) CRC Byte: " & to_hstring(crc_byte);
                 return crc_byte = cur_byte;
             else
+                report "Data Byte: " & to_hstring(cur_byte);
+                -- Not the last byte so push this into the CRC queue
+                -- for eventual CRC calculation
                 push_byte(crc_queue, to_integer(cur_byte));
             end if;
         end loop;
@@ -154,6 +161,16 @@ package body espi_tb_pkg is
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
         push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_reset_cmd return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        push_byte(cmd.queue, to_integer(unsigned'(X"FF")));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(unsigned'(X"FF")));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -231,6 +248,20 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(address(15 downto 8)));
         push_byte(cmd.queue, to_integer(address(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 4;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_get_flash_c_cmd(
+        constant bad_crc : boolean := false
+    ) return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        -- OPCODE_GET_FLASH_C (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_get_flash_c));
+        cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
         push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;

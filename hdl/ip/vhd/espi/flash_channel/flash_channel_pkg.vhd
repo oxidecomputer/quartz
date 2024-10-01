@@ -15,7 +15,6 @@ package flash_channel_pkg is
     constant num_descriptors : integer := 4;
 
     type descriptor_t is record
-        id : integer range 0 to num_descriptors - 1;
         sp5_addr : std_logic_vector(31 downto 0);
         xfr_size_bytes : std_logic_vector(11 downto 0);
         ready_bytes: std_logic_vector(11 downto 0);
@@ -26,7 +25,6 @@ package flash_channel_pkg is
     end record;
 
     constant descriptor_init : descriptor_t := (
-        id => 0,
         sp5_addr => (others => '0'),
         xfr_size_bytes => (others => '0'),
         ready_bytes => (others => '0'),
@@ -36,6 +34,7 @@ package flash_channel_pkg is
         done => false
     );
     type command_queue_t is array(0 to num_descriptors - 1) of descriptor_t;
+
 
 
     type flash_channel_req_t is record

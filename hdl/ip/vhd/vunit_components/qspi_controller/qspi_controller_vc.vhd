@@ -54,11 +54,22 @@ architecture model of qspi_controller_vc is
     signal rx_rem_bytes    : natural              := 0;
     signal debug_rx_byte   : unsigned(7 downto 0) := (others => '0');
     signal alert_pending   : boolean              := false;
+    signal sclk_cnts       : natural              := 0;
 
 begin
 
     -- Generate a clock when enabled otherwise make it low
     sclk <= not sclk after clk_period / 2 when sclk_enable else '0';
+
+    sclk_cntr: process(sclk, ss_n)
+    begin
+        if falling_edge(ss_n(0)) then
+            sclk_cnts <= 0;
+        elsif rising_edge(sclk) then
+            sclk_cnts <= sclk_cnts + 1;
+        end if;
+    end process;
+
 
     messages: process
         variable msg_type               : msg_type_t;
@@ -81,6 +92,12 @@ begin
             txn_go <= true;
             wait until rising_edge(sclk);
             txn_go <= false;
+        elsif msg_type = ensure_start then
+            -- Ensure we're out of the idle state
+            while state = idle loop
+                wait on state;
+            end loop;
+            acknowledge(net, request_msg, true);
         elsif msg_type = enqueue_tx_bytes then
             txn_tx_bytes := pop(request_msg);
             if txn_tx_bytes > 0 then
@@ -143,24 +160,28 @@ begin
     transaction_sm: process
     begin
         wait on txn_go;
-        -- enable the sclk
-        sclk_enable <= true;
         -- assert cs
         ss_n(0) <= '0';
+        wait for 100 ns;
+        -- enable the sclk
+        sclk_enable <= true;
         -- put data in tx_queue (if any)
         state <= tx_phase;
         -- finish transmit phase
         wait until tx_rem_bytes = 0;
-        -- do the 2 cycle turn-around
-        state <= tar1;
-        wait until falling_edge(sclk);
-        state <= tar2;
-        wait until falling_edge(sclk);
-        -- finish the rx phase
-        state <= rx_phase;
-        wait until rx_rem_bytes = 0;
-        wait until falling_edge(sclk);
+        if rx_bytes_txn /= 0 then
+            -- do the 2 cycle turn-around
+            state <= tar1;
+            wait until falling_edge(sclk);
+            state <= tar2;
+            wait until falling_edge(sclk);
+            -- finish the rx phase
+            state <= rx_phase;
+            wait until rx_rem_bytes = 0;
+            wait until falling_edge(sclk);
+        end if;
         sclk_enable <= false;
+        wait for 100 ns;
         -- de-assert cs
         ss_n(0) <= '1';
         wait for clk_period;

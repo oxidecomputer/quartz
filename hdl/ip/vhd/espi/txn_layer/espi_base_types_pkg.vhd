@@ -51,6 +51,7 @@ package espi_base_types_pkg is
         pc_free: std_logic;
     end record;
     function pack(status: status_t) return std_logic_vector;
+    function unpack(status: std_logic_vector(15 downto 0)) return status_t;
     function rec_reset return status_t;
 
     type response_info is record
@@ -108,6 +109,20 @@ package espi_base_types_pkg is
         rdata_valid : std_logic;
     end record;
 
+    type vwire_if_type is record
+        idx: integer range 0 to 255;
+        dat: std_logic_vector(7 downto 0);
+        wstrobe: std_logic;
+    end record;
+
+    view vwire_regs_side of vwire_if_type is
+        idx: in;
+        dat: in;
+        wstrobe: in;
+    end view;
+
+    alias vwire_cmd_side is vwire_regs_side'converse;
+
 
 
 end package;
@@ -150,12 +165,35 @@ package body espi_base_types_pkg is
         ret(0) := status.pc_free;
         return ret;
     end function;
+    function unpack(status: std_logic_vector(15 downto 0)) return status_t is
+        variable ret : status_t;
+    begin
+        ret.flash_np_avail := status(13);
+        ret.flash_c_avail := status(12);
+        ret.flash_np_free := status(9);
+        ret.flash_c_free := status(8);
+        ret.oob_avail := status(7);
+        ret.vwire_avail := status(6);
+        ret.np_avail := status(5);
+        ret.pc_avail := status(4);
+        ret.oob_free := status(3);
+        ret.vwire_free := status(2);
+        ret.np_free := status(1);
+        ret.pc_free := status(0);
+        return ret;
+
+    end;
     function rec_reset return status_t is
         variable ret : status_t;
     begin
+        -- controller must ignore stuff that
+        -- is not enabled or not ready, so
+        -- we can set the "Free" bits to 1 here
+        -- so as not to generate interrupts when
+        -- the controller enables the peripheral
         ret.flash_np_avail := '0';
         ret.flash_c_avail := '0';
-        ret.flash_np_free := '0';
+        ret.flash_np_free := '1';
         ret.flash_c_free := '1';
         ret.oob_avail := '0';
         ret.vwire_avail := '0';

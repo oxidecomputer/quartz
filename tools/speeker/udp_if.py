@@ -93,7 +93,10 @@ class Request:
             for value in values:
                 self.bytes += self.poke4_arg.to_bytes(1, byteorder='little')
                 if isinstance(value, int):
-                    self.bytes += value.to_bytes(4, byteorder='little')
+                    if value >= 0:
+                        self.bytes += value.to_bytes(4, byteorder='little')
+                    else:
+                        self.bytes += value.to_bytes(4, byteorder='little', signed=True)
                 else:
                     raise Exception(f"Invalid type {type(value)} for value")
 

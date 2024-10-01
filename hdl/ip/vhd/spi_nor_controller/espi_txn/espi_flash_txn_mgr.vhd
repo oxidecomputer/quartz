@@ -18,7 +18,7 @@ entity espi_flash_txn_mgr is
         reset: in std_logic;
         -- From Hubris control
         espi_reads_allowed: in std_logic;
-        cur_flash_addr_offset: in std_logic_vector(31 downto 0);
+        cur_flash_addr_offset: in signed(31 downto 0);
         -- espi cmd fifo interface
         espi_cmd_fifo_rdata: in std_logic_vector(31 downto 0);
         espi_cmd_fifo_rdack: out std_logic;
@@ -37,6 +37,8 @@ entity espi_flash_txn_mgr is
 end entity;
 
 architecture rtl of espi_flash_txn_mgr is
+    attribute mark_debug : string;
+
     constant max_flash_read_size : natural := 255;
     constant fast_read_dummy_cycles : natural := 8;
     type state_t is (idle, read_cmd_addr, read_cmd_len, issue_read, wait_for_data);
@@ -55,6 +57,9 @@ architecture rtl of espi_flash_txn_mgr is
     constant reg_reset : reg_t := (idle, '0', 0, 0, 0, 0, (others => '0'), (others => '0'), (others => '0'));
 
     signal r, rin: reg_t;
+
+    attribute mark_debug of r : signal is "TRUE";
+
 
 
 begin
@@ -93,37 +98,46 @@ begin
                 -- flash location we're actually talking to so we adjust the commands from
                 -- the SP5 right here one time so that we're in real flash addresses from there
                 -- on out.
-                v.cur_flash_addr := espi_cmd_fifo_rdata(31 downto 0) + cur_flash_addr_offset;
+                --
+                assert signed(espi_cmd_fifo_rdata(31 downto 0)) > 0 report "Flash address must be positive" severity failure;
+                assert signed(espi_cmd_fifo_rdata(31 downto 0)) + cur_flash_addr_offset >= 0 report "Adjusted address must be positive" severity failure;
+                v.cur_flash_addr := std_logic_vector(signed(espi_cmd_fifo_rdata(31 downto 0)) + cur_flash_addr_offset);
                 v.state := read_cmd_len;
 
             when read_cmd_len =>
-                v.rem_bytes := to_integer(espi_cmd_fifo_rdata(11 downto 0));
+                -- This comes 1-indexed from the eSPI block, so we need to subtract 1 below
+                v.rem_bytes := to_integer(espi_cmd_fifo_rdata(11 downto 0)) - 1;
                 v.state := issue_read;
                 -- We're either going to issue the max page size, or the 0-indexed remaining bytes
                 -- which ever is smaller.
-                v.txn_bytes := minimum(v.rem_bytes - 1, max_flash_read_size);
-                v.data_bytes := v.txn_bytes;
+                v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size);
+                -- spi is 1-indexed still, so we need to add 1 here
+                v.data_bytes := v.txn_bytes + 1;
 
             when issue_read =>
                 if spi_hw_busy = '0' then
                     v.state := wait_for_data;
                     -- Adjust info for a potential next read or so we can decide we're done later
-                    v.rem_bytes := r.rem_bytes - (r.txn_bytes + 1);
+                    v.rem_bytes := r.rem_bytes - r.txn_bytes;
                     v.next_flash_addr := r.cur_flash_addr + (r.txn_bytes + 1);
                 end if;
                
             when wait_for_data =>
                 -- count down when we load data into the fifo
-                if flash_rdata_write = '1' then
+                if flash_rdata_write = '1' and r.txn_bytes > 0 then
                     v.txn_bytes := r.txn_bytes - 1;
-                end if;
-                if v.txn_bytes = 0 and r.rem_bytes = 0 then
-                    v.state := idle;
-                elsif v.txn_bytes = 0 then
-                    v.state := issue_read;
-                    v.cur_flash_addr := r.next_flash_addr;
-                    v.txn_bytes := minimum(v.rem_bytes - 1, max_flash_read_size);
-                    v.data_bytes := v.txn_bytes;
+                -- on final write decide where we're going
+                elsif flash_rdata_write = '1' then
+                    -- last data, no more parts of the full read to do
+                    if r.rem_bytes = 0 then
+                        v.state := idle;
+                    -- last data for this part of the transaction
+                    else
+                        v.state := issue_read;
+                        v.cur_flash_addr := r.next_flash_addr;
+                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size);
+                        v.data_bytes := v.txn_bytes + 1;
+                    end if;
                 end if;
 
         end case;

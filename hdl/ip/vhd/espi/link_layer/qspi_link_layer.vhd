@@ -30,18 +30,28 @@ entity qspi_link_layer is
         io    : in    std_logic_vector(3 downto 0);
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
+
+        response_csn: out std_logic;
         -- set in registers, controls how the shifters
         -- sample per sclk
         qspi_mode : in    qspi_mode_t;
         -- Asserted by command processor during the
         -- transmission of the last command byte (the CRC)
-        is_crc_byte : in    boolean;
+        is_tx_crc_byte : in    boolean;
+        is_rx_crc_byte : in    boolean;
         alert_needed : in boolean;
         -- "Streaming" data to serialize and transmit
         data_to_host       : view st_sink;
         -- "Streaming" bytes after receipt and deserialization
         data_from_host     : view st_source;
     );
+    attribute mark_debug : string;
+    attribute mark_debug of io_oe        : signal is "TRUE";
+    attribute mark_debug of io_o        : signal is "TRUE";
+    attribute mark_debug of io        : signal is "TRUE";
+    attribute mark_debug of sclk        : signal is "TRUE";
+    attribute mark_debug of cs_n        : signal is "TRUE";
+    
 end entity;
 
 architecture rtl of qspi_link_layer is
@@ -56,6 +66,8 @@ architecture rtl of qspi_link_layer is
     -- for a sentinel value
     signal tx_reg            : std_logic_vector(8 downto 0);
     signal rx_reg            : std_logic_vector(8 downto 0);
+    attribute mark_debug of tx_reg        : signal is "TRUE";
+    attribute mark_debug of rx_reg        : signal is "TRUE";
     signal in_turnaround     : boolean;
     signal ta_cnts    : integer range 0 to 2 := 0;
     signal response_phase    : boolean;
@@ -66,8 +78,28 @@ architecture rtl of qspi_link_layer is
     signal alert_state : alert_state_t;
     signal cs_cntr : natural range 0 to 3 := 0;
     constant cs_deassert_delay : natural := 2;
+    signal last_byte : boolean;
+    signal in_turnaround_last : boolean;
+    
+
 
 begin
+
+    saleae_response_cs_gen: process(clk, reset)
+    begin
+        if reset then
+            response_csn <= '1';
+            in_turnaround_last <= false;
+        elsif rising_edge(clk) then
+            in_turnaround_last <= in_turnaround;
+            if response_csn = '1' and response_phase and sclk = '0' then
+                response_csn <= '0';
+            elsif cs_n = '1' then
+                response_csn <= '1';
+            end if;
+
+        end if;
+    end process;
 
     -- We have some fairly slow minimum delay timings for the alert pin
     -- this block monitors the chip select and provides an alert_allowed
@@ -105,6 +137,9 @@ begin
         elsif rising_edge(clk) then
             -- If we have an alert to send, we can send it by pulling
             --io[1] low, but only when cs is not asserted.
+            -- it is possible that we will send a status before this
+            -- is needed, in which case we should not send the alert
+            -- since the status was current.
             case alert_state is
                 when idle =>
                     if alert_needed and cs_monitor_state = alert_allowed then
@@ -113,11 +148,15 @@ begin
                         alert_state <= wait_for_allowed;
                     end if;
                 when wait_for_allowed =>
-                    if cs_monitor_state = alert_allowed then
+                    if not alert_needed then
+                        alert_state <= idle;
+                    elsif cs_monitor_state = alert_allowed then
                         alert_state <= alert;
                     end if;
                 when alert =>
-                    if cs_n = '0' or cs_monitor_state = no_alert_allowed then
+                    if not alert_needed then
+                        alert_state <= idle;
+                    elsif cs_n = '0' or cs_monitor_state = no_alert_allowed then
                         alert_state <= idle;
                     end if;
             end case;
@@ -168,7 +207,7 @@ begin
             -- once this byte has been stored (sclk fedge), there are two sclk cycles
             -- of turn-around. We're allowed to start drivng the bus at the 2nd rising
             -- edge of the turn around.
-            if is_crc_byte and rx_byte_done then
+            if is_rx_crc_byte and rx_byte_done then
                 in_turnaround <= true;
             elsif in_turnaround and ta_cnts < 2 and sclk_redge then
                 ta_cnts <= ta_cnts + 1;
@@ -211,6 +250,11 @@ begin
                 if alert_state = alert then
                     -- we want to issue an alert now so we need to drive the alert pin
                     io_oe <= (1 => '1', others => '0');
+                elsif cs_n_last = '0' and cs_n = '1' then
+                    -- just as we're de-selecting, we want to drive the bus high due to
+                    -- crappy pull-ups
+                    io_oe <= (1 => '1', others => '0');
+
                 end if;
 
             end if;
@@ -225,32 +269,48 @@ begin
     -- sentinel up 8x
     serializer : process (clk, reset)
         variable sclk_fedge        : boolean := false;
+        variable cs_fedge          : boolean := false;
     begin
         if reset then
-            tx_reg <= (tx_reg'high -1 => '1', others => '0');
+            tx_reg <= (tx_reg'high => '1', tx_reg'high -1 => '1', others => '0');
             data_ready_to_host <= '0';
+            last_byte <= false;
         elsif rising_edge(clk) then
             sclk_fedge := sclk = '0' and sclk_last = '1';
+            cs_fedge := cs_n = '0' and cs_n_last = '1';
             -- clear single-cycle flags
             data_ready_to_host <= '0';
 
             -- Main serializer logic, shift out on sclk_fedge
             -- when we're chip-selected and not doing turnaround
-            if selected and response_phase and sclk_fedge then
+            if cs_fedge then
+                -- set sentinel value before we see sclks on a new transaction
+                tx_reg <= (tx_reg'high => '1', tx_reg'high -1 => '1', others => '0');
+            elsif selected and response_phase and sclk_fedge then
                 -- if next-shift would be our sentinal value, load new data
                 if shift_left(tx_reg, shift_amt) = "100000000" then
                     -- tx_register is "empty" load a new one
                     -- and the sentinal value
-                    tx_reg(8 downto 1) <= data_to_host.data;
-                    tx_reg(tx_reg'low) <= '1';
-                    -- strobe ready since we grabbed the value
-                    data_ready_to_host <= '1';
+                    last_byte <= is_tx_crc_byte;
+                    
+                    if not last_byte then
+                        -- Since this was not the last byte, we should get
+                        -- new data from the system and ack it
+                        tx_reg(8 downto 1) <= data_to_host.data;
+                        tx_reg(tx_reg'low) <= '1';
+                        -- strobe ready since we grabbed the value
+                        data_ready_to_host <= '1';
+                    else
+                        -- when we're done with the last byte, we don't ack and set
+                        -- the tx pins to 1's to help with the bus pull-up per spec
+                        tx_reg <= (others => '1');
+                    end if;
                 -- mid-byte, shift
-                else
+                else 
                     tx_reg       <= shift_left(tx_reg, shift_amt);
                 end if;
             elsif not selected then
-                tx_reg <= (tx_reg'high -1 => '1', others => '0');
+                last_byte <= false;
             end if;
         end if;
     end process;

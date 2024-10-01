@@ -20,8 +20,9 @@ entity txn_layer_top is
         reset : in    std_logic;
 
         -- register layer connections
-
         regs_if : view    bus_side;
+        -- vwire channel connections
+        vwire_if : view vwire_cmd_side;
         -- flash channel status
         flash_np_free : in    std_logic;
         flash_c_avail : in    std_logic;
@@ -36,9 +37,11 @@ entity txn_layer_top is
         pc_avail : in std_logic;
         np_free : in std_logic;
         np_avail: in std_logic;
+        vwire_avail : in std_logic;
 
         -- Link-layer connections
-        is_crc_byte     : out   boolean;
+        is_rx_crc_byte     : out   boolean;
+        is_tx_crc_byte     : out   boolean;
         chip_sel_active : in    boolean;
         data_to_host    : view st_source;
         alert_needed    : out   boolean;
@@ -108,6 +111,7 @@ begin
             clk             => clk,
             reset           => reset,
             regs_if         => regs_if,
+            vwire_if        => vwire_if,
             flash_req       => flash_req,
             host_to_sp_espi => host_to_sp_espi,
             running_crc     => rx_running_crc,
@@ -115,7 +119,7 @@ begin
             command_header  => command_header,
             response_done   => response_done,
             aborted_due_to_bad_crc => aborted_due_to_bad_crc,
-            is_crc_byte     => is_crc_byte,
+            is_rx_crc_byte  => is_rx_crc_byte,
             chip_sel_active => chip_sel_active,
             data_from_host  => data_from_host
         );
@@ -127,6 +131,7 @@ begin
             command_header => command_header,
             response_done  => response_done,
             regs_if        => resp_regs_if,
+            is_tx_last_byte => is_tx_crc_byte,
             clear_tx_crc   => clear_tx_crc,
             data_to_host   => data_to_host,
             live_status    => live_status,
@@ -147,6 +152,7 @@ begin
     begin
         -- default to reset, override with other status bits
         live_status <= rec_reset;
+        live_status.vwire_avail <= vwire_avail;
         live_status.flash_c_avail <= flash_c_avail;
         live_status.flash_np_free <= flash_np_free;
         live_status.pc_avail <= pc_avail;

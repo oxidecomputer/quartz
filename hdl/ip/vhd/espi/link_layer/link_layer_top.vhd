@@ -14,6 +14,8 @@ entity link_layer_top is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
+        axi_clk : in std_logic;
+        axi_reset : in std_logic;
 
         cs_n  : in    std_logic;
         sclk  : in    std_logic;
@@ -21,12 +23,14 @@ entity link_layer_top is
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
         dbg_chan : view dbg_periph_if;
+        response_csn : out std_logic;
         -- set in registers, controls how the shifters
         -- sample per sclk
         qspi_mode : in    qspi_mode_t;
         -- Asserted by command processor during the
         -- transmission of the last command byte (the CRC)
-        is_crc_byte : in    boolean;
+        is_rx_crc_byte : in    boolean;
+        is_tx_crc_byte : in    boolean;
         alert_needed : in boolean;
         response_done: in boolean;
         aborted_due_to_bad_crc : in boolean;
@@ -46,10 +50,20 @@ architecture rtl of link_layer_top is
     signal dbg_data_to_host : data_channel;
     signal dbg_data_from_host : data_channel;
     signal dbg_alert_needed : boolean;
-    alias  debug_active is dbg_chan.enabled;
+    signal debug_active : boolean;
     signal dbg_chip_sel_active : boolean;
     
 begin
+
+    -- sync from axi domain into the system domain
+    sync_process: process(clk, reset)
+    begin
+        if reset then
+            debug_active <= false;
+    elsif rising_edge(clk) then
+            debug_active <= dbg_chan.enabled;
+        end if;
+    end process;
 
     -- The "real" link layer
     qspi_link_layer: entity work.qspi_link_layer
@@ -61,8 +75,10 @@ begin
             io => io,
             io_o => io_o,
             io_oe => io_oe,
+            response_csn => response_csn,
             qspi_mode => qspi_mode,
-            is_crc_byte => is_crc_byte,
+            is_tx_crc_byte => is_tx_crc_byte,
+            is_rx_crc_byte => is_rx_crc_byte,
             alert_needed => qspi_alert_needed,
             data_to_host => qspi_data_to_host,
             data_from_host => qspi_data_from_host
@@ -73,6 +89,8 @@ begin
         port map (
             clk => clk,
             reset => reset,
+            axi_clk => axi_clk,
+            axi_reset => axi_reset,
             response_done => response_done,
             aborted_due_to_bad_crc => aborted_due_to_bad_crc,
             cs_active => dbg_chip_sel_active,

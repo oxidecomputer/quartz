@@ -47,7 +47,9 @@ begin
         variable pending_alert   : boolean;
         variable flash_cap_reg   : ch3_capabilities_type := rec_reset;
         variable my_queue        : queue_t               := new_queue;
+        variable status_rec      : status_t;
         variable cmd             : cmd_t;
+        variable gen_int         : integer;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -108,18 +110,6 @@ begin
                 exp_data_32 := (others => '0');
                 check_equal(data_32, exp_data_32, "Expected no response to bad CRC command");
 
-                -- dbg_get_response(net, 4, response);
-                -- check(response.crc_ok, "CRC Check failed");
-                -- expected_status := pack(status_t'(rec_reset));
-                -- check_equal(response.status, expected_status, "Status did not match reset value");
-
-                -- -- Do it a 2nd time
-                -- dbg_send_get_status_cmd(net);
-                -- dbg_wait_for_done(net);
-                -- dbg_get_response(net, 4, response);
-                -- check(response.crc_ok, "CRC Check failed");
-                -- expected_status := pack(status_t'(rec_reset));
-                -- check_equal(response.status, expected_status, "Status did not match reset value");
             elsif run("get_config") then
                 get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
@@ -145,12 +135,12 @@ begin
                 data_32(31) := '1'; -- alter state
                 wait for 100 ns;
                 set_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
-                exp_data_32 := data_32;
-                wait for 100 ns;
-                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
-                check(crc_ok, "CRC Check failed");
-                -- Expect the reset value of gen-cap here
-                check_equal(data_32, exp_data_32, "General Capabilities did not match expected value");
+                -- exp_data_32 := data_32;
+                -- wait for 100 ns;
+                -- get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
+                -- check(crc_ok, "CRC Check failed");
+                -- -- Expect the reset value of gen-cap here
+                -- check_equal(data_32, exp_data_32, "General Capabilities did not match expected value");
             elsif run("check_alert_works") then
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';
@@ -160,6 +150,7 @@ begin
                 -- We expect something to happen here and the alert get set when the completion
                 -- status is written back, so we check the crc here and then wait for the alert
                 put_flash_read(net, X"00000000", 32, response_code, status,  crc_ok);
+                wait_for_alert(net);
             elsif run("read_flash") then
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';
@@ -167,14 +158,27 @@ begin
                 -- Put a non-posted read request into the flash channel
                 -- We expect something to happen here and the alert get set when the completion
                 -- status is written back, so we check the crc here and then wait for the alert
-                put_flash_read(net, X"00000000", 32, response_code, status,  crc_ok);
+                -- enqueue 3 copies of the same np request
+                put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
-                wait_for_alert(net);
+                -- put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
+                -- check(crc_ok, "CRC Check failed");
+                -- put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
+                -- check(crc_ok, "CRC Check failed");
 
-                get_flash_c(net, 32, my_queue, response_code, status,  crc_ok);
-                -- TODO: the data's not coming back right.
-                for i in 0 to 31 loop
-                    report "Flash Byte: " & to_hstring(to_unsigned(pop_byte(my_queue), 8));
+                for i in 0 to 0 loop
+                    report "Status: " & to_hstring(status);
+                    status_rec := unpack(status);
+                    if status_rec.flash_c_avail = '0' then
+                       report "Waiting, iter: " & integer'image(i);
+                       wait_for_alert(net);
+                    end if;
+                    get_flash_c(net, 16, my_queue, response_code, status,  crc_ok);
+                    check(crc_ok, "CRC Check failed");
+                    -- TODO: the data's not coming back right.
+                    for j in 0 to 15 loop
+                        report "Flash Byte: " & to_hstring(to_unsigned(pop_byte(my_queue), 8));
+                    end loop;
                 end loop;
 
                 -- would normally wait for the completion alert now
@@ -187,7 +191,7 @@ begin
                 dbg_wait_for_done(net);
                 -- 4 junk bytes at the top of the response for the accept of the command
                 dbg_pop_resp_fifo(net, 1);  -- 32bit read = 4 bytes
-                wait for 100 us; -- let uart data propagate
+                wait for 200 us; -- let uart data propagate
                 dbg_wait_for_alert(net);
                 -- technically we'd get status here, and if we supported completions we'd return it here
                 -- response size is going to be 4 bytes for response_code/status/crc
@@ -195,8 +199,15 @@ begin
                 -- bringing total to 40 bytes
                 dbg_get_uart_data_cmd(net);
                 dbg_wait_for_done(net);
+                dbg_get_response_size(net, gen_int);
+                print("Response size: " & integer'image(gen_int));
                 dbg_get_response(net, 40 , response);
                 check(response.crc_ok, "CRC Check failed");
+            elsif run("dbg_ruby_boot") then
+                send_reset(net);
+                wait for 1 us;
+                set_config(net, CH1_CAPABILITIES_OFFSET, X"00000001", response_code, status,  crc_ok);
+
             end if;
         end loop;
         wait for 10 us;

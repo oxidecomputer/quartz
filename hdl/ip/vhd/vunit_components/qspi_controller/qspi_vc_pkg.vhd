@@ -16,11 +16,13 @@ use vunit_lib.sync_pkg.all;
 package qspi_vc_pkg is
 
     -- Message defs
+    constant do_reset     : msg_type_t   := new_msg_type("do_reset");
     constant set_period     : msg_type_t   := new_msg_type("set_period");
     constant set_qspi_mode  : msg_type_t   := new_msg_type("set_qspi_mode");
     constant enqueue_tx_bytes : msg_type_t := new_msg_type("enqueue_tx_bytes");
     constant get_rx_bytes : msg_type_t     := new_msg_type("get_rx_bytes");
     constant enqueue_txn      : msg_type_t := new_msg_type("enqueue_txn");
+    constant ensure_start   : msg_type_t := new_msg_type("ensure_start");
     constant alert_status     : msg_type_t := new_msg_type("alert_status");
 
     -- bfm types
@@ -67,6 +69,14 @@ package qspi_vc_pkg is
 
     );
 
+    procedure enqueue_and_execute_transaction (
+        signal net            : inout network_t;
+        constant actor        : actor_t;
+        constant num_tx_bytes : natural;
+        constant num_rx_bytes : natural
+
+    );
+
     procedure enqueue_tx_data_bytes (
         signal net         : inout network_t;
         constant actor     : actor_t;
@@ -91,6 +101,12 @@ package qspi_vc_pkg is
         constant actor : actor_t;
         variable alert : out boolean
     );
+
+    procedure wait_until_start (
+        signal net : inout network_t;
+        constant actor : actor_t;
+    );
+
 
 end package;
 
@@ -126,6 +142,18 @@ package body qspi_vc_pkg is
           );
     end;
 
+    procedure wait_until_start (
+        signal net : inout network_t;
+        constant actor : actor_t;
+    ) is
+            
+            variable request_msg : msg_t := new_msg(ensure_start);
+            variable ack : boolean;
+    begin
+        send(net, actor, request_msg);
+        request(net, actor, request_msg, ack);
+    end;
+
     procedure enqueue_transaction (
         signal net            : inout network_t;
         constant actor        : actor_t;
@@ -140,6 +168,24 @@ package body qspi_vc_pkg is
         push(request_msg, num_tx_bytes);
         push(request_msg, num_rx_bytes);
         send(net, actor, request_msg);
+        wait_until_idle(net, actor);
+    end;
+
+    procedure enqueue_and_execute_transaction (
+        signal net            : inout network_t;
+        constant actor        : actor_t;
+        constant num_tx_bytes : natural;
+        constant num_rx_bytes : natural
+
+    )is
+
+        variable request_msg : msg_t := new_msg(enqueue_txn);
+
+    begin
+        push(request_msg, num_tx_bytes);
+        push(request_msg, num_rx_bytes);
+        send(net, actor, request_msg);
+        wait_until_start(net, actor);
         wait_until_idle(net, actor);
     end;
 

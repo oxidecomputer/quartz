@@ -19,6 +19,8 @@ entity espi_target_top is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
+        axi_clk : in std_logic;
+        axi_reset : in std_logic;
         -- Axilite interface
         axi_if : view axil_target;
         -- phy interface
@@ -27,6 +29,7 @@ entity espi_target_top is
         io    : in    std_logic_vector(3 downto 0);
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
+        response_csn : out std_logic;
         -- Interface out to the flash block
         -- Read Command FIFO
         flash_cfifo_data : out std_logic_vector(31 downto 0);
@@ -48,7 +51,8 @@ end entity;
 architecture rtl of espi_target_top is
 
     signal qspi_mode       : qspi_mode_t;
-    signal is_crc_byte     : boolean;
+    signal is_rx_crc_byte     : boolean;
+    signal is_tx_crc_byte     : boolean;
     signal chip_sel_active : boolean;
     signal data_to_host    : data_channel;
     signal data_from_host  : data_channel;
@@ -68,22 +72,51 @@ architecture rtl of espi_target_top is
     signal host_to_sp_espi : st_uart_t;
     signal sp_to_host_espi : uart_resp_t;
     signal aborted_due_to_bad_crc : boolean;
+    signal cs_n_syncd : std_logic;
+    signal sclk_syncd : std_logic;
+    signal vwire_if : vwire_if_type;
+    signal vwire_avail : std_logic;
 
 begin
+
+    -- sync
+    cs_meta_sync_inst: entity work.meta_sync
+     generic map(
+        stages => 1
+    )
+     port map(
+        async_input => cs_n,
+        clk => clk,
+        sycnd_output => cs_n_syncd
+    );
+
+    sclk_meta_sync_inst: entity work.meta_sync
+     generic map(
+        stages => 1
+    )
+     port map(
+        async_input => sclk,
+        clk => clk,
+        sycnd_output => sclk_syncd
+    );
 
     -- link layer
     link_layer_top_inst: entity work.link_layer_top
      port map(
         clk => clk,
         reset => reset,
-        cs_n => cs_n,
-        sclk => sclk,
+        axi_clk => axi_clk,
+        axi_reset => axi_reset,
+        cs_n => cs_n_syncd,
+        sclk => sclk_syncd,
         io => io,
         io_o => io_o,
         io_oe => io_oe,
+        response_csn => response_csn,
         dbg_chan => dbg_chan,
         qspi_mode => qspi_mode,
-        is_crc_byte => is_crc_byte,
+        is_rx_crc_byte => is_rx_crc_byte,
+        is_tx_crc_byte => is_tx_crc_byte,
         response_done => response_done,
         aborted_due_to_bad_crc => aborted_due_to_bad_crc,
         chip_sel_active => chip_sel_active,
@@ -95,8 +128,8 @@ begin
     -- system (axi-lite) register block
    espi_sys_regs_inst: entity work.espi_regs
     port map(
-       clk => clk,
-       reset => reset,
+       clk => axi_clk,
+       reset => axi_reset,
        axi_if => axi_if,
        dbg_chan => dbg_chan
    );
@@ -106,8 +139,10 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
-            is_crc_byte     => is_crc_byte,
+            is_rx_crc_byte  => is_rx_crc_byte,
+            is_tx_crc_byte  => is_tx_crc_byte,
             regs_if         => regs_if,
+            vwire_if        => vwire_if,
             chip_sel_active => chip_sel_active,
             data_to_host    => data_to_host,
             data_from_host  => data_from_host,
@@ -124,7 +159,8 @@ begin
             pc_free => pc_free,
             pc_avail => pc_avail,
             np_free => np_free,
-            np_avail => np_avail
+            np_avail => np_avail,
+            vwire_avail => vwire_avail
         );
 
     -- espi-internal register block
@@ -173,4 +209,13 @@ begin
        np_avail => np_avail
    );
 
+   -- vwire channel logic
+    vwire_block_inst: entity work.vwire_block
+     port map(
+        clk => clk,
+        reset => reset,
+        espi_reset_flag => '0',
+        wire_tx_avail => vwire_avail,
+        vwire_if => vwire_if
+    );
 end rtl;
