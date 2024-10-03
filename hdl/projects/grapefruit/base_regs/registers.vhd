@@ -20,7 +20,9 @@ entity registers is
         clk: in std_logic;
         reset: in std_logic;
 
-        axi_if : view axil8x32_pkg.axil_target
+        axi_if : view axil8x32_pkg.axil_target;
+
+        spi_nor_passthru: out std_logic
 
     );
 end entity;
@@ -30,6 +32,7 @@ architecture rtl of registers is
     signal sha : sha_type := unpack(std_logic_vector'(X"00000002"));
     signal checksum : cs_type;
     signal scratchpad : scratchpad_type;
+    signal passthu : passthru_type;
     signal axi_int_read_ready : std_logic;
     signal awready : std_logic;
     signal bvalid : std_logic;
@@ -105,6 +108,7 @@ begin
                     when SHA_OFFSET => null;  -- SHA is read-only
                     when CS_OFFSET => checksum <= unpack(axi_if.write_data.data);
                     when SCRATCHPAD_OFFSET => scratchpad <= unpack(axi_if.write_data.data);
+                    when PASSTHRU_OFFSET => passthu <= unpack(axi_if.write_data.data);
                     when others => null;
                 end case;
             end if;
@@ -124,12 +128,16 @@ begin
                     when SHA_OFFSET => rdata <= pack(sha);
                     when CS_OFFSET => rdata <= pack(checksum);
                     when SCRATCHPAD_OFFSET => rdata <= pack(scratchpad);
+                    when PASSTHRU_OFFSET => rdata <= pack(passthu);
                     when others => rdata <= (others => '0');
                 end case;
             end if;
 
         end if;
     end process;
+
+
+    spi_nor_passthru <= passthu.spi_pass;
 
 
 end architecture;
