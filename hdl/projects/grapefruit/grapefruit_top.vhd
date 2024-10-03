@@ -237,12 +237,23 @@ architecture rtl of grapefruit_top is
     signal console_to_sp_tx_valid : std_logic;
     signal espi_io_o : std_logic_vector(3 downto 0);
     signal espi_io_oe : std_logic_vector(3 downto 0);
+    signal espi_io_post_mux_o : std_logic_vector(3 downto 0);
     signal ipcc_sp_to_fpga_data: std_logic;
     signal ipcc_fpga_to_sp_data: std_logic;
     signal ipcc_sp_to_fpga_cts_l: std_logic;
     signal ipcc_fpga_to_sp_rts_l: std_logic;
     constant ipcc_dbg_en : std_logic := '0';
     signal hpm_to_scm_stby_rdy_syncd : std_logic;
+    signal sp5_owns_flash : std_logic;
+    signal espi_cs_l : std_logic;
+    signal espi_io_pins_oe : std_logic_vector(3 downto 0);
+    signal spi_fpga_to_flash_dat_pins_oe : std_logic_vector(3 downto 0);
+    signal spi_nor_passthru : std_logic;
+    signal spi_nor_block_cs_l : std_logic;
+    signal spi_nor_block_clk : std_logic;
+    signal spi_nor_block_data_o : std_logic_vector(3 downto 0);
+    signal spi_nor_block_data_oe : std_logic_vector(3 downto 0);
+    signal spi_nor_block_data_post_mux_o : std_logic_vector(3 downto 0);
    
 begin
 
@@ -321,7 +332,8 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(0)
+        axi_if => responders(0),
+        spi_nor_passthru => spi_nor_passthru
     );
 
     spi_nor_top_inst: entity work.spi_nor_top
@@ -329,11 +341,12 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(1),
-        cs_n => spi_fpga_to_flash_cs_l,
-        sclk => spi_fpga_to_flash_clk,
+        cs_n => spi_nor_block_cs_l,
+        sclk => spi_nor_block_clk,
         io => spi_fpga_to_flash_dat,
-        io_o => spi_fpga_to_flash_dat_o,
-        io_oe => spi_fpga_to_flash_dat_oe,
+        io_o => spi_nor_block_data_o,
+        io_oe => spi_nor_block_data_oe,
+        sp5_owns_flash => sp5_owns_flash,
         espi_cmd_fifo_rdata => espi_cmd_fifo_rdata,
         espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
         espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
@@ -391,7 +404,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(2),
-        cs_n => espi_hpm_to_scm_cs_l,
+        cs_n => espi_cs_l,
         sclk => espi_hpm_to_scm_clk,
         io => espi_hpm_to_scm_dat,
         io_o => espi_io_o,
@@ -408,21 +421,6 @@ begin
         from_sp_uart_valid => from_sp_uart_to_host_espi_valid,
         from_sp_uart_ready => from_sp_uart_to_host_espi_ready
     );
-
-   espi_tris:process(all)
-    begin
-        for i in 0 to 3 loop
-            espi_hpm_to_scm_dat(i) <= espi_io_o(i) when espi_io_oe(i) = '1' else 'Z';
-        end loop;
-    end process;
-
-     -- spi NOR qspi tris buffer
-    process(all)
-    begin
-        for i in 0 to 3 loop
-            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash_dat_o(i) when spi_fpga_to_flash_dat_oe(i) = '1' else 'Z';
-        end loop;
-    end process;
 
     -- UARTs
     -- SP UART #0  -- Expected to be console uart?
@@ -513,21 +511,49 @@ begin
     );
 
     -- SPI passthru mux
-
-
-    -- spi NOR qspi tris buffer
+    -- For bring-up we're supporting a few options, regardless we want hubris to have the flash
+    -- when it owns the flash.
+    process(all)
+    begin
+        if spi_nor_passthru = '1' and sp5_owns_flash = '1' then
+            -- SPI NOR control pins driven from the QSPI pins from the SP5
+            -- as passthru
+            spi_fpga_to_flash_cs_l <= espi_hpm_to_scm_cs_l;
+            spi_fpga_to_flash_clk <= espi_hpm_to_scm_clk;
+            espi_io_pins_oe <= (1 => '1', others => '0');
+            spi_fpga_to_flash_dat_pins_oe <= (0 => '1', others => '0');
+            espi_cs_l <= '1';
+            spi_nor_block_data_post_mux_o(0) <=  espi_hpm_to_scm_dat(0);
+            spi_nor_block_data_post_mux_o(3 downto 2) <= (others => '1');
+            espi_io_post_mux_o(1) <= spi_fpga_to_flash_dat(1);
+            espi_io_post_mux_o(0) <= '1';
+            espi_io_post_mux_o(3 downto 2) <= (others => '1');
+        else
+            -- Not in passthru mode
+            -- SPI NOR control pins driven from spi-nor hw block
+            spi_fpga_to_flash_cs_l <= spi_nor_block_cs_l;
+            spi_fpga_to_flash_clk <= spi_nor_block_clk;
+            spi_fpga_to_flash_dat_oe <= spi_nor_block_data_oe;
+            spi_fpga_to_flash_dat_o <= spi_nor_block_data_o;
+            --eSPI pins driven from the eSPI block
+            espi_cs_l <= espi_hpm_to_scm_cs_l;
+            espi_io_pins_oe <= espi_io_oe;
+            espi_io_post_mux_o <= espi_io_o;
+            spi_fpga_to_flash_dat_pins_oe <= spi_fpga_to_flash_dat_oe;
+        end if;
+    end process;
+    -- espi and spiNor tris buffer
     process(all)
     begin
         for i in 0 to 3 loop
-            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash_dat_o(i) when spi_fpga_to_flash_dat_oe(i) = '1' else 'Z';
+            espi_hpm_to_scm_dat(i) <= espi_io_post_mux_o(i) when espi_io_pins_oe(i) = '1' else 'Z';
+        end loop;
+
+        for i in 0 to 3 loop
+            spi_fpga_to_flash_dat(i) <= spi_nor_block_data_post_mux_o(i) when spi_fpga_to_flash_dat_pins_oe(i) = '1' else 'Z';
         end loop;
     end process;
 
-    -- Basic flash spi passthru fomr qspi0 to spi flash
-    -- spi_fpga_to_flash_cs_l <= qspi0_hpm_to_scm_cs0_l;
-    -- spi_fpga_to_flash_clk <= qspi0_hpm_to_scm_clk;
-    -- spi_fpga_to_flash_dat0 <= qspi0_hpm_to_scm_dat0;
-    -- qspi0_hpm_to_scm_dat1 <= spi_fpga_to_flash_dat1;
 
     -- Debug stuff for i3c
     -- pin the enables low to enable the devices
