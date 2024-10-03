@@ -24,6 +24,7 @@ entity spi_nor_top is
         io    : in    std_logic_vector(3 downto 0);
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
+        sp5_owns_flash : out std_logic;
         -- eSPI transaction interface.
         -- FIFO the command, which is simply an 32bit address
         -- as the first word and the transaction length as the 
@@ -145,6 +146,7 @@ begin
 
     spi_cmd_if <= hubris_cmd when spicr_reg.sp5_owns_flash = '0' else espi_cmd;
     
+    sp5_owns_flash <= spicr_reg.sp5_owns_flash;
     -- TODO: this would be more simple with a mixed width fifo
     -- but this was faster than digging around making a new wrapper
     -- for now
