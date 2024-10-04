@@ -23,8 +23,8 @@ architecture th of {{project.name}}_th is
 
 begin
 
-     -- set up a fastish, clock for the sim
-    -- env and release reset after a bit of time
+    -- set up a fastish clock for the sim env
+    -- and release reset after a bit of time
     clk   <= not clk after {{project.half_period}};
     reset <= '0' after {{project.reset_time}};
 
