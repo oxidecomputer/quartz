@@ -6,23 +6,14 @@
 
 # Super simple read/write example
 
-target = "fe80::c1d:76ff:fea8:34f6"
+target = "fe80::c1d:76ff:fea8:34f5"
 port = 11114
-ifname = "enx000ec6456e79"
+ifname = "eno1"
 
 import udp_if
 
 con = udp_if.UDPMem(target, ifname, port)
 
-a = con.read32(0x60000000)
-print(f"0x0: {a:#x}")
-b = con.read32(0x60000008)
-print(f"0x8: {b:#x}")
-# # write to scratchpad
-con.write32(0x60000008, 0xabadbeef)
-a = con.read32(0x60000008)
-print(f"0x8: {a:#x}")
-# # set back to default
-con.write32(0x60000008, b)
-b = con.read32(0x60000008)
-print(f"0x8: {b:#x}")
+for addr in range(0x60000200, 0x60000220, 4):
+    a = con.read32(addr)
+    print(f"{addr:#x}: {a:#x}")

@@ -1,5 +1,6 @@
 load("@prelude//toolchains:python.bzl", "system_python_bootstrap_toolchain", "system_python_toolchain")
 load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
+load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
 
 load("vivado_toolchain.bzl", "vivado_toolchain")
 load("vsg_toolchain.bzl", "vsg_toolchain")
@@ -38,5 +39,10 @@ icepack_toolchain(
 
 nextpnr_ice40_toolchain(
     name = "nextpnr-ice40",
+    visibility = ["PUBLIC"],
+)
+
+remote_test_execution_toolchain(
+    name = "remote_test_execution",
     visibility = ["PUBLIC"],
 )

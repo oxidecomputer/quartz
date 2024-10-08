@@ -1,0 +1,50 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+// Copyright 2024 Oxide Computer Company
+//
+// This is SystemRDL description of the sw-accesible registers in the
+// grapefruit dev board FPGA.
+
+addrmap gfruit_base_regs {
+    name = "Grapefruit FPGA";
+    desc = "Register description of the Grapefruit FPGA";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Identification";
+        default sw = r;
+        
+        field {
+            desc = "0x1de";
+        } data[31:0] =  0x01de;
+
+    } ID;
+    
+    reg {
+        name = "ShortSHA";
+        default sw = r;
+
+        field {
+            desc = "git short sha[31..0]";
+        } data[31:0] = 0;
+    } SHA;
+    
+    reg {
+        name = "FPGA Checksum";
+        field {
+            desc = "Scribble Register for read-write use";
+        } data[31:0] = 0;
+    } CS;
+    reg {
+        name = "Scratchpad"; 
+
+        field {
+            desc = "Scribble Register for read-write use";
+        } TBD[31:0] = 0;
+    } SCRATCHPAD;
+};

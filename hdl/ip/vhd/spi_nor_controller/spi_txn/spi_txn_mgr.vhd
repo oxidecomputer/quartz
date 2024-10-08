@@ -44,7 +44,7 @@ architecture rtl of spi_txn_mgr is
     attribute mark_debug : string;
     constant BYTES_24BIT_ADDR  : integer := 3;
     constant BYTES_32BIT_ADDR  : integer := 4;
-    constant CS_CLK_DELAY_CNTS : integer := 2;
+    constant CS_CLK_DELAY_CNTS : integer := 4;
 
     type state_t is (idle, cs_assert, instruction, addr, dummy, wdata, rdata, cs_deassert);
 
@@ -248,7 +248,7 @@ begin
         -- out what state we're going to be in next
         if v.state = cs_assert then
             v.csn := '0';
-        elsif v.state = cs_deassert and v.counter = 1 then
+        elsif v.state = idle then
             v.csn := '1';
         end if;
 

@@ -43,6 +43,7 @@ entity txn_layer_top is
         data_to_host    : view st_source;
         alert_needed    : out   boolean;
         response_done   : out   boolean;
+        aborted_due_to_bad_crc : out boolean;
         -- "Streaming" data to serialize and transmit
         data_from_host : view st_sink
     );
@@ -113,6 +114,7 @@ begin
             clear_rx_crc    => clear_rx_crc,
             command_header  => command_header,
             response_done   => response_done,
+            aborted_due_to_bad_crc => aborted_due_to_bad_crc,
             is_crc_byte     => is_crc_byte,
             chip_sel_active => chip_sel_active,
             data_from_host  => data_from_host

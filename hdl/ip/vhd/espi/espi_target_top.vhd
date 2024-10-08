@@ -67,6 +67,7 @@ architecture rtl of espi_target_top is
     signal np_avail : std_logic;
     signal host_to_sp_espi : st_uart_t;
     signal sp_to_host_espi : uart_resp_t;
+    signal aborted_due_to_bad_crc : boolean;
 
 begin
 
@@ -84,6 +85,7 @@ begin
         qspi_mode => qspi_mode,
         is_crc_byte => is_crc_byte,
         response_done => response_done,
+        aborted_due_to_bad_crc => aborted_due_to_bad_crc,
         chip_sel_active => chip_sel_active,
         alert_needed => alert_needed,
         data_to_host => data_to_host,
@@ -113,6 +115,7 @@ begin
             flash_req       => flash_req,
             flash_resp      => flash_resp,
             response_done   => response_done,
+            aborted_due_to_bad_crc => aborted_due_to_bad_crc,
              -- flash channel status
             flash_np_free => flash_np_free,
             flash_c_avail => flash_c_avail,

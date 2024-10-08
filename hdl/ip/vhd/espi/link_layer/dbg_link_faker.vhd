@@ -24,6 +24,7 @@ entity dbg_link_faker is
         -- Asserted by command processor during the
         -- transmission of the last command byte (the CRC)
         response_done : in boolean;
+        aborted_due_to_bad_crc : in boolean;
         cs_active : out boolean;
         alert_needed : in boolean;
         -- "Streaming" data recieved after deserialization
@@ -59,23 +60,24 @@ architecture rtl of dbg_link_faker is
         idx: std_logic_vector(1 downto 0);
         size_rdack: std_logic;
         cmd_rdack: std_logic;
+        crc_based_abort: boolean;
     end record;
 
     signal r, rin : reg_type;
-    constant reg_reset : reg_type := (idle, false, (others => '0'), (others => '0'), '0', '0');
+    constant reg_reset : reg_type := (idle, false, (others => '0'), (others => '0'), '0', '0', false);
     constant cs_delay : integer := 6;
     constant idle_delay : integer := 10;
     signal cmd_size_fifo_empty : std_logic;
     signal cmd_size_rdata : std_logic_vector(31 downto 0);
     signal cmd_fifo_wusedwds: std_logic_vector(log2ceil(1024) downto 0);
     signal rusedwds: std_logic_vector(log2ceil(1024) downto 0);
-    signal resp_fifo_wusedwds: std_logic_vector(log2ceil(1024) downto 0);
+    signal resp_fifo_rusedwds: std_logic_vector(log2ceil(1024) downto 0);
 
 begin
 
     dbg_chan.busy <= '1' when r.state /= idle else '0';
     dbg_chan.wstatus.usedwds <= resize(cmd_fifo_wusedwds, dbg_chan.wstatus.usedwds'length);
-    dbg_chan.rdstatus.usedwds <= resize(resp_fifo_wusedwds, dbg_chan.wstatus.usedwds'length);
+    dbg_chan.rdstatus.usedwds <= resize(resp_fifo_rusedwds, dbg_chan.rdstatus.usedwds'length);
     dbg_chan.rd.data <= resp_fifo_read_data;
     cs_active <= r.cs_asserted;
     dbg_chan.alert_pending <= '1' when alert_needed else '0';
@@ -191,14 +193,17 @@ begin
                    if r.cntr = 0 then
                        v.state := resp;
                    end if;
-                   
                end if;
              -- we're going to issue bytes from the command fifo at the timer rate.
              -- every 4 bytes or the transition out is a fifo ack since it's 32 bits wide.
+                if aborted_due_to_bad_crc then
+                    v.crc_based_abort := true;
+                end if;
 
             when resp =>
-               if response_done then
+               if response_done or r.crc_based_abort then
                    v.size_rdack := '1';
+                   v.crc_based_abort := false;
                    v.state := cs_finish;
                end if;
 
@@ -251,7 +256,7 @@ begin
         rdata => resp_fifo_read_data,
         rdreq => resp_fifo_read_ack,
         rempty => resp_fifo_empty,
-        rusedwds => open
+        rusedwds => resp_fifo_rusedwds
     );
     data_to_host.ready <= byte_strobe;
 

@@ -30,6 +30,11 @@ package spi_nor_tb_pkg is
         data       : integer
     );
 
+    procedure write_addr (
+        signal net : inout network_t;
+        data       : std_logic_vector
+    );
+
     procedure write_data (
         signal net : inout network_t;
         data       : std_logic_vector
@@ -50,6 +55,14 @@ package body spi_nor_tb_pkg is
     ) is
     begin
         write_bus(net, bus_handle, To_StdLogicVector(INSTR_OFFSET + 16#100#, bus_handle.p_address_length), resize(data, 32));
+    end;
+
+    procedure write_addr (
+        signal net : inout network_t;
+        data       : std_logic_vector
+    ) is
+    begin
+        write_bus(net, bus_handle, To_StdLogicVector(ADDR_OFFSET + 16#100#, bus_handle.p_address_length), resize(data, 32));
     end;
 
     procedure write_dummy (

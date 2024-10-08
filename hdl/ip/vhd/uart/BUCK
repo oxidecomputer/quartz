@@ -4,7 +4,7 @@ vhdl_unit(
     name = "axi_st_uart",
     srcs = ["base_uart/axi_st_uart.vhd"],
     deps = [
-        "//hdl/ip/vhd/utilities:calc_pkg",
+        "//hdl/ip/vhd/common:calc_pkg",
         "//hdl/ip/vhd/synchronizers:meta_sync",
         ],
     visibility = ['PUBLIC'],

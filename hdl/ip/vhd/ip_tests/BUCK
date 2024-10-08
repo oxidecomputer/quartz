@@ -9,7 +9,7 @@ vhdl_unit(
         "//hdl/ip/vhd/fifos:fifos_tb",
         "//hdl/ip/vhd/memories:memories_tb",
         "//hdl/ip/vhd/synchronizers:synchronizers_tb",
-        "//hdl/ip/vhd/utilities:utilities_tb",
+        "//hdl/ip/vhd/common:utilities_tb",
         "//hdl/ip/vhd/fmc_if:fmc_tb",
     ]
 )

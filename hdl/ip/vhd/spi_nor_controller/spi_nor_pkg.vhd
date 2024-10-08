@@ -76,6 +76,7 @@ package spi_nor_pkg is
     constant SECTOR_LOCK_OP : std_logic_vector(7 downto 0)                   := x"36";
     constant SECTOR_UNLOCK_OP : std_logic_vector(7 downto 0)                 := x"39";
     constant READ_SECTOR_LOCK_OP : std_logic_vector(7 downto 0)              := x"3D";
+    constant SW_DIE_SELECT_OP : std_logic_vector(7 downto 0)                 := x"C2";
 
     function get_txn_info (
         opcode: std_logic_vector
@@ -196,6 +197,9 @@ package body spi_nor_pkg is
             when READ_SECTOR_LOCK_OP =>
                 info.addr_kind := bit24;
                 info.data_kind := read;
+            when SW_DIE_SELECT_OP =>
+                -- needs to send one byte
+                info.data_kind := write;
             when others =>
                 -- the default for single instruction options
                 -- with no address, no data, no dummy cycles
