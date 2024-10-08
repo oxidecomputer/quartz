@@ -2,8 +2,10 @@ package PCIeEndpointControllerTests;
 
 import Assert::*;
 import ConfigReg::*;
+import Connectable::*;
 import StmtFSM::*;
 
+import Strobe::*;
 import TestUtils::*;
 
 import MockTofino2Sequencer::*;
@@ -16,6 +18,13 @@ import SidecarMainboardControllerReg::*;
 module mkResetHostControlTest (Empty);
     Tofino2Sequencer sequencer <- mkMockTofino2Sequencer();
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
+
+    // fake strobe to speed up simulation, make 5 ticks = 1 us
+    let pci_perst_tick_duration = 5;
+    Strobe#(6) tick_1us <-  mkLimitStrobe(1, pci_perst_tick_duration, 0);
+    mkFreeRunningStrobe(tick_1us);
+    mkConnection(asIfc(tick_1us), asIfc(endpoint.tick_1us));
+
     Reg#(Bool) reset_from_host <- mkReg(True);
 
     let ctrl = endpoint.registers.ctrl;
@@ -27,6 +36,7 @@ module mkResetHostControlTest (Empty);
     endrule
 
     mkAutoFSM(seq
+        delay(pci_perst_tick_duration * 101); // there's a 100 us debounce
         assert_not_set(
             ctrl.override_host_reset,
             "expected no software override of PERST from host");
@@ -40,7 +50,7 @@ module mkResetHostControlTest (Empty);
         // Deassert reset from the host and wait a cycle for the change to
         // propagate.
         reset_from_host <= False;
-        noAction;
+        delay(pci_perst_tick_duration * 101); // there's a 100 us debounce
 
         assert_not_set(
             status.host_reset,
@@ -50,7 +60,7 @@ module mkResetHostControlTest (Empty);
             "expected PCIe peripheral to not be reset");
     endseq);
 
-    mkTestWatchdog(20);
+    mkTestWatchdog(2500);
 endmodule
 
 // This test demonstrates software control over PERST for a downstream
@@ -59,6 +69,13 @@ endmodule
 module mkResetSoftwareControlTest (Empty);
     Tofino2Sequencer sequencer <- mkMockTofino2Sequencer();
     PCIeEndpointController endpoint <- mkPCIeEndpointController(sequencer);
+
+    // fake strobe to speed up simulation, make 5 ticks = 1 us
+    let pci_perst_tick_duration = 5;
+    Strobe#(6) tick_1us <-  mkLimitStrobe(1, pci_perst_tick_duration, 0);
+    mkFreeRunningStrobe(tick_1us);
+    mkConnection(asIfc(tick_1us), asIfc(endpoint.tick_1us));
+
     Reg#(Bool) reset_from_host <- mkReg(True);
 
     let ctrl = asReg(endpoint.registers.ctrl);
@@ -70,6 +87,7 @@ module mkResetSoftwareControlTest (Empty);
     endrule
 
     mkAutoFSM(seq
+        delay(pci_perst_tick_duration * 101); // there's a 100 us debounce
         assert_not_set(
             ctrl.reset,
             "expected reset not set by software");
@@ -91,7 +109,7 @@ module mkResetSoftwareControlTest (Empty);
             "expected PCIe peripheral to be reset by software");
     endseq);
 
-    mkTestWatchdog(20);
+    mkTestWatchdog(1500);
 endmodule
 
 // This test demonstrates the PCIe Power Fault being set when the

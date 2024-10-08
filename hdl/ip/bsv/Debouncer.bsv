@@ -23,7 +23,7 @@ import TestUtils::*;
 // `send` method upon input assertion and `deassertion_duration` for input
 // deassertion. Assertion is defined as input being not equal to the
 // `reset_value` supplied at module instantiation. The intention is for `send`
-// to be wired up to a regular pulse (such as every microsend or millisecond).
+// to be wired up to a regular pulse (such as every microsecond or millisecond).
 // Either assertion or deassertion duration can be set to zero to get a fast
 // transition, but not both.
 //
