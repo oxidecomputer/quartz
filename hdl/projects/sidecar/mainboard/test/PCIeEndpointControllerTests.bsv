@@ -36,7 +36,7 @@ module mkResetHostControlTest (Empty);
     endrule
 
     mkAutoFSM(seq
-        delay(pci_perst_tick_duration * 201); // there's a 200 us debounce
+        delay(pci_perst_tick_duration * 101); // there's a 100 us debounce
         assert_not_set(
             ctrl.override_host_reset,
             "expected no software override of PERST from host");
@@ -50,7 +50,7 @@ module mkResetHostControlTest (Empty);
         // Deassert reset from the host and wait a cycle for the change to
         // propagate.
         reset_from_host <= False;
-        delay(pci_perst_tick_duration * 201); // there's a 200 us debounce
+        delay(pci_perst_tick_duration * 101); // there's a 100 us debounce
 
         assert_not_set(
             status.host_reset,
@@ -87,7 +87,7 @@ module mkResetSoftwareControlTest (Empty);
     endrule
 
     mkAutoFSM(seq
-        delay(pci_perst_tick_duration * 201); // there's a 200 us debounce
+        delay(pci_perst_tick_duration * 101); // there's a 100 us debounce
         assert_not_set(
             ctrl.reset,
             "expected reset not set by software");
