@@ -4,7 +4,7 @@ vhdl_unit(
     name = "dual_clock_simple_dpr",
     srcs = ["dual_clock_simple_dpr.vhd",],
     deps = [
-        "//hdl/ip/vhd/utilities:calc_pkg",
+        "//hdl/ip/vhd/common:calc_pkg",
         ],
     visibility = ["PUBLIC"],
 )
