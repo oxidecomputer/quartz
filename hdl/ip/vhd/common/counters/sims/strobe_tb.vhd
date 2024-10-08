@@ -32,6 +32,7 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
+        alias enable is << signal th.dut_enable : std_logic >>;
         alias strobe is << signal th.dut_strobe : std_logic >>;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -42,11 +43,18 @@ begin
 
         while test_suite loop
             if run("test_strobe") then
+                enable <= '1';
                 check_equal(strobe, '0', "Strobe should be low after reset");
                 wait for 72 ns; -- CLK_PER_NS * (TB_TICKS - 1) ns
                 check_equal(strobe, '0', "Strobe should be low after TB_TICKS-1");
                 wait for 8 ns; -- wait one more period, bringing us to TB_TICKs
                 check_equal(strobe, '1', "Strobe should be high once the TICKS count is reached");
+            elsif run("test_strobe_enable") then
+                wait for 80 ns; -- wait for TB_TICKs while disabled
+                check_equal(strobe, '0', "Strobe should be low after TB_TICKS when not enabled");
+                enable <= '1';
+                wait for 80 ns; -- wait for TB_TICKs while enabled
+                check_equal(strobe, '1', "Strobe should be high after TICKs when enabled");
             end if;
         end loop;
 
