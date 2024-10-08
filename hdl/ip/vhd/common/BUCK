@@ -1,43 +1,45 @@
 load("//tools:hdl.bzl", "vhdl_unit")
 
-# Packages
+# Utilities
 
 vhdl_unit(
     name = "calc_pkg",
-    srcs = ["packages/calc_pkg.vhd",],
+    srcs = ["utils/calc_pkg.vhd",],
     visibility = ['PUBLIC'],
 )
 
 vhdl_unit(
     name = "time_pkg",
-    srcs = ["packages/time_pkg.vhd",],
+    srcs = ["utils/time_pkg.vhd",],
     visibility = ['PUBLIC'],
 )
 
 vhdl_unit(
     name = "transforms_pkg",
-    srcs = ["packages/transforms_pkg.vhd",],
+    srcs = ["utils/transforms_pkg.vhd",],
     visibility = ['PUBLIC'],
-)
-
-vhdl_unit(
-    name = "interfaces_pkg",
-    srcs = glob(["packages/interfaces_pkg.vhd"]),
-    deps = [],
-    standard = "2019",
-    visibility = ['PUBLIC']
 )
 
 vhdl_unit(
     name = "utilities_tb",
     is_tb = True,
-    srcs = glob(["packages/sims/*.vhd"]),
+    srcs = glob(["utils/sims/*.vhd"]),
     deps = [
         ":transforms_pkg", 
         ":time_pkg", 
         ":calc_pkg",
     ],
     visibility = ['PUBLIC'],
+)
+
+# Interfaces
+
+vhdl_unit(
+    name = "streaming_if_pkg",
+    srcs = glob(["interfaces/streaming_if_pkg.vhd"]),
+    deps = [],
+    standard = "2019",
+    visibility = ['PUBLIC']
 )
 
 # Strobe
