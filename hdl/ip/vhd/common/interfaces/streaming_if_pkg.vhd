@@ -20,12 +20,12 @@ package streaming_if_pkg is
         ready   : std_logic;
     end record;
 
-    view st_source of data_channel is
+    view st_source_if of data_channel is
         valid, data : out;
         ready       : in;
     end view;
 
-    alias st_sink is st_source'converse;
+    alias st_sink_if is st_source_if'converse;
 
 end package;
 
