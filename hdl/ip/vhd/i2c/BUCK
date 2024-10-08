@@ -1,0 +1,23 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "i2c_top",
+    srcs = glob([
+        "link_layer/*.vhd",
+        "*.vhd"]),
+    deps = [
+        "//hdl/ip/vhd/common:streaming_if_pkg",
+        "//hdl/ip/vhd/common:time_pkg"
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "i2c_tb",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+        ":i2c_top",
+    ],
+    visibility = ['PUBLIC'],
+)
