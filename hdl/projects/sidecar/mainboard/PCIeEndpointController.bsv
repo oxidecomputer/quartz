@@ -49,10 +49,10 @@ module mkPCIeEndpointController
     // This represents the debounced PCIe PERST signal. This signal is driven by
     // a buffer whose input comes from Gimlet. This signal will oscillate during
     // Gimlet reboot and thus we should lightly debounce it. We've chosen to
-    // apply a 200us debounce to rising and falling edge. The default state will
+    // apply a 100us debounce to rising and falling edge. The default state will
     // be to assert reset (i.e. True) until initial sampling has occurred.
     // For more details see https://github.com/oxidecomputer/quartz/issues/202
-    Debouncer#(200, 200, Bool) perst <- mkDebouncer(True);
+    Debouncer#(100, 100, Bool) perst <- mkDebouncer(True);
 
     (* fire_when_enabled *)
     rule do_perst_debounce_reg;
