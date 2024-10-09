@@ -77,7 +77,7 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
-        "//hdl/ip/vhd/utilities:time_pkg",
+        "//hdl/ip/vhd/common:time_pkg",
     ],
     standard = "2019",
 )

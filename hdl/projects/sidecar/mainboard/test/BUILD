@@ -24,6 +24,7 @@ bluesim_tests('PCIeEndpointControllerTests',
         '//hdl/projects/sidecar/mainboard:PCIeEndpointController',
         '//hdl/ip/bsv:Strobe',
         '//hdl/ip/bsv:TestUtils',
+        '//hdl/ip/bsv:Debouncer',
     ])
 
 bluesim_tests('TofinoDebugPortTests',

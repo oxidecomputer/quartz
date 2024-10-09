@@ -9,6 +9,8 @@ package PCIeEndpointController;
 import ConfigReg::*;
 
 import CommonFunctions::*;
+import Connectable::*;
+import Debouncer::*;
 import SidecarMainboardControllerReg::*;
 import Tofino2Sequencer::*;
 
@@ -34,6 +36,7 @@ endinterface
 interface PCIeEndpointController;
     interface Pins pins;
     interface Registers registers;
+    interface PulseWire tick_1us;
 endinterface
 
 module mkPCIeEndpointController
@@ -42,6 +45,20 @@ module mkPCIeEndpointController
     ConfigReg#(PcieHotplugCtrl) ctrl <- mkConfigReg(unpack('0));
     ConfigReg#(Bool) host_reset <- mkConfigReg(False);
     ConfigReg#(Bool) power_fault <- mkConfigReg(False);
+
+    // This represents the debounced PCIe PERST signal. This signal is driven by
+    // a buffer whose input comes from Gimlet. This signal will oscillate during
+    // Gimlet reboot and thus we should lightly debounce it. We've chosen to
+    // apply a 100us debounce to rising and falling edge as that is the minimum
+    // pulse width for Tperst per PCIe spec. The default state will
+    // be to assert reset (i.e. True) until initial sampling has occurred.
+    // For more details see https://github.com/oxidecomputer/quartz/issues/202
+    Debouncer#(100, 100, Bool) perst <- mkDebouncer(True);
+
+    (* fire_when_enabled *)
+    rule do_perst_debounce_reg;
+        host_reset <= perst;
+    endrule
 
     (* fire_when_enabled *)
     rule do_set_sequencer_pcie_reset;
@@ -78,7 +95,7 @@ module mkPCIeEndpointController
 
     interface Pins pins;
         method present = unpack(ctrl.present);
-        method reset = host_reset._write;
+        method reset = perst._write;
         method power_fault = power_fault;
     endinterface
 
@@ -89,6 +106,12 @@ module mkPCIeEndpointController
                 present: ctrl.present,
                 host_reset: pack(host_reset),
                 power_fault: pack(power_fault)});
+    endinterface
+
+    interface PulseWire tick_1us;
+        method Action send;
+            perst.send();
+        endmethod
     endinterface
 endmodule
 
