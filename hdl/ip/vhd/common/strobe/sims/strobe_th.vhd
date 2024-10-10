@@ -23,6 +23,7 @@ architecture th of strobe_th is
 
     signal clk          : std_logic := '0';
     signal reset        : std_logic := '1';
+    signal dut_enable   : std_logic := '0';
     signal dut_strobe   : std_logic;
 
 begin
@@ -39,6 +40,7 @@ begin
         port map (
             clk     => clk,
             reset   => reset,
+            enable  => dut_enable,
             strobe  => dut_strobe
         );
 

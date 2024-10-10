@@ -18,6 +18,7 @@ entity strobe is
         clk     : in std_logic;
         reset   : in std_logic;
 
+        enable  : in std_logic;
         strobe  : out std_logic;
     );
 end entity strobe;
@@ -34,7 +35,7 @@ begin
             if strobe_counter = TICKS - 1 then
                 strobe          <= '1';
                 strobe_counter  <= 0;
-            else
+            elsif enable = '1' then
                 strobe          <= '0';
                 strobe_counter  <= strobe_counter + 1;
             end if;
