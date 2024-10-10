@@ -5,7 +5,17 @@ export mkReceiver;
 
 export ControllerReceiver(..);
 export mkControllerReceiver;
+export mkControllerReceiver36;
+export mkDeserializerEventMux1;
+export mkDeserializerEventMux2;
+export mkDeserializerEventMux4;
+export mkDeserializerEventMux36;
+export mkDeserializerEventMux36Alt;
+
 export StatusMessageFragment(..);
+export DeserializerEvent(..);
+export DeserializerEvent_$ev(..);
+export DeserializerEventFIFOs(..);
 export ReceiverEvent(..);
 export ReceiverEvent_$ev(..);
 
@@ -660,10 +670,13 @@ endmodule
 typedef Vector#(m, FIFOF#(DeserializerEvent#(n)))
         DeserializerEventFIFOs#(numeric type m, numeric type n);
 
-module mkControllerReceiver (ControllerReceiver#(n))
-            provisos (
-                Add#(4, _, n),
-                NumAlias#(TLog#(n), id_sz));
+module mkControllerReceiver #(
+        function module#(Empty) mkDeserializerEventMux(
+                Vector#(n, FIFOF#(DeserializerEvent#(n))) sources,
+                FIFOF#(DeserializerEvent#(n)) sink))
+            (ControllerReceiver#(n))
+                provisos (
+                    NumAlias#(TLog#(n), id_sz));
     Vector#(n, DeserializerChannel#(n))
             channels <- mapM(mkDeserializerChannel, genVector);
     Vector#(n, Reg#(Bool)) channels_locked <- replicateM(mkReg(False));
@@ -677,141 +690,7 @@ module mkControllerReceiver (ControllerReceiver#(n))
     // ability to process a receiver event very cycle.
     FIFOF#(DeserializerEvent#(n)) deserializer_events_l0 <- mkGFIFOF(False, True);
 
-    //
-    // Deserializer mux stage(s)
-    //
-
-    function Rules do_forward_event(
-            Get#(DeserializerEvent#(n)) source,
-            Put#(DeserializerEvent#(n)) sink,
-            Bool sink_selected,
-            Reg#(Bit#(demux_sz)) grant_base,
-            Bit#(demux_sz) grant);
-        return (
-            rules
-                (* fire_when_enabled *)
-                rule do_forward_receiver_event (sink_selected);
-                    let e <- source.get;
-                    sink.put(e);
-                    grant_base <= rotateBitsBy(grant, 1);
-                endrule
-            endrules);
-    endfunction
-
-    if (valueof(n) == 36) begin
-        Reg#(Bit#(3)) grant_base_l0 <- mkReg(1);
-
-        Vector#(3, FIFOF#(DeserializerEvent#(n)))
-                deserializer_events_l1 <- replicateM(mkLFIFOF());
-        Vector#(3, Reg#(Bit#(3))) grant_base_l1 <- replicateM(mkReg(1));
-
-        Vector#(9, FIFOF#(DeserializerEvent#(n)))
-                deserializer_events_l2 <- replicateM(mkLFIFOF());
-        Vector#(9, Reg#(Bit#(4))) grant_base_l2 <- replicateM(mkReg(1));
-
-        begin
-            let sink = deserializer_events_l0;
-            let sources = deserializer_events_l1;
-            let not_empty = map(notEmpty, sources);
-            let grant = select_fifo(not_empty, grant_base_l0);
-
-            Vector#(3, Rules) forwarding_rules;
-
-            for (Integer j = 0; j < 3; j = j + 1) begin
-                forwarding_rules[j] =
-                        do_forward_event(
-                            toGet(sources[j]),
-                            toPut(sink),
-                            not_empty[j] && grant[j],
-                            asIfc(grant_base_l0),
-                            pack(grant));
-            end
-
-            addRules(foldr(
-                    rJoinMutuallyExclusive,
-                    emptyRules,
-                    forwarding_rules));
-        end
-
-        for (Integer i = 0; i < 3; i = i + 1) begin
-            let sink = deserializer_events_l1[i];
-            let sources = DeserializerEventFIFOs#(3, n)'(takeAt(3 * i, deserializer_events_l2));
-            let not_empty = map(notEmpty, sources);
-            let grant = select_fifo(not_empty, grant_base_l1[i]);
-
-            Vector#(3, Rules) forwarding_rules;
-
-            for (Integer j = 0; j < 3; j = j + 1) begin
-                forwarding_rules[j] =
-                        do_forward_event(
-                            toGet(sources[j]),
-                            toPut(sink),
-                            not_empty[j] && grant[j],
-                            asIfc(grant_base_l1[i]),
-                            pack(grant));
-            end
-
-            addRules(foldr(
-                    rJoinMutuallyExclusive,
-                    emptyRules,
-                    forwarding_rules));
-        end
-
-        for (Integer i = 0; i < 9; i = i + 1) begin
-            let sink = deserializer_events_l2[i];
-            let sources = DeserializerEventFIFOs#(4, n)'(takeAt(4 * i, map(events, channels)));
-            let not_empty = map(notEmpty, sources);
-            let grant = select_fifo(not_empty, grant_base_l2[i]);
-
-            Vector#(4, Rules) forwarding_rules;
-
-            for (Integer j = 0; j < 4; j = j + 1) begin
-                forwarding_rules[j] =
-                        do_forward_event(
-                            toGet(sources[j]),
-                            toPut(sink),
-                            not_empty[j] && grant[j],
-                            asIfc(grant_base_l2[i]),
-                            pack(grant));
-            end
-
-            addRules(foldr(
-                    rJoinMutuallyExclusive,
-                    emptyRules,
-                    forwarding_rules));
-        end
-    end
-
-    // With up to four receiver channels there is no need for intermediate mux
-    // stages. Instead deserializers should forward directly to
-    // `deserializer_events_l0`.
-    else if (valueof(n) <= 4) begin
-        Reg#(Bit#(n)) grant_base_l0 <- mkReg(1);
-
-        begin
-            let sink = deserializer_events_l0;
-            let sources = DeserializerEventFIFOs#(n, n)'(map(events, channels));
-            let not_empty = map(notEmpty, sources);
-            let grant = select_fifo(not_empty, grant_base_l0);
-
-            Vector#(n, Rules) forwarding_rules;
-
-            for (Integer j = 0; j < valueof(n); j = j + 1) begin
-                forwarding_rules[j] =
-                        do_forward_event(
-                            toGet(sources[j]),
-                            toPut(sink),
-                            not_empty[j] && grant[j],
-                            asIfc(grant_base_l0),
-                            pack(grant));
-            end
-
-            addRules(foldr(
-                    rJoinMutuallyExclusive,
-                    emptyRules,
-                    forwarding_rules));
-        end
-    end
+    mkDeserializerEventMux(map(events, channels), deserializer_events_l0);
 
     //
     // Receive Phase
@@ -1341,5 +1220,101 @@ function Vector#(n, Bool) select_fifo(
     match {.left, .right} = split(pending & ~(pending - extend(grant_base)));
     return unpack(left | right);
 endfunction
+
+module mkRoundRobinFIFOFMux #(
+        Vector#(n, FIFOF#(t)) sources,
+        FIFOF#(t) sink)
+            (Empty);
+    Reg#(Bit#(n)) grant_base <- mkReg(1);
+
+    // Determine which source should be selected next.
+    let grant = select_fifo(map(notEmpty, sources), grant_base);
+
+    function Rules forwardRule(Integer i) =
+        rules
+            (* fire_when_enabled *)
+            rule do_forward (grant[i]);
+                sources[i].deq();
+                sink.enq(sources[i].first);
+                grant_base <= rotateBitsBy(pack(grant), 1);
+            endrule
+        endrules;
+
+    // The `select_fifo` function guarantees only a single bit will be set.
+    // These bits in the grant vector are used as guards on the rules above, but
+    // the compiler can not determine this. Add all the rules to the module and
+    // annotate them as mutually exclusive, allowing the compiler to schedule
+    // them as intended.
+    addRules(foldr(
+            rJoinMutuallyExclusive,
+            emptyRules,
+            map(forwardRule, Vector#(n, Integer)'(genVector))));
+endmodule
+
+function Vector#(y, Vector#(TDiv#(x, y), t))
+        chunks(
+            Vector#(x, t) sources,
+            Vector#(y, t) sinks)
+                provisos (Add#(TDiv#(x, y), a__, x));
+    function chunk(i) = takeAt(valueof(TDiv#(x, y)) * i, sources);
+    return map(chunk, genVector);
+endfunction
+
+function module#(Empty) mkDeserializerEventMux1(
+        DeserializerEventFIFOs#(1, 1) deserializers,
+        FIFOF#(DeserializerEvent#(1)) deserializer_events_l0) =
+            mkRoundRobinFIFOFMux(deserializers, deserializer_events_l0);
+
+function module#(Empty) mkDeserializerEventMux2(
+        DeserializerEventFIFOs#(2, 2) deserializers,
+        FIFOF#(DeserializerEvent#(2)) deserializer_events_l0) =
+            mkRoundRobinFIFOFMux(deserializers, deserializer_events_l0);
+
+function module#(Empty) mkDeserializerEventMux4(
+        DeserializerEventFIFOs#(4, 4) deserializers,
+        FIFOF#(DeserializerEvent#(4)) deserializer_events_l0) =
+            mkRoundRobinFIFOFMux(deserializers, deserializer_events_l0);
+
+module mkDeserializerEventMux36 #(
+        DeserializerEventFIFOs#(36, 36) deserializers,
+        FIFOF#(DeserializerEvent#(36)) deserializer_events_l0)
+            (Empty);
+    Vector#(9, FIFOF#(DeserializerEvent#(36)))
+            deserializer_events_l2 <- replicateM(mkLFIFOF());
+    zipWithM(
+            mkRoundRobinFIFOFMux,
+            chunks(deserializers, deserializer_events_l2),
+            deserializer_events_l2);
+
+    Vector#(3, FIFOF#(DeserializerEvent#(36)))
+            deserializer_events_l1 <- replicateM(mkLFIFOF());
+    zipWithM(
+            mkRoundRobinFIFOFMux,
+            chunks(deserializer_events_l2, deserializer_events_l1),
+            deserializer_events_l1);
+
+    mkRoundRobinFIFOFMux(deserializer_events_l1, deserializer_events_l0);
+endmodule
+
+// A 36:6:1 alternative mux, using only a single layer of 6 intermediate queues.
+// This implementation seems to reduce utilization without any significant
+// impact in timing and could be worth using instead of the 36:9:3:1
+// implementation above.
+module mkDeserializerEventMux36Alt #(
+        DeserializerEventFIFOs#(36, 36) deserializers,
+        FIFOF#(DeserializerEvent#(36)) deserializer_events_l0)
+            (Empty);
+    Vector#(6, FIFOF#(DeserializerEvent#(36)))
+            deserializer_events_l1 <- replicateM(mkLFIFOF());
+    zipWithM(
+            mkRoundRobinFIFOFMux,
+            chunks(deserializers, deserializer_events_l1),
+            deserializer_events_l1);
+
+    mkRoundRobinFIFOFMux(deserializer_events_l1, deserializer_events_l0);
+endmodule
+
+function module#(ControllerReceiver#(36)) mkControllerReceiver36() =
+        mkControllerReceiver(mkDeserializerEventMux36);
 
 endpackage

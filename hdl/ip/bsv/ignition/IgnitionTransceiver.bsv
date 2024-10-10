@@ -20,11 +20,16 @@ export mkLinkStatusLED;
 export ControllerTransceiver(..);
 export ControllerTransceiverClient(..);
 export mkControllerTransceiver;
+export mkControllerTransceiver1;
+export mkControllerTransceiver2;
+export mkControllerTransceiver4;
+export mkControllerTransceiver36;
 
 import BuildVector::*;
 import ConfigReg::*;
 import Connectable::*;
 import FIFO::*;
+import FIFOF::*;
 import GetPut::*;
 import RevertingVirtualReg::*;
 import Vector::*;
@@ -380,10 +385,13 @@ interface ControllerTransceiverClient#(numeric type n);
     interface Get#(TransmitterEvent#(n)) tx;
 endinterface
 
-module mkControllerTransceiver (ControllerTransceiver#(n))
-        provisos (Add#(4, a__, n));
+module mkControllerTransceiver #(
+            function module#(Empty) mkDeserializerEventMux(
+                    Vector#(n, FIFOF#(DeserializerEvent#(n))) sources,
+                    FIFOF#(DeserializerEvent#(n)) sink))
+                (ControllerTransceiver#(n));
     Vector#(n, Deserializer) deserializers <- replicateM(mkDeserializer);
-    ControllerReceiver#(n) receiver <- mkControllerReceiver();
+    ControllerReceiver#(n) receiver <- mkControllerReceiver(mkDeserializerEventMux);
 
     zipWithM(mkConnection, deserializers, receiver.rx);
 
@@ -429,10 +437,17 @@ module mkControllerTransceiver (ControllerTransceiver#(n))
     method tick_1khz = receiver.tick_1khz;
 endmodule
 
-module mkControllerTransceiver36 (ControllerTransceiver#(36));
-    (* hide *) ControllerTransceiver#(36) _txr <- mkControllerTransceiver();
-    return _txr;
-endmodule
+function module#(ControllerTransceiver#(1)) mkControllerTransceiver1() =
+        mkControllerTransceiver(mkDeserializerEventMux1);
+
+function module#(ControllerTransceiver#(2)) mkControllerTransceiver2() =
+        mkControllerTransceiver(mkDeserializerEventMux2);
+
+function module#(ControllerTransceiver#(4)) mkControllerTransceiver4() =
+        mkControllerTransceiver(mkDeserializerEventMux4);
+
+function module#(ControllerTransceiver#(36)) mkControllerTransceiver36() =
+        mkControllerTransceiver(mkDeserializerEventMux36);
 
 instance Connectable#(
         ControllerTransceiver#(n),

@@ -277,7 +277,7 @@ module mkController #(
     // Event handler state
     Reg#(EventHandlerState) event_handler_state <- mkReg(AwaitingEvent);
     Reg#(EventHandlerState) event_handler_select <- mkRegU();
-    Reg#(ControllerId#(n)) current_controller <- mkRegU();
+    Reg#(ControllerId#(n)) controller_id <- mkRegU();
 
     PulseWire tick <- mkPulseWire();
     Reg#(UInt#(10)) tick_count <- mkReg(0);
@@ -384,11 +384,11 @@ module mkController #(
 
     function Action count_application_events(
             CountableApplicationEvents events) =
-        event_counters.count_application_events(current_controller, events);
+        event_counters.count_application_events(controller_id, events);
 
     function Action count_transceiver_events(
             CountableTransceiverEvents events) =
-        event_counters.count_transceiver_events(current_controller, events);
+        event_counters.count_transceiver_events(controller_id, events);
 
     (* fire_when_enabled *)
     rule do_start_event_handler (
@@ -416,7 +416,7 @@ module mkController #(
         // setting the id in all register files. This will automatically cause a
         // read of each register file on the next clock cycle.
         if (maybe_controller_id matches tagged Valid .id) begin
-            current_controller <= id;
+            controller_id <= id;
 
             presence.select(id);
             transceiver.select(id);
@@ -431,14 +431,14 @@ module mkController #(
             target_link1_status.select(id);
             target_link1_events.select(id);
 
-            event_handler_state <= ReadingRegisters;
+            event_handler_state <= AwaitingControllerDataValid;
         end
     endrule
 
     (* fire_when_enabled *)
     rule do_read_registers (
             init_complete &&
-            event_handler_state == ReadingRegisters);
+            event_handler_state == AwaitingControllerDataValid);
         // Select the appropriate handler.
         event_handler_state <= event_handler_select;
     endrule
@@ -515,20 +515,20 @@ module mkController #(
 
                 $display("%5t [Controller %02d] Transmitter output enable mode ",
                         $time,
-                        current_controller,
+                        controller_id,
                         fshow(transceiver_.transmitter_output_enable_mode));
 
                 if (transceiver.transmitter_output_enabled &&
                         !transceiver_.transmitter_output_enabled) begin
                     $display("%5t [Controller %02d] Transmitter output disabled",
                             $time,
-                            current_controller);
+                            controller_id);
                 end
                 else if (!transceiver.transmitter_output_enabled &&
                         transceiver_.transmitter_output_enabled) begin
                     $display("%5t [Controller %02d] Transmitter output enabled",
                             $time,
-                            current_controller);
+                            controller_id);
                 end
 
                 // Update the transceiver register. Any changes are applied on
@@ -565,11 +565,11 @@ module mkController #(
                         maybe_request matches tagged Valid .request) begin
                     $display("%5t [Controller %02d] Requesting ",
                             $time,
-                            current_controller, fshow(request));
+                            controller_id, fshow(request));
 
                     transmitter_events.enq(
                             TransmitterEvent {
-                                id: current_controller,
+                                id: controller_id,
                                 ev: tagged Message tagged Request request});
 
                     count_application_events(
@@ -612,7 +612,7 @@ module mkController #(
         if (presence.status_message_timeout_ticks_remaining == 0) begin
             $display("%5t [Controller %02d] Target Status timeout",
                     $time,
-                    current_controller);
+                    controller_id);
 
             // Add a timeout to the presence history.
             presence_.history = shiftInAt0(presence.history, False);
@@ -633,7 +633,7 @@ module mkController #(
         if (pack(presence_.history) == 'b000 && presence.present) begin
             $display("%5t [Controller %02d] Target not present",
                     $time,
-                    current_controller);
+                    controller_id);
 
             target_timeout = True;
             presence_.present = False;
@@ -641,7 +641,7 @@ module mkController #(
 
         // Write back the presence state.
         presence <= presence_;
-        presence_summary_r[current_controller] <= presence_.present;
+        presence_summary_r[controller_id] <= presence_.present;
 
         // Count down until the next Hello.
         if (hello_timer.ticks_remaining == 0) begin
@@ -675,7 +675,7 @@ module mkController #(
                 transceiver.transmitter_output_disable_timeout_ticks_remaining == 1) begin
             $display("%5t [Controller %02d] Transmitter output disabled",
                     $time,
-                    current_controller);
+                    controller_id);
 
             transceiver_.transmitter_output_enabled = False;
         end
@@ -687,11 +687,11 @@ module mkController #(
         if (hello_timer.ticks_remaining == 0) begin
             $display("%5t [Controller %02d] Hello",
                     $time,
-                    current_controller);
+                    controller_id);
 
             transmitter_events.enq(
                     TransmitterEvent {
-                        id: current_controller,
+                        id: controller_id,
                         ev: tagged Message tagged Hello});
 
             hello_sent = True;
@@ -703,7 +703,7 @@ module mkController #(
         else begin
             transmitter_events.enq(
                     TransmitterEvent {
-                        id: current_controller,
+                        id: controller_id,
                         ev: tagged OutputEnabled
                             transceiver_.transmitter_output_enabled});
         end
@@ -734,7 +734,7 @@ module mkController #(
             tagged TargetStatusReceived: begin
                 $display("%5t [Controller %02d] Received Status",
                         $time,
-                        current_controller);
+                        controller_id);
 
                 PresenceRegister presence_ = presence;
                 Bool target_present = False;
@@ -755,7 +755,7 @@ module mkController #(
                         !presence.present) begin
                     $display("%5t [Controller %02d] Target present",
                             $time,
-                            current_controller);
+                            controller_id);
 
                     presence_.present = True;
                     target_present = True;
@@ -763,7 +763,7 @@ module mkController #(
 
                 // Write back the presence state.
                 presence <= presence_;
-                presence_summary_r[current_controller] <= presence_.present;
+                presence_summary_r[controller_id] <= presence_.present;
 
                 // Update the transmitter output enabled state if configured.
                 // The actual TransmitterEvent will be sent on the next tick.
@@ -776,7 +776,7 @@ module mkController #(
                         presence_.present) begin
                     $display("%5t [Controller %02d] Transmitter output enabled",
                             $time,
-                            current_controller);
+                            controller_id);
 
                     transceiver_.transmitter_output_enabled = True;
                     transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
@@ -798,7 +798,7 @@ module mkController #(
                 let current = presence_.current_status_message;
 
                 event_counters.count_target_link0_events(
-                        current_controller,
+                        controller_id,
                         determine_transceiver_events(
                             target_link0_status[previous],
                             target_link0_status[current],
@@ -815,7 +815,7 @@ module mkController #(
                             True));
 
                 event_counters.count_target_link1_events(
-                        current_controller,
+                        controller_id,
                         determine_transceiver_events(
                             target_link1_status[previous],
                             target_link1_status[current],
@@ -890,7 +890,7 @@ module mkController #(
             tagged ReceiverReset: begin
                 $display("%5t [Controller %02d] Receiver reset",
                         $time,
-                        current_controller);
+                        controller_id);
 
                 TransceiverRegister transceiver_ = transceiver;
 
@@ -924,7 +924,7 @@ module mkController #(
                         current_status.receiver_aligned) begin
                     $display("%5t [Controller %02d] Transmitter output enabled",
                             $time,
-                            current_controller);
+                            controller_id);
 
                     transceiver_.transmitter_output_enabled = True;
                     transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
@@ -1053,7 +1053,7 @@ typedef struct {
 
 typedef enum {
     AwaitingEvent = 0,
-    ReadingRegisters,
+    AwaitingControllerDataValid,
     HandlingSoftwareRequest,
     HandlingTickEvent,
     HandlingReceiverEvent
