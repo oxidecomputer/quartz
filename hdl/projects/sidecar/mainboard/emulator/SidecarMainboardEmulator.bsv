@@ -185,9 +185,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
 
     // Instantiate Transceivers, IO adapters and connect them to the Ignition
     // Controllers.
-    //Transceivers#(n_ignition_controllers) controller_txrs <- mkTransceivers();
-
-    ControllerTransceiver#(4) controller_txrs <- mkControllerTransceiver();
+    ControllerTransceiver#(4) controller_txrs <- mkControllerTransceiver4();
 
     mkConnection(controller_txrs, controller.ignition_controller.txr);
     //mkConnection(asIfc(tick_1khz), asIfc(controller_txrs.tick_1khz));
@@ -264,14 +262,14 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
 
     ReadOnly#(Bit#(1)) ignition_link2_status_led <-
         mkLinkStatusLED(
-            False, //controller.ignition_controllers[2].status.target_present,
+            controller.ignition_controller.presence_summary[2],
             link_status_disconnected, //controller_txrs.txrs[2].status,
             False, //controller_txrs.txrs[2].receiver_locked_timeout,
             False);
 
     ReadOnly#(Bit#(1)) ignition_link3_status_led <-
         mkLinkStatusLED(
-            False, //controller.ignition_controllers[3].status.target_present,
+            controller.ignition_controller.presence_summary[3],
             link_status_disconnected, //controller_txrs.txrs[3].status,
             False, //controller_txrs.txrs[3].receiver_locked_timeout,
             False);

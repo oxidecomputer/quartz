@@ -305,7 +305,7 @@ module mkMockTransmitter #(
 endmodule
 
 module mkControllerReceiverTest (Empty);
-    ControllerReceiver#(36) receiver <- mkControllerReceiver();
+    ControllerReceiver#(36) receiver <- mkControllerReceiver36();
 
     FIFO#(Message) message <- mkLFIFO();
     Transmitter tx <- mkTransmitter();

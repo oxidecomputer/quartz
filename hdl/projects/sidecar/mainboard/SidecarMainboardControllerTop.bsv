@@ -518,7 +518,7 @@ module mkSidecarMainboardControllerTop
     //
 
     ControllerTransceiver#(36)
-            ignition_txr <- mkControllerTransceiver(reset_by reset_sync);
+            ignition_txr <- mkControllerTransceiver36(reset_by reset_sync);
 
     mkConnection(ignition_txr, controller.ignition_controller.txr);
 
