@@ -50,6 +50,7 @@ begin
         variable status_rec      : status_t;
         variable cmd             : cmd_t;
         variable gen_int         : integer;
+        variable payload_size    : integer;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -189,23 +190,35 @@ begin
             elsif run("dbg_uart") then
                 enable_debug_mode(net);
                 -- Send UART data which will then be looped back and rx'd
-                my_queue := build_rand_byte_queue(32);
-                dbg_send_uart_data_cmd(net, my_queue);
-                dbg_wait_for_done(net);
-                -- 4 junk bytes at the top of the response for the accept of the command
-                dbg_pop_resp_fifo(net, 1);  -- 32bit read = 4 bytes
-                wait for 200 us; -- let uart data propagate
-                dbg_wait_for_alert(net);
-                -- technically we'd get status here, and if we supported completions we'd return it here
-                -- response size is going to be 4 bytes for response_code/status/crc
-                -- plus the payload which is 32 bytes + 4 header bytes
-                -- bringing total to 40 bytes
-                dbg_get_uart_data_cmd(net);
-                dbg_wait_for_done(net);
-                dbg_get_response_size(net, gen_int);
-                print("Response size: " & integer'image(gen_int));
-                dbg_get_response(net, 40 , response);
-                check(response.crc_ok, "CRC Check failed");
+                --for i in 0 to 1 loop
+                    payload_size := rnd.RandInt(1, 64);
+                    my_queue := build_rand_byte_queue(payload_size);
+                    dbg_send_uart_data_cmd(net, my_queue);
+                    dbg_wait_for_done(net);
+                    -- get the response from the fifo
+                    dbg_get_response(net, 4 , response);
+                    check(response.crc_ok, "Send UART CMD resp CRC Check failed");
+                    dbg_get_response_size(net, gen_int);
+                    print("Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int));
+                    wait for 10 * payload_size * 250 ns;  -- approx uart time for payload size
+                    status_rec := unpack(response.status);
+                    if status_rec.pc_avail /= '1' then
+                        dbg_wait_for_alert(net);
+                    end if;
+                    -- technically we'd get status here, and if we supported completions we'd return it here
+                    -- response size is going to be 4 bytes for response_code/status/crc
+                    -- + 8 header bytes
+                    -- + payload bytes
+
+                    dbg_get_uart_data_cmd(net);
+                    dbg_wait_for_done(net);
+                    wait for 10 us;
+                    dbg_get_response_size(net, gen_int);
+                    print("Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int * 4));
+                    dbg_get_response(net, payload_size + 12 , response);
+                    check(response.crc_ok, "Response UART data resp CRC Check failed");
+                    compare_uart_loopback(my_queue, response.queue);
+                    --end loop;
             end if;
         end loop;
         wait for 10 us;
@@ -214,6 +227,6 @@ begin
     end process;
 
     -- Example total test timeout dog
-    test_runner_watchdog(runner, 1 ms);
+    test_runner_watchdog(runner, 4 ms);
 
 end tb;
