@@ -1,0 +1,20 @@
+cobble:
+  - 'tools/site_cobble/**/*'
+  - 'vnd/**/*'
+  - 'hdl/ip/bsv/**/*'
+  - 'hdl/projects/ecp5_evn/**/*'
+  - 'hdl/projects/gimlet/**/*'
+  - 'hdl/projects/icestick/**/*'
+  - 'hdl/projects/ignitionlet/**/*'
+  - 'hdl/projects/psc/**/*'
+  - 'hdl/projects/sidecar/**/*'
+  - 'hdl/projects/ulx3s/**/*'
+            
+buck2:
+  - 'vnd/xpm/**/*'
+  - 'prelude/**/*'
+  - 'toolchains/**/*'
+  - 'hdl/ip/toolchains/**/*'
+  - 'tools/**/*'
+  - 'hdl/ip/vhd/**/*'
+  - 'hdl/projects/grapefruit/**/*'

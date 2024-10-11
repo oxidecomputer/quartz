@@ -15,6 +15,7 @@ vhdl_unit(
     srcs = glob(["sims/*.vhd"]),
     deps = [
         ":dual_clock_simple_dpr",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/vunit_components:sim_gpio"
     ],
     visibility = ['PUBLIC'],

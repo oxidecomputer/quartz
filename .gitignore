@@ -37,5 +37,11 @@ vivado*.log
 # Yep, even ignore Vivado core dump logs!
 *.log 
  
+# VUnit test results
+**/*.xml
+
 # DrawIO cruft
 **/*.svg.bkp
+
+# cobble local env
+BUILD.vars

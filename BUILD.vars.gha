@@ -1,0 +1,14 @@
+[bluespec]
+prefix = "/opt/bsc-2022.01"
+bin = "/opt/bsc-2022.01/bin/bsc"
+libdir = "/opt/bsc-2022.01/lib/"
+
+[yosys]
+bin = "/opt/oss-cad-suite-20240513/bin/yosys"
+libdir = "/opt/oss-cad-suite-20240513/share/yosys"
+
+[nextpnr]
+ecp5 = "/opt/oss-cad-suite-20240513/bin/nextpnr-ecp5"
+ecp5_pack = "/opt/oss-cad-suite-20240513/bin/ecppack"
+ice40 = "/opt/oss-cad-suite-20240513/bin/nextpnr-ice40"
+ice40_pack = "/opt/oss-cad-suite-20240513/bin/icepack"
