@@ -29,7 +29,7 @@ vhdl_unit(
         "txn_layer/*.vhd",
         "flash_channel/*.vhd",
         "sys_regs/*.vhd",
-        "uart_channel/*.vhd",
+        "peripheral_channel/*.vhd",
         "vwire_channel/*.vhd",
         "*.vhd"]),
     deps = [

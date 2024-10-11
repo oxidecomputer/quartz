@@ -416,7 +416,7 @@ begin
     );
 
     -- UARTs
-    -- SP UART #0  -- Expected to be console uart?
+    -- SP UART #0  -- Expected to be console uart
     sp_uart0: entity work.axi_fifo_st_uart
      generic map(
         CLK_DIV => BAUD_3M_AT_125M,
@@ -433,6 +433,7 @@ begin
         rts_pin => uart0_fpga_to_sp_rts_l,
         cts_pin => uart0_sp_to_fpga_rts_l,
         axi_clk => clk_125m,
+        axi_reset => reset_125m,
         rx_ready => console_from_sp_rx_ready,
         rx_data => console_from_sp_rx_data,
         rx_valid => console_from_sp_rx_valid,
@@ -457,7 +458,8 @@ begin
         tx_pin => ipcc_fpga_to_sp_data,
         rts_pin => ipcc_fpga_to_sp_rts_l,
         cts_pin => ipcc_sp_to_fpga_cts_l,
-        axi_clk => clk_125m,
+        axi_clk => clk_200m,  -- from espi domain
+        axi_reset => reset_200m,
         rx_ready => from_sp_uart_to_host_espi_ready,
         rx_data => from_sp_uart_to_host_espi_data,
         rx_valid => from_sp_uart_to_host_espi_valid,
@@ -466,6 +468,7 @@ begin
         tx_ready => host_espi_to_sp_uart_ready
     );
 
+
     -- debug stuff
     -- inputs
     ipcc_sp_to_fpga_data <= uart_local_sp_to_fpga_dat when ipcc_dbg_en else uart1_sp_to_fpga_dat;
@@ -473,6 +476,11 @@ begin
     -- outputs to debug, can leave always enabled for now
     uart_local_fpga_to_sp_dat <= ipcc_fpga_to_sp_data;
     uart1_fpga_to_sp_rts_l <= ipcc_fpga_to_sp_rts_l;
+    -- push uart stuff out to debug header
+    fpga_spare_1v8(3) <= ipcc_sp_to_fpga_data;
+    fpga_spare_1v8(4) <= ipcc_sp_to_fpga_cts_l;
+    fpga_spare_1v8(5) <= ipcc_fpga_to_sp_data;
+    fpga_spare_1v8(6) <= ipcc_fpga_to_sp_rts_l;
     -- outputs to sp
     uart1_fpga_to_sp_dat <= ipcc_fpga_to_sp_data when not ipcc_dbg_en else '1';
     uart1_fpga_to_sp_rts_l <= ipcc_fpga_to_sp_rts_l when not ipcc_dbg_en else '0';  --default to block or not?
@@ -495,6 +503,7 @@ begin
         rts_pin => uart0_fpga_to_sp5_rts_l,
         cts_pin => uart0_sp5_to_fpga_rts_l,
         axi_clk => clk_125m,
+        axi_reset => reset_125m,
         rx_ready => console_to_sp_tx_ready,
         rx_data => console_to_sp_tx_data,
         rx_valid => console_to_sp_tx_valid,

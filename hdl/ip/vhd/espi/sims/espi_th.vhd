@@ -131,6 +131,7 @@ begin
         rts_pin => uart_handshake,
         cts_pin => uart_handshake,
         axi_clk => clk,
+        axi_reset => reset,
         rx_ready => from_sp_uart_ready,
         rx_data => from_sp_uart_data,
         rx_valid => from_sp_uart_valid,

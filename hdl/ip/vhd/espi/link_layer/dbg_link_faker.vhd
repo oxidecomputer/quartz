@@ -53,20 +53,21 @@ architecture rtl of dbg_link_faker is
     signal strobe_cntr: unsigned(7 downto 0) := (others => '0');
     constant strobe_limit: unsigned(7 downto 0) := to_unsigned(6, 8);
 
-    type state_t is (idle, cs_start, cmd, resp, cs_finish);
+    type state_t is (idle, cs_start, cmd, resp, cs_finish, fifo_flush);
 
     type reg_type is record
         state: state_t;
         cs_asserted: boolean;
-        cntr : std_logic_vector(7 downto 0);
+        cntr : std_logic_vector(12 downto 0);
         idx: std_logic_vector(1 downto 0);
         size_rdack: std_logic;
         cmd_rdack: std_logic;
         crc_based_abort: boolean;
+        flush_write: std_logic;
     end record;
 
     signal r, rin : reg_type;
-    constant reg_reset : reg_type := (idle, false, (others => '0'), (others => '0'), '0', '0', false);
+    constant reg_reset : reg_type := (idle, false, (others => '0'), (others => '0'), '0', '0', false, '0');
     constant cs_delay : integer := 6;
     constant idle_delay : integer := 10;
     signal cmd_size_fifo_empty : std_logic;
@@ -78,6 +79,7 @@ architecture rtl of dbg_link_faker is
     signal busy_axi_sync: std_logic;
     signal alert_pending : std_logic;
     signal alert_pending_axi_sync : std_logic;
+    signal rem_fifo_writes : integer range 0 to 3;
 
 begin
 
@@ -245,8 +247,18 @@ begin
             when cs_finish =>
             v.cntr := r.cntr + 1;
             if r.cntr = cs_delay then
+                if rem_fifo_writes > 0 then
+                    v.state := fifo_flush;
+                    v.flush_write := '1';
+                else
+                    v.state := idle;
+                end if;
                 v.state := idle;
             end if;
+
+            when fifo_flush =>
+                v.flush_write := '0';
+                v.state := cs_finish;
                 
         end case;
 
@@ -269,6 +281,31 @@ begin
         byte_idx := to_integer(r.idx);
         data_from_host.data <= cmd_fifo_rdata(7 + 8*byte_idx downto 8*byte_idx);
     end process;
+
+    -- deal with mixed width fifo usedwds.  If we're doing writes on the 
+    -- smaller side, the read side usedwds doesn't increment until you
+    -- put the balanced number of small side writes in. This means that in
+    -- our case, putting 8 bits in at a time we need 4 writes to increment the
+    -- 32bit side usedwds by 1, so at the end of a transaction, if we have an
+    -- outstanding number of writes, we flush fake data into the fifo to make
+    -- the rdusedws side increment.
+    process(clk, reset)
+    begin 
+    if reset then
+        rem_fifo_writes <= 0;
+
+    elsif rising_edge(clk) then
+        if r.state /= idle and (resp_fifo_write = '1' or r.flush_write = '1') then
+            if rem_fifo_writes = 0 then
+                rem_fifo_writes <= 3;
+            else
+                rem_fifo_writes <= rem_fifo_writes - 1;
+            end if;
+        end if;
+
+    end if;
+    end process;
+
     -- Response FIFO.
     -- when we're enabled, any target response data gets written into the response fifo.
     -- software is resonsible for reading the data out of the fifo at an appropriate rate.
@@ -283,7 +320,7 @@ begin
      port map(
         wclk => clk,
         reset => reset,
-        write_en => resp_fifo_write,
+        write_en => resp_fifo_write or r.flush_write,
         wdata => data_to_host.data,
         wfull => open,
         wusedwds => open,

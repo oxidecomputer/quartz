@@ -86,6 +86,11 @@ package espi_tb_pkg is
 
     impure function build_rand_byte_queue(constant size: natural) return queue_t;
 
+    procedure compare_uart_loopback(
+        constant input_payload : queue_t;
+        constant output_response : queue_t
+    );
+
 end package;
 
 package body espi_tb_pkg is
@@ -295,6 +300,11 @@ package body espi_tb_pkg is
         -- length low
         push_byte(cmd.queue, to_integer(msg_length(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 1;
+        -- Push 5 dummy bytes (message code, message specific)
+        for i in 0 to 4 loop
+            push_byte(cmd.queue, 0);
+            cmd.num_bytes := cmd.num_bytes + 1;
+        end loop;
         -- payload
         while not is_empty(payload_copy) loop
             push_byte(cmd.queue, pop_byte(payload_copy));
@@ -326,5 +336,35 @@ package body espi_tb_pkg is
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
+
+    procedure compare_uart_loopback(
+        constant input_payload : queue_t;
+        constant output_response : queue_t
+    ) is
+        variable input_copy : queue_t := copy(input_payload);
+        variable output_copy : queue_t := copy(output_response);
+        variable input_byte : std_logic_vector(7 downto 0);
+        variable output_byte : std_logic_vector(7 downto 0);
+    begin
+        -- Dump response headers
+        -- opcode
+        -- cycle type
+        -- tag/length high
+        -- length low
+        -- message code
+        -- 4 bytes message specific
+        for i in 0 to 8 loop
+            output_byte := To_StdLogicVector(pop_byte(output_copy), 8);
+        end loop;
+        while not is_empty(input_copy) loop
+            input_byte := To_StdLogicVector(pop_byte(input_copy), 8);
+            output_byte := To_StdLogicVector(pop_byte(output_copy), 8);
+            check_equal(input_byte, output_byte, "UART Loopback Mismatch");
+        end loop;
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- status0
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- status1
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- crc
+        check_true(is_empty(output_copy), "Output queue not empty");
+    end procedure;
 
 end package body;

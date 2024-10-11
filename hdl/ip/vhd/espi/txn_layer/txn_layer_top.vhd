@@ -131,6 +131,7 @@ begin
             command_header => command_header,
             response_done  => response_done,
             regs_if        => resp_regs_if,
+            chip_sel_active => chip_sel_active,
             is_tx_last_byte => is_tx_crc_byte,
             clear_tx_crc   => clear_tx_crc,
             data_to_host   => data_to_host,

@@ -76,8 +76,8 @@ set_property -dict { PACKAGE_PIN G14 IOSTANDARD LVCMOS33 } [get_ports { uart0_sp
 set_property -dict { PACKAGE_PIN F15 IOSTANDARD LVCMOS33 } [get_ports { uart0_fpga_to_sp_dat }];
 set_property -dict { PACKAGE_PIN D13 IOSTANDARD LVCMOS33 } [get_ports { uart0_sp_to_fpga_rts_l }];
 set_property -dict { PACKAGE_PIN C13 IOSTANDARD LVCMOS33 } [get_ports { uart0_fpga_to_sp_rts_l }];
-set_property -dict { PACKAGE_PIN A12 IOSTANDARD LVCMOS33 } [get_ports { uart1_sp_to_fpga_dat }];
-set_property -dict { PACKAGE_PIN B13 IOSTANDARD LVCMOS33 } [get_ports { uart1_fpga_to_sp_dat }];
+set_property -dict { PACKAGE_PIN B13 IOSTANDARD LVCMOS33 } [get_ports { uart1_sp_to_fpga_dat }];
+set_property -dict { PACKAGE_PIN A12 IOSTANDARD LVCMOS33 } [get_ports { uart1_fpga_to_sp_dat }];
 set_property -dict { PACKAGE_PIN A13 IOSTANDARD LVCMOS33 } [get_ports { uart1_sp_to_fpga_rts_l }];
 set_property -dict { PACKAGE_PIN C10 IOSTANDARD LVCMOS33 } [get_ports { uart1_fpga_to_sp_rts_l }];
 set_property -dict { PACKAGE_PIN D14 IOSTANDARD LVCMOS33 } [get_ports { uart_local_sp_to_fpga_dat }];
