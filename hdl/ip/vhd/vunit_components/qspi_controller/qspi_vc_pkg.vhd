@@ -104,7 +104,7 @@ package qspi_vc_pkg is
 
     procedure wait_until_start (
         signal net : inout network_t;
-        constant actor : actor_t;
+        constant actor : actor_t
     );
 
 
@@ -144,7 +144,7 @@ package body qspi_vc_pkg is
 
     procedure wait_until_start (
         signal net : inout network_t;
-        constant actor : actor_t;
+        constant actor : actor_t
     ) is
             
             variable request_msg : msg_t := new_msg(ensure_start);
