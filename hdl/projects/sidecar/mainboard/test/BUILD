@@ -21,10 +21,10 @@ bluesim_tests('PCIeEndpointControllerTests',
     deps = [
         ':MockTofino2Sequencer',
         '//hdl/ip/bsv:PowerRail',
-        '//hdl/projects/sidecar/mainboard:PCIeEndpointController',
         '//hdl/ip/bsv:Strobe',
         '//hdl/ip/bsv:TestUtils',
         '//hdl/ip/bsv:Debouncer',
+        '//hdl/projects/sidecar/mainboard:PCIeEndpointController',
     ])
 
 bluesim_tests('TofinoDebugPortTests',
