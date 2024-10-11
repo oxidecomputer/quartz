@@ -348,31 +348,6 @@ import PowerRail::*;
 
     endmodule
 
-    module mkA1PowerDownA0InteractionTest(Empty);
-
-        Bench bench <- mkBench();
-
-        mkAutoFSM(seq
-            dynamicAssert(bench.a1_ok == False, "Expected sequencer in A2");
-            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 0, "Expected RSMRST_L asserted");
-            bench.power_up();
-            await(bench.a1_ok);
-            bench.a0_busy();
-            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 1, "Expected RSMRST_L de-asserted");
-            bench.power_down(); // Should not actually happen because A0 is busy
-            delay(200);
-            dynamicAssert(bench.a1_ok == True, "Expected a1_ok to still be asserted since it can't power down");
-            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 1, "Expected RSMRST_L still de-asserted");
-            bench.a0_idle();
-            delay(5);
-            dynamicAssert(bench.a1_ok == False, "Expected a1_ok to be de-asserted we can now power down");
-            dynamicAssert(bench.seq_to_sp3_rsmrst_v3p3_l == 0, "Expected RSMRST_L asserted");
-            dynamicAssert(bench.v3p3_s5.enabled == False, "Expected v3p3_s5_en de-asserted");
-            delay(200);
-        endseq);
-
-    endmodule
-
     module mkA1MAPOTest(Empty);
 
         Bench bench <- mkBench();

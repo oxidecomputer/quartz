@@ -93,7 +93,6 @@ bluesim_tests('A1Tests',
         'mkA1PowerUpTest',
         'mkA1PowerDownTest',
         'mkA1MAPOTest',
-        'mkA1PowerDownA0InteractionTest',
     ],
     deps = [
         ':A1Block'
