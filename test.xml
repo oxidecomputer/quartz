@@ -1,0 +1,8 @@
+<testsuite name="testsuite" errors="0" failures="0" skipped="0" tests="1" hostname="rubicon"><testcase classname="lib.strobe_tb" name="test_strobe" time="0.1"><system-out>/usr/local/bin/nvc --work=lib:/home/nhuffman/oxide/quartz/vunit_out/nvc/libraries/lib --std=2019 --map=vunit_lib:/home/nhuffman/oxide/quartz/vunit_out/nvc/libraries/vunit_lib --map=JSON:/home/nhuffman/oxide/quartz/vunit_out/nvc/libraries/JSON --map=osvvm:/home/nhuffman/oxide/quartz/vunit_out/nvc/libraries/osvvm --map=lib:/home/nhuffman/oxide/quartz/vunit_out/nvc/libraries/lib -H 64m -e strobe_tb-tb -grunner_cfg=active python runner : true,enabled_test_cases : test_strobe,output path : /home/nhuffman/oxide/quartz/vunit_out/test_output/lib.strobe_tb.test_strobe_14700f48593584e849069025f0db89592748e47e/,tb path : /home/nhuffman/oxide/quartz/hdl/ip/vhd/common/strobe/sims/,use_color : true --no-save --jit -r --dump-arrays --exit-severity=error --ieee-warnings=off
+** Note: 2280ns+10: STOP called with status 0
+   Procedure STOP [INTEGER] at ../lib/std.19/env-body.vhd:33
+   Procedure STOP [INTEGER] at /home/nhuffman/.local/lib/python3.10/site-packages/vunit/vhdl/core/src/stop_body_2008p.vhd:13
+   Procedure STOP [NATURAL] at /home/nhuffman/.local/lib/python3.10/site-packages/vunit/vhdl/core/src/core_pkg.vhd:130
+   Procedure TEST_RUNNER_CLEANUP [RUNNER_SYNC_T, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN] at /home/nhuffman/.local/lib/python3.10/site-packages/vunit/vhdl/run/src/run.vhd:128
+   Process :strobe_tb:bench at /home/nhuffman/oxide/quartz/hdl/ip/vhd/common/strobe/sims/strobe_tb.vhd:33
+</system-out></testcase></testsuite>
