@@ -20,13 +20,6 @@ vhdl_unit(
     visibility = ['PUBLIC'],
 )
 
-vunit_sim(
-    name = "qspi_vc_tb",
-    srcs = glob(["qspi_controller/sims/*.vhd"]),
-    deps = [":qspi_controller_vc"],
-    visibility = ['PUBLIC'],
-)
-
 vhdl_unit(
     name = "basic_stream",
     srcs = glob(["basic_stream/*.vhd"]),
