@@ -96,6 +96,18 @@ but if you want to see a list of all available buck2 targets you can do: `buck2 
 To run a simulation, pick one of the testbench targets and `buck2 run <target>` you may do
 `-- <vunit args>` if you need to pass arguments into VUnit.
 
+### running all sims or sim regressions
+We can use the build system to query for vunit simulation testbenches and have built a .bxl
+that does this and gives you the command line options to run each one found:
+
+`buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen`
+
+If you'd like to run a regression run like the build machine does, you can pipe that into split
+and use the shell to execute each line:
+
+`buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done`
+
+
 ## multitool
 multitool is a collection of quality of live utilities built in-tree for regular use, but whose
 function is small enough to not warrant a self-contained project.
