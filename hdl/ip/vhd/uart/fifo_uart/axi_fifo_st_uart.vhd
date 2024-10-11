@@ -26,6 +26,7 @@ entity axi_fifo_st_uart is
     reset : in std_logic;
 
     -- UART interface
+    allow_rx : in std_logic := '1'; -- Some configurations may want to not rx data until ready
     rx_pin : in std_logic;
     tx_pin : out std_logic;
     rts_pin : out std_logic;
@@ -33,6 +34,7 @@ entity axi_fifo_st_uart is
 
     -- AXI streaming interface
     axi_clk : in std_logic;
+    axi_reset : in std_logic;
     rx_ready : in std_logic;
     rx_data : out std_logic_vector(7 downto 0);
     rx_valid : out std_logic;
@@ -86,6 +88,9 @@ begin
       tx_ready => uart_tx_ready
   );
 
+  -- As an "RX" FIFO, writes come from the UART block
+  -- in the UART's clock domain. Reads go out the main interface
+  -- in the "AXI" clock domain.
   rx_fifo: entity work.dcfifo_xpm
    generic map(
       fifo_write_depth => fifo_depth,
@@ -106,13 +111,15 @@ begin
       rusedwds => open
   );
   rx_valid <= not rx_fifo_rempty;
-  -- hw handshake, de-assert when we run low on rx fifo space
-  rts_pin <= '0' when rx_wusedwds < full_threshold else '1';
+  -- hw handshake, de-assert when we run low on rx fifo space or when we're not allowing rx
+  rts_pin <= '0' when (rx_wusedwds < full_threshold) and allow_rx = '1' else '1';
   -- hw handshake
   uart_tx_valid <= not tx_fifo_rempty when (cts_pin_syncd = cts_ok and use_hw_handshake) else 
                      not tx_fifo_rempty when (not use_hw_handshake) else 
                     '0';
 
+  -- As an "TX" FIFO, writes come from AXI interface in the axi domain
+  -- Reads go to the UART block in its clock domain
   tx_fifo: entity work.dcfifo_xpm
    generic map(
       fifo_write_depth => fifo_depth,
@@ -120,13 +127,13 @@ begin
       showahead_mode => true
   )
    port map(
-      wclk => clk,
-      reset => reset,
+      wclk => axi_clk,
+      reset => axi_reset,
       write_en => tx_valid and tx_ready,
       wdata => tx_data,
       wfull => tx_fifo_wfull,
       wusedwds => open,
-      rclk => axi_clk,
+      rclk => clk,
       rdata => tx_fifo_rdata,
       rdreq => uart_tx_valid and uart_tx_ready,
       rempty => tx_fifo_rempty,
