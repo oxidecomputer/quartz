@@ -1,0 +1,29 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2024 Oxide Computer Company
+
+# This function queries the build graph and targets that are
+# simulation targets and runs them
+def vunit_sim(ctx):
+    # start with all the buck2 targets from the root
+    target_universe = ctx.target_universe("//...").target_set()
+    # Get the deps
+    targets = ctx.cquery().deps(target_universe)
+    # Filter for vhdl files in the project
+    vhdl_files = ctx.cquery().kind("vhdl.*", targets)
+    sims = ctx.cquery().attrfilter("is_tb", "True", vhdl_files)
+    sims = sorted(sims, key=lambda x: x.attrs_eager().standard.value())
+     # Eagerly analyze targets
+    results = ctx.analysis(sims)
+    for lbl,result in results.items():
+         ctx.output.print("buck2 run " + str(lbl.raw_target()) + " -- --clean -x " + lbl.name + ".xml")
+
+
+vunit_sim_gen = bxl_main(
+    impl = vunit_sim,
+    cli_args = {
+        # cli args that you want to receive from the command line
+    },
+)

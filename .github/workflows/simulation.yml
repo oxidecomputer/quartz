@@ -1,0 +1,61 @@
+name: simulation
+run-name: ${{ github.actor }} running HDL simulations
+on:
+  [push]
+jobs:
+  changes:
+    runs-on: self-hosted
+    permissions:
+      pull-requests: read
+    outputs:
+      cobble: ${{ steps.filter.outputs.cobble }}
+      buck2: ${{ steps.filter.outputs.buck2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/filters.yml
+          
+  vunit-sim:
+    needs: changes
+    if: ${{ needs.changes.outputs.buck2 == 'true' }}
+    runs-on: self-hosted
+    steps:
+        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+        - name: Check out repository code
+          uses: actions/checkout@v4
+          with:
+            submodules: 'true'
+        - name: Update pip reqs
+          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+        - name: Run VUnit tests
+          run: buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done
+  
+  bsv-sim:
+    needs: changes
+    if: ${{ needs.changes.outputs.cobble == 'true' }}
+    runs-on: self-hosted
+    steps:
+        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+        - name: Check out repository code
+          uses: actions/checkout@v4
+          with:
+            submodules: 'true'
+            fetch-depth: 0
+        - name: Update pip reqs
+          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+        - name: Env setup
+          run: cp BUILD.vars.gha BUILD.vars && echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+        - name: Restore build-dir
+          run: if [ -d /tmp/cobble_build_bkup ]; then cp -R /tmp/cobble_build_bkup ./build; else mkdir ./build; fi
+        - name: cobble init
+          run: ../vnd/cobble/cobble init .. --reinit
+          working-directory: ./build
+        - name: Run BSIM tests
+          run: ./cobble bluesim_test "//.*SchmittRegTest.*"
+          working-directory: ./build
+        - name: backup build-dir
+          run: cp -R ./build /tmp/cobble_build_bkup
