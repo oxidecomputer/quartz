@@ -7,19 +7,34 @@ import Vector::*;
 
 import TestUtils::*;
 
+import I2CCommon::*;
 import I2CPeripheralModel::*;
 import TofinoDebugPort::*;
 
 
-Bit#(7) tofino_address = 7'b1011_011;
+I2CTestParams i2c_config = I2CTestParams {
+        core_clk_freq_hz: 50_000_000,
+        core_clk_period_ns: 20,
+        scl_freq_hz: 100_000,
+        max_scl_stretch_us: 10,
+        peripheral_addr: 7'b1011_011};
+
 Bit#(7) incorrect_address = 7'b0;
 
 function Bit#(8) local_read(Bit#(5) i) = {pack(LocalRead), i};
 function Bit#(8) local_write(Bit#(5) i) = {pack(LocalWrite), i};
 
 module mkClearSendBufferTest (Empty);
-    TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 5, 100, tofino_address, 5);
-    I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
+    TofinoDebugPort debug_port <- mkTofinoDebugPort(
+            i2c_config.core_clk_freq_hz,
+            i2c_config.core_clk_period_ns,
+            i2c_config.scl_freq_hz,
+            i2c_config.peripheral_addr,
+            i2c_config.max_scl_stretch_us);
+    I2CPeripheralModel tofino <- mkI2CPeripheralModel(
+            i2c_config.peripheral_addr,
+            i2c_config.core_clk_period_ns,
+            i2c_config.max_scl_stretch_us);
 
     mkConnection(debug_port.pins, tofino);
 
@@ -38,8 +53,16 @@ module mkClearSendBufferTest (Empty);
 endmodule
 
 module mkAbortRequestOnAddressNackTest (Empty);
-    TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 5, 100, tofino_address, 5);
-    I2CPeripheralModel tofino <- mkI2CPeripheralModel(incorrect_address);
+    TofinoDebugPort debug_port <- mkTofinoDebugPort(
+            i2c_config.core_clk_freq_hz,
+            i2c_config.core_clk_period_ns,
+            i2c_config.scl_freq_hz,
+            i2c_config.peripheral_addr,
+            i2c_config.max_scl_stretch_us);
+    I2CPeripheralModel tofino <- mkI2CPeripheralModel(
+            i2c_config.peripheral_addr,
+            i2c_config.core_clk_period_ns,
+            i2c_config.max_scl_stretch_us);
 
     mkConnection(debug_port.pins, tofino);
 
@@ -69,8 +92,16 @@ module mkAbortRequestOnAddressNackTest (Empty);
 endmodule
 
 module mkLocalWriteTest (Empty);
-    TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 5, 100, tofino_address, 5);
-    I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
+    TofinoDebugPort debug_port <- mkTofinoDebugPort(
+            i2c_config.core_clk_freq_hz,
+            i2c_config.core_clk_period_ns,
+            i2c_config.scl_freq_hz,
+            i2c_config.peripheral_addr,
+            i2c_config.max_scl_stretch_us);
+    I2CPeripheralModel tofino <- mkI2CPeripheralModel(
+            i2c_config.peripheral_addr,
+            i2c_config.core_clk_period_ns,
+            i2c_config.max_scl_stretch_us);
 
     mkConnection(debug_port.pins, tofino);
 
@@ -111,8 +142,16 @@ module mkLocalWriteTest (Empty);
 endmodule
 
 module mkLocalReadTest (Empty);
-    TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 5, 100, tofino_address, 5);
-    I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
+    TofinoDebugPort debug_port <- mkTofinoDebugPort(
+            i2c_config.core_clk_freq_hz,
+            i2c_config.core_clk_period_ns,
+            i2c_config.scl_freq_hz,
+            i2c_config.peripheral_addr,
+            i2c_config.max_scl_stretch_us);
+    I2CPeripheralModel tofino <- mkI2CPeripheralModel(
+            i2c_config.peripheral_addr,
+            i2c_config.core_clk_period_ns,
+            i2c_config.max_scl_stretch_us);
 
     mkConnection(debug_port.pins, tofino);
 
@@ -141,6 +180,12 @@ module mkLocalReadTest (Empty);
                     "expected LocalRead of register 1");
                 assert_get_eq(tofino.receive,tagged ReceivedStop, "expected STOP");
 
+                // Expect one write ack poll cycle.
+                assert_get_eq(tofino.receive, tagged ReceivedStart, "expected START");
+                assert_get_eq(tofino.receive, tagged AddressMatch, "expected address");
+                assert_get_eq(tofino.receive, tagged ReceivedStop, "expected STOP");
+
+                // Continue read.
                 assert_get_eq(tofino.receive, tagged ReceivedStart, "expected START");
                 assert_get_eq(tofino.receive, tagged AddressMatch, "expected address");
 
@@ -156,12 +201,20 @@ module mkLocalReadTest (Empty);
         assert_av_not_eq(buffer, 'h00, "expected register value");
     endseq);
 
-    mkTestWatchdog(20000);
+    mkTestWatchdog(100_000);
 endmodule
 
 module mkDirectWriteTest (Empty);
-    TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 5, 100, tofino_address, 5);
-    I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
+    TofinoDebugPort debug_port <- mkTofinoDebugPort(
+            i2c_config.core_clk_freq_hz,
+            i2c_config.core_clk_period_ns,
+            i2c_config.scl_freq_hz,
+            i2c_config.peripheral_addr,
+            i2c_config.max_scl_stretch_us);
+    I2CPeripheralModel tofino <- mkI2CPeripheralModel(
+            i2c_config.peripheral_addr,
+            i2c_config.core_clk_period_ns,
+            i2c_config.max_scl_stretch_us);
 
     mkConnection(debug_port.pins, tofino);
 
@@ -213,12 +266,20 @@ module mkDirectWriteTest (Empty);
         assert_set(state.receive_buffer_empty, "expected receive buffer still empty");
     endseq);
 
-    mkTestWatchdog(20000);
+    mkTestWatchdog(100_000);
 endmodule
 
 module mkDirectReadTest (Empty);
-    TofinoDebugPort debug_port <- mkTofinoDebugPort(10000, 5, 100, tofino_address, 5);
-    I2CPeripheralModel tofino <- mkI2CPeripheralModel(tofino_address);
+    TofinoDebugPort debug_port <- mkTofinoDebugPort(
+            i2c_config.core_clk_freq_hz,
+            i2c_config.core_clk_period_ns,
+            i2c_config.scl_freq_hz,
+            i2c_config.peripheral_addr,
+            i2c_config.max_scl_stretch_us);
+    I2CPeripheralModel tofino <- mkI2CPeripheralModel(
+            i2c_config.peripheral_addr,
+            i2c_config.core_clk_period_ns,
+            i2c_config.max_scl_stretch_us);
 
     mkConnection(debug_port.pins, tofino);
 
@@ -256,6 +317,12 @@ module mkDirectReadTest (Empty);
                 assert_get_eq(tofino.receive, tagged ReceivedData 'h04, "expected address byte 3");
                 assert_get_eq(tofino.receive,tagged ReceivedStop, "expected STOP");
 
+                // Expect one write ack poll cycle.
+                assert_get_eq(tofino.receive, tagged ReceivedStart, "expected START");
+                assert_get_eq(tofino.receive, tagged AddressMatch, "expected address");
+                assert_get_eq(tofino.receive, tagged ReceivedStop, "expected STOP");
+
+                // Read the expected data.
                 assert_get_eq(tofino.receive, tagged ReceivedStart, "expected START");
                 assert_get_eq(tofino.receive, tagged AddressMatch, "expected address");
                 // Receive the first 3 value bytes.
@@ -277,7 +344,7 @@ module mkDirectReadTest (Empty);
         endaction
     endseq);
 
-    mkTestWatchdog(20000);
+    mkTestWatchdog(100_000);
 endmodule
 
 endpackage

@@ -118,8 +118,7 @@ module mkTofinoDebugPort #(
     I2CCore i2c <- mkI2CCore(system_frequency_hz,
                                 i2c_frequency_hz,
                                 system_period_ns,
-                                tofino_i2c_stretch_timeout_us
-                            );
+                                tofino_i2c_stretch_timeout_us);
     ConfigReg#(Maybe#(Error)) error <- mkConfigReg(tagged Invalid);
 
     // Buffer and connections to the module interface.
