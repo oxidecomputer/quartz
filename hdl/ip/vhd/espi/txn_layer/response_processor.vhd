@@ -27,6 +27,7 @@ entity response_processor is
         live_status    : in    status_t;
         response_crc   : in    std_logic_vector(7 downto 0);
         is_tx_last_byte : out   boolean;
+        chip_sel_active : in    boolean;
 
         -- flash channel responses
         flash_resp : view flash_chan_resp_sink;
@@ -56,6 +57,7 @@ architecture rtl of response_processor is
         status        : status_t;
         resp_idx      : integer range 0 to 255;
         payload_cnt   : std_logic_vector(11 downto 0);
+        temp_length  : std_logic_vector(11 downto 0);
         cur_data      : std_logic_vector(7 downto 0);
         cur_valid     : std_logic;
         reg_data      : std_logic_vector(31 downto 0);
@@ -71,6 +73,7 @@ architecture rtl of response_processor is
         '0',
         rec_reset,
         0,
+        (others => '0'),
         (others => '0'),
         (others => '0'),
         '0',
@@ -106,7 +109,7 @@ begin
         else  -- UART response
            response_chan_mux.cycle_type <= message_with_data;
            response_chan_mux.tag        <= (others => '0');
-           response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 1024);  -- cap to tx max
+           response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 256);  -- cap to tx max
            flash_resp.ready             <= '0';
            resp_data <= sp_to_host_espi.st.data;
            sp_to_host_espi.st.ready <= r.resp_ack;
@@ -182,15 +185,17 @@ begin
                     end if;
                 end if;
             when RESPONSE_FLASH_HEADER =>
-
-                v.payload_cnt := response_chan_mux.length - 1;
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := response_chan_mux.cycle_type;
+                        -- These two things could change cycle-cycle but we need them to match
+                        -- so we latch them at the same time
+                        v.payload_cnt := response_chan_mux.length - 1;
+                        v.temp_length := response_chan_mux.length;
                     when 1 =>
-                        v.cur_data := response_chan_mux.tag & response_chan_mux.length(11 downto 8);
+                        v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
                     when 2 =>
-                        v.cur_data := response_chan_mux.length(7 downto 0);
+                        v.cur_data := r.temp_length(7 downto 0);
                     when others =>
                         null;  -- not expected
                 end case;
@@ -201,21 +206,30 @@ begin
                     end if;
                 end if;
             when RESPONSE_UART_HEADER =>
-
-                v.payload_cnt := response_chan_mux.length - 1;
+                -- This is a message with data message going up
+                -- Standard header (3 bytes)
+                -- message code (1 byte)
+                -- message specific (4 bytes)
+                -- then data
+                
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := response_chan_mux.cycle_type;
+                        -- These two things could change cycle-cycle but we need them to match
+                        -- so we latch them at the same time, before they're needed
+                        -- internal counters are 0 indexed
+                        v.temp_length := response_chan_mux.length;
+                        v.payload_cnt := response_chan_mux.length - 1;
                     when 1 =>
-                        v.cur_data := response_chan_mux.tag & response_chan_mux.length(11 downto 8);
+                        v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
                     when 2 =>
-                        v.cur_data := response_chan_mux.length(7 downto 0);
+                        v.cur_data := r.temp_length(7 downto 0);
                     when others =>
-                       v.cur_data := (others => '0'); -- message code field
+                       v.cur_data := (others => '0'); -- Filled in for message code, and msg specific
                 end case;
                 if data_to_host.ready then
                     v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 3 then
+                    if r.resp_idx = 7 then
                         v.state := RESPONSE_PAYLOAD;
                     end if;
                 end if;
@@ -223,8 +237,9 @@ begin
                 v.cur_data := resp_data;
                 if data_to_host.ready then
                     v.resp_ack := '1';
-                    v.payload_cnt := r.payload_cnt - 1;
-                    if r.payload_cnt = 0 then
+                    if r.payload_cnt > 0 then
+                        v.payload_cnt := r.payload_cnt - 1;
+                    elsif r.payload_cnt = 0 then
                         v.state := STATUS;
                         v.status := live_status;
                     end if;
@@ -258,6 +273,10 @@ begin
         if r.state /= IDLE then
             v.cur_valid := '1';
         end if;
+        -- -- abort the transaction if we're not selected
+        -- if not chip_sel_active then
+        --     v.state := IDLE;
+        -- end if;
         rin <= v;
     end process;
 

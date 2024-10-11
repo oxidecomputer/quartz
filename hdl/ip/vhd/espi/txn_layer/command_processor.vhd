@@ -52,6 +52,7 @@ architecture rtl of command_processor is
         parse_data,
         parse_get_cfg_hdr,
         parse_set_cfg_hdr,
+        parse_msg_header,
         parse_vwire_put,
         reset_word1,
         crc,
@@ -72,7 +73,7 @@ architecture rtl of command_processor is
         vwire_wstrobe   : std_logic;
         valid_redge    : boolean;
         reset_strobe   : std_logic;
-        hdr_idx        : integer range 0 to 7;
+        hdr_idx        : integer range 0 to 11;
         rem_addr_bytes : integer range 0 to 7;
         rem_data_bytes : integer range 0 to 2048;
     end record;
@@ -129,7 +130,8 @@ architecture rtl of command_processor is
             when opcode_put_pc =>
                 case header.cycle_kind is
                     when message_with_data =>
-                        next_state.next_state := parse_data;
+                        next_state.next_state := parse_msg_header;
+                        next_state.cmd_addr_bytes := 0;
                         next_state.cmd_payload_bytes := to_integer(header.length);
                     when others =>
                         null;
@@ -282,6 +284,13 @@ begin
                             -- cycle type cases so we need to have something here
                             null;
                     end case;
+                end if;
+            when parse_msg_header =>
+                if data_from_host.valid then
+                    v.hdr_idx := v.hdr_idx + 1;
+                    if r.hdr_idx = 7 then
+                        v.state := parse_data;
+                    end if;
                 end if;
             when parse_addr_header =>
                 if data_from_host.valid then
