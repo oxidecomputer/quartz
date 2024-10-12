@@ -34,9 +34,9 @@ bluespec_library('Target',
         '//hdl/ip/bsv:Strobe',
     ],
     using = {
+        # Bluesim generated C++ output seems to trigger compiler warnings.
+        # Silence these for now.
         'bsc_flags': [
-            # Bluesim generated C++ output seems to trigger compiler warnings.
-            # Silence these for now.
             '-Xc++', '-Wno-dangling-else',
             '-Xc++', '-Wno-bool-operation',
         ],
@@ -67,14 +67,14 @@ bluespec_library('TargetWrapper',
 bluespec_library('Controller',
     sources = [
         'IgnitionController.bsv',
-        'IgnitionEventCounter.bsv',
+        'IgnitionControllerCounters.bsv',
+        'IgnitionControllerShared.bsv',
     ],
     deps = [
         ':ControllerRegisters',
         ':Protocol',
         ':Transceiver',
-        '//hdl/ip/bsv:Countdown',
-        '//hdl/ip/bsv:SchmittReg',
+        '//hdl/ip/bsv:CounterRAM',
         '//hdl/ip/bsv:Strobe',
     ],
     using = {
@@ -122,11 +122,30 @@ bluespec_verilog('mkParser',
         ],
     })
 
-bluespec_verilog('mkTransceiver',
-    env = 'ignition_target',
+bluespec_verilog('mkController',
+    env = 'ecp5',
+    top = 'IgnitionController.bsv',
+    modules = [
+        'mkDefaultController',
+        'mkDefaultControllerUsingBRAM',
+    ],
+    deps = [
+        ':Controller',
+    ],
+    local = {
+        'bsc_flags': [
+            '-opt-undetermined-vals',
+            '-unspecified-to', 'X',
+        ],
+    })
+
+bluespec_verilog('mkTransceivers',
+    env = 'ecp5',
     top = 'IgnitionTransceiver.bsv',
     modules = [
-        'mkTransceiver',
+        'mkTransceivers6',
+        'mkTransceivers8',
+        'mkControllerTransceiver36',
     ],
     deps = [
         ':Transceiver',
