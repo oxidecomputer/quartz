@@ -15,12 +15,14 @@ entity i2c_top is
         reset       :   in  std_logic;
 
         -- Tri-state signals to I2C interface
-        scl_i       :   in  std_logic;
-        scl_o       :   out std_logic;
-        scl_oe      :   out std_logic;
-        sda_i       :   in  std_logic;
-        sda_o       :   out std_logic;
-        sda_oe      :   out std_logic;
+        scl_if      : view tristate_if;
+        sda_if      : view tristate_if;
+
+        -- Transmit data stream
+        tx_st_if    : view stream8_pkg.st_sink_if;
+
+        -- Received data stream
+        rx_st_if    : view stream8_pkg.st_source_if;
     );
 end entity;
 

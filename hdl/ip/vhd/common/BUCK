@@ -50,11 +50,19 @@ vhdl_unit(
     visibility = ['PUBLIC']
 )
 
-# Strobe
+# Counters
+
+vhdl_unit(
+    name = "countdown",
+    srcs = glob(["counters/countdown.vhd"]),
+    deps = [],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
 
 vhdl_unit(
     name = "strobe",
-    srcs = glob(["strobe/strobe.vhd"]),
+    srcs = glob(["counters/strobe.vhd"]),
     deps = [],
     standard = "2019",
     visibility = ['PUBLIC'],
@@ -63,7 +71,7 @@ vhdl_unit(
 vhdl_unit(
     name = "strobe_tb",
     is_tb = True,
-    srcs = glob(["strobe/sims/*.vhd"]),
+    srcs = glob(["counters/sims/*.vhd"]),
     deps = [":strobe"],
     standard = "2019",
     visibility = ['PUBLIC'],

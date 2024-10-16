@@ -11,7 +11,7 @@ package i2c_link_layer_pkg is
 
     type mode_t is (STANDARD, FAST, FAST_PLUS);
 
-    type state_t is (IDLE, WAIT_BUF, START, TX_BYTE, RX_BYTE, TX_ACK, RX_ACK, STOP);
+    type state_t is (IDLE, WAIT_BUF, START, BYTE_TX, BYTE_RX, ACK_TX, ACK_RX, STOP, AWAIT_STREAM);
 
     -- all times in nanoseconds (ns)
     type settings_t is record

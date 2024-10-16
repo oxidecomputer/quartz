@@ -8,7 +8,8 @@ vhdl_unit(
     deps = [
         "//hdl/ip/vhd/common:streaming_if_pkg",
         "//hdl/ip/vhd/common:tristate_if_pkg",
-        "//hdl/ip/vhd/common:time_pkg"
+        "//hdl/ip/vhd/common:time_pkg",
+        "//hdl/ip/vhd/synchronizers:meta_sync"
     ],
     standard = "2019",
     visibility = ['PUBLIC']

@@ -27,6 +27,12 @@ entity i2c_link_layer is
         scl_if      : view tristate_if;
         sda_if      : view tristate_if;
 
+        -- I2C framing
+        tx_start    : in std_logic; -- send a start
+        tx_ack      : in std_logic; -- send an ACK
+        tx_stop     : in std_logic; -- send a stop
+        got_ack      : out std_logic; -- received an ACK
+
         -- Transmit data stream
         tx_st_if    : view stream8_pkg.st_sink_if;
 
@@ -43,12 +49,20 @@ architecture rtl of i2c_link_layer is
         to_integer(calc_ns(SETTINGS.sta_su_hd_ns, CLK_PER_NS, 8));
     constant STO_TO_STA_BUF_TICKS   : positive :=
         to_integer(calc_ns(SETTINGS.sto_sta_buf_ns, CLK_PER_NS, 8));
-    -- constant SDA_TRANSITION_TICKS   : positive :=
-    --     to_integer(calc_ns())
+
+    -- The number of ticks after SCL falls until SDA should be transitioned. FastMode+ has the
+    -- tightest requirement here (obviously) at 450ns, so by design we will always transition well
+    -- prior to that since we don't have a reason not to. 
+    constant SDA_TRANSITION_TICKS   : positive :=
+        to_integer(calc_ns(300, CLK_PER_NS, 5));
+
+    -- The state machine's counter to enforce timing around various events
+    constant SM_COUNTER_SIZE_BITS   : positive := 10;
 
     type sm_reg_t is record
-        -- state machine
-        state       : state_t;
+        -- state
+        state           : state_t;
+        bits_shifted    : natural range 0 to 7;
 
         -- control
         scl_active  : std_logic;
@@ -56,28 +70,43 @@ architecture rtl of i2c_link_layer is
         sta_setup   : std_logic;
         sta_hold    : std_logic;
         sda_hold    : std_logic;
+        counter     : unsigned(SM_COUNTER_SIZE_BITS - 1 downto 0);
+        count_load  : std_logic;
+        count_decr  : std_logic;
+        count_clr   : std_logic;
+        sda_change  : std_logic;
 
         -- interfaces
         tx_ready    : std_logic;
-        data        : unsigned(7 downto 0); -- unsigned makes using shift functions cleaner
+        data        : std_logic_vector(7 downto 0);
         rx_valid    : std_logic;
         sda_oe      : std_logic;
+        got_ack     : std_logic;
     end record;
 
     constant sm_reg_reset   : sm_reg_t := (
         IDLE,           -- state
+        0,              -- bits_shifted
         '0',            -- scl_active
         '0',            -- tbuf_met
         '0',            -- sta_setup
         '0',            -- sta_hold
         '0',            -- sda_hold
+        (others => '0'),-- counter
+        '0',            -- count_load
+        '0',            -- count_decr
+        '0',            -- count_clr
+        '0',            -- sda_change
         '0',            -- tx_ready
         (others => '0'),-- data
         '0',            -- rx_valid
-        '0'             -- sda_oe
+        '0',            -- sda_oe
+        '0'             -- got_ack
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
+
+    signal sm_count_done    : std_logic;
 
     signal scl_toggle   : std_logic;
     signal scl_oe       : std_logic;
@@ -89,6 +118,8 @@ architecture rtl of i2c_link_layer is
     signal sta_en       : std_logic;
     signal sta_pulse    : std_logic;
 
+    signal transition_sda   : std_logic;
+    signal sda_in_syncd     : std_logic;
 begin
 
     --
@@ -132,7 +163,14 @@ begin
     -- SDA Control
     --
 
-    tbuf_en <= '1' when sda_if.i = '1' and 
+    sda_in_sync: entity work.meta_sync
+        port map(
+          async_input   => sda_if.i,
+          clk           => clk,
+          sycnd_output  => sda_in_syncd
+        );
+
+    tbuf_en <= '1' when sda_in_syncd = '1' and 
                         (sm_reg.state = IDLE or sm_reg.state = WAIT_BUF)
                     else '0';
 
@@ -151,15 +189,39 @@ begin
 
     start_strobe: entity work.strobe
         generic map (
-            TICKS => START_SETUP_HOLD_TICKS
+            TICKS   => START_SETUP_HOLD_TICKS
         )
         port map (
-            clk => clk,
-            reset => reset,
-            enable => sta_en,
-            strobe => sta_pulse
+            clk     => clk,
+            reset   => reset,
+            enable  => sta_en,
+            strobe  => sta_pulse
         );
 
+    sda_transition: entity work.strobe
+        generic map (
+            TICKS   => SDA_TRANSITION_TICKS
+        )
+        port map (
+            clk     => clk,
+            reset   => reset,
+            enable  => sm_reg.sda_change,
+            strobe  => transition_sda
+        );
+
+    sm_countdown: entity work.countdown
+        generic map (
+            SIZE    => SM_COUNTER_SIZE_BITS
+        )
+        port map (
+            clk     => clk,
+            reset   => reset,
+            count   => sm_reg.counter,
+            load    => sm_reg.count_load,
+            decr    => sm_reg.count_decr,
+            clear   => sm_reg.count_clr,
+            done    => sm_count_done
+        );
 
     --
     -- Link State Machine
@@ -170,9 +232,23 @@ begin
     begin
         v   := sm_reg;
 
+        -- default to single cycle pulses to counter control
+        v.count_load    := '0';
+        v.count_decr    := '0';
+        v.count_clr     := '0';
+
+        -- single-cycle pulses
+        v.got_ack   := '0';
+        v.rx_valid  := '0';
+
         -- catch the pulse once tbuf as elapsed
         if not sm_reg.tbuf_met then
             v.tbuf_met  := tbuf_pulse;
+        end if;
+
+        -- after a scl fedge sda should be updated
+        if scl_fedge then
+            v.sda_change := '1';
         end if;
 
         case sm_reg.state is
@@ -182,10 +258,11 @@ begin
                 v.sda_oe    := '0';
                 v.tx_ready  := '1';
 
-                if tx_st_if.valid then
+                -- only begin a transaction once the address byte is valid
+                if tx_st_if.valid = '1' then
                     v.state     := WAIT_BUF;
+                    v.data      := tx_st_if.data;
                     v.tx_ready  := '0';
-                    v.data      := unsigned(tx_st_if.data);
                 end if;
 
             -- Wait out tbuf to ensure STOP/START spacing
@@ -201,41 +278,85 @@ begin
             when START =>
                 v.sda_oe    := sm_reg.sta_setup and not sm_reg.sta_hold;
 
+                -- address byte has to be send after a start
                 if sm_reg.sta_hold then
-                    v.state         := TX_BYTE;
+                    v.state         := BYTE_TX;
                     v.sta_setup     := '0';
                     v.sta_hold      := '0';
                     v.scl_active    := '1';
                 end if;
 
+            when AWAIT_STREAM =>
+                v.tx_ready  := '1';
+
+                if tx_start then
+                    -- A repeated start was issued mid-transaction
+                    v.state     := START;
+                elsif tx_st_if.valid then
+                    -- more data to transmit
+                    v.state     := BYTE_TX;
+                    v.data      := tx_st_if.data;
+                    v.tx_ready  := '0';
+                elsif rx_st_if.ready then
+                    -- more data to read
+                    v.state     := BYTE_RX;
+                    v.tx_ready  := '0';
+                end if;
+
             -- Clock out a byte and then wait for an ACK
-            when TX_BYTE =>
-                v.sda_oe    := sm_reg.data(0);
+            when BYTE_TX =>
+                v.sda_oe    := not sm_reg.data(0);
 
-                -- shift data appropriately
-                -- v.data  := shift_right(sm_reg.data, 1);
+                if transition_sda = '1' and sm_reg.sda_change = '1' then
+                    v.data          := '1' & sm_reg.data(7 downto 1);
+                    v.sda_change    := '0';
 
-            -- See if the target ACKs
-            when RX_ACK =>
-                if scl_redge then
-                    if scl_if.i then
-                        -- NACK'd
-
+                    if sm_reg.bits_shifted = 7 then
+                        v.state         := ACK_RX;
+                        v.bits_shifted  := 0;
                     else
-                        -- ACK'd
-
+                        v.bits_shifted  := sm_reg.bits_shifted + 1;
                     end if;
                 end if;
 
+            -- See if the target ACKs
+            when ACK_RX =>
+                v.sda_oe    := '0';
+
+                if scl_redge then
+                    v.state     := AWAIT_STREAM;
+                    v.got_ack   := not sda_in_syncd;
+                end if;
+
             -- Clock in a byte and then send an ACK
-            when RX_BYTE =>
-                
+            when BYTE_RX =>
+                v.sda_oe    := '0';
+
+                if scl_redge then
+                    v.data  := sda_in_syncd & sm_reg.data(7 downto 1);
+
+                    if sm_reg.bits_shifted = 7 then
+                        v.state         := ACK_TX;
+                        v.rx_valid      := '1';
+                        v.bits_shifted  := 0;
+                    else
+                        v.bits_shifted  := sm_reg.bits_shifted + 1;
+                    end if;
+                end if;
 
             -- ACK the target
-            when TX_ACK =>
+            when ACK_TX =>
+                if transition_sda = '1' and sm_reg.sda_change = '1' then
+                    v.sda_oe    := tx_ack;
+                    v.state     := AWAIT_STREAM when tx_ack else STOP;
+                end if;
 
             -- Do the stop sequence to end the transaction
             when STOP =>
+                if scl_redge then
+                    v.scl_active    := '0';
+                end if;
+
 
 
         end case;
@@ -255,6 +376,7 @@ begin
     --
     -- Interface connections
     --
+    got_ack         <= sm_reg.got_ack;
 
     -- I2C is open-drain, so we only ever drive low
     scl_if.o        <= '0';
