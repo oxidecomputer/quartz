@@ -9,6 +9,13 @@ rdl_file(
 )
 
 rdl_file(
+    name = "vwire_regs_pkg",
+    src = "vwire_channel/vwire_regs.rdl",
+    outputs = ["vwire_regs_pkg.vhd", "vwire_regs.html"],
+    visibility = ['PUBLIC']
+)
+
+rdl_file(
     name = "espi_regs_pkg",
     src = "sys_regs/espi_regs.rdl",
     outputs = ["espi_regs_pkg.vhd", "espi_regs.html"],
@@ -23,10 +30,12 @@ vhdl_unit(
         "flash_channel/*.vhd",
         "sys_regs/*.vhd",
         "uart_channel/*.vhd",
+        "vwire_channel/*.vhd",
         "*.vhd"]),
     deps = [
         ":espi_spec_regs_pkg",
         ":espi_regs_pkg",
+        ":vwire_regs_pkg",
         "//hdl/ip/vhd/crc:crc8atm_8wide",
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",

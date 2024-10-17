@@ -108,6 +108,20 @@ package espi_base_types_pkg is
         rdata_valid : std_logic;
     end record;
 
+    type vwire_if_type is record
+        idx: integer range 0 to 255;
+        dat: std_logic_vector(7 downto 0);
+        wstrobe: std_logic;
+    end record;
+
+    view vwire_regs_side of vwire_if_type is
+        idx: in;
+        dat: in;
+        wstrobe: in;
+    end view;
+
+    alias vwire_cmd_side is vwire_regs_side'converse;
+
 
 
 end package;

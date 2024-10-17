@@ -20,8 +20,9 @@ entity txn_layer_top is
         reset : in    std_logic;
 
         -- register layer connections
-
         regs_if : view    bus_side;
+        -- vwire channel connections
+        vwire_if : view vwire_cmd_side;
         -- flash channel status
         flash_np_free : in    std_logic;
         flash_c_avail : in    std_logic;
@@ -36,6 +37,7 @@ entity txn_layer_top is
         pc_avail : in std_logic;
         np_free : in std_logic;
         np_avail: in std_logic;
+        vwire_avail : in std_logic;
 
         -- Link-layer connections
         is_crc_byte     : out   boolean;
@@ -108,6 +110,7 @@ begin
             clk             => clk,
             reset           => reset,
             regs_if         => regs_if,
+            vwire_if        => vwire_if,
             flash_req       => flash_req,
             host_to_sp_espi => host_to_sp_espi,
             running_crc     => rx_running_crc,
@@ -147,6 +150,7 @@ begin
     begin
         -- default to reset, override with other status bits
         live_status <= rec_reset;
+        live_status.vwire_avail <= vwire_avail;
         live_status.flash_c_avail <= flash_c_avail;
         live_status.flash_np_free <= flash_np_free;
         live_status.pc_avail <= pc_avail;

@@ -109,18 +109,6 @@ begin
                 exp_data_32 := (others => '0');
                 check_equal(data_32, exp_data_32, "Expected no response to bad CRC command");
 
-                -- dbg_get_response(net, 4, response);
-                -- check(response.crc_ok, "CRC Check failed");
-                -- expected_status := pack(status_t'(rec_reset));
-                -- check_equal(response.status, expected_status, "Status did not match reset value");
-
-                -- -- Do it a 2nd time
-                -- dbg_send_get_status_cmd(net);
-                -- dbg_wait_for_done(net);
-                -- dbg_get_response(net, 4, response);
-                -- check(response.crc_ok, "CRC Check failed");
-                -- expected_status := pack(status_t'(rec_reset));
-                -- check_equal(response.status, expected_status, "Status did not match reset value");
             elsif run("get_config") then
                 get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");
@@ -200,6 +188,11 @@ begin
                 print("Response size: " & integer'image(gen_int));
                 dbg_get_response(net, 40 , response);
                 check(response.crc_ok, "CRC Check failed");
+            elsif run("dbg_ruby_boot") then
+                send_reset(net);
+                wait for 1 us;
+                set_config(net, CH1_CAPABILITIES_OFFSET, X"00000001", response_code, status,  crc_ok);
+
             end if;
         end loop;
         wait for 10 us;

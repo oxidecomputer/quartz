@@ -34,6 +34,7 @@ architecture rtl of espi_spec_regs is
     signal device_id        : device_id_type;
     signal gen_capabilities : general_capabilities_type;
     signal ch0_capabilities : ch0_capabilities_type;
+    signal ch1_capabilities : ch1_capabilities_type;
     signal ch3_capabilities : ch3_capabilities_type;
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
@@ -52,6 +53,7 @@ begin
             device_id <= rec_reset;
             gen_capabilities <= rec_reset;
             ch0_capabilities <= rec_reset;
+            ch1_capabilities <= rec_reset;
             ch3_capabilities <= rec_reset;
         elsif rising_edge(clk) then
             if regs_if.addr = GENERAL_CAPABILITIES_OFFSET and regs_if.write = '1' then
@@ -71,6 +73,15 @@ begin
                 -- clean up RO fields by keeping current val
                 ch0_capabilities.max_payload_support <= ch0_capabilities.max_payload_support;
                 ch0_capabilities.chan_rdy <= ch0_capabilities.chan_rdy;
+            end if;
+
+            if regs_if.addr = CH1_CAPABILITIES_OFFSET and regs_if.write = '1' then
+                ch1_capabilities <= unpack(regs_if.wdata);
+                -- clean up RO fields by keeping current val
+                ch1_capabilities.wire_max_supported <= ch1_capabilities.wire_max_supported;
+                ch1_capabilities.chan_rdy <= ch1_capabilities.chan_rdy;
+            else
+                ch1_capabilities.chan_rdy <= ch1_capabilities.chan_en;
             end if;
 
             if regs_if.addr = CH3_CAPABILITIES_OFFSET and regs_if.write = '1' then
@@ -105,6 +116,10 @@ begin
                     readdata <= pack(gen_capabilities);
                 when CH0_CAPABILITIES_OFFSET =>
                     readdata <= pack(ch0_capabilities);
+                when CH1_CAPABILITIES_OFFSET =>
+                    readdata <= pack(ch1_capabilities);
+                when CH3_CAPABILITIES_OFFSET =>
+                    readdata <= pack(ch3_capabilities);
                 when others =>
                     readdata <= (others => '0');
             end case;

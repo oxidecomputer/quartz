@@ -19,6 +19,8 @@ entity espi_target_top is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
+        axi_clk : in std_logic;
+        axi_reset : in std_logic;
         -- Axilite interface
         axi_if : view axil_target;
         -- phy interface
@@ -68,16 +70,43 @@ architecture rtl of espi_target_top is
     signal host_to_sp_espi : st_uart_t;
     signal sp_to_host_espi : uart_resp_t;
     signal aborted_due_to_bad_crc : boolean;
+    signal cs_n_syncd : std_logic;
+    signal sclk_syncd : std_logic;
+    signal vwire_if : vwire_if_type;
+    signal vwire_avail : std_logic;
 
 begin
+
+    -- sync
+    cs_meta_sync_inst: entity work.meta_sync
+     generic map(
+        stages => 1
+    )
+     port map(
+        async_input => cs_n,
+        clk => clk,
+        sycnd_output => cs_n_syncd
+    );
+
+    sclk_meta_sync_inst: entity work.meta_sync
+     generic map(
+        stages => 1
+    )
+     port map(
+        async_input => sclk,
+        clk => clk,
+        sycnd_output => sclk_syncd
+    );
 
     -- link layer
     link_layer_top_inst: entity work.link_layer_top
      port map(
         clk => clk,
         reset => reset,
-        cs_n => cs_n,
-        sclk => sclk,
+        axi_clk => axi_clk,
+        axi_reset => axi_reset,
+        cs_n => cs_n_syncd,
+        sclk => sclk_syncd,
         io => io,
         io_o => io_o,
         io_oe => io_oe,
@@ -95,8 +124,8 @@ begin
     -- system (axi-lite) register block
    espi_sys_regs_inst: entity work.espi_regs
     port map(
-       clk => clk,
-       reset => reset,
+       clk => axi_clk,
+       reset => axi_reset,
        axi_if => axi_if,
        dbg_chan => dbg_chan
    );
@@ -108,6 +137,7 @@ begin
             reset           => reset,
             is_crc_byte     => is_crc_byte,
             regs_if         => regs_if,
+            vwire_if        => vwire_if,
             chip_sel_active => chip_sel_active,
             data_to_host    => data_to_host,
             data_from_host  => data_from_host,
@@ -124,7 +154,8 @@ begin
             pc_free => pc_free,
             pc_avail => pc_avail,
             np_free => np_free,
-            np_avail => np_avail
+            np_avail => np_avail,
+            vwire_avail => vwire_avail
         );
 
     -- espi-internal register block
@@ -173,4 +204,13 @@ begin
        np_avail => np_avail
    );
 
+   -- vwire channel logic
+    vwire_block_inst: entity work.vwire_block
+     port map(
+        clk => clk,
+        reset => reset,
+        espi_reset_flag => '0',
+        wire_tx_avail => vwire_avail,
+        vwire_if => vwire_if
+    );
 end rtl;

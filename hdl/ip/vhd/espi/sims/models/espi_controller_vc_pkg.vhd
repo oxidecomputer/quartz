@@ -27,6 +27,10 @@ package espi_controller_vc_pkg is
     constant rx_queue : queue_t := new_queue;
 
 
+    procedure send_reset(
+        signal net : inout network_t
+    );
+    
     procedure get_status(
         signal net : inout network_t;
         variable response_code : inout std_logic_vector(7 downto 0);
@@ -96,6 +100,17 @@ package body espi_controller_vc_pkg is
         --done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
         flush(queue);
         return status;
+    end;
+
+    procedure send_reset(
+        signal net : inout network_t
+    ) is
+        variable msg_target : actor_t := find("espi_vc");
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        cmd := build_reset_cmd;
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, 0);
     end;
 
     procedure get_status(

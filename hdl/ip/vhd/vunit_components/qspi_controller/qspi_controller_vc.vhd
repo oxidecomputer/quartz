@@ -151,15 +151,17 @@ begin
         state <= tx_phase;
         -- finish transmit phase
         wait until tx_rem_bytes = 0;
-        -- do the 2 cycle turn-around
-        state <= tar1;
-        wait until falling_edge(sclk);
-        state <= tar2;
-        wait until falling_edge(sclk);
-        -- finish the rx phase
-        state <= rx_phase;
-        wait until rx_rem_bytes = 0;
-        wait until falling_edge(sclk);
+        if rx_rem_bytes /= 0 then
+            -- do the 2 cycle turn-around
+            state <= tar1;
+            wait until falling_edge(sclk);
+            state <= tar2;
+            wait until falling_edge(sclk);
+            -- finish the rx phase
+            state <= rx_phase;
+            wait until rx_rem_bytes = 0;
+            wait until falling_edge(sclk);
+        end if;
         sclk_enable <= false;
         -- de-assert cs
         ss_n(0) <= '1';

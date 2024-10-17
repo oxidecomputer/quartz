@@ -173,7 +173,14 @@ begin
                             v.is_flash_response := false;
                             v.state := RESPONSE_UART_HEADER;
                             v.status := live_status;
+                        when opcode_put_vwire =>
+                            v.state := STATUS;
+                            v.status := live_status;
                         when others =>
+                            -- Default hw to just return status with accept code
+                            -- for now, but crash a simulation if we hit this
+                            v.state := STATUS;
+                            v.status := live_status;
                             assert false
                                 report "Not implemented yet"
                                 severity FAILURE;

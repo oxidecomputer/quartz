@@ -21,6 +21,8 @@ entity dbg_link_faker is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
+        axi_clk : in std_logic;
+        axi_reset : in std_logic;
         -- Asserted by command processor during the
         -- transmission of the last command byte (the CRC)
         response_done : in boolean;
@@ -72,15 +74,48 @@ architecture rtl of dbg_link_faker is
     signal cmd_fifo_wusedwds: std_logic_vector(log2ceil(1024) downto 0);
     signal rusedwds: std_logic_vector(log2ceil(1024) downto 0);
     signal resp_fifo_rusedwds: std_logic_vector(log2ceil(1024) downto 0);
+    signal busy: std_logic;
+    signal busy_axi_sync: std_logic;
+    signal alert_pending : std_logic;
+    signal alert_pending_axi_sync : std_logic;
 
 begin
 
-    dbg_chan.busy <= '1' when r.state /= idle else '0';
+    sync_regs: process(clk, reset)
+    begin
+        if reset = '1' then
+            busy <= '0';
+            alert_pending <= '0';
+        elsif rising_edge(clk) then
+            busy <= '1' when r.state /= idle else '0';
+            alert_pending <= '1' when alert_needed else '0';
+        end if;
+    end process;
+
+    busy_meta_sync_inst: entity work.meta_sync
+     generic map(
+        stages => 2
+    )
+     port map(
+        async_input => busy,
+        clk => clk,
+        sycnd_output => busy_axi_sync
+    );
+    alert_meta_sync_inst: entity work.meta_sync
+    generic map(
+       stages => 2
+   )
+    port map(
+       async_input => alert_pending,
+       clk => clk,
+       sycnd_output => alert_pending_axi_sync
+   );
+    dbg_chan.busy <= busy_axi_sync;
     dbg_chan.wstatus.usedwds <= resize(cmd_fifo_wusedwds, dbg_chan.wstatus.usedwds'length);
     dbg_chan.rdstatus.usedwds <= resize(resp_fifo_rusedwds, dbg_chan.rdstatus.usedwds'length);
     dbg_chan.rd.data <= resp_fifo_read_data;
     cs_active <= r.cs_asserted;
-    dbg_chan.alert_pending <= '1' when alert_needed else '0';
+    dbg_chan.alert_pending <= alert_pending_axi_sync;
 
     -- Timer: the fastest byte transfer that can be done is 2 clocks at 66MHz (in quad mode) so we'll
     -- generate a strobe at that speed when enabled to provide effective rate-limiting to the design.
@@ -113,8 +148,8 @@ begin
         showahead_mode => true
     )
      port map(
-        wclk => clk,
-        reset => reset,
+        wclk => axi_clk,
+        reset => axi_reset,
         write_en => dbg_chan.wr.write,
         wdata => dbg_chan.wr.data,
         wfull => open,
@@ -133,7 +168,7 @@ begin
         showahead_mode => true
     )
      port map(
-        wclk => clk,
+        wclk => axi_clk,
         reset => reset,
         write_en => dbg_chan.size.write,
         wdata => dbg_chan.size.data,
@@ -252,7 +287,7 @@ begin
         wdata => data_to_host.data,
         wfull => open,
         wusedwds => open,
-        rclk => clk,
+        rclk => axi_clk,
         rdata => resp_fifo_read_data,
         rdreq => resp_fifo_read_ack,
         rempty => resp_fifo_empty,

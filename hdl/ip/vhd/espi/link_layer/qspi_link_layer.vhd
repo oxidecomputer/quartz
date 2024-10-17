@@ -42,6 +42,13 @@ entity qspi_link_layer is
         -- "Streaming" bytes after receipt and deserialization
         data_from_host     : view st_source;
     );
+    attribute mark_debug : string;
+    attribute mark_debug of io_oe        : signal is "TRUE";
+    attribute mark_debug of io_o        : signal is "TRUE";
+    attribute mark_debug of io        : signal is "TRUE";
+    attribute mark_debug of sclk        : signal is "TRUE";
+    attribute mark_debug of cs_n        : signal is "TRUE";
+    
 end entity;
 
 architecture rtl of qspi_link_layer is
@@ -56,6 +63,8 @@ architecture rtl of qspi_link_layer is
     -- for a sentinel value
     signal tx_reg            : std_logic_vector(8 downto 0);
     signal rx_reg            : std_logic_vector(8 downto 0);
+    attribute mark_debug of tx_reg        : signal is "TRUE";
+    attribute mark_debug of rx_reg        : signal is "TRUE";
     signal in_turnaround     : boolean;
     signal ta_cnts    : integer range 0 to 2 := 0;
     signal response_phase    : boolean;
@@ -66,6 +75,7 @@ architecture rtl of qspi_link_layer is
     signal alert_state : alert_state_t;
     signal cs_cntr : natural range 0 to 3 := 0;
     constant cs_deassert_delay : natural := 2;
+
 
 begin
 

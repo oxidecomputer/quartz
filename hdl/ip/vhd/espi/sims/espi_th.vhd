@@ -94,6 +94,8 @@ begin
         port map (
             clk                => clk,
             reset              => reset,
+            axi_clk            => clk,
+            axi_reset          => reset,
             cs_n               => ss_n(0),
             sclk               => sclk,
             io                 => io,

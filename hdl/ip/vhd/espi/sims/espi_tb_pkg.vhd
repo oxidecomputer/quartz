@@ -60,6 +60,7 @@ package espi_tb_pkg is
     -- returns the queue and the number of bytes in the queue
     -- for additional processing in the testbench such as
     -- commanding the qspi VC or using the debug axi interface
+    impure function build_reset_cmd return cmd_t;
     impure function build_get_status_cmd(constant bad_crc : boolean := false) return cmd_t;
     impure function build_get_config_cmd(
         constant address : natural;
@@ -157,6 +158,16 @@ package body espi_tb_pkg is
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
         push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_reset_cmd return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        push_byte(cmd.queue, to_integer(unsigned'(X"FF")));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(unsigned'(X"FF")));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;

@@ -16,6 +16,7 @@ use vunit_lib.sync_pkg.all;
 package qspi_vc_pkg is
 
     -- Message defs
+    constant do_reset     : msg_type_t   := new_msg_type("do_reset");
     constant set_period     : msg_type_t   := new_msg_type("set_period");
     constant set_qspi_mode  : msg_type_t   := new_msg_type("set_qspi_mode");
     constant enqueue_tx_bytes : msg_type_t := new_msg_type("enqueue_tx_bytes");
