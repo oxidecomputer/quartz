@@ -51,6 +51,10 @@ package espi_dbg_vc_pkg is
         constant expected_resp_bytes : integer;
         variable resp  : inout resp_t
     );
+    procedure dbg_get_response_size(
+        signal net : inout network_t;
+        variable size  : inout integer
+    );
     procedure dbg_send_uart_data_cmd(
         signal net : inout network_t;
         payload : queue_t
@@ -160,6 +164,7 @@ package body espi_dbg_vc_pkg is
         dbg_send_cmd(net, cmd);
     end procedure;
 
+
     procedure dbg_get_response(
         signal net : inout network_t;
         constant expected_resp_bytes : integer;
@@ -192,6 +197,18 @@ package body espi_dbg_vc_pkg is
         resp.response_code := response;
         -- Status comes LSB first, so older is lower.  very last byte is crc
         resp.status := last_3_bytes(1) & last_3_bytes(2);
+    end procedure;
+
+    procedure dbg_get_response_size(
+        signal net : inout network_t;
+        variable size  : inout integer
+    ) is
+        variable readdata : std_logic_vector(31 downto 0) := (others => '0');
+        variable fifo_status : fifo_status_type := rec_reset;
+    begin
+        read_bus(net, bus_handle, To_StdLogicVector(FIFO_STATUS_OFFSET, bus_handle.p_address_length), readdata);
+        fifo_status := unpack(readdata);
+        size := to_integer(fifo_status.resp_used_wds);
     end procedure;
 
     procedure dbg_send_uart_data_cmd(

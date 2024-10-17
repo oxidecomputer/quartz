@@ -48,6 +48,7 @@ begin
         variable flash_cap_reg   : ch3_capabilities_type := rec_reset;
         variable my_queue        : queue_t               := new_queue;
         variable cmd             : cmd_t;
+        variable gen_int         : integer;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -187,7 +188,7 @@ begin
                 dbg_wait_for_done(net);
                 -- 4 junk bytes at the top of the response for the accept of the command
                 dbg_pop_resp_fifo(net, 1);  -- 32bit read = 4 bytes
-                wait for 100 us; -- let uart data propagate
+                wait for 200 us; -- let uart data propagate
                 dbg_wait_for_alert(net);
                 -- technically we'd get status here, and if we supported completions we'd return it here
                 -- response size is going to be 4 bytes for response_code/status/crc
@@ -195,6 +196,8 @@ begin
                 -- bringing total to 40 bytes
                 dbg_get_uart_data_cmd(net);
                 dbg_wait_for_done(net);
+                dbg_get_response_size(net, gen_int);
+                print("Response size: " & integer'image(gen_int));
                 dbg_get_response(net, 40 , response);
                 check(response.crc_ok, "CRC Check failed");
             end if;

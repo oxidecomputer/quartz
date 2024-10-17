@@ -129,13 +129,16 @@ package body espi_tb_pkg is
     begin
         while true loop
             cur_byte := To_StdLogicVector(pop_byte(copy_queue), 8);
-            report "Data Byte: " & to_hstring(cur_byte);
             -- Last element in queue is the CRC
             if is_empty(copy_queue) then
                 crc_byte := crc8(crc_queue);
-                report "CRC Byte: " & to_hstring(crc_byte);
+                report "Received CRC Byte: " & to_hstring(cur_byte);
+                report "Calculated (Expected) CRC Byte: " & to_hstring(crc_byte);
                 return crc_byte = cur_byte;
             else
+                report "Data Byte: " & to_hstring(cur_byte);
+                -- Not the last byte so push this into the CRC queue
+                -- for eventual CRC calculation
                 push_byte(crc_queue, to_integer(cur_byte));
             end if;
         end loop;
