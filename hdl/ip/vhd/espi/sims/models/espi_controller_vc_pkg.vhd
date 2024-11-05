@@ -27,6 +27,10 @@ package espi_controller_vc_pkg is
     constant rx_queue : queue_t := new_queue;
 
 
+    procedure send_reset(
+        signal net : inout network_t
+    );
+    
     procedure get_status(
         signal net : inout network_t;
         variable response_code : inout std_logic_vector(7 downto 0);
@@ -96,6 +100,17 @@ package body espi_controller_vc_pkg is
         --done, empty the queue (crc byte wasn't popped since we checked it above via queue copy)
         flush(queue);
         return status;
+    end;
+
+    procedure send_reset(
+        signal net : inout network_t
+    ) is
+        variable msg_target : actor_t := find("espi_vc");
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        cmd := build_reset_cmd;
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, 0);
     end;
 
     procedure get_status(
@@ -197,10 +212,14 @@ package body espi_controller_vc_pkg is
         -- send transaction
         enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
         enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
+        wait for 10 us;
+        report "Here1";
         get_rx_queue(net, msg_target, rx_queue);
+        report "Here";
         crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
         response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
         status := get_status_from_queue_and_flush(rx_queue);
+        
         
     end;
 
@@ -212,20 +231,17 @@ package body espi_controller_vc_pkg is
         variable status : inout std_logic_vector(15 downto 0);
         variable crc_ok : inout boolean
     ) is
-        variable dummy_data : std_logic_vector(7 downto 0) := (others => '0');
-        variable tx_bytes : integer   := 2;  -- 1 opcode, 1 crc
-        variable rx_bytes : integer   := 4 + num_bytes + 3;  -- response, 16bit status, 1 crc, num_bytes, 3 bytes header
+        variable cmd : cmd_t := (new_queue, 0);
+        variable rx_bytes : integer   := 3 + num_bytes + 4;  -- 3 bytes header, num_bytes, response, 16bit status, 1 crc, 
         variable msg_target : actor_t := find("espi_vc");
         variable rx_queue : queue_t := new_queue;
+        variable dummy_data : std_logic_vector(7 downto 0);
     begin
+
+        cmd := build_get_flash_c_cmd;
         -- Build and send a flash read message
-        -- OPCODE_GET_FLASH_C(1 byte)
-        push_byte(tx_queue, to_integer(opcode_get_flash_c));
-        -- CRC (1 byte)
-        push_byte(tx_queue, to_integer(crc8(tx_queue)));
-        -- send transaction
-        enqueue_tx_data_bytes(net, msg_target,  tx_bytes, tx_queue);
-        enqueue_transaction(net, msg_target, tx_bytes, rx_bytes);
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
         get_rx_queue(net, msg_target, rx_queue);
         crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
         response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));

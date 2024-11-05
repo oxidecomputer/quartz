@@ -109,6 +109,4 @@ begin
         rusedwds => tx_rusedwds
     );
 
-
-
 end architecture;

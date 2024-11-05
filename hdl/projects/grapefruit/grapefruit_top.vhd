@@ -211,8 +211,6 @@ architecture rtl of grapefruit_top is
       3 => (base_addr => x"00000300", addr_span_bits => 8)
       );
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
-    signal spi_fpga_to_flash_dat_o : std_logic_vector(3 downto 0);
-    signal spi_fpga_to_flash_dat_oe : std_logic_vector(3 downto 0);
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
     signal espi_cmd_fifo_rdack : std_logic;
     signal espi_cmd_fifo_rempty : std_logic;
@@ -243,8 +241,13 @@ architecture rtl of grapefruit_top is
     signal ipcc_fpga_to_sp_rts_l: std_logic;
     constant ipcc_dbg_en : std_logic := '0';
     signal hpm_to_scm_stby_rdy_syncd : std_logic;
+    signal sp5_owns_flash : std_logic;
+    signal spi_nor_block_data_o : std_logic_vector(3 downto 0);
+    signal spi_nor_block_data_oe : std_logic_vector(3 downto 0);
    
 begin
+
+    espi_scm_to_hpm_alert_l <= 'Z';
 
     pll: entity work.gfruit_pll
         port map ( 
@@ -277,7 +280,6 @@ begin
         end if;
     end process;
 
-    fpga_spare_1v8(0) <= not counter(26);
     fpga_spare_1v8(1) <= pll_locked_async;
     fpga_spare_1v8(2) <= reset_l;
 
@@ -321,7 +323,8 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(0)
+        axi_if => responders(0),
+        spi_nor_passthru => open
     );
 
     spi_nor_top_inst: entity work.spi_nor_top
@@ -332,8 +335,9 @@ begin
         cs_n => spi_fpga_to_flash_cs_l,
         sclk => spi_fpga_to_flash_clk,
         io => spi_fpga_to_flash_dat,
-        io_o => spi_fpga_to_flash_dat_o,
-        io_oe => spi_fpga_to_flash_dat_oe,
+        io_o => spi_nor_block_data_o,
+        io_oe => spi_nor_block_data_oe,
+        sp5_owns_flash => sp5_owns_flash,
         espi_cmd_fifo_rdata => espi_cmd_fifo_rdata,
         espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
         espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
@@ -350,7 +354,7 @@ begin
         showahead_mode => true
     )
      port map(
-        wclk => clk_125m,  -- eSPI clock
+        wclk => clk_200m,  -- eSPI clock
         reset => reset_125m,
         write_en => flash_cfifo_write,
         wdata => flash_cfifo_data,
@@ -376,7 +380,7 @@ begin
         wdata => espi_data_fifo_wdata,
         wfull => open,
         wusedwds => open,
-        rclk => clk_125m, -- espi clock
+        rclk => clk_200m, -- espi clock
         rdata => flash_rfifo_data,
         rdreq => flash_rfifo_rdack,
         rempty => flash_rfifo_rempty,
@@ -384,18 +388,20 @@ begin
     );
 
     -- eSPI
-    -- ideally we'll want to be in 200MHz but we're going 
-    -- to get it working in 125MHz first
+    -- ideally we'll want to be in 200MHz but we're going
     espi_target_top_inst: entity work.espi_target_top
      port map(
-        clk => clk_125m,
-        reset => reset_125m,
+        clk => clk_200m,
+        reset => reset_200m,
+        axi_clk => clk_125m,
+        axi_reset => reset_125m,
         axi_if => responders(2),
         cs_n => espi_hpm_to_scm_cs_l,
         sclk => espi_hpm_to_scm_clk,
         io => espi_hpm_to_scm_dat,
         io_o => espi_io_o,
         io_oe => espi_io_oe,
+        response_csn => fpga_spare_1v8(0),
         flash_cfifo_data => flash_cfifo_data,
         flash_cfifo_write => flash_cfifo_write,
         flash_rfifo_data => flash_rfifo_data,
@@ -408,21 +414,6 @@ begin
         from_sp_uart_valid => from_sp_uart_to_host_espi_valid,
         from_sp_uart_ready => from_sp_uart_to_host_espi_ready
     );
-
-   espi_tris:process(all)
-    begin
-        for i in 0 to 3 loop
-            espi_hpm_to_scm_dat(i) <= espi_io_o(i) when espi_io_oe(i) = '1' else 'Z';
-        end loop;
-    end process;
-
-     -- spi NOR qspi tris buffer
-    process(all)
-    begin
-        for i in 0 to 3 loop
-            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash_dat_o(i) when spi_fpga_to_flash_dat_oe(i) = '1' else 'Z';
-        end loop;
-    end process;
 
     -- UARTs
     -- SP UART #0  -- Expected to be console uart?
@@ -512,22 +503,18 @@ begin
         tx_ready => console_from_sp_rx_ready
     );
 
-    -- SPI passthru mux
-
-
-    -- spi NOR qspi tris buffer
+    -- espi and spiNor tris buffer
     process(all)
     begin
         for i in 0 to 3 loop
-            spi_fpga_to_flash_dat(i) <= spi_fpga_to_flash_dat_o(i) when spi_fpga_to_flash_dat_oe(i) = '1' else 'Z';
+            espi_hpm_to_scm_dat(i) <= espi_io_o(i) when espi_io_oe(i) = '1' else 'Z';
+        end loop;
+
+        for i in 0 to 3 loop
+            spi_fpga_to_flash_dat(i) <= spi_nor_block_data_o(i) when spi_nor_block_data_oe(i) = '1' else 'Z';
         end loop;
     end process;
 
-    -- Basic flash spi passthru fomr qspi0 to spi flash
-    -- spi_fpga_to_flash_cs_l <= qspi0_hpm_to_scm_cs0_l;
-    -- spi_fpga_to_flash_clk <= qspi0_hpm_to_scm_clk;
-    -- spi_fpga_to_flash_dat0 <= qspi0_hpm_to_scm_dat0;
-    -- qspi0_hpm_to_scm_dat1 <= spi_fpga_to_flash_dat1;
 
     -- Debug stuff for i3c
     -- pin the enables low to enable the devices

@@ -108,6 +108,8 @@ begin
             -- Figure 116
             -- activate address, chipsel, write, and latch
             transaction_start(WRITE_TXN);
+            wait until falling_edge(clk);
+            wait until falling_edge(clk);
             -- on next falling edge of clock, apply wdata
             while rem_data_cnt > 0 loop
                 wait on clk;

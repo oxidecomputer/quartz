@@ -42,6 +42,8 @@ end;
 
 
 architecture rtl of flash_channel is
+
+    attribute mark_debug : string;
     constant max_txn_size : integer := 1024;
     subtype desc_index_t is natural range 0 to num_descriptors - 1;
     signal dpr_waddr : std_logic_vector(11 downto 0);
@@ -69,22 +71,53 @@ architecture rtl of flash_channel is
         compl_side_cntr : integer range 0 to 1024;
         cmd_queue: command_queue_t;
         dpr_write_en: std_logic;
+        dpr_wdata_buf: std_logic_vector(7 downto 0);
         tail_desc: desc_index_t;
         issue_desc: desc_index_t;
         head_desc: desc_index_t;
         flash_np_free : std_logic;
         flash_c_avail: std_logic;
     end record;
-    constant reg_reset : reg_type := (idle, idle, 0, 0, 0, (others => descriptor_init), '0', 0, 0, 0, '0', '0');
+    constant reg_reset : reg_type := (idle, idle, 0, 0, 0, (others => descriptor_init), '0', (others => '0'), 0, 0, 0, '0', '0');
 
     signal r, rin : reg_type;
+    signal dpr_wdata: std_logic_vector(7 downto 0);
+    signal dpr_rdata: std_logic_vector(7 downto 0);
+    signal dpr_read_ack: std_logic;
+    signal dpr_wr_delay: std_logic;
 
+    attribute mark_debug of r : signal is "TRUE";
+    attribute mark_debug of dpr_wdata : signal is "TRUE";
+    attribute mark_debug of dpr_rdata : signal is "TRUE";
+    attribute mark_debug of dpr_read_ack : signal is "TRUE";
+    attribute mark_debug of dpr_wr_delay : signal is "TRUE";    
 
 begin
 
+    dbg_regs: process (clk, reset)
+    begin
+        if reset then
+            dpr_wdata <= (others => '0');
+            dpr_rdata <= (others => '0');
+            dpr_read_ack <= '0';
+            dpr_wr_delay <= '0';
+        elsif rising_edge(clk) then
+            dpr_rdata <= readdata;
+            dpr_wdata <= flash_rfifo_data;
+            dpr_read_ack <= response.ready;
+            dpr_wr_delay <= r.dpr_write_en;
+        end if;
+    end process;
+
+
     -- Always write straight from the FIFO to the dpr so any dpr write is a fifo read ack also
     flash_rfifo_rdack <= r.dpr_write_en;
-    flash_np_free <= r.flash_np_free when enabled else '0';
+    flash_np_free <= r.flash_np_free;
+
+    -- flash_c_avail is set when we have pending data to be read back out, but critically this status needs to represent
+    -- the state *after* any current message, so if we're responding now and this response is the only one available,
+    -- this needs to be set to 0.
+
     flash_c_avail <= r.flash_c_avail when enabled else '0';
 
     flash_cfifo_data <= r.cmd_queue(r.issue_desc).sp5_addr when r.flash_cmd_state = issue_flash_addr else 
@@ -104,7 +137,7 @@ begin
      port map(
         wclk => clk,
         waddr => dpr_waddr,
-        wdata => flash_rfifo_data,
+        wdata => r.dpr_wdata_buf,
         wren => r.dpr_write_en,
         rclk => clk,
         raddr => dpr_raddr,
@@ -114,11 +147,11 @@ begin
     response.valid <= '1' when r.compl_state = read_dpr else '0';
     response.tag <= r.cmd_queue(r.tail_desc).tag;
     response.length <= r.cmd_queue(r.tail_desc).xfr_size_bytes;
-    response.cycle_type <= "00001111"; -- successful completion of with data, only complettion for a split txn
+    response.cycle_type <= "00001111"; -- successful completion of with data, only completion for a split txn
 
 
-    dpr_waddr <= To_Std_Logic_Vector(r.cmd_queue(r.issue_desc).id * max_txn_size  + r.flash_write_addr_offset, 12);
-    dpr_raddr <= To_Std_Logic_Vector(r.cmd_queue(r.tail_desc).id * max_txn_size  + r.compl_side_cntr, 12);
+    dpr_waddr <= To_Std_Logic_Vector(r.issue_desc * max_txn_size  + r.flash_write_addr_offset, 12);
+    dpr_raddr <= To_Std_Logic_Vector(r.tail_desc * max_txn_size  + r.compl_side_cntr, 12);
 
     -- We have two state machines running here as both need to be able to update
     -- the descriptor queues.
@@ -215,8 +248,11 @@ begin
                     v.flash_cmd_state := idle;
                     v.flash_side_cntr := 0;
                     v.issue_desc := add_wrap(r.issue_desc, desc_index_t'high);
-                elsif not flash_rfifo_rempty then
+                -- "empty" isn't strictly valid if we're acking this cycle since this write could
+                -- empty it. We only check for empty on a cycle where we're not acking
+                elsif not flash_rfifo_rempty and (not r.dpr_write_en) then
                     v.dpr_write_en := '1';
+                    v.dpr_wdata_buf := flash_rfifo_data;
                     v.flash_write_addr_offset := r.flash_side_cntr;
                     v.flash_side_cntr := r.flash_side_cntr + 1;
                 end if;

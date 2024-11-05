@@ -26,6 +26,7 @@ entity response_processor is
         response_done  : out   boolean;
         live_status    : in    status_t;
         response_crc   : in    std_logic_vector(7 downto 0);
+        is_tx_last_byte : out   boolean;
 
         -- flash channel responses
         flash_resp : view flash_chan_resp_sink;
@@ -146,37 +147,29 @@ begin
                     v.state := RESPONSE_CODE;
                 end if;
             when RESPONSE_CODE =>
-                v.cur_data := accept_code;
+                v.status := live_status;
                 v.resp_idx := 0;
+                -- set opcode immediately so it's ready for the next state
+                case command_header.opcode.value is
+                    when opcode_put_flash_np =>
+                        v.cur_data := defer_code;
+                    when others =>
+                        v.cur_data := accept_code;
+                        v.status := live_status;
+                end case;
+                -- determine next state based on current opcode
                 if data_to_host.ready then
                     case command_header.opcode.value is
-                        when opcode_get_status =>
-                            v.state := STATUS;
-                            v.status := live_status;
-                        when opcode_set_configuration =>
-                            v.state := STATUS;
-                            v.status := live_status;
                         when opcode_get_configuration =>
-                            v.state := send_config;
-                        when opcode_put_flash_np =>
-                            v.cur_data := defer_code;
-                            v.state := STATUS;
-                            v.status := live_status;
+                            v.state := SEND_CONFIG;
                         when opcode_get_flash_c =>
                             v.is_flash_response := true;
                             v.state := RESPONSE_FLASH_HEADER;
-                            v.status := live_status;
-                        when opcode_put_pc =>
-                            v.state := STATUS;
-                            v.status := live_status;
                         when opcode_get_pc =>
-                            v.is_flash_response := false;
                             v.state := RESPONSE_UART_HEADER;
-                            v.status := live_status;
                         when others =>
-                            assert false
-                                report "Not implemented yet"
-                                severity FAILURE;
+                            -- Default hw to just return status with accept code
+                            v.state := STATUS;
                     end case;
                 end if;
             when send_config =>
@@ -190,7 +183,7 @@ begin
                 end if;
             when RESPONSE_FLASH_HEADER =>
 
-                v.payload_cnt := response_chan_mux.length;
+                v.payload_cnt := response_chan_mux.length - 1;
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := response_chan_mux.cycle_type;
@@ -209,7 +202,7 @@ begin
                 end if;
             when RESPONSE_UART_HEADER =>
 
-                v.payload_cnt := response_chan_mux.length;
+                v.payload_cnt := response_chan_mux.length - 1;
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := response_chan_mux.cycle_type;
@@ -233,6 +226,7 @@ begin
                     v.payload_cnt := r.payload_cnt - 1;
                     if r.payload_cnt = 0 then
                         v.state := STATUS;
+                        v.status := live_status;
                     end if;
                 end if;
                 null;
@@ -256,7 +250,8 @@ begin
         end case;
         -- Status words
         if r.state = STATUS and r.status_idx = '0' then
-            v.cur_data := pack(r.status)(7 downto 0);
+            v.status := live_status;
+            v.cur_data := pack(live_status)(7 downto 0);
         elsif r.state = STATUS then
             v.cur_data := pack(r.status)(15 downto 8);
         end if;
@@ -265,6 +260,8 @@ begin
         end if;
         rin <= v;
     end process;
+
+    is_tx_last_byte <= r.state = CRC;
 
     response_processor_reg: process(clk, reset)
     begin

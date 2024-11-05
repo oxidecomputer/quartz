@@ -47,6 +47,8 @@ architecture model of fake_flash_txn_mgr is
     constant cmd_queue : queue_t              := new_queue;
     signal   addr      : std_logic_vector(31 downto 0);
     signal   cmd_idx   : natural range 0 to 1 := 0;
+    signal write_en : std_logic;
+    signal wdata : std_logic_vector(7 downto 0);
 
 begin
 
@@ -79,24 +81,54 @@ begin
         variable top  : std_logic_vector(11 downto 0);
         variable data : std_logic_vector(11 downto 0);
     begin
-        flash_rdata_empty <= '1';
-        flash_rdata <= (others => 'X');
+        write_en <= '0';
         loop
             exit when not is_empty(cmd_queue);
-            wait until rising_edge(clk);
+            wait until falling_edge(clk);
         end loop;
         addr := pop(cmd_queue);
         len := pop(cmd_queue);
         top := len;
-        flash_rdata_empty <= '0';
+        -- push some data into the fifo
         while len > 0 loop
             data := top - len;
-            flash_rdata <= data(7 downto 0);
-            if rising_edge(clk) and flash_rdata_rdack = '1' then
+            wdata <= resize(data, wdata'length);
+            write_en <= '1';
+            if rising_edge(clk)then
                 len := len - 1;
+                wait on clk;
+                write_en <= '0';
+                wait until rising_edge(clk);
+                wait until rising_edge(clk);
+                wait until rising_edge(clk);
+                wait until rising_edge(clk);
+                wait until rising_edge(clk);
+                wait until rising_edge(clk);
             end if;
             wait on clk;
         end loop;
+        
     end process;
+
+
+    dcfifo_xpm_inst: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 4096,
+        data_width => 8,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk,
+        reset => reset,
+        write_en => write_en,
+        wdata => wdata,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk,
+        rdata => flash_rdata,
+        rdreq => flash_rdata_rdack,
+        rempty => flash_rdata_empty,
+        rusedwds => open
+    );
 
 end model;

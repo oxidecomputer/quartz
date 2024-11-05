@@ -1,0 +1,300 @@
+// Copyright 2024 Oxide Computer Company
+// This is SystemRDL description of the sw-accesible registers in the Gimlet
+// Sequencer FPGA.
+
+addrmap vwire_regs {
+    name = "espi vwire registers";
+    desc = "defined by the espi specification";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "IRQ0, slave to master, active high";
+        
+        field {
+            desc = "Interrupt Level";
+        } irq_level[7:7] =  0x00;
+        field {
+            desc = "Interrupt Line 0-127";
+        } irq_line[6:0] =  0x00;
+
+    } irq0 @0x0;
+
+    reg {
+        name = "IRQ1, slave to master, active high";
+        
+        field {
+            desc = "Interrupt Level";
+        } irq_level[7:7] =  0x00;
+        field {
+            desc = "Interrupt Line 128-255";
+        } irq_line[6:0] =  0x00;
+
+    } irq1 @0x1;
+
+    reg {
+        name = "System Event Idx 2, master to slave. Reset by eSPI reset";
+        
+        field {
+            desc = "SLP_S5# Valid (bit[2])";
+        } slp_s5_valid[6:6] =  0x00;
+        field {
+            desc = "SLP_S4# Valid (bit[1])";
+        } slp_s4_valid[5:5] =  0x00;
+         field {
+            desc = "SLP_S3# Valid (bit[0])";
+        } slp_s3_valid[4:4] =  0x00;
+
+        field {
+            desc = "S5 SLeep control, active low.
+            Sent when the power to non-critical systems should be shut off in S5 (Soft Off)
+            ";
+        } slp_s5_l[2:2] =  0x00;
+        field {
+            desc = "S4 SLeep control, active low.
+            Sent when the power to non-critical systems should be shut off in S4 (Suspend to Disk).
+            ";
+        } slp_s4_l[1:1] =  0x00;
+        field {
+            desc = "S3 SLeep control, active low.
+            Sent when the power to non-critical systems should be shut off in S3 (Suspend to RAM).
+            ";
+        } slp_s3_l[0:0] =  0x00;
+
+    } sys_event2 @0x2;
+
+    reg {
+        name = "System Event Idx 3, master to slave. Reset by eSPI reset";
+        
+        field {
+            desc = "OOB_RST_WARN Valid: This bit indicates the validity of OOB_RST_WARN virtual wire on bit[2]";
+        } oob_rst_warn_valid[6:6] =  0x00;
+
+        field {
+            desc = "PLTRST# Valid: This bit indicates the validity of PLTRST# virtual wire on bit[1].";
+        } pltrst_valid[5:5] =  0x00;
+
+        field {
+            desc = "SUS_STAT# Valid: This bit indicates the validity of SUS_STAT# virtual wire on bit[0].";
+        } sus_stat_valid[4:4] =  0x00;
+
+        field {
+            desc = "OOB Reset Warn: Sent by master just before the OOB processor is
+                    about to enter reset. Upon receiving, the EC or BMC must flush and
+                    quiesce its OOB Channel upstream request queues and assert
+                    OOB_RST_ACK VWire upon completing all the outstanding
+                    transactions. The master subsequently completes any outstanding
+                    posted transactions or completions and then disables the OOB
+                    Channel via a write to the slave's Configuration Register.";
+        } oob_reset_warn[2:2] =  0x00;
+
+        field {
+            desc = "Platform Reset: Command to indicate Platform Reset assertion and
+                    de-assertion.  Active Low";
+        } pltrst_l[1:1] =  0x00;
+
+         field {
+            desc = "Suspend Status: Sent when the system will be entering a low
+                    power state soon..  Active Low";
+        } sus_stat_l[0:0] =  0x00;
+    } sys_event3 @0x3;
+
+    reg {
+        name = "System Event Idx 4, master to slave. Reset by eSPI reset";
+
+        field {
+            desc = "PME# Valid: This bit indicates the validity of PME# virtual wire on bit[3].";
+        } pme_valid[7:7] =  0x00;
+
+        field {
+            desc = "WAKE# Valid: This bit indicates the validity of WAKE# virtual wire on bit[2].";
+        } wake_valid[6:6] =  0x00;
+
+        field {
+            desc = "OOB_RST_ACK Valid: This bit indicates the validity of OOB_RST_ACK virtual wire on bit[0].";
+        } oob_rst_ack_valid[4:4] =  0x00;
+
+         field {
+            desc = "CI Power Management Event: eSPI slaves generated PCI PME#
+                    event. Used by the slave to wake the host from Sx through PCI
+                    defined PME#.
+                    If the event occurs while system is in S0, a SCI is generated instead.
+                    Shared by multiple PCI devices on the platform.
+                    Active Low
+                ";
+        } pme_l[3:3] =  0x01;
+
+        field {
+            desc = "Wake#: Used by the slave to wake the Host from Sx on any event;
+                    also general purpose event to wake on LID switch or AC insertion,
+                    etc. It is used to generate an eSPI device specific non-PME# wake.
+                    If the event occurs while system is in S0, a SCI is generated instead.
+                    Active Low. Reset: inactive";
+        } wake_l[2:2] =  0x01;
+
+        field {
+            desc = "OOB Reset Acknowledge: Sent by slave in response to
+                    OOB_RST_WARN virtual wire. Refer to the description of
+                    OOB_RST_WARN for details.
+                    Active high. Reset: inactive";
+        } oob_rst_ack[0:0] =  0x00;
+
+    } sys_event4 @0x4;
+
+    reg {
+        name = "System Event Idx 5, slave to master. Reset by eSPI reset";
+
+        field {
+            desc = "SLAVE_BOOT_LOAD_STATUS Valid: This bit indicates the validity
+                    of SLAVE_BOOT_LOAD_STATUS virtual wire on bit[3].";
+        } slave_boot_load_status_valid[7:7] =  0x00;
+        field {
+            desc = "ERROR_NONFATAL Valid: This bit indicates the validity of
+                    ERROR_NONFATAL virtual wire on bit[2].";
+        } error_nonfatal_valid[6:6] =  0x00;
+        field {
+            desc = "ERROR_FATAL Valid: This bit indicates the validity of ERROR_FATAL
+                    virtual wire on bit[1].";
+        } error_fatal_valid[5:5] =  0x00;
+        field {
+            desc = "SLAVE_BOOT_LOAD_DONE Valid: This bit indicates the validity of
+                    SLAVE_BOOT_LOAD_DONE virtual wire on bit[0].";
+        } slave_boot_load_done_valid[4:4] =  0x00;
+
+        field {
+            desc = "Slave Boot Load Status: Sent by EC or BMC upon completion of
+                Slave Boot Load from the master attached flash.
+                '0': The boot image is corrupted, incomplete or otherwise unusable.
+                '1': The boot code load was successful and that the integrity of the
+                image is intact, or the boot code load from master attached flash is
+                not required.
+                Note: The Slave_Boot_Load_Status must be sent in either the same
+                or a previous virtual wire message as the Slave_Boot_Load_Done.
+                Polarity: As defined above.
+                Reset: '0'.";
+        } slave_boot_load_status[3:3] =  0x00;
+        field {
+            desc = "Error Non-Fatal: Sent by slave when a non-fatal error is detected.
+                    Note: Refer to Section 9.2 for the error conditions that Non-Fatal
+                    Error virtual wire is signaled.
+                    Polarity: Active high.
+                    Reset: Inactive.";
+        } error_nonfatal[2:2] =  0x00;
+        field {
+            desc = "Error Fatal: Sent by slave when a fatal error is detected.
+                    Note: Refer to Section 9.2 for the error conditions that Fatal Error
+                    virtual wire is signaled.
+                    Polarity: Active high.
+                    Reset: Inactive.";
+        } error_fatal[1:1] =  0x00;
+        field {
+            desc = "Slave Boot Load Done: Sent when EC or BMC has completed its
+                    boot process as indication to eSPI master to continue with the G3 to
+                    S0 exit. eSPI master waits for the assertion of this virtual wire before
+                    proceeding with the SLP_S5# deassertion.
+                    Polarity: Active high.
+                    Reset: Inactive.
+                    ";
+        } slave_boot_load_done[0:0] =  0x00;
+
+
+    } sys_event5 @0x5;
+
+    reg {
+        name = "System Event Idx 6, slave to master. Reset by PLTRST#";
+
+        field {
+            desc = "HOST_RST_ACK Valid: This bit indicates the validity of
+                    HOST_RST_ACK virtual wire on bit[3].";
+        } host_rst_ack_valid[7:7] =  0x00;
+        field {
+            desc = "RCIN# Valid: This bit indicates the validity of RCIN# virtual wire on
+                    bit[2].";
+        } rcin_valid[6:6] =  0x00;
+        field {
+            desc = "SMI# Valid: This bit indicates the validity of SMI# virtual wire on
+                    bit[1].";
+        } smi_valid[5:5] =  0x00;
+        field {
+            desc = "SCI# Valid: This bit indicates the validity of SCI# virtual wire on
+                    bit[0].";
+        } sci_valid[4:4] =  0x00;
+
+        field {
+            desc = "Host Reset Acknowledge: Sent by slave in response to
+                    HOST_RST_WARN virtual wire. Refer to the description of
+                    HOST_RST_WARN for details.
+                    Polarity: Active high.
+                    Reset: Inactive.";
+        } host_reset_ack[3:3] =  0x00;
+        field {
+            desc = "Reset CPU INIT#: Sent to request CPU reset on behalf of the
+                    keyboard controller.
+                    Active Low. Reset: Inactive.";
+        } rcin_l[2:2] =  0x01;
+        field {
+            desc = "System Management Interrupt (SMI): Sent as general purpose
+                    Polarity: Active low.
+                    Reset: Inactive.
+                    ";
+        } smi_l[1:1] =  0x01;
+        field {
+            desc = "System Controller Interrupt (SCI): Sent as general purpose alert
+                    resulting in ACPI method being invoked by the OS.
+                    Polarity: Active low.
+                    Reset: Inactive.
+                    ";
+        } sci_l[0:0] =  0x01;
+    } sys_event6 @0x6;
+
+    reg {
+        name = "System Event Idx 7, slave to master. Reset by PLTRST#";
+
+        field {
+            desc = "NMIOUT# Valid: This bit indicates the validity of NMIOUT# virtual
+                    wire on bit[2].
+                    ";
+        } nmiout_valid[6:6] =  0x00;
+        field {
+            desc = "SMIOUT# Valid: This bit indicates the validity of SMIOUT# virtual
+                    wire on bit[1]..
+                    ";
+        } smiout_valid[5:5] =  0x00;
+        field {
+            desc = "HOST_RST_WARN Valid: This bit indicates the validity of
+                    HOST_RST_WARN virtual wire on bit[0].
+                    ";
+        } host_rst_warn_valid[4:4] =  0x00;
+
+        field {
+            desc = "HOST_RST_WARN Valid: This bit indicates the validity of
+                    HOST_RST_WARN virtual wire on bit[0].
+                    Polarity: Active low.
+                    Reset: Inactive.
+                    ";
+        } nmi_out_l[2:2] =  0x01;
+        field {
+            desc = "SMI Output: Sent by master as indication that SMI# event occurs.
+                    The '0' and '1' on this virtual wire correspond to the assertion and
+                    deassertion of the SMI# to CPU respectively.
+                    Polarity: Active low.
+                    Reset: Inactive.
+                    ";
+        } smi_out_l[1:1] =  0x01;
+        field {
+            desc = "Host Reset Warn: Sent by master just before the Host is about to
+                    enter reset. Upon receiving, the EC or BMC must flush and quiesce its
+                    upstream Peripheral Channel request queues and assert
+                    HOST_RST_ACK VWire upon completing all the outstanding
+                    transactions. The master subsequently completes any outstanding
+                    posted transactions or completions and then disables the Peripheral
+                    Channel via a write to the slave's Configuration Register.
+                    Polarity: Active High.
+                    Reset: Inactive.
+                    ";
+        } host_rst_warn[0:0] =  0x00;
+
+    } sys_event7 @0x7;
+};

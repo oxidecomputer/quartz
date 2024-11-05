@@ -23,6 +23,7 @@ entity command_processor is
         running_crc    : in    std_logic_vector(7 downto 0);
         clear_rx_crc   : out   std_logic;
         regs_if        : view bus_side;
+        vwire_if       : view vwire_cmd_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
         aborted_due_to_bad_crc : out boolean;
@@ -32,7 +33,7 @@ entity command_processor is
         host_to_sp_espi : view uart_data_source;
 
         -- Link-layer connections
-        is_crc_byte     : out   boolean;
+        is_rx_crc_byte     : out   boolean;
         chip_sel_active : in    boolean;
         -- "Streaming" data to serialize and transmit
         data_from_host : view st_sink
@@ -40,6 +41,8 @@ entity command_processor is
 end entity;
 
 architecture rtl of command_processor is
+
+    attribute mark_debug : string;
 
     type   pkt_state_t is (
         idle,
@@ -49,6 +52,8 @@ architecture rtl of command_processor is
         parse_data,
         parse_get_cfg_hdr,
         parse_set_cfg_hdr,
+        parse_vwire_put,
+        reset_word1,
         crc,
         response
     );
@@ -61,13 +66,35 @@ architecture rtl of command_processor is
         ch_addr        : std_logic_vector(31 downto 0);
         cfg_addr       : std_logic_vector(15 downto 0);
         cfg_data       : std_logic_vector(31 downto 0);
+        vwire_idx       : std_logic_vector(7 downto 0);
+        vwire_dat       : std_logic_vector(7 downto 0);
+        vwire_active    : boolean;
+        vwire_wstrobe   : std_logic;
         valid_redge    : boolean;
+        reset_strobe   : std_logic;
         hdr_idx        : integer range 0 to 7;
         rem_addr_bytes : integer range 0 to 7;
         rem_data_bytes : integer range 0 to 2048;
     end record;
 
-    constant reg_reset : reg_type := (idle, false, false, rec_reset, (others => '0'), (others => '0'), (others => '0'), false, 0, 0, 0);
+    constant reg_reset : reg_type := (
+        idle, 
+        false, 
+        false, 
+        rec_reset, 
+        (others => '0'),
+        (others => '0'),
+        (others => '0'),
+        (others => '0'),
+        (others => '0'),
+        false,
+        '0',
+        false, 
+        '0',
+        0, 
+        0, 
+        0
+    );
 
     type parse_info_t is record
         next_state        : pkt_state_t;
@@ -96,8 +123,6 @@ architecture rtl of command_processor is
                     when flash_erase =>
                         -- Note that while we'll rx this payload, we will not
                         -- act upon it, as we do not allow flash writes over eSPI
-                        next_state.next_state := parse_addr_header;
-                        next_state.cmd_payload_bytes := 0;
                     when others =>
                         null;
                 end case;
@@ -117,7 +142,14 @@ architecture rtl of command_processor is
 
     signal r, rin : reg_type;
 
+    attribute mark_debug of r        : signal is "TRUE";
+
 begin
+
+    -- vwire interface
+    vwire_if.idx <= to_integer(r.vwire_idx);
+    vwire_if.dat <= r.vwire_dat;
+    vwire_if.wstrobe <= r.vwire_wstrobe;
 
     host_to_sp_espi.data <= data_from_host.data;
     host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and r.cmd_header.cycle_kind = message_with_data and r.state = parse_data else '0';
@@ -148,6 +180,7 @@ begin
         v.crc_good := false;
         v.crc_bad := false;
         v.valid_redge := false;
+        v.vwire_wstrobe := '0';
 
         -- Command parsing state machine
         case r.state is
@@ -169,9 +202,9 @@ begin
                         -- Opcodes with no additional data following, these
                         -- can just go immediately to the CRC phase
                         when opcode_get_status |
-                             opcode_reset |
                              opcode_get_pc |
-                             opcode_get_flash_c =>
+                             opcode_get_flash_c |
+                             opcode_get_vwire =>
                             v.state := crc;
                         -- Config register opcodes, get and set
                         when opcode_get_configuration =>
@@ -179,6 +212,10 @@ begin
                         when opcode_set_configuration =>
                             v.state := parse_set_cfg_hdr;
                         -- Opcodes with cycle type headers following
+                        when opcode_reset =>
+                            v.state := reset_word1;
+                        when opcode_put_vwire =>
+                            v.state := parse_vwire_put;
                         when others =>
                             v.state := parse_common_cycle_header;
                     end case;
@@ -264,6 +301,19 @@ begin
                     end if;
                 end if;
 
+            when parse_vwire_put =>
+                -- vwire put look like this assuming 1 count:
+                -- PUT_VWIRE => VWIRECOUNT, INDEX, DATA, CRC
+                if data_from_host.valid then
+                    v.hdr_idx := v.hdr_idx + 1;
+                    if r.hdr_idx = 1 then
+                        v.vwire_idx := data_from_host.data;
+                    elsif r.hdr_idx = 2 then
+                        v.vwire_dat := data_from_host.data;
+                        v.state := crc;
+                    end if;
+                end if;
+
             -- not much to do here. In theory, we have already indicated that the
             -- appropriate channel has room so we sit here until the data phase has
             -- finished. Muxes elsewhere should direct this datat to appropriate buffers
@@ -274,6 +324,17 @@ begin
                 end if;
                 if v.rem_data_bytes = 0 then
                     v.state := crc;
+                end if;
+            when reset_word1 =>
+                v.reset_strobe := '0';
+                if data_from_host.valid and data_from_host.ready then
+                    if data_from_host.data = X"FF" then
+                        v.reset_strobe := '1';
+                    end if;
+                end if;
+                if not chip_sel_active then
+                    v.state := idle;
+                    v.cmd_header := rec_reset;
                 end if;
 
             -- Yay! we made it to the last cmd byte, now we can check the CRC
@@ -308,11 +369,13 @@ begin
                 if not chip_sel_active then
                     v.state := idle;
                     v.cmd_header := rec_reset;
+                    v.vwire_wstrobe := '1' when r.cmd_header.valid and r.vwire_active else '0';
+                    v.vwire_active := false;
                 end if;
             when others =>
                 null;
         end case;
-        is_crc_byte <= true when r.state = crc else false;
+        is_rx_crc_byte <= true when r.state = crc else false;
         rin <= v;
     end process;
 

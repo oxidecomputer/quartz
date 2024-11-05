@@ -33,6 +33,7 @@ vivado*.jou
 vivado*.log
 /clockinfo.txt
 **/*clockInfo.txt
+*.txt
 # Yep, even ignore Vivado core dump logs!
 *.log 
  

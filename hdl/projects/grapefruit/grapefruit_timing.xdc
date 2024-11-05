@@ -10,7 +10,7 @@ set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125
 
 
 # #######################
-# FMC to FPGA inputs first
+# FMC Interface
 # #######################
 
 # FPGA's input delays have to be low enough that they don't run into the uncertainty region due to any possible skew.
@@ -68,3 +68,5 @@ set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -hold 1
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -setup 2
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -hold 1
+
+
