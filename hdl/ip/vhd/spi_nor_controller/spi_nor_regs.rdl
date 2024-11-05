@@ -124,7 +124,7 @@ addrmap nor_flash_regs {
         name = "SP5 Flash offset address";
         desc = "Allows hubris to control which flash page is accessed by the eSPI block";
         field {
-            desc = "*Signed* Address added (subtracted for -ve) to raw eSPI transactions to generate physical flash address";
+            desc = "*Signed* Address added (ie subtracted for negative) to raw eSPI transactions to generate physical flash address";
         } offset[31:0] =  0;
     } SP5FlashOffset;
 };

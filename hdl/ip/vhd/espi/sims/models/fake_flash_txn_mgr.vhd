@@ -98,12 +98,15 @@ begin
                 len := len - 1;
                 wait on clk;
                 write_en <= '0';
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
+                -- We want this to be "fast" for sim but representative of a real
+                -- design so we wait a few cycles before pushing the next data into
+                -- the fifo.  The number for delay here is somewhat arbirary, but 
+                -- we want it to be more than 2 or 3 so fifo latency doesn't mask
+                -- the delay so that we see our downstream logic does the right thing
+                -- with stalls in the data.
+                for i in 0 to 5 loop
+                    wait until rising_edge(clk);
+                end loop;
             end if;
             wait on clk;
         end loop;
