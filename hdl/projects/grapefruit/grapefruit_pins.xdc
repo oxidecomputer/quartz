@@ -125,7 +125,6 @@ set_property -dict { PACKAGE_PIN U1 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_
 set_property -dict { PACKAGE_PIN W3 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_to_scm_clk }];
 set_property -dict { PACKAGE_PIN T3 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_to_scm_dat[3] }];
 set_property -dict { PACKAGE_PIN U3 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_to_scm_dat[2] }];
-#set_property -dict { PACKAGE_PIN U4 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_to_scm_dat[1] }];
 set_property -dict { PACKAGE_PIN U2 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_to_scm_dat[1] }];
 set_property -dict { PACKAGE_PIN Y3 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_to_scm_dat[0] }];
 set_property SLEW FAST [get_ports espi_hpm_to_scm_dat[*]]

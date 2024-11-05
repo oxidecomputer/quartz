@@ -158,17 +158,20 @@ begin
                 -- Put a non-posted read request into the flash channel
                 -- We expect something to happen here and the alert get set when the completion
                 -- status is written back, so we check the crc here and then wait for the alert
-                -- enqueue 3 copies of the same np request
-                put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
-                check(crc_ok, "CRC Check failed");
-                -- put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
-                -- check(crc_ok, "CRC Check failed");
-                -- put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
-                -- check(crc_ok, "CRC Check failed");
-
-                for i in 0 to 0 loop
+                -- enqueue n copies of the same np request
+                -- gen_int represents number of transactions to queue
+                gen_int := 1;
+                for i in 0 to gen_int - 1 loop
+                    put_flash_read(net, X"03020000", 16, response_code, status,  crc_ok);
+                    check(crc_ok, "CRC Check failed");
+                end loop;
+    
+                -- deal with the responses
+                for i in 0 to gen_int - 1 loop
                     report "Status: " & to_hstring(status);
                     status_rec := unpack(status);
+                    -- we may, or may not have a completion ready, if not
+                    -- we wait for the alert
                     if status_rec.flash_c_avail = '0' then
                        report "Waiting, iter: " & integer'image(i);
                        wait_for_alert(net);
@@ -203,11 +206,6 @@ begin
                 print("Response size: " & integer'image(gen_int));
                 dbg_get_response(net, 40 , response);
                 check(response.crc_ok, "CRC Check failed");
-            elsif run("dbg_ruby_boot") then
-                send_reset(net);
-                wait for 1 us;
-                set_config(net, CH1_CAPABILITIES_OFFSET, X"00000001", response_code, status,  crc_ok);
-
             end if;
         end loop;
         wait for 10 us;

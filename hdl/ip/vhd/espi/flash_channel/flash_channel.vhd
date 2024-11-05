@@ -78,7 +78,7 @@ architecture rtl of flash_channel is
         flash_np_free : std_logic;
         flash_c_avail: std_logic;
     end record;
-        constant reg_reset : reg_type := (idle, idle, 0, 0, 0, (others => descriptor_init), '0', (others => '0'), 0, 0, 0, '0', '0');
+    constant reg_reset : reg_type := (idle, idle, 0, 0, 0, (others => descriptor_init), '0', (others => '0'), 0, 0, 0, '0', '0');
 
     signal r, rin : reg_type;
     signal dpr_wdata: std_logic_vector(7 downto 0);
