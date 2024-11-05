@@ -73,6 +73,8 @@ begin
                 -- clean up RO fields by keeping current val
                 ch0_capabilities.max_payload_support <= ch0_capabilities.max_payload_support;
                 ch0_capabilities.chan_rdy <= ch0_capabilities.chan_rdy;
+            else
+                ch0_capabilities.chan_rdy <= ch0_capabilities.chan_en;
             end if;
 
             if regs_if.addr = CH1_CAPABILITIES_OFFSET and regs_if.write = '1' then
