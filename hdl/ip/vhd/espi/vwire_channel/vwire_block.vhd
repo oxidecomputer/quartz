@@ -4,10 +4,10 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
--- Note: Documentation can be rendered in VSCode using the TerosHDL
--- plugin: https://terostechnology.github.io/terosHDLdoc/
-
---! A verification component that acts as a qspi controller
+-- eSPI Virtual Wire Channel implementation
+-- While we do nothing with this today, the mask-rom in the SP5
+-- unconditionally enables this and sends a platform reset event
+-- to it so we need to at least catch that nicely.
 
 library ieee;
 use ieee.std_logic_1164.all;
