@@ -146,7 +146,7 @@ begin
                         if sm_reg.cmd.op = Read or sm_reg.in_random_read then
                             v.state         := READ;
                             -- set bytes done to 1 to handle the single byte read case
-                            v.bytes_done    := (others => '0', 0 => '1');
+                            v.bytes_done    := (0 => '1', others => '0');
                             -- nack after the first byte when only reading one byte
                             v.do_ack        := '0' when sm_reg.cmd.len = 1 else '1';
                         else

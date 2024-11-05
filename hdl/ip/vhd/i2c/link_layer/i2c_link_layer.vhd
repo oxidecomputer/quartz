@@ -46,15 +46,19 @@ entity i2c_link_layer is
 end entity;
 
 architecture rtl of i2c_link_layer is
+    -- fetch the settings for the desired I2C mode
     constant SETTINGS               : settings_t := get_i2c_settings(MODE);
     constant SCL_HALF_PER_TICKS     : positive :=
         to_integer(calc_ns(SETTINGS.fscl_period_ns, CLK_PER_NS, 10));
+
+    -- The state machine's counter to enforce timing around various events
+    constant SM_COUNTER_SIZE_BITS   : positive := 8;
     constant START_SETUP_HOLD_TICKS : unsigned(7 downto 0) :=
-        calc_ns(SETTINGS.sta_su_hd_ns, CLK_PER_NS, 8);
+        calc_ns(SETTINGS.sta_su_hd_ns, CLK_PER_NS, SM_COUNTER_SIZE_BITS);
     constant STOP_SETUP_TICKS       : unsigned(7 downto 0) :=
-        calc_ns(SETTINGS.sto_su_ns, CLK_PER_NS, 8);
+        calc_ns(SETTINGS.sto_su_ns, CLK_PER_NS, SM_COUNTER_SIZE_BITS);
     constant STO_TO_STA_BUF_TICKS   : unsigned(7 downto 0) :=
-        calc_ns(SETTINGS.sto_sta_buf_ns, CLK_PER_NS, 8);
+        calc_ns(SETTINGS.sto_sta_buf_ns, CLK_PER_NS, SM_COUNTER_SIZE_BITS);
 
     -- The number of ticks after SCL falls until SDA should be transitioned. FastMode+ has the
     -- tightest requirement here (obviously) at 450ns, so by design we will always transition well
@@ -62,8 +66,7 @@ architecture rtl of i2c_link_layer is
     constant SDA_TRANSITION_TICKS   : positive :=
         to_integer(calc_ns(300, CLK_PER_NS, 5));
 
-    -- The state machine's counter to enforce timing around various events
-    constant SM_COUNTER_SIZE_BITS   : positive := 10;
+
 
     type state_t is (
         IDLE,
