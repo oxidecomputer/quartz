@@ -17,7 +17,6 @@ library vunit_lib;
 
 entity i2c_tb is
     generic (
-
         runner_cfg : string
     );
 end entity;

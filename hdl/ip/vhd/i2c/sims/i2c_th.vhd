@@ -13,6 +13,8 @@ library vunit_lib;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
+use work.i2c_link_layer_pkg.all;
+
 entity i2c_th is
 end entity;
 
@@ -27,5 +29,22 @@ begin
     -- env and release reset after a bit of time
     clk   <= not clk after 4 ns;
     reset <= '0' after 200 ns;
+
+    dut: entity work.i2c_core
+        generic map (
+            CLK_PER_NS => 8,
+            MODE        => STANDARD
+        )
+        port map (
+            clk         => clk,
+            reset   => reset,
+            scl_if  => ,
+            sda_if  => ,
+            cmd     => ,
+            cmd_valid   => ,
+            core_ready => open,
+            tx_st_if =>,
+            rx_st_if =>
+        );
 
 end th;
