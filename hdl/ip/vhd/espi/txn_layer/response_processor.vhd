@@ -46,6 +46,7 @@ architecture rtl of response_processor is
         send_config,
         response_flash_header,
         response_uart_header,
+        response_oob_header,
         response_payload,
         status,
         crc
@@ -233,6 +234,29 @@ begin
                         v.state := RESPONSE_PAYLOAD;
                     end if;
                 end if;
+            when response_oob_header =>
+                case r.resp_idx is
+                    when 0 =>
+                        v.cur_data := oob_cycle_type;
+                        -- These two things could change cycle-cycle but we need them to match
+                        -- so we latch them at the same time, before they're needed
+                        -- internal counters are 0 indexed
+                        v.temp_length := response_chan_mux.length;
+                        v.payload_cnt := response_chan_mux.length - 1;
+                    when 1 =>
+                        v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
+                    when 2 =>
+                        v.cur_data := r.temp_length(7 downto 0);
+                    when others =>
+                       v.cur_data := (others => '0'); -- Filled in for message code, and msg specific
+                end case;
+                if data_to_host.ready then
+                    v.resp_idx := r.resp_idx + 1;
+                    if r.resp_idx = 2 then
+                        v.state := RESPONSE_PAYLOAD;
+                    end if;
+                end if;
+
             when RESPONSE_PAYLOAD =>
                 v.cur_data := resp_data;
                 if data_to_host.ready then

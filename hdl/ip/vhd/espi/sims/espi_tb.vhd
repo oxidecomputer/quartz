@@ -189,6 +189,8 @@ begin
                 wait for 300 us;
             elsif run("dbg_uart") then
                 enable_debug_mode(net);
+                -- temp enable periph 0 msg responses
+                write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), std_logic_vector'(X"00000011"));
                 -- Send UART data which will then be looped back and rx'd
                 --for i in 0 to 1 loop
                     payload_size := rnd.RandInt(1, 64);

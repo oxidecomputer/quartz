@@ -36,6 +36,8 @@ vhdl_unit(
         ":espi_spec_regs_pkg",
         ":espi_regs_pkg",
         ":vwire_regs_pkg",
+        "//hdl/ip/vhd/common:calc_pkg",
+        "//hdl/ip/vhd/common:time_pkg",
         "//hdl/ip/vhd/crc:crc8atm_8wide",
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",

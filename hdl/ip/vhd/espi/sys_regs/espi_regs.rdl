@@ -24,6 +24,9 @@ addrmap espi_regs {
         name = "Control Register";
         desc = "";
         field {
+            desc = "Respond back on periph 0 channel vs oob";
+        } msg_en[4:4] =  0;
+        field {
             desc = "Set to one to reset the command FIFO. Cleared by hardware after reset.";
         } cmd_fifo_reset[3:3] =  0;
          field {
@@ -90,4 +93,12 @@ addrmap espi_regs {
             if desired. left over data bytes are discarded if this fifo is empty and there are <4 bytes left in cmd_fifo";
         } fifo_data[7:0] =  0;
      } cmd_size_fifo_wdata;
+
+    reg {
+        name = "UART Avail Threshold Bytes";
+        desc = "";
+        field {
+            desc = "";
+        } bytes[7:0] =  32;
+     } uart_thresh;
 };

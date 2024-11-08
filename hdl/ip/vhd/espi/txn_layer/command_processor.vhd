@@ -54,6 +54,7 @@ architecture rtl of command_processor is
         parse_set_cfg_hdr,
         parse_msg_header,
         parse_vwire_put,
+        parse_iowr_put,
         reset_word1,
         crc,
         response
@@ -136,6 +137,10 @@ architecture rtl of command_processor is
                     when others =>
                         null;
                 end case;
+            when opcode_put_oob =>
+                next_state.next_state := parse_data;
+                next_state.cmd_addr_bytes := 0;
+                next_state.cmd_payload_bytes := to_integer(header.length);
             when others =>
                 null;
         end case;
@@ -154,7 +159,8 @@ begin
     vwire_if.wstrobe <= r.vwire_wstrobe;
 
     host_to_sp_espi.data <= data_from_host.data;
-    host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and r.cmd_header.cycle_kind = message_with_data and r.state = parse_data else '0';
+    host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and r.cmd_header.cycle_kind = message_with_data and r.state = parse_data else 
+                             data_from_host.valid when r.cmd_header.opcode.value = opcode_put_oob and r.state = parse_data else '0';
     -- pass through the flash channel requests here
     flash_req.espi_hdr             <= r.cmd_header;
     flash_req.sp5_flash_address    <= r.ch_addr;
@@ -218,6 +224,8 @@ begin
                             v.state := reset_word1;
                         when opcode_put_vwire =>
                             v.state := parse_vwire_put;
+                        when opcode_put_iowr_short_mask =>
+                            v.state := parse_iowr_put;
                         when others =>
                             v.state := parse_common_cycle_header;
                     end case;
@@ -322,7 +330,14 @@ begin
                         v.state := crc;
                     end if;
                 end if;
-
+            --we accept this but don't do anything with it
+            when parse_iowr_put =>
+                if data_from_host.valid then
+                    v.hdr_idx := v.hdr_idx + 1;
+                    if r.hdr_idx = 6 then
+                        v.state := crc;
+                    end if;
+                end if;
             -- not much to do here. In theory, we have already indicated that the
             -- appropriate channel has room so we sit here until the data phase has
             -- finished. Muxes elsewhere should direct this datat to appropriate buffers
