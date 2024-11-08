@@ -7,8 +7,29 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 package espi_base_types_pkg is
+
+    -- Enum for our qspi operating mode
+    type qspi_mode_t is (single, dual, quad);
+    function encode(mode: std_logic_vector(1 downto 0)) return qspi_mode_t;
+    function decode(mode: qspi_mode_t) return std_logic_vector;
+
+    type qspi_freq_t is (twenty, twentyfive, thirtythree, fifty, sixtysix);
+
+    function wait_states_from_freq_and_mode(
+        constant freq: qspi_freq_t;
+        constant mode: qspi_mode_t
+    ) return std_logic_vector;
+
+    function get_qspi_shift_amt_by_mode (
+        constant mode : qspi_mode_t
+    ) return natural;
+
+    function get_sclk_to_bytes_shift_amt_by_mode (
+        constant mode : qspi_mode_t
+    ) return natural;
 
     type opcode_t is record
         value: std_logic_vector(7 downto 0);
@@ -128,6 +149,125 @@ package espi_base_types_pkg is
 end package;
 
 package body espi_base_types_pkg is
+
+    function wait_states_from_freq_and_mode(
+        constant freq: qspi_freq_t;
+        constant mode: qspi_mode_t
+    ) return std_logic_vector is
+        variable wait_states : std_logic_vector(3 downto 0) := (others => '0');
+    begin
+        -- As described in our block's documentation, 
+        -- we arrive at a turn-around time of 53ns * 2 + 32 ns = 138ns. Each WAIT_STATE will count as 
+        -- 1 byte-time per espi spec, so the number of needed waits changes based
+        -- on the bus width and speed.  We've pre-calcuated them here.
+        case freq is
+            when twenty =>
+                case mode is
+                    when single =>
+                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                end case;
+            when twentyfive =>
+                case mode is
+                    when single =>
+                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                end case;
+            when thirtythree =>
+                case mode is
+                    when single =>
+                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(3, wait_states'length);
+                end case;
+            when fifty =>
+                case mode is
+                    when single =>
+                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(4, wait_states'length);
+                end case;
+            when sixtysix =>
+                case mode is
+                    when single =>
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(3, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(5, wait_states'length);
+                end case;
+        end case;
+
+
+        return wait_states;
+    end function;
+
+    function encode(mode: std_logic_vector(1 downto 0)) return qspi_mode_t is
+    begin
+        case mode is
+            when "01" =>
+                return dual;
+            when "10" =>
+                return quad;
+            when others =>
+               return single;
+        end case;
+
+    end function;
+    function decode(mode: qspi_mode_t) return std_logic_vector is
+        variable ret_vec : std_logic_vector(1 downto 0);
+    begin
+        case mode is
+            when single =>
+                ret_vec := "00";
+            when dual =>
+                ret_vec := "01";
+            when quad =>
+                ret_vec := "10";
+        end case;
+        return ret_vec;
+    end function;
+
+    -- how many shifts of data are needed
+    -- per sclk based on i/o mode
+    function get_qspi_shift_amt_by_mode (
+        constant mode : qspi_mode_t
+    ) return natural is
+    begin
+        case mode is
+            when single =>
+                return 1;
+            when dual =>
+                return 2;
+            when quad =>
+                return 4;
+        end case;
+    end;
+
+    -- Turn current sclk into current byte count
+    function get_sclk_to_bytes_shift_amt_by_mode (
+        constant mode : qspi_mode_t
+    ) return natural is
+    begin
+        case mode is
+            when single =>
+                return 3;
+            when dual =>
+                return 2;
+            when quad =>
+                return 1;
+        end case;
+    end;
 
     function rec_reset return opcode_t is
         variable ret : opcode_t;

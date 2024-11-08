@@ -20,6 +20,9 @@ package espi_protocol_pkg is
     constant opcode_get_np : std_logic_vector(7 downto 0)                  := "00000011";
     constant opcode_put_iord_short_mask : std_logic_vector(7 downto 0)     := "010000--";
     constant opcode_put_iowr_short_mask : std_logic_vector(7 downto 0)     := "010001--";
+    constant opcode_put_iowr_short_1byte : std_logic_vector(7 downto 0)    := "01000100";
+    constant opcode_put_iowr_short_2byte : std_logic_vector(7 downto 0)    := "01000101";
+    constant opcode_put_iowr_short_4byte : std_logic_vector(7 downto 0)    := "01000111";
     constant opcode_put_memrd32_short_mask : std_logic_vector(7 downto 0)  := "010010--";
     constant opcode_put_memwr32_short_mask  : std_logic_vector(7 downto 0) := "010011--";
     constant opcode_put_vwire : std_logic_vector(7 downto 0)               := "00000100";
@@ -73,6 +76,7 @@ package espi_protocol_pkg is
     -- TODO: support response modifiers
     constant accept_code : std_logic_vector(7 downto 0) := "00001000";
     constant defer_code : std_logic_vector(7 downto 0)  := "00000001";
+    constant wait_state_code : std_logic_vector(7 downto 0) := "00001111";
 
     function by_byte_msb_first (
         constant data : std_logic_vector;

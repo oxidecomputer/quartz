@@ -38,6 +38,8 @@ vhdl_unit(
         ":vwire_regs_pkg",
         "//hdl/ip/vhd/common:calc_pkg",
         "//hdl/ip/vhd/common:time_pkg",
+        "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/synchronizers:bacd",
         "//hdl/ip/vhd/crc:crc8atm_8wide",
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",

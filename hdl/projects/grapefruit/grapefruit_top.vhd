@@ -354,7 +354,7 @@ begin
         showahead_mode => true
     )
      port map(
-        wclk => clk_200m,  -- eSPI clock
+        wclk => clk_125m,  -- eSPI slow clock
         reset => reset_125m,
         write_en => flash_cfifo_write,
         wdata => flash_cfifo_data,
@@ -380,21 +380,23 @@ begin
         wdata => espi_data_fifo_wdata,
         wfull => open,
         wusedwds => open,
-        rclk => clk_200m, -- espi clock
+        rclk => clk_125m, -- espi slow clock
         rdata => flash_rfifo_data,
         rdreq => flash_rfifo_rdack,
         rempty => flash_rfifo_rempty,
         rusedwds => open
     );
 
-    -- eSPI
-    -- ideally we'll want to be in 200MHz but we're going
+    -- eSPI block
+    -- Only the link layer runs at 200MHz, the remaining
+    -- logic runs at 125MHz so all the interfaces are synchronous
+    -- to 125MHz
     espi_target_top_inst: entity work.espi_target_top
      port map(
-        clk => clk_200m,
-        reset => reset_200m,
-        axi_clk => clk_125m,
-        axi_reset => reset_125m,
+        clk_200m => clk_200m,
+        reset_200m => reset_200m,
+        clk => clk_125m,
+        reset => reset_125m,
         axi_if => responders(2),
         cs_n => espi_hpm_to_scm_cs_l,
         sclk => espi_hpm_to_scm_clk,
@@ -458,8 +460,8 @@ begin
         tx_pin => ipcc_fpga_to_sp_data,
         rts_pin => ipcc_fpga_to_sp_rts_l,
         cts_pin => ipcc_sp_to_fpga_cts_l,
-        axi_clk => clk_200m,  -- from espi domain
-        axi_reset => reset_200m,
+        axi_clk => clk_125m,  -- from espi slow domain
+        axi_reset => reset_125m,
         rx_ready => from_sp_uart_to_host_espi_ready,
         rx_data => from_sp_uart_to_host_espi_data,
         rx_valid => from_sp_uart_to_host_espi_valid,

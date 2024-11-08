@@ -13,6 +13,7 @@ use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
 use work.uart_channel_pkg.all;
+use work.link_layer_pkg.all;
 
 entity txn_layer_top is
     port (
@@ -42,13 +43,13 @@ entity txn_layer_top is
         -- Link-layer connections
         is_rx_crc_byte     : out   boolean;
         is_tx_crc_byte     : out   boolean;
-        chip_sel_active : in    boolean;
-        data_to_host    : view st_source;
+        chip_sel_active : in    std_logic;
+        data_to_host    : view byte_source;
         alert_needed    : out   boolean;
         response_done   : out   boolean;
         aborted_due_to_bad_crc : out boolean;
         -- "Streaming" data to serialize and transmit
-        data_from_host : view st_sink
+        data_from_host : view byte_sink
     );
 end entity;
 

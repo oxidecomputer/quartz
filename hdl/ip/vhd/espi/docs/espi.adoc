@@ -19,9 +19,56 @@ image::espi_block.drawio.svg[align="center"]
 
 This block deals with the physical layer of the eSPI interface and contains the serializer/deserializer
 and qspi I/O.  Sampled data is sent to the command processor (transaction layer) with a byte-wide streaming
-interface.  Responses from the response processor (transaction layer) are received via a byte-wide streaming
-interface and shipped out the serializer.
+interface via a CDC FIFO.  Responses from the response processor (transaction layer) are received via a 
+byte-wide streaming interface (through CDC FIFO) and shipped out the serializer.
 
+This is the only block expected to run in the faster clock domain.  To realize this, functionality,
+we're leveraging the eSPI "WAIT_STATE" feature on every response, which allows us cycles to get from
+the fast domain to the slow domain with the command packets, and have a couple of slow-domain cycles
+to push responses back into the response FIFO before they are needed.
+
+The number of wait states depends on the speed and bus-width of the eSPI interface.  We make decisions
+in the slow domain based on the register settings and then propagate those decisions to the fast domain
+as a wait-state count, using a simple cross-domain bus interface.
+These wait states are inserted automatically at the link layer by the 
+target, so the transaction layer doesn't need to worry about them.
+
+The physical-layer will also insert 0xFFs if the FIFO is empty. This serves
+2 purposes:
+- It provides the ERROR response if the target chooses not to respond
+- It raises the qspi lines to '1' at the final shift, which is needed by
+the specification.
+
+==== Turn around analysis
+
+The cross-domain FIFOs take some cycles for data to propagate. Xilinx shows 1 wr-clk + 6 rd-clk cycles for data to propagate from one side to the other. Assuming the fast domain is at 200MHz and the slow domain is at 125MHz that results in a prop-delay of 5ns + 6*8ns = 53ns. The response
+path will be slower since the read clock is faster but we can use this number as a rough estimate each way since we're trying to calculate how
+many wait states we need to insert worst-case. Assigning 4 slow clocks to
+do operational logic, we arrive at a turn-around time of 53ns * 2 + 32 ns = 138ns. Each WAIT_STATE will count as a byte-time, so this changes based
+on the bus width and speed. Our worst-case here is quad mode, 66MHz so we have 2 clks/byte = 33ns/byte. We have 138ns / 33ns = 4.18 bytes rounding up to 5 waits.
+
+We can do the same calculation for each of the speeds/modes resulting in this table:
+5 wait states for quad mode, 66MHz
+3 wait states for dual mode, 66MHz
+2 wait states for single mode, 66MHz
+4 wait states for quad mode, 50MHz
+2 wait states for dual mode, 50MHz
+1 wait state for single mode, 50MHz
+3 wait states for quad mode, 33MHz
+2 wait states for dual mode, 33MHz
+1 wait state for single mode, 33MHz
+2 wait states for quad mode, 25MHz
+1 wait state for dual mode, 25MHz
+1 wait state for single mode, 25MHz
+2 wait states for quad mode, 20MHz
+1 wait state for dual mode, 20MHz
+1 wait state for single mode, 20MHz
+
+The physical-layer inserts these wait states automatically before fetching
+from the response FIFO as they are not counted in the CRC generation.
+
+
+=== Debug Interface
 We can enable a debug interface that muxes the streaming interfaces away from the serdes blocks and connects
 them to FIFOs that are accessible via the AXI bus. This allows software to inject eSPI commands and capture
 eSPI responses without needing an eSPI master connected in the system. With some minor modifications, this 

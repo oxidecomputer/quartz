@@ -25,6 +25,8 @@ architecture th of espi_th is
 
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
+    signal clk_200m   : std_logic := '0';
+    signal reset_200m : std_logic := '1';
 
     signal   ss_n       : std_logic_vector(7 downto 0);
     signal   sclk       : std_logic;
@@ -54,6 +56,9 @@ begin
     -- environment and release reset after a bit of time
     clk   <= not clk after 4 ns;
     reset <= '0' after 200 ns;
+
+    clk_200m <= not clk_200m after 2500 ps;
+    reset_200m <= '0' after 200 ns;
 
     qspi_controller_vc_inst: entity work.qspi_controller_vc
         generic map (
@@ -94,8 +99,8 @@ begin
         port map (
             clk                => clk,
             reset              => reset,
-            axi_clk            => clk,
-            axi_reset          => reset,
+            clk_200m            => clk_200m,
+            reset_200m          => reset_200m,
             cs_n               => ss_n(0),
             sclk               => sclk,
             io                 => io,

@@ -12,6 +12,7 @@ use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
+use work.link_layer_pkg.all;
 
 use work.axil8x32_pkg.all;
 
@@ -19,8 +20,8 @@ entity espi_target_top is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
-        axi_clk : in std_logic;
-        axi_reset : in std_logic;
+        clk_200m : in std_logic;
+        reset_200m : in std_logic;
         -- Axilite interface
         axi_if : view axil_target;
         -- phy interface
@@ -53,9 +54,7 @@ architecture rtl of espi_target_top is
     signal qspi_mode       : qspi_mode_t;
     signal is_rx_crc_byte     : boolean;
     signal is_tx_crc_byte     : boolean;
-    signal chip_sel_active : boolean;
-    signal data_to_host    : data_channel;
-    signal data_from_host  : data_channel;
+    signal chip_sel_active : std_logic;
     signal regs_if         : cmd_reg_if;
     signal flash_req       : flash_channel_req_t;
     signal flash_resp      : flash_channel_resp_t;
@@ -77,6 +76,20 @@ architecture rtl of espi_target_top is
     signal vwire_if : vwire_if_type;
     signal vwire_avail : std_logic;
     signal msg_en : std_logic;
+    signal qspi_cmd : byte_stream;
+    signal qspi_resp : byte_stream;
+    signal gen_cmd : byte_stream;
+    signal gen_resp : byte_stream;
+    signal gen_cs_n : std_logic;
+    signal txn_cmd : byte_stream;
+    signal txn_resp : byte_stream;
+    signal txn_csn : std_logic;
+    signal alert_needed_fast : std_logic;
+    signal alert_needed_slow : std_logic;
+    signal qspi_mode_vec_slow : std_logic_vector(1 downto 0);
+    signal qspi_mode_vec_fast : std_logic_vector(1 downto 0);
+    signal wait_states_fast: std_logic_vector(3 downto 0);
+    signal wait_states_slow: std_logic_vector(3 downto 0);
 
 begin
 
@@ -87,7 +100,7 @@ begin
     )
      port map(
         async_input => cs_n,
-        clk => clk,
+        clk => clk_200m,
         sycnd_output => cs_n_syncd
     );
 
@@ -97,40 +110,111 @@ begin
     )
      port map(
         async_input => sclk,
-        clk => clk,
+        clk => clk_200m,
         sycnd_output => sclk_syncd
     );
 
-    -- link layer
-    link_layer_top_inst: entity work.link_layer_top
+    wait_state_sync: entity work.bacd
+     generic map(
+        always_valid_in_b => true
+    )
      port map(
-        clk => clk,
-        reset => reset,
-        axi_clk => axi_clk,
-        axi_reset => axi_reset,
+        reset_launch => reset,
+        clk_launch => clk,
+        write_launch => '1',  -- always propagate
+        bus_launch => wait_states_slow,
+        write_allowed => open,
+        reset_latch => reset_200m,
+        clk_latch => clk_200m,
+        datavalid_latch => open,
+        bus_latch => wait_states_fast
+    );
+
+    qspi_mode_vec_slow <= decode(qspi_mode);
+    qspi_mode_sync: entity work.bacd
+    generic map(
+       always_valid_in_b => true
+   )
+    port map(
+       reset_launch => reset,
+       clk_launch => clk,
+       write_launch => '1',  -- always propagate
+       bus_launch => qspi_mode_vec_slow,
+       write_allowed => open,
+       reset_latch => reset_200m,
+       clk_latch => clk_200m,
+       datavalid_latch => open,
+       bus_latch => qspi_mode_vec_fast
+   );
+
+    qspi_link_layer_inst: entity work.link_layer
+     port map(
+        clk => clk_200m,
+        reset => reset_200m,
         cs_n => cs_n_syncd,
         sclk => sclk_syncd,
         io => io,
         io_o => io_o,
         io_oe => io_oe,
         response_csn => response_csn,
-        dbg_chan => dbg_chan,
-        qspi_mode => qspi_mode,
-        is_rx_crc_byte => is_rx_crc_byte,
-        is_tx_crc_byte => is_tx_crc_byte,
-        response_done => response_done,
-        aborted_due_to_bad_crc => aborted_due_to_bad_crc,
-        chip_sel_active => chip_sel_active,
-        alert_needed => alert_needed,
-        data_to_host => data_to_host,
-        data_from_host => data_from_host
+        cmd_to_fifo => qspi_cmd,
+        resp_from_fifo => qspi_resp,
+        wait_states => wait_states_fast,
+        qspi_mode => encode(qspi_mode_vec_fast),
+        alert_needed => alert_needed_fast,
+        espi_reset => open
     );
 
+    -- debug_link_layer
+    dbg_link_faker_inst: entity work.dbg_link_faker
+     port map(
+        clk => clk,
+        reset => reset,
+        response_done => response_done,
+        aborted_due_to_bad_crc => aborted_due_to_bad_crc,
+        cs_n => gen_cs_n,
+        alert_needed => alert_needed,
+        gen_resp => gen_resp,
+        gen_cmd => gen_cmd,
+        dbg_chan => dbg_chan
+    );
+
+    alert_needed_slow <= '1' when alert_needed else '0';
+    alert_sync: entity work.meta_sync
+    generic map(
+       stages => 1
+   )
+    port map(
+       async_input => alert_needed_slow,
+       clk => clk_200m,
+       sycnd_output => alert_needed_fast
+   );
+
+
+   link_to_txn_bridge_inst: entity work.link_to_txn_bridge
+    port map(
+       clk_200m => clk_200m,
+       reset_200m => reset_200m,
+       clk => clk,
+       reset => reset,
+       txn_gen_enabled => dbg_chan.enabled,
+       qspi_cmd => qspi_cmd,
+       qspi_resp => qspi_resp,
+       qspi_cs_n => cs_n_syncd,
+       gen_cmd => gen_cmd,
+       gen_resp => gen_resp,
+       gen_cs_n => gen_cs_n,
+       txn_cmd => txn_cmd,
+       txn_resp => txn_resp,
+       txn_csn => txn_csn
+   );
+
+   chip_sel_active <= not txn_csn;
     -- system (axi-lite) register block
    espi_sys_regs_inst: entity work.espi_regs
     port map(
-       clk => axi_clk,
-       reset => axi_reset,
+       clk => clk,
+       reset => reset,
        axi_if => axi_if,
        msg_en => msg_en,
        dbg_chan => dbg_chan
@@ -146,8 +230,8 @@ begin
             regs_if         => regs_if,
             vwire_if        => vwire_if,
             chip_sel_active => chip_sel_active,
-            data_to_host    => data_to_host,
-            data_from_host  => data_from_host,
+            data_to_host    => txn_resp,
+            data_from_host  => txn_cmd,
             alert_needed    => alert_needed,
             flash_req       => flash_req,
             flash_resp      => flash_resp,
@@ -172,6 +256,7 @@ begin
             reset          => reset,
             regs_if        => regs_if,
             qspi_mode      => qspi_mode,
+            wait_states    => wait_states_slow,
             flash_channel_enable => flash_channel_enable
         );
 

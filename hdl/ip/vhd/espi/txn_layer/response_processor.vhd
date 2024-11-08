@@ -8,11 +8,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
-use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
 use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
+use work.link_layer_pkg.all;
 
 entity response_processor is
     port (
@@ -22,12 +22,12 @@ entity response_processor is
         clear_tx_crc   : out   std_logic;
         regs_if        : in    resp_reg_if;
         command_header : in    espi_cmd_header;
-        data_to_host   : view st_source;
+        data_to_host   : view byte_source;
         response_done  : out   boolean;
         live_status    : in    status_t;
         response_crc   : in    std_logic_vector(7 downto 0);
         is_tx_last_byte : out   boolean;
-        chip_sel_active : in    boolean;
+        chip_sel_active : in    std_logic;
 
         -- flash channel responses
         flash_resp : view flash_chan_resp_sink;
@@ -49,6 +49,7 @@ architecture rtl of response_processor is
         response_oob_header,
         response_payload,
         status,
+        calc_crc,
         crc
     );
 
@@ -104,7 +105,7 @@ begin
            response_chan_mux.cycle_type <= flash_resp.cycle_type;
            response_chan_mux.tag        <= flash_resp.tag;
            response_chan_mux.length     <= flash_resp.length;
-           flash_resp.ready <= r.resp_ack;
+           flash_resp.ready <= '1' when data_to_host.ready = '1' and r.cur_valid = '1' and r.state = RESPONSE_PAYLOAD else '0';
            sp_to_host_espi.st.ready <= '0';
            resp_data <= flash_resp.data;
         else  -- UART response
@@ -113,7 +114,7 @@ begin
            response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 256);  -- cap to tx max
            flash_resp.ready             <= '0';
            resp_data <= sp_to_host_espi.st.data;
-           sp_to_host_espi.st.ready <= r.resp_ack;
+           sp_to_host_espi.st.ready <= '1' when data_to_host.ready = '1' and r.cur_valid = '1' and r.state = RESPONSE_PAYLOAD else '0';
         end if;
     end process;
 
@@ -151,6 +152,7 @@ begin
                     v.state := RESPONSE_CODE;
                 end if;
             when RESPONSE_CODE =>
+                v.cur_valid := '1';
                 v.status := live_status;
                 v.resp_idx := 0;
                 -- set opcode immediately so it's ready for the next state
@@ -177,6 +179,7 @@ begin
                     end case;
                 end if;
             when send_config =>
+                v.cur_valid := '1';
                 -- This needs to be LSB first
                 v.cur_data := v.reg_data(7 + r.resp_idx * 8 downto r.resp_idx * 8);
                 if data_to_host.ready then
@@ -186,6 +189,7 @@ begin
                     end if;
                 end if;
             when RESPONSE_FLASH_HEADER =>
+                v.cur_valid := '1';
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := response_chan_mux.cycle_type;
@@ -207,6 +211,7 @@ begin
                     end if;
                 end if;
             when RESPONSE_UART_HEADER =>
+                v.cur_valid := '1';
                 -- This is a message with data message going up
                 -- Standard header (3 bytes)
                 -- message code (1 byte)
@@ -235,6 +240,7 @@ begin
                     end if;
                 end if;
             when response_oob_header =>
+                v.cur_valid := '1';
                 case r.resp_idx is
                     when 0 =>
                         v.cur_data := oob_cycle_type;
@@ -258,6 +264,7 @@ begin
                 end if;
 
             when RESPONSE_PAYLOAD =>
+                v.cur_valid := '1';
                 v.cur_data := resp_data;
                 if data_to_host.ready then
                     v.resp_ack := '1';
@@ -270,15 +277,24 @@ begin
                 end if;
                 null;
             when STATUS =>
+                v.cur_valid := '1';
                 if data_to_host.ready then
                     if r.status_idx = '0' then
                         v.status_idx := '1';
                     elsif r.status_idx = '1' then
                         v.status_idx := '0';
-                        v.state := CRC;
+                        v.state := CALC_CRC;
                     end if;
                 end if;
+            when CALC_CRC =>
+               -- Need to let the CRC calc finish including the last byte
+               -- this case is special-cased below to not be a valid byte.
+               -- in the original implementation, this happened naturally
+               -- due to the delay the pipeline, but the new implementaion
+               -- this can run clock-over-clock
+               v.state := CRC;
             when CRC =>
+                v.cur_valid := '1';
                 v.cur_data := response_crc;
                 if data_to_host.ready then
                     v.response_done := true;
@@ -293,9 +309,6 @@ begin
             v.cur_data := pack(live_status)(7 downto 0);
         elsif r.state = STATUS then
             v.cur_data := pack(r.status)(15 downto 8);
-        end if;
-        if r.state /= IDLE then
-            v.cur_valid := '1';
         end if;
         -- -- abort the transaction if we're not selected
         -- if not chip_sel_active then
