@@ -73,8 +73,10 @@ begin
     handshake_a_to_b: entity work.tacd(rtl)
         port map (
             clk_launch      => clk_launch,
+            reset_launch    => reset_launch,
             pulse_in_launch => write_a_in_masked,
             clk_latch       => clk_latch,
+            reset_latch     => reset_latch,
             pulse_out_latch => handshake_from_launch
         );
 
@@ -84,8 +86,10 @@ begin
         port
     map (
             clk_launch      => clk_latch,
+            reset_launch    => reset_latch,
             pulse_in_launch => handshake_from_launch,
             clk_latch       => clk_launch,
+            reset_latch     => reset_launch,
             pulse_out_latch => handshake_from_latch
         );
 
