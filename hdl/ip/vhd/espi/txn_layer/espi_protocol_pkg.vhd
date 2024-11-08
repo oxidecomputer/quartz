@@ -19,7 +19,7 @@ package espi_protocol_pkg is
     constant opcode_put_np : std_logic_vector(7 downto 0)                  := "00000010";
     constant opcode_get_np : std_logic_vector(7 downto 0)                  := "00000011";
     constant opcode_put_iord_short_mask : std_logic_vector(7 downto 0)     := "010000--";
-    constant opcode_put_iowr_short_mask : std_logic_vector(7 downto 0)     := "010000--";
+    constant opcode_put_iowr_short_mask : std_logic_vector(7 downto 0)     := "010001--";
     constant opcode_put_memrd32_short_mask : std_logic_vector(7 downto 0)  := "010010--";
     constant opcode_put_memwr32_short_mask  : std_logic_vector(7 downto 0) := "010011--";
     constant opcode_put_vwire : std_logic_vector(7 downto 0)               := "00000100";
@@ -66,6 +66,7 @@ package espi_protocol_pkg is
     constant split_first_complete : std_logic_vector(1 downto 0) := "01";
     constant split_last_complete : std_logic_vector(1 downto 0)  := "10";
     constant split_only_complete : std_logic_vector(1 downto 0)  := "11";
+    constant oob_cycle_type : std_logic_vector(7 downto 0) := "00100001";
 
     constant accept : std_logic_vector(1 downto 0)      := "00";
     constant no_response : std_logic_vector(1 downto 0) := "11";

@@ -100,7 +100,7 @@ addrmap eSPI_Spec {
         field {
             desc = "OOB Message Channel Supported";
             sw = r;
-        } oob_support[2:2] = 0x0;
+        } oob_support[2:2] = 0x1;
         field {
             desc = "Virtual Wire Channel Supported";
             sw = r;
@@ -201,12 +201,12 @@ addrmap eSPI_Spec {
         field {
             desc = "OOB Message Channel Ready";
             sw = r;
-        } oob_ready[1:1] =  0x0;
+        } chan_rdy[1:1] =  0x0;
 
          field {
             desc = "OOB Message Channel Enabled";
             sw = rw;
-        } oob_en[0:0] =  0x0;
+        } chan_en[0:0] =  0x0;
 
     } ch2_capabilities @0x30;
 

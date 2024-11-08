@@ -85,10 +85,12 @@ package body espi_dbg_vc_pkg is
     procedure enable_debug_mode(
         signal net : inout network_t
     ) is
+        variable readdata : std_logic_vector(31 downto 0) := (others => '0');
         variable control_reg : control_type := rec_reset;
     begin
+        read_bus(net, bus_handle, To_StdLogicVector(RESP_FIFO_RDATA_OFFSET, bus_handle.p_address_length), readdata);
         control_reg.dbg_mode_en := '1';
-        write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), pack(control_reg));
+        write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), pack(control_reg) or readdata);
     end procedure;
 
     procedure cmd_fifo_reset(

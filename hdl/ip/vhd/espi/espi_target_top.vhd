@@ -76,6 +76,7 @@ architecture rtl of espi_target_top is
     signal sclk_syncd : std_logic;
     signal vwire_if : vwire_if_type;
     signal vwire_avail : std_logic;
+    signal msg_en : std_logic;
 
 begin
 
@@ -131,6 +132,7 @@ begin
        clk => axi_clk,
        reset => axi_reset,
        axi_if => axi_if,
+       msg_en => msg_en,
        dbg_chan => dbg_chan
    );
 
@@ -203,6 +205,7 @@ begin
        from_sp_uart_data => from_sp_uart_data,
        from_sp_uart_valid => from_sp_uart_valid,
        from_sp_uart_ready => from_sp_uart_ready,
+        msg_not_oob => msg_en,
        pc_free => pc_free,
        pc_avail => pc_avail,
        np_free => np_free,
