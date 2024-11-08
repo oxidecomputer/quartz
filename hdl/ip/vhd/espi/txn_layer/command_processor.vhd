@@ -8,11 +8,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
-use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_protocol_pkg.all;
 use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
+use work.link_layer_pkg.all;
 
 entity command_processor is
     port (
@@ -34,9 +34,9 @@ entity command_processor is
 
         -- Link-layer connections
         is_rx_crc_byte     : out   boolean;
-        chip_sel_active : in    boolean;
+        chip_sel_active : in    std_logic;
         -- "Streaming" data to serialize and transmit
-        data_from_host : view st_sink
+        data_from_host : view byte_sink
     );
 end entity;
 
@@ -206,7 +206,7 @@ begin
                     v.hdr_idx := 0;
                     -- Now we need to decide where we're going
                     -- options are CRC or HEADER based on opcode
-                    case v.cmd_header.opcode.value is
+                    case? v.cmd_header.opcode.value is
                         -- Opcodes with no additional data following, these
                         -- can just go immediately to the CRC phase
                         when opcode_get_status |
@@ -228,7 +228,7 @@ begin
                             v.state := parse_iowr_put;
                         when others =>
                             v.state := parse_common_cycle_header;
-                    end case;
+                    end case?;
                 end if;
             -- Special-cased the configuration registers as they don't follow
             -- the generic parsing pattern
@@ -334,7 +334,7 @@ begin
             when parse_iowr_put =>
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
-                    if r.hdr_idx = 6 then
+                    if r.hdr_idx = 5 then
                         v.state := crc;
                     end if;
                 end if;

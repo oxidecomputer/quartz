@@ -46,6 +46,8 @@ architecture model of qspi_controller_vc is
     constant tx_byte_queue : queue_t := new_queue;
     constant rx_byte_queue : queue_t := new_queue;
 
+    constant wait_state_code : unsigned(7 downto 0) := "00001111";
+
     signal tx_shifter_busy : boolean              := false;
     signal txn_go          : boolean              := false;
     signal tx_bytes_txn    : natural              := 0;
@@ -55,6 +57,8 @@ architecture model of qspi_controller_vc is
     signal debug_rx_byte   : unsigned(7 downto 0) := (others => '0');
     signal alert_pending   : boolean              := false;
     signal sclk_cnts       : natural              := 0;
+    signal done_waiting    : boolean              := false;
+    signal wait_cntr       : natural              := 0;
 
 begin
 
@@ -224,6 +228,11 @@ begin
         if state /= rx_phase then
             rx_reg          <= (0 => '1', others => '0');
             rx_rem_bytes <= rx_bytes_txn;
+            wait_cntr   <= 0;
+            -- we may see wait_state_codes as the first thing in the stream
+            -- once we've seen something that isn't a wait_state code, we 
+            -- clear the flag
+            done_waiting <= false;
         else
             -- we use the variable rx_bytes_remaining for
             -- process-local flow control where we want instant
@@ -246,12 +255,20 @@ begin
                     rx_nxt(3) := io(3);
                 end if;
                 if rx_nxt(rx_nxt'left) = '1' then
-                    push_byte(rx_byte_queue, to_integer(rx_nxt(7 downto 0)));
-                    -- open tooling doesn't have a great way to see variable state changes
-                    -- so I'm leaving this signal here for trace visibility even though it's
-                    -- not used in the design
                     debug_rx_byte <= rx_nxt(7 downto 0);
-                    rx_rem_bytes <= rx_rem_bytes - 1;
+                    -- we drop wait-state coded bytes until we've seen a non-wait-state coded byte
+                    if (rx_nxt(7 downto 0) /= wait_state_code) or done_waiting then
+                        -- we see a non-wait-state coded byte, we're done waiting
+                        done_waiting <= true;
+                        -- open tooling doesn't have a great way to see variable state changes
+                        -- so I'm leaving this signal here for trace visibility even though it's
+                        -- not used in the design
+                        push_byte(rx_byte_queue, to_integer(rx_nxt(7 downto 0)));
+                        rx_rem_bytes <= rx_rem_bytes - 1;
+                    elsif rx_nxt(7 downto 0) = wait_state_code and not done_waiting then
+                        wait_cntr <= wait_cntr + 1;
+                        assert wait_cntr < 16 report "wait_cntr exceeded" severity failure;
+                    end if;
                     rx_nxt       := (0 => '1', others => '0');
                 end if;
                 rx_reg <= rx_nxt;

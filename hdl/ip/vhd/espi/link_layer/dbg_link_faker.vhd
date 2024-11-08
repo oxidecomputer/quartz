@@ -9,6 +9,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
+use work.link_layer_pkg.all;
 use work.calc_pkg.all;
 
 
@@ -21,18 +22,16 @@ entity dbg_link_faker is
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
-        axi_clk : in std_logic;
-        axi_reset : in std_logic;
         -- Asserted by command processor during the
         -- transmission of the last command byte (the CRC)
         response_done : in boolean;
         aborted_due_to_bad_crc : in boolean;
-        cs_active : out boolean;
+        cs_n : out std_logic;
         alert_needed : in boolean;
         -- "Streaming" data recieved after deserialization
-        data_to_host       : view st_sink;
+        gen_resp       : view byte_sink;
         -- "Streaming" data to serialize and transmit
-        data_from_host     : view st_source;
+        gen_cmd     : view byte_source;
 
         dbg_chan : view dbg_periph_if
 
@@ -57,7 +56,7 @@ architecture rtl of dbg_link_faker is
 
     type reg_type is record
         state: state_t;
-        cs_asserted: boolean;
+        cs_asserted: std_logic;
         cntr : std_logic_vector(12 downto 0);
         idx: std_logic_vector(1 downto 0);
         size_rdack: std_logic;
@@ -67,7 +66,7 @@ architecture rtl of dbg_link_faker is
     end record;
 
     signal r, rin : reg_type;
-    constant reg_reset : reg_type := (idle, false, (others => '0'), (others => '0'), '0', '0', false, '0');
+    constant reg_reset : reg_type := (idle, '1', (others => '0'), (others => '0'), '0', '0', false, '0');
     constant cs_delay : integer := 6;
     constant idle_delay : integer := 10;
     signal cmd_size_fifo_empty : std_logic;
@@ -116,7 +115,7 @@ begin
     dbg_chan.wstatus.usedwds <= resize(cmd_fifo_wusedwds, dbg_chan.wstatus.usedwds'length);
     dbg_chan.rdstatus.usedwds <= resize(resp_fifo_rusedwds, dbg_chan.rdstatus.usedwds'length);
     dbg_chan.rd.data <= resp_fifo_read_data;
-    cs_active <= r.cs_asserted;
+    cs_n <= not r.cs_asserted;
     dbg_chan.alert_pending <= alert_pending_axi_sync;
 
     -- Timer: the fastest byte transfer that can be done is 2 clocks at 66MHz (in quad mode) so we'll
@@ -150,8 +149,8 @@ begin
         showahead_mode => true
     )
      port map(
-        wclk => axi_clk,
-        reset => axi_reset,
+        wclk => clk,
+        reset => reset,
         write_en => dbg_chan.wr.write,
         wdata => dbg_chan.wr.data,
         wfull => open,
@@ -170,7 +169,7 @@ begin
         showahead_mode => true
     )
      port map(
-        wclk => axi_clk,
+        wclk => clk,
         reset => reset,
         write_en => dbg_chan.size.write,
         wdata => dbg_chan.size.data,
@@ -202,15 +201,15 @@ begin
                 if r.cntr < idle_delay then
                     v.cntr := r.cntr + 1;
                 end if;
-                v.cs_asserted := false;
+                v.cs_asserted := '0';
                 -- when enabled, and we have a non-empty transaction size:
                 -- assert cs
-                if dbg_chan.enabled and cmd_size_fifo_not_empty and r.cntr = idle_delay then
+                if dbg_chan.enabled = '1' and cmd_size_fifo_not_empty and r.cntr = idle_delay then
                     v.state := cs_start;
                     v.cntr := (others => '0');
                 end if;
             when cs_start =>
-                v.cs_asserted := true;
+                v.cs_asserted := '1';
                 v.cntr := r.cntr + 1;
                 v.idx := (others => '0');
                 if r.cntr = cs_delay then
@@ -274,12 +273,12 @@ begin
         end if;
     end process;
 
-    data_from_host.valid <= byte_strobe when r.state = cmd else '0';
+    gen_cmd.valid <= byte_strobe when r.state = cmd else '0';
     process(all)
         variable byte_idx : integer;
     begin
         byte_idx := to_integer(r.idx);
-        data_from_host.data <= cmd_fifo_rdata(7 + 8*byte_idx downto 8*byte_idx);
+        gen_cmd.data <= cmd_fifo_rdata(7 + 8*byte_idx downto 8*byte_idx);
     end process;
 
     -- deal with mixed width fifo usedwds.  If we're doing writes on the 
@@ -309,7 +308,7 @@ begin
     -- Response FIFO.
     -- when we're enabled, any target response data gets written into the response fifo.
     -- software is resonsible for reading the data out of the fifo at an appropriate rate.
-    resp_fifo_write <= data_to_host.ready and data_to_host.valid when dbg_chan.enabled else '0';
+    resp_fifo_write <= gen_resp.ready and gen_resp.valid when dbg_chan.enabled else '0';
     resp_fifo: entity work.dcfifo_mixed_xpm
      generic map(
         wfifo_write_depth => 4096,
@@ -321,15 +320,15 @@ begin
         wclk => clk,
         reset => reset,
         write_en => resp_fifo_write or r.flush_write,
-        wdata => data_to_host.data,
+        wdata => gen_resp.data,
         wfull => open,
         wusedwds => open,
-        rclk => axi_clk,
+        rclk => clk,
         rdata => resp_fifo_read_data,
         rdreq => resp_fifo_read_ack,
         rempty => resp_fifo_empty,
         rusedwds => resp_fifo_rusedwds
     );
-    data_to_host.ready <= byte_strobe;
+    gen_resp.ready <= byte_strobe;
 
 end rtl;

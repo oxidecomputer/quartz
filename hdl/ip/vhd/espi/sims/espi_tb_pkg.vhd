@@ -86,6 +86,11 @@ package espi_tb_pkg is
 
     impure function build_rand_byte_queue(constant size: natural) return queue_t;
 
+    impure function build_iowr_short(
+        constant address: in std_logic_vector(15 downto 0);
+        constant data : in std_logic_vector(31 downto 0);
+        constant bad_crc : boolean := false) return cmd_t;
+
     procedure compare_uart_loopback(
         constant input_payload : queue_t;
         constant output_response : queue_t
@@ -366,5 +371,35 @@ package body espi_tb_pkg is
         output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- crc
         check_true(is_empty(output_copy), "Output queue not empty");
     end procedure;
+
+    impure function build_iowr_short(
+        constant address: in std_logic_vector(15 downto 0);
+        constant data : in std_logic_vector(31 downto 0);
+        constant bad_crc : boolean := false) return cmd_t is
+            variable cmd : cmd_t := (new_queue, 0);
+    begin
+         -- OPCODE_GET_PC (1 byte)
+         push_byte(cmd.queue, to_integer(opcode_put_iowr_short_4byte));
+         cmd.num_bytes := cmd.num_bytes + 1;
+         -- address 2 bytes
+         push_byte(cmd.queue, to_integer(address(15 downto 8)));
+         cmd.num_bytes := cmd.num_bytes + 1;
+         push_byte(cmd.queue, to_integer(address(7 downto 0)));
+         cmd.num_bytes := cmd.num_bytes + 1;
+        -- data 4 bytes
+        push_byte(cmd.queue, to_integer(data(7 downto 0)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(data(15 downto 8)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(data(23 downto 16)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(data(31 downto 24)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+
+        return cmd;
+    end function;
 
 end package body;

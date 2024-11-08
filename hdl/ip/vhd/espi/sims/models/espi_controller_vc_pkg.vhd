@@ -74,6 +74,15 @@ package espi_controller_vc_pkg is
         variable crc_ok : inout boolean
     );
 
+    procedure put_iowr_short4(
+        signal net : inout network_t;
+        constant address : in std_logic_vector(15 downto 0);
+        constant data : in std_logic_vector(31 downto 0);
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    );
+
     procedure get_any_pending_alert(
         signal net : inout network_t;
         variable alert : out boolean
@@ -256,6 +265,29 @@ package body espi_controller_vc_pkg is
         status := get_status_from_queue_and_flush(rx_queue);
         
     end;
+
+    procedure put_iowr_short4(
+        signal net : inout network_t;
+        constant address : in std_logic_vector(15 downto 0);
+        constant data : in std_logic_vector(31 downto 0);
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    ) is
+        variable cmd : cmd_t := (new_queue, 0);
+        variable rx_bytes : integer   := 4;  -- response, 16bit status, 1 crc, 
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue : queue_t := new_queue;
+    begin
+        cmd := build_iowr_short(address, data);
+        -- Build and send a flash read message
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status := get_status_from_queue_and_flush(rx_queue);
+    end procedure;
     
     procedure get_any_pending_alert(
         signal net : inout network_t;

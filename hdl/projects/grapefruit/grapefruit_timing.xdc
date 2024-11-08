@@ -6,7 +6,7 @@ create_clock -add -name fmc_clk_pin -period 15.000 -waveform {0 7.500}  [get_por
 # Create a virtual clock, to represent the source clock of the FMC interface
 create_clock -name fmc_virt_clk -period 15.000;
 
-set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125m_gfruit_pll} -group {clk_125m_gfruit_pll_1}
+set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125m_gfruit_pll} -group {clk_200m_gfruit_pll}
 
 
 # #######################

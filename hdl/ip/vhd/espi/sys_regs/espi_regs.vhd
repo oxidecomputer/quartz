@@ -139,6 +139,6 @@ begin
         end if;
     end process;
 
-    dbg_chan.enabled <= control_reg.dbg_mode_en = '1';
+    dbg_chan.enabled <= control_reg.dbg_mode_en;
 
 end rtl;

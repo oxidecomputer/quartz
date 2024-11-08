@@ -14,7 +14,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.espi_spec_regs_pkg.all;
-use work.qspi_link_layer_pkg.all;
+use work.link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 
 entity espi_spec_regs is
@@ -25,6 +25,7 @@ entity espi_spec_regs is
         regs_if : view regs_side;
 
         qspi_mode            : out   qspi_mode_t;
+        wait_states          : out   std_logic_vector(3 downto 0);
         flash_channel_enable : out   boolean
     );
 end entity;
@@ -39,6 +40,7 @@ architecture rtl of espi_spec_regs is
     signal ch3_capabilities : ch3_capabilities_type;
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
+    signal qspi_freq        : qspi_freq_t;
 
 begin
 
@@ -144,5 +146,24 @@ begin
     qspi_mode <= quad when gen_capabilities.io_mode_sel = quad else
                  dual when gen_capabilities.io_mode_sel = dual else
                  single;
+
+    qspi_freq <= sixtysix when gen_capabilities.op_freq_select = sixtysix else
+                 fifty when gen_capabilities.op_freq_select = fifty else
+                 thirtythree when gen_capabilities.op_freq_select = thirtythree else
+                 twentyfive when gen_capabilities.op_freq_select = twentyfive else
+                 twenty;
+    
+
+    -- we know we're going to clock-cross this so register it here 
+    -- so we don't have to worry about it elsewhere
+    wait_reg: process(clk, reset)
+    begin
+        if reset then
+            wait_states <= To_Std_Logic_Vector(2, wait_states'length);
+        elsif rising_edge(clk) then
+            wait_states <= wait_states_from_freq_and_mode(qspi_freq, qspi_mode);
+        end if;
+    end process;
+        
 
 end rtl;
