@@ -77,8 +77,10 @@ begin
         port
     map (
             clk_launch      => clk_a,
+            reset_launch   => reset_a,
             pulse_in_launch => sim_gpio_out,
             clk_latch       => clk_b,
+            reset_latch     => reset_b,
             pulse_out_latch => tacd_latch_out
         );
 

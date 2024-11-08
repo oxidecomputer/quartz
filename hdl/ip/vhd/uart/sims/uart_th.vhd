@@ -72,6 +72,7 @@ begin
         rts_pin => dut_rts_pin,
         cts_pin => dut_cts_pin,
         axi_clk => clk,
+        axi_reset => reset,
         rx_ready => dut_rx_ready,
         rx_data => dut_rx_data,
         rx_valid => dut_rx_valid,

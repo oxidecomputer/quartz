@@ -43,11 +43,13 @@ entity tacd is
     port (
         --! "Sending" clock domain
         clk_launch : in    std_logic;
+        reset_launch : in std_logic;
         --! Input for edge detector, must be sync'd
         --! to `clk_launch` domain already else we could sample a glitch
         pulse_in_launch : in    std_logic;
         --! "Receiving" clock domain
         clk_latch : in    std_logic;
+        reset_latch :in std_logic;
         --! Single clock-cycle pulse out in `clk_latch` domain for
         --! every rising edge on `pulse_a_in` from the `clk_launch` domain
         --! subject to the frequency limitations described above.
@@ -80,9 +82,11 @@ begin
 
     --! Input edge detector and toggled line registers in the
     --! `clk_launch` domain
-    clk_launch_regs: process(clk_launch)
+    clk_launch_regs: process(clk_launch, reset_launch)
     begin
-        if rising_edge(clk_launch) then
+        if reset_launch then
+            pulse_in_launch_last <= '0';
+        elsif rising_edge(clk_launch) then
             pulse_in_launch_last <= pulse_in_launch;
             -- Toggle the line going between the designs on every rising edge of the input
             if pulse_in_launch_redge = '1' then
@@ -96,9 +100,11 @@ begin
 
     --! 2 flipflops to sync the toggling line into `clk_latch` then run
     --! that into a final flipflop for the `clk_latch` domain edge detector
-    clk_latch_sync_reg: process(clk_latch)
+    clk_latch_sync_reg: process(clk_latch, reset_latch)
     begin
-        if rising_edge(clk_latch) then
+        if reset_latch then
+            b_sr <= (others => '0');
+        elsif rising_edge(clk_latch) then
             b_sr    <= SHIFT_RIGHT(b_sr, 1);
             b_sr(2) <= toggle_launch;
         end if;
