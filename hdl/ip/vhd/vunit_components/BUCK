@@ -26,3 +26,16 @@ vunit_sim(
     deps = [":qspi_controller_vc"],
     visibility = ['PUBLIC'],
 )
+
+vhdl_unit(
+    name = "basic_stream",
+    srcs = glob(["basic_stream/*.vhd"]),
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "tb_basic_stream",
+    srcs = glob(["basic_stream/sims/*.vhd"]),
+    deps = [":basic_stream"],
+    visibility = ['PUBLIC']
+)
