@@ -16,26 +16,23 @@ library vunit_lib;
 use work.basic_stream_pkg.all;
 
 entity th_basic_stream is
+    generic (
+        source : basic_source_t;
+        sink: basic_sink_t
+    );
 end entity;
 
 architecture th of th_basic_stream is
-
-    constant basic_source_stream : basic_source_t :=
-        new_basic_source(data_length => 8, valid_high_probability => 0.1);
-
-    constant basic_sink_stream : basic_sink_t :=
-        new_basic_sink(data_length => 8, ready_high_probability => 0.3);
-
     signal clk   : std_logic := '0';
     signal valid : std_logic;
     signal ready : std_logic;
-    signal data  : std_logic_vector(data_length(basic_source_stream)-1 downto 0);
+    signal data  : std_logic_vector(data_length(source)-1 downto 0);
 begin
     clk   <= not clk after 4 ns;
 
     basic_source_vc : entity work.basic_source
     generic map (
-        source  => basic_source_stream)
+        source  => source)
     port map (
         clk     => clk,
         valid   => valid,
@@ -45,7 +42,7 @@ begin
 
   basic_sink_vc : entity work.basic_sink
     generic map (
-        sink    => basic_sink_stream)
+        sink    => sink)
     port map (
         clk     => clk,
         valid   => valid,

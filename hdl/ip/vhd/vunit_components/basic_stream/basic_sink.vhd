@@ -41,19 +41,23 @@ begin
         msg_type := message_type(msg);
 
         if msg_type = stream_pop_msg or msg_type = pop_basic_stream_msg then
-            -- loop until ready
-            while rnd.Uniform(0.0, 1.0) > sink.ready_high_probability loop
-                wait until rising_edge(clk);
+            loop
+                -- loop until ready
+                while rnd.Uniform(0.0, 1.0) > sink.ready_high_probability loop
+                    wait until rising_edge(clk);
+                end loop;
+                ready <= '1';
+                -- wait for a clk rising edge to sample valid
+                wait until ready = '1' and rising_edge(clk);
+                if valid = '1' then
+                    reply_msg := new_msg;
+                    push_std_ulogic_vector(reply_msg, data);
+                    reply(net, msg, reply_msg);
+                    ready <= '0';
+                end if;
+                ready <= '0';
+                exit;
             end loop;
-            ready <= '1';
-            -- wait for a clk rising edge to sample valid
-            wait until ready = '1' and rising_edge(clk);
-            if valid = '1' then
-                push_std_ulogic_vector(reply_msg, data);
-            end if;
-
-            reply(net, msg, reply_msg);
-            ready <= '0';
         else
             unexpected_msg_type(msg_type);
         end if;
