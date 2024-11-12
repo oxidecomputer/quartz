@@ -3,6 +3,8 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
 -- Copyright 2024 Oxide Computer Company
+--
+-- A basic sink for streamed data that can apply backpressure.
 
 library ieee;
 use ieee.std_logic_1164.all;

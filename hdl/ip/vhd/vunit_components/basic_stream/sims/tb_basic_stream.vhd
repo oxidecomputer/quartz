@@ -24,9 +24,10 @@ end entity;
 
 architecture tb of tb_basic_stream is
 
+    -- Create the source/sinks with relatively low valid/ready probability to help esnure those
+    -- signals are being respected.
     constant basic_source_stream : basic_source_t :=
         new_basic_source(data_length => 8, valid_high_probability => 0.5);
-
     constant basic_sink_stream : basic_sink_t :=
         new_basic_sink(data_length => 8, ready_high_probability => 0.5);
 
