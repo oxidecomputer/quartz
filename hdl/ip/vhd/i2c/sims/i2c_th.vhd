@@ -13,15 +13,47 @@ library vunit_lib;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
+use work.i2c_core_pkg.all;
 use work.i2c_link_layer_pkg.all;
 
+use work.i2c_cmd_vc_pkg.all;
+use work.i2c_peripheral_pkg.all;
+use work.basic_stream_pkg.all;
+
 entity i2c_th is
+    generic (
+        tx_source       : basic_source_t;
+        rx_sink         : basic_sink_t;
+        i2c_peripheral  : i2c_peripheral_t;
+        i2c_cmd_vc      : i2c_cmd_vc_t
+    );
 end entity;
 
 architecture th of i2c_th is
 
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
+
+    -- I2C interface
+    signal scl              : std_logic;
+    signal scl_o            : std_logic;
+    signal scl_oe           : std_logic;
+    signal sda              : std_logic;
+    signal sda_o            : std_logic;
+    signal sda_oe           : std_logic;
+
+    -- command interface
+    signal command          : cmd_t;
+    signal command_valid    : std_logic;
+    signal core_ready       : std_logic;
+
+    -- streaming interfaces
+    signal tx_valid         : std_logic;
+    signal tx_data          : std_logic_vector(data_length(tx_source)-1 downto 0);
+    signal core_tx_ready    : std_logic;
+    signal rx_valid         : std_logic;
+    signal rx_data          : std_logic_vector(data_length(rx_sink)-1 downto 0);
+    signal sink_rx_ready    : std_logic;
 
 begin
 
@@ -32,19 +64,75 @@ begin
 
     dut: entity work.i2c_core
         generic map (
-            CLK_PER_NS => 8,
+            CLK_PER_NS  => 8,
             MODE        => STANDARD
         )
         port map (
-            clk         => clk,
-            reset   => reset,
-            scl_if  => ,
-            sda_if  => ,
-            cmd     => ,
-            cmd_valid   => ,
-            core_ready => open,
-            tx_st_if =>,
-            rx_st_if =>
+            clk             => clk,
+            reset           => reset,
+            scl_if.i        => scl,
+            scl_if.o        => scl_o,
+            scl_if.oe       => scl_oe,
+            sda_if.i        => sda,
+            sda_if.o        => sda_o,
+            sda_if.oe       => sda_oe,
+            cmd             => command,
+            cmd_valid       => command_valid,
+            core_ready      => core_ready,
+            tx_st_if.valid  => tx_valid,
+            tx_st_if.data   => tx_data,
+            tx_st_if.ready  => core_tx_ready,
+            rx_st_if.valid  => rx_valid,
+            rx_st_if.data   => rx_data,
+            rx_st_if.ready  => sink_rx_ready
         );
+
+    i2c_cmd_vc_inst: entity work.i2c_cmd_vc
+        generic map (
+            i2c_cmd_vc => i2c_cmd_vc
+        )
+        port map (
+            cmd     => command,
+            valid   => command_valid,
+            ready   => core_ready
+        );
+
+    peripheral: entity work.i2c_peripheral
+        generic map (
+            i2c_peripheral_vc => i2c_peripheral
+        )
+        port map (
+            scl => scl,
+            sda => sda
+        );
+
+    tx_source_vc : entity work.basic_source
+    generic map (
+        source  => tx_source
+    )
+    port map (
+        clk     => clk,
+        valid   => tx_valid,
+        ready   => core_tx_ready,
+        data    => tx_data
+    );
+
+    rx_sink_vc : entity work.basic_sink
+    generic map (
+        sink    => rx_sink
+    )
+    port map (
+        clk     => clk,
+        valid   => rx_valid,
+        ready   => sink_rx_ready,
+        data    => rx_data
+    );
+
+    -- pull-up the tristated pin to simulate the on-board pull-up resistors
+    i2c_tristates: process(all)
+    begin
+        scl <= scl_o when scl_oe else 'H';
+        sda <= sda_o when sda_oe else 'H';
+    end process;
 
 end th;

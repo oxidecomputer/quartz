@@ -21,6 +21,7 @@ vunit_sim(
     srcs = glob(["sims/**/*.vhd"]),
     deps = [
         ":i2c_core",
+        "//hdl/ip/vhd/vunit_components:basic_stream"
     ],
     visibility = ['PUBLIC'],
 )

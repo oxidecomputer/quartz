@@ -57,8 +57,12 @@ begin
     end process;
 
     transaction_sm: process
+        variable event_msg : msg_t;
     begin
         wait on start_detected;
+        event_msg   := new_msg(got_start);
+        send(net, i2c_peripheral_vc.p_actor, event_msg);
+
         state   <= GET_START_BYTE;
         wait on rx_done;
         state   <= SEND_ACK;
@@ -73,7 +77,6 @@ begin
             wait until rising_edge(scl);
             data_next := sda & rx_data(7 downto 1);
             rx_bit_count    <= rx_bit_count + 1;
-            
         else
             rx_bit_count    <= (others => '0');
         end if;
