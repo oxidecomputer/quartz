@@ -14,6 +14,9 @@ library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.vc_context;
 
+use work.i2c_cmd_vc_pkg.all;
+use work.i2c_peripheral_pkg.all;
+use work.basic_stream_pkg.all;
 
 entity i2c_tb is
     generic (
@@ -22,10 +25,20 @@ entity i2c_tb is
 end entity;
 
 architecture tb of i2c_tb is
-
+    constant I2C_MEM        : memory_t          := new_memory;
+    constant TX_DATA_SOURCE : basic_source_t    := new_basic_source(8);
+    constant RX_DATA_SINK   : basic_sink_t      := new_basic_sink(8);
+    constant I2C_PERIPHERAL : i2c_peripheral_t  := new_i2c_peripheral_vc("I2C_PERIPH", I2C_MEM);
+    constant I2C_CMD        : i2c_cmd_vc_t      := new_i2c_cmd_vc;
 begin
 
-    th: entity work.i2c_th;
+    th: entity work.i2c_th
+        generic map (
+            tx_source       => TX_DATA_SOURCE,
+            rx_sink         => RX_DATA_SINK,
+            i2c_peripheral  => I2C_PERIPHERAL,
+            i2c_cmd_vc      => I2C_CMD
+        );
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;

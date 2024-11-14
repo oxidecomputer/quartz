@@ -9,9 +9,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.stream8_pkg;
+use work.tristate_if_pkg.all;
+
 use work.i2c_core_pkg.all;
 use work.i2c_link_layer_pkg.all;
-use work.tristate_if_pkg.all;
 
 entity i2c_core is
     generic (

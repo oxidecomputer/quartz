@@ -15,6 +15,8 @@ library vunit_lib;
 
 use work.i2c_core_pkg.all;
 use work.i2c_link_layer_pkg.all;
+use work.tristate_if_pkg.all;
+use work.stream8_pkg;
 
 use work.i2c_cmd_vc_pkg.all;
 use work.i2c_peripheral_pkg.all;
@@ -35,12 +37,8 @@ architecture th of i2c_th is
     signal reset : std_logic := '1';
 
     -- I2C interface
-    signal scl              : std_logic;
-    signal scl_o            : std_logic;
-    signal scl_oe           : std_logic;
-    signal sda              : std_logic;
-    signal sda_o            : std_logic;
-    signal sda_oe           : std_logic;
+    signal scl_tristate     : tristate;
+    signal sda_tristate     : tristate;
 
     -- command interface
     signal command          : cmd_t;
@@ -48,12 +46,8 @@ architecture th of i2c_th is
     signal core_ready       : std_logic;
 
     -- streaming interfaces
-    signal tx_valid         : std_logic;
-    signal tx_data          : std_logic_vector(data_length(tx_source)-1 downto 0);
-    signal core_tx_ready    : std_logic;
-    signal rx_valid         : std_logic;
-    signal rx_data          : std_logic_vector(data_length(rx_sink)-1 downto 0);
-    signal sink_rx_ready    : std_logic;
+    signal tx_data_stream   : stream8_pkg.data_channel;
+    signal rx_data_stream   : stream8_pkg.data_channel;
 
 begin
 
@@ -70,21 +64,13 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
-            scl_if.i        => scl,
-            scl_if.o        => scl_o,
-            scl_if.oe       => scl_oe,
-            sda_if.i        => sda,
-            sda_if.o        => sda_o,
-            sda_if.oe       => sda_oe,
+            scl_if          => scl_tristate,
+            sda_if          => sda_tristate,
             cmd             => command,
             cmd_valid       => command_valid,
             core_ready      => core_ready,
-            tx_st_if.valid  => tx_valid,
-            tx_st_if.data   => tx_data,
-            tx_st_if.ready  => core_tx_ready,
-            rx_st_if.valid  => rx_valid,
-            rx_st_if.data   => rx_data,
-            rx_st_if.ready  => sink_rx_ready
+            tx_st_if        => tx_data_stream,
+            rx_st_if        => rx_data_stream
         );
 
     i2c_cmd_vc_inst: entity work.i2c_cmd_vc
@@ -97,14 +83,14 @@ begin
             ready   => core_ready
         );
 
-    peripheral: entity work.i2c_peripheral
-        generic map (
-            i2c_peripheral_vc => i2c_peripheral
-        )
-        port map (
-            scl => scl,
-            sda => sda
-        );
+    -- peripheral: entity work.i2c_peripheral
+    --     generic map (
+    --         i2c_peripheral_vc => i2c_peripheral
+    --     )
+    --     port map (
+    --         scl => scl_tristate.i,
+    --         sda => sda_tristate.i
+    --     );
 
     tx_source_vc : entity work.basic_source
     generic map (
@@ -112,9 +98,9 @@ begin
     )
     port map (
         clk     => clk,
-        valid   => tx_valid,
-        ready   => core_tx_ready,
-        data    => tx_data
+        valid   => tx_data_stream.valid,
+        ready   => tx_data_stream.ready,
+        data    => tx_data_stream.data
     );
 
     rx_sink_vc : entity work.basic_sink
@@ -123,16 +109,16 @@ begin
     )
     port map (
         clk     => clk,
-        valid   => rx_valid,
-        ready   => sink_rx_ready,
-        data    => rx_data
+        valid   => rx_data_stream.valid,
+        ready   => rx_data_stream.ready,
+        data    => rx_data_stream.data
     );
 
     -- pull-up the tristated pin to simulate the on-board pull-up resistors
     i2c_tristates: process(all)
     begin
-        scl <= scl_o when scl_oe else 'H';
-        sda <= sda_o when sda_oe else 'H';
+        scl_tristate.i <= scl_tristate.o when scl_tristate.oe else 'H';
+        sda_tristate.i <= sda_tristate.o when sda_tristate.oe else 'H';
     end process;
 
 end th;

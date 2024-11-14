@@ -48,13 +48,13 @@ begin
 
     start_detected  <= '1' when sda = '0' and state = IDLE else '0';
 
-    message_handler: process
-        variable msg_type               : msg_type_t;
-        variable request_msg, reply_msg : msg_t;
-    begin
-        receive(net, i2c_peripheral_vc, request_msg);
-        msg_type := message_type(request_msg);
-    end process;
+    -- message_handler: process
+    --     variable msg_type               : msg_type_t;
+    --     variable request_msg, reply_msg : msg_t;
+    -- begin
+    --     receive(net, i2c_peripheral_vc, request_msg);
+    --     msg_type := message_type(request_msg);
+    -- end process;
 
     transaction_sm: process
         variable event_msg : msg_t;
