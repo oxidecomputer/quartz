@@ -146,7 +146,7 @@ package body time_pkg is
     begin
         -- Not all values work out evenly since we're dividing, so we round up the value as needed
         -- to be greater than or equal to the requested value
-        ret_num := to_unsigned(natural(ceil(real(desired * sacle_factor) / real(clk_per_ns))), 32)(return_size-1 downto 0);
+        ret_num := resize(to_unsigned(natural(ceil(real(desired * sacle_factor) / real(clk_per_ns))), 32), return_size);
         return ret_num;
     end;
 
