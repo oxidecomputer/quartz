@@ -83,14 +83,14 @@ begin
             ready   => core_ready
         );
 
-    -- peripheral: entity work.i2c_peripheral
-    --     generic map (
-    --         i2c_peripheral_vc => i2c_peripheral
-    --     )
-    --     port map (
-    --         scl => scl_tristate.i,
-    --         sda => sda_tristate.i
-    --     );
+    peripheral: entity work.i2c_peripheral
+        generic map (
+            i2c_peripheral_vc => i2c_peripheral
+        )
+        port map (
+            scl => scl_tristate.i,
+            sda => sda_tristate.i
+        );
 
     tx_source_vc : entity work.basic_source
     generic map (

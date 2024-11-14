@@ -25,6 +25,8 @@ package i2c_peripheral_pkg is
     constant got_byte           : msg_type_t := new_msg_type("got_byte");
 
     type i2c_peripheral_t is record
+        -- I2C peripheral address
+        address     : std_logic_vector(6 downto 0);
         -- private
         p_actor     : actor_t;
         p_ack_actor : actor_t;
@@ -35,7 +37,8 @@ package i2c_peripheral_pkg is
     constant i2c_peripheral_vc_logger : logger_t := get_logger("work:i2c_peripheral_vc");
 
     impure function new_i2c_peripheral_vc (
-        name    : string := "";
+        name    : string;
+        address : std_logic_vector(6 downto 0);
         memory  : memory_t;
         logger  : logger_t := i2c_peripheral_vc_logger
     ) return i2c_peripheral_t;
@@ -45,12 +48,14 @@ end package;
 package body i2c_peripheral_pkg is
 
     impure function new_i2c_peripheral_vc (
-        name    : string := "";
+        name    : string;
+        address : std_logic_vector(6 downto 0);
         memory  : memory_t;
         logger  : logger_t := i2c_peripheral_vc_logger
     ) return i2c_peripheral_t is
     begin
         return (
+            address     => address,
             p_actor     => new_actor(name),
             p_ack_actor => new_actor(name & "_ack"),
             p_memory    => to_vc_interface(memory, logger),

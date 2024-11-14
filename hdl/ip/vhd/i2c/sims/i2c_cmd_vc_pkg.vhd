@@ -47,9 +47,13 @@ package body i2c_cmd_vc_pkg is
     impure function new_i2c_cmd_vc(
         actor   : actor_t   := null_actor;
         logger  : logger_t  := i2c_cmd_vc_logger;
-    ) return i2c_cmd_vc_t is begin
+    ) return i2c_cmd_vc_t is 
+        variable p_actor : actor_t;
+    begin
+        p_actor := actor when actor /= null_actor else new_actor;
+
         return (
-            p_actor     => actor,
+            p_actor     => p_actor,
             p_logger    => logger
         );
     end function;

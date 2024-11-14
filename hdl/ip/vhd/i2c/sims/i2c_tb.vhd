@@ -18,6 +18,8 @@ use work.i2c_cmd_vc_pkg.all;
 use work.i2c_peripheral_pkg.all;
 use work.basic_stream_pkg.all;
 
+use work.i2c_core_pkg.all;
+
 entity i2c_tb is
     generic (
         runner_cfg : string
@@ -25,23 +27,28 @@ entity i2c_tb is
 end entity;
 
 architecture tb of i2c_tb is
-    constant I2C_MEM        : memory_t          := new_memory;
-    constant TX_DATA_SOURCE : basic_source_t    := new_basic_source(8);
-    constant RX_DATA_SINK   : basic_sink_t      := new_basic_sink(8);
-    constant I2C_PERIPHERAL : i2c_peripheral_t  := new_i2c_peripheral_vc("I2C_PERIPH", I2C_MEM);
-    constant I2C_CMD        : i2c_cmd_vc_t      := new_i2c_cmd_vc;
+    constant I2C_MEM            : memory_t                      := new_memory;
+    constant I2C_ADDR           : std_logic_vector(6 downto 0)  := b"1010101";
+    constant I2C_PERIPHERAL_VC  : i2c_peripheral_t  :=
+        new_i2c_peripheral_vc("I2C_PERIPH", I2C_ADDR, I2C_MEM);
+
+    constant TX_DATA_SOURCE_VC  : basic_source_t    := new_basic_source(8);
+    constant RX_DATA_SINK_VC    : basic_sink_t      := new_basic_sink(8);
+    constant I2C_CMD_VC         : i2c_cmd_vc_t      := new_i2c_cmd_vc;
 begin
 
     th: entity work.i2c_th
         generic map (
-            tx_source       => TX_DATA_SOURCE,
-            rx_sink         => RX_DATA_SINK,
-            i2c_peripheral  => I2C_PERIPHERAL,
-            i2c_cmd_vc      => I2C_CMD
+            tx_source       => TX_DATA_SOURCE_VC,
+            rx_sink         => RX_DATA_SINK_VC,
+            i2c_peripheral  => I2C_PERIPHERAL_VC,
+            i2c_cmd_vc      => I2C_CMD_VC
         );
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
+
+        variable command : cmd_t;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -51,8 +58,9 @@ begin
         wait for 500 ns;  -- let the resets propagate
 
         while test_suite loop
-            if run("") then
-                null;
+            if run("nack_wrong_address") then
+                command := CMD_RESET;
+                push_i2c_cmd(net, I2C_CMD_VC, command);
             end if;
         end loop;
 
@@ -62,6 +70,6 @@ begin
     end process;
 
     -- Example total test timeout dog
-    test_runner_watchdog(runner, 10 ms);
+    test_runner_watchdog(runner, 10 us);
 
 end tb;

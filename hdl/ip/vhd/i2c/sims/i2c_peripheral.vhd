@@ -20,8 +20,9 @@ entity i2c_peripheral is
         i2c_peripheral_vc   : i2c_peripheral_t
     );
     port (
-        scl : inout std_logic;
-        sda : inout std_logic;
+        -- initilize to 'H' to simulate pull-ups
+        scl : inout std_logic := 'H';
+        sda : inout std_logic := 'H';
     );
 end entity;
 
@@ -38,7 +39,7 @@ architecture model of i2c_peripheral is
         GET_STOP
     );
 
-    signal state    : state_t;
+    signal state    : state_t := IDLE;
 
     signal start_detected   : std_logic                     := '0';
     signal rx_data          : std_logic_vector(7 downto 0)  := (others => '0');
@@ -48,13 +49,13 @@ begin
 
     start_detected  <= '1' when sda = '0' and state = IDLE else '0';
 
-    -- message_handler: process
-    --     variable msg_type               : msg_type_t;
-    --     variable request_msg, reply_msg : msg_t;
-    -- begin
-    --     receive(net, i2c_peripheral_vc, request_msg);
-    --     msg_type := message_type(request_msg);
-    -- end process;
+    message_handler: process
+        variable msg_type               : msg_type_t;
+        variable request_msg, reply_msg : msg_t;
+    begin
+        receive(net, i2c_peripheral_vc.p_actor, request_msg);
+        msg_type := message_type(request_msg);
+    end process;
 
     transaction_sm: process
         variable event_msg : msg_t;
@@ -70,16 +71,16 @@ begin
 
     rx_done <= '1' when rx_bit_count = 8 else '0';
 
-    receive_sm: process
-        variable data_next  : std_logic_vector(7 downto 0)  := (others => '0');
-    begin
-        if state = GET_START_BYTE then
-            wait until rising_edge(scl);
-            data_next := sda & rx_data(7 downto 1);
-            rx_bit_count    <= rx_bit_count + 1;
-        else
-            rx_bit_count    <= (others => '0');
-        end if;
-    end process;
+    -- receive_sm: process
+    --     variable data_next  : std_logic_vector(7 downto 0)  := (others => '0');
+    -- begin
+    --     if state = GET_START_BYTE then
+    --         wait until rising_edge(scl);
+    --         data_next := sda & rx_data(7 downto 1);
+    --         rx_bit_count    <= rx_bit_count + 1;
+    --     else
+    --         rx_bit_count    <= (others => '0');
+    --     end if;
+    -- end process;
 
 end architecture;
