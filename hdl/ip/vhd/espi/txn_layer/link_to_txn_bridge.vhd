@@ -4,6 +4,10 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- Provides clock-crossing between the link layer and transaction layer
+-- and provides the debug mux for disconnecting the link layer and using
+-- the debug mode to generate transactions.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

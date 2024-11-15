@@ -4,6 +4,10 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- The main qspi link layer block for this target, including the 
+-- link-layer transaction management and FIFO interfaces to/from
+-- the transaction layer.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

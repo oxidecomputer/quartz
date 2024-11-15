@@ -4,6 +4,10 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- Main command parser and processing for the eSPI transaction layer.
+-- Pulls from a FIFO from the link layer or debug layer and processes
+-- the commands, issuing insructions to the different layers as required
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -206,6 +210,9 @@ begin
                     v.hdr_idx := 0;
                     -- Now we need to decide where we're going
                     -- options are CRC or HEADER based on opcode
+                    -- We're using case? (matching case) since some
+                    -- of the opcode constants have been defined with
+                    -- '-' (don't care) values.
                     case? v.cmd_header.opcode.value is
                         -- Opcodes with no additional data following, these
                         -- can just go immediately to the CRC phase

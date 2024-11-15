@@ -4,6 +4,11 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- This block provides the transaction queueing and management for the flash
+-- channel. It is responsible for queueing up transactions, issuing commands to
+-- to the spi flash block and providing flash response data to the transaction
+-- layer.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

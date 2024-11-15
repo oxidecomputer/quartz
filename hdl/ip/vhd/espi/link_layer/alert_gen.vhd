@@ -4,6 +4,11 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- This block manages the state machine for the in-band alert mechanism.
+-- Logic in the slow domain monitors when an alert is needed and this block
+-- runs state machines such that the in-band alert conforms to the timing
+-- requirements of the eSPI specification.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
