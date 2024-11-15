@@ -1,0 +1,109 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Fri Nov 15 23:06:39 2024
+[*]
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_tb.nack_wrong_address_6e7177752142ecc63355e348514d199090f1ab25/nvc/i2c_tb.fst"
+[dumpfile_mtime] "Fri Nov 15 22:36:21 2024"
+[dumpfile_size] 3661
+[savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/i2c/sims/tb_i2c.gtkw"
+[timestart] 0
+[size] 2560 1283
+[pos] 1247 23
+*-31.940149 28476000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] i2c_tb.
+[treeopen] i2c_tb.th.
+[treeopen] i2c_tb.th.dut.i2c_link_layer_inst.
+[treeopen] i2c_tb.th.dut.sm_reg.
+[treeopen] i2c_tb.th.dut.sm_reg_next.
+[treeopen] i2c_tb.th.i2c_cmd_vc_inst.
+[sst_width] 389
+[signals_width] 361
+[sst_expanded] 1
+[sst_vpaned_height] 382
+@200
+-I2C_CMD_VC
+@28
+i2c_tb.th.i2c_cmd_vc_inst.ready
+i2c_tb.th.i2c_cmd_vc_inst.valid
+@22
+i2c_tb.th.i2c_cmd_vc_inst.cmd.addr[6:0]
+i2c_tb.th.i2c_cmd_vc_inst.cmd.len[7:0]
+@28
+i2c_tb.th.i2c_cmd_vc_inst.cmd.op
+@22
+i2c_tb.th.i2c_cmd_vc_inst.cmd.reg[7:0]
+@200
+-
+-Transaction Layer
+@28
+i2c_tb.th.dut.clk
+i2c_tb.th.dut.cmd_valid
+i2c_tb.th.dut.core_ready
+@200
+-I2C Interface
+-SCL
+@28
+i2c_tb.th.dut.scl_if.i
+i2c_tb.th.dut.scl_if.oe
+@200
+-SDA
+@28
+i2c_tb.th.dut.sda_if.i
+i2c_tb.th.dut.sda_if.oe
+@200
+-State
+@28
+i2c_tb.th.dut.sm_reg.state
+i2c_tb.th.dut.sm_reg.do_start
+i2c_tb.th.dut.sm_reg.do_ack
+i2c_tb.th.dut.sm_reg.do_stop
+i2c_tb.th.dut.ll_ready
+@200
+-
+-Link Layer
+@28
+i2c_tb.th.dut.i2c_link_layer_inst.scl_toggle
+i2c_tb.th.dut.i2c_link_layer_inst.scl_redge
+i2c_tb.th.dut.i2c_link_layer_inst.scl_fedge
+i2c_tb.th.dut.i2c_link_layer_inst.transition_sda
+@200
+-Transmit Stream
+@28
+i2c_tb.th.dut.i2c_link_layer_inst.tx_data_valid
+@22
+i2c_tb.th.dut.i2c_link_layer_inst.tx_data[7:0]
+@28
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.ready
+@200
+-State
+@28
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.state
+@22
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.bits_shifted
+@28
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.rx_ack_valid
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.rx_ack
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.sda_change
+i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.ack_sending
+@200
+-Counter
+@22
+i2c_tb.th.dut.i2c_link_layer_inst.sm_countdown.counter[7:0]
+@28
+i2c_tb.th.dut.i2c_link_layer_inst.sm_countdown.decr
+i2c_tb.th.dut.i2c_link_layer_inst.sm_countdown.load
+i2c_tb.th.dut.i2c_link_layer_inst.sm_countdown.done
+@200
+-
+-Peripheral Model
+@28
+i2c_tb.th.peripheral.scl
+i2c_tb.th.peripheral.sda
+i2c_tb.th.peripheral.state
+@29
+i2c_tb.th.peripheral.rx_done
+@22
+i2c_tb.th.peripheral.rx_data[7:0]
+i2c_tb.th.peripheral.rx_bit_count[3:0]
+[pattern_trace] 1
+[pattern_trace] 0

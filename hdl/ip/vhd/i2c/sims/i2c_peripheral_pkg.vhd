@@ -17,8 +17,8 @@ package i2c_peripheral_pkg is
 
     -- Message definitions
     constant got_start          : msg_type_t := new_msg_type("got_start");
-    constant start_byte         : msg_type_t := new_msg_type("start_byte");
     constant address_matched    : msg_type_t := new_msg_type("address_matched");
+    constant address_different  : msg_type_t := new_msg_type("address_different");
     constant send_ack           : msg_type_t := new_msg_type("send_ack");
     constant got_ack            : msg_type_t := new_msg_type("got_ack");
     constant send_byte          : msg_type_t := new_msg_type("send_byte");
@@ -29,7 +29,6 @@ package i2c_peripheral_pkg is
         address     : std_logic_vector(6 downto 0);
         -- private
         p_actor     : actor_t;
-        p_ack_actor : actor_t;
         p_memory    : memory_t;
         p_logger    : logger_t;
     end record;
@@ -57,7 +56,6 @@ package body i2c_peripheral_pkg is
         return (
             address     => address,
             p_actor     => new_actor(name),
-            p_ack_actor => new_actor(name & "_ack"),
             p_memory    => to_vc_interface(memory, logger),
             p_logger    => logger
         );

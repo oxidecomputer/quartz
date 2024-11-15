@@ -33,6 +33,7 @@ architecture model of i2c_peripheral is
         GET_START_BYTE,
         GET_REG_BYTE,
         SEND_ACK,
+        SEND_NACK,
         SEND_BYTE,
         GET_BYTE,
         GET_ACK,
@@ -41,13 +42,13 @@ architecture model of i2c_peripheral is
 
     signal state    : state_t := IDLE;
 
-    signal start_detected   : std_logic                     := '0';
+    signal start_condition  : std_logic                     := '0';
     signal rx_data          : std_logic_vector(7 downto 0)  := (others => '0');
     signal rx_bit_count     : unsigned(3 downto 0)          := (others => '0');
     signal rx_done          : std_logic                     := '0';
 begin
 
-    start_detected  <= '1' when sda = '0' and state = IDLE else '0';
+    start_condition  <= '1' when sda = '0' and state = IDLE else '0';
 
     message_handler: process
         variable msg_type               : msg_type_t;
@@ -60,27 +61,37 @@ begin
     transaction_sm: process
         variable event_msg : msg_t;
     begin
-        wait on start_detected;
+        wait on start_condition;
         event_msg   := new_msg(got_start);
         send(net, i2c_peripheral_vc.p_actor, event_msg);
 
         state   <= GET_START_BYTE;
         wait on rx_done;
-        state   <= SEND_ACK;
+        if rx_data(7 downto 1) = i2c_peripheral_vc.address then
+            state       <= SEND_ACK;
+            event_msg   := new_msg(address_matched);
+            send(net, i2c_peripheral_vc.p_actor, event_msg);
+        else
+            state       <= SEND_NACK;
+            event_msg   := new_msg(address_different);
+            send(net, i2c_peripheral_vc.p_actor, event_msg);
+        end if;
     end process;
 
     rx_done <= '1' when rx_bit_count = 8 else '0';
 
-    -- receive_sm: process
-    --     variable data_next  : std_logic_vector(7 downto 0)  := (others => '0');
-    -- begin
-    --     if state = GET_START_BYTE then
-    --         wait until rising_edge(scl);
-    --         data_next := sda & rx_data(7 downto 1);
-    --         rx_bit_count    <= rx_bit_count + 1;
-    --     else
-    --         rx_bit_count    <= (others => '0');
-    --     end if;
-    -- end process;
+    receive_sm: process
+        variable data_next  : std_logic_vector(7 downto 0)  := (others => '0');
+    begin
+        wait until rising_edge(scl);
+        if state = GET_START_BYTE then
+            data_next       := sda & rx_data(7 downto 1);
+            rx_bit_count    <= rx_bit_count + 1;
+        else
+            rx_bit_count    <= (others => '0');
+        end if;
+
+        rx_data <= data_next;
+    end process;
 
 end architecture;

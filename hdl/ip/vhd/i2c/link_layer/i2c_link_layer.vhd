@@ -73,6 +73,7 @@ architecture rtl of i2c_link_layer is
         WAIT_TBUF,
         START_SETUP,
         START_HOLD,
+        HANDLE_NEXT_PRE,
         HANDLE_NEXT,
         BYTE_TX,
         BYTE_RX,
@@ -162,8 +163,7 @@ begin
     begin
         if reset then
             scl_oe      <= '0';
-            scl_redge   <= '0';
-            scl_fedge   <= '0';
+            scl_oe_last <= '0';
         elsif rising_edge(clk) then
             scl_oe_last     <= scl_oe;
             v_scl_oe_next   := not scl_oe;
@@ -238,8 +238,6 @@ begin
         v.rx_ack_valid  := '0';
         v.rx_data_valid := '0';
 
-        v.ready         := '1' when sm_reg.state = IDLE or sm_reg.state = HANDLE_NEXT else '0';
-
         -- after a scl fedge sda should be updated
         if scl_fedge then
             v.sda_change := '1';
@@ -283,12 +281,15 @@ begin
             when START_HOLD =>
                 v.sda_oe    := '1';
                 if sm_count_done then
-                    v.state         := HANDLE_NEXT;
+                    v.state         := HANDLE_NEXT_PRE;
                     v.scl_start     := '1'; -- drop SCL to finish START condition
                     v.scl_active    := '1'; -- begin free running counter for SCL transitions
                 else
                     v.count_decr    := '1';
                 end if;
+
+            when HANDLE_NEXT_PRE =>
+                v.state := HANDLE_NEXT;
 
             when HANDLE_NEXT =>
                 if tx_start then
@@ -309,9 +310,8 @@ begin
 
             -- Clock out a byte and then wait for an ACK
             when BYTE_TX =>
-                v.sda_oe    := not sm_reg.data(0);
-
                 if transition_sda = '1' and sm_reg.sda_change = '1' then
+                    v.sda_oe        := not sm_reg.data(0);
                     v.data          := '1' & sm_reg.data(7 downto 1);
                     v.sda_change    := '0';
 
@@ -328,7 +328,7 @@ begin
                 v.sda_oe    := '0';
 
                 if scl_redge then
-                    v.state         := HANDLE_NEXT;
+                    v.state         := HANDLE_NEXT_PRE;
                     v.rx_ack        := not sda_in_syncd;
                     v.rx_ack_valid  := '1';
                 end if;
@@ -362,7 +362,7 @@ begin
                     v.sda_oe        := '0';
                     v.ack_sending   := '0';
                     v.sda_change    := '0';
-                    v.state         := HANDLE_NEXT;
+                    v.state         := HANDLE_NEXT_PRE;
                 end if;
 
             -- drive SDA through final SCL cycle
@@ -389,6 +389,9 @@ begin
                 end if;
 
         end case;
+
+        -- next state logic
+        v.ready := '1' when (v.state = IDLE or v.state = HANDLE_NEXT_PRE or v.state = HANDLE_NEXT) else '0';
 
         sm_reg_next <= v;
     end process;

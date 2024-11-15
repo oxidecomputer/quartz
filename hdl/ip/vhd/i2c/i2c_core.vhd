@@ -42,7 +42,7 @@ end entity;
 
 architecture rtl of i2c_core is
 
-    type state_t is (IDLE, START, WAIT_START, WAIT_ADDR, ADDR_ACK, READ, WRITE, WAIT_WRITE_ACK, STOP, WAIT_STOP);
+    type state_t is (IDLE, START, WAIT_START, WAIT_ADDR_ACK, READ, WRITE, WAIT_WRITE_ACK, STOP, WAIT_STOP);
 
     type sm_reg_t is record
         state           : state_t;
@@ -108,8 +108,6 @@ begin
         is_read := '0' when sm_reg.cmd.op = WRITE else '1';
 
         -- defaults
-        v.do_start      := '0';
-        v.do_stop       := '0';
         v.tx_byte_valid := '0';
 
         case sm_reg.state is
@@ -124,25 +122,18 @@ begin
             -- single cycle state to initiate a START
             when START =>
                 v.state         := WAIT_START;
-                v.do_start      := '1';
 
             -- wait for link layer to finish START sequence and load up the address byte
             when WAIT_START =>
+                v.tx_byte       := sm_reg.cmd.addr & is_read;
+                v.tx_byte_valid := '1';
                 if ll_ready then
-                    v.state         := WAIT_ADDR;
-                    v.tx_byte       := sm_reg.cmd.addr & is_read;
-                    v.tx_byte_valid := '1';
+                    v.state         := WAIT_ADDR_ACK;
                 end if;
 
-            -- wait for address byte to have been sent
-            when WAIT_ADDR =>
-                if ll_ready then
-                    v.state := ADDR_ACK;
-                end if;
-
-            -- take action based off the operation type and the ACK
-            when ADDR_ACK =>
-                if ll_ackd_valid then
+            -- wait for address byte to have been sent and for the peripheral to ACK
+            when WAIT_ADDR_ACK =>
+                if ll_ready = '1' and ll_ackd_valid = '1' then
                     if ll_ackd then
                         if sm_reg.cmd.op = Read or sm_reg.in_random_read then
                             v.state         := READ;
@@ -160,7 +151,6 @@ begin
                         -- TODO: address nack error
                         v.state := STOP;
                     end if;
-
                 end if;
 
             -- read as many bytes as requested
@@ -207,7 +197,6 @@ begin
             -- initiate a STOP and clear state
             when STOP =>
                 v.state             := WAIT_STOP;
-                v.do_stop           := '1';
                 v.bytes_done        := (others => '0');
                 v.in_random_read    := false;
 
@@ -217,6 +206,10 @@ begin
                     v.state := IDLE;
                 end if;
         end case;
+
+        -- next state logic
+        v.do_start  := '1' when v.state = START else '0';
+        v.do_stop   := '1' when v.state = STOP else '0';
 
         sm_reg_next <= v;
     end process;
