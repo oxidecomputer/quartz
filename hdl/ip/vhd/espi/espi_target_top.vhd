@@ -4,6 +4,10 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- Top level of the eSPI target block. This block is responsible for
+-- basic synchronization of the eSPI signals, and instantiation of the
+-- rest of the blocks
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

@@ -4,6 +4,9 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- Determine and coordinate responses back to the link layer depending on the
+-- current command opcode and availablilty of data to send back.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

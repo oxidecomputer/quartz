@@ -4,6 +4,11 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- In the fast domain, before we've done full packet parsing, we need
+-- some basic parsing to determine the size of the packet and when the
+-- turnaround time is. This block does the minimal parsing required to
+-- determine the size of the incomming packet.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

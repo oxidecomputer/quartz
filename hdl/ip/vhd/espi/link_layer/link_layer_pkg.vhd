@@ -57,6 +57,9 @@ package body link_layer_pkg is
 
     function known_size_by_opcode(h: hdr_t) return boolean is
     begin
+        -- We're using case? (matching case) since some
+        -- of the opcode constants have been defined with
+        -- '-' (don't care) values.
         case? h.opcode is
             when opcode_get_status |
                  opcode_set_configuration |
@@ -76,6 +79,9 @@ package body link_layer_pkg is
 
     function known_size_by_cycle_type(h: hdr_t) return boolean is
     begin
+        -- We're using case? (matching case) since some
+        -- of the opcode constants have been defined with
+        -- '-' (don't care) values.
         case? h.opcode is
             when opcode_put_np |
                  opcode_get_pc |
@@ -88,6 +94,9 @@ package body link_layer_pkg is
 
     function known_size_by_length(h: hdr_t) return boolean is
     begin
+        -- We're using case? (matching case) since some
+        -- of the opcode constants have been defined with
+        -- '-' (don't care) values.
         case? h.opcode is
             when opcode_put_pc |
                  opcode_put_oob =>
@@ -100,6 +109,9 @@ package body link_layer_pkg is
     function size_by_header(h: hdr_t) return std_logic_vector is
         variable c_bits : natural := 0;
     begin
+        -- We're using case? (matching case) since some
+        -- of the opcode constants have been defined with
+        -- '-' (don't care) values.
         case? h.opcode is
             when opcode_get_status |
                  -- opcode_get_np would go here but is not current supported

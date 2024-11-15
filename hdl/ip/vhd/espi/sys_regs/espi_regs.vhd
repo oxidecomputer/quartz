@@ -4,6 +4,8 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- SP-accessible registers for the eSPI block
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

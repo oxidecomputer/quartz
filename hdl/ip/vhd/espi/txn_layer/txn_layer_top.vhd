@@ -4,6 +4,8 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- Structural wrapper for the transaction layer and the various channel blocks
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

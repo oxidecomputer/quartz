@@ -4,6 +4,10 @@
 --
 -- Copyright 2024 Oxide Computer Company
 
+-- This block allows an SP-interface to issue eSPI commands to the transaction
+-- layer and recieve responses. It is used for debugging and testing purposes
+-- and is muxed in after the physical layer at the cross domain fifos.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

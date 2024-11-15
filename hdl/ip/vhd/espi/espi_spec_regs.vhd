@@ -7,7 +7,8 @@
 -- Note: Documentation can be rendered in VSCode using the TerosHDL
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
 
---! A verification component that acts as a qspi controller
+-- A register layer for the eSPI specification registers, that can
+-- be read and written in-band by the eSPI host.
 
 library ieee;
 use ieee.std_logic_1164.all;
