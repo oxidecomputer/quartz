@@ -32,9 +32,13 @@ jobs:
         - name: Update pip reqs
           run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
         - name: buck path
-          run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
+          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
         - name: Build grapefruit bitstream
           run: buck2 build //hdl/projects/grapefruit:grapefruit --show-output
+        - uses: actions/upload-artifact@v4
+          with:
+            name: gfruit-image
+            path: "./buck-out/v2/gen/root/**/*"
 
   bsv-streams:
     needs: changes
@@ -61,3 +65,7 @@ jobs:
           working-directory: ./build
         - name: backup build-dir
           run: cp -R ./build /tmp/cobble_build_bkup
+        - uses: actions/upload-artifact@v4
+          with:
+            name: bsv-images
+            path: "./build/latest/**/*"
