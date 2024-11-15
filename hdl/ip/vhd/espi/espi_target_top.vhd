@@ -220,7 +220,6 @@ begin
        clk => clk,
        reset => reset,
        axi_if => axi_if,
-       msg_en => msg_en,
        dbg_chan => dbg_chan
    );
 

@@ -90,6 +90,12 @@ package espi_tb_pkg is
         constant address: in std_logic_vector(15 downto 0);
         constant data : in std_logic_vector(31 downto 0);
         constant bad_crc : boolean := false) return cmd_t;
+    
+    impure function build_mem_write32(
+        constant address: in std_logic_vector(31 downto 0);
+        constant payload_len : in std_logic_vector(11 downto 0);
+        constant payload : queue_t;
+        constant bad_crc : boolean := false) return cmd_t;
 
     procedure compare_uart_loopback(
         constant input_payload : queue_t;
@@ -378,14 +384,14 @@ package body espi_tb_pkg is
         constant bad_crc : boolean := false) return cmd_t is
             variable cmd : cmd_t := (new_queue, 0);
     begin
-         -- OPCODE_GET_PC (1 byte)
-         push_byte(cmd.queue, to_integer(opcode_put_iowr_short_4byte));
-         cmd.num_bytes := cmd.num_bytes + 1;
-         -- address 2 bytes
-         push_byte(cmd.queue, to_integer(address(15 downto 8)));
-         cmd.num_bytes := cmd.num_bytes + 1;
-         push_byte(cmd.queue, to_integer(address(7 downto 0)));
-         cmd.num_bytes := cmd.num_bytes + 1;
+        -- OPCODE_PUT_IOWR_SHORT (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_put_iowr_short_4byte));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- address 2 bytes
+        push_byte(cmd.queue, to_integer(address(15 downto 8)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(address(7 downto 0)));
+        cmd.num_bytes := cmd.num_bytes + 1;
         -- data 4 bytes
         push_byte(cmd.queue, to_integer(data(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 1;
@@ -395,6 +401,46 @@ package body espi_tb_pkg is
         cmd.num_bytes := cmd.num_bytes + 1;
         push_byte(cmd.queue, to_integer(data(31 downto 24)));
         cmd.num_bytes := cmd.num_bytes + 1;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+
+        return cmd;
+    end function;
+
+    impure function build_mem_write32(
+        constant address: in std_logic_vector(31 downto 0);
+        constant payload_len : in std_logic_vector(11 downto 0);
+        constant payload : queue_t;
+        constant bad_crc : boolean := false) return cmd_t is
+            variable cmd : cmd_t := (new_queue, 0);
+    begin
+        -- OPCODE_GET_PC (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_put_pc));
+        cmd.num_bytes := cmd.num_bytes + 1;
+         -- cycle type (1 byte)
+         push_byte(cmd.queue, to_integer(mem_write_32));
+         cmd.num_bytes := cmd.num_bytes + 1;
+         -- tag/length high
+         push_byte(cmd.queue, to_integer("0000" & payload_len(11 downto 8)));
+         cmd.num_bytes := cmd.num_bytes + 1;
+         -- length low
+         push_byte(cmd.queue, to_integer(payload_len(7 downto 0)));
+         cmd.num_bytes := cmd.num_bytes + 1;
+        -- address 4 bytes
+        push_byte(cmd.queue, to_integer(address(31 downto 24)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(address(23 downto 16)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(address(15 downto 8)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, to_integer(address(7 downto 0)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- data length bytes
+        while not is_empty(payload) loop
+            push_byte(cmd.queue, pop_byte(payload));
+            cmd.num_bytes := cmd.num_bytes + 1;
+        end loop;
         -- CRC (1 byte)
         push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;

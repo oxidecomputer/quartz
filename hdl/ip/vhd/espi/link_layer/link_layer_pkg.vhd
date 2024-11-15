@@ -147,6 +147,9 @@ package body link_layer_pkg is
                     when message_with_data =>
                         -- opcode, standard header (3), 5 mesg header bytes, length bytes, crc
                         return To_StdLogicVector(1 + 3 + 5 + to_integer(h.len) + 1, 13);
+                    when mem_write_32 =>
+                        -- opcode, standard header (3), 4 addr bytes, length bytes, crc
+                        return To_StdLogicVector(1 + 3 + 4 + to_integer(h.len) + 1, 13);
                     when others =>
                         assert false report "Unsupported cycle type" severity failure;
                         return To_StdLogicVector(0, 13);

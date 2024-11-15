@@ -42,6 +42,8 @@ package espi_protocol_pkg is
     -- eSPI Channel
     constant mem_read_32 : std_logic_vector(7 downto 0) := "00000000";
     constant mem_read_64 : std_logic_vector(7 downto 0) := "00000010";
+    constant mem_write_32 : std_logic_vector(7 downto 0) := "00000001";
+    constant mem_write_64 : std_logic_vector(7 downto 0) := "00000011";
     -- Flash channel (from  server addendum)
     constant flash_read : std_logic_vector(7 downto 0)      := "00000000";
     constant success_no_data : std_logic_vector(7 downto 0) := "00000110";

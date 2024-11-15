@@ -138,7 +138,12 @@ architecture rtl of command_processor is
                         next_state.next_state := parse_msg_header;
                         next_state.cmd_addr_bytes := 0;
                         next_state.cmd_payload_bytes := to_integer(header.length);
+                    when mem_write_32 =>
+                        -- mem writes have a payload of "length"
+                        next_state.next_state := parse_addr_header;
+                        next_state.cmd_payload_bytes := to_integer(header.length);
                     when others =>
+                        -- use the default value for next_state
                         null;
                 end case;
             when opcode_put_oob =>
@@ -163,7 +168,9 @@ begin
     vwire_if.wstrobe <= r.vwire_wstrobe;
 
     host_to_sp_espi.data <= data_from_host.data;
-    host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and r.cmd_header.cycle_kind = message_with_data and r.state = parse_data else 
+    host_to_sp_espi.valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_pc and 
+                                                        (r.cmd_header.cycle_kind = message_with_data  or
+                                                         r.cmd_header.cycle_kind = mem_write_32) and r.state = parse_data else 
                              data_from_host.valid when r.cmd_header.opcode.value = opcode_put_oob and r.state = parse_data else '0';
     -- pass through the flash channel requests here
     flash_req.espi_hdr             <= r.cmd_header;

@@ -220,6 +220,26 @@ begin
                 dbg_get_response(net, payload_size + 12 , response);
                 check(response.crc_ok, "Response UART data resp CRC Check failed");
                 compare_uart_loopback(my_queue, response.queue);
+            elsif run("put_mem_write32") then
+                my_queue := build_rand_byte_queue(4);
+                put_mem_write32(net, X"00000000", To_Std_Logic_Vector(4,12), my_queue, response_code, status,  crc_ok);
+                check(crc_ok, "put mem write32 CRC Check failed");
+                dbg_get_response(net, 4 , response);
+                check(response.crc_ok, "put mem write32 resp CRC Check failed");
+
+                get_status(net, response_code, status, crc_ok);
+                check(crc_ok, "get status CRC Check failed");
+
+            elsif run("put_invalid_len_mem_write32") then
+                my_queue := build_rand_byte_queue(5);  -- one extra byte here
+                put_mem_write32(net, X"00000000", To_Std_Logic_Vector(4,12), my_queue, response_code, status,  crc_ok);
+                check(crc_ok, "put mem write32 CRC Check failed");
+                dbg_get_response(net, 4 , response);
+                check(response.crc_ok, "put mem write32 resp CRC Check failed");
+
+                get_status(net, response_code, status, crc_ok);
+                check(crc_ok, "get status CRC Check failed");
+                
             elsif run("put_iowr_short") then
                 put_iowr_short4(net, X"0080", X"EE0000A2", response_code, status,  crc_ok);
                 dbg_get_response(net, 4 , response);

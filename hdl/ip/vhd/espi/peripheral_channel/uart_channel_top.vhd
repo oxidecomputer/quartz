@@ -82,9 +82,9 @@ begin
     np_free <= '0';
     np_avail <= '0';
     pc_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    pc_avail <= (not tx_rempty) and pc_avail_not_masked and msg_not_oob_syncd;
-    oob_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    oob_avail <= (not tx_rempty) and pc_avail_not_masked and (not msg_not_oob_syncd);
+    pc_avail <= '0'; --(not tx_rempty) and pc_avail_not_masked and msg_not_oob_syncd;
+    oob_free <= '0'; --'1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
+    oob_avail <= '0'; --(not tx_rempty) and pc_avail_not_masked and (not msg_not_oob_syncd);
 
     host_to_sp_espi.ready <= not rx_wfull;
     -- tx_rusedwds is potentailly cycles behind the empty flag due to fifo latencies.
@@ -94,6 +94,8 @@ begin
     to_sp_uart_valid <= not rx_rempty;
 
     fifo_read_by_espi <= sp_to_host_espi.st.valid and sp_to_host_espi.st.ready;
+
+    -- Need a bit of a re-write here.
 
     -- We want to hold some data to let the bytes accumulate
     -- so that we're not doing multiple transactions (which are multi-byte)
