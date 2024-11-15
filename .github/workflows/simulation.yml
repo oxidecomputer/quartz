@@ -31,6 +31,8 @@ jobs:
             submodules: 'true'
         - name: Update pip reqs
           run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+        - name: buck path
+          run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
         - name: Run VUnit tests
           run: buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done
   
@@ -55,7 +57,7 @@ jobs:
           run: ../vnd/cobble/cobble init .. --reinit
           working-directory: ./build
         - name: Run BSIM tests
-          run: ./cobble bluesim_test "//.*SchmittRegTest.*"
+          run: ./cobble bluesim_test "//.*Test.*"
           working-directory: ./build
         - name: backup build-dir
           run: cp -R ./build /tmp/cobble_build_bkup
