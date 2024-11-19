@@ -19,4 +19,12 @@ buck2:
   - 'hdl/ip/toolchains/**/*'
   - 'tools/**/*'
   - 'hdl/ip/vhd/**/*'
+
+grapefruit:
   - 'hdl/projects/grapefruit/**/*'
+
+cosmo_hp:
+  - 'hdl/projects/cosmo_hp/**/*'
+
+cosmo_seq:
+  - 'hdl/projects/cosmo_seq/**/*'

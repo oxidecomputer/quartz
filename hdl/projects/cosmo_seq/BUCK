@@ -1,0 +1,45 @@
+load("//tools:hdl.bzl", "vhdl_unit", "black_box")
+load("//tools:rdl.bzl", "rdl_file")
+load("//tools:vivado.bzl", "vivado_bitstream")
+
+
+black_box (
+    name = "cosmo_black_boxes",
+    srcs = glob(["black_box_entities/*.vhd"]),
+)
+# Shared with grapefruit
+vhdl_unit(
+    name = "reset_sync",
+    srcs = ["clk_rst_infra/reset_sync.vhd"],
+    deps = ["//hdl/ip/vhd/synchronizers:async_reset_bridge"],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "cosmo_clks",
+    srcs = glob(["clk_rst_infra/*.vhd"], exclude = ["clk_rst_infra/reset_sync.vhd"]),
+    deps = [
+        ":reset_sync",
+        ":cosmo_black_boxes",
+    ],
+)
+
+
+vhdl_unit(
+    name = "cosmo_seq_top",
+    srcs = ["cosmo_seq_top.vhd"],
+    deps = [
+        ":cosmo_clks",
+    ],
+    standard = "2019",
+)
+
+vivado_bitstream(
+    name="cosmo_seq",
+    top_entity_name="cosmo_seq_top",
+    top= ":cosmo_seq_top",
+    part= "xc7s100fgga484-1",
+    constraints=glob(["*.xdc"]),
+    pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
+    #post_synth_tcl_files=glob(["*ila.tcl"]),
+)
