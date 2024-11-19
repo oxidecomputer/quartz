@@ -1,0 +1,17 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:yosys.bzl", "ice40_bitstream")
+
+vhdl_unit(
+    name = "cosmo_hp_top",
+    srcs = glob(["*.vhd"]),
+    standard = "2008",
+)
+
+ice40_bitstream(
+    name="cosmo_hp_bitstream",
+    top_entity_name="cosmo_hp_top",
+    top= ":cosmo_hp_top",
+    family="hx8k",
+    package="ct256",
+    pinmap="cosmo_hp.pcf"
+)
