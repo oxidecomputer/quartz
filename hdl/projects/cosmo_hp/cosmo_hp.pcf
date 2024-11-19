@@ -68,6 +68,7 @@ set_io --warn-no-port fpga1_to_fpga2_io[2] E3
 set_io --warn-no-port fpga1_to_fpga2_io[3] H5
 set_io --warn-no-port fpga1_to_fpga2_io[4] E2
 set_io --warn-no-port fpga1_to_fpga2_io[5] G3
+set_io --warn-no-port fpga2_creset_l_r N11
 set_io --warn-no-port fpga2_spare_v3p3[0] E4
 set_io --warn-no-port fpga2_spare_v3p3[1] B2
 set_io --warn-no-port fpga2_spare_v3p3[2] F5
