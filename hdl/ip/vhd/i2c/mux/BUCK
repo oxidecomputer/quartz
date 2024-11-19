@@ -1,0 +1,29 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "i2c_mux_regs_pkg",
+    src = "i2c_mux_regs.rdl",
+    outputs = ["i2c_mux_regs_pkg.vhd", "i2c_mux_regs.html"],
+    visibility = ['PUBLIC']
+)
+
+vhdl_unit(
+    name = "i2c_mux_top",
+    srcs = glob(["*.vhd"]),
+    deps = [
+        "//hdl/ip/vhd/i2c/target:i2c_target_phy",
+        ":i2c_mux_regs_pkg",
+    ],
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "i2c_mux_tb",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+        ":i2c_mux_top",
+        "//hdl/ip/vhd/vunit_components:i2c_controller_vc",
+    ],
+    visibility = ['PUBLIC'],
+)
