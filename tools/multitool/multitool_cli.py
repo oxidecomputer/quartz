@@ -66,7 +66,6 @@ def vunit_files():
     try:
         import vunit
         vunit_install_dir = Path(vunit.__file__).parent
-        print(vunit_install_dir)
     except:
         print("Error attempting to import vunit module."
               " Check tools/requirements.txt and install deps as necessary"

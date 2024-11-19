@@ -207,6 +207,13 @@ vhdl_unit = rule(
             ),
             default=False,
         ),
+        "is_black_box": attrs.bool(
+            doc=(
+                "Set to true for code that will get dropped from synth and sim, but\
+                is used for LSP analysis (like generated IP shims)"
+            ),
+            default=False,
+        ),
         "codec_package": attrs.string(
             doc=(
                 "Set to True when you want to generate VUnit codec package\
@@ -252,4 +259,11 @@ def sim_only_model(**kwargs):
 # user doesn't have to do so
 def third_party(**kwargs):
     kwargs.update({"is_third_party": True})
+    vhdl_unit(**kwargs)
+
+# A helper macro for declaring empty entities in BUCK files
+# to keep the LSP happy (no missing entities) but these entities
+# are dropped from synthesis and simulation outputs
+def black_box(**kwargs):
+    kwargs.update({"is_black_box": True})
     vhdl_unit(**kwargs)
