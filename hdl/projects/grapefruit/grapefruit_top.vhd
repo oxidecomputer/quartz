@@ -319,12 +319,15 @@ begin
     -- tristate control for the FMC data bus
     fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
 
-    registers_inst: entity work.registers
+    info_regs: entity work.info
+     generic map(
+        hubris_compat_num_bits => 3
+    )
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(0),
-        spi_nor_passthru => open
+        hubris_compat_pins => (others => '0'),
+        axi_if => responders(0)
     );
 
     spi_nor_top_inst: entity work.spi_nor_top

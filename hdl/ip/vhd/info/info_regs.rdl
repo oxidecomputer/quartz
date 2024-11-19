@@ -1,0 +1,70 @@
+// Copyright 2024 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible common board-info registers
+
+addrmap info_regs {
+    name = "Board and Build info";
+    desc = "Registers accessible on the Axi bus providing board and build info";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Identity";
+        desc = "";
+
+        field {
+            default sw = r;
+            desc = "Read-only bits showing 0x1de";
+        } data[32] =  0x1de;
+    } identity;
+
+    reg {
+        name = "Hubris Compatibility Straps";
+        desc = "";
+
+        field {
+            default sw = r;
+            desc = "Read-only bits showing resistor strapping for hubris compatibility value";
+        } data[32] =  0;
+    } hubris_compat;
+
+    reg {
+        name = "Version";
+        desc = "";
+
+        field {
+            default sw = r;
+            desc = "Read-only bits showing 0x1de";
+        } data[32] =  0x1de;
+    } version;
+
+    reg {
+        name = "GIT SHORT SHA";
+        desc = "";
+
+        field {
+             default sw = r;
+            desc = "Read-only bits showing the 4byte short-sha of the git commit";
+        } sha[32] =  0;
+    } git_info;
+
+     reg {
+        name = "FPGA Checksum";
+        desc = "";
+
+        field {
+            desc = "Scribble register, nominally intended to hold the FPGA checksum,
+            used for knowing if the FPGA needs to be re-programmed or not";
+        } data[32] =  0;
+    } fpga_checksum;
+
+    reg {
+        name = "Scratchpad";
+        desc = "";
+
+        field {
+            desc = "Scribble register scratchpad suitable for any software purpose";
+        } data[32] =  0;
+    } scratchpad;
+};
