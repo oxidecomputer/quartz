@@ -24,7 +24,7 @@ def vhdl_toml_gen(ctx):
     # Right now, this assumes the default work library
     # Filter for rdl files in the project
     rdl_files = ctx.cquery().kind("rdl.*", targets)
-    gen_vhdl_from_rdl = []
+    gen_vhdl = []
     bld = ctx.build(rdl_files)
     for target, value in bld.items():
         # Buck documentation appears to be incorrect here in that failures() can't be
@@ -37,7 +37,26 @@ def vhdl_toml_gen(ctx):
             if art.extension == ".vhd":
                 # Locally materialize this output since we want it local
                 a = ctx.output.ensure(art)
-                gen_vhdl_from_rdl.append(a)
+                gen_vhdl.append(a)
+
+    # Also probably janky but find any genrules, and locally materialize
+    # any .vhd files they would produce
+    # This is maybe a bit broad but it's working for now as it catches *any*
+    # rule that has a .vhd in the 'out' attribute
+    gen_vhdl_rules = ctx.cquery().attrregexfilter('out', '.*vhd', targets)
+    bld = ctx.build(gen_vhdl_rules)
+    for target, value in bld.items():
+        # Buck documentation appears to be incorrect here in that failures() can't be
+        # evaluated without iterating for whatever reason (if `value.failures()` always
+        # trips)
+        for f in value.failures():
+            fail_no_stacktrace("Failed to build {} file".format(target))
+
+        for art in value.artifacts():
+            if art.extension == ".vhd":
+                # Locally materialize this output since we want it local
+                a = ctx.output.ensure(art)
+                gen_vhdl.append(a)
     
     # Eagerly analyze vhdl build tree targets
     ctx.analysis(vhdl_files)
@@ -48,6 +67,8 @@ def vhdl_toml_gen(ctx):
     files_by_library_name = dict()
 
     for file in vhdl_files:
+        # Useful for debug, but messes the std_out for normal use
+        #ctx.output.print("Processing file: {}".format(file))
         # For each target, we're going to need the attributes to figure
         # out if there are specified libraries or just the default lib
         attrs = file.attrs_eager()
@@ -58,6 +79,8 @@ def vhdl_toml_gen(ctx):
             # we allow combination sims with no source files, so
             # if we find one of those, we'll just move on since
             # there's nothing to do
+            # Useful for debug, but messes the std_out for normal use
+            #ctx.output.print("No sources found for {}".format(file))
             continue
         lib_name = attrs.library.value()
         # We allow empty library names, but need to dump them into a defaul
@@ -76,7 +99,7 @@ def vhdl_toml_gen(ctx):
     
     # Now load the vhdl from RDL files into worklib
     worklib_files = files_by_library_name.get("worklib", {"files": []}).get("files")
-    worklib_files.extend(gen_vhdl_from_rdl)
+    worklib_files.extend(gen_vhdl)
 
 
     # VHDL-LS wants a specific structure that was annoying to work with above so

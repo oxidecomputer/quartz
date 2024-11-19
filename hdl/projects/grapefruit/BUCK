@@ -71,6 +71,7 @@ vhdl_unit(
         ":gfruit_top_regs",
         ":gfruit_sgpio",
         ":reset_sync",
+        "//hdl/ip/vhd/info:info",
         "//hdl/ip/vhd/espi:espi_top",
         "//hdl/ip/vhd/uart:axi_fifo_uart",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",

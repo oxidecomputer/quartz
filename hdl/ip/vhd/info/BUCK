@@ -1,0 +1,52 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "info_regs_pkg",
+    src = "info_regs.rdl",
+    outputs = ["info_regs_pkg.vhd", "info_regs.html"],
+    visibility = ['PUBLIC']
+)
+
+# Janky generate git sha via genrule
+# There are a lot of better ways this might be done, but this was the simplest.
+# It does mean there's a re-build for any change to the git repo, but for now that's fine.
+# Longer-term, we might evaluate backannotating ROMs or something with this build info
+genrule(
+    name = "git_sha",
+    out = "git_sha_pkg.vhd",
+    default_outs = ["git_sha_pkg.vhd"],
+    cmd = '''echo "library ieee;\nuse ieee.std_logic_1164.all;\npackage git_sha_pkg is\n    constant short_sha : std_logic_vector(31 downto 0) := X\\""`git rev-parse --short=8 HEAD`\\"";\nend package git_sha_pkg;\" > $OUT''',
+    
+)
+
+vhdl_unit(
+    name = "git_sha_pkg",
+    srcs = [":git_sha"],
+    visibility = ['PUBLIC']
+)
+
+#  2008-based signals in the this block
+vhdl_unit(
+    name = "info_2k8",
+    srcs = ["info_2k8.vhd"],
+    deps = [
+        ":git_sha_pkg",
+        ":info_regs_pkg",
+        ],
+    standard = "2008",
+    visibility = ['PUBLIC']
+)
+
+# Wrapping previous block in a 2019-compatible block using
+# axi interfaces
+vhdl_unit(
+    name = "info",
+    srcs = ["info.vhd"],
+    deps = [
+        ":info_2k8",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        ],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)

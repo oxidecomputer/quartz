@@ -1,5 +1,5 @@
 // Copyright 2024 Oxide Computer Company
-// This is SystemRDL description of the sw-accesible registers in the Gimlet
+// This is SystemRDL description of the sw-accessible registers in the Gimlet
 // Sequencer FPGA.
 
 addrmap espi_regs {
