@@ -73,6 +73,7 @@ def ice40_nextpnr(ctx, yoys_providers):
     asc = ctx.actions.declare_output("{}.asc".format(ctx.attrs.name))
     cmd = cmd_args()
     cmd.add(ctx.attrs._nextpnr_ice40[RunInfo])
+    cmd.add(next_pnr_family_flags(ctx.attrs.family))
     cmd.add("--package", ctx.attrs.package)
     cmd.add("--pcf", ctx.attrs.pinmap)
     cmd.add("--json", yosys_json)
@@ -82,6 +83,10 @@ def ice40_nextpnr(ctx, yoys_providers):
 
     providers.append(DefaultInfo(default_output=asc))
     return providers
+
+# naive implemenation of turning family into nextpnr flags
+def next_pnr_family_flags(family):
+    return "--{}".format(family)
 
 
 def icepack(ctx, next_pnr_providers):
@@ -104,6 +109,7 @@ ice40_bitstream = rule(
     attrs={
         "top_entity_name": attrs.string(),
         "top": attrs.dep(doc="Expected top HDL unit"),
+        "family": attrs.string(doc="FPGA family"),
         "package": attrs.string(doc="Supported FPGA package"),
         "pinmap": attrs.source(doc="Pin constraints file *.pcf"),
         "_yosys_gen": attrs.exec_dep(
