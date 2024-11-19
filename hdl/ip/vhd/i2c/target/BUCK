@@ -1,0 +1,20 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "i2c_target_phy",
+    srcs = glob(["*.vhd"]),
+    deps = [
+       "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
+    ],
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "i2c_target_phy_tb",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+        ":i2c_target_phy",
+        "//hdl/ip/vhd/vunit_components:i2c_controller_vc",
+    ],
+    visibility = ['PUBLIC'],
+)

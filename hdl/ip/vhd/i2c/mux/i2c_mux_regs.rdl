@@ -1,0 +1,27 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of emulated i2c mux registers
+
+addrmap emulated_pca9545 {
+    name = "pca9545 registers";
+    desc = "Registers accessible on the i2c bus for controlling the emulated PCA9545 i2c mux";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Control Register";
+        desc = "";
+
+        field {
+            desc = "Channel 2: 0 = disable, 1 = enable";
+        } B2[2:2] =  0;
+        field {
+            desc = "Channel 1: 0 = disable, 1 = enable";
+        } B1[1:1] =  0;
+        field {
+            desc = "Channel 0: 0 = disable, 1 = enable";
+        } B0[0:0] =  0;
+    } control;
+
+};
