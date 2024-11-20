@@ -48,7 +48,9 @@ begin
     bench: process
         alias reset is << signal th.reset : std_logic >>;
 
-        variable command : cmd_t;
+        variable msg        : msg_t;
+        variable command    : cmd_t;
+        variable ack        : boolean := false;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -61,6 +63,21 @@ begin
             if run("nack_wrong_address") then
                 command := CMD_RESET;
                 push_i2c_cmd(net, I2C_CMD_VC, command);
+                start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
+                check_false(ack, "Peripheral did not NACK incorrect address");
+                -- transaction is over, receive STOP event
+                expect_stop(net, I2C_PERIPHERAL_VC);
+                wait for 10 us;
+            elsif run("read_one_byte") then
+                command := (
+                    op      => READ,
+                    addr    => I2C_PERIPHERAL_VC.address,
+                    reg     => X"00",
+                    len     => to_unsigned(1, command.len'length)
+                );
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+                start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
+                check_true(ack, "Peripheral did not ACK correct address");
             end if;
         end loop;
 

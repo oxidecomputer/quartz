@@ -23,6 +23,7 @@ package i2c_peripheral_pkg is
     constant got_ack            : msg_type_t := new_msg_type("got_ack");
     constant send_byte          : msg_type_t := new_msg_type("send_byte");
     constant got_byte           : msg_type_t := new_msg_type("got_byte");
+    constant got_stop           : msg_type_t := new_msg_type("got_stop");
 
     type i2c_peripheral_t is record
         -- I2C peripheral address
@@ -42,6 +43,23 @@ package i2c_peripheral_pkg is
         logger  : logger_t := i2c_peripheral_vc_logger
     ) return i2c_peripheral_t;
 
+    procedure expect_message (
+        signal net              : inout network_t;
+        constant vc             : i2c_peripheral_t;
+        constant expected_msg   : msg_type_t;
+    );
+
+    procedure expect_stop (
+        signal net  : inout network_t;
+        constant vc : i2c_peripheral_t;
+    );
+
+    procedure start_byte_ack (
+        signal net      : inout network_t;
+        constant vc     : i2c_peripheral_t;
+        variable ack    : out boolean;
+    );
+
 end package;
 
 package body i2c_peripheral_pkg is
@@ -60,5 +78,46 @@ package body i2c_peripheral_pkg is
             p_logger    => logger
         );
     end;
+
+    procedure expect_message (
+        signal net              : inout network_t;
+        constant vc             : i2c_peripheral_t;
+        constant expected_msg   : msg_type_t;
+    ) is
+        variable msg        : msg_t;
+        variable matched    : boolean;
+    begin
+        receive(net, vc.p_actor, msg);
+        matched := message_type(msg) = expected_msg;
+        check_true(matched, "Received message did not match expected message.");
+    end procedure;
+
+    procedure expect_stop (
+        signal net      : inout network_t;
+        constant vc     : i2c_peripheral_t;
+    ) is
+    begin
+        expect_message(net, vc, got_stop);
+    end procedure;
+
+    procedure start_byte_ack (
+        signal net      : inout network_t;
+        constant vc     : i2c_peripheral_t;
+        variable ack    : out boolean;
+    ) is
+        variable msg    : msg_t;
+    begin
+        -- receive START event
+        receive(net, vc.p_actor, msg);
+        if message_type(msg) = got_start then
+            -- receive START byte ack
+            receive(net, vc.p_actor, msg);
+            if message_type(msg) = address_matched then
+                ack := true;
+            elsif message_type(msg) = address_different then
+                ack := false;
+            end if;
+        end if;
+    end procedure;
 
 end package body;

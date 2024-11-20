@@ -42,7 +42,17 @@ end entity;
 
 architecture rtl of i2c_core is
 
-    type state_t is (IDLE, START, WAIT_START, WAIT_ADDR_ACK, READ, WRITE, WAIT_WRITE_ACK, STOP, WAIT_STOP);
+    type state_t is (
+        IDLE,
+        START,
+        WAIT_START,
+        WAIT_ADDR_ACK,
+        READ,
+        WRITE,
+        WAIT_WRITE_ACK,
+        STOP,
+        WAIT_STOP
+    );
 
     type sm_reg_t is record
         state           : state_t;
@@ -135,10 +145,9 @@ begin
             when WAIT_ADDR_ACK =>
                 if ll_ready = '1' and ll_ackd_valid = '1' then
                     if ll_ackd then
+                        v.bytes_done := (others => '0');
                         if sm_reg.cmd.op = Read or sm_reg.in_random_read then
                             v.state         := READ;
-                            -- set bytes done to 1 to handle the single byte read case
-                            v.bytes_done    := (0 => '1', others => '0');
                             -- nack after the first byte when only reading one byte
                             v.do_ack        := '0' when sm_reg.cmd.len = 1 else '1';
                         else
@@ -155,14 +164,12 @@ begin
 
             -- read as many bytes as requested
             when READ =>
-                if ll_rx_data_valid then
-                    if sm_reg.cmd.len = sm_reg.bytes_done then
-                        v.state     := STOP;
-                    else
-                        v.bytes_done    := sm_reg.bytes_done + 1;
-                        -- nack the next byte if it is the last
-                        v.do_ack        := '0' when sm_reg.cmd.len = sm_reg.bytes_done + 1 else '1';
-                    end if;
+                if sm_reg.cmd.len = sm_reg.bytes_done then
+                    v.state     := STOP;
+                elsif ll_rx_data_valid then
+                    v.bytes_done    := sm_reg.bytes_done + 1;
+                    -- nack the next byte if it is the last
+                    v.do_ack        := '0' when sm_reg.cmd.len = v.bytes_done else '1';
                 end if;
 
             -- transmit the next byte

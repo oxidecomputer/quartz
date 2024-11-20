@@ -87,7 +87,7 @@ architecture rtl of i2c_link_layer is
     type sm_reg_t is record
         -- state
         state           : state_t;
-        bits_shifted    : natural range 0 to 7;
+        bits_shifted    : natural range 0 to 8;
 
         -- control
         ready           : std_logic;
@@ -239,7 +239,9 @@ begin
         v.rx_data_valid := '0';
 
         -- after a scl fedge sda should be updated
-        if scl_fedge then
+        if scl_fedge = '1' and (sm_reg.state = BYTE_TX or 
+                                sm_reg.state = ACK_TX or 
+                                sm_reg.state = STOP_SDA) then
             v.sda_change := '1';
         end if;
 
@@ -301,8 +303,9 @@ begin
                     v.state         := STOP_SDA;
                 elsif tx_data_valid then
                     -- data to transmit
-                    v.state     := BYTE_TX;
-                    v.data      := tx_data;
+                    v.state         := BYTE_TX;
+                    v.data          := tx_data;
+                    v.sda_change    := '1';
                 else
                     -- if nothing else, read
                     v.state     := BYTE_RX;
@@ -310,17 +313,15 @@ begin
 
             -- Clock out a byte and then wait for an ACK
             when BYTE_TX =>
-                if transition_sda = '1' and sm_reg.sda_change = '1' then
+                if transition_sda = '1' and sm_reg.bits_shifted = 8 then
+                    v.state         := ACK_RX;
+                    v.sda_change    := '0';
+                    v.bits_shifted  := 0;
+                elsif transition_sda = '1' and sm_reg.sda_change = '1' then
                     v.sda_oe        := not sm_reg.data(0);
                     v.data          := '1' & sm_reg.data(7 downto 1);
                     v.sda_change    := '0';
-
-                    if sm_reg.bits_shifted = 7 then
-                        v.state         := ACK_RX;
-                        v.bits_shifted  := 0;
-                    else
-                        v.bits_shifted  := sm_reg.bits_shifted + 1;
-                    end if;
+                    v.bits_shifted  := sm_reg.bits_shifted + 1;
                 end if;
 
             -- See if the target ACKs
@@ -337,16 +338,13 @@ begin
             when BYTE_RX =>
                 v.sda_oe    := '0';
 
-                if scl_redge then
-                    v.data  := sda_in_syncd & sm_reg.data(7 downto 1);
-
-                    if sm_reg.bits_shifted = 7 then
-                        v.state         := ACK_TX;
-                        v.rx_data_valid := '1';
-                        v.bits_shifted  := 0;
-                    else
-                        v.bits_shifted  := sm_reg.bits_shifted + 1;
-                    end if;
+                if sm_reg.bits_shifted = 8 then
+                    v.state         := ACK_TX;
+                    v.rx_data_valid := '1';
+                    v.bits_shifted  := 0;
+                elsif scl_redge then
+                    v.data          := sda_in_syncd & sm_reg.data(7 downto 1);
+                    v.bits_shifted  := sm_reg.bits_shifted + 1;
                 end if;
 
             -- ACK the target

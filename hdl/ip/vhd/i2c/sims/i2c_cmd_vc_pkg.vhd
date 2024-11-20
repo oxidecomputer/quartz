@@ -76,7 +76,7 @@ package body i2c_cmd_vc_pkg is
         push(msg, cmd.reg);
         push(msg, cmd.len);
         send(net, i2c_cmd_vc.p_actor, msg);
-        wait_until_idle(net, i2c_cmd_vc.p_actor);
+        -- wait_until_idle(net, i2c_cmd_vc.p_actor);
     end;
 
 
