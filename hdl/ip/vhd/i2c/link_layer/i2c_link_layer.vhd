@@ -102,8 +102,9 @@ architecture rtl of i2c_link_layer is
         ack_sending     : std_logic;
 
         -- interfaces
-        data            : std_logic_vector(7 downto 0);
+        rx_data         : std_logic_vector(7 downto 0);
         rx_data_valid   : std_logic;
+        tx_data         : std_logic_vector(7 downto 0);
         sda_oe          : std_logic;
         rx_ack          : std_logic;
         rx_ack_valid    : std_logic;
@@ -121,9 +122,10 @@ architecture rtl of i2c_link_layer is
         '0',            -- count_decr
         '0',            -- count_clr
         '0',            -- sda_change
-        '0',            -- ack_sending;
-        (others => '0'),-- data
+        '0',            -- ack_sending
+        (others => '0'),-- rx_data
         '0',            -- rx_data_valid
+        (others => '0'),-- tx_data
         '0',            -- sda_oe
         '0',            -- rx_ack
         '0'             -- rx_ack_valid
@@ -304,7 +306,7 @@ begin
                 elsif tx_data_valid then
                     -- data to transmit
                     v.state         := BYTE_TX;
-                    v.data          := tx_data;
+                    v.tx_data       := tx_data;
                     v.sda_change    := '1';
                 else
                     -- if nothing else, read
@@ -318,8 +320,8 @@ begin
                     v.sda_change    := '0';
                     v.bits_shifted  := 0;
                 elsif transition_sda = '1' and sm_reg.sda_change = '1' then
-                    v.sda_oe        := not sm_reg.data(0);
-                    v.data          := '1' & sm_reg.data(7 downto 1);
+                    v.sda_oe        := not sm_reg.tx_data(0);
+                    v.tx_data       := '1' & sm_reg.tx_data(7 downto 1);
                     v.sda_change    := '0';
                     v.bits_shifted  := sm_reg.bits_shifted + 1;
                 end if;
@@ -336,14 +338,15 @@ begin
 
             -- Clock in a byte and then send an ACK
             when BYTE_RX =>
-                v.sda_oe    := '0';
+                v.sda_oe        := '0';
+                -- v.rx_data_valid := '0';
 
                 if sm_reg.bits_shifted = 8 then
                     v.state         := ACK_TX;
                     v.rx_data_valid := '1';
                     v.bits_shifted  := 0;
                 elsif scl_redge then
-                    v.data          := sda_in_syncd & sm_reg.data(7 downto 1);
+                    v.rx_data       := sda_in_syncd & sm_reg.rx_data(7 downto 1);
                     v.bits_shifted  := sm_reg.bits_shifted + 1;
                 end if;
 
@@ -353,6 +356,7 @@ begin
                 if transition_sda = '1' and sm_reg.sda_change = '1' then
                     v.sda_oe        := tx_ack;
                     v.ack_sending   := '1';
+                    v.sda_change    := '0';
                 end if;
 
                 -- at the next transition point release the bus
@@ -406,7 +410,7 @@ begin
     ready           <= sm_reg.ready;
     tx_ackd         <= sm_reg.rx_ack;
     tx_ackd_valid   <= sm_reg.rx_ack_valid;
-    rx_data         <= sm_reg.data;
+    rx_data         <= sm_reg.rx_data;
     rx_data_valid   <= sm_reg.rx_data_valid;
 
     -- I2C is open-drain, so we only ever drive low

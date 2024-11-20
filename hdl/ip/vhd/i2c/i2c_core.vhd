@@ -164,7 +164,7 @@ begin
 
             -- read as many bytes as requested
             when READ =>
-                if sm_reg.cmd.len = sm_reg.bytes_done then
+                if sm_reg.cmd.len = sm_reg.bytes_done and ll_ready = '1' then
                     v.state     := STOP;
                 elsif ll_rx_data_valid then
                     v.bytes_done    := sm_reg.bytes_done + 1;

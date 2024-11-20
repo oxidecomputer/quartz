@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Wed Nov 20 00:20:54 2024
+[*] Wed Nov 20 23:14:40 2024
 [*]
 [dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_tb.read_one_byte_f5003d4ca7a772188d7e5908ca58541f5b186a63/nvc/i2c_tb.fst"
-[dumpfile_mtime] "Wed Nov 20 00:13:45 2024"
-[dumpfile_size] 3513
+[dumpfile_mtime] "Wed Nov 20 23:09:58 2024"
+[dumpfile_size] 3731
 [savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/i2c/sims/tb_i2c.gtkw"
 [timestart] 0
-[size] 2656 1283
-[pos] 1151 23
-*-29.651344 1356000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[size] 2688 1283
+[pos] 1183 23
+*-34.626644 73844000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] i2c_tb.
 [treeopen] i2c_tb.th.
-[treeopen] i2c_tb.th.dut.
 [treeopen] i2c_tb.th.dut.i2c_link_layer_inst.
 [treeopen] i2c_tb.th.dut.sm_reg.
 [treeopen] i2c_tb.th.dut.sm_reg_next.
 [treeopen] i2c_tb.th.i2c_cmd_vc_inst.
+[treeopen] i2c_tb.th.peripheral.
 [sst_width] 389
 [signals_width] 361
 [sst_expanded] 1
@@ -67,7 +67,6 @@ i2c_tb.th.dut.i2c_link_layer_inst.scl_toggle
 i2c_tb.th.dut.i2c_link_layer_inst.scl_redge
 i2c_tb.th.dut.i2c_link_layer_inst.scl_fedge
 i2c_tb.th.dut.i2c_link_layer_inst.transition_sda
-@29
 i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.sda_change
 @200
 -Transmit Stream
@@ -102,10 +101,35 @@ i2c_tb.th.dut.i2c_link_layer_inst.sm_countdown.load
 i2c_tb.th.dut.i2c_link_layer_inst.sm_countdown.done
 @200
 -
--Peripheral Model
+-RX Stream VC
 @28
-i2c_tb.th.peripheral.scl
-i2c_tb.th.peripheral.sda
+i2c_tb.th.rx_sink_vc.ready
+i2c_tb.th.rx_sink_vc.valid
+@22
+i2c_tb.th.rx_sink_vc.data[7:0]
+@200
+-TX Stream VC
+@28
+i2c_tb.th.tx_source_vc.ready
+i2c_tb.th.tx_source_vc.valid
+@22
+i2c_tb.th.tx_source_vc.data[7:0]
+@200
+-
+-Peripheral Model
+-SCL
+@28
+i2c_tb.th.peripheral.scl_if.i
+i2c_tb.th.peripheral.scl_if.o
+i2c_tb.th.peripheral.scl_if.oe
+@200
+-SDA
+@28
+i2c_tb.th.peripheral.sda_if.i
+i2c_tb.th.peripheral.sda_if.o
+@29
+i2c_tb.th.peripheral.sda_if.oe
+@28
 i2c_tb.th.peripheral.sda_last
 i2c_tb.th.peripheral.state
 i2c_tb.th.peripheral.start_condition

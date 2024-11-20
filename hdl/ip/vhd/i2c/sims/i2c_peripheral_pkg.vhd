@@ -21,27 +21,27 @@ package i2c_peripheral_pkg is
     constant address_different  : msg_type_t := new_msg_type("address_different");
     constant send_ack           : msg_type_t := new_msg_type("send_ack");
     constant got_ack            : msg_type_t := new_msg_type("got_ack");
-    constant send_byte          : msg_type_t := new_msg_type("send_byte");
     constant got_byte           : msg_type_t := new_msg_type("got_byte");
     constant got_stop           : msg_type_t := new_msg_type("got_stop");
 
     type i2c_peripheral_t is record
-        -- I2C peripheral address
-        address     : std_logic_vector(6 downto 0);
         -- private
         p_actor     : actor_t;
-        p_memory    : memory_t;
+        p_buffer    : buffer_t;
         p_logger    : logger_t;
+        -- I2C peripheral address
+        P_address   : std_logic_vector(6 downto 0);
     end record;
 
     constant i2c_peripheral_vc_logger : logger_t := get_logger("work:i2c_peripheral_vc");
 
     impure function new_i2c_peripheral_vc (
         name    : string;
-        address : std_logic_vector(6 downto 0);
-        memory  : memory_t;
+        address : std_logic_vector(6 downto 0) := b"1010101";
         logger  : logger_t := i2c_peripheral_vc_logger
     ) return i2c_peripheral_t;
+
+    impure function address(i2c_periph: i2c_peripheral_t) return std_logic_vector;
 
     procedure expect_message (
         signal net              : inout network_t;
@@ -66,18 +66,26 @@ package body i2c_peripheral_pkg is
 
     impure function new_i2c_peripheral_vc (
         name    : string;
-        address : std_logic_vector(6 downto 0);
-        memory  : memory_t;
+        address : std_logic_vector(6 downto 0) := b"1010101";
         logger  : logger_t := i2c_peripheral_vc_logger
     ) return i2c_peripheral_t is
+        variable buf : buffer_t;
     begin
+        -- I2C can address 256 bytes, so construct an internal buffer to reflect that
+        buf := allocate(new_memory, 256, name & "_MEM", 8, read_and_write);
+
         return (
-            address     => address,
             p_actor     => new_actor(name),
-            p_memory    => to_vc_interface(memory, logger),
-            p_logger    => logger
+            p_buffer    => buf,
+            p_logger    => logger,
+            p_address   => address
         );
     end;
+
+    impure function address (i2c_periph: i2c_peripheral_t) return std_logic_vector is
+    begin
+        return i2c_periph.p_address;
+    end function;
 
     procedure expect_message (
         signal net              : inout network_t;

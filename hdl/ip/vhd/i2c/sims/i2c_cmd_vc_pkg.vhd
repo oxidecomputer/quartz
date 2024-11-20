@@ -67,7 +67,7 @@ package body i2c_cmd_vc_pkg is
         variable is_read    : boolean;
         variable is_random  : boolean;
     begin
-        -- breaking down our type since we can't push custom types in VUnit
+        -- breaking down our type since we can't push enums in VUnit
         is_read     := false when cmd.op = WRITE else true;
         is_random   := true when cmd.op = RANDOM_READ else false;
         push(msg, is_read);
@@ -76,7 +76,6 @@ package body i2c_cmd_vc_pkg is
         push(msg, cmd.reg);
         push(msg, cmd.len);
         send(net, i2c_cmd_vc.p_actor, msg);
-        -- wait_until_idle(net, i2c_cmd_vc.p_actor);
     end;
 
 

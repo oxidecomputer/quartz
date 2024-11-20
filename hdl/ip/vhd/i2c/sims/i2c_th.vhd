@@ -36,9 +36,15 @@ architecture th of i2c_th is
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
-    -- I2C interface
-    signal scl_tristate     : tristate;
-    signal sda_tristate     : tristate;
+    -- I2C interfaces
+    signal ctrl_scl_tristate    : tristate;
+    signal ctrl_sda_tristate    : tristate;
+    signal periph_scl_tristate  : tristate;
+    signal periph_sda_tristate  : tristate;
+
+    -- I2C bus
+    signal scl  : std_logic;
+    signal sda  : std_logic;
 
     -- command interface
     signal command          : cmd_t;
@@ -64,8 +70,8 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
-            scl_if          => scl_tristate,
-            sda_if          => sda_tristate,
+            scl_if          => ctrl_scl_tristate,
+            sda_if          => ctrl_sda_tristate,
             cmd             => command,
             cmd_valid       => command_valid,
             core_ready      => core_ready,
@@ -88,8 +94,8 @@ begin
             i2c_peripheral_vc => i2c_peripheral
         )
         port map (
-            scl => scl_tristate.i,
-            sda => sda_tristate.i
+            scl_if  => periph_scl_tristate,
+            sda_if  => periph_sda_tristate
         );
 
     tx_source_vc : entity work.basic_source
@@ -114,11 +120,40 @@ begin
         data    => rx_data_stream.data
     );
 
-    -- pull-up the tristated pin to simulate the on-board pull-up resistors
     i2c_tristates: process(all)
     begin
-        scl_tristate.i <= scl_tristate.o when scl_tristate.oe else 'H';
-        sda_tristate.i <= sda_tristate.o when sda_tristate.oe else 'H';
+        if ctrl_scl_tristate.oe = '1' and periph_scl_tristate.oe = '0' then
+            -- controller has line
+            scl <= ctrl_scl_tristate.o;
+        elsif ctrl_scl_tristate.oe = '0' and periph_scl_tristate.oe = '1' then
+            -- peripheral has line
+            scl <= periph_scl_tristate.o;
+        elsif ctrl_scl_tristate.oe = '1' and periph_scl_tristate.oe = '1' then
+            -- contention
+            scl <= 'Z';
+        else
+            -- line floats to pull-up
+            scl <= '1';
+        end if;
+
+        if ctrl_sda_tristate.oe = '1' and periph_sda_tristate.oe = '0' then
+            -- controller has line
+            sda <= ctrl_sda_tristate.o;
+        elsif ctrl_sda_tristate.oe = '0' and periph_sda_tristate.oe = '1' then
+            -- peripheral has line
+            sda <= periph_sda_tristate.o;
+        elsif ctrl_sda_tristate.oe = '1' and periph_sda_tristate.oe = '1' then
+            -- contention
+            sda <= 'Z';
+        else
+            -- line floats to pull-up
+            sda <= '1';
+        end if;
+
+        ctrl_scl_tristate.i     <= scl;
+        ctrl_sda_tristate.i     <= sda;
+        periph_scl_tristate.i   <= scl;
+        periph_sda_tristate.i   <= sda;
     end process;
 
 end th;

@@ -50,14 +50,16 @@ begin
                 end loop;
                 ready <= '1';
                 -- wait for a clk rising edge to sample valid
-                wait until ready = '1' and rising_edge(clk);
-                if valid = '1' then
-                    reply_msg := new_msg;
-                    push_std_ulogic_vector(reply_msg, data);
-                    reply(net, msg, reply_msg);
-                    ready <= '0';
-                end if;
+                wait until valid = '1' and rising_edge(clk);
+                -- if valid = '1' then
+                reply_msg := new_msg;
+                push_std_ulogic_vector(reply_msg, data);
+                reply(net, msg, reply_msg);
                 ready <= '0';
+                exit;
+                -- end if;
+
+                -- ready <= '0';
                 exit;
             end loop;
         else
