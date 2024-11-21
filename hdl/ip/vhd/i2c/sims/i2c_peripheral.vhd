@@ -11,6 +11,7 @@ use ieee.numeric_std.all;
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
+    context vunit_lib.vc_context;
 use vunit_lib.sync_pkg.all;
 
 use work.tristate_if_pkg.all;
@@ -42,23 +43,21 @@ architecture model of i2c_peripheral is
 
     signal state    : state_t := IDLE;
 
-    signal start_condition  : std_logic                     := '0';
-    signal stop_condition   : std_logic                     := '0';
+    signal start_condition  : boolean                     := FALSE;
+    signal stop_condition   : boolean                     := FALSE;
     signal sda_last         : std_logic                     := '1';
     signal rx_data          : std_logic_vector(7 downto 0)  := (others => '0');
     signal rx_bit_count     : unsigned(3 downto 0)          := (others => '0');
     signal rx_done          : std_logic                     := '0';
     signal rx_ackd          : boolean                       := FALSE;
-    signal tx_data          : std_logic_vector(7 downto 0)  := (others => '0');
     signal tx_bit_count     : unsigned(3 downto 0)          := (others => '0');
     signal tx_done          : std_logic                     := '0';
-
-    signal in_receiving_state       : boolean := FALSE;
-    signal in_transmitting_state    : boolean := FALSE;
 
     signal scl_oe : std_logic := '0';
     signal sda_oe : std_logic := '0';
 
+    signal reg_addr     : unsigned(7 downto 0)  := (others => '0');
+    signal is_addr_set  : boolean               := FALSE;
 begin
     -- I2C interface is open-drain
     scl_if.o    <= '0';
@@ -67,8 +66,8 @@ begin
     scl_if.oe   <= scl_oe;
     sda_if.oe   <= sda_oe;
 
-    start_condition  <= '1' when sda_last = '1' and sda_if.i = '0' and scl_if.i = '1' else '0';
-    stop_condition   <= '1' when sda_last = '0' and sda_if.i = '1' and scl_if.i = '1' else '0';
+    start_condition  <= sda_last = '1' and sda_if.i = '0' and scl_if.i = '1';
+    stop_condition   <= sda_last = '0' and sda_if.i = '1' and scl_if.i = '1';
 
     -- message_handler: process
     --     variable msg_type               : msg_type_t;
@@ -88,6 +87,7 @@ begin
     transaction_sm: process
         variable event_msg  : msg_t;
         variable is_read    : boolean := FALSE;
+        variable stop_during_write  : boolean := FALSE;
     begin
         -- IDLE: wait for a START
         wait on start_condition;
@@ -97,7 +97,6 @@ begin
 
         -- GET_BYTE: check address and acknowledge appropriately
         wait on rx_done;
-        wait until falling_edge(scl_if.i);
         if rx_data(7 downto 1) = address(i2c_peripheral_vc) then
             state       <= SEND_ACK;
             is_read     := rx_data(0) = '1';
@@ -110,6 +109,7 @@ begin
         end if;
 
         -- SEND_ACK/NACK: acknowledge the START byte
+        wait on tx_done;
         wait until falling_edge(scl_if.i);
         if state = SEND_ACK then
             if is_read then
@@ -121,7 +121,7 @@ begin
             -- NACK'd
             state   <= GET_STOP;
         end if;
-        wait until rising_edge(scl_if.i);
+        -- wait until rising_edge(scl_if.i);
 
         if is_read then
             -- loop to respond to a controller read request
@@ -137,18 +137,52 @@ begin
                 -- the loop condition needs this to realize when state gets set to GET_STOP
                 wait for 1 ns;
             end loop;
+        else
+            -- loop to respond to a controller write request
+            while state /= GET_STOP loop
+                if stop_condition then
+                    state   <= GET_STOP;
+                    -- the loop condition needs this to realize when state gets set to GET_STOP
+                    wait for 1 ns;
+                end if;
+
+                -- GET_BYTE: get the byte and then send an acknowledge
+                wait on rx_done;
+                state   <= GET_STOP when stop_condition else SEND_ACK;
+                -- the loop condition needs this to realize when state gets set to GET_STOP
+                wait for 1 ns;
+
+                if state /= GET_STOP then
+                    wait on tx_done;
+                    wait until falling_edge(scl_if.i);
+                    state       <= GET_BYTE;
+
+                    if is_addr_set then
+                        write_word(memory(i2c_peripheral_vc), to_integer(reg_addr), rx_data);
+                        event_msg   := new_msg(got_byte);
+                        send(net, i2c_peripheral_vc.p_actor, event_msg);
+                        reg_addr    <= reg_addr + 1;
+                    else
+                        is_addr_set <= TRUE;
+                        reg_addr    <= unsigned(rx_data);
+                    end if;
+                else
+                    stop_during_write   := TRUE;
+                end if;
+            end loop;
         end if;
 
         -- GET_STOP: wait for a STOP
-        wait on stop_condition;
+        wait until (stop_condition or stop_during_write);
         event_msg   := new_msg(got_stop);
         send(net, i2c_peripheral_vc.p_actor, event_msg);
         state       <= IDLE;
+        stop_during_write   := FALSE;
     end process;
 
-    in_receiving_state  <= state = GET_BYTE or state = GET_ACK;
     rx_done <= '1' when (state = GET_BYTE and rx_bit_count = 8) or 
-                        (state = GET_ACK and rx_bit_count = 1)
+                        (state = GET_ACK and rx_bit_count = 1) or
+                        stop_condition
                 else '0';
 
     receive_sm: process
@@ -156,49 +190,59 @@ begin
     begin
         wait until rising_edge(scl_if.i);
 
-        if rx_done then
-            rx_bit_count    <= (others => '0');
-        elsif state = GET_ACK then
+        if state = GET_ACK then
             -- '0' = ACK, '1' = NACK
             rx_ackd         <= TRUE when sda_if.i = '0' else FALSE;
-            rx_bit_count    <= to_unsigned(1, rx_bit_count'length);
         elsif state = GET_BYTE then
             data_next       := sda_if.i & rx_data(7 downto 1);
-            rx_bit_count    <= rx_bit_count + 1;            
         end if;
 
         rx_data <= data_next;
+
+        wait until falling_edge(scl_if.i);
+
+        if state = GET_ACK then
+            rx_bit_count    <= to_unsigned(1, rx_bit_count'length);
+        elsif state = GET_BYTE then
+            rx_bit_count    <= rx_bit_count + 1;
+        else
+            rx_bit_count    <= (others => '0');
+        end if;
     end process;
 
 
-    in_transmitting_state   <= state = SEND_ACK or state = SEND_NACK or state = SEND_BYTE;
     tx_done <= '1' when ((state = SEND_ACK or state = SEND_ACK) and tx_bit_count = 1) or 
                         (state = SEND_BYTE and tx_bit_count = 8)
                 else '0';
 
     transmit_sm: process
-        variable data_next  : std_logic_vector(7 downto 0)  := X"CC"; 
+        variable data_v  : std_logic_vector(7 downto 0)  := X"CC"; 
     begin
-        if tx_done then
-            tx_bit_count    <= (others => '0');
-        end if;
-
         wait until falling_edge(scl_if.i);
         -- delay the SDA transition to a bit after SCL falls to allow the controller to release SDA
-        wait for 25 ns;
-        
-        if tx_done then 
-            -- release bus
-            sda_oe          <= '0';
-        elsif state = SEND_ACK or state = SEND_NACK then
+        wait for 100 ns;
+        if state = SEND_ACK or state = SEND_NACK then
             sda_oe          <= '1' when state = SEND_ACK else '0';
-            tx_bit_count    <= to_unsigned(1, tx_bit_count'length);
         elsif state = SEND_BYTE then
-            sda_oe          <= not data_next(to_integer(tx_bit_count));
-            tx_bit_count    <= tx_bit_count + 1;
+            if tx_bit_count = 0 then
+                data_v := read_word(i2c_peripheral_vc.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
+            end if;
+            sda_oe          <= not data_v(to_integer(tx_bit_count));
+        else
+            -- release the bus
+            sda_oe          <= '0';
         end if;
 
         wait until rising_edge(scl_if.i);
+
+        -- update counter once bit has been sampled
+        if state = SEND_ACK or state = SEND_NACK then
+            tx_bit_count    <= to_unsigned(1, tx_bit_count'length);
+        elsif state = SEND_BYTE then
+            tx_bit_count    <= tx_bit_count + 1;
+        else
+            tx_bit_count    <= (others => '0');
+        end if;
 
     end process;
 

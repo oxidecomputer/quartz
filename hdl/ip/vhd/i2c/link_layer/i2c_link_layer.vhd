@@ -98,7 +98,7 @@ architecture rtl of i2c_link_layer is
         count_load      : std_logic;
         count_decr      : std_logic;
         count_clr       : std_logic;
-        sda_change      : std_logic;
+        sda_changed     : std_logic;
         ack_sending     : std_logic;
 
         -- interfaces
@@ -121,7 +121,7 @@ architecture rtl of i2c_link_layer is
         '0',            -- count_load
         '0',            -- count_decr
         '0',            -- count_clr
-        '0',            -- sda_change
+        '0',            -- sda_changed
         '0',            -- ack_sending
         (others => '0'),-- rx_data
         '0',            -- rx_data_valid
@@ -202,7 +202,7 @@ begin
         port map (
             clk     => clk,
             reset   => reset,
-            enable  => sm_reg.sda_change,
+            enable  => not sm_reg.sda_changed,
             strobe  => transition_sda
         );
 
@@ -240,11 +240,10 @@ begin
         v.rx_ack_valid  := '0';
         v.rx_data_valid := '0';
 
-        -- after a scl fedge sda should be updated
-        if scl_fedge = '1' and (sm_reg.state = BYTE_TX or 
-                                sm_reg.state = ACK_TX or 
-                                sm_reg.state = STOP_SDA) then
-            v.sda_change := '1';
+        if scl_fedge then
+            v.sda_changed := '0';
+        elsif transition_sda then
+            v.sda_changed := '1';
         end if;
 
         case sm_reg.state is
@@ -307,23 +306,22 @@ begin
                     -- data to transmit
                     v.state         := BYTE_TX;
                     v.tx_data       := tx_data;
-                    v.sda_change    := '1';
                 else
                     -- if nothing else, read
-                    v.state     := BYTE_RX;
+                    v.state         := BYTE_RX;
                 end if;
 
             -- Clock out a byte and then wait for an ACK
-            when BYTE_TX =>
-                if transition_sda = '1' and sm_reg.bits_shifted = 8 then
-                    v.state         := ACK_RX;
-                    v.sda_change    := '0';
-                    v.bits_shifted  := 0;
-                elsif transition_sda = '1' and sm_reg.sda_change = '1' then
-                    v.sda_oe        := not sm_reg.tx_data(0);
-                    v.tx_data       := '1' & sm_reg.tx_data(7 downto 1);
-                    v.sda_change    := '0';
-                    v.bits_shifted  := sm_reg.bits_shifted + 1;
+            when BYTE_TX =>                    
+                if transition_sda = '1' then
+                    if sm_reg.bits_shifted = 8 then
+                        v.state         := ACK_RX;
+                        v.bits_shifted  := 0;
+                    else
+                        v.sda_oe        := not sm_reg.tx_data(0);
+                        v.tx_data       := '1' & sm_reg.tx_data(7 downto 1);
+                        v.bits_shifted  := sm_reg.bits_shifted + 1;
+                    end if;
                 end if;
 
             -- See if the target ACKs
@@ -339,7 +337,6 @@ begin
             -- Clock in a byte and then send an ACK
             when BYTE_RX =>
                 v.sda_oe        := '0';
-                -- v.rx_data_valid := '0';
 
                 if sm_reg.bits_shifted = 8 then
                     v.state         := ACK_TX;
@@ -353,18 +350,16 @@ begin
             -- ACK the target
             when ACK_TX =>
                 -- at the first transition_sda pulse start sending the (N)ACK
-                if transition_sda = '1' and sm_reg.sda_change = '1' then
-                    v.sda_oe        := tx_ack;
-                    v.ack_sending   := '1';
-                    v.sda_change    := '0';
-                end if;
-
-                -- at the next transition point release the bus
-                if transition_sda = '1' and sm_reg.ack_sending = '1' then
-                    v.sda_oe        := '0';
-                    v.ack_sending   := '0';
-                    v.sda_change    := '0';
-                    v.state         := HANDLE_NEXT_PRE;
+                if transition_sda = '1' then
+                    if sm_reg.ack_sending = '0' then
+                        v.sda_oe        := tx_ack;
+                        v.ack_sending   := '1';
+                    else
+                        -- at the next transition point release the bus
+                        v.sda_oe        := '0';
+                        v.ack_sending   := '0';
+                        v.state         := HANDLE_NEXT_PRE;
+                    end if;
                 end if;
 
             -- drive SDA through final SCL cycle

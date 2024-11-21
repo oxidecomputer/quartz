@@ -113,12 +113,12 @@ begin
     reg_sm_next: process(all)
         variable v          : sm_reg_t;
         variable is_read    : std_logic;
+        variable txd_v      : std_logic_vector(7 downto 0);
+        variable txd_valid_v: std_logic;
     begin
         v       := sm_reg;
         is_read := '0' when sm_reg.cmd.op = WRITE else '1';
-
-        -- defaults
-        v.tx_byte_valid := '0';
+        txd_valid_v := '0';
 
         case sm_reg.state is
 
@@ -135,8 +135,8 @@ begin
 
             -- wait for link layer to finish START sequence and load up the address byte
             when WAIT_START =>
-                v.tx_byte       := sm_reg.cmd.addr & is_read;
-                v.tx_byte_valid := '1';
+                txd_v       := sm_reg.cmd.addr & is_read;
+                txd_valid_v := '1';
                 if ll_ready then
                     v.state         := WAIT_ADDR_ACK;
                 end if;
@@ -153,8 +153,8 @@ begin
                         else
                             v.state         := WAIT_WRITE_ACK;
                             -- load up the register address
-                            v.tx_byte       := sm_reg.cmd.reg;
-                            v.tx_byte_valid := '1';
+                            txd_v       := sm_reg.cmd.reg;
+                            txd_valid_v := '1';
                         end if;
                     else
                         -- TODO: address nack error
@@ -176,8 +176,6 @@ begin
             when WRITE =>
                 if tx_st_if.valid then
                     v.state         := WAIT_WRITE_ACK;
-                    v.tx_byte       := tx_st_if.data;
-                    v.tx_byte_valid := '1';
                 end if;
 
             -- take action based off of the operation type and the ACK
@@ -217,6 +215,9 @@ begin
         -- next state logic
         v.do_start  := '1' when v.state = START else '0';
         v.do_stop   := '1' when v.state = STOP else '0';
+
+        v.tx_byte       := txd_v when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK else tx_st_if.data;
+        v.tx_byte_valid := txd_valid_v when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK else tx_st_if.valid;
 
         sm_reg_next <= v;
     end process;

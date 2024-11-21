@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Wed Nov 20 23:14:40 2024
+[*] Thu Nov 21 22:01:19 2024
 [*]
-[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_tb.read_one_byte_f5003d4ca7a772188d7e5908ca58541f5b186a63/nvc/i2c_tb.fst"
-[dumpfile_mtime] "Wed Nov 20 23:09:58 2024"
-[dumpfile_size] 3731
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_tb.write_one_byte_45371635dc90e325712a46a4289140589cf4a62c/nvc/i2c_tb.fst"
+[dumpfile_mtime] "Thu Nov 21 21:54:59 2024"
+[dumpfile_size] 3991
 [savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/i2c/sims/tb_i2c.gtkw"
-[timestart] 0
+[timestart] 64455600000
 [size] 2688 1283
-[pos] 1183 23
-*-34.626644 73844000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-25.367004 64660000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] i2c_tb.
 [treeopen] i2c_tb.th.
 [treeopen] i2c_tb.th.dut.i2c_link_layer_inst.
@@ -67,10 +67,9 @@ i2c_tb.th.dut.i2c_link_layer_inst.scl_toggle
 i2c_tb.th.dut.i2c_link_layer_inst.scl_redge
 i2c_tb.th.dut.i2c_link_layer_inst.scl_fedge
 i2c_tb.th.dut.i2c_link_layer_inst.transition_sda
-i2c_tb.th.dut.i2c_link_layer_inst.sm_reg.sda_change
 @200
 -Transmit Stream
-@28
+@29
 i2c_tb.th.dut.i2c_link_layer_inst.tx_data_valid
 @22
 i2c_tb.th.dut.i2c_link_layer_inst.tx_data[7:0]
@@ -127,15 +126,14 @@ i2c_tb.th.peripheral.scl_if.oe
 @28
 i2c_tb.th.peripheral.sda_if.i
 i2c_tb.th.peripheral.sda_if.o
-@29
 i2c_tb.th.peripheral.sda_if.oe
-@28
-i2c_tb.th.peripheral.sda_last
 i2c_tb.th.peripheral.state
 i2c_tb.th.peripheral.start_condition
 i2c_tb.th.peripheral.stop_condition
-i2c_tb.th.peripheral.in_receiving_state
-i2c_tb.th.peripheral.in_transmitting_state
+i2c_tb.th.peripheral.is_addr_set
+@22
+i2c_tb.th.peripheral.reg_addr[7:0]
+@28
 i2c_tb.th.peripheral.rx_done
 @22
 i2c_tb.th.peripheral.rx_data[7:0]
@@ -143,7 +141,6 @@ i2c_tb.th.peripheral.rx_bit_count[3:0]
 @28
 i2c_tb.th.peripheral.tx_done
 @22
-i2c_tb.th.peripheral.tx_data[7:0]
 i2c_tb.th.peripheral.tx_bit_count[3:0]
 [pattern_trace] 1
 [pattern_trace] 0

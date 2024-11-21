@@ -94,7 +94,9 @@ begin
             i2c_peripheral_vc => i2c_peripheral
         )
         port map (
-            scl_if  => periph_scl_tristate,
+            scl_if.i  => periph_scl_tristate.i,
+            scl_if.o  => periph_scl_tristate.o,
+            scl_if.oe  => periph_scl_tristate.oe,
             sda_if  => periph_sda_tristate
         );
 
@@ -120,7 +122,12 @@ begin
         data    => rx_data_stream.data
     );
 
-    i2c_tristates: process(all)
+    -- wire the bus to the tristate inputs
+    ctrl_scl_tristate.i     <= scl;
+    periph_scl_tristate.i   <= scl;
+    ctrl_sda_tristate.i     <= sda;
+    periph_sda_tristate.i   <= sda;
+    i2c_bus_resolver: process(all)
     begin
         if ctrl_scl_tristate.oe = '1' and periph_scl_tristate.oe = '0' then
             -- controller has line
@@ -149,11 +156,6 @@ begin
             -- line floats to pull-up
             sda <= '1';
         end if;
-
-        ctrl_scl_tristate.i     <= scl;
-        ctrl_sda_tristate.i     <= sda;
-        periph_scl_tristate.i   <= scl;
-        periph_sda_tristate.i   <= sda;
     end process;
 
 end th;

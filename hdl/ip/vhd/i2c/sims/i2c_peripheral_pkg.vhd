@@ -41,7 +41,9 @@ package i2c_peripheral_pkg is
         logger  : logger_t := i2c_peripheral_vc_logger
     ) return i2c_peripheral_t;
 
-    impure function address(i2c_periph: i2c_peripheral_t) return std_logic_vector;
+    impure function address (i2c_periph: i2c_peripheral_t) return std_logic_vector;
+    impure function buf (i2c_periph: i2c_peripheral_t) return buffer_t;
+    impure function memory (i2c_periph: i2c_peripheral_t) return memory_t;
 
     procedure expect_message (
         signal net              : inout network_t;
@@ -58,6 +60,13 @@ package i2c_peripheral_pkg is
         signal net      : inout network_t;
         constant vc     : i2c_peripheral_t;
         variable ack    : out boolean;
+    );
+
+    procedure check_written_byte (
+        signal net      : inout network_t;
+        constant vc     : i2c_peripheral_t;
+        variable data   : std_logic_vector;
+        variable addr   : unsigned;
     );
 
 end package;
@@ -85,6 +94,16 @@ package body i2c_peripheral_pkg is
     impure function address (i2c_periph: i2c_peripheral_t) return std_logic_vector is
     begin
         return i2c_periph.p_address;
+    end function;
+
+    impure function buf (i2c_periph: i2c_peripheral_t) return buffer_t is
+    begin
+        return i2c_periph.p_buffer;
+    end function;
+
+    impure function memory (i2c_periph: i2c_peripheral_t) return memory_t is
+    begin
+        return i2c_periph.p_buffer.p_memory_ref;
     end function;
 
     procedure expect_message (
@@ -125,6 +144,21 @@ package body i2c_peripheral_pkg is
             elsif message_type(msg) = address_different then
                 ack := false;
             end if;
+        end if;
+    end procedure;
+
+    procedure check_written_byte (
+        signal net      : inout network_t;
+        constant vc     : i2c_peripheral_t;
+        variable data   : std_logic_vector;
+        variable addr   : unsigned;
+    ) is
+        variable msg    : msg_t;
+    begin
+        set_expected_word(memory(vc), to_integer(addr), data);
+        receive(net, vc.p_actor, msg);
+        if message_type(msg) = got_byte then
+            check_expected_was_written(buf(vc));
         end if;
     end procedure;
 
