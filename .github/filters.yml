@@ -1,4 +1,5 @@
 cobble:
+  - .github/**/*
   - 'tools/site_cobble/**/*'
   - 'vnd/**/*'
   - 'hdl/ip/bsv/**/*'
@@ -11,6 +12,7 @@ cobble:
   - 'hdl/projects/ulx3s/**/*'
             
 buck2:
+  - .github/**/*
   - 'vnd/xpm/**/*'
   - 'prelude/**/*'
   - 'toolchains/**/*'
