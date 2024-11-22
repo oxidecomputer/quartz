@@ -67,26 +67,7 @@ begin
                 check_false(ack, "Peripheral did not NACK incorrect address");
                 -- transaction is over, receive STOP event
                 wait for 10 us;
-            elsif run("write_one_byte") then
-                expected_addr   := X"9E"; -- arbitrary for the test
-                expected_data   := X"A5";
-
-                command := (
-                    op      => WRITE,
-                    addr    => address(I2C_PERIPHERAL_VC),
-                    reg     => std_logic_vector(expected_addr), 
-                    len     => to_unsigned(1, command.len'length)
-                );
-                push_i2c_cmd(net, I2C_CMD_VC, command);
-
-                start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
-                check_true(ack, "Peripheral did not ACK correct address");
-
-                push_basic_stream(net, TX_DATA_SOURCE_VC, expected_data);
-                check_written_byte(net, I2C_PERIPHERAL_VC, expected_data, expected_addr);
-
-                expect_stop(net, I2C_PERIPHERAL_VC);
-            elsif run("read_one_byte") then
+            elsif run("write_and_read_one_byte") then
                 -- write some data in
                 expected_addr   := X"9E"; -- arbitrary for the test
                 expected_data   := X"A5";
@@ -123,6 +104,9 @@ begin
                 check_equal(data, expected_data, "Expected read data to match");
 
                 expect_stop(net, I2C_PERIPHERAL_VC);
+            elsif run("write_and_read_many_bytes") then
+
+            end if;
             end if;
         end loop;
 
