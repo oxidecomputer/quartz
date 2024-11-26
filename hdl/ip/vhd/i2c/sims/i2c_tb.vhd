@@ -44,13 +44,13 @@ begin
     bench: process
         alias reset is << signal th.reset : std_logic >>;
 
-        variable msg        : msg_t;
         variable command    : cmd_t;
         variable ack        : boolean := false;
 
         variable data           : std_logic_vector(7 downto 0);
         variable expected_addr  : unsigned(7 downto 0);
         variable expected_data  : std_logic_vector(7 downto 0);
+        variable byte_len       : natural;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -66,12 +66,13 @@ begin
                 start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
                 check_false(ack, "Peripheral did not NACK incorrect address");
                 -- transaction is over, receive STOP event
-                wait for 10 us;
+                expect_stop(net, I2C_PERIPHERAL_VC);
             elsif run("write_and_read_one_byte") then
-                -- write some data in
-                expected_addr   := X"9E"; -- arbitrary for the test
+                -- arbitrary for the test
+                expected_addr   := X"9E";
                 expected_data   := X"A5";
 
+                -- write some data in
                 command := (
                     op      => WRITE,
                     addr    => address(I2C_PERIPHERAL_VC),
@@ -92,7 +93,7 @@ begin
                 command := (
                     op      => READ,
                     addr    => address(I2C_PERIPHERAL_VC),
-                    reg     => std_logic_vector(expected_addr),
+                    reg     => X"--", -- READ uses internal address set by a WRITE to the peripheral
                     len     => to_unsigned(1, command.len'length)
                 );
                 push_i2c_cmd(net, I2C_CMD_VC, command);
@@ -105,8 +106,61 @@ begin
 
                 expect_stop(net, I2C_PERIPHERAL_VC);
             elsif run("write_and_read_many_bytes") then
+                -- arbitrary for the test
+                expected_addr   := X"00";
+                byte_len        := 8;
 
-            end if;
+                -- write some data in
+                command := (
+                    op      => WRITE,
+                    addr    => address(I2C_PERIPHERAL_VC),
+                    reg     => std_logic_vector(expected_addr), 
+                    len     => to_unsigned(byte_len, command.len'length)
+                );
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+
+                start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
+                check_true(ack, "Peripheral did not ACK correct address");
+
+                for byte_idx in 0 to byte_len - 1 loop
+                    data            := std_logic_vector(to_unsigned(byte_idx, data'length));
+                    expected_addr   := to_unsigned(byte_idx, expected_addr'length);
+                    push_basic_stream(net, TX_DATA_SOURCE_VC, data);
+                end loop;
+
+                for byte_idx in 0 to byte_len - 1 loop
+                    data            := std_logic_vector(to_unsigned(byte_idx, data'length));
+                    expected_addr   := to_unsigned(byte_idx, expected_addr'length);
+                    check_written_byte(net, I2C_PERIPHERAL_VC, data, expected_addr);
+                end loop;
+
+                expect_stop(net, I2C_PERIPHERAL_VC);
+
+                -- read it back out
+                expected_addr   := X"00";
+                command := (
+                    op      => RANDOM_READ,
+                    addr    => address(I2C_PERIPHERAL_VC),
+                    reg     => std_logic_vector(expected_addr),
+                    len     => to_unsigned(byte_len, command.len'length)
+                );
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+
+                -- ACK WRITE portion of the random read
+                start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
+                check_true(ack, "Peripheral did not ACK correct address");
+
+                -- ACK READ portion of the random read
+                start_byte_ack(net, I2C_PERIPHERAL_VC, ack);
+                check_true(ack, "Peripheral did not ACK correct address");
+
+                for byte_idx in 0 to byte_len - 1 loop
+                    expected_data := std_logic_vector(to_unsigned(byte_idx, expected_data'length));
+                    pop_basic_stream(net, RX_DATA_SINK_VC, data);
+                    check_equal(data, expected_data, "Expected read data to match");
+                end loop;
+
+                expect_stop(net, I2C_PERIPHERAL_VC);
             end if;
         end loop;
 

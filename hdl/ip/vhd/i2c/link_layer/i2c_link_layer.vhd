@@ -73,6 +73,7 @@ architecture rtl of i2c_link_layer is
         WAIT_TBUF,
         START_SETUP,
         START_HOLD,
+        WAIT_REPEAT_START,
         HANDLE_NEXT_PRE,
         HANDLE_NEXT,
         BYTE_TX,
@@ -100,6 +101,7 @@ architecture rtl of i2c_link_layer is
         count_clr       : std_logic;
         sda_changed     : std_logic;
         ack_sending     : std_logic;
+        scl_fedge_seen  : std_logic;
 
         -- interfaces
         rx_data         : std_logic_vector(7 downto 0);
@@ -123,6 +125,7 @@ architecture rtl of i2c_link_layer is
         '0',            -- count_clr
         '0',            -- sda_changed
         '0',            -- ack_sending
+        '0',            -- scl_fedge_seen
         (others => '0'),-- rx_data
         '0',            -- rx_data_valid
         (others => '0'),-- tx_data
@@ -270,9 +273,18 @@ begin
                     v.count_decr    := '1';
                 end if;
 
+            when WAIT_REPEAT_START =>
+                if not sm_reg.scl_fedge_seen then
+                    v.scl_fedge_seen    := scl_fedge;
+                elsif scl_redge then
+                    v.state         := START_SETUP;
+                    v.scl_active    := '0';
+                end if;
+
             -- In the event of a repeated START account for setup requirements
             when START_SETUP =>
                 v.sda_oe    := '0';
+
                 if sm_count_done then
                     v.state         := START_HOLD;
                     v.counter       := START_SETUP_HOLD_TICKS;
@@ -297,9 +309,9 @@ begin
             when HANDLE_NEXT =>
                 if tx_start then
                     -- A repeated start was issued mid-transaction
-                    v.state         := START_SETUP;
-                    v.counter       := START_SETUP_HOLD_TICKS;
-                    v.count_load    := '1';
+                    v.state             := WAIT_REPEAT_START;
+                    v.counter           := START_SETUP_HOLD_TICKS;
+                    v.count_load        := '1';
                 elsif tx_stop then
                     v.state         := STOP_SDA;
                 elsif tx_data_valid then
@@ -379,8 +391,7 @@ begin
 
             when STOP_SETUP =>
                 if sm_count_done then
-                    v.state         := IDLE;
-                    v.sda_oe        := '0';
+                    v := SM_REG_RESET;
                 else
                     v.count_decr    := '1';
                 end if;

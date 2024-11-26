@@ -111,13 +111,13 @@ begin
     );
 
     reg_sm_next: process(all)
-        variable v          : sm_reg_t;
-        variable is_read    : std_logic;
-        variable txd_v      : std_logic_vector(7 downto 0);
-        variable txd_valid_v: std_logic;
+        variable v              : sm_reg_t;
+        variable is_read        : std_logic;
+        variable txd_v          : std_logic_vector(7 downto 0);
+        variable txd_valid_v    : std_logic;
     begin
         v       := sm_reg;
-        is_read := '0' when sm_reg.cmd.op = WRITE else '1';
+        is_read := '1' when sm_reg.cmd.op = READ or sm_reg.in_random_read else '0';
         txd_valid_v := '0';
 
         case sm_reg.state is
@@ -131,14 +131,14 @@ begin
 
             -- single cycle state to initiate a START
             when START =>
-                v.state         := WAIT_START;
+                v.state     := WAIT_START;
 
             -- wait for link layer to finish START sequence and load up the address byte
             when WAIT_START =>
                 txd_v       := sm_reg.cmd.addr & is_read;
                 txd_valid_v := '1';
                 if ll_ready then
-                    v.state         := WAIT_ADDR_ACK;
+                    v.state := WAIT_ADDR_ACK;
                 end if;
 
             -- wait for address byte to have been sent and for the peripheral to ACK
@@ -147,11 +147,11 @@ begin
                     if ll_ackd then
                         v.bytes_done := (others => '0');
                         if sm_reg.cmd.op = Read or sm_reg.in_random_read then
-                            v.state         := READ;
+                            v.state     := READ;
                             -- nack after the first byte when only reading one byte
-                            v.do_ack        := '0' when sm_reg.cmd.len = 1 else '1';
+                            v.do_ack    := '0' when sm_reg.cmd.len = 1 else '1';
                         else
-                            v.state         := WAIT_WRITE_ACK;
+                            v.state     := WAIT_WRITE_ACK;
                             -- load up the register address
                             txd_v       := sm_reg.cmd.reg;
                             txd_valid_v := '1';

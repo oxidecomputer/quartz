@@ -33,9 +33,11 @@ architecture model of i2c_peripheral is
 
     type state_t is (
         IDLE,
+        START,
         SEND_ACK,
         SEND_NACK,
         SEND_BYTE,
+        GET_START_BYTE,
         GET_BYTE,
         GET_ACK,
         GET_STOP
@@ -71,14 +73,6 @@ begin
     start_condition  <= sda_last = '1' and sda_if.i = '0' and scl_if.i = '1';
     stop_condition   <= sda_last = '0' and sda_if.i = '1' and scl_if.i = '1';
 
-    -- message_handler: process
-    --     variable msg_type               : msg_type_t;
-    --     variable request_msg, reply_msg : msg_t;
-    -- begin
-    --     receive(net, i2c_peripheral_vc.p_actor, request_msg);
-    --     msg_type := message_type(request_msg);
-    -- end process;
-
     -- sample SDA regularly to catch transitions
     sda_monitor: process
     begin
@@ -87,100 +81,96 @@ begin
     end process;
 
     transaction_sm: process
-        variable event_msg  : msg_t;
-        variable is_read    : boolean := FALSE;
-        variable stop_during_write  : boolean := FALSE;
+        variable event_msg          : msg_t;
+        variable is_read            : boolean               := FALSE;
+        variable reg_addr_v         : unsigned(7 downto 0)  := (others => '0');
+        variable stop_during_write  : boolean               := FALSE;
     begin
-        -- IDLE: wait for a START
-        wait on start_condition;
-        event_msg   := new_msg(got_start);
-        send(net, i2c_peripheral_vc.p_actor, event_msg);
-        state   <= GET_BYTE;
+        case state is
 
-        -- GET_BYTE: check address and acknowledge appropriately
-        wait on rx_done;
-        if rx_data(7 downto 1) = address(i2c_peripheral_vc) then
-            state       <= SEND_ACK;
-            is_read     := rx_data(0) = '1';
-            event_msg   := new_msg(address_matched);
-            send(net, i2c_peripheral_vc.p_actor, event_msg);
-        else
-            state       <= SEND_NACK;
-            event_msg   := new_msg(address_different);
-            send(net, i2c_peripheral_vc.p_actor, event_msg);
-        end if;
+            when IDLE =>
+                wait on start_condition;
+                state <= START;
+            
+            when START =>
+                event_msg   := new_msg(got_start);
+                send(net, i2c_peripheral_vc.p_actor, event_msg);
+                state       <= GET_START_BYTE;
 
-        -- SEND_ACK/NACK: acknowledge the START byte
-        wait until falling_edge(scl_if.i);
-        if state = SEND_ACK then
-            if is_read then
-                state   <= SEND_BYTE;
-                wait for 1 ns;
-            else
-                state   <= GET_BYTE;
-            end if;
-        else
-            -- NACK'd
-            state   <= GET_STOP;
-        end if;
-
-        if is_read then
-            -- loop to respond to a controller read request
-            while state /= GET_STOP loop
-                -- SEND_BYTE: send the byte and then wait for an acknowledge
-                wait on tx_done;
-                wait until falling_edge(scl_if.i);
-                state   <= GET_ACK;
-
-                -- GET_ACK: see if the controller wants to continue reading or is finished
+            when GET_START_BYTE =>
                 wait on rx_done;
-                state   <= SEND_BYTE when rx_ackd else GET_STOP;
-                -- the loop condition needs this to realize when state gets set to GET_STOP
-                wait for 1 ns;
-            end loop;
-        else
-            -- loop to respond to a controller write request
-            while state /= GET_STOP loop
-                if stop_condition then
-                    state   <= GET_STOP;
-                    -- the loop condition needs this to realize when state gets set to GET_STOP
-                    wait for 1 ns;
+                if rx_data(7 downto 1) = address(i2c_peripheral_vc) then
+                    state       <= SEND_ACK;
+                    is_read     := rx_data(0) = '1';
+                    event_msg   := new_msg(address_matched);
+                    send(net, i2c_peripheral_vc.p_actor, event_msg);
+                else
+                    state       <= SEND_NACK;
+                    event_msg   := new_msg(address_different);
+                    send(net, i2c_peripheral_vc.p_actor, event_msg);
                 end if;
 
-                -- GET_BYTE: get the byte and then send an acknowledge
-                wait until rx_done or stop_condition;
-                state   <= GET_STOP when stop_condition else SEND_ACK;
-                -- the loop condition needs this to realize when state gets set to GET_STOP
-                wait for 1 ns;
+            when GET_BYTE =>
+                wait until rx_done or start_condition or stop_condition;
 
-                if state /= GET_STOP then
-                    wait on tx_done;
-                    wait until falling_edge(scl_if.i);
-                    state       <= GET_BYTE;
+                if start_condition then
+                    state   <= START;
+                elsif stop_condition then
+                    state               <= GET_STOP;
+                    stop_during_write   := TRUE;
+                else
+                    state   <= SEND_ACK;
+
+                    if addr_incr then
+                        reg_addr_v  := reg_addr + 1;
+                    end if;
 
                     if addr_set then
-                        write_word(memory(i2c_peripheral_vc), to_integer(reg_addr), rx_data);
+                        write_word(memory(i2c_peripheral_vc), to_integer(reg_addr_v), rx_data);
                         event_msg   := new_msg(got_byte);
                         send(net, i2c_peripheral_vc.p_actor, event_msg);
-                        if addr_incr then 
-                            reg_addr    <= reg_addr + 1;
-                        end if;
+                        addr_incr   <= TRUE;
                     else
                         addr_set    <= TRUE;
-                        reg_addr    <= unsigned(rx_data);
+                        reg_addr_v  := unsigned(rx_data);
                     end if;
-                else
-                    stop_during_write   := TRUE;
                 end if;
-            end loop;
-        end if;
+                
+            when SEND_ACK =>
+                wait until falling_edge(scl_if.i) and tx_done;
+                if is_read then
+                    state   <= SEND_BYTE;
+                else
+                    state   <= GET_BYTE;
+                end if;
 
-        -- GET_STOP: wait for a STOP
-        wait until (stop_condition or stop_during_write);
-        event_msg           := new_msg(got_stop);
-        send(net, i2c_peripheral_vc.p_actor, event_msg);
-        state               <= IDLE;
-        stop_during_write   := FALSE;
+            when SEND_NACK =>
+                wait until falling_edge(scl_if.i);
+                state   <= GET_STOP;
+
+            when SEND_BYTE =>
+                wait until falling_edge(scl_if.i) and tx_done;
+                reg_addr_v  := reg_addr + 1;
+                state       <= GET_ACK;
+
+            when GET_ACK =>
+                wait on rx_done;
+                state   <= SEND_BYTE when rx_ackd else GET_STOP;
+
+            when GET_STOP =>
+                wait until (stop_condition or stop_during_write);
+                event_msg           := new_msg(got_stop);
+                send(net, i2c_peripheral_vc.p_actor, event_msg);
+                state               <= IDLE;
+                addr_set            <= FALSE;
+                addr_incr           <= FALSE;
+                stop_during_write   := FALSE;
+
+        end case;
+
+        reg_addr    <= reg_addr_v;
+
+        wait for 1 fs;
     end process;
 
     receive_sm: process
@@ -191,18 +181,19 @@ begin
             -- '0' = ACK, '1' = NACK
             rx_ackd         <= TRUE when sda_if.i = '0' else FALSE;
             rx_bit_count    <= to_unsigned(1, rx_bit_count'length);
-        elsif state = GET_BYTE then
+        elsif state = GET_START_BYTE or state = GET_BYTE then
             rx_data         <= sda_if.i & rx_data(7 downto 1);
             rx_bit_count    <= rx_bit_count + 1;
         end if;
 
-        wait until falling_edge(scl_if.i) or stop_condition;
-        if stop_condition then
+        wait until falling_edge(scl_if.i) or start_condition or stop_condition;
+        if not falling_edge(scl_if.i) then
             rx_bit_count    <= (others => '0');
             wait until falling_edge(scl_if.i);
         end if;
 
-        if (state = GET_BYTE and rx_bit_count = 8) or (state = GET_ACK and rx_bit_count = 1) then
+        if ((state = GET_START_BYTE or state = GET_BYTE) and rx_bit_count = 8) or
+            (state = GET_ACK and rx_bit_count = 1) then
             rx_done         <= TRUE;
             rx_bit_count    <= (others => '0');
         end if;
@@ -235,7 +226,7 @@ begin
 
         wait until rising_edge(scl_if.i);
 
-        if ((state = SEND_ACK or state = SEND_ACK) and tx_bit_count = 1) or
+        if ((state = SEND_ACK or state = SEND_NACK) and tx_bit_count = 1) or
             (state = SEND_BYTE and tx_bit_count = 8) then
             tx_done         <= TRUE;
             tx_bit_count    <= (others => '0');
