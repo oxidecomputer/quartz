@@ -15,7 +15,7 @@ library vunit_lib;
     context vunit_lib.vc_context;
 use vunit_lib.sync_pkg.all;
 
-use work.i2c_core_pkg.all;
+use work.i2c_common_pkg.all;
 
 package i2c_cmd_vc_pkg is
 

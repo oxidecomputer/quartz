@@ -13,8 +13,8 @@ library vunit_lib;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
-use work.i2c_core_pkg.all;
-use work.i2c_link_layer_pkg.all;
+use work.i2c_common_pkg.all;
+use work.i2c_common_pkg.all;
 use work.tristate_if_pkg.all;
 use work.stream8_pkg;
 
@@ -22,7 +22,7 @@ use work.i2c_cmd_vc_pkg.all;
 use work.i2c_peripheral_pkg.all;
 use work.basic_stream_pkg.all;
 
-entity i2c_th is
+entity i2c_txn_layer_th is
     generic (
         tx_source       : basic_source_t;
         rx_sink         : basic_sink_t;
@@ -31,8 +31,7 @@ entity i2c_th is
     );
 end entity;
 
-architecture th of i2c_th is
-
+architecture th of i2c_txn_layer_th is
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
@@ -62,7 +61,7 @@ begin
     clk   <= not clk after 4 ns;
     reset <= '0' after 200 ns;
 
-    dut: entity work.i2c_core
+    dut: entity work.i2c_txn_layer
         generic map (
             CLK_PER_NS  => 8,
             MODE        => STANDARD

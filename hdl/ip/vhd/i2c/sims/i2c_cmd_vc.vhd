@@ -13,7 +13,7 @@ library vunit_lib;
     context vunit_lib.com_context;
 use vunit_lib.sync_pkg.all;
 
-use work.i2c_core_pkg.all;
+use work.i2c_common_pkg.all;
 use work.i2c_cmd_vc_pkg.all;
 
 entity i2c_cmd_vc is

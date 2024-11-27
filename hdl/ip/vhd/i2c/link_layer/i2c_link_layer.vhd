@@ -12,7 +12,7 @@ use work.stream8_pkg;
 use work.tristate_if_pkg.all;
 use work.time_pkg.all;
 
-use work.i2c_link_layer_pkg.all;
+use work.i2c_common_pkg.all;
 
 entity i2c_link_layer is
     generic (

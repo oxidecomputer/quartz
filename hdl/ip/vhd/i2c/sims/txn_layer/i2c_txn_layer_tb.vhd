@@ -18,22 +18,22 @@ use work.i2c_cmd_vc_pkg.all;
 use work.i2c_peripheral_pkg.all;
 use work.basic_stream_pkg.all;
 
-use work.i2c_core_pkg.all;
+use work.i2c_common_pkg.all;
 
-entity i2c_tb is
+entity i2c_txn_layer_tb is
     generic (
         runner_cfg : string
     );
 end entity;
 
-architecture tb of i2c_tb is
+architecture tb of i2c_txn_layer_tb is
     constant I2C_PERIPHERAL_VC  : i2c_peripheral_t  := new_i2c_peripheral_vc("I2C_PERIPH");
     constant TX_DATA_SOURCE_VC  : basic_source_t    := new_basic_source(8);
     constant RX_DATA_SINK_VC    : basic_sink_t      := new_basic_sink(8);
     constant I2C_CMD_VC         : i2c_cmd_vc_t      := new_i2c_cmd_vc;
 begin
 
-    th: entity work.i2c_th
+    th: entity work.i2c_txn_layer_th
         generic map (
             tx_source       => TX_DATA_SOURCE_VC,
             rx_sink         => RX_DATA_SINK_VC,
