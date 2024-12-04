@@ -76,7 +76,10 @@ begin
             rvalid <= '0';
         elsif rising_edge(clk) then
             -- bvalid set on every write,
-            -- cleared after bvalid && bready
+            -- The tranfer occurs when bvalid && bready
+            -- but we can simplify the clearing logic to only
+            -- look at bready since we don't care if we set bvalid to 0
+            -- if it was already a 0
             if awready then
                 bvalid <= '1';
             elsif bready then
