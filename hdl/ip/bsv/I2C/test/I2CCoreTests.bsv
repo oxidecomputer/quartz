@@ -135,7 +135,7 @@ module mkBench (Bench);
             endaction
         endseq
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-    endseq, command_r.op == Write);
+    endseq, command_r.op == Write && !dut.scl_stretch_timeout);
 
     FSM read_seq <- mkFSMWithPred(seq
         dut.send_command.put(command_r);
@@ -156,7 +156,7 @@ module mkBench (Bench);
         check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
         bytes_done  <= 0;
-    endseq, command_r.op == Read);
+    endseq, command_r.op == Read && !dut.scl_stretch_timeout);
 
     FSM rand_read_seq <- mkFSMWithPred(seq
         dut.send_command.put(command_r);
@@ -181,7 +181,7 @@ module mkBench (Bench);
         check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
         bytes_done  <= 0;
-    endseq, command_r.op == RandomRead);
+    endseq, command_r.op == RandomRead && !dut.scl_stretch_timeout);
 
     rule do_handle_stretch_timeout(dut.scl_stretch_timeout);
         write_seq.abort();
