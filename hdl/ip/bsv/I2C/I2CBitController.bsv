@@ -48,6 +48,9 @@ interface I2CBitController;
     interface Put#(Event) send;
     interface Get#(Event) receive;
 
+    // way of indicating when there is no bus activity
+    method Bool busy();
+
     // clock stretching information sent sideband from the state machine events
     method Bool scl_stretch_seen();
     method Bool scl_stretch_timeout();
@@ -155,14 +158,14 @@ module mkI2CBitController #(
     // After the delay we know SCL is being stretched if we aren't the ones
     // holding it low.
     (* fire_when_enabled *)
-    rule do_sample_scl_stretch(scl_stretch_sample_strobe && scl_in == 0);
-        scl_stretching              <= scl_out_en == 0;
+    rule do_sample_scl_stretch(scl_stretch_sample_strobe);
+        scl_stretching              <= scl_out_en == 0 && scl_in == 0;
         scl_stretch_sample_delay    <= False;
     endrule
 
     // If SCL is high then no one is holding it
     (* fire_when_enabled *)
-    rule do_clear_scl_stretch(scl_in == 1);
+    rule do_clear_scl_stretch(scl_in == 1 && !scl_stretch_sample_strobe);
         scl_stretching <= False;
     endrule
 
@@ -251,6 +254,8 @@ module mkI2CBitController #(
     (* fire_when_enabled *)
     rule do_scl_stretch_timeout(scl_stretch_timeout_cntr);
         state                   <= AwaitStart;
+        scl_active              <= False;
+        sda_out_en              <= 0;
         scl_stretch_timeout_r   <= True;
         incoming_events.clear();
     endrule
@@ -415,6 +420,8 @@ module mkI2CBitController #(
         method put if (!scl_stretch_timeout_cntr) = incoming_events.enq;
     endinterface
     interface Get receive = toGet(outgoing_events);
+
+    method busy = state != AwaitStart;
 
     method scl_stretch_seen     = scl_stretch_seen_r;
     method scl_stretch_timeout  = scl_stretch_timeout_r;
