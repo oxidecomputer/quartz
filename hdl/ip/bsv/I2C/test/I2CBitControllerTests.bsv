@@ -89,7 +89,6 @@ module mkBench (Bench);
     Reg#(Vector#(3,Bit#(8))) prev_written_bytes <- mkReg(replicate(0));
     Reg#(UInt#(2)) bytes_done                   <- mkReg(0);
     Reg#(Bool) is_last_byte                     <- mkReg(False);
-    Reg#(Bool) stretch_timeout                  <- mkReg(False);
 
     FSM write_seq <- mkFSMWithPred(seq
         dut.send.put(tagged Start);
@@ -120,7 +119,7 @@ module mkBench (Bench);
 
         dut.send.put(tagged Stop);
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-    endseq, command_r.op == Write && !stretch_timeout);
+    endseq, command_r.op == Write && !dut.scl_stretch_timeout);
 
     FSM read_seq <- mkFSMWithPred(seq
         dut.send.put(tagged Start);
@@ -153,7 +152,7 @@ module mkBench (Bench);
 
         dut.send.put(tagged Stop);
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-    endseq, command_r.op == Read && !stretch_timeout);
+    endseq, command_r.op == Read && !dut.scl_stretch_timeout);
 
     FSM rnd_read_seq <- mkFSMWithPred(seq
         dut.send.put(tagged Start);

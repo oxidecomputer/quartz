@@ -33,6 +33,8 @@ interface I2CPeripheralModel;
     interface Get#(ModelEvent) receive;
     method Action nack_response(Bool ack);
     method Action stretch_next(Bool timeout);
+    method Action bus_pullups(Bool present);
+    method Action reset_device;
 endinterface
 
 typedef union tagged {
@@ -110,6 +112,9 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     Reg#(Bool) countdown_reset  <- mkReg(False);
     Reg#(Bool) back_to_rx  <- mkReg(False);
 
+    ConfigReg#(Bool) pullups_lost   <- mkConfigReg(False);
+    PulseWire reset_device_         <- mkPulseWire();
+
     (* fire_when_enabled *)
     rule do_detect_scl_fedge;
         scl_in_prev <= scl_in;
@@ -147,12 +152,18 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
+    rule do_reset_state (reset_device_);
+        state   <= AwaitStartByte;
+        outgoing_events.clear();
+    endrule
+
+    (* fire_when_enabled *)
     rule do_scl_stretch_tick(state == SclStretch && scl_in == 1);
         scl_stretch_countdown.send();
     endrule
 
     (* fire_when_enabled *)
-    rule do_await_start (state == AwaitStartByte);
+    rule do_await_start (!reset_device_ && state == AwaitStartByte);
         shift_bits  <= shift_bits_reset;
         is_sequential   <= False;
         if (start_detected) begin
@@ -162,7 +173,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
-    rule do_receive_start_byte (state == ReceiveStartByte);
+    rule do_receive_start_byte (!reset_device_ && state == ReceiveStartByte);
         addr_set        <= False;
         if (scl_redge) begin
             case (last(shift_bits)) matches
@@ -186,11 +197,10 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
                 end
             end
         endcase
-
     endrule
 
     (* fire_when_enabled *)
-    rule do_receive_byte (state == ReceiveByte);
+    rule do_receive_byte (!reset_device_ && state == ReceiveByte);
         if (stop_detected) begin
             state <= AwaitStartByte;
             outgoing_events.enq(tagged ReceivedStop);
@@ -235,7 +245,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
-    rule do_transmit_byte (state == TransmitByte);
+    rule do_transmit_byte (!reset_device_ && state == TransmitByte);
         if (scl_stretch_countdown.count() > 0) begin
             state <= SclStretch;
             back_to_rx <= False;
@@ -255,7 +265,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
-    rule do_receive_ack (state == ReceiveAck);
+    rule do_receive_ack (!reset_device_ && state == ReceiveAck);
         if (scl_redge) begin
             if (sda_in == 0) begin
                 // ACK'd, set up next byte to read
@@ -273,7 +283,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
-    rule do_transmit_ack (state == TransmitAck);
+    rule do_transmit_ack (!reset_device_ && state == TransmitAck);
         sda_out     <= pack(nack_response_);
         do_write    <= False;
         do_read     <= False;
@@ -290,7 +300,7 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
-    rule do_scl_stretch (state == SclStretch);
+    rule do_scl_stretch (!reset_device_ && state == SclStretch);
         if (scl_stretch_countdown) begin
             scl_out <= 1;
             if (back_to_rx) begin
@@ -304,11 +314,16 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endrule
 
     (* fire_when_enabled *)
-    rule do_await_stop (state == AwaitStop);
+    rule do_await_stop (!reset_device_ && state == AwaitStop);
         if (stop_detected) begin
             state <= AwaitStartByte;
             outgoing_events.enq(tagged ReceivedStop);
         end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_pullup_sda (state != TransmitAck && state != TransmitByte);
+        sda_out <= 1;
     endrule
 
     method Action scl_i(Bit#(1) scl_i_next);
@@ -319,13 +334,21 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
     endmethod
 
     method Bit#(1) scl_o();
-        return scl_out;
+        if (pullups_lost) begin
+            return 0;
+        end else begin
+            return scl_out;
+        end
     endmethod
 
     method Action sda_i(Bit#(1) sda_i_next) = sda_in._write(sda_i_next);
 
     method Bit#(1) sda_o();
-        return sda_out;
+        if (pullups_lost) begin
+            return 0;
+        end else begin
+            return sda_out;
+        end
     endmethod
 
     method Action nack_response(Bool ack) = nack_response_._write(ack);
@@ -340,6 +363,10 @@ module mkI2CPeripheralModel #(Bit#(7) i2c_address,
             scl_stretch_countdown <= fromInteger(scl_stretch_limit - 20);
         end
     endmethod
+
+    method Action bus_pullups(Bool present) = pullups_lost._write(!present);
+
+    method Action reset_device = reset_device_.send();
 
     interface Get receive = toGet(outgoing_events);
 endmodule
