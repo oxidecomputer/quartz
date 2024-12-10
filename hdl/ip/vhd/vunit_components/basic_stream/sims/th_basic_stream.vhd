@@ -31,22 +31,22 @@ begin
     clk   <= not clk after 4 ns;
 
     basic_source_vc : entity work.basic_source
-    generic map (
-        source  => source)
-    port map (
-        clk     => clk,
-        valid   => valid,
-        ready   => ready,
-        data    => data
-    );
+        generic map (
+            source  => source)
+        port map (
+            clk     => clk,
+            valid   => valid,
+            ready   => ready,
+            data    => data
+        );
 
-  basic_sink_vc : entity work.basic_sink
-    generic map (
-        sink    => sink)
-    port map (
-        clk     => clk,
-        valid   => valid,
-        ready   => ready,
-        data    => data
-    );
+    basic_sink_vc : entity work.basic_sink
+        generic map (
+            sink    => sink)
+        port map (
+            clk     => clk,
+            valid   => valid,
+            ready   => ready,
+            data    => data
+        );
 end architecture;

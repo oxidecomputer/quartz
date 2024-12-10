@@ -56,9 +56,9 @@ begin
                     push_std_ulogic_vector(reply_msg, data);
                     reply(net, msg, reply_msg);
                     ready <= '0';
+                    exit;
                 end if;
                 ready <= '0';
-                exit;
             end loop;
         else
             unexpected_msg_type(msg_type);
