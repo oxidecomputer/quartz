@@ -1,4 +1,13 @@
 load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "i2c_core_regs_pkg",
+    src = "i2c_core_regs.rdl",
+    outputs = ["i2c_core_regs_pkg.vhd", "i2c_core_regs.html"],
+    visibility = ['PUBLIC']
+)
 
 vhdl_unit(
     name = "i2c_txn_layer",
