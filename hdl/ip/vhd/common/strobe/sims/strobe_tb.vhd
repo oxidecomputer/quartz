@@ -14,7 +14,6 @@ library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.vc_context;
 
-
 entity strobe_tb is
     generic (
         runner_cfg : string

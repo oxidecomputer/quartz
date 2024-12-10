@@ -15,7 +15,7 @@ library vunit_lib;
 
 entity strobe_th is
     generic (
-        TICKS : natural
+        TICKS : positive
     );
 end entity;
 

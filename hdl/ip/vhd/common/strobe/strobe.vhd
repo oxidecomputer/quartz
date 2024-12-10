@@ -18,7 +18,7 @@ entity strobe is
         clk     : in std_logic;
         reset   : in std_logic;
 
-        strobe  : out std_logic;
+        strobe  : out std_logic
     );
 end entity strobe;
 
