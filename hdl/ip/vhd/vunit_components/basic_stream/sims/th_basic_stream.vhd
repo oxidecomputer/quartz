@@ -17,8 +17,8 @@ use work.basic_stream_pkg.all;
 
 entity th_basic_stream is
     generic (
-        source : basic_source_t;
-        sink: basic_sink_t
+        source  : basic_source_t;
+        sink    : basic_sink_t
     );
 end entity;
 
