@@ -1,5 +1,49 @@
 load("//tools:hdl.bzl", "vhdl_unit")
 
+# Countdown
+
+vhdl_unit(
+    name = "countdown",
+    srcs = glob(["countdown/countdown.vhd"]),
+    deps = [],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "countdown_tb",
+    is_tb = True,
+    srcs = glob(["countdown/sims/*.vhd"]),
+    deps = [":countdown"],
+    visibility = ['PUBLIC'],
+)
+
+# Interfaces
+
+vhdl_unit(
+    name = "streaming_if_pkg",
+    srcs = glob(["interfaces/streaming_if_pkg.vhd"]),
+    deps = [],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+
+# Strobe
+
+vhdl_unit(
+    name = "strobe",
+    srcs = glob(["strobe/strobe.vhd"]),
+    deps = [],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "strobe_tb",
+    is_tb = True,
+    srcs = glob(["strobe/sims/*.vhd"]),
+    deps = [":strobe"],
+    visibility = ['PUBLIC'],
+)
+
 # Utilities
 
 vhdl_unit(
@@ -29,34 +73,5 @@ vhdl_unit(
         ":time_pkg", 
         ":calc_pkg",
     ],
-    visibility = ['PUBLIC'],
-)
-
-# Interfaces
-
-vhdl_unit(
-    name = "streaming_if_pkg",
-    srcs = glob(["interfaces/streaming_if_pkg.vhd"]),
-    deps = [],
-    standard = "2019",
-    visibility = ['PUBLIC']
-)
-
-# Strobe
-
-vhdl_unit(
-    name = "strobe",
-    srcs = glob(["strobe/strobe.vhd"]),
-    deps = [],
-    standard = "2019",
-    visibility = ['PUBLIC'],
-)
-
-vhdl_unit(
-    name = "strobe_tb",
-    is_tb = True,
-    srcs = glob(["strobe/sims/*.vhd"]),
-    deps = [":strobe"],
-    standard = "2019",
     visibility = ['PUBLIC'],
 )

@@ -1,0 +1,35 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Tue Dec 10 16:14:34 2024
+[*]
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.countdown_tb.test_clear_51d615dad8132a3234ef3e09e32429b15166ad96/nvc/countdown_tb.fst"
+[dumpfile_mtime] "Tue Dec 10 16:12:02 2024"
+[dumpfile_size] 682
+[savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/common/countdown/sims/countdown_tb.gtkw"
+[timestart] 0
+[size] 1296 1283
+[pos] 1215 23
+*-25.634460 208000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] countdown_tb.
+[treeopen] countdown_tb.th.
+[sst_width] 287
+[signals_width] 142
+[sst_expanded] 1
+[sst_vpaned_height] 382
+@28
+countdown_tb.th.clk
+countdown_tb.th.reset
+@200
+-
+-Countdown DUT
+@22
+countdown_tb.th.countdown_inst.count[3:0]
+@28
+countdown_tb.th.countdown_inst.clear
+countdown_tb.th.countdown_inst.load
+countdown_tb.th.countdown_inst.decr
+countdown_tb.th.countdown_inst.done
+@23
+countdown_tb.th.countdown_inst.counter[3:0]
+[pattern_trace] 1
+[pattern_trace] 0
