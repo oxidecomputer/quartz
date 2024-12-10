@@ -18,6 +18,7 @@ entity strobe is
         clk     : in std_logic;
         reset   : in std_logic;
 
+        enable  : in std_logic;
         strobe  : out std_logic
     );
 end entity strobe;
@@ -27,14 +28,14 @@ architecture rtl of strobe is
 begin
     strobe_gen: process (clk, reset) is
     begin
-        if reset = '1' then
+        if reset then
             strobe_counter  <= 0;
             strobe          <= '0';
         elsif rising_edge(clk) then
             if strobe_counter = TICKS - 1 then
                 strobe          <= '1';
                 strobe_counter  <= 0;
-            else
+            elsif enable then
                 strobe          <= '0';
                 strobe_counter  <= strobe_counter + 1;
             end if;

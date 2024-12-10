@@ -27,6 +27,14 @@ vhdl_unit(
     visibility = ['PUBLIC']
 )
 
+vhdl_unit(
+    name = "tristate_if_pkg",
+    srcs = glob(["interfaces/tristate_if_pkg.vhd"]),
+    deps = [],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+
 # Strobe
 
 vhdl_unit(

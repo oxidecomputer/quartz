@@ -15,7 +15,8 @@ library vunit_lib;
 
 entity strobe_th is
     generic (
-        TICKS : positive
+        CLK_PER : time;
+        TICKS   : positive
     );
 end entity;
 
@@ -23,13 +24,12 @@ architecture th of strobe_th is
 
     signal clk          : std_logic := '0';
     signal reset        : std_logic := '1';
+    signal dut_enable   : std_logic := '0';
     signal dut_strobe   : std_logic;
 
 begin
 
-    -- set up a fastish clock for the sim env
-    -- and release reset after a bit of time
-    clk   <= not clk after 4 ns;
+    clk   <= not clk after CLK_PER / 2;
     reset <= '0' after 200 ns;
 
     strobe_inst: entity work.strobe
@@ -39,6 +39,7 @@ begin
         port map (
             clk     => clk,
             reset   => reset,
+            enable  => dut_enable,
             strobe  => dut_strobe
         );
 
