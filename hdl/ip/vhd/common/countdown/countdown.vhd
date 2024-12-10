@@ -13,7 +13,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 entity countdown is
     generic (
@@ -24,7 +24,7 @@ entity countdown is
         reset   : in std_logic;
 
         -- target value to count down from
-        count   : in unsigned(SIZE - 1 downto 0);
+        count   : in std_logic_vector(SIZE - 1 downto 0);
         -- loads `count` into internal registers
         load    : in std_logic;
         -- decrement internal counter
@@ -38,7 +38,7 @@ entity countdown is
 end entity countdown;
 
 architecture rtl of countdown is
-    signal counter  : unsigned(SIZE - 1 downto 0);
+    signal counter  : std_logic_vector(SIZE - 1 downto 0);
 begin
     counter_gen: process (clk, reset) is
     begin

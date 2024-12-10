@@ -33,7 +33,7 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
-        alias count is << signal th.dut_count : unsigned >>;
+        alias count is << signal th.dut_count : std_logic_vector >>;
         alias load is << signal th.dut_load : std_logic >>;
         alias decr is << signal th.dut_decr : std_logic >>;
         alias clear is << signal th.dut_clear : std_logic >>;
@@ -49,7 +49,7 @@ begin
             if run("test_reset") then
                 check_true(done = '1', "should be done as it not been loaded");
             elsif run("test_clear") then
-                count   <= to_unsigned(3, count'length);
+                count   <= to_std_logic_vector(3, count'length);
                 load    <= '1';
                 clear   <= '1';
                 wait for CLK_PER;
@@ -65,7 +65,7 @@ begin
                 wait for CLK_PER;
                 check_true(done = '1', "should be done after clear");
             elsif run("test_countdown") then
-                count   <= to_unsigned(3, count'length);
+                count   <= to_std_logic_vector(3, count'length);
                 load    <= '1';
                 wait for CLK_PER;
                 check_true(done = '0', "should not be done after load");

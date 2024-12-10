@@ -6,7 +6,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 library vunit_lib;
     context vunit_lib.vunit_context;
@@ -25,7 +25,7 @@ architecture th of countdown_th is
     signal clk      : std_logic := '0';
     signal reset    : std_logic := '1';
 
-    signal dut_count    : unsigned(SIZE - 1 downto 0) := (others => '0');
+    signal dut_count    : std_logic_vector(SIZE - 1 downto 0) := (others => '0');
     signal dut_load     : std_logic := '0';
     signal dut_decr     : std_logic := '0';
     signal dut_clear    : std_logic := '0';

@@ -17,7 +17,7 @@ vhdl_unit(
     visibility = ['PUBLIC'],
 )
 
-# Interfaces - Note these packages require VHDL-2019 support
+# Interfaces
 
 vhdl_unit(
     name = "streaming_if_pkg",
