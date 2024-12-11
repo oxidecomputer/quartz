@@ -1,0 +1,51 @@
+// Copyright 2024 Oxide Computer Company
+// This is a SystemRDL description of the SW-accessible registers for the I2C controller.
+
+addrmap i2c_ctrl_regs {
+    name = "I2C controller registers";
+    desc = "Registers accessible on the AXI bus for interacting with the I2C controller.";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Receive data";
+        default sw = r;
+        default hw = rw;
+
+        field {
+            desc = "Last 4 bytes recieved";
+        } DATA[31:0] = 0;
+    } RXD;
+
+    reg {
+        name = "Transmit data";
+        default sw = r;
+        default hw = rw;
+
+        field {
+            desc = "Next 4 bytes to send";
+        } DATA[31:0] = 0;
+    } TXD;
+
+    reg {
+        name = "Control bits for I2C communication.";
+
+        field {
+            desc = "Number of bytes to read/write in the I2C transaction. up to 128 bytes.";
+        } COUNT[22:16] = 1;
+
+        field {
+            desc = "I2C Address of target";
+        } ADDR[14:8] = 0;
+
+        field {
+            desc = "2'b00 to read, 2'b01 to write, 2'b10 to random-read.";
+        } OP[2:1] = 0;
+
+        field {
+            desc = "'1' to start next transaction.";
+        } START[0:0] = 0;
+    } CONTROL;
+};

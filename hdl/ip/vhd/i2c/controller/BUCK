@@ -1,0 +1,39 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "i2c_ctrl_regs_pkg",
+    src = "regs/i2c_ctrl_regs.rdl",
+    outputs = ["i2c_ctrl_regs_pkg.vhd", "i2c_ctrl_regs.html"],
+    visibility = ['PUBLIC']
+)
+
+vhdl_unit(
+    name = "i2c_ctrl_txn_layer",
+    srcs = glob([
+        "link_layer/*.vhd",
+        "txn_layer/*.vhd",]),
+    deps = [
+        "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
+        "//hdl/ip/vhd/common:countdown",
+        "//hdl/ip/vhd/common:strobe",
+        "//hdl/ip/vhd/common:streaming_if_pkg",
+        "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/common:time_pkg",
+        "//hdl/ip/vhd/synchronizers:meta_sync"
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "i2c_ctrl_txn_layer_tb",
+    srcs = glob(["txn_layer/sims/*.vhd"]),
+    deps = [
+        ":i2c_ctrl_txn_layer",
+        "//hdl/ip/vhd/i2c/common:i2c_cmd_vc",
+        "//hdl/ip/vhd/i2c/common:i2c_target_vc",
+        "//hdl/ip/vhd/vunit_components:basic_stream"
+    ],
+    visibility = ['PUBLIC'],
+)
