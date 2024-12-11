@@ -14,7 +14,7 @@ use work.time_pkg.all;
 
 use work.i2c_common_pkg.all;
 
-entity i2c_link_layer is
+entity i2c_ctrl_link_layer is
     generic (
         CLK_PER_NS  : positive;
         MODE        : mode_t
@@ -27,11 +27,13 @@ entity i2c_link_layer is
         scl_if          : view tristate_if;
         sda_if          : view tristate_if;
 
+        txn_next_valid  : in std_logic; -- qualify transition to next action 
+        ready           : out std_logic; -- ready for next action
+
         -- I2C framing
         tx_start        : in std_logic; -- send a start
         tx_ack          : in std_logic; -- send an ACK
         tx_stop         : in std_logic; -- send a stop
-        ready           : out std_logic; -- ready for next action
 
         -- transmit data
         tx_data         : in std_logic_vector(7 downto 0);
@@ -45,7 +47,7 @@ entity i2c_link_layer is
     );
 end entity;
 
-architecture rtl of i2c_link_layer is
+architecture rtl of i2c_ctrl_link_layer is
     -- fetch the settings for the desired I2C mode
     constant SETTINGS               : settings_t := get_i2c_settings(MODE);
     constant SCL_HALF_PER_TICKS     : positive :=
@@ -66,15 +68,12 @@ architecture rtl of i2c_link_layer is
     constant SDA_TRANSITION_TICKS   : positive :=
         to_integer(calc_ns(300, CLK_PER_NS, 5));
 
-
-
     type state_t is (
         IDLE,
         WAIT_TBUF,
         START_SETUP,
         START_HOLD,
         WAIT_REPEAT_START,
-        HANDLE_NEXT_PRE,
         HANDLE_NEXT,
         BYTE_TX,
         BYTE_RX,
@@ -99,7 +98,7 @@ architecture rtl of i2c_link_layer is
         count_load      : std_logic;
         count_decr      : std_logic;
         count_clr       : std_logic;
-        sda_changed     : std_logic;
+        transition_sda_cntr_en     : std_logic;
         ack_sending     : std_logic;
         scl_fedge_seen  : std_logic;
 
@@ -123,7 +122,7 @@ architecture rtl of i2c_link_layer is
         '0',            -- count_load
         '0',            -- count_decr
         '0',            -- count_clr
-        '0',            -- sda_changed
+        '0',            -- transition_sda_cntr_en
         '0',            -- ack_sending
         '0',            -- scl_fedge_seen
         (others => '0'),-- rx_data
@@ -164,19 +163,19 @@ begin
         );
 
     scl_reg: process(clk, reset)
-        variable v_scl_oe_next : std_logic := '0';
+        variable scl_oe_next : std_logic := '0';
     begin
         if reset then
             scl_oe      <= '0';
             scl_oe_last <= '0';
         elsif rising_edge(clk) then
-            scl_oe_last     <= scl_oe;
-            v_scl_oe_next   := not scl_oe;
+            scl_oe_last <= scl_oe;
+            scl_oe_next := not scl_oe;
 
             if not sm_reg.scl_active then
                 scl_oe  <= '0';
             elsif scl_toggle = '1' or sm_reg.scl_start = '1' then
-                scl_oe  <= v_scl_oe_next;
+                scl_oe  <= scl_oe_next;
             end if;
         end if;
     end process;
@@ -188,6 +187,7 @@ begin
     -- SDA Control
     --
 
+    -- TODO: this should be a glitch filter that means `tsp` per the spec
     sda_in_sync: entity work.meta_sync
         generic map (
             STAGES      => 2
@@ -198,6 +198,8 @@ begin
           sycnd_output  => sda_in_syncd
         );
 
+    -- This counter enforces `tvd` per the spec, ensuring we transition SDA only after an
+    -- appropriate amount of time after a SCL falling edge.
     sda_transition: entity work.strobe
         generic map (
             TICKS   => SDA_TRANSITION_TICKS
@@ -205,10 +207,12 @@ begin
         port map (
             clk     => clk,
             reset   => reset,
-            enable  => not sm_reg.sda_changed,
+            enable  => sm_reg.transition_sda_cntr_en,
             strobe  => transition_sda
         );
 
+    -- This is a counter which can be loaded by the state machine to meet various timing
+    -- requirements per the specification.
     sm_countdown: entity work.countdown
         generic map (
             SIZE    => SM_COUNTER_SIZE_BITS
@@ -232,21 +236,23 @@ begin
     begin
         v   := sm_reg;
 
-        -- default to single cycle pulses to counter control
+        -- Single-cycle pulsed control signals
         v.count_load    := '0';
         v.count_decr    := '0';
         v.count_clr     := '0';
-
-        -- Signal defaults
         v.scl_start     := '0';
         v.rx_ack        := '0';
         v.rx_ack_valid  := '0';
         v.rx_data_valid := '0';
 
+        -- Every time we see a falling edge on SCL we count the number of cycles until we should
+        -- transition SDA accordingly, indicated by the transition_sda pulse. The state machine pays
+        -- attention to transition_sda during states when the controller believes it has control of
+        -- the bus, otherwise ignoring the pulse.
         if scl_fedge then
-            v.sda_changed := '0';
+            v.transition_sda_cntr_en := '1';
         elsif transition_sda then
-            v.sda_changed := '1';
+            v.transition_sda_cntr_en := '0';
         end if;
 
         case sm_reg.state is
@@ -296,31 +302,30 @@ begin
             when START_HOLD =>
                 v.sda_oe    := '1';
                 if sm_count_done then
-                    v.state         := HANDLE_NEXT_PRE;
+                    v.state         := HANDLE_NEXT;
                     v.scl_start     := '1'; -- drop SCL to finish START condition
                     v.scl_active    := '1'; -- begin free running counter for SCL transitions
                 else
                     v.count_decr    := '1';
                 end if;
 
-            when HANDLE_NEXT_PRE =>
-                v.state := HANDLE_NEXT;
-
             when HANDLE_NEXT =>
-                if tx_start then
-                    -- A repeated start was issued mid-transaction
-                    v.state             := WAIT_REPEAT_START;
-                    v.counter           := START_SETUP_HOLD_TICKS;
-                    v.count_load        := '1';
-                elsif tx_stop then
-                    v.state         := STOP_SDA;
-                elsif tx_data_valid then
-                    -- data to transmit
-                    v.state         := BYTE_TX;
-                    v.tx_data       := tx_data;
-                else
-                    -- if nothing else, read
-                    v.state         := BYTE_RX;
+                if txn_next_valid then
+                    if tx_start then
+                        -- A repeated start was issued mid-transaction
+                        v.state             := WAIT_REPEAT_START;
+                        v.counter           := START_SETUP_HOLD_TICKS;
+                        v.count_load        := '1';
+                    elsif tx_stop then
+                        v.state         := STOP_SDA;
+                    elsif tx_data_valid then
+                        -- data to transmit
+                        v.state         := BYTE_TX;
+                        v.tx_data       := tx_data;
+                    else
+                        -- if nothing else, read
+                        v.state         := BYTE_RX;
+                    end if;
                 end if;
 
             -- Clock out a byte and then wait for an ACK
@@ -341,14 +346,14 @@ begin
                 v.sda_oe    := '0';
 
                 if scl_redge then
-                    v.state         := HANDLE_NEXT_PRE;
+                    v.state         := HANDLE_NEXT;
                     v.rx_ack        := not sda_in_syncd;
                     v.rx_ack_valid  := '1';
                 end if;
 
             -- Clock in a byte and then send an ACK
             when BYTE_RX =>
-                v.sda_oe        := '0';
+                v.sda_oe    := '0';
 
                 if sm_reg.bits_shifted = 8 then
                     v.state         := ACK_TX;
@@ -370,7 +375,7 @@ begin
                         -- at the next transition point release the bus
                         v.sda_oe        := '0';
                         v.ack_sending   := '0';
-                        v.state         := HANDLE_NEXT_PRE;
+                        v.state         := HANDLE_NEXT;
                     end if;
                 end if;
 
@@ -399,7 +404,8 @@ begin
         end case;
 
         -- next state logic
-        v.ready := '1' when (v.state = IDLE or v.state = HANDLE_NEXT_PRE or v.state = HANDLE_NEXT) else '0';
+        v.ready := '1' when v.state = IDLE or v.state = HANDLE_NEXT or v.state = HANDLE_NEXT 
+                        else '0';
 
         sm_reg_next <= v;
     end process;

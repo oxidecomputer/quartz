@@ -11,7 +11,7 @@ use work.tristate_if_pkg;
 
 use work.i2c_common_pkg;
 
-entity i2c_core is
+entity i2c_ctrl is
     generic (
         CLK_PER_NS  : positive;
         MODE        : mode_t;
@@ -28,25 +28,25 @@ entity i2c_core is
     );
 end entity;
 
-architecture rtl of i2c_core is
+architecture rtl of i2c_ctrl is
 
 begin
 
-    i2c_txn_layer_inst: entity work.i2c_txn_layer
-     generic map(
-        CLK_PER_NS => CLK_PER_NS,
-        MODE => MODE
-    )
-     port map(
-        clk => clk,
-        reset => reset,
-        scl_if => scl_if,
-        sda_if => sda_if,
-        cmd => cmd,
-        cmd_valid => cmd_valid,
-        core_ready => core_ready,
-        tx_st_if => tx_st_if,
-        rx_st_if => rx_st_if
-    );
+    i2c_ctrl_txn_layer_inst: entity work.i2c_ctrl_txn_layer
+        generic map(
+            CLK_PER_NS  => CLK_PER_NS,
+            MODE        => MODE
+        )
+        port map(
+            clk         => clk,
+            reset       => reset,
+            scl_if      => scl_if,
+            sda_if      => sda_if,
+            cmd         => cmd,
+            cmd_valid   => cmd_valid,
+            core_ready  => core_ready,
+            tx_st_if    => tx_st_if,
+            rx_st_if    => rx_st_if
+        );
 
 end architecture;

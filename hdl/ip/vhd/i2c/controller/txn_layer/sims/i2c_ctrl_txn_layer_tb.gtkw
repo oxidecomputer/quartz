@@ -1,0 +1,165 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Wed Dec 11 22:39:03 2024
+[*]
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_ctrl_txn_layer_tb.write_and_read_many_bytes_713f701447aec89dff2ce07f3dce0c8020399b4e/nvc/i2c_ctrl_txn_layer_tb.fst"
+[dumpfile_mtime] "Wed Dec 11 22:34:30 2024"
+[dumpfile_size] 6129
+[savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/i2c/controller/txn_layer/sims/i2c_ctrl_txn_layer_tb.gtkw"
+[timestart] 455740000000
+[size] 1344 1283
+[pos] -1 -1
+*-31.427509 459684000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] i2c_ctrl_txn_layer_tb.
+[treeopen] i2c_ctrl_txn_layer_tb.th.
+[treeopen] i2c_ctrl_txn_layer_tb.th.dut.
+[treeopen] i2c_ctrl_txn_layer_tb.th.dut.sm_reg.
+[treeopen] i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.
+[treeopen] i2c_ctrl_txn_layer_tb.th.target.
+[sst_width] 389
+[signals_width] 361
+[sst_expanded] 1
+[sst_vpaned_height] 382
+@200
+-I2C_CMD_VC
+@28
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.ready
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.valid
+@22
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.addr[6:0]
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.len[7:0]
+@28
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.op
+@22
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.reg[7:0]
+@200
+-
+-Transaction Layer
+@28
+i2c_ctrl_txn_layer_tb.th.dut.clk
+i2c_ctrl_txn_layer_tb.th.dut.cmd_valid
+i2c_ctrl_txn_layer_tb.th.dut.core_ready
+@200
+-I2C Interface
+-SCL
+@28
+i2c_ctrl_txn_layer_tb.th.dut.scl_if.i
+i2c_ctrl_txn_layer_tb.th.dut.scl_if.oe
+@200
+-SDA
+@28
+i2c_ctrl_txn_layer_tb.th.dut.sda_if.i
+i2c_ctrl_txn_layer_tb.th.dut.sda_if.oe
+@200
+-State
+@28
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.state
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.do_start
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.do_ack
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.do_stop
+i2c_ctrl_txn_layer_tb.th.dut.ll_ready
+@22
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.bytes_done[7:0]
+@23
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.cmd.len[7:0]
+@28
+i2c_ctrl_txn_layer_tb.th.dut.sm_reg.next_valid
+@200
+-
+-Link Layer
+@28
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.scl_toggle
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.scl_redge
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.scl_fedge
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.transition_sda
+@200
+-Transmit Stream
+@28
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.tx_data_valid
+@22
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.tx_data[7:0]
+@200
+-Receive Stream
+@22
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.rx_data[7:0]
+@28
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.rx_data_valid
+@200
+-State
+@28
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.ready
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.state
+@24
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.bits_shifted
+@28
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.rx_ack_valid
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.rx_ack
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.ack_sending
+@200
+-Counter
+@22
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.counter[7:0]
+@28
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.decr
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.load
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.done
+@200
+-
+-RX Stream VC
+@28
+i2c_ctrl_txn_layer_tb.th.rx_sink_vc.ready
+i2c_ctrl_txn_layer_tb.th.rx_sink_vc.valid
+@22
+i2c_ctrl_txn_layer_tb.th.rx_sink_vc.data[7:0]
+@200
+-TX Stream VC
+@28
+i2c_ctrl_txn_layer_tb.th.tx_source_vc.ready
+i2c_ctrl_txn_layer_tb.th.tx_source_vc.valid
+@22
+i2c_ctrl_txn_layer_tb.th.tx_source_vc.data[7:0]
+@200
+-
+-target Model
+-SCL
+@28
+i2c_ctrl_txn_layer_tb.th.target.scl_if.i
+i2c_ctrl_txn_layer_tb.th.target.scl_if.o
+i2c_ctrl_txn_layer_tb.th.target.scl_if.oe
+@200
+-SDA
+@28
+i2c_ctrl_txn_layer_tb.th.target.sda_if.i
+i2c_ctrl_txn_layer_tb.th.target.sda_if.o
+i2c_ctrl_txn_layer_tb.th.target.sda_if.oe
+i2c_ctrl_txn_layer_tb.th.target.state
+i2c_ctrl_txn_layer_tb.th.target.start_condition
+i2c_ctrl_txn_layer_tb.th.target.stop_condition
+@22
+i2c_ctrl_txn_layer_tb.th.target.reg_addr[7:0]
+@28
+i2c_ctrl_txn_layer_tb.th.target.addr_set
+i2c_ctrl_txn_layer_tb.th.target.addr_incr
+i2c_ctrl_txn_layer_tb.th.target.rx_done
+@22
+i2c_ctrl_txn_layer_tb.th.target.rx_data[7:0]
+i2c_ctrl_txn_layer_tb.th.target.rx_bit_count[3:0]
+@28
+i2c_ctrl_txn_layer_tb.th.target.tx_done
+@c00022
+i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+@28
+(0)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(1)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(2)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(3)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(4)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(5)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(6)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+(7)i2c_ctrl_txn_layer_tb.th.target.tx_data[7:0]
+@1401200
+-group_end
+@22
+i2c_ctrl_txn_layer_tb.th.target.tx_bit_count[3:0]
+[pattern_trace] 1
+[pattern_trace] 0

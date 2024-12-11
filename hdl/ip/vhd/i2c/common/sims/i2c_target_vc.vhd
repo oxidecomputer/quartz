@@ -16,11 +16,11 @@ use vunit_lib.sync_pkg.all;
 
 use work.tristate_if_pkg.all;
 
-use work.i2c_peripheral_pkg.all;
+use work.i2c_target_vc_pkg.all;
 
-entity i2c_peripheral is
+entity i2c_target_vc is
     generic (
-        i2c_peripheral_vc   : i2c_peripheral_t
+        i2c_target_vc   : i2c_target_vc_t
     );
     port (
         -- Tri-state signals to I2C interface
@@ -29,7 +29,7 @@ entity i2c_peripheral is
     );
 end entity;
 
-architecture model of i2c_peripheral is
+architecture model of i2c_target_vc is
 
     type state_t is (
         IDLE,
@@ -94,20 +94,20 @@ begin
             
             when START =>
                 event_msg   := new_msg(got_start);
-                send(net, i2c_peripheral_vc.p_actor, event_msg);
+                send(net, i2c_target_vc.p_actor, event_msg);
                 state       <= GET_START_BYTE;
 
             when GET_START_BYTE =>
                 wait on rx_done;
-                if rx_data(7 downto 1) = address(i2c_peripheral_vc) then
+                if rx_data(7 downto 1) = address(i2c_target_vc) then
                     state       <= SEND_ACK;
                     is_read     := rx_data(0) = '1';
                     event_msg   := new_msg(address_matched);
-                    send(net, i2c_peripheral_vc.p_actor, event_msg);
+                    send(net, i2c_target_vc.p_actor, event_msg);
                 else
                     state       <= SEND_NACK;
                     event_msg   := new_msg(address_different);
-                    send(net, i2c_peripheral_vc.p_actor, event_msg);
+                    send(net, i2c_target_vc.p_actor, event_msg);
                 end if;
 
             when GET_BYTE =>
@@ -126,9 +126,9 @@ begin
                     end if;
 
                     if addr_set then
-                        write_word(memory(i2c_peripheral_vc), to_integer(reg_addr_v), rx_data);
+                        write_word(memory(i2c_target_vc), to_integer(reg_addr_v), rx_data);
                         event_msg   := new_msg(got_byte);
-                        send(net, i2c_peripheral_vc.p_actor, event_msg);
+                        send(net, i2c_target_vc.p_actor, event_msg);
                         addr_incr   <= TRUE;
                     else
                         addr_set    <= TRUE;
@@ -160,7 +160,7 @@ begin
             when GET_STOP =>
                 wait until (stop_condition or stop_during_write);
                 event_msg           := new_msg(got_stop);
-                send(net, i2c_peripheral_vc.p_actor, event_msg);
+                send(net, i2c_target_vc.p_actor, event_msg);
                 state               <= IDLE;
                 addr_set            <= FALSE;
                 addr_incr           <= FALSE;
@@ -212,7 +212,7 @@ begin
             tx_bit_count    <= to_unsigned(1, tx_bit_count'length);
         elsif state = SEND_BYTE then
             if tx_bit_count = 0 then
-                txd := read_word(i2c_peripheral_vc.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
+                txd := read_word(i2c_target_vc.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
             else
                 txd := '1' & tx_data(7 downto 1);
             end if;

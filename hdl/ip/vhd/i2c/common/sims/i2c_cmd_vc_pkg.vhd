@@ -70,11 +70,15 @@ package body i2c_cmd_vc_pkg is
         -- breaking down our type since we can't push enums in VUnit
         is_read     := false when cmd.op = WRITE else true;
         is_random   := true when cmd.op = RANDOM_READ else false;
-        push(msg, is_read);
-        push(msg, is_random);
-        push(msg, cmd.addr);
-        push(msg, cmd.reg);
-        push(msg, cmd.len);
+
+        -- We break down cmd_t into it's primitive types to push them into the message where we will
+        -- pop them off when we receive it in order to reconstruct a cmd_t.
+        -- TODO: implement push/pop for our custom type so we wouldn't have to do this?
+        push(msg, is_read);     -- boolean
+        push(msg, is_random);   -- boolean
+        push(msg, cmd.addr);    -- std_logic_vector
+        push(msg, cmd.reg);     -- std_logic_vector
+        push(msg, cmd.len);     -- std_logic_vector
         send(net, i2c_cmd_vc.p_actor, msg);
     end;
 

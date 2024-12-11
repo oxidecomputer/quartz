@@ -19,27 +19,27 @@ use work.tristate_if_pkg.all;
 use work.stream8_pkg;
 
 use work.i2c_cmd_vc_pkg.all;
-use work.i2c_peripheral_pkg.all;
+use work.i2c_target_vc_pkg.all;
 use work.basic_stream_pkg.all;
 
-entity i2c_txn_layer_th is
+entity i2c_ctrl_txn_layer_th is
     generic (
         tx_source       : basic_source_t;
         rx_sink         : basic_sink_t;
-        i2c_peripheral  : i2c_peripheral_t;
+        i2c_target_vc   : i2c_target_vc_t;
         i2c_cmd_vc      : i2c_cmd_vc_t
     );
 end entity;
 
-architecture th of i2c_txn_layer_th is
+architecture th of i2c_ctrl_txn_layer_th is
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
     -- I2C interfaces
     signal ctrl_scl_tristate    : tristate;
     signal ctrl_sda_tristate    : tristate;
-    signal periph_scl_tristate  : tristate;
-    signal periph_sda_tristate  : tristate;
+    signal target_scl_tristate  : tristate;
+    signal target_sda_tristate  : tristate;
 
     -- I2C bus
     signal scl  : std_logic;
@@ -88,53 +88,53 @@ begin
             ready   => core_ready
         );
 
-    peripheral: entity work.i2c_peripheral
+    target: entity work.i2c_target_vc
         generic map (
-            i2c_peripheral_vc => i2c_peripheral
+            i2c_target_vc => i2c_target_vc
         )
         port map (
-            scl_if.i  => periph_scl_tristate.i,
-            scl_if.o  => periph_scl_tristate.o,
-            scl_if.oe  => periph_scl_tristate.oe,
-            sda_if  => periph_sda_tristate
+            scl_if.i    => target_scl_tristate.i,
+            scl_if.o    => target_scl_tristate.o,
+            scl_if.oe   => target_scl_tristate.oe,
+            sda_if      => target_sda_tristate
         );
 
     tx_source_vc : entity work.basic_source
-    generic map (
-        source  => tx_source
-    )
-    port map (
-        clk     => clk,
-        valid   => tx_data_stream.valid,
-        ready   => tx_data_stream.ready,
-        data    => tx_data_stream.data
-    );
+        generic map (
+            source  => tx_source
+        )
+        port map (
+            clk     => clk,
+            valid   => tx_data_stream.valid,
+            ready   => tx_data_stream.ready,
+            data    => tx_data_stream.data
+        );
 
     rx_sink_vc : entity work.basic_sink
-    generic map (
-        sink    => rx_sink
-    )
-    port map (
-        clk     => clk,
-        valid   => rx_data_stream.valid,
-        ready   => rx_data_stream.ready,
-        data    => rx_data_stream.data
-    );
+        generic map (
+            sink    => rx_sink
+        )
+        port map (
+            clk     => clk,
+            valid   => rx_data_stream.valid,
+            ready   => rx_data_stream.ready,
+            data    => rx_data_stream.data
+        );
 
     -- wire the bus to the tristate inputs
     ctrl_scl_tristate.i     <= scl;
-    periph_scl_tristate.i   <= scl;
+    target_scl_tristate.i   <= scl;
     ctrl_sda_tristate.i     <= sda;
-    periph_sda_tristate.i   <= sda;
+    target_sda_tristate.i   <= sda;
     i2c_bus_resolver: process(all)
     begin
-        if ctrl_scl_tristate.oe = '1' and periph_scl_tristate.oe = '0' then
+        if ctrl_scl_tristate.oe = '1' and target_scl_tristate.oe = '0' then
             -- controller has line
             scl <= ctrl_scl_tristate.o;
-        elsif ctrl_scl_tristate.oe = '0' and periph_scl_tristate.oe = '1' then
-            -- peripheral has line
-            scl <= periph_scl_tristate.o;
-        elsif ctrl_scl_tristate.oe = '1' and periph_scl_tristate.oe = '1' then
+        elsif ctrl_scl_tristate.oe = '0' and target_scl_tristate.oe = '1' then
+            -- targeteral has line
+            scl <= target_scl_tristate.o;
+        elsif ctrl_scl_tristate.oe = '1' and target_scl_tristate.oe = '1' then
             -- contention
             scl <= 'Z';
         else
@@ -142,13 +142,13 @@ begin
             scl <= '1';
         end if;
 
-        if ctrl_sda_tristate.oe = '1' and periph_sda_tristate.oe = '0' then
+        if ctrl_sda_tristate.oe = '1' and target_sda_tristate.oe = '0' then
             -- controller has line
             sda <= ctrl_sda_tristate.o;
-        elsif ctrl_sda_tristate.oe = '0' and periph_sda_tristate.oe = '1' then
-            -- peripheral has line
-            sda <= periph_sda_tristate.o;
-        elsif ctrl_sda_tristate.oe = '1' and periph_sda_tristate.oe = '1' then
+        elsif ctrl_sda_tristate.oe = '0' and target_sda_tristate.oe = '1' then
+            -- targeteral has line
+            sda <= target_sda_tristate.o;
+        elsif ctrl_sda_tristate.oe = '1' and target_sda_tristate.oe = '1' then
             -- contention
             sda <= 'Z';
         else

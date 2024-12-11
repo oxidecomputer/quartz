@@ -13,9 +13,9 @@ use ieee.numeric_std_unsigned.all;
 
 use work.axil8x32_pkg.all;
 
-use work.i2c_core_regs_pkg.all;
+use work.i2c_ctrl_regs_pkg.all;
 
-entity i2c_core_regs is
+entity i2c_ctrl_regs is
     port (
         clk     : in    std_logic;
         reset   : in    std_logic;
@@ -23,7 +23,7 @@ entity i2c_core_regs is
     );
 end entity;
 
-architecture rtl of i2c_core_regs is
+architecture rtl of i2c_ctrl_regs is
     constant AXI_OKAY           : std_logic_vector(1 downto 0) := "00";
     signal   axi_read_ready_int : std_logic;
     signal   axi_awready        : std_logic;

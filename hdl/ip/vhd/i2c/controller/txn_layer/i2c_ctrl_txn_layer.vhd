@@ -6,7 +6,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 use work.stream8_pkg;
 use work.tristate_if_pkg.all;
@@ -58,12 +58,13 @@ architecture rtl of i2c_txn_layer is
         state           : state_t;
         cmd             : cmd_t;
         in_random_read  : boolean;
-        bytes_done      : unsigned(7 downto 0);
+        bytes_done      : std_logic_vector(7 downto 0);
         do_start        : std_logic;
         do_ack          : std_logic;
         do_stop         : std_logic;
         tx_byte         : std_logic_vector(7 downto 0);
         tx_byte_valid   : std_logic;
+        next_valid      : std_logic;
     end record;
 
     constant SM_REG_RESET : sm_reg_t := (
@@ -75,7 +76,8 @@ architecture rtl of i2c_txn_layer is
         '0',            -- do_ack
         '0',            -- do_stop
         (others => '0'),-- tx_byte
-        '0'             -- tx_byte_valid
+        '0',            -- tx_byte_valid
+        '0'             -- next_valid
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -88,7 +90,7 @@ architecture rtl of i2c_txn_layer is
 begin
 
     -- The block that handles the link layer of the protocol
-    i2c_link_layer_inst: entity work.i2c_link_layer
+    i2c_ctrl_link_layer_inst: entity work.i2c_ctrl_link_layer
      generic map(
         CLK_PER_NS  => CLK_PER_NS,
         MODE        => MODE
@@ -101,6 +103,7 @@ begin
         tx_start        => sm_reg.do_start,
         tx_ack          => sm_reg.do_ack,
         tx_stop         => sm_reg.do_stop,
+        txn_next_valid  => sm_reg.next_valid,
         ready           => ll_ready,
         tx_data         => sm_reg.tx_byte,
         tx_data_valid   => sm_reg.tx_byte_valid,
@@ -111,14 +114,17 @@ begin
     );
 
     reg_sm_next: process(all)
-        variable v              : sm_reg_t;
-        variable is_read        : std_logic;
-        variable txd_v          : std_logic_vector(7 downto 0);
-        variable txd_valid_v    : std_logic;
+        variable v          : sm_reg_t;
+        variable is_read    : std_logic;
+        variable txd        : std_logic_vector(7 downto 0);
+        variable txd_valid  : std_logic;
     begin
-        v       := sm_reg;
-        is_read := '1' when sm_reg.cmd.op = READ or sm_reg.in_random_read else '0';
-        txd_valid_v := '0';
+        v           := sm_reg;
+        is_read     := '1' when sm_reg.cmd.op = READ or sm_reg.in_random_read else '0';
+
+        -- single cycle pulses
+        v.next_valid    := '0';
+        txd_valid       := '0';
 
         case sm_reg.state is
 
@@ -135,15 +141,17 @@ begin
 
             -- wait for link layer to finish START sequence and load up the address byte
             when WAIT_START =>
-                txd_v       := sm_reg.cmd.addr & is_read;
-                txd_valid_v := '1';
+                txd       := sm_reg.cmd.addr & is_read;
+                txd_valid := '1';
                 if ll_ready then
-                    v.state := WAIT_ADDR_ACK;
+                    v.next_valid    := '1';
+                    v.state         := WAIT_ADDR_ACK;
                 end if;
 
             -- wait for address byte to have been sent and for the peripheral to ACK
             when WAIT_ADDR_ACK =>
                 if ll_ready = '1' and ll_ackd_valid = '1' then
+                    v.next_valid    := '1';
                     if ll_ackd then
                         v.bytes_done := (others => '0');
                         if sm_reg.cmd.op = Read or sm_reg.in_random_read then
@@ -153,8 +161,8 @@ begin
                         else
                             v.state     := WAIT_WRITE_ACK;
                             -- load up the register address
-                            txd_v       := sm_reg.cmd.reg;
-                            txd_valid_v := '1';
+                            txd         := sm_reg.cmd.reg;
+                            txd_valid   := '1';
                         end if;
                     else
                         -- TODO: address nack error
@@ -162,10 +170,12 @@ begin
                     end if;
                 end if;
 
-            -- read as many bytes as requested
+            -- read as many bytes as requested, nacking and transitioning to STOP when done
             when READ =>
+                v.next_valid    := ll_ready;
+
                 if sm_reg.cmd.len = sm_reg.bytes_done and ll_ready = '1' then
-                    v.state     := STOP;
+                    v.state         := STOP;
                 elsif ll_rx_data_valid then
                     v.bytes_done    := sm_reg.bytes_done + 1;
                     -- nack the next byte if it is the last
@@ -175,12 +185,14 @@ begin
             -- transmit the next byte
             when WRITE =>
                 if tx_st_if.valid then
+                    v.next_valid    := '1';
                     v.state         := WAIT_WRITE_ACK;
                 end if;
 
             -- take action based off of the operation type and the ACK
             when WAIT_WRITE_ACK =>
                 if ll_ackd_valid then
+                    v.next_valid    := '1';
                     if ll_ackd then
                         v.bytes_done    := sm_reg.bytes_done + 1;
 
@@ -216,8 +228,10 @@ begin
         v.do_start  := '1' when v.state = START else '0';
         v.do_stop   := '1' when v.state = STOP else '0';
 
-        v.tx_byte       := txd_v when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK else tx_st_if.data;
-        v.tx_byte_valid := txd_valid_v when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK else tx_st_if.valid;
+        v.tx_byte       := txd when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
+                            else tx_st_if.data;
+        v.tx_byte_valid := txd_valid when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
+                            else tx_st_if.valid;
 
         sm_reg_next <= v;
     end process;

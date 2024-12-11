@@ -1,9 +1,9 @@
 // Copyright 2024 Oxide Computer Company
-// This is a SystemRDL description of the SW-accessible registers for the I2C core.
+// This is a SystemRDL description of the SW-accessible registers for the I2C controller.
 
-addrmap i2c_core_regs {
-    name = "I2C core registers";
-    desc = "Registers accessible on the AXI bus for interacting with the I2C core.";
+addrmap i2c_ctrl_regs {
+    name = "I2C controller registers";
+    desc = "Registers accessible on the AXI bus for interacting with the I2C controller.";
 
     default regwidth = 32;
     default sw = rw;

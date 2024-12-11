@@ -6,14 +6,14 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
-package i2c_peripheral_pkg is
+package i2c_target_vc_pkg is
 
     -- Message definitions
     constant got_start          : msg_type_t := new_msg_type("got_start");
@@ -24,7 +24,7 @@ package i2c_peripheral_pkg is
     constant got_byte           : msg_type_t := new_msg_type("got_byte");
     constant got_stop           : msg_type_t := new_msg_type("got_stop");
 
-    type i2c_peripheral_t is record
+    type i2c_target_vc_t is record
         -- private
         p_actor     : actor_t;
         p_buffer    : buffer_t;
@@ -33,51 +33,51 @@ package i2c_peripheral_pkg is
         P_address   : std_logic_vector(6 downto 0);
     end record;
 
-    constant i2c_peripheral_vc_logger : logger_t := get_logger("work:i2c_peripheral_vc");
+    constant i2c_target_vc_logger : logger_t := get_logger("work:i2c_peripheral_vc");
 
-    impure function new_i2c_peripheral_vc (
-        name    : string;
+    impure function new_i2c_target_vc (
+        name    : string    := "I2C_TARGET_VC";
         address : std_logic_vector(6 downto 0) := b"1010101";
-        logger  : logger_t := i2c_peripheral_vc_logger
-    ) return i2c_peripheral_t;
+        logger  : logger_t  := i2c_target_vc_logger
+    ) return i2c_target_vc_t;
 
-    impure function address (i2c_periph: i2c_peripheral_t) return std_logic_vector;
-    impure function buf (i2c_periph: i2c_peripheral_t) return buffer_t;
-    impure function memory (i2c_periph: i2c_peripheral_t) return memory_t;
+    impure function address (i2c_periph: i2c_target_vc_t) return std_logic_vector;
+    impure function buf (i2c_periph: i2c_target_vc_t) return buffer_t;
+    impure function memory (i2c_periph: i2c_target_vc_t) return memory_t;
 
     procedure expect_message (
         signal net              : inout network_t;
-        constant vc             : i2c_peripheral_t;
+        constant vc             : i2c_target_vc_t;
         constant expected_msg   : msg_type_t;
     );
 
     procedure expect_stop (
         signal net  : inout network_t;
-        constant vc : i2c_peripheral_t;
+        constant vc : i2c_target_vc_t;
     );
 
     procedure start_byte_ack (
         signal net      : inout network_t;
-        constant vc     : i2c_peripheral_t;
+        constant vc     : i2c_target_vc_t;
         variable ack    : out boolean;
     );
 
     procedure check_written_byte (
         signal net      : inout network_t;
-        constant vc     : i2c_peripheral_t;
+        constant vc     : i2c_target_vc_t;
         variable data   : std_logic_vector;
-        variable addr   : unsigned;
+        variable addr   : std_logic_vector;
     );
 
 end package;
 
-package body i2c_peripheral_pkg is
+package body i2c_target_vc_pkg is
 
-    impure function new_i2c_peripheral_vc (
-        name    : string;
+    impure function new_i2c_target_vc (
+        name    : string    := "I2C_TARGET_VC";
         address : std_logic_vector(6 downto 0) := b"1010101";
-        logger  : logger_t := i2c_peripheral_vc_logger
-    ) return i2c_peripheral_t is
+        logger  : logger_t  := i2c_target_vc_logger
+    ) return i2c_target_vc_t is
         variable buf : buffer_t;
     begin
         -- I2C can address 256 bytes, so construct an internal buffer to reflect that
@@ -91,24 +91,24 @@ package body i2c_peripheral_pkg is
         );
     end;
 
-    impure function address (i2c_periph: i2c_peripheral_t) return std_logic_vector is
+    impure function address (i2c_periph: i2c_target_vc_t) return std_logic_vector is
     begin
         return i2c_periph.p_address;
     end function;
 
-    impure function buf (i2c_periph: i2c_peripheral_t) return buffer_t is
+    impure function buf (i2c_periph: i2c_target_vc_t) return buffer_t is
     begin
         return i2c_periph.p_buffer;
     end function;
 
-    impure function memory (i2c_periph: i2c_peripheral_t) return memory_t is
+    impure function memory (i2c_periph: i2c_target_vc_t) return memory_t is
     begin
         return i2c_periph.p_buffer.p_memory_ref;
     end function;
 
     procedure expect_message (
         signal net              : inout network_t;
-        constant vc             : i2c_peripheral_t;
+        constant vc             : i2c_target_vc_t;
         constant expected_msg   : msg_type_t;
     ) is
         variable msg        : msg_t;
@@ -121,7 +121,7 @@ package body i2c_peripheral_pkg is
 
     procedure expect_stop (
         signal net      : inout network_t;
-        constant vc     : i2c_peripheral_t;
+        constant vc     : i2c_target_vc_t;
     ) is
     begin
         expect_message(net, vc, got_stop);
@@ -129,7 +129,7 @@ package body i2c_peripheral_pkg is
 
     procedure start_byte_ack (
         signal net      : inout network_t;
-        constant vc     : i2c_peripheral_t;
+        constant vc     : i2c_target_vc_t;
         variable ack    : out boolean;
     ) is
         variable msg    : msg_t;
@@ -149,9 +149,9 @@ package body i2c_peripheral_pkg is
 
     procedure check_written_byte (
         signal net      : inout network_t;
-        constant vc     : i2c_peripheral_t;
+        constant vc     : i2c_target_vc_t;
         variable data   : std_logic_vector;
-        variable addr   : unsigned;
+        variable addr   : std_logic_vector;
     ) is
         variable msg    : msg_t;
     begin
