@@ -1,0 +1,163 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of emulated i2c mux registers
+
+addrmap pca9506_regs {
+    name = "pca9506 registers";
+    desc = "Registers accessible on the i2c bus for controlling the emulated PCA9545 i2c mux";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    reg io {
+        field {
+            desc = "bits for current port";
+        } bits[7:0];
+    };
+
+    io ip0 @ 0x00;
+    ip0->name = "Ip0"; 
+    ip0->desc = "I/O port input state after polarity inversion (if enabled)";
+    ip0.bits->sw = r;
+
+    io ip1;
+    ip1->name = "Ip1"; 
+    ip1->desc = "I/O port input state after polarity inversion (if enabled)";
+    ip1.bits->sw = r;
+
+    io ip2;
+    ip2->name = "Ip2"; 
+    ip2->desc = "I/O port input state after polarity inversion (if enabled)";
+    ip2.bits->sw = r;
+
+    io ip3;
+    ip3->name = "Ip3"; 
+    ip3->desc = "I/O port input state after polarity inversion (if enabled)";
+    ip3.bits->sw = r;
+
+    io ip4;
+    ip4->name = "Ip4"; 
+    ip4->desc = "I/O port input state after polarity inversion (if enabled)";
+    ip4.bits->sw = r;
+
+    io op0 @ 0x08;
+    op0->name = "Op0"; 
+    op0->desc = "These registers reflect the outgoing logic levels of the pins defined as outputs by the
+I/O Configuration register. Bit values in these registers have no effect on pins defined
+as inputs. In turn, reads from these registers reflect the values that are in the flip-flops
+controlling the output selection, not the actual pin values.";
+
+    io op1;
+    op1->name = "Op1"; 
+    op1->desc = "These registers reflect the outgoing logic levels of the pins defined as outputs by the
+I/O Configuration register. Bit values in these registers have no effect on pins defined
+as inputs. In turn, reads from these registers reflect the values that are in the flip-flops
+controlling the output selection, not the actual pin values.";
+
+    io op2;
+    op2->name = "Op2"; 
+    op2->desc = "These registers reflect the outgoing logic levels of the pins defined as outputs by the
+I/O Configuration register. Bit values in these registers have no effect on pins defined
+as inputs. In turn, reads from these registers reflect the values that are in the flip-flops
+controlling the output selection, not the actual pin values.";
+
+    io op3;
+    op3->name = "Op3"; 
+    op3->desc = "These registers reflect the outgoing logic levels of the pins defined as outputs by the
+I/O Configuration register. Bit values in these registers have no effect on pins defined
+as inputs. In turn, reads from these registers reflect the values that are in the flip-flops
+controlling the output selection, not the actual pin values.";
+
+    io op4;
+    op4->name = "Op4"; 
+    op4->desc = "These registers reflect the outgoing logic levels of the pins defined as outputs by the
+I/O Configuration register. Bit values in these registers have no effect on pins defined
+as inputs. In turn, reads from these registers reflect the values that are in the flip-flops
+controlling the output selection, not the actual pin values.";
+
+    io pi0 @ 0x10;
+    pi0->name = "pi0"; 
+    pi0->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
+
+    io pi1 ;
+    pi1->name = "pi1"; 
+    pi1->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
+
+    io pi2 ;
+    pi2->name = "pi2"; 
+    pi2->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
+
+    io pi3 ;
+    pi3->name = "pi3"; 
+    pi3->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
+
+    io pi4 ;
+    pi4->name = "pi4"; 
+    pi4->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
+
+    io ioc0 @ 0x18;
+    ioc0->name = "ioc0"; 
+    ioc0->desc = "Config registers. 0: output, 1: input";
+    ioc0.bits->reset = 0xff;
+
+    io ioc1;
+    ioc1->name = "ioc1"; 
+    ioc1->desc = "Config registers. 0: output, 1: input";
+    ioc1.bits->reset = 0xff;
+
+    io ioc2;
+    ioc2->name = "ioc2"; 
+    ioc2->desc = "Config registers. 0: output, 1: input";
+    ioc2.bits->reset = 0xff;
+
+    io ioc3;
+    ioc3->name = "ioc3"; 
+    ioc3->desc = "Config registers. 0: output, 1: input";
+    ioc3.bits->reset = 0xff;
+
+    io ioc4;
+    ioc4->name = "ioc4"; 
+    ioc4->desc = "Config registers. 0: output, 1: input";
+    ioc4.bits->reset = 0xff;
+
+    io msk0 @ 0x20;
+    msk0->name = "msk0"; 
+    msk0->desc = "Mx[y] = 0: A level change at the I/O will generate an interrupt if IOx_y defined as input
+(Cx[y] in IOC register = 1).
+Mx[y] = 1: A level change in the input port will not generate an interrupt if IOx_y
+defined as input (Cx[y] in IOC register = 1).";
+    msk0.bits->reset = 0xff;
+
+    io msk1;
+    msk1->name = "msk1"; 
+    msk1->desc = "Mx[y] = 0: A level change at the I/O will generate an interrupt if IOx_y defined as input
+(Cx[y] in IOC register = 1).
+Mx[y] = 1: A level change in the input port will not generate an interrupt if IOx_y
+defined as input (Cx[y] in IOC register = 1).";
+    msk1.bits->reset = 0xff;
+
+    io msk2;
+    msk2->name = "msk2"; 
+    msk2->desc = "Mx[y] = 0: A level change at the I/O will generate an interrupt if IOx_y defined as input
+(Cx[y] in IOC register = 1).
+Mx[y] = 1: A level change in the input port will not generate an interrupt if IOx_y
+defined as input (Cx[y] in IOC register = 1).";
+    msk2.bits->reset = 0xff;
+
+    io msk3;
+    msk3->name = "msk3"; 
+    msk3->desc = "Mx[y] = 0: A level change at the I/O will generate an interrupt if IOx_y defined as input
+(Cx[y] in IOC register = 1).
+Mx[y] = 1: A level change in the input port will not generate an interrupt if IOx_y
+defined as input (Cx[y] in IOC register = 1).";
+    msk3.bits->reset = 0xff;
+
+    io msk4;
+    msk4->name = "msk4"; 
+    msk4->desc = "Mx[y] = 0: A level change at the I/O will generate an interrupt if IOx_y defined as input
+(Cx[y] in IOC register = 1).
+Mx[y] = 1: A level change in the input port will not generate an interrupt if IOx_y
+defined as input (Cx[y] in IOC register = 1).";
+    msk4.bits->reset = 0xff;
+
+};

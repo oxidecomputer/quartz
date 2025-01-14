@@ -39,6 +39,8 @@ entity i2c_target_phy is
         in_ack_phase: out std_logic;
         do_ack : in std_logic;
         txn_header : out i2c_header;
+        stop_condition : out std_logic;
+        start_condition : out std_logic;
 
         -- response interface
         resp_data : in std_logic_vector(7 downto 0);
@@ -82,8 +84,6 @@ architecture rtl of i2c_target_phy is
 
     constant BYTE_DONE : integer := 8;
 
-    signal start_condition : std_logic;
-    signal stop_condition : std_logic;
     signal sda_redge : std_logic;
     signal sda_fedge : std_logic;
     signal scl_fedge : std_logic;
@@ -178,7 +178,6 @@ begin
                     -- the registers are updated
                     if v.txn_hdr.valid = '1' and v.txn_hdr.read_write_n = '1' then
                         v.post_ack_nxt_state := TX_DATA;
-                        v.tx_ready := '1';
                     else
                         v.post_ack_nxt_state := RX_DATA;
                     end if;
@@ -191,14 +190,12 @@ begin
                     v.tx_reg := resp_data;
                     v.tx_ready := '0';
                 end if;
-                -- this biffs a shift after an ack
                 if scl_fedge then
                     v.tx_reg := shift_left(r.tx_reg, 1);
                     v.cntr := r.cntr + 1;
                 end if;
                 -- deal with stop or ack/nack 
                 if r.cntr = BYTE_DONE then
-                    v.tx_ready := '1';
                     v.tx_reg := shift_left(r.tx_reg, 1);
                     -- ack if upstream allows, else nack
                     v.state := GET_ACKNACK;
@@ -212,6 +209,9 @@ begin
                 end if;
                 if scl_fedge then
                     v.state := r.post_ack_nxt_state;
+                    if r.post_ack_nxt_state = TX_DATA then
+                        v.tx_ready := '1';
+                    end if;
                 end if;
 
             when GET_ACKNACK =>

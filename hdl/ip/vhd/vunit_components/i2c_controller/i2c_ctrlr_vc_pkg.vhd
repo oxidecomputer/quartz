@@ -91,6 +91,21 @@ package i2c_ctrl_vc_pkg is
         constant user_actor : in actor_t := null_actor
     );
 
+    -- send a mixed transaction to the i2c bus
+    -- a mixed transaction has some number of writes
+    -- followed by a restart with read
+    -- and the some number of reads
+    procedure i2c_mixed_txn (
+        signal net : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant tx_data      : queue_t;
+        constant bytes_to_read : integer;
+        constant rx_data      : queue_t;
+        constant ack_queue    : queue_t;
+        constant ack_last_read : boolean := false;
+        constant user_actor : in actor_t := null_actor
+    );
+
 end package;
 
 
@@ -270,6 +285,94 @@ package body i2c_ctrl_vc_pkg is
             push_byte(rx_data, pop(reply_msg));
             -- Ack data
             request_msg := new_msg(i2c_send_ack);
+            send(net, actor, request_msg);
+        end loop;
+        -- send stop
+        request_msg := new_msg(i2c_send_stop);
+        send(net, actor, request_msg);
+    end procedure;
+
+    procedure i2c_mixed_txn (
+        signal net : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant tx_data      : queue_t;
+        constant bytes_to_read : integer;
+        constant rx_data      : queue_t;
+        constant ack_queue    : queue_t;
+        constant ack_last_read : boolean := false;
+        constant user_actor : in actor_t := null_actor
+    ) is
+        variable request_msg : msg_t := new_msg(i2c_send_start);
+        variable reply_msg : msg_t;
+        variable actor : actor_t;
+        variable tgt_addr_rw : std_logic_vector(7 downto 0);
+    begin
+        if user_actor = null_actor then
+            actor := find("i2c_ctrl_vc");
+        else
+            actor := user_actor;
+        end if;
+
+        -- send start (msg defined in variable initialization)
+        send(net, actor, request_msg);
+        -- send target address
+        request_msg := new_msg(i2c_send_byte);
+        -- set rw bit , and put in the target address
+        tgt_addr_rw := target_addr & WRITE_BIT;
+        push(request_msg, to_integer(tgt_addr_rw));
+        send(net, actor, request_msg);
+        -- Get Ack/Nack from target
+        request_msg := new_msg(i2c_get_ack_nack);
+        send(net, actor, request_msg);
+        receive_reply(net, request_msg, reply_msg);
+        -- Put Ack/Nack into ack queue
+        push_boolean(ack_queue, pop_boolean(reply_msg));
+        delete(reply_msg);
+        -- loop through wr sending and waiting for acks
+        while not is_empty(tx_data) loop
+            -- send data byte
+            request_msg := new_msg(i2c_send_byte);
+            push(request_msg, pop_byte(tx_data));
+            send(net, actor, request_msg);
+            -- Get Ack/Nack from target, expecting ack
+            request_msg := new_msg(i2c_get_ack_nack);
+            send(net, actor, request_msg);
+            receive_reply(net, request_msg, reply_msg);
+            -- Put Ack/Nack into ack queue
+            push_boolean(ack_queue, pop_boolean(reply_msg));
+            delete(reply_msg);
+        end loop;
+        -- send restart
+        request_msg := new_msg(i2c_send_start);
+        send(net, actor, request_msg);
+         -- send target address, now as a read
+         request_msg := new_msg(i2c_send_byte);
+         -- set rw bit to 1 (read), and put in the target address
+         tgt_addr_rw := target_addr & READ_BIT;
+         push(request_msg, to_integer(tgt_addr_rw));
+         send(net, actor, request_msg);
+         -- Get Ack/Nack from target
+         request_msg := new_msg(i2c_get_ack_nack);
+         send(net, actor, request_msg);
+         receive_reply(net, request_msg, reply_msg);
+         -- Put Ack/Nack into ack queue
+         push_boolean(ack_queue, pop_boolean(reply_msg));
+         delete(reply_msg);
+
+         -- Now we read target bytes on these transactions the controller should ack
+        for i in 0 to bytes_to_read-1 loop
+            -- get data byte
+            request_msg := new_msg(i2c_get_byte);
+            send(net, actor, request_msg);
+            receive_reply(net, request_msg, reply_msg);
+            -- store data into rx queue
+            push_byte(rx_data, pop(reply_msg));
+            -- Ack/Nack data
+            if i = bytes_to_read-1 and ack_last_read = false then
+                request_msg := new_msg(i2c_send_nack);
+            else
+                request_msg := new_msg(i2c_send_ack);
+            end if;
             send(net, actor, request_msg);
         end loop;
         -- send stop
