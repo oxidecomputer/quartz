@@ -16,14 +16,14 @@ library vunit_lib;
 
 use work.i2c_ctrl_vc_pkg.all;
 
-entity i2c_mux_tb is
+entity i2c_pca9545ish_tb is
     generic (
 
         runner_cfg : string
     );
 end entity;
 
-architecture tb of i2c_mux_tb is
+architecture tb of i2c_pca9545ish_tb is
     -- CHB enabled results from sel = 00
     -- CHC enabled results from sel = 01
     -- CHA enabled results from sel = 10
@@ -34,7 +34,7 @@ architecture tb of i2c_mux_tb is
 
 begin
 
-    th: entity work.i2c_mux_th;
+    th: entity work.i2c_pca9545ish_th;
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;

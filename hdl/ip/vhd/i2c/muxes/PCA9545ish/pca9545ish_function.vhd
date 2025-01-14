@@ -19,7 +19,7 @@ use work.i2c_base_types_pkg.all;
 use work.i2c_mux_regs_pkg.all;
 
 
-entity i2c_mux_function is
+entity pca9545ish_function is
     generic(
         -- i2c address of the mux
         i2c_addr : std_logic_vector(6 downto 0) := 7x"70"
@@ -46,7 +46,7 @@ entity i2c_mux_function is
 end entity;
 
 
-architecture rtl of i2c_mux_function is
+architecture rtl of pca9545ish_function is
     function is_valid(data : std_logic_vector(7 downto 0)) return boolean is
     begin
         -- only allow clear and one-hot bits 0-2

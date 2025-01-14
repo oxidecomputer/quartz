@@ -28,7 +28,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.i2c_base_types_pkg.all;
 
-entity i2c_mux_top is
+entity pca9545ish_top is
     generic(
         -- i2c address of the mux
         i2c_addr : std_logic_vector(6 downto 0);
@@ -52,9 +52,9 @@ entity i2c_mux_top is
         -- 00: channel 0, 01: channel 1, 10: channel 2, 11: off
         mux_sel : out std_logic_vector(1 downto 0)
     );
-end entity i2c_mux_top;
+end entity;
 
-architecture rtl of i2c_mux_top is
+architecture rtl of pca9545ish_top is
     signal inst_data : std_logic_vector(7 downto 0);
     signal inst_valid : std_logic;
     signal inst_ready : std_logic;
@@ -93,7 +93,7 @@ begin
     );
 
     -- mux functional logic
-    i2c_mux_function_inst: entity work.i2c_mux_function
+    i2c_mux_function_inst: entity work.pca9545ish_function
      generic map(
         i2c_addr => i2c_addr
     )

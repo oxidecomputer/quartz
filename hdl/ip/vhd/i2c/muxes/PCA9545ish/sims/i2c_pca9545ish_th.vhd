@@ -14,12 +14,12 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.i2c_ctrl_vc_pkg.all;
-use work.i2c_mux_sim_pkg.all;
+use work.i2c_pca9545ish_sim_pkg.all;
 
-entity i2c_mux_th is
+entity i2c_pca9545ish_th is
 end entity;
 
-architecture th of i2c_mux_th is
+architecture th of i2c_pca9545ish_th is
 
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
@@ -53,7 +53,7 @@ begin
     i2c_bus_scl <= tgt_scl_o when tgt_scl_oe = '1' else 'H';
     i2c_bus_sda <= tgt_sda_o when tgt_sda_oe = '1' else 'H';
 
-    DUT: entity work.i2c_mux_top
+    DUT: entity work.pca9545ish_top
      generic map(
         i2c_addr => 7x"70",
         giltch_filter_cycles => 3
