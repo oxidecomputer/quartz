@@ -30,7 +30,6 @@ entity response_processor is
         live_status    : in    status_t;
         response_crc   : in    std_logic_vector(7 downto 0);
         is_tx_last_byte : out   boolean;
-        chip_sel_active : in    std_logic;
 
         -- flash channel responses
         flash_resp : view flash_chan_resp_sink;
@@ -114,7 +113,10 @@ begin
         else  -- UART response
            response_chan_mux.cycle_type <= message_with_data;
            response_chan_mux.tag        <= (others => '0');
-           response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 256);  -- cap to tx max
+           -- to get this working well we're going to cap the payload at 61 bytes
+           -- we can re-evaluate this later, but this will support the smallest OOB channel
+           -- with 3 bytes of SMB headers
+           response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 61);  -- cap to tx max
            flash_resp.ready             <= '0';
            resp_data <= sp_to_host_espi.st.data;
            sp_to_host_espi.st.ready <= '1' when data_to_host.ready = '1' and r.cur_valid = '1' and r.state = RESPONSE_PAYLOAD else '0';
@@ -150,7 +152,7 @@ begin
         case r.state is
             when IDLE =>
                 -- TODO: figure out a better mask here to deal with the valid response
-                -- or manange processing
+                -- or manage processing
                 if command_header.valid and not r.response_done then
                     v.state := RESPONSE_CODE;
                 end if;
@@ -176,6 +178,8 @@ begin
                             v.state := RESPONSE_FLASH_HEADER;
                         when opcode_get_pc =>
                             v.state := RESPONSE_UART_HEADER;
+                        when opcode_get_oob =>
+                            v.state := response_oob_header;
                         when others =>
                             -- Default hw to just return status with accept code
                             v.state := STATUS;
@@ -250,18 +254,20 @@ begin
                         -- These two things could change cycle-cycle but we need them to match
                         -- so we latch them at the same time, before they're needed
                         -- internal counters are 0 indexed
-                        v.temp_length := response_chan_mux.length;
+                        v.temp_length := response_chan_mux.length + 3;  -- 3 bytes of SMB headers
                         v.payload_cnt := response_chan_mux.length - 1;
                     when 1 =>
                         v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
                     when 2 =>
                         v.cur_data := r.temp_length(7 downto 0);
+                    when 5 =>
+                        v.cur_data := resize(v.payload_cnt, 8) + 1; -- SMBus Byte Count
                     when others =>
-                       v.cur_data := (others => '0'); -- Filled in for message code, and msg specific
+                       v.cur_data := (others => '0'); -- SMB Headers
                 end case;
                 if data_to_host.ready then
                     v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 2 then
+                    if r.resp_idx = 5 then
                         v.state := RESPONSE_PAYLOAD;
                     end if;
                 end if;
@@ -293,7 +299,7 @@ begin
                -- Need to let the CRC calc finish including the last byte
                -- this case is special-cased below to not be a valid byte.
                -- in the original implementation, this happened naturally
-               -- due to the delay the pipeline, but the new implementaion
+               -- due to the delay the pipeline, but the new implementation
                -- this can run clock-over-clock
                v.state := CRC;
             when CRC =>

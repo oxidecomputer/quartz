@@ -71,6 +71,12 @@ begin
                 -- Expect the reset value of status here
                 expected_status := pack(status_t'(rec_reset));
                 check_equal(status, expected_status, "Status did not match reset value");
+
+                get_status(net, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                -- Expect the reset value of status here
+                expected_status := pack(status_t'(rec_reset));
+                check_equal(status, expected_status, "Status did not match reset value");
             elsif run("dbg_status_check") then
                 enable_debug_mode(net);
                 dbg_send_get_status_cmd(net);
@@ -188,14 +194,53 @@ begin
 
                 -- would normally wait for the completion alert now
                 wait for 300 us;
-            elsif run("dbg_uart") then
+            elsif run("oob_no_pec_uart") then
+                enable_debug_mode(net);
+                -- Send UART data which will then be looped back and rx'd
+                payload_size := rnd.RandInt(1, 61);  -- why 61 you ask? we are limiting total bytes to 64 and there could be 3 bytes of header
+                my_queue := build_rand_byte_queue(payload_size);
+                dbg_send_uart_oob_no_pec_cmd(net, my_queue);
+                dbg_wait_for_done(net);
+                -- get the response from the fifo
+                dbg_get_response(net, 4 , response);
+                check(response.crc_ok, "Send UART CMD resp CRC Check failed");
+                dbg_get_response_size(net, gen_int);
+                print("PUT resp Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int));
+                wait for 10 * payload_size * 250 ns;  -- approx uart time for payload size
+                status_rec := unpack(response.status);
+                if status_rec.oob_avail /= '1' then
+                    dbg_wait_for_alert(net);
+                end if;
+                -- technically we'd get status here, and if we supported completions we'd return it here
+                -- response size is going to be 4 bytes for response_code/status/crc
+                -- + 3 standard header bytes
+                -- + 3 smbus header bytes
+                -- + payload bytes
+
+                dbg_get_uart_oob_no_pec_cmd(net);
+                dbg_wait_for_done(net);
+                wait for 10 us;
+                dbg_get_response_size(net, gen_int);
+                print("GET resp Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int * 4));
+                dbg_get_response(net, payload_size + 10 , response);
+                check(response.crc_ok, "Response UART data resp CRC Check failed");
+                compare_uart_loopback(my_queue, response.queue);
+
+            elsif run("qspi_oob_no_pec_uart") then
+                -- Send UART data which will then be looped back and rx'd
+                payload_size := 21; --rnd.RandInt(1, 61);  -- why 61 you ask? we are limiting total bytes to 64 and there could be 3 bytes of header
+                my_queue := build_rand_byte_queue(payload_size);
+                put_oob_no_pec(net, my_queue, response_code, status,  crc_ok);
+                wait for 1 ms;
+
+            elsif run("msg_w_data_uart") then
                 enable_debug_mode(net);
                 -- temp enable periph 0 msg responses
                 write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), std_logic_vector'(X"00000011"));
                 -- Send UART data which will then be looped back and rx'd
-                payload_size := rnd.RandInt(1, 64);
+                payload_size := rnd.RandInt(1, 61);  -- why 61 you ask? we are limiting total bytes to 64 and there could be 3 bytes of header
                 my_queue := build_rand_byte_queue(payload_size);
-                dbg_send_uart_data_cmd(net, my_queue);
+                dbg_send_uart_msg_w_data_cmd(net, my_queue);
                 dbg_wait_for_done(net);
                 -- get the response from the fifo
                 dbg_get_response(net, 4 , response);
@@ -212,7 +257,7 @@ begin
                 -- + 8 header bytes
                 -- + payload bytes
 
-                dbg_get_uart_data_cmd(net);
+                dbg_get_uart_msg_w_data_cmd(net);
                 dbg_wait_for_done(net);
                 wait for 10 us;
                 dbg_get_response_size(net, gen_int);

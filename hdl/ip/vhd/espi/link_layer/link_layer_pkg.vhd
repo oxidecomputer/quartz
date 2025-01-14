@@ -84,8 +84,7 @@ package body link_layer_pkg is
         -- '-' (don't care) values.
         case? h.opcode is
             when opcode_put_np |
-                 opcode_get_pc |
-                 opcode_get_oob =>
+                 opcode_get_pc =>
                 return true;
             when others =>
                 return false;
@@ -163,7 +162,7 @@ package body link_layer_pkg is
         end case?;
     end function;
 
-    -- Function overloading hacks for restting records
+    -- Function overloading hacks for resetting records
     function rec_reset return size_info_t is
         variable rec: size_info_t := (
             (others => '0'),

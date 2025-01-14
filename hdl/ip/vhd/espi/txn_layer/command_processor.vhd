@@ -57,6 +57,7 @@ architecture rtl of command_processor is
         parse_get_cfg_hdr,
         parse_set_cfg_hdr,
         parse_msg_header,
+        parse_oob_hdr,
         parse_vwire_put,
         parse_iowr_put,
         reset_word1,
@@ -137,12 +138,13 @@ architecture rtl of command_processor is
                     when message_with_data =>
                         next_state.next_state := parse_msg_header;
                         next_state.cmd_addr_bytes := 0;
+                        -- 5 message specific bytes aren't included in the length
                         next_state.cmd_payload_bytes := to_integer(header.length);
                     when others =>
                         null;
                 end case;
             when opcode_put_oob =>
-                next_state.next_state := parse_data;
+                next_state.next_state := parse_oob_hdr;
                 next_state.cmd_addr_bytes := 0;
                 next_state.cmd_payload_bytes := to_integer(header.length);
             when others =>
@@ -219,6 +221,7 @@ begin
                         when opcode_get_status |
                              opcode_get_pc |
                              opcode_get_flash_c |
+                             opcode_get_oob |
                              opcode_get_vwire =>
                             v.state := crc;
                         -- Config register opcodes, get and set
@@ -276,7 +279,7 @@ begin
             -- The more fun command parsing. The first 3 bytes of these commands are
             -- always the same, cycle type (1 byte), tag/length[11:8] (1 byte), and
             -- length[7:0] (1 byte). The next bytes are opcode/type specific, with some
-            -- having variable address byte lenths and some having data while some have
+            -- having variable address byte lengths and some having data while some have
             -- no data and are just requests for data.
             when parse_common_cycle_header =>
                 if data_from_host.valid then
@@ -302,11 +305,23 @@ begin
                 end if;
             when parse_msg_header =>
                 if data_from_host.valid then
+                    -- 5 message specific bytes *are* included in the length
+                    -- so we don't need to account for them by decrementing rem_bytes
                     v.hdr_idx := v.hdr_idx + 1;
                     if r.hdr_idx = 7 then
                         v.state := parse_data;
                     end if;
                 end if;
+            when parse_oob_hdr =>
+            if data_from_host.valid then
+                -- 3 smb header bytes *are* included in the length
+                -- so we need to decrement the rem_bytes
+                v.hdr_idx := v.hdr_idx + 1;
+                v.rem_data_bytes := r.rem_data_bytes - 1;
+                if r.hdr_idx = 5 then
+                    v.state := parse_data;
+                end if;
+            end if;
             when parse_addr_header =>
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
@@ -347,7 +362,7 @@ begin
                 end if;
             -- not much to do here. In theory, we have already indicated that the
             -- appropriate channel has room so we sit here until the data phase has
-            -- finished. Muxes elsewhere should direct this datat to appropriate buffers
+            -- finished. Muxes elsewhere should direct this data to appropriate buffers
             when parse_data =>
                 v.hdr_idx := 0;
                 if data_from_host.valid and data_from_host.ready then
