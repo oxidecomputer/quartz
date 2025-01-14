@@ -11,7 +11,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.i2c_ctrl_vc_pkg.all;
 
-package i2c_mux_sim_pkg is
+package i2c_pca9545ish_sim_pkg is
 
     constant i2c_ctrl_vc : i2c_ctrl_vc_t := new_i2c_ctrl_vc("i2c_ctrl_vc");
 
