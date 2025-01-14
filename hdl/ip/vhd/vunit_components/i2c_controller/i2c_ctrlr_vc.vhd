@@ -45,6 +45,8 @@ architecture model of i2c_controller_vc is
         gen_start : boolean;
         gen_stop : boolean;
     end record;
+    signal i2c_tx_data : std_logic_vector(7 downto 0);  -- for debug/tracing etc
+    signal i2c_rx_data : std_logic_vector(7 downto 0);  -- for debug/tracing etc
 
     function decode(byte : integer range 0 to 255) return flags_t is
         variable byte_as_bits : std_logic_vector(7 downto 0);
@@ -106,6 +108,10 @@ begin
         procedure gen_start is
             -- High to low transition of SDA while SCL is high
             begin
+                if scl = '0' then
+                    sda <= 'Z';
+                    wait until rising_edge(aligner_int);
+                end if;
                 state <= START;
                 scl <= 'Z';
                 sda <= 'Z';
@@ -135,12 +141,13 @@ begin
             ) is
             begin
                 state <= OUT_DATA;
+                i2c_tx_data <= payload;
                 -- assume we're immediately after a start condition or 
                 -- after the sclk fedge of an ack/nack
                 -- scl must be low coming in and going out
                 -- msb first
                 for i in 7 downto 0 loop
-                    sda <= payload(i);  -- clock is low put data out on sda
+                    sda <= '0' when payload(i) = '0' else 'Z';  -- clock is low put data out on sda
                     wait until rising_edge(aligner_int);
                     scl <= 'Z';
                     wait until falling_edge(aligner_int);
@@ -164,6 +171,7 @@ begin
                     wait until falling_edge(aligner_int);
                     scl <= '0';
                 end loop;
+                i2c_rx_data <= payload;
             end procedure;
             procedure send_ack is
             begin
