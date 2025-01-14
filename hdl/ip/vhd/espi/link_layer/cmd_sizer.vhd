@@ -102,8 +102,9 @@ begin
 
             when tag_len =>
                 if byte_transfer then
-                    v.state := tag_len;
-                    v.hdr.len(11 downto 8) := cmd.data(3 downto 0);
+                    v.state := len;
+                    v.hdr.len(7 downto 0) := cmd.data(7 downto 0);
+                    v.state := len;
                 end if;
                 if cs_n = '1' then
                     v.size_info.valid := '0';
@@ -111,7 +112,7 @@ begin
                 end if;
 
             when len =>
-                if known_size_by_cycle_type(r.hdr) then
+                if known_size_by_length(r.hdr) then
                     v.state := size_known;
                     v.size_info.size := size_by_header(r.hdr);
                 elsif byte_transfer then

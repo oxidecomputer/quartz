@@ -55,12 +55,19 @@ package espi_dbg_vc_pkg is
         signal net : inout network_t;
         variable size  : inout integer
     );
-    procedure dbg_send_uart_data_cmd(
+    procedure dbg_send_uart_msg_w_data_cmd(
+        signal net : inout network_t;
+        payload : queue_t
+    );
+    procedure dbg_send_uart_oob_no_pec_cmd(
         signal net : inout network_t;
         payload : queue_t
     );
 
-    procedure dbg_get_uart_data_cmd(
+    procedure dbg_get_uart_msg_w_data_cmd(
+        signal net : inout network_t;
+    );
+    procedure dbg_get_uart_oob_no_pec_cmd(
         signal net : inout network_t;
     );
 
@@ -213,19 +220,36 @@ package body espi_dbg_vc_pkg is
         size := to_integer(fifo_status.resp_used_wds);
     end procedure;
 
-    procedure dbg_send_uart_data_cmd(
+    procedure dbg_send_uart_msg_w_data_cmd(
         signal net : inout network_t;
         payload : queue_t
     ) is
-        variable cmd : cmd_t := build_put_uart_data_cmd(payload);
+        variable cmd : cmd_t := build_put_msg_w_data_cmd(payload);
     begin
         dbg_send_cmd(net, cmd);
     end procedure;
 
-    procedure dbg_get_uart_data_cmd(
+    procedure dbg_get_uart_msg_w_data_cmd(
         signal net : inout network_t;
     ) is
-        variable cmd : cmd_t := build_get_uart_data_cmd;
+        variable cmd : cmd_t := build_get_msg_w_data_cmd;
+    begin
+        dbg_send_cmd(net, cmd);
+    end procedure;
+
+    procedure dbg_send_uart_oob_no_pec_cmd(
+        signal net : inout network_t;
+        payload : queue_t
+    ) is
+        variable cmd : cmd_t := build_put_oob_no_pec_cmd(payload);
+    begin
+        dbg_send_cmd(net, cmd);
+    end procedure;
+
+    procedure dbg_get_uart_oob_no_pec_cmd(
+        signal net : inout network_t;
+    ) is
+        variable cmd : cmd_t := build_get_oob_no_pec_cmd;
     begin
         dbg_send_cmd(net, cmd);
     end procedure;

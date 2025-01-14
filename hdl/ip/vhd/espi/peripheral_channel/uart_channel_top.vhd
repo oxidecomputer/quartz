@@ -64,9 +64,12 @@ architecture rtl of uart_channel_top is
    signal fifo_thresh_timer : std_logic_vector(32 downto 0);
    constant delay_time : std_logic_vector(fifo_thresh_timer'range) := calc_ms(1, 5, fifo_thresh_timer'length);
    signal fifo_read_by_espi : std_logic;
-   signal  pc_avail_not_masked : std_logic;
    signal msg_not_oob_syncd : std_logic;
+   alias is_data_msg : std_logic is msg_not_oob_syncd;
+   signal is_oob_msg : std_logic;
    constant hold_thresh: natural := 32;
+   type orphan_state_t is (MASKED, NOT_MASKED);
+   signal orphan_state: orphan_state_t;
 
 begin
 
@@ -77,17 +80,19 @@ begin
         sycnd_output => msg_not_oob_syncd
     );
 
+    is_oob_msg <= not msg_not_oob_syncd;
+
     -- Not going to support any Non-posted transactions
     -- on this interface
     np_free <= '0';
     np_avail <= '0';
     pc_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    pc_avail <= (not tx_rempty) and pc_avail_not_masked and msg_not_oob_syncd;
+    pc_avail <= '1' when is_data_msg = '1' and orphan_state = NOT_MASKED else '0';
     oob_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    oob_avail <= (not tx_rempty) and pc_avail_not_masked and (not msg_not_oob_syncd);
+    oob_avail <= '1' when is_oob_msg = '1' and orphan_state = NOT_MASKED else '0';
 
     host_to_sp_espi.ready <= not rx_wfull;
-    -- tx_rusedwds is potentailly cycles behind the empty flag due to fifo latencies.
+    -- tx_rusedwds is potentially cycles behind the empty flag due to fifo latencies.
     -- since we're using it in the avail bytes, we need to ensure we're at least > 0
     sp_to_host_espi.st.valid <= '1' when tx_rempty /= '1' and tx_rusedwds > 0 else '0';
     sp_to_host_espi.avail_bytes <= resize(tx_rusedwds, sp_to_host_espi.avail_bytes'length);
@@ -97,27 +102,39 @@ begin
 
     -- We want to hold some data to let the bytes accumulate
     -- so that we're not doing multiple transactions (which are multi-byte)
-    -- but just transferring 1-2 bytes at a time.
-    -- above the threshold, let it run
-    -- below the threshold timer runs
-    -- read resets the timer
-    -- empty timer doesn't run, masked
+    -- not avail:
+    --   when we're below the used words threshold, but not empty run a timer
+    --   timer expires, move to avail
+    --   cross the threshold, move to avail
+    --  avail:
+    --   if we read down to empty, move to not avail
+    
     orphan_timer: process(clk)
     begin
         if reset then
             fifo_thresh_timer <= (others => '0');
-            pc_avail_not_masked <= '0';
+            orphan_state <= MASKED;
         elsif rising_edge(clk) then
-            pc_avail_not_masked <= '0';  -- 
-            -- Any read or empty fifo resets the timer
-            if fifo_read_by_espi = '1' or tx_rempty = '1' then
-                fifo_thresh_timer <= (others => '0');
-            -- below the threshold, timer runs
-            elsif tx_rusedwds < hold_thresh and fifo_thresh_timer < delay_time then
-                fifo_thresh_timer <= fifo_thresh_timer + 1;
-            elsif tx_rusedwds >= hold_thresh or fifo_thresh_timer = delay_time then
-                pc_avail_not_masked <= '1';
-            end if;
+            case orphan_state is
+                when MASKED =>
+                    if tx_rempty = '1' then
+                        -- nothing going on, clear the timer
+                        fifo_thresh_timer <= (others => '0');
+                    elsif tx_rusedwds < hold_thresh and fifo_thresh_timer < delay_time then
+                        -- count when not empty but below the threshold
+                        fifo_thresh_timer <= fifo_thresh_timer + 1;
+                    elsif tx_rusedwds >= hold_thresh or fifo_thresh_timer >= delay_time then
+                        -- we're above the threshold or the timer expired
+                        orphan_state <= NOT_MASKED;
+                    end if;
+
+                when NOT_MASKED =>
+                    if tx_rempty = '1' then
+                        -- we've emptied the fifo, go back to masked
+                        fifo_thresh_timer <= (others => '0');
+                        orphan_state <= MASKED;
+                    end if;
+            end case;
         end if;
     end process;
 

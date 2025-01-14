@@ -339,7 +339,7 @@ package body espi_base_types_pkg is
         ret.vwire_avail := '0';
         ret.np_avail := '0';
         ret.pc_avail := '0';
-        ret.oob_free := '0';
+        ret.oob_free := '1';
         ret.vwire_free := '1';
         ret.np_free := '0';
         ret.pc_free := '1';
