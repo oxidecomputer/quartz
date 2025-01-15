@@ -1,11 +1,14 @@
 package ControllerTests;
 
 import Assert::*;
+import ClientServer::*;
 import Connectable::*;
 import DefaultValue::*;
+import FIFO::*;
 import GetPut::*;
 import StmtFSM::*;
 
+import CounterRAM::*;
 import Strobe::*;
 import TestUtils::*;
 
@@ -16,6 +19,9 @@ import IgnitionControllerRegisters::*;
 import IgnitionProtocol::*;
 import IgnitionTestHelpers::*;
 
+import IgnitionReceiver::*;
+import IgnitionTransceiver::*;
+import IgnitionTransmitter::*;
 
 IgnitionController::Parameters parameters = defaultValue;
 
@@ -24,42 +30,88 @@ module mkPeriodicHelloTest (Empty);
         mkControllerBench(
             parameters,
             4 * parameters.protocol.hello_interval);
-    let controller = bench.controller;
-    let rx = tpl_1(bench.link.message);
+    Reg#(Bool) first_hello_interval <- mkReg(True);
+
+    // The Controller will emit OutputEnabled events for transmitters. This test
+    // is not interested in these events, so discard them.
+    FIFO#(TransmitterEvent#(4)) tx <- mkLFIFO();
+
+    (* fire_when_enabled *)
+    rule do_filter_tx_output_enabled_events;
+        let ev <- bench.controller.txr.tx.get;
+
+        case (ev.ev) matches
+            tagged OutputEnabled .*: noAction;
+            default: tx.enq(ev);
+        endcase
+    endrule
+
+    function assert_controller_message_eq(id, expected, msg) =
+        assert_get_eq(
+            fifoToGet(tx),
+            TransmitterEvent {
+                id: id,
+                ev: tagged Message expected},
+            msg);
 
     mkAutoFSM(seq
-        action
-            bench.link.set_connected(True, True);
-            // Reset Hello sent count.
-            reset_count(controller.registers.controller_hello_sent_count);
-        endaction
+        // Reset HelloSent count.
+        bench.clear_counter(0, HelloSent);
+        bench.clear_counter(1, HelloSent);
+        bench.clear_counter(2, HelloSent);
+        bench.clear_counter(3, HelloSent);
 
-        action
-            assert_get_eq(rx, tagged Hello, "expected Hello message");
-            // Reset the ticks elapsed counter to determine the interval between
-            // Hello messages.
-            bench.reset_ticks_elapsed();
-        endaction
+        repeat(4) seq
+            // Expect the next Hello messages ..
+            assert_controller_message_eq(
+                0, tagged Hello,
+                "expected Hello from Controller 0");
+            assert_controller_message_eq(
+                1, tagged Hello,
+                "expected Hello from Controller 1");
+            assert_controller_message_eq(
+                2, tagged Hello,
+                "expected Hello from Controller 2");
+            assert_controller_message_eq(
+                3, tagged Hello,
+                "expected Hello from Controller 3");
 
-        repeat(3) action // This only fires twice, still not sure why.
-            // Expect the next Hello message ..
-            assert_get_eq(rx, tagged Hello, "expected Hello message");
+            // .. and test the interval between this set and the previous
+            // messages.
+            action
+                if (first_hello_interval) begin
+                    first_hello_interval <= False;
+                    assert_eq(
+                        bench.ticks_elapsed, 0,
+                        "expected Hello messages during the first tick");
+                end
+                else begin
+                    assert_eq(
+                        bench.ticks_elapsed,
+                        fromInteger(parameters.protocol.hello_interval + 1),
+                        "expected the configured number of ticks between Hello messages");
 
-            // .. and test the interval between it and the previous message.
-            // Note that the expired timer for Hello messages fires one tick
-            // early, to allow for some slack between send/receive and the
-            // timout on the Target side.
-            assert_eq(
-                bench.ticks_elapsed,
-                fromInteger(parameters.protocol.hello_interval),
-                "expected the configured number of ticks between Hello messages");
+                    bench.reset_ticks_elapsed();
+                end
+            endaction
+        endseq
 
-            bench.reset_ticks_elapsed();
-        endaction
+        bench.assert_counter_eq(
+            0, HelloSent, 3,
+            "expected HelloSent count of 3 for Controller 0");
+        bench.assert_counter_eq(
+            1, HelloSent, 3,
+            "expected HelloSent count of 3 for Controller 1");
+        bench.assert_counter_eq(
+            2, HelloSent, 3,
+            "expected HelloSent count of 3 for Controller 2");
+        bench.assert_counter_eq(
+            3, HelloSent, 3,
+            "expected HelloSent count of 3 for Controller 3");
 
-        assert_count(
-            controller.registers.controller_hello_sent_count, 3,
-            "expected 3 Hello messages sent");
+        bench.assert_counter_eq(
+            0, HelloSent, 0,
+            "expected HelloSent count to have cleared");
     endseq);
 endmodule
 
@@ -68,27 +120,65 @@ module mkTargetPresentTest (Empty);
         mkControllerBench(
             parameters,
             5 * parameters.protocol.status_interval);
-    let controller = bench.controller;
-    let tx = tpl_2(bench.link.message);
 
+    mkDiscardTx(bench.controller);
     mkAutoFSM(seq
-        action
-            bench.link.set_connected(True, True);
-            reset_count(controller.registers.controller_status_received_count);
-        endaction
+        // Reset StatusReceived count.
+        bench.clear_counter(0, StatusReceived);
+        bench.clear_counter(1, StatusReceived);
+        bench.clear_counter(2, StatusReceived);
+        bench.clear_counter(3, StatusReceived);
 
-        repeat(3) tx.put(message_status_system_powered_on_link0_connected);
+        bench.clear_counter(0, TargetPresent);
+        bench.clear_counter(1, TargetPresent);
+        bench.clear_counter(2, TargetPresent);
+        bench.clear_counter(3, TargetPresent);
 
-        action
-            await(controller.registers.controller_state.target_present == 1);
-            bench.reset_ticks_elapsed();
+        repeat(4) seq
+            bench.receive_status_message(0,
+                    message_status_system_powered_on_link0_connected);
+            bench.receive_status_message(1,
+                    message_status_system_powered_on_link0_connected);
+            bench.receive_status_message(2,
+                    message_status_system_powered_on_link0_connected);
+            bench.receive_status_message(3,
+                    message_status_system_powered_on_link0_connected);
+        endseq
 
-            assert_count(
-                controller.registers.controller_status_received_count, 3,
-                "expected Status received count to be 3");
-        endaction
+        bench.assert_target_present(0, "expected Target 0 present");
+        bench.assert_target_present(1, "expected Target 1 present");
+        bench.assert_target_present(2, "expected Target 2 present");
+        bench.assert_target_present(3, "expected Target 3 present");
 
-        await(controller.registers.controller_state.target_present == 0);
+        bench.assert_counter_eq(
+                0, StatusReceived, 3,
+                "expected StatusReceived count of 3 for Controller 0");
+        bench.assert_counter_eq(
+                1, StatusReceived, 3,
+                "expected StatusReceived count of 3 for Controller 1");
+        bench.assert_counter_eq(
+                2, StatusReceived, 3,
+                "expected StatusReceived count of 3 for Controller 2");
+        bench.assert_counter_eq(
+                3, StatusReceived, 3,
+                "expected StatusReceived count of 3 for Controller 3");
+
+        bench.assert_counter_eq(
+                0, TargetPresent, 1,
+                "expected TargetPresent count of 1 for Controller 0");
+        bench.assert_counter_eq(
+                1, TargetPresent, 1,
+                "expected TargetPresent count of 1 for Controller 1");
+        bench.assert_counter_eq(
+                2, TargetPresent, 1,
+                "expected TargetPresent count of 1 for Controller 2");
+        bench.assert_counter_eq(
+                3, TargetPresent, 1,
+                "expected TargetPresent count of 1 for Controller 3");
+
+        bench.assert_counter_eq(
+                0, StatusReceived, 0,
+                "expected StatusReceived count to have cleared");
     endseq);
 endmodule
 
@@ -96,58 +186,32 @@ module mkTargetStateValidIfPresentTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
             parameters,
-            parameters.protocol.status_interval);
-    let controller = bench.controller;
-    let tx = tpl_2(bench.link.message);
+            5 * parameters.protocol.status_interval);
 
-    // Shortcuts to registers.
-    let controller_state = bench.controller.registers.controller_state;
-    let target_system_type = bench.controller.registers.target_system_type;
-    let target_system_status = bench.controller.registers.target_system_status;
-
+    mkDiscardTx(bench.controller);
     mkAutoFSM(seq
-        bench.link.set_connected(True, True);
+        assert_controller_register_eq(
+                bench.controller, 0,
+                TargetSystemType, SystemType'(defaultValue),
+                "Target system type set");
 
-        action
-            bench.await_tick();
-            tx.put(message_status_system_powered_on_link0_connected);
-        endaction
+        // Announce the Target.
+        bench.receive_status_message(0,
+                message_status_system_powered_on_link0_connected);
+        await(bench.controller.idle);
 
-        action
-            // Target presence is not yet valid after one Status message.
-            bench.await_tick();
-            assert_not_set(controller_state.target_present,
-                "expected Target not present");
-            assert_eq(
-                target_system_type,
-                defaultValue,
-                "expected Target system type not set");
-            assert_eq(
-                target_system_status,
-                defaultValue,
-                "expected Target system status not set");
-        endaction
+        assert_controller_register_eq(
+                bench.controller, 0,
+                TargetSystemType, IgnitionTestHelpers::target_system_type,
+                "Target system type not set");
 
-        // Send additional Status messages.
-        repeat(3) action
-            bench.await_tick();
-            tx.put(message_status_system_powered_on_link0_connected);
-        endaction
+        // Let the Target time out.
+        await(!bench.controller.presence_summary[0]);
 
-        action
-            bench.await_tick();
-            assert_set(
-                controller_state.target_present,
-                "expected Target present");
-            assert_eq(
-                target_system_type.system_type,
-                pack(IgnitionTestHelpers::target_system_type.id),
-                "expected Target system type 5");
-            assert_eq(
-                target_system_status,
-                unpack(extend(pack(system_status_system_power_enabled))),
-                "expected (only) system power enabled bit set");
-        endaction
+        assert_controller_register_eq(
+                bench.controller, 0,
+                TargetSystemType, SystemType'(defaultValue),
+                "Target system type set");
     endseq);
 endmodule
 
@@ -155,45 +219,71 @@ module mkTargetLinkStatusTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
             parameters,
-            parameters.protocol.status_interval);
-    let controller = bench.controller;
-    let tx = tpl_2(bench.link.message);
+            5 * parameters.protocol.status_interval);
 
-    // Shortcuts to registers.
-    let controller_state = bench.controller.registers.controller_state;
-    let link0_status = bench.controller.registers.target_link0_status;
-    let link1_status = bench.controller.registers.target_link1_status;
-
+    mkDiscardTx(bench.controller);
     mkAutoFSM(seq
-        bench.link.set_connected(True, True);
+        // Reset Target link 0 status counters.
+        bench.clear_counter(0, TargetLink0ReceiverReset);
+        bench.clear_counter(0, TargetLink0ReceiverAligned);
+        bench.clear_counter(0, TargetLink0ReceiverLocked);
+        bench.clear_counter(0, TargetLink0ReceiverPolarityInverted);
 
-        // Send Status messages.
-        repeat(4) action
-            bench.await_tick();
-            tx.put(message_status_system_powered_on_controller0_present);
-        endaction
+        repeat(4) seq
+            bench.receive_status_message(
+                    0, message_status_system_powered_on_link0_connected);
+        endseq
+        await(bench.controller.idle);
 
-        // Expect the Target to be present.
-        action
-            bench.await_tick();
-            assert_set(
-                controller_state.target_present,
-                "expected Target present");
+        assert_controller_register_eq(
+                bench.controller, 0,
+                TargetLink0Status,
+                IgnitionControllerRegisters::LinkStatus {
+                    receiver_aligned: 1,
+                    receiver_locked: 1,
+                    receiver_polarity_inverted: 0},
+                "Target link 0 not connected");
 
-            // Test the Link 0 Status registers.
-            assert_set(
-                link0_status.receiver_aligned,
-                "expected link 0 receiver aligned");
-            assert_set(
-                link0_status.receiver_locked,
-                "expected link 0 receiver locked");
-            assert_not_set(
-                link0_status.polarity_inverted,
-                "expected no link 0 polarity inversion");
+        bench.assert_counter_eq(
+                0, TargetLink0ReceiverReset, 0,
+                "receiver reset count for Target link 0");
+        bench.assert_counter_eq(
+                0, TargetLink0ReceiverAligned, 1,
+                "receiver aligned count for Target link 0");
+        bench.assert_counter_eq(
+                0, TargetLink0ReceiverLocked, 1,
+                "receiver locked count for Target link 0");
+        bench.assert_counter_eq(
+                0, TargetLink0ReceiverPolarityInverted, 0,
+                "receiver polarity inverted count for Target link 0");
 
-            assert_not_eq(link0_status, link1_status,
-                "expected link status registers to not be equal");
-        endaction
+        // Send a Status update which has link 0 disconnected, causing this to
+        // be counted as a receiver reset.
+        bench.receive_status_message(
+                0, message_status_system_powered_on_link0_disconnected);
+        await(bench.controller.idle);
+
+        assert_controller_register_eq(
+                bench.controller, 0,
+                TargetLink0Status,
+                IgnitionControllerRegisters::LinkStatus {
+                    receiver_aligned: 0,
+                    receiver_locked: 0,
+                    receiver_polarity_inverted: 0},
+                "Target link 0 not disconnected");
+
+        bench.assert_counter_eq(0,
+                TargetLink0ReceiverReset, 1,
+                "receiver reset count for Target link 0");
+        bench.assert_counter_eq(0,
+                TargetLink0ReceiverAligned, 0,
+                "receiver aligned count for Target link 0");
+        bench.assert_counter_eq(0,
+                TargetLink0ReceiverLocked, 0,
+                "receiver locked count for Target link 0");
+        bench.assert_counter_eq(0,
+                TargetLink0ReceiverPolarityInverted, 0,
+                "receiver polarity inverted count for Target link 0");
     endseq);
 endmodule
 
@@ -201,214 +291,275 @@ module mkTargetLinkEventsTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
             parameters,
-            parameters.protocol.status_interval);
-    let controller = bench.controller;
-    let tx = tpl_2(bench.link.message);
+            2 * parameters.protocol.status_interval);
 
-    // Shortcuts to registers.
-    let target_link0_counters = bench.controller.registers.target_link0_counters;
-    let target_link1_counters = bench.controller.registers.target_link1_counters;
-    let link_events =
-            link_events_message_checksum_invalid |
-            link_events_message_version_invalid |
-            link_events_decoding_error;
-
-    let counters_expected_not_zero =
-            IgnitionControllerRegisters::LinkEvents {
-                encoding_error: 0,
-                decoding_error: 1,
-                ordered_set_invalid: 0,
-                message_version_invalid: 1,
-                message_type_invalid: 0,
-                message_checksum_invalid: 1};
-
+    mkDiscardTx(bench.controller);
     mkAutoFSM(seq
-        action
-            bench.link.set_connected(True, True);
+        bench.clear_counter(0, TargetLink0EncodingError);
+        bench.clear_counter(0, TargetLink0DecodingError);
+        bench.clear_counter(0, TargetLink0OrderedSetInvalid);
+        bench.clear_counter(0, TargetLink0MessageVersionInvalid);
+        bench.clear_counter(0, TargetLink0MessageTypeInvalid);
+        bench.clear_counter(0, TargetLink0MessageChecksumInvalid);
+        bench.clear_counter(0, TargetLink1EncodingError);
+        bench.clear_counter(0, TargetLink1DecodingError);
+        bench.clear_counter(0, TargetLink1OrderedSetInvalid);
+        bench.clear_counter(0, TargetLink1MessageVersionInvalid);
+        bench.clear_counter(0, TargetLink1MessageTypeInvalid);
+        bench.clear_counter(0, TargetLink1MessageChecksumInvalid);
 
-            // Clear all Target link event counters.
-            target_link0_counters.summary <= ~defaultValue;
-            target_link1_counters.summary <= ~defaultValue;
-        endaction
-
-        // Send Status messages.
-        repeat(4) action
+        repeat(3) seq
+            bench.receive_status_message(0, message_status_with_link0_events(
+                    message_status_system_powered_on_controller0_present,
+                    // Add some link events.
+                    link_events_message_checksum_invalid |
+                        link_events_message_version_invalid |
+                        link_events_decoding_error));
             bench.await_tick();
-            tx.put(message_status_with_link0_events(
-                message_status_system_powered_on_controller0_present,
-                link_events));
-        endaction
+        endseq
 
-        action
-            // Test link counter summary registers.
-            assert_eq(
-                target_link0_counters.summary,
-                counters_expected_not_zero,
-                "expected summary bits set");
-            assert_eq(
-                target_link1_counters.summary,
-                defaultValue,
-                "expected summary bits unset");
+        // Test link 0 counters
+        bench.assert_counter_eq(0,
+                TargetLink0EncodingError, 0,
+                "link 0 encoding error count");
+        bench.assert_counter_eq(0,
+                TargetLink0DecodingError, 3,
+                "link 0 decoding error count");
+        bench.assert_counter_eq(0,
+                TargetLink0OrderedSetInvalid, 0,
+                "link 0 ordered set invalid count");
+        bench.assert_counter_eq(0,
+                TargetLink0MessageVersionInvalid, 3,
+                "link 0 message version invalid count");
+        bench.assert_counter_eq(0,
+                TargetLink0MessageTypeInvalid, 0,
+                "link 0 message type invalid count");
+        bench.assert_counter_eq(0,
+                TargetLink0MessageChecksumInvalid, 3,
+                "link 0 message version invalid count");
 
-            // Test the counters.
-            assert_count(
-                target_link0_counters.decoding_error, 3,
-                "expected 3 decoding_error events");
-            assert_count(
-                target_link0_counters.message_version_invalid, 3,
-                "expected 3 message_version_invalid events");
-            assert_count(
-                target_link0_counters.message_checksum_invalid, 3,
-                "expected 3 message_checksum_invalid events");
-
-            // Test a link 1 counter to make sure no accidental sharing is
-            // happening.
-            assert_count(
-                target_link1_counters.decoding_error, 0,
-                "expected no decoding_error events on link 1");
-        endaction
-
-        assert_eq(
-            target_link0_counters.summary,
-            defaultValue,
-            "expected summary cleared");
+        // Test link 1 counters, to assert no accidental sharing.
+        bench.assert_counter_eq(0,
+                TargetLink1EncodingError, 0,
+                "link 1 encoding error count");
+        bench.assert_counter_eq(0,
+                TargetLink1DecodingError, 0,
+                "link 1 decoding error count");
+        bench.assert_counter_eq(0,
+                TargetLink1OrderedSetInvalid, 0,
+                "link 1 ordered set invalid count");
+        bench.assert_counter_eq(0,
+                TargetLink1MessageVersionInvalid, 0,
+                "link 1 message version invalid count");
+        bench.assert_counter_eq(0,
+                TargetLink1MessageTypeInvalid, 0,
+                "link 1 message type invalid count");
+        bench.assert_counter_eq(0,
+                TargetLink1MessageChecksumInvalid, 0,
+                "link 1 message version invalid count");
     endseq);
 endmodule
 
-module mkSendRequestTest #(Request r, String msg) (Empty);
+module mkSendRequestTest #(
+        SystemPowerRequest expected_request,
+        String msg) (Empty);
     ControllerBench bench <-
         mkControllerBench(
             parameters,
             2 * parameters.protocol.status_interval);
 
-    let controller = bench.controller;
-    let rx = tpl_1(bench.link.message);
-    let tx = tpl_2(bench.link.message);
+    Bit#(8) expected_request_value = {extend(pack(expected_request)), 4'b0};
+    Reg#(Bool) system_power_request_received <- mkReg(False);
 
     mkAutoFSM(seq
-        action
-            bench.link.set_connected(True, True);
-            reset_count(controller.registers.controller_request_sent_count);
-        endaction
+            bench.clear_counter(0, SystemPowerRequestSent);
 
-        // Send Status messages.
-        repeat(4) action
+            repeat(4) seq
+                bench.receive_status_message(
+                        0, message_status_system_powered_on_controller0_present);
+            endseq
+            await(bench.controller.idle);
+            bench.assert_target_present(0, "expected Target present");
+
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TargetSystemPowerRequestStatus,
+                        op: tagged Write expected_request_value});
+            await(bench.controller.idle);
+
+            // The transmit FIFO may contain a Hello message. Discard these and
+            // wait for a system power request.
+            while (!system_power_request_received) action
+                let e <- bench.controller.txr.tx.get;
+
+                if (e.id == 0 &&& e.ev matches tagged Message
+                        {tagged Request .actual_request}) begin
+                    system_power_request_received <= True;
+                    assert_eq(actual_request, expected_request, msg);
+                end
+            endaction
+
+            // Wait a few cycles for the event counter to be updated and assert
+            // the count.
             bench.await_tick();
-            tx.put(message_status_system_powered_on_controller0_present);
-        endaction
-
-        action
-            bench.await_tick();
-            controller.registers.target_request <=
-                TargetRequest {
-                    pending: 0,
-                    kind: pack(r)};
-        endaction
-
-        // The request should be sent in the next two cycles.
-        assert_set(
-            controller.registers.target_request.pending,
-            "expected request pending");
-        assert_not_set(
-            controller.registers.target_request.pending,
-            "expected request sent");
-
-        assert_get_eq(rx, tagged Request r, msg);
-
-        assert_count(
-            controller.registers.controller_request_sent_count, 1,
-            "expected 1 request sent");
+            bench.assert_counter_eq(0,
+                    SystemPowerRequestSent, 1,
+                    "system power request sent count");
     endseq);
 endmodule
 
 module mkSendSystemPowerOffRequestTest (Empty);
     (* hide *) Empty _test <-
-        mkSendRequestTest(SystemPowerOff, "expected SystemPowerOff Request");
+        mkSendRequestTest(SystemPowerOff, "expected SystemPowerOff request");
     return _test;
 endmodule
 
 module mkSendSystemPowerOnRequestTest (Empty);
     (* hide *) Empty _test <-
-        mkSendRequestTest(SystemPowerOn, "expected SystemPowerOn Request");
+        mkSendRequestTest(SystemPowerOn, "expected SystemPowerOn request");
     return _test;
 endmodule
 
-module mkSendSystemResetRequestTest (Empty);
+module mkSendSystemPowerResetRequestTest (Empty);
     (* hide *) Empty _test <-
-        mkSendRequestTest(SystemReset, "expected SystemReset Request");
+        mkSendRequestTest(
+                SystemPowerReset,
+                "expected SystemPowerReset request");
     return _test;
 endmodule
 
-module mkDropHelloTest (Empty);
+module mkReceiverResetEventTest (Empty);
     ControllerBench bench <-
         mkControllerBench(
             parameters,
             parameters.protocol.status_interval);
 
-    let controller = bench.controller;
-    let tx = tpl_2(bench.link.message);
-
+    mkDiscardTx(bench.controller);
     mkAutoFSM(seq
-        action
-            bench.link.set_connected(True, True);
-            reset_count(controller.registers.controller_message_dropped_count);
-        endaction
+        bench.clear_counter(0, ControllerReceiverReset);
 
-        // Send Hello messages.
-        repeat(11) action
-            bench.await_tick();
-            tx.put(tagged Hello);
-        endaction
+        repeat(4) bench.controller.txr.rx.put(
+                ReceiverEvent {
+                    id: 0,
+                    ev: tagged ReceiverReset});
 
-        bench.await_tick();
-        assert_count(
-            controller.registers.controller_message_dropped_count, 10,
-            "expected 10 dropped messages counted");
+        // Wait a few ticks for the Controller to process the events and update
+        // the counter.
+        repeat(3) bench.await_tick();
+
+        bench.assert_counter_eq(0,
+                ControllerReceiverReset, 3,
+                "receiver reset count");
     endseq);
 endmodule
 
-module mkDropRequestTest (Empty);
+module mkReadTargetStatusRegisterTest #(
+        Message status_message,
+        RegisterId register,
+        value_t expected_value,
+        String msg)
+            (Empty)
+                provisos (
+                    Bits#(value_t, value_t_sz),
+                    Add#(value_t_sz, 0, 8),
+                    Eq#(value_t),
+                    FShow#(value_t));
     ControllerBench bench <-
-        mkControllerBench(
-            parameters,
-            parameters.protocol.status_interval);
+            mkControllerBench(
+                parameters,
+                parameters.protocol.status_interval);
 
-    let controller = bench.controller;
-    let tx = tpl_2(bench.link.message);
-
+    mkDiscardTx(bench.controller);
     mkAutoFSM(seq
-        action
-            bench.link.set_connected(True, True);
-            reset_count(controller.registers.controller_message_dropped_count);
-        endaction
-
-        // Send Request messages.
-        repeat(11) action
-            bench.await_tick();
-            tx.put(tagged Request SystemReset);
-        endaction
-
-        bench.await_tick();
-        assert_count(
-            controller.registers.controller_message_dropped_count, 10,
-            "expected 10 dropped messages counted");
+        bench.receive_status_message(0, status_message);
+        await(bench.controller.idle);
+        assert_controller_register_eq(
+                bench.controller, 0,
+                register, expected_value,
+                msg);
     endseq);
 endmodule
 
-//
-// Helpers
-//
+module mkReadTargetSystemTypeRegisterTest (Empty);
+    (* hide *) Empty _test <- mkReadTargetStatusRegisterTest(
+            message_status_system_powered_on_link0_connected,
+            TargetSystemType,
+            TargetSystemType {system_type: 5},
+            "target system type");
 
-function Action reset_count(
-        ActionValue#(IgnitionControllerRegisters::Counter) r) =
-    action
-        let _ <- r;
-    endaction;
+    return _test;
+endmodule
 
-function Action assert_count(
-        ActionValue#(IgnitionControllerRegisters::Counter) r,
-        Bit#(8) expected_count,
-        String msg) =
-            assert_av_eq(r, unpack(expected_count), msg);
+module mkReadTargetSystemStatusController0PresentTest (Empty);
+    (* hide *) Empty _test <- mkReadTargetStatusRegisterTest(
+            message_status_with_system_status(
+                message_status_none,
+                system_status_controller0_present),
+            TargetSystemStatus,
+            TargetSystemStatus {
+                controller0_detected: 1,
+                controller1_detected: 0,
+                system_power_enabled: 0,
+                system_power_abort: 0},
+            "target system status");
+
+    return _test;
+endmodule
+
+module mkReadTargetSystemStatusController1PresentTest (Empty);
+    (* hide *) Empty _test <- mkReadTargetStatusRegisterTest(
+            message_status_with_system_status(
+                message_status_none,
+                system_status_controller1_present),
+            TargetSystemStatus,
+            TargetSystemStatus {
+                controller0_detected: 0,
+                controller1_detected: 1,
+                system_power_enabled: 0,
+                system_power_abort: 0},
+            "target system status");
+
+    return _test;
+endmodule
+
+module mkReadTargetSystemStatusSystemPowerEnabledTest (Empty);
+    (* hide *) Empty _test <- mkReadTargetStatusRegisterTest(
+            message_status_with_system_status(
+                message_status_none,
+                system_status_system_power_enabled),
+            TargetSystemStatus,
+            TargetSystemStatus {
+                controller0_detected: 0,
+                controller1_detected: 0,
+                system_power_enabled: 1,
+                system_power_abort: 0},
+            "target system status");
+
+    return _test;
+endmodule
+
+module mkReadTargetSystemStatusSystemPowerAbortTest (Empty);
+    (* hide *) Empty _test <- mkReadTargetStatusRegisterTest(
+            message_status_with_system_status(
+                message_status_none,
+                system_status_system_power_abort),
+            TargetSystemStatus,
+            TargetSystemStatus {
+                controller0_detected: 0,
+                controller1_detected: 0,
+                system_power_enabled: 0,
+                system_power_abort: 1},
+            "target system status");
+
+    return _test;
+endmodule
+
+module mkDiscardTx #(Controller#(n) controller) (Empty);
+    (* fire_when_enabled *)
+    rule do_discard_tx;
+        let _ <- controller.txr.tx.get;
+    endrule
+endmodule
 
 endpackage

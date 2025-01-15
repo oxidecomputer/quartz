@@ -87,4 +87,35 @@ function Tuple2#(State, Value)
             tuple2(AwaitReset, end_of_message1);
     endcase;
 
+function Tuple2#(State, Value)
+        deparse_controller_message(State s, ControllerMessage m, Bit#(8) crc) =
+    case (s)
+        EmitStartOfMessage:
+            tuple2(EmitVersion, start_of_message);
+
+        EmitVersion:
+            tuple2(
+                EmitMessageType,
+                tagged D fromInteger(defaultValue.version));
+
+        EmitMessageType:
+            case (m) matches
+                tagged Hello:
+                    tuple2(EmitChecksum, tagged D 2);
+                tagged Request .*:
+                    tuple2(EmitRequest, tagged D 3);
+            endcase
+
+        // Emit Request
+        EmitRequest:
+            tuple2(EmitChecksum, tagged D extend(pack(m.Request)));
+
+        // Emit end of message
+        EmitChecksum:
+            tuple2(EmitEndOfMessage1, tagged D crc);
+
+        EmitEndOfMessage1:
+            tuple2(AwaitReset, end_of_message1);
+    endcase;
+
 endpackage

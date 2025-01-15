@@ -75,8 +75,8 @@ typedef struct {
 typedef enum {
     SystemPowerOff = 1,
     SystemPowerOn = 2,
-    SystemReset = 3
-} Request deriving (Bits, Eq, FShow);
+    SystemPowerReset = 3
+} SystemPowerRequest deriving (Bits, Eq, FShow);
 
 typedef union tagged {
     struct {
@@ -90,7 +90,7 @@ typedef union tagged {
         LinkEvents link1_events;
     } Status;
     void Hello;
-    Request Request;
+    SystemPowerRequest Request;
 } Message deriving (Bits, Eq, FShow);
 
 // The Target is only supposed to receive Hello and Request messages from a
@@ -99,7 +99,7 @@ typedef union tagged {
 // implement a more size efficient parser/receiver for the Target.
 typedef union tagged {
     void Hello;
-    Request Request;
+    SystemPowerRequest Request;
 } ControllerMessage deriving (Bits, Eq, FShow);
 
 //
@@ -143,6 +143,23 @@ function module#(CRC#(8)) mkIgnitionCRC() =
         crc_parameters.final_xor,
         crc_parameters.reflect_data,
         crc_parameters.reflect_remainder);
+
+function Bit#(8) crc_add(Bit#(8) running_crc, Bit#(8) data);
+    Bit#(8) remainder = running_crc ^ data;
+
+    for(Integer i = 0; i < 8; i = i + 1) begin
+        if (msb(remainder) == 1)
+            remainder = (remainder << 1) ^ crc_parameters.poly;
+        else
+            remainder = (remainder << 1);
+    end
+
+    return remainder;
+endfunction
+
+function Bit#(8) crc_result(Bit#(8) running_crc) =
+    running_crc ^ crc_parameters.final_xor;
+
 
 //
 // Encoding Ordered Sets
@@ -244,7 +261,9 @@ endinstance
 RequestStatus request_status_none = defaultValue;
 RequestStatus request_status_power_off_in_progress = unpack('h1);
 RequestStatus request_status_power_on_in_progress = unpack('h2);
-RequestStatus request_status_reset_in_progress = unpack('h4);
+RequestStatus request_status_power_reset_in_progress = unpack('h4);
+RequestStatus request_status_power_reset_off_in_progress = unpack('h5);
+RequestStatus request_status_power_reset_on_in_progress = unpack('h6);
 
 instance DefaultValue#(LinkEvents);
     defaultValue = unpack('0);
@@ -276,10 +295,6 @@ LinkEvents link_events_message_version_invalid = unpack('h8);
 LinkEvents link_events_message_type_invalid = unpack('h10);
 LinkEvents link_events_message_checksum_invalid = unpack('h20);
 
-instance DefaultValue#(LinkStatus);
-    defaultValue = unpack('0);
-endinstance
-
 instance Bitwise#(LinkStatus);
     function LinkStatus \& (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) & pack(s2));
     function LinkStatus \| (LinkStatus s1, LinkStatus s2) = unpack(pack(s1) | pack(s2));
@@ -298,9 +313,19 @@ instance Bitwise#(LinkStatus);
         error("lsb operation is not supported with type LinkStatus");
 endinstance
 
-LinkStatus link_status_disconnected = defaultValue;
-LinkStatus link_status_connected = unpack('h3);
-LinkStatus link_status_connected_polarity_inverted = unpack('h7);
+LinkStatus link_status_none = unpack('0);
+LinkStatus link_status_aligned = unpack('h1);
+LinkStatus link_status_locked = unpack('h2);
+LinkStatus link_status_polarity_inverted = unpack('h4);
+LinkStatus link_status_disconnected = link_status_none;
+LinkStatus link_status_connected = link_status_aligned | link_status_locked;
+LinkStatus link_status_connected_polarity_inverted =
+        link_status_connected |
+        link_status_polarity_inverted;
+
+instance DefaultValue#(LinkStatus);
+    defaultValue = link_status_none;
+endinstance
 
 //
 // Status Message pretty printer

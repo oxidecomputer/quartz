@@ -276,7 +276,7 @@ module mkTarget #(Parameters parameters) (Target);
     let button_released = !fromMaybe(True, button_event_w.wget);
 
     // This Request RWire is used by rules to make system power requests.
-    RWire#(Request) request <- mkRWire();
+    RWire#(SystemPowerRequest) request <- mkRWire();
 
     Countdown#(12) system_power_toggle_cool_down <- mkCountdownBy1();
     Reg#(Bool) system_power_toggle_cool_down_complete <- mkRegU();
@@ -358,7 +358,7 @@ module mkTarget #(Parameters parameters) (Target);
                 reset_button_released) begin
             system_power_next = On;
             request_status <=
-                request_status_reset_in_progress |
+                request_status_power_reset_in_progress |
                 request_status_power_on_in_progress;
         end
         // Complete an in progress system power request if the cool down has
@@ -389,10 +389,10 @@ module mkTarget #(Parameters parameters) (Target);
                     request_status <= request_status_power_off_in_progress;
                 end
 
-                {On, SystemReset}: begin
+                {On, SystemPowerReset}: begin
                     system_power_next = Off;
                     request_status <=
-                        request_status_reset_in_progress |
+                        request_status_power_reset_in_progress |
                         request_status_power_off_in_progress;
                 end
             endcase
@@ -524,13 +524,13 @@ module mkTarget #(Parameters parameters) (Target);
                 // system power fault/abort.
                 let request_ = system_power_off ?
                         SystemPowerOn :
-                        SystemReset;
+                        SystemPowerReset;
 
                 reset_button_released <= False;
                 request.wset(request_);
                 $display(
                     "%5t [Target] ", $time,
-                    fshow(request_), " Request from button");
+                    fshow(request_), " request from button");
             endrule
 
             (* fire_when_enabled *)
@@ -556,7 +556,7 @@ module mkTarget #(Parameters parameters) (Target);
                 request.wset(request_);
                 $display(
                     "%5t [Target] ", $time, fshow(request_),
-                    " Request from button ");
+                    " request from button ");
             endrule
         end
     endcase
@@ -581,7 +581,7 @@ module mkTarget #(Parameters parameters) (Target);
 
         $display(
             "%5t [Target] ", $time, fshow(request_),
-            " Request from Controller %1d", rx.sender);
+            " request from Controller %1d", rx.sender);
     endrule
 
     (* fire_when_enabled *)
@@ -595,7 +595,7 @@ module mkTarget #(Parameters parameters) (Target);
 
         $display(
             "%5t [Target] ", $time, fshow(request_),
-            " Request from Controller %1d ignored", rx.sender);
+            " request from Controller %1d ignored", rx.sender);
     endrule
 
     //
