@@ -27,6 +27,20 @@ vhdl_unit(
     visibility = ['PUBLIC']
 )
 
+vhdl_unit(
+    name = "i2c_ctrl_top",
+    srcs = ["i2c_ctrl_top.vhd", "regs/i2c_ctrl_regs.vhd"],
+    deps = [
+        ":i2c_ctrl_regs_pkg",
+        ":i2c_ctrl_txn_layer",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC']
+)
+
 vunit_sim(
     name = "i2c_ctrl_txn_layer_tb",
     srcs = glob(["txn_layer/sims/*.vhd"]),

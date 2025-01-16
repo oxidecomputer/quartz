@@ -44,6 +44,8 @@ package i2c_common_pkg is
         RANDOM_READ 
     );
 
+    function slv_to_op (op_vec : std_logic_vector(1 downto 0)) return op_t;
+
     type cmd_t is record
         op      : op_t;
         addr    : std_logic_vector(6 downto 0);
@@ -90,6 +92,17 @@ package body i2c_common_pkg is
         end case;
 
         return r;
+    end;
+
+    function slv_to_op (op_vec : std_logic_vector(1 downto 0)) return op_t is
+        variable r : op_t;
+    begin
+        case op_vec is
+            when b"00" => r := READ;
+            when b"01" => r := WRITE;
+            when b"10" => r := RANDOM_READ;
+            when others => null;
+        end case;
     end;
 
 end package body;

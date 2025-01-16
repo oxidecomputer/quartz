@@ -33,6 +33,10 @@ addrmap i2c_ctrl_regs {
         name = "Control bits for I2C communication.";
 
         field {
+            desc = "Internal register address of target";
+        } REG[31:24] = 0;
+
+        field {
             desc = "Number of bytes to read/write in the I2C transaction. up to 128 bytes.";
         } COUNT[22:16] = 1;
 
