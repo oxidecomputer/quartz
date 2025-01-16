@@ -13,7 +13,9 @@ use ieee.numeric_std_unsigned.all;
 use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
+use work.i2c_common_pkg.all;
 use work.time_pkg.all;
+use work.tristate_if_pkg.all;
 
 entity grapefruit_top is
     port (
@@ -244,7 +246,10 @@ architecture rtl of grapefruit_top is
     signal sp5_owns_flash : std_logic;
     signal spi_nor_block_data_o : std_logic_vector(3 downto 0);
     signal spi_nor_block_data_oe : std_logic_vector(3 downto 0);
-   
+
+    -- TODO: remove after hacking
+    signal dimmlet_scl : tristate;
+    signal dimmlet_sda : tristate;
 begin
 
     espi_scm_to_hpm_alert_l <= 'Z';
@@ -568,8 +573,10 @@ begin
         sgpio1_ld => sgpio_scm_to_hpm_ld(1)
     );
 
-    i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
+    i3c_hpm_to_scm_dimm0_abcdef_scl <= dimmlet_scl.o when dimmlet_scl.oe = '1' else 'Z';
+    dimmlet_scl.i <= i3c_hpm_to_scm_dimm0_abcdef_scl;
+    i3c_hpm_to_scm_dimm0_abcdef_sda <= dimmlet_sda.o when dimmlet_sda.oe = '1' else 'Z';
+    dimmlet_sda.i <= i3c_hpm_to_scm_dimm0_abcdef_sda;
     i3c_hpm_to_scm_dimm0_ghijkl_scl <= not counter(26);
     i3c_hpm_to_scm_dimm0_ghijkl_sda <= not counter(26);
 
@@ -587,6 +594,20 @@ begin
     i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
     i3c_scm_to_dimm1_ghijkl_scl <= not counter(26);
     i3c_scm_to_dimm1_ghijkl_sda <= not counter(26);
+
+    -- TODO: Temporary for Aaron's hacking
+    i2c_ctrl_top_inst: entity work.i2c_ctrl_top
+     generic map(
+        CLK_PER_NS => 20,
+        MODE => STANDARD
+    )
+     port map(
+        clk => clk,
+        reset => not reset_l,
+        scl_if => dimmlet_scl,
+        sda_if => dimmlet_sda
+        -- axi_if => axi_if
+    );
 
     
 end rtl;

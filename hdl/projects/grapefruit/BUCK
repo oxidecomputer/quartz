@@ -71,6 +71,8 @@ vhdl_unit(
         ":gfruit_top_regs",
         ":gfruit_sgpio",
         ":reset_sync",
+        "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
+        "//hdl/ip/vhd/i2c/controller:i2c_ctrl_top",
         "//hdl/ip/vhd/info:info",
         "//hdl/ip/vhd/espi:espi_top",
         "//hdl/ip/vhd/uart:axi_fifo_uart",
@@ -79,6 +81,7 @@ vhdl_unit(
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
         "//hdl/ip/vhd/common:time_pkg",
+        "//hdl/ip/vhd/common:tristate_if_pkg",
     ],
     standard = "2019",
 )
