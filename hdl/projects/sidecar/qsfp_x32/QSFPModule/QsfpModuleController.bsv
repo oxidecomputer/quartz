@@ -61,7 +61,7 @@ instance DefaultValue#(Parameters);
         system_frequency_hz: 50_000_000,
         core_clk_period_ns: 20,
         i2c_frequency_hz: 100_000,
-        power_good_timeout_ms: 10,
+        power_good_timeout_ms: 20,
         t_init_ms: 2000, // t_init is 2 seconds per SFF-8679
         t_clock_hold_us: 500 // t_clock_hold is 500 microseconds per SFF-8636
     };
@@ -180,7 +180,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     mkConnection(asIfc(tick_1ms_), asIfc(modprsl_));
 
     // Power Rail control for the hot swap controller
-    PowerRail#(4) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
+    PowerRail#(5) hot_swap  <- mkPowerRailDisableOnAbort(parameters.power_good_timeout_ms);
     Reg#(Bool) power_en_ <- mkReg(False);
     mkConnection(hot_swap.pins.en, power_en_._write);
     mkConnection(power_good_, hot_swap.pins.pg);
