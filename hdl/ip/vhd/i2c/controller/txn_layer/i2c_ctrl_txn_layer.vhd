@@ -12,7 +12,6 @@ use work.stream8_pkg;
 use work.tristate_if_pkg.all;
 
 use work.i2c_common_pkg.all;
-use work.i2c_common_pkg.all;
 
 entity i2c_txn_layer is
     generic (
