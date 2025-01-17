@@ -7,8 +7,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-use work.tristate_if_pkg.all;
 use work.axil8x32_pkg.all;
+use work.stream8_pkg;
+use work.tristate_if_pkg.all;
 
 use work.i2c_common_pkg.all;
 
@@ -35,12 +36,8 @@ architecture rtl of i2c_ctrl_top is
     signal command          : cmd_t;
 
     -- stubs
-    signal tx_st_if_data    : std_logic_vector(7 downto 0);
-    signal tx_st_if_valid   : std_logic;
-    signal tx_st_if_ready   : std_logic;
-    signal rx_st_if_data    : std_logic_vector(7 downto 0);
-    signal rx_st_if_valid   : std_logic;
-    signal rx_st_if_ready   : std_logic;
+    signal tx_st_if         : stream8_pkg.data_channel;
+    signal rx_st_if         : stream8_pkg.data_channel;
 begin
 
     i2c_ctrl_txn_layer_inst: entity work.i2c_txn_layer
@@ -56,12 +53,8 @@ begin
             cmd         => command,
             cmd_valid   => start_command,
             core_ready  => open,
-            tx_st_if.data   => tx_st_if_data,
-            tx_st_if.valid  => tx_st_if_valid,
-            tx_st_if.ready  => tx_st_if_ready,
-            rx_st_if.data   => rx_st_if_data,
-            rx_st_if.valid  => rx_st_if_valid,
-            rx_st_if.ready  => rx_st_if_ready
+            tx_st_if    => tx_st_if,
+            rx_st_if    => rx_st_if
         );
 
     i2c_ctrl_regs_inst: entity work.i2c_ctrl_regs
