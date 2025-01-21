@@ -8,7 +8,7 @@ vhdl_unit(
 )
 
 ice40_bitstream(
-    name="cosmo_hp_bitstream",
+    name="cosmo_hp",
     top_entity_name="cosmo_hp_top",
     top= ":cosmo_hp_top",
     family="hx8k",
