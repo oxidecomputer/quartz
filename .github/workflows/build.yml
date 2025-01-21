@@ -79,7 +79,7 @@ jobs:
         - name: buck path
           run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20240513/bin" >> "$GITHUB_PATH"
         - name: Build cosmo_hp bitstream
-          run: buck2 build //hdl/projects/cosmo_hp:cosmo_hp_bitstream --show-output
+          run: buck2 build //hdl/projects/cosmo_hp:cosmo_hp --show-output
         - uses: actions/upload-artifact@v4
           with:
             name: cosmo-hp-image

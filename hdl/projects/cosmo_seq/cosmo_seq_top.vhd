@@ -2,10 +2,9 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
--- Cosmo Sequencer FPGA targeting an Spartan-7
--- Pin names snapshot from 20Nov2024
+-- Cosmo Sequencer FPGA targeting the Spartan-7
 
 library ieee;
 use ieee.std_logic_1164.all;
