@@ -22,6 +22,10 @@
 --   sizeof() returns an integer of the number of used bits in the register
 --   rec_reset abusing overload signatures to return the reset value for the
 --     register type as defined in the RDL
+--   reset_1s abusing overload signatures to return the reset value for the
+--     register type with all defined bits set to 1
+--   reset_0s abusing overload signatures to return the reset value for the
+--     register type as defined bits set to 0
 --   "or","and", "xor" we provide overloads for logical bitwise functions for 
 --     the record type with itself on both sides, it on the left side with an 
 --     slv on the right, and it on the left side with an unsigned on the right.
@@ -102,7 +106,15 @@ package {{module_name}} is
   function compress (rec : {{reg_type_name}}) return std_logic_vector;
   function uncompress (vec : std_logic_vector) return {{reg_type_name}};
   function sizeof (rec : {{reg_type_name}}) return integer;
+  {# Only generate rec_reset if resets were specified #}
+  {% if register.has_reset_definition %}
   function rec_reset return {{reg_type_name}};
+  {% endif %}
+  {# We can only generate reset1's and reset0's for non-enumerated types #}
+  {% if not register.has_encoded_fields %}
+  function reset_1s return {{reg_type_name}};
+  function reset_0s return {{reg_type_name}};
+  {% endif %}
   function "or"  (left, right : {{reg_type_name}}) return {{reg_type_name}};
   function "or"  (left : {{reg_type_name}}; right : std_logic_vector) return {{reg_type_name}};
   function "or"  (left : {{reg_type_name}}; right : unsigned) return {{reg_type_name}};
@@ -227,6 +239,8 @@ package body {{module_name}} is
     begin
         return {{register.used_bits}};
     end sizeof;
+    {# Only generate rec_reset if resets were specified #}
+    {% if register.has_reset_definition %}
     function rec_reset return {{reg_type_name}} is
         variable ret_rec : {{reg_type_name}};
     begin
@@ -239,6 +253,26 @@ package body {{module_name}} is
         {% endfor %}
         return ret_rec;
     end rec_reset;
+    {% endif %}
+    {# We can only generate reset1's and reset0's for non-enumerated types #}
+    {% if not register.has_encoded_fields %}
+    function reset_1s return {{reg_type_name}} is
+        variable ret_rec : {{reg_type_name}};
+    begin
+        {% for field in register.packed_fields %}
+        ret_rec.{{field.name}} := {{field.vhdl_reset_1s}};
+        {% endfor %}
+        return ret_rec;
+    end reset_1s;
+    function reset_0s return {{reg_type_name}} is
+        variable ret_rec : {{reg_type_name}};
+    begin
+        {% for field in register.packed_fields %}
+        ret_rec.{{field.name}} := {{field.vhdl_reset_0s}};
+        {% endfor %}
+        return ret_rec;
+    end reset_0s;
+    {% endif %}
     function "or" (left, right : {{reg_type_name}}) return {{reg_type_name}} is
       variable ret_rec : {{reg_type_name}};
     begin

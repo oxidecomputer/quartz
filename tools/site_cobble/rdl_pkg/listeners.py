@@ -78,6 +78,7 @@ class BaseListener(RDLListener):
     def __init__(self):
         self.prefix_stack = []
         self.known_types = []
+        self.reset_by_known_type = {}  # A dictionary for looking up reset values by their known-type names
         self.cur_reg = None
         self.registers = []
 
@@ -104,11 +105,6 @@ class BaseListener(RDLListener):
         self.prefix_stack.pop()
 
     def enter_Reg(self, node: RegNode) -> None:
-        # print(f"orig type name: {node.orig_type_name}")
-        # print(f"new type name: {node.type_name}")
-        # print(f"segment: {node.get_path_segment()}")
-        # print(f"Enter reg: {node.inst_name}")
-        # print(f"stack: {self.prefix_stack}")
         # 2 cases here:
         # node.orig_type_name is None, use node.type_name
         #
@@ -133,9 +129,33 @@ class BaseListener(RDLListener):
         is then appended list of registers to be used
         in generation of design collateral.
         """
-        # print(f"Exit reg: {node.inst_name}")
         self.cur_reg.elaborate()
         self.registers.append(self.cur_reg)
+        # If not a repeated type, put the reset value which we now know into a dictionary lookup
+        if not self.cur_reg.repeated_type:
+            self.reset_by_known_type[self.cur_reg.type_name] = self.cur_reg.elaborated_reset, self.cur_reg.prefixed_name
+        else:
+            # If it was a repeated type, check that the reset value here matches the default reset value
+            base_reset, base_name = self.reset_by_known_type.get(self.cur_reg.type_name)
+            reg_reset = self.cur_reg.elaborated_reset
+            
+            # base reset is None, we'll allow None, 1s or 0s, nothing else. Anything else is an error
+            if base_reset is None and not (self.cur_reg.reset_is_all_1s or self.cur_reg.reset_is_all_0s or reg_reset is None):
+                raise ValueError(
+                   f"Reset value '{reg_reset}'for register {self.cur_reg.prefixed_name} is not all 1s or all 0s, "
+                   "and there's no default reset value for the type. The RDL subsystem doesn't support this pattern. "
+                   "Please check that you can't use a default value for the type, or elide the special reset value"
+                   " from the RDL and implement it in your own logic. You may also file an enhancement request to "
+                   "figure out how to better support this pattern."
+                )
+            elif reg_reset != base_reset and base_reset is not None:
+                raise ValueError(
+                   f"Reset value '{reg_reset}' for register {self.cur_reg.prefixed_name} does not match reset value '{base_reset}'"
+                   f" already defined for that type: {base_name}.\n"
+                   "This is likely due to a reset value override on an instance of the type that is conflicting "
+                   f"with a default value on the shared type '{self.cur_reg.type_name}'"
+
+                )
         self.cur_reg = None
 
     def enter_Field(self, node) -> None:

@@ -20,8 +20,8 @@ class DuplicateEnumNameError(Exception):
 
 class BaseModel:
     @classmethod
-    def from_node(cls, node: RegNode, prefix_stack, repeated_type=False):
-        return cls(node=node, prefix_stack=prefix_stack, repeated_type=repeated_type)
+    def from_node(cls, node: RegNode, prefix_stack, repeated_type=False, base_reset=None):
+        return cls(node=node, prefix_stack=prefix_stack, repeated_type=repeated_type, base_reset=base_reset)
 
     def __init__(self, **kwargs):
         self.prefix = copy.deepcopy(kwargs.pop("prefix_stack"))
@@ -40,11 +40,11 @@ class BaseModel:
         self._max_field_name_chars = 0
 
     @property
-    def prefixed_name(self):
+    def prefixed_name(self) -> str:
         return "_".join(self.prefix) + "_" + self.node.get_path_segment()
 
     @property
-    def name(self):
+    def name(self) -> str:
         # We're generating address maps but we can skip the first address map name, but we want the rest of the elaboration
         return (
             "_".join(self.prefix[1:]) + "_" + self.node.get_path_segment()
@@ -111,27 +111,67 @@ class Register(BaseModel):
         super().__init__(**kwargs)
 
     @property
-    def used_bits(self):
+    def used_bits(self) -> int:
         return sum([x.width for x in self.packed_fields])
 
     @property
-    def packed_fields(self):
+    def packed_fields(self) -> List["Field"]:
         """
         Returns all the defined register fields, skipping any ReservedFields (undefined spaces)
         """
         return [x for x in self.fields if not isinstance(x, ReservedField)]
 
     @property
-    def encoded_fields(self):
+    def encoded_fields(self) -> List["Field"]:
         """
         Returns any register fields that have encodings
         """
         return [x for x in self.packed_fields if x.has_encode()]
+    
+    @property
+    def has_encoded_fields(self) -> bool:
+        """
+        True if any fields have an encoding, meaning we'll generate enumerated types for them
+        """
+        return len(self.encoded_fields) > 0
+    
+    @property
+    def reset_is_all_1s(self) -> bool:
+        """
+        True if all defined, non-reserved fields have a reset value of all 1s
+        """
+        for field in self.fields:
+            rst_prop = field.get_property("reset")
+            if (not isinstance(field, ReservedField) and 
+                (rst_prop is not None) and 
+                rst_prop != field.reset_1s):
+                    return False
+        return True
+    
+    @property
+    def reset_is_all_0s(self) -> bool:
+        """
+        True if all defined, non-reserved fields have a reset value of all 0s
+        """
+        return self.elaborated_reset == 0
+    
+    @property
+    def elaborated_reset(self) -> int:
+        """
+        Returns the combined reset value of the register post elaboration, if it has one.
+        """
+        if not self.has_reset_definition:
+            return None
+        reset_val = 0
+        for field in self.fields:
+            if (field.get_property("reset") is not None) and (not isinstance(field, ReservedField)):
+                reset_val |= field.get_property("reset") << field.low
+        return reset_val
 
     @property
-    def has_reset_definition(self):
+    def has_reset_definition(self) -> bool:
         """
-        RDS doesn't force a reset definition on registers but we may want to conditionally generate
+        RDL doesn't force a reset definition on registers but we may want to conditionally generate
         reset logic if a reset value was specified.
         """
         # Get the reset value for all the fields. If we don't see None in any of them we have defined reset behavior
@@ -142,7 +182,7 @@ class Register(BaseModel):
         ]
         return False if None in a else True
 
-    def elaborate(self):
+    def elaborate(self) -> None:
         """
         Register elaboration consists of sorting the defined fields by the
         low index of the field. We then loop through the fields and
@@ -177,7 +217,7 @@ class Register(BaseModel):
         # Combine fields and re-sort, leaving us with a completely specified register
         self.fields = sorted(self.fields + gaps, key=lambda x: x.low, reverse=True)
 
-    def format_field_name(self, name):
+    def format_field_name(self, name) -> str:
         """
         To nicely generate aligned outputs, it's handy to know the max length
         of the names of fields on a per-register basis, this function
@@ -210,11 +250,11 @@ class BaseField:
             return f"{self.high}..{self.low}"
 
     @property
-    def width(self):
+    def width(self) -> int:
         return (self.high - self.low) + 1
 
     @property
-    def mask(self):
+    def mask(self) -> int:
         return ((1 << self.width) - 1) << self.low
 
     def get_property(self, *args, **kwargs):
@@ -225,20 +265,44 @@ class BaseField:
         return prop
 
     @property
-    def reset_str(self):
+    def reset_str(self) -> str:
         my_rst = self.node.get_property("reset")
         return "{:#0x}".format(my_rst) if my_rst is not None else "None"
 
     @property
-    def vhdl_reset_or_default(self):
+    def vhdl_reset_or_default(self) -> str:
         my_rst = self.node.get_property("reset")
         reset_val = 0 if my_rst is None else my_rst
         if self.width > 1:
             return f'{self.width}x"{reset_val:X}"'
         else:
             return f"'{reset_val:1X}'"
+        
+    @property
+    def reset_1s(self) -> int:
+        if self.width > 1:   
+            return (1 << self.width) - 1
+        else:
+            return 1
+    
+    @property
+    def vhdl_reset_1s(self) -> str:
+        if self.width > 1:
+            reset_val = (1 << self.width) - 1
+            return f'{self.width}x"{reset_val:X}"'
+        else:
+            reset_val = 1
+            return f"'{reset_val:1X}'"
+        
+    @property
+    def vhdl_reset_0s(self) -> str:
+        reset_val = 0
+        if self.width > 1:
+            return f'{self.width}x"{reset_val:X}"'
+        else:
+            return f"'{reset_val:1X}'"
 
-    def has_encode(self):
+    def has_encode(self) -> bool:
         return False
     
     def __str__(self):
