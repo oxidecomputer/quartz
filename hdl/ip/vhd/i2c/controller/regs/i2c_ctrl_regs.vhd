@@ -132,10 +132,10 @@ begin
     --     len     => command_reg.count
     -- );
     command <= (
-        op      => READ,
-        addr    => b"1010000",
+        op      => RANDOM_READ,
+        addr    => b"1010000", -- 0x50
         reg     => x"80",
-        len     => x"0F"
+        len     => x"10"
     );
     txd     <= pack(txd_reg);
     rxd_reg <= unpack(rxd);

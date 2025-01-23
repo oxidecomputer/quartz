@@ -136,8 +136,8 @@ set_property -dict { PACKAGE_PIN Y4 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_t
 set_property -dict { PACKAGE_PIN AA3 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_abcdef_sda }];
 set_property -dict { PACKAGE_PIN AB3 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_ghijkl_scl }];
 set_property -dict { PACKAGE_PIN AB2 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_ghijkl_sda }];
-set_property -dict { PACKAGE_PIN AA1 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_abcdef_scl }];
-set_property -dict { PACKAGE_PIN AB5 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_abcdef_sda }];
+set_property -dict { PACKAGE_PIN AA1 IOSTANDARD LVCMOS18 PULLUP true } [get_ports { i3c_scm_to_dimm0_abcdef_scl }];
+set_property -dict { PACKAGE_PIN AB5 IOSTANDARD LVCMOS18 PULLUP true } [get_ports { i3c_scm_to_dimm0_abcdef_sda }];
 set_property -dict { PACKAGE_PIN AB4 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_ghijkl_scl }];
 set_property -dict { PACKAGE_PIN V8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_ghijkl_sda }];
 set_property -dict { PACKAGE_PIN W8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm1_abcdef_scl }];
