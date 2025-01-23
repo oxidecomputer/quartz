@@ -335,8 +335,8 @@ begin
                         v.state         := ACK_RX;
                         v.bits_shifted  := 0;
                     else
-                        v.sda_oe        := not sm_reg.tx_data(0);
-                        v.tx_data       := '1' & sm_reg.tx_data(7 downto 1);
+                        v.sda_oe        := not sm_reg.tx_data(7);
+                        v.tx_data       := sm_reg.tx_data(6 downto 0) & '1';
                         v.bits_shifted  := sm_reg.bits_shifted + 1;
                     end if;
                 end if;

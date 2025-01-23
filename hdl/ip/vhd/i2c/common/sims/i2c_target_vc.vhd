@@ -182,7 +182,7 @@ begin
             rx_ackd         <= TRUE when sda_if.i = '0' else FALSE;
             rx_bit_count    <= to_unsigned(1, rx_bit_count'length);
         elsif state = GET_START_BYTE or state = GET_BYTE then
-            rx_data         <= sda_if.i & rx_data(7 downto 1);
+            rx_data         <= rx_data(6 downto 0) & sda_if.i;
             rx_bit_count    <= rx_bit_count + 1;
         end if;
 

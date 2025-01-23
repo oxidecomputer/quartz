@@ -573,10 +573,8 @@ begin
         sgpio1_ld => sgpio_scm_to_hpm_ld(1)
     );
 
-    i3c_hpm_to_scm_dimm0_abcdef_scl <= dimmlet_scl.o when dimmlet_scl.oe = '1' else 'Z';
-    dimmlet_scl.i <= i3c_hpm_to_scm_dimm0_abcdef_scl;
-    i3c_hpm_to_scm_dimm0_abcdef_sda <= dimmlet_sda.o when dimmlet_sda.oe = '1' else 'Z';
-    dimmlet_sda.i <= i3c_hpm_to_scm_dimm0_abcdef_sda;
+    i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
+    i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
     i3c_hpm_to_scm_dimm0_ghijkl_scl <= not counter(26);
     i3c_hpm_to_scm_dimm0_ghijkl_sda <= not counter(26);
 
@@ -585,8 +583,10 @@ begin
     i3c_hpm_to_scm_dimm1_ghijkl_scl <= not counter(26);
     i3c_hpm_to_scm_dimm1_ghijkl_sda <= not counter(26);
 
-    i3c_scm_to_dimm0_abcdef_scl <= not counter(26);
-    i3c_scm_to_dimm0_abcdef_sda <= not counter(26);
+    i3c_scm_to_dimm0_abcdef_scl <= dimmlet_scl.o when dimmlet_scl.oe = '1' else 'Z';
+    dimmlet_scl.i <= i3c_scm_to_dimm0_abcdef_scl;
+    i3c_scm_to_dimm0_abcdef_sda <= dimmlet_sda.o when dimmlet_sda.oe = '1' else 'Z';
+    dimmlet_sda.i <= i3c_scm_to_dimm0_abcdef_sda;
     i3c_scm_to_dimm0_ghijkl_scl <= not counter(26);
     i3c_scm_to_dimm0_ghijkl_sda <= not counter(26);
     
@@ -599,7 +599,7 @@ begin
     i2c_ctrl_top_inst: entity work.i2c_ctrl_top
      generic map(
         CLK_PER_NS => 20,
-        MODE => STANDARD
+        MODE => FAST_PLUS
     )
      port map(
         clk => clk,
