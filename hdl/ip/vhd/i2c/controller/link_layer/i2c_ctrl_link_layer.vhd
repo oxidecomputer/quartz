@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -51,7 +51,7 @@ architecture rtl of i2c_ctrl_link_layer is
     -- fetch the settings for the desired I2C mode
     constant SETTINGS               : settings_t := get_i2c_settings(MODE);
     constant SCL_HALF_PER_TICKS     : positive :=
-        to_integer(calc_ns(SETTINGS.fscl_period_ns, CLK_PER_NS, 10));
+        to_integer(calc_ns(SETTINGS.fscl_period_ns / 2, CLK_PER_NS, 10));
 
     -- The state machine's counter to enforce timing around various events
     constant SM_COUNTER_SIZE_BITS   : positive := 8;
@@ -90,17 +90,17 @@ architecture rtl of i2c_ctrl_link_layer is
         bits_shifted    : natural range 0 to 8;
 
         -- control
-        ready           : std_logic;
-        scl_start       : std_logic;
-        scl_active      : std_logic;
-        sda_hold        : std_logic;
-        counter         : std_logic_vector(SM_COUNTER_SIZE_BITS - 1 downto 0);
-        count_load      : std_logic;
-        count_decr      : std_logic;
-        count_clr       : std_logic;
-        transition_sda_cntr_en     : std_logic;
-        ack_sending     : std_logic;
-        scl_fedge_seen  : std_logic;
+        ready                   : std_logic;
+        scl_start               : std_logic;
+        scl_active              : std_logic;
+        sda_hold                : std_logic;
+        counter                 : std_logic_vector(SM_COUNTER_SIZE_BITS - 1 downto 0);
+        count_load              : std_logic;
+        count_decr              : std_logic;
+        count_clr               : std_logic;
+        transition_sda_cntr_en  : std_logic;
+        ack_sending             : std_logic;
+        sr_scl_fedge_seen       : std_logic;
 
         -- interfaces
         rx_data         : std_logic_vector(7 downto 0);
@@ -124,7 +124,7 @@ architecture rtl of i2c_ctrl_link_layer is
         '0',            -- count_clr
         '0',            -- transition_sda_cntr_en
         '0',            -- ack_sending
-        '0',            -- scl_fedge_seen
+        '0',            -- sr_scl_fedge_seen
         (others => '0'),-- rx_data
         '0',            -- rx_data_valid
         (others => '0'),-- tx_data
@@ -280,11 +280,12 @@ begin
                 end if;
 
             when WAIT_REPEAT_START =>
-                if not sm_reg.scl_fedge_seen then
-                    v.scl_fedge_seen    := scl_fedge;
+                if not sm_reg.sr_scl_fedge_seen then
+                    v.sr_scl_fedge_seen := scl_fedge;
                 elsif scl_redge then
-                    v.state         := START_SETUP;
-                    v.scl_active    := '0';
+                    v.state             := START_SETUP;
+                    v.scl_active        := '0';
+                    v.sr_scl_fedge_seen := '0';
                 end if;
 
             -- In the event of a repeated START account for setup requirements
@@ -335,8 +336,8 @@ begin
                         v.state         := ACK_RX;
                         v.bits_shifted  := 0;
                     else
-                        v.sda_oe        := not sm_reg.tx_data(0);
-                        v.tx_data       := '1' & sm_reg.tx_data(7 downto 1);
+                        v.sda_oe        := not sm_reg.tx_data(7);
+                        v.tx_data       := sm_reg.tx_data(6 downto 0) & '1';
                         v.bits_shifted  := sm_reg.bits_shifted + 1;
                     end if;
                 end if;
@@ -360,7 +361,7 @@ begin
                     v.rx_data_valid := '1';
                     v.bits_shifted  := 0;
                 elsif scl_redge then
-                    v.rx_data       := sda_in_syncd & sm_reg.rx_data(7 downto 1);
+                    v.rx_data       := sm_reg.rx_data(6 downto 0) & sda_in_syncd;
                     v.bits_shifted  := sm_reg.bits_shifted + 1;
                 end if;
 
@@ -404,8 +405,7 @@ begin
         end case;
 
         -- next state logic
-        v.ready := '1' when v.state = IDLE or v.state = HANDLE_NEXT or v.state = HANDLE_NEXT 
-                        else '0';
+        v.ready := '1' when v.state = IDLE or v.state = HANDLE_NEXT else '0';
 
         sm_reg_next <= v;
     end process;

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -182,7 +182,7 @@ begin
             rx_ackd         <= TRUE when sda_if.i = '0' else FALSE;
             rx_bit_count    <= to_unsigned(1, rx_bit_count'length);
         elsif state = GET_START_BYTE or state = GET_BYTE then
-            rx_data         <= sda_if.i & rx_data(7 downto 1);
+            rx_data         <= rx_data(6 downto 0) & sda_if.i;
             rx_bit_count    <= rx_bit_count + 1;
         end if;
 
@@ -214,9 +214,9 @@ begin
             if tx_bit_count = 0 then
                 txd := read_word(i2c_target_vc.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
             else
-                txd := '1' & tx_data(7 downto 1);
+                txd := tx_data(6 downto 0) & '1';
             end if;
-            sda_oe          <= not txd(0);
+            sda_oe          <= not txd(7);
             tx_bit_count    <= tx_bit_count + 1;
         else
             -- release the bus
