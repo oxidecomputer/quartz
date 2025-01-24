@@ -587,8 +587,8 @@ begin
     dimmlet_scl.i <= i3c_scm_to_dimm0_abcdef_scl;
     i3c_scm_to_dimm0_abcdef_sda <= dimmlet_sda.o when dimmlet_sda.oe = '1' else 'Z';
     dimmlet_sda.i <= i3c_scm_to_dimm0_abcdef_sda;
-    i3c_scm_to_dimm0_ghijkl_scl <= not counter(26);
-    i3c_scm_to_dimm0_ghijkl_sda <= not counter(26);
+    i3c_scm_to_dimm0_ghijkl_scl <= dimmlet_scl.oe;
+    i3c_scm_to_dimm0_ghijkl_sda <= dimmlet_sda.oe;
     
     i3c_scm_to_dimm1_abcdef_scl <= not counter(26);
     i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
@@ -599,7 +599,7 @@ begin
     i2c_ctrl_top_inst: entity work.i2c_ctrl_top
      generic map(
         CLK_PER_NS => 20,
-        MODE => FAST_PLUS
+        MODE => FAST
     )
      port map(
         clk => clk,

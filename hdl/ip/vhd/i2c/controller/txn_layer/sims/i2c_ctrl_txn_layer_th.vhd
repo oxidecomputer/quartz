@@ -64,7 +64,7 @@ begin
     dut: entity work.i2c_txn_layer
         generic map (
             CLK_PER_NS  => 8,
-            MODE        => STANDARD
+            MODE        => FAST_PLUS
         )
         port map (
             clk             => clk,
