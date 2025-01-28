@@ -1,15 +1,13 @@
--- watch for start condition
--- 7 bit target address + read/write bit
--- if write:
---   -- shift 8 bytes and ack until stop or repeated start
--- if read:
---   -- shift 8 bytes and until nack, stop or repeated start
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+--
+-- Copyright 2025 Oxide Computer Company
 
--- otherwise we want to change data when SCL is low
-
--- Need 50ns glitch filters on SDA and SCL
-
--- ACK is DATA low for 9th SCL pulse
+-- This block provides an i2c-compliant "phy" for use with additional logic
+-- to create i2c target functions. It is intended to be generic and shareable
+-- across multiple target functions, with the target function logic being
+-- implemented in other modules.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -31,7 +29,6 @@ entity i2c_target_phy is
         sda : in std_logic;
         sda_o : out std_logic;
         sda_oe : out std_logic;
-
         -- instruction interface
         inst_data : out std_logic_vector(7 downto 0);
         inst_valid : out std_logic;
@@ -64,6 +61,7 @@ architecture rtl of i2c_target_phy is
         inst_data_buf : std_logic_vector(7 downto 0);
         inst_data_valid : std_logic;
         start_seen : std_logic;
+        selected : std_logic;
         got_ack : std_logic;
         got_nack : std_logic;
     end record;
@@ -78,6 +76,7 @@ architecture rtl of i2c_target_phy is
         (others => '0'), 
         '0', 
         '0', 
+        '0',
         '0',
         '0'
     );
@@ -106,7 +105,7 @@ begin
     sda_o <= '0';  -- Only pull bus low, enable will control tristate
     -- enable becomes bit inversion of msb of tx reg when we're transmitting
     -- or acking
-    sda_oe <= '1' when (r.state = TX_DATA or r.state = SEND_ACK_NACK) and r.tx_reg(r.tx_reg'high) = '0' else '0';
+    sda_oe <= '1' when (r.state = TX_DATA or r.state = SEND_ACK_NACK) and r.tx_reg(r.tx_reg'high) = '0' and r.selected = '1' else '0';
     i2c_glitch_filter_inst: entity work.i2c_glitch_filter
      generic map(
         filter_cycles => giltch_filter_cycles
@@ -204,14 +203,23 @@ begin
             when SEND_ACK_NACK =>
                 if do_ack and in_ack_phase then
                     v.tx_reg := (others => '0');
+                    v.selected := '1';
                 elsif in_ack_phase then
                     v.tx_reg := (others => '1');  --NACK
                 end if;
-                if scl_fedge then
+                if scl_fedge and r.selected then
                     v.state := r.post_ack_nxt_state;
                     if r.post_ack_nxt_state = TX_DATA then
                         v.tx_ready := '1';
                     end if;
+                elsif scl_fedge then
+                    -- we were not selected b/c we didn't ack
+                    -- so go back to idle and wait for another txn
+                    v.state := IDLE;
+                    v.txn_hdr.valid := '0';
+                    v.start_seen := '0';
+                    v.cntr := (others => '0');
+                    v.selected := '0';
                 end if;
 
             when GET_ACKNACK =>
@@ -236,10 +244,12 @@ begin
             v.txn_hdr.valid := '0';
             v.start_seen := '0';
             v.cntr := (others => '0');
+            v.selected := '0';
         elsif start_condition then
             v.start_seen := '1';
             v.txn_hdr.valid := '0';
             v.state := IDLE;
+            v.selected := '0';
         end if;
 
         -- deal with handshake all the time

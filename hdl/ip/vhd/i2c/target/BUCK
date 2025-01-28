@@ -1,8 +1,13 @@
 load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 
 vhdl_unit(
+    name = "i2c_phy_consolidator",
+    srcs = glob(["*consolidator.vhd"]),
+    visibility = ['PUBLIC']
+)
+vhdl_unit(
     name = "i2c_target_phy",
-    srcs = glob(["*.vhd"]),
+    srcs = glob(["*.vhd"], exclude = ["*consolidator.vhd"]),
     deps = [
        "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
     ],
