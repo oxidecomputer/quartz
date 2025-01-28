@@ -25,14 +25,23 @@ architecture th of i2c_pca9545ish_th is
     signal reset : std_logic := '1';
 
     signal i2c_bus_scl : std_logic := 'Z';
+    signal i2c_bus_scl_o : std_logic;
+    signal i2c_bus_scl_oe : std_logic;
     signal i2c_bus_sda : std_logic := 'Z';
-    signal tgt_scl_o : std_logic;
-    signal tgt_scl_oe : std_logic;
-    signal tgt_sda_o : std_logic;
-    signal tgt_sda_oe : std_logic;
+    signal i2c_bus_sda_o : std_logic;
+    signal i2c_bus_sda_oe : std_logic;
+    
+    signal tgt_scl : std_logic_vector(1 downto 0);
+    signal tgt_scl_o : std_logic_vector(1 downto 0);
+    signal tgt_scl_oe : std_logic_vector(1 downto 0);
+    signal tgt_sda : std_logic_vector(1 downto 0);
+    signal tgt_sda_o : std_logic_vector(1 downto 0);
+    signal tgt_sda_oe : std_logic_vector(1 downto 0);
 
     signal mux_reset : std_logic := '0';
-    signal mux_sel : std_logic_vector(1 downto 0);
+    signal mux0_sel : std_logic_vector(1 downto 0);
+    signal mux1_sel : std_logic_vector(1 downto 0);
+    signal other_mux_selected : std_logic_vector(1 downto 0);
 
 begin
 
@@ -50,10 +59,13 @@ begin
         sda => i2c_bus_sda
     );
 
-    i2c_bus_scl <= tgt_scl_o when tgt_scl_oe = '1' else 'H';
-    i2c_bus_sda <= tgt_sda_o when tgt_sda_oe = '1' else 'H';
+    i2c_bus_scl <= i2c_bus_scl_o when i2c_bus_scl_oe = '1' else 'H';
+    i2c_bus_sda <= i2c_bus_sda_o when i2c_bus_sda_oe = '1' else 'H';
 
-    DUT: entity work.pca9545ish_top
+    other_mux_selected(0) <= '1' when mux1_sel /= "11" else '0';
+    other_mux_selected(1) <= '1' when mux0_sel /= "11" else '0';
+
+    DUT0: entity work.pca9545ish_top
      generic map(
         i2c_addr => 7x"70",
         giltch_filter_cycles => 3
@@ -62,13 +74,54 @@ begin
         clk => clk,
         reset => reset,
         mux_reset => mux_reset,
+        other_mux_selected => other_mux_selected(0),
+        scl => tgt_scl(0),
+        scl_o => tgt_scl_o(0),
+        scl_oe => tgt_scl_oe(0),
+        sda => tgt_sda(0),
+        sda_o => tgt_sda_o(0),
+        sda_oe => tgt_sda_oe(0),
+        mux_sel => mux0_sel
+    );
+
+    DUT1: entity work.pca9545ish_top
+     generic map(
+        i2c_addr => 7x"71",
+        giltch_filter_cycles => 3
+    )
+     port map(
+        clk => clk,
+        reset => reset,
+        mux_reset => mux_reset,
+        other_mux_selected => other_mux_selected(1),
+        scl => tgt_scl(1),
+        scl_o => tgt_scl_o(1),
+        scl_oe => tgt_scl_oe(1),
+        sda => tgt_sda(1),
+        sda_o => tgt_sda_o(1),
+        sda_oe => tgt_sda_oe(1),
+        mux_sel => mux1_sel
+    );
+
+    bus_consolidator: entity work.i2c_phy_consolidator
+     generic map(
+        TARGET_NUM => 2
+    )
+     port map(
+        clk => clk,
+        reset => reset,
         scl => i2c_bus_scl,
-        scl_o => tgt_scl_o,
-        scl_oe => tgt_scl_oe,
+        scl_o => i2c_bus_scl_o,
+        scl_oe => i2c_bus_scl_oe,
         sda => i2c_bus_sda,
-        sda_o => tgt_sda_o,
-        sda_oe => tgt_sda_oe,
-        mux_sel => mux_sel
+        sda_o => i2c_bus_sda_o,
+        sda_oe => i2c_bus_sda_oe,
+        tgt_scl => tgt_scl,
+        tgt_scl_o => tgt_scl_o,
+        tgt_scl_oe => tgt_scl_oe,
+        tgt_sda => tgt_sda,
+        tgt_sda_o => tgt_sda_o,
+        tgt_sda_oe => tgt_sda_oe
     );
 
 end th;

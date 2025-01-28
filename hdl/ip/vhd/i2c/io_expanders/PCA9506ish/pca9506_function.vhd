@@ -91,6 +91,8 @@ begin
         case r.state is
             when IDLE =>
                 v.increment := '0';
+                v.data_valid := '0';
+                v.post_ack_state := IDLE;
                 if txn_header.valid = '1' and txn_header.tgt_addr = i2c_addr then
                     v.state := ACK;
                     if txn_header.read_write_n = '0' then

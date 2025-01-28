@@ -8,6 +8,7 @@ rdl_file(
     visibility = ['PUBLIC']
 )
 
+
 vhdl_unit(
     name = "pca9545ish_top",
     srcs = glob(["*.vhd"]),
@@ -24,6 +25,7 @@ vunit_sim(
     deps = [
         ":pca9545ish_top",
         "//hdl/ip/vhd/vunit_components:i2c_controller_vc",
+        "//hdl/ip/vhd/i2c/target:i2c_phy_consolidator",
     ],
     visibility = ['PUBLIC'],
 )
