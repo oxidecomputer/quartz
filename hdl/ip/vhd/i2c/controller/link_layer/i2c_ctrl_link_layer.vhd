@@ -337,7 +337,7 @@ begin
                         v.bits_shifted  := 0;
                     else
                         v.sda_oe        := not sm_reg.tx_data(7);
-                        v.tx_data       := sm_reg.tx_data(6 downto 0) & '1';
+                        v.tx_data       := sm_reg.tx_data(sm_reg.tx_data'high-1 downto sm_reg.tx_data'low) & '1';
                         v.bits_shifted  := sm_reg.bits_shifted + 1;
                     end if;
                 end if;
@@ -361,7 +361,7 @@ begin
                     v.rx_data_valid := '1';
                     v.bits_shifted  := 0;
                 elsif scl_redge then
-                    v.rx_data       := sm_reg.rx_data(6 downto 0) & sda_in_syncd;
+                    v.rx_data       := sm_reg.rx_data(sm_reg.rx_data'high-1 downto sm_reg.rx_data'low) & sda_in_syncd;
                     v.bits_shifted  := sm_reg.bits_shifted + 1;
                 end if;
 
