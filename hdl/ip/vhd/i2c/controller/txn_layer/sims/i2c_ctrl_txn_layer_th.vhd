@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -64,7 +64,7 @@ begin
     dut: entity work.i2c_txn_layer
         generic map (
             CLK_PER_NS  => 8,
-            MODE        => STANDARD
+            MODE        => FAST_PLUS
         )
         port map (
             clk             => clk,
