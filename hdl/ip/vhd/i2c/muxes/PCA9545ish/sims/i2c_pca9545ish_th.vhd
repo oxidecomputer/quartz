@@ -41,7 +41,7 @@ architecture th of i2c_pca9545ish_th is
     signal mux_reset : std_logic := '0';
     signal mux0_sel : std_logic_vector(1 downto 0);
     signal mux1_sel : std_logic_vector(1 downto 0);
-    signal other_mux_selected : std_logic_vector(1 downto 0);
+    signal allowed_to_enable : std_logic_vector(1 downto 0);
 
 begin
 
@@ -62,8 +62,9 @@ begin
     i2c_bus_scl <= i2c_bus_scl_o when i2c_bus_scl_oe = '1' else 'H';
     i2c_bus_sda <= i2c_bus_sda_o when i2c_bus_sda_oe = '1' else 'H';
 
-    other_mux_selected(0) <= '1' when mux1_sel /= "11" else '0';
-    other_mux_selected(1) <= '1' when mux0_sel /= "11" else '0';
+    -- "11" is de-selected
+    allowed_to_enable(0) <= '1' when mux1_sel = "11" else '0';
+    allowed_to_enable(1) <= '1' when mux0_sel = "11" else '0';
 
     DUT0: entity work.pca9545ish_top
      generic map(
@@ -74,7 +75,7 @@ begin
         clk => clk,
         reset => reset,
         mux_reset => mux_reset,
-        other_mux_selected => other_mux_selected(0),
+        allowed_to_enable => allowed_to_enable(0),
         scl => tgt_scl(0),
         scl_o => tgt_scl_o(0),
         scl_oe => tgt_scl_oe(0),
@@ -93,7 +94,7 @@ begin
         clk => clk,
         reset => reset,
         mux_reset => mux_reset,
-        other_mux_selected => other_mux_selected(1),
+        allowed_to_enable => allowed_to_enable(1),
         scl => tgt_scl(1),
         scl_o => tgt_scl_o(1),
         scl_oe => tgt_scl_oe(1),
