@@ -79,8 +79,10 @@ package espi_tb_pkg is
         impure function build_get_flash_c_cmd(
         constant bad_crc : boolean := false
     ) return cmd_t;
-    impure function build_put_uart_data_cmd(constant payload : queue_t) return cmd_t;
-    impure function build_get_uart_data_cmd return cmd_t;
+    impure function build_put_msg_w_data_cmd(constant payload : queue_t) return cmd_t;
+    impure function build_get_msg_w_data_cmd return cmd_t;
+    impure function build_put_oob_no_pec_cmd(constant payload : queue_t) return cmd_t;
+    impure function build_get_oob_no_pec_cmd return cmd_t;
     -- Need procedures to build expected responses
     impure function check_queue_crc (data: queue_t) return boolean;
 
@@ -278,7 +280,7 @@ package body espi_tb_pkg is
         return cmd;
     end function;
 
-    impure function build_put_uart_data_cmd(
+    impure function build_put_msg_w_data_cmd(
         constant payload : queue_t
     ) return cmd_t is
         variable cmd : cmd_t := (new_queue, 0);
@@ -321,6 +323,53 @@ package body espi_tb_pkg is
         return cmd;
     end function;
 
+    impure function build_put_oob_no_pec_cmd(
+        constant payload : queue_t
+    ) return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+        variable payload_copy : queue_t := copy(payload);
+        variable input_queue_entries : natural;
+        variable msg_length : std_logic_vector(11 downto 0);
+    begin
+        -- OPCODE_PUT_OOB (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_put_oob));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- cycle type (1 byte) -- oob cycletype
+        push_byte(cmd.queue, to_integer(oob_cycle_type));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- annoying vunit queue limitation: we don't know the number of entries
+        -- by reverse engineering the queue you find that each push_byte results in
+        -- 2 bytes in the queue so we can use that information. Unclear if this is
+        -- guaranteed to be stable in VUnit. The alternative here would be copying
+        -- the input queue and popping bytes until empty to get the size.
+        input_queue_entries := length(payload) / 2;
+        -- add 3 bytes for SMB headers
+        input_queue_entries := input_queue_entries + 3;
+        msg_length := To_Std_Logic_Vector(input_queue_entries, 12);
+        -- tag/length high
+        push_byte(cmd.queue, to_integer(X"0" & msg_length(11 downto 8)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- length low
+        push_byte(cmd.queue, to_integer(msg_length(7 downto 0)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- push 3 smb bytes, the last one being the number of payload bytes (input_queue_entries - 3)
+        push_byte(cmd.queue, 0);
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, 0);
+        cmd.num_bytes := cmd.num_bytes + 1;
+        push_byte(cmd.queue, input_queue_entries - 3);
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- Now the real payload
+        while not is_empty(payload_copy) loop
+            push_byte(cmd.queue, pop_byte(payload_copy));
+            cmd.num_bytes := cmd.num_bytes + 1;
+        end loop;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
     impure function build_rand_byte_queue(constant size: natural) return queue_t is
         variable q : queue_t := new_queue;
     begin
@@ -330,11 +379,23 @@ package body espi_tb_pkg is
         return q;
     end function;
 
-    impure function build_get_uart_data_cmd return cmd_t is
+    impure function build_get_msg_w_data_cmd return cmd_t is
         variable cmd : cmd_t := (new_queue, 0);
     begin
         -- OPCODE_GET_PC (1 byte)
         push_byte(cmd.queue, to_integer(opcode_get_pc));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_get_oob_no_pec_cmd return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        -- OPCODE_GET_OOB (1 byte)
+        push_byte(cmd.queue, to_integer(opcode_get_oob));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
         push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
@@ -350,17 +411,31 @@ package body espi_tb_pkg is
         variable output_copy : queue_t := copy(output_response);
         variable input_byte : std_logic_vector(7 downto 0);
         variable output_byte : std_logic_vector(7 downto 0);
+        variable additional_hdr_bytes : natural := 3;
     begin
         -- Dump response headers
-        -- opcode
+        -- We have always 4 bytes of header:
+        -- res code
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- dump
         -- cycle type
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8);
+        if output_byte = message_with_data then
+            additional_hdr_bytes := 5;
+        end if;
         -- tag/length high
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); --dump
         -- length low
-        -- message code
-        -- 4 bytes message specific
-        for i in 0 to 8 loop
-            output_byte := To_StdLogicVector(pop_byte(output_copy), 8);
-        end loop;
+        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); --dump
+
+        if additional_hdr_bytes > 0 then
+            -- message code has 5 bytes of additional header
+            -- oob has 3 bytes of additional header
+            for i in 0 to additional_hdr_bytes - 1 loop
+                output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- dump
+            end loop;
+        end if;
+
+        -- Now we're to the data
         while not is_empty(input_copy) loop
             input_byte := To_StdLogicVector(pop_byte(input_copy), 8);
             output_byte := To_StdLogicVector(pop_byte(output_copy), 8);

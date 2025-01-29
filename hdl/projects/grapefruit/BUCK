@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:hdl.bzl", "vhdl_unit", "black_box")
 load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
@@ -36,6 +36,11 @@ rdl_file(
     ]
 )
 
+black_box (
+    name = "gfruit_black_boxes",
+    srcs = glob(["black_box_entities/*.vhd"]),
+)
+
 vhdl_unit (
     name = "base_regs",
     srcs = glob(["base_regs/*.vhd"]),
@@ -57,11 +62,6 @@ vhdl_unit (
     standard = "2019",
 )
 
-vhdl_unit(
-    name = "reset_sync",
-    srcs = ["reset_sync/reset_sync.vhd"],
-    deps = ["//hdl/ip/vhd/synchronizers:async_reset_bridge"],
-)
 
 vhdl_unit(
     name = "grapefruit_top",
@@ -70,7 +70,8 @@ vhdl_unit(
         ":base_regs",
         ":gfruit_top_regs",
         ":gfruit_sgpio",
-        ":reset_sync",
+        ":gfruit_black_boxes",
+        "//hdl/projects/cosmo_seq:reset_sync",
         "//hdl/ip/vhd/info:info",
         "//hdl/ip/vhd/espi:espi_top",
         "//hdl/ip/vhd/uart:axi_fifo_uart",

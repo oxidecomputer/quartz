@@ -43,6 +43,9 @@ source {{file.absolute().as_posix()}}
 read_xdc {{file.absolute().as_posix()}}
 {% endfor %}
 
+## Auto-detect xpm stuff
+auto_detect_xpm
+
 ## Synthesize Design
 set_param general.maxThreads {{project.max_threads}}
 eval "synth_design {{project.synth_args}} -top {{project.top_name}} -part {{project.part}}"

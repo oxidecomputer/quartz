@@ -10,6 +10,9 @@ jobs:
     outputs:
       cobble: ${{ steps.filter.outputs.cobble }}
       buck2: ${{ steps.filter.outputs.buck2 }}
+      grapefruit: ${{ steps.filter.outputs.grapefruit }}
+      cosmo_hp: ${{ steps.filter.outputs.cosmo_hp }}
+      cosmo_seq: ${{ steps.filter.outputs.cosmo_seq }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,7 +24,7 @@ jobs:
 
   grapefruit:
     needs: changes
-    if: ${{ needs.changes.outputs.buck2 == 'true' }}
+    if: ${{ needs.changes.outputs.buck2 == 'true' || needs.changes.outputs.grapefruit == 'true' }}
     runs-on: self-hosted
     steps:
         - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
@@ -38,6 +41,48 @@ jobs:
         - uses: actions/upload-artifact@v4
           with:
             name: gfruit-image
+            path: "./buck-out/v2/gen/root/**/*"
+
+  cosmo_seq:
+    needs: changes
+    if: ${{ needs.changes.outputs.buck2 == 'true'  || needs.changes.outputs.cosmo_seq == 'true' }}
+    runs-on: self-hosted
+    steps:
+        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+        - name: Check out repository code
+          uses: actions/checkout@v4
+          with:
+            submodules: 'true'
+        - name: Update pip reqs
+          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+        - name: buck path
+          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
+        - name: Build cosmo_seq bitstream
+          run: buck2 build //hdl/projects/cosmo_seq:cosmo_seq --show-output
+        - uses: actions/upload-artifact@v4
+          with:
+            name: cosmo-seq-image
+            path: "./buck-out/v2/gen/root/**/*"
+
+  cosmo_hp:
+    needs: changes
+    if: ${{ needs.changes.outputs.buck2 == 'true' ||  needs.changes.outputs.cosmo_hp == 'true' }}
+    runs-on: self-hosted
+    steps:
+        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+        - name: Check out repository code
+          uses: actions/checkout@v4
+          with:
+            submodules: 'true'
+        - name: Update pip reqs
+          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+        - name: buck path
+          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20240513/bin" >> "$GITHUB_PATH"
+        - name: Build cosmo_hp bitstream
+          run: buck2 build //hdl/projects/cosmo_hp:cosmo_hp --show-output
+        - uses: actions/upload-artifact@v4
+          with:
+            name: cosmo-hp-image
             path: "./buck-out/v2/gen/root/**/*"
 
   bsv-streams:

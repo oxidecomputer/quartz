@@ -72,6 +72,8 @@ architecture rtl of espi_target_top is
     signal pc_avail : std_logic;
     signal np_free : std_logic;
     signal np_avail : std_logic;
+    signal oob_free : std_logic;
+    signal oob_avail : std_logic;
     signal host_to_sp_espi : st_uart_t;
     signal sp_to_host_espi : uart_resp_t;
     signal aborted_due_to_bad_crc : boolean;
@@ -250,6 +252,8 @@ begin
             pc_avail => pc_avail,
             np_free => np_free,
             np_avail => np_avail,
+            oob_free => oob_free,
+            oob_avail => oob_avail,
             vwire_avail => vwire_avail
         );
 
@@ -294,11 +298,13 @@ begin
        from_sp_uart_data => from_sp_uart_data,
        from_sp_uart_valid => from_sp_uart_valid,
        from_sp_uart_ready => from_sp_uart_ready,
-        msg_not_oob => msg_en,
+       msg_not_oob => msg_en,
        pc_free => pc_free,
        pc_avail => pc_avail,
        np_free => np_free,
-       np_avail => np_avail
+       np_avail => np_avail,
+       oob_avail => oob_avail,
+       oob_free => oob_free
    );
 
    -- vwire channel logic

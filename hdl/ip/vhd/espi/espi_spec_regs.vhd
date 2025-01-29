@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 -- Note: Documentation can be rendered in VSCode using the TerosHDL
 -- plugin: https://terostechnology.github.io/terosHDLdoc/
@@ -33,7 +33,7 @@ end entity;
 
 architecture rtl of espi_spec_regs is
 
-    signal device_id        : device_id_type;
+    constant device_id      : device_id_type := rec_reset;
     signal gen_capabilities : general_capabilities_type;
     signal ch0_capabilities : ch0_capabilities_type;
     signal ch1_capabilities : ch1_capabilities_type;
@@ -54,7 +54,6 @@ begin
     write_reg: process(clk, reset)
     begin
         if reset then
-            device_id <= rec_reset;
             gen_capabilities <= rec_reset;
             ch0_capabilities <= rec_reset;
             ch1_capabilities <= rec_reset;

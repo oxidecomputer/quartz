@@ -41,6 +41,8 @@ entity txn_layer_top is
         np_free : in std_logic;
         np_avail: in std_logic;
         vwire_avail : in std_logic;
+        oob_avail : in std_logic;
+        oob_free : in std_logic;
 
         -- Link-layer connections
         is_rx_crc_byte     : out   boolean;
@@ -134,7 +136,6 @@ begin
             command_header => command_header,
             response_done  => response_done,
             regs_if        => resp_regs_if,
-            chip_sel_active => chip_sel_active,
             is_tx_last_byte => is_tx_crc_byte,
             clear_tx_crc   => clear_tx_crc,
             data_to_host   => data_to_host,
@@ -163,6 +164,8 @@ begin
         live_status.pc_free <= pc_free;
         live_status.np_avail <= np_avail;
         live_status.np_free <= np_free;
+        live_status.oob_free <= oob_free;
+        live_status.oob_avail <= oob_avail;
     end process;
 
 end rtl;
