@@ -47,6 +47,25 @@ def yosys_vhdl_synth(ctx):
     }
     in_json_file = ctx.actions.write_json("yosys_synth_input.json", out_json, with_inputs=True)
 
+    # Dump some register map stuff
+    maps = []
+    json_maps = ctx.attrs.top.get(RDLJsonMaps)
+    if json_maps != None:
+            for file in json_maps.files:
+                new_file = ctx.actions.declare_output("maps", file.basename)
+                maps.append(ctx.actions.copy_file(new_file, file))
+    html_maps = ctx.attrs.top.get(RDLHtmlMaps)
+    if html_maps != None:
+            for file in html_maps.files:
+                new_file = ctx.actions.declare_output("maps", file.basename)
+                maps.append(ctx.actions.copy_file(new_file, file))
+
+    # This is a bit sketchy but we're declaring any maps as hidden inputs
+    # here to force the generation of these files since nothing downstream
+    # depends on them. Buck2 is too smart such that since nothing depends
+    # on them, it doesn't even build them 
+    # This is a bit of a hack but it works for now.
+
     yosys_py = ctx.actions.declare_output("synth.py")
 
     yosys_gen = ctx.attrs._yosys_gen[RunInfo]
@@ -57,7 +76,7 @@ def yosys_vhdl_synth(ctx):
 
     ctx.actions.run(cmd, category="yosys_synth_gen")
 
-    yosys_synth_cmd = cmd_args(hidden=in_json_file)
+    yosys_synth_cmd = cmd_args(hidden=[in_json_file, maps])
     yosys_synth_cmd.add(ctx.attrs._python[PythonToolchainInfo].interpreter)
     yosys_synth_cmd.add(yosys_py)
     yosys_synth_cmd.add("--output", yosys_json.as_output())
