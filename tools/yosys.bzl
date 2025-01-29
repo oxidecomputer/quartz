@@ -1,5 +1,3 @@
-# need to end up executing something like this:
-#yosys -m ghdl -p "ghdl --std=08 {files} -e {top}; synth_ice40 -json {top.json}"
 load(
     "@prelude//python:toolchain.bzl",
     "PythonToolchainInfo",
@@ -14,13 +12,18 @@ load(
     "RDLJsonMaps",
 )
 
+load(
+    ":compress.bzl", "compress_bitstream",
+)
+
 def _ice40_bitstream_impl(ctx):
     yosys_synth_providers = yosys_vhdl_synth(ctx)
     next_pnr_providers = ice40_nextpnr(ctx, yosys_synth_providers)
     icepack_providers = icepack(ctx, next_pnr_providers)
+    compressed = compress_bitstream(ctx, icepack_providers)
     return [
         DefaultInfo(
-            default_output=icepack_providers[0].default_outputs[0],
+            default_output=compressed[0].default_outputs[0],
             sub_targets = {
                 "synth": yosys_synth_providers,
                 "route": next_pnr_providers,
@@ -102,7 +105,6 @@ def icepack(ctx, next_pnr_providers):
     providers.append(DefaultInfo(default_output=bit))
     return providers
 
-
 ice40_bitstream = rule(
     impl=_ice40_bitstream_impl,
     attrs={
@@ -119,6 +121,10 @@ ice40_bitstream = rule(
             doc="Use system python toolchain for running stuff",
             default="toolchains//:python",
         ),
+        "_bz2compress": attrs.exec_dep(
+                doc="bz2 compressor",
+                default="root//tools/bz2compress:bz2compress",
+            ),
         "_icepack": attrs.toolchain_dep(
             doc="Use system python toolchain for running python stuff",
             default="toolchains//:icepack",
