@@ -1,0 +1,23 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+
+vhdl_unit(
+    name = "spi_axi_controller",
+    srcs = glob(["*.vhd",]),
+        deps = [
+            "//hdl/ip/vhd/spi/spi_target_phy:spi_target_phy",
+    ],
+    visibility = ['PUBLIC']
+)
+
+vunit_sim(
+    name = "spi_axi_tb",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+        ":spi_axi_controller",
+        "//hdl/ip/vhd/vunit_components:spi_vcs",
+        "//hdl/ip/vhd/i2c/target:i2c_phy_consolidator",
+    ],
+    visibility = ['PUBLIC'],
+)
