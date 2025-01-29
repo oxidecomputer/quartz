@@ -224,7 +224,7 @@ def place(ctx, input_checkpoint, optimize=False):
 
     # because we're using the inputs to generate a tcl that *just* lists them,
     # irrespective of their content, we make the checkpoint a hidden input
-    # so that if it changesthis step is re-run rather than just relying
+    # so that if it changes this step is re-run rather than just relying
     # on cache. We need this step to run if the input file content, or
     # constraint file content changes
 

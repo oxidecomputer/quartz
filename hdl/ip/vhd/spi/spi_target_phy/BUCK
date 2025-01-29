@@ -1,0 +1,11 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "spi_target_phy",
+    srcs = glob(["*.vhd",]),
+        deps = [
+       "//hdl/ip/vhd/synchronizers:meta_sync",
+       "//hdl/ip/vhd/common:transforms_pkg",
+    ],
+    visibility = ['PUBLIC']
+)
