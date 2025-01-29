@@ -11,7 +11,10 @@ use ieee.numeric_std.all;
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
+    context vunit_lib.vc_context;
+
 use vunit_lib.sync_pkg.all;
+
 
 package qspi_vc_pkg is
 
@@ -48,13 +51,15 @@ package qspi_vc_pkg is
         p_actor     : actor_t;
         p_ack_actor : actor_t;
         p_logger    : logger_t;
+        p_checker   : checker_t;
     end record;
-
-    constant qspi_vc_logger : logger_t := get_logger("work:qspi_vc");
 
     impure function new_qspi_vc (
         name : string := "";
-        logger : logger_t := qspi_vc_logger
+        logger : logger_t := null_logger;
+        checker: checker_t := null_checker;
+        actor : actor_t := null_actor;
+        unexpected_msg_type_policy : unexpected_msg_type_policy_t := fail
     )
         return qspi_vc_t;
 
@@ -130,15 +135,20 @@ package body qspi_vc_pkg is
         return qspi_mode_t'val(to_integer(unsigned(mode_vec)));
     end;
 
+    -- VUnit VC rule #2: constructor starts with "new_"
     impure function new_qspi_vc (
         name : string := "";
-        logger : logger_t := qspi_vc_logger
+        logger : logger_t := null_logger;
+        checker: checker_t := null_checker;
+        actor : actor_t := null_actor;
+        unexpected_msg_type_policy : unexpected_msg_type_policy_t := fail
     )
       return qspi_vc_t is
     begin
         return (p_actor => new_actor(name),
               p_ack_actor => new_actor(name & " read-ack"),
-              p_logger => logger
+              p_logger => logger,
+              p_checker => checker
           );
     end;
 
