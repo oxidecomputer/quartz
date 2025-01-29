@@ -30,6 +30,13 @@ package pca9506_pkg is
         reg_mask: io_type
     ) return std_logic;
 
+    -- PCA9506 defines a category as a set of contiguous registers of the
+    -- same function for each of the  5 ports.  When auto-incrementing is
+    -- enabled, the pointer will wrap around to the first register of the
+    -- category when it reaches the last register of the category.
+    -- Because there  are 5 ports, there are 5 registers in each category
+    -- so we can't just use a power of 2 that wraps and we wrote this 
+    -- function.
     function category_wrapping_increment(
         pointer: std_logic_vector(5 downto 0) -- register number
     ) return std_logic_vector;

@@ -29,7 +29,7 @@ entity pca9545ish_function is
         reset : in std_logic;
         mux_reset: in std_logic;
         mux_sel : out std_logic_vector(1 downto 0);
-        other_mux_selected : in std_logic;
+        allowed_to_enable : in std_logic;
         -- instruction interface
         inst_data : in std_logic_vector(7 downto 0);
         inst_valid : in std_logic;
@@ -50,10 +50,10 @@ end entity;
 architecture rtl of pca9545ish_function is
     function is_valid(
         data : std_logic_vector(7 downto 0);
-        other_mux_selected : std_logic) return boolean is
+        allowed_to_enable : std_logic) return boolean is
     begin
-        -- if another mux is selected, only writes of 0 are allowed
-        if other_mux_selected = '1' and data /= "00000000" then
+        -- allow only writes of 0 even when we're not allowed to enable
+        if allowed_to_enable = '0' and data /= 0 then
             return false;
         end if;
         -- only allow clear and one-hot bits 0-2
@@ -77,7 +77,7 @@ architecture rtl of pca9545ish_function is
 begin
 
     inst_ready <= '1';  -- never block writes
-    resp_valid <= is_our_transaction; -- never block reads
+    resp_valid <= '1'; -- never block reads
     resp_data <= pack(control_reg);  -- Only one register to read so hand it back always
 
     -- register block
@@ -91,7 +91,7 @@ begin
             if mux_reset then
                 control_reg <= rec_reset;
             elsif inst_valid = '1' and inst_ready = '1' 
-                    and is_valid(inst_data, other_mux_selected) 
+                    and is_valid(inst_data, allowed_to_enable) 
                     and is_valid_write(txn_header)
                     and is_our_transaction = '1' then
                 control_reg <= unpack(inst_data);
@@ -128,7 +128,7 @@ begin
             if in_ack_phase_last = '1' and in_ack_phase = '0' then
                 ack_next <= '0';
             -- Ack on valid data when we're in the middle of a transaction (and we're being addressed)
-            elsif inst_valid = '1' and inst_ready = '1' and is_valid(inst_data, other_mux_selected) and is_our_transaction = '1' then
+            elsif inst_valid = '1' and inst_ready = '1' and is_valid(inst_data, allowed_to_enable) and is_our_transaction = '1' then
                 ack_next <= '1';
             -- Ack on the address byte when we're in the start of a transaction and we're being addressed
             elsif txn_header.tgt_addr = i2c_addr and txn_header.valid = '1' and  is_our_transaction = '0' then
