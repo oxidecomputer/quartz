@@ -255,7 +255,7 @@ def sim_only_model(**kwargs):
     vhdl_unit(**kwargs)
 
 # A helper macro for declaring top-level simulations in BUCK files
-# This helper just sets the "is_tb" and "is_model" fields so the
+# This helper just sets the "is_third_party" field so the
 # user doesn't have to do so
 def third_party(**kwargs):
     kwargs.update({"is_third_party": True})
