@@ -56,7 +56,7 @@ vu.add_random()
 vu.add_verification_components()
 # Create libraries
 {% for library in libraries %}
-{{library.name}} = vu.add_library("{{library.name}}", vhdl_standard="{{vhdl_standard}}")
+{{library.name}} = vu.add_library("{{library.name}}", vhdl_standard="{{vhdl_standard}}", allow_duplicate=True)
 {% for file in library.files %}
 {{library.name}}.add_source_file("{{file}}", vhdl_standard="{{vhdl_standard}}")
 {% endfor %}
@@ -75,8 +75,7 @@ vu.set_sim_option("disable_ieee_warnings", True)
 {% if simulator == "nvc" %}
 # Dump arrays of records, may have a perf penalty
 vu.set_sim_option("nvc.sim_flags", ["--dump-arrays"])
+vu.set_sim_option("nvc.global_flags", ["--ignore-time"])
 {% endif %}
-# saved here for when we upgrade VUnit
-#vu.set_sim_option("nvc.global_flags", ["--ignore-time"])
 # Run vunit function
 vu.main()
