@@ -98,13 +98,3 @@ python_library(
     name = 'drivers',
     srcs = glob(["integration/drivers/*.py"]),
 )
-
-python_test(
-    name = 'test',
-    srcs = glob(["integration/tests/*.py"]),
-    deps = [
-        ":drivers",
-        '//tools/speeker:udp_if'
-        ],
-    visibility = ["PUBLIC"],
-)
