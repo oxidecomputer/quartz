@@ -122,7 +122,7 @@ begin
         if reset then
             rdata <= (others => '0');
         elsif rising_edge(clk) then
-            if (not axi_if.read_address.valid) or arready then
+            if axi_int_read_ready then
                 case to_integer(axi_if.read_address.addr) is
                     when ID_OFFSET => rdata <= pack(id);
                     when SHA_OFFSET => rdata <= pack(sha);

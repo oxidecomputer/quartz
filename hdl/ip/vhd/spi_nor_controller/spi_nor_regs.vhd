@@ -49,6 +49,7 @@ architecture rtl of spi_nor_regs is
     signal   arready            : std_logic;
     signal   rvalid             : std_logic;
     signal   rdata              : std_logic_vector(31 downto 0);
+    signal   rx_fifo_ack        : std_logic;
 
 begin
 
@@ -134,7 +135,7 @@ end process;
     tx_fifo_write_data <= axi_if.write_data.data;
     tx_fifo_write      <= '1' when wready = '1' and to_integer(axi_if.write_address.addr) = TX_FIFO_WDATA_OFFSET else '0';
 
-    rx_fifo_read_ack <= '1' when axi_if.read_data.ready = '1' and rvalid = '1' and to_integer(axi_if.read_address.addr) = RX_FIFO_RDATA_OFFSET else '0';
+    rx_fifo_read_ack <= '1' when axi_if.read_data.ready = '1' and rvalid = '1' and rx_fifo_ack = '1' else '0';
    
 
 -- vsg_off
@@ -142,8 +143,10 @@ read_logic: process(clk, reset)
 begin
     if reset then
         rdata <= (others => '0');
+        rx_fifo_ack <= '0';
     elsif rising_edge(clk) then
-        if (not axi_if.read_address.valid) or arready then
+        rx_fifo_ack <= '0';
+        if axi_int_read_ready then
             case to_integer(axi_if.read_address.addr) is
                 when SPICR_OFFSET => rdata <= pack(spicr);
                 when SPISR_OFFSET => rdata <= pack(spisr);
@@ -151,7 +154,9 @@ begin
                 when DATABYTES_OFFSET => rdata <= pack(data_bytes);
                 when INSTR_OFFSET => rdata <= pack(instr);
                 when ADDR_OFFSET => rdata <= pack(addr);
-                when RX_FIFO_RDATA_OFFSET => rdata <= rx_fifo_read_data;
+                when RX_FIFO_RDATA_OFFSET => 
+                    rdata <= rx_fifo_read_data;
+                    rx_fifo_ack <= '1';
                 when SP5FLASHOFFSET_OFFSET => rdata <= pack(sp5_flash_offset);
                 when others => rdata <= (others => '0');
             end case;

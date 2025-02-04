@@ -127,7 +127,7 @@ begin
         if reset then
             rdata <= (others => '0');
         elsif rising_edge(clk) then
-            if (not arvalid) or arready then
+            if axi_int_read_ready then
                 case to_integer(araddr) is
                     when IDENTITY_OFFSET => rdata <= pack(identity);
                     when HUBRIS_COMPAT_OFFSET => rdata <= pack(hubris_compat);
