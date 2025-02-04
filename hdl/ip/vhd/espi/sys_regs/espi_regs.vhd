@@ -43,6 +43,7 @@ architecture rtl of espi_regs is
     signal   status_reg         : status_type;
     signal   fifo_status_reg    : fifo_status_type;
     signal   flags_reg          : flags_type;
+    signal   resp_fifo_ack      : std_logic;
 
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
@@ -123,20 +124,23 @@ begin
     dbg_chan.size.data <= axi_if.write_data.data;
     dbg_chan.size.write <= '1' when wready = '1' and to_integer(axi_if.write_address.addr) = CMD_SIZE_FIFO_WDATA_OFFSET else '0';
 
-    dbg_chan.rd.rdack <= '1' when axi_if.read_data.ready = '1' and rvalid = '1' and to_integer(axi_if.read_address.addr) = RESP_FIFO_RDATA_OFFSET else '0';
+    dbg_chan.rd.rdack <= '1' when axi_if.read_data.ready = '1' and rvalid = '1' and resp_fifo_ack = '1' else '0';
 
     read_logic: process(clk, reset)
     begin
         if reset then
             rdata <= (others => '0');
         elsif rising_edge(clk) then
-            if (not axi_if.read_address.valid) or arready then
+            resp_fifo_ack <= '0';
+            if axi_int_read_ready then
                 case to_integer(axi_if.read_address.addr) is
                     when FLAGS_OFFSET => rdata <= pack(flags_reg);
                     when CONTROL_OFFSET => rdata <= pack(control_reg);
                     when STATUS_OFFSET => rdata <= pack(status_reg);
                     when FIFO_STATUS_OFFSET => rdata <= pack(fifo_status_reg);
-                    when RESP_FIFO_RDATA_OFFSET => rdata <= dbg_chan.rd.data;
+                    when RESP_FIFO_RDATA_OFFSET => 
+                        rdata <= dbg_chan.rd.data;
+                        resp_fifo_ack <= '1';
                     when others =>
                         rdata <= (others => '0');
                 end case;

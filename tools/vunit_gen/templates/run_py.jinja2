@@ -45,7 +45,7 @@ os.environ["VUNIT_SIMULATOR"] = "{{simulator}}"
 os.environ["VUNIT_VHDL_STANDARD"] = "{{vhdl_standard}}"
 {% endif %}
 
-vu = VUnit.from_argv(compile_builtins=False)
+vu = VUnit.from_argv()
 
 # For now, add everything here so it's always available
 vu.add_vhdl_builtins()
