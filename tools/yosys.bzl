@@ -54,12 +54,11 @@ def yosys_vhdl_synth(ctx):
 
     ctx.actions.run(cmd, category="yosys_synth_gen")
 
-    yosys_synth_cmd = cmd_args()
+    yosys_synth_cmd = cmd_args(hidden=in_json_file)
     yosys_synth_cmd.add(ctx.attrs._python[PythonToolchainInfo].interpreter)
     yosys_synth_cmd.add(yosys_py)
     yosys_synth_cmd.add("--output", yosys_json.as_output())
 
-    yosys_synth_cmd.hidden(in_json_file)
     ctx.actions.run(yosys_synth_cmd, category="yosys_run")
     providers.append(DefaultInfo(default_output=yosys_json))
 

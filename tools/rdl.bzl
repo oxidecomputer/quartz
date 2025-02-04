@@ -32,7 +32,7 @@ def _rdl_file_impl(ctx):
     deps_tset = [x[RDLFileInfo].set for x in ctx.attrs.deps]
 
     # Make the deps a child of the tset containing any sources
-    top_tset = ctx.actions.tset(RDLTSet, ctx.attrs.src, children=deps_tset)
+    top_tset = ctx.actions.tset(RDLTSet, value=ctx.attrs.src, children=deps_tset)
 
     providers.append(
         RDLFileInfo(
