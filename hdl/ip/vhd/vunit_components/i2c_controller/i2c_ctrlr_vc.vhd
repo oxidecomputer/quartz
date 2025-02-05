@@ -120,7 +120,7 @@ begin
                 sda <= 'Z';
                 wait for 60 ns; -- need to be longer than 50ns glitch timing
                 sda <= '0';
-                wait for thd_sta * 4;
+                wait for thd_sta;
                 wait until falling_edge(aligner_int);
                 scl <= '0';     -- scl is now low, ready for bits
                 wait for 60 ns; -- need to be longer than 50ns glitch timing
