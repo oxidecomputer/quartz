@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -32,12 +32,18 @@ package i2c_cmd_vc_pkg is
         logger  : logger_t  := i2c_cmd_vc_logger;
     ) return i2c_cmd_vc_t;
 
-    constant push_i2c_cmd_msg : msg_type_t := new_msg_type("push_i2c_cmd");
+    constant push_i2c_cmd_msg   : msg_type_t := new_msg_type("push_i2c_cmd");
+    constant abort_msg          : msg_type_t := new_msg_type("abort");
 
     procedure push_i2c_cmd(
         signal net  : inout network_t;
         i2c_cmd_vc  : i2c_cmd_vc_t;
         cmd         : cmd_t;
+    );
+
+    procedure push_abort(
+        signal net  : inout network_t;
+        i2c_cmd_vc  : i2c_cmd_vc_t;
     );
 
 end package;
@@ -82,5 +88,13 @@ package body i2c_cmd_vc_pkg is
         send(net, i2c_cmd_vc.p_actor, msg);
     end;
 
+    procedure push_abort(
+        signal net  : inout network_t;
+        i2c_cmd_vc  : i2c_cmd_vc_t;
+    ) is
+        variable msg : msg_t := new_msg(abort_msg);
+    begin
+        send(net, i2c_cmd_vc.p_actor, msg);
+    end;
 
 end package body;

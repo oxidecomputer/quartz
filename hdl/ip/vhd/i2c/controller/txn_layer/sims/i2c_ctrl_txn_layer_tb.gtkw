@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Wed Dec 11 22:39:03 2024
+[*] Fri Feb  7 21:04:37 2025
 [*]
-[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_ctrl_txn_layer_tb.write_and_read_many_bytes_713f701447aec89dff2ce07f3dce0c8020399b4e/nvc/i2c_ctrl_txn_layer_tb.fst"
-[dumpfile_mtime] "Wed Dec 11 22:34:30 2024"
-[dumpfile_size] 6129
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_ctrl_txn_layer_tb.abort_transaction_5030992a55fd175f5a816e54580c7a725cf50715/nvc/i2c_ctrl_txn_layer_tb.fst"
+[dumpfile_mtime] "Fri Feb  7 16:35:44 2025"
+[dumpfile_size] 5828
 [savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/i2c/controller/txn_layer/sims/i2c_ctrl_txn_layer_tb.gtkw"
-[timestart] 455740000000
+[timestart] 0
 [size] 1344 1283
-[pos] -1 -1
-*-31.427509 459684000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] 2559 23
+*-34.710972 86100000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] i2c_ctrl_txn_layer_tb.
 [treeopen] i2c_ctrl_txn_layer_tb.th.
 [treeopen] i2c_ctrl_txn_layer_tb.th.dut.
+[treeopen] i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.
 [treeopen] i2c_ctrl_txn_layer_tb.th.dut.sm_reg.
 [treeopen] i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.
-[treeopen] i2c_ctrl_txn_layer_tb.th.target.
-[sst_width] 389
+[sst_width] 280
 [signals_width] 361
 [sst_expanded] 1
 [sst_vpaned_height] 382
@@ -32,6 +32,8 @@ i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.len[7:0]
 i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.op
 @22
 i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.reg[7:0]
+@28
+i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.abort
 @200
 -
 -Transaction Layer
@@ -39,6 +41,7 @@ i2c_ctrl_txn_layer_tb.th.i2c_cmd_vc_inst.cmd.reg[7:0]
 i2c_ctrl_txn_layer_tb.th.dut.clk
 i2c_ctrl_txn_layer_tb.th.dut.cmd_valid
 i2c_ctrl_txn_layer_tb.th.dut.core_ready
+i2c_ctrl_txn_layer_tb.th.dut.abort
 @200
 -I2C Interface
 -SCL
@@ -60,7 +63,6 @@ i2c_ctrl_txn_layer_tb.th.dut.sm_reg.do_stop
 i2c_ctrl_txn_layer_tb.th.dut.ll_ready
 @22
 i2c_ctrl_txn_layer_tb.th.dut.sm_reg.bytes_done[7:0]
-@23
 i2c_ctrl_txn_layer_tb.th.dut.sm_reg.cmd.len[7:0]
 @28
 i2c_ctrl_txn_layer_tb.th.dut.sm_reg.next_valid
@@ -95,6 +97,8 @@ i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.bits_shifted
 i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.rx_ack_valid
 i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.rx_ack
 i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.ack_sending
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.tx_stop
+i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_reg.stop_requested
 @200
 -Counter
 @22

@@ -23,6 +23,7 @@ entity i2c_cmd_vc is
     port (
         cmd     : out cmd_t     := CMD_RESET;
         valid   : out std_logic := '0';
+        abort   : out std_logic := '0';
         ready   : in std_logic;
     );
 end entity;
@@ -57,8 +58,16 @@ begin
             command.len     := pop(msg);
             cmd     <= command;
             valid   <= '1';
-            wait until ready;
+
+            -- once the command is accepted, release valid
+            wait until not ready;
             valid   <= '0';
+        elsif msg_type = abort_msg then
+            abort   <= '1';
+
+            -- once the core is ready, release abort
+            wait until ready;
+            abort   <= '0';
         else
             unexpected_msg_type(msg_type);
         end if;

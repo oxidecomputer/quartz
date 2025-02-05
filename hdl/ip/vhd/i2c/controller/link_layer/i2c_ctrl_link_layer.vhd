@@ -4,6 +4,15 @@
 --
 -- Copyright 2025 Oxide Computer Company
 
+-- I2C Control Link Layer
+--
+-- This block handles the bit-level details of an I2C transaction. It requires higher order logic
+-- to actually orchestrate the transaction and is designed for use with i2c_ctrl_txn_layer.
+--
+-- Notes:
+-- - This block currently does not support block stretching.
+-- - This block currently does not do ackknowledge-polling after a write.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std_unsigned.all;
@@ -101,6 +110,7 @@ architecture rtl of i2c_ctrl_link_layer is
         transition_sda_cntr_en  : std_logic;
         ack_sending             : std_logic;
         sr_scl_fedge_seen       : std_logic;
+        stop_requested          : std_logic;
 
         -- interfaces
         rx_data         : std_logic_vector(7 downto 0);
@@ -125,6 +135,7 @@ architecture rtl of i2c_ctrl_link_layer is
         '0',            -- transition_sda_cntr_en
         '0',            -- ack_sending
         '0',            -- sr_scl_fedge_seen
+        '0',            -- stop_requested
         (others => '0'),-- rx_data
         '0',            -- rx_data_valid
         (others => '0'),-- tx_data
@@ -255,6 +266,12 @@ begin
             v.transition_sda_cntr_en := '0';
         end if;
 
+        -- Latch if a stop is requested to handle the case when it may need to happen before the end
+        -- of the transaction.
+        if sm_reg.stop_requested = '0' then
+            v.stop_requested := '1' when tx_stop = '1' and txn_next_valid = '1' else '0';
+        end if;
+
         case sm_reg.state is
 
             -- Ready and awaiting the next transaction
@@ -311,12 +328,14 @@ begin
                 end if;
 
             when HANDLE_NEXT =>
-                if txn_next_valid then
+                if v.stop_requested then
+                    v.state := STOP_SDA;
+                elsif txn_next_valid then
                     if tx_start then
                         -- A repeated start was issued mid-transaction
-                        v.state             := WAIT_REPEAT_START;
-                        v.counter           := START_SETUP_HOLD_TICKS;
-                        v.count_load        := '1';
+                        v.state         := WAIT_REPEAT_START;
+                        v.counter       := START_SETUP_HOLD_TICKS;
+                        v.count_load    := '1';
                     elsif tx_stop then
                         v.state         := STOP_SDA;
                     elsif tx_data_valid then
@@ -335,6 +354,8 @@ begin
                     if sm_reg.bits_shifted = 8 then
                         v.state         := ACK_RX;
                         v.bits_shifted  := 0;
+                    elsif v.stop_requested then
+                        v.state         := STOP_SDA;
                     else
                         v.sda_oe        := not sm_reg.tx_data(7);
                         v.tx_data       := sm_reg.tx_data(sm_reg.tx_data'high-1 downto sm_reg.tx_data'low) & '1';
@@ -347,7 +368,7 @@ begin
                 v.sda_oe    := '0';
 
                 if scl_redge then
-                    v.state         := HANDLE_NEXT;
+                    v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     v.rx_ack        := not sda_in_syncd;
                     v.rx_ack_valid  := '1';
                 end if;
@@ -370,13 +391,14 @@ begin
                 -- at the first transition_sda pulse start sending the (N)ACK
                 if transition_sda = '1' then
                     if sm_reg.ack_sending = '0' then
-                        v.sda_oe        := tx_ack;
+                        v.sda_oe        := '1' when (tx_ack = '1' and v.stop_requested = '0')
+                                            else '0';
                         v.ack_sending   := '1';
                     else
                         -- at the next transition point release the bus
                         v.sda_oe        := '0';
                         v.ack_sending   := '0';
-                        v.state         := HANDLE_NEXT;
+                        v.state         := STOP_SDA when sm_reg.stop_requested else HANDLE_NEXT;
                     end if;
                 end if;
 
@@ -405,7 +427,9 @@ begin
         end case;
 
         -- next state logic
-        v.ready := '1' when v.state = IDLE or v.state = HANDLE_NEXT else '0';
+        v.ready := '1' when v.state = IDLE or
+                            (v.state = HANDLE_NEXT and sm_reg.stop_requested = '0')
+                    else '0';
 
         sm_reg_next <= v;
     end process;

@@ -98,16 +98,21 @@ begin
                 state       <= GET_START_BYTE;
 
             when GET_START_BYTE =>
-                wait on rx_done;
-                if rx_data(7 downto 1) = address(i2c_target_vc) then
-                    state       <= SEND_ACK;
-                    is_read     := rx_data(0) = '1';
-                    event_msg   := new_msg(address_matched);
-                    send(net, i2c_target_vc.p_actor, event_msg);
+                wait until rx_done or stop_condition;
+
+                if stop_condition then
+                    state   <= GET_STOP;
                 else
-                    state       <= SEND_NACK;
-                    event_msg   := new_msg(address_different);
-                    send(net, i2c_target_vc.p_actor, event_msg);
+                    if rx_data(7 downto 1) = address(i2c_target_vc) then
+                        state       <= SEND_ACK;
+                        is_read     := rx_data(0) = '1';
+                        event_msg   := new_msg(address_matched);
+                        send(net, i2c_target_vc.p_actor, event_msg);
+                    else
+                        state       <= SEND_NACK;
+                        event_msg   := new_msg(address_different);
+                        send(net, i2c_target_vc.p_actor, event_msg);
+                    end if;
                 end if;
 
             when GET_BYTE =>
@@ -135,30 +140,43 @@ begin
                         reg_addr_v  := unsigned(rx_data);
                     end if;
                 end if;
-                
+
             when SEND_ACK =>
-                wait until falling_edge(scl_if.i) and tx_done;
-                if is_read then
-                    state   <= SEND_BYTE;
+                wait until (falling_edge(scl_if.i) and tx_done) or stop_condition;
+
+                if stop_condition then
+                    state   <= GET_STOP;
                 else
-                    state   <= GET_BYTE;
+                    if is_read then
+                        state   <= SEND_BYTE;
+                    else
+                        state   <= GET_BYTE;
+                    end if;
                 end if;
 
             when SEND_NACK =>
-                wait until falling_edge(scl_if.i);
+                wait until falling_edge(scl_if.i) or stop_condition;
                 state   <= GET_STOP;
 
             when SEND_BYTE =>
-                wait until falling_edge(scl_if.i) and tx_done;
-                reg_addr_v  := reg_addr + 1;
-                state       <= GET_ACK;
+                wait until (falling_edge(scl_if.i) and tx_done) or stop_condition;
+
+                if stop_condition then
+                    state   <= GET_STOP;
+                else
+                    reg_addr_v  := reg_addr + 1;
+                    state       <= GET_ACK;
+                end if;
 
             when GET_ACK =>
-                wait on rx_done;
+                wait until rx_done;
                 state   <= SEND_BYTE when rx_ackd else GET_STOP;
 
             when GET_STOP =>
-                wait until (stop_condition or stop_during_write);
+                if not stop_condition then
+                    wait until stop_condition or stop_during_write;
+                end if;
+
                 event_msg           := new_msg(got_stop);
                 send(net, i2c_target_vc.p_actor, event_msg);
                 state               <= IDLE;
