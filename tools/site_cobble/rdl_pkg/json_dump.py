@@ -45,6 +45,13 @@ from systemrdl.node import (
     MemNode,
 )
 
+def convert_only_map_to_json(rdlc: RDLCompiler, obj: RootNode, path: Union[str, PathLike]):
+    # Convert entire register model to primitive datatypes (a dict/list tree)
+    json_obj = convert_addr_map_only(rdlc, obj.top)
+
+    # Write to a JSON file
+    with open(path, "w") as f:
+        json.dump(json_obj, f, indent=4)
 
 def convert_to_json(rdlc: RDLCompiler, obj: RootNode, path: Union[str, PathLike]):
     # Convert entire register model to primitive datatypes (a dict/list tree)
@@ -113,6 +120,33 @@ def convert_mem(obj: MemNode) -> dict:
 
     return json_obj
 
+
+def convert_addr_map_only(
+    rdlc: RDLCompiler, obj: Union[AddrmapNode, RegfileNode]
+) -> dict:
+    if obj.is_array:
+        rdlc.msg.fatal("JSON export does not support arrays", obj.inst.inst_src_ref)
+
+    json_obj = dict()
+    if isinstance(obj, AddrmapNode):
+        json_obj["type"] = "addrmap"
+    elif isinstance(obj, RegfileNode):
+        json_obj["type"] = "regfile"
+    else:
+        raise RuntimeError
+
+    json_obj["inst_name"] = obj.inst_name
+    json_obj["addr_offset"] = obj.address_offset
+
+    json_obj["children"] = []
+    for child in obj.children():
+        if isinstance(child, AddrmapNode):
+            json_child = convert_addr_map_only(rdlc, child)
+        else:
+            continue
+        json_obj["children"].append(json_child)
+
+    return json_obj
 
 def convert_addrmap_or_regfile(
     rdlc: RDLCompiler, obj: Union[AddrmapNode, RegfileNode]
