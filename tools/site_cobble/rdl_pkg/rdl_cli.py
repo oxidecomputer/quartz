@@ -21,7 +21,7 @@ try:
 except ModuleNotFoundError:
     from rdl_pkg.exporter import MapExporter, MapofMapsExporter
     from rdl_pkg.listeners import PreExportListener, MyModelPrintingListener
-    from rdl_pkg.json_dump import convert_to_json
+    from rdl_pkg.json_dump import convert_to_json, convert_only_map_to_json
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -64,6 +64,13 @@ def main():
         # Dump Jinja template-based outputs (filter out .json)
         exporter = MapofMapsExporter()
         exporter.export(pre_export.maps[0], output_filenames_no_json)
+        json_files = [x for x in output_filenames if ".json" in str(x)]
+        if len(json_files) == 1:
+            json_name = Path(json_files[0])
+            convert_only_map_to_json(rdlc, root, json_name)
+        elif len(json_files) > 1:
+            raise Exception(f'Specified too many .json outputs: {json_files.join(",")}')
+
     else:
         # For each standard map, we're going to generate:
         # Standard bsv package from this base address

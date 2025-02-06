@@ -32,7 +32,8 @@ rdl_file(
         "//hdl/ip/vhd/espi:espi_regs_pkg",
     ],
     outputs = [
-        "gfruit_top_map.html",
+        "gfruit_top_map.html", 
+        "gfruit_top_map.json"
     ]
 )
 
