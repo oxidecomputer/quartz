@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim", "third_party")
 load("//tools:rdl.bzl", "rdl_file")
 
 vhdl_unit(
@@ -26,9 +26,17 @@ vhdl_unit(
     visibility = ['PUBLIC'],
 )
 
+third_party(
+    name = "spi_vcs",
+    srcs = glob(["spi_controller/*.vhd"]),
+    library = "vunit_lib",
+    visibility = ['PUBLIC'],
+)
+
 vhdl_unit(
     name = "basic_stream",
     srcs = glob(["basic_stream/*.vhd"]),
+
     visibility = ['PUBLIC']
 )
 

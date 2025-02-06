@@ -113,6 +113,14 @@ def vhdl_ls_toml_gen(args):
     vunit = {"vunit_lib": {"files": vunit_dict["vunit_lib"]}}
     osvvm = {"osvvm": {"files": vunit_dict["osvvm"]}}
 
+    # We may have provided additional, vendored files in these libraries.
+    our_vunit_files = vhdl_lsp_dict["libraries"].get("vunit_lib", {}).get("files", [])
+    our_osvvm_files = vhdl_lsp_dict["libraries"].get("osvvm", {}).get("files", [])
+
+    # Now combine these with the vunit and osvvm files we just found
+    vunit["vunit_lib"]["files"].extend(our_vunit_files)
+    osvvm["osvvm"]["files"].extend(our_osvvm_files)
+
     # Update the running structure with these new libraries
     vhdl_lsp_dict["libraries"].update(vunit)
     vhdl_lsp_dict["libraries"].update(osvvm)
