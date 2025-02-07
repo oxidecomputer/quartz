@@ -19,6 +19,11 @@
 --     set, skipping any reserved fields.
 --   uncompress() is the complement of compress() taking a std_logic_vector 
 --     in a register's compressed form putting it back into the record type
+--   write_byte_enable() takes a record type, a std_logic_vector of the
+--     register's width as the wdata, and a std_logic_vector representing the
+--     byte enables and returns the record with the updated values. Note that 
+--     for registers with a width of 8, this function is not even generated 
+--     since it doesn't make sense.
 --   sizeof() returns an integer of the number of used bits in the register
 --   rec_reset abusing overload signatures to return the reset value for the
 --     register type as defined in the RDL
@@ -105,6 +110,14 @@ package {{module_name}} is
   function pack(rec : {{reg_type_name}}) return unsigned;
   function compress (rec : {{reg_type_name}}) return std_logic_vector;
   function uncompress (vec : std_logic_vector) return {{reg_type_name}};
+  {% if register.width > 8 %}
+  {# Only generate write_byte_enable if register is > 8 bits #}
+  function write_byte_enable(
+    rec : {{reg_type_name}}; 
+    wdata: std_logic_vector({{register.width - 1}} downto 0);
+    byte_en : std_logic_vector({{(register.width/8 - 1)|int}} downto 0)) 
+    return {{reg_type_name}};
+  {% endif %}
   function sizeof (rec : {{reg_type_name}}) return integer;
   {# Only generate rec_reset if resets were specified #}
   {% if register.has_reset_definition %}
@@ -235,6 +248,27 @@ package body {{module_name}} is
         {% endfor %}
         return ret_rec;
     end uncompress;
+    {% if register.width > 8 %}
+    {# Only generate write_byte_enable if register is > 8 bits #}
+    function write_byte_enable(
+    rec : {{reg_type_name}}; 
+    wdata: std_logic_vector({{register.width - 1}} downto 0);
+    byte_en : std_logic_vector({{(register.width/8 - 1)|int}} downto 0)) 
+    return {{reg_type_name}} is
+        variable cur_data_slv : std_logic_vector({{register.width - 1}} downto 0);
+    begin
+        -- Firstly, we're going to pack existing values into an slv
+        -- then looping over the bytes and updating any byte with write-data if the byte is enabled
+        cur_data_slv := pack(rec);
+        for i in byte_en'range loop
+            if byte_en(i) = '1' then
+                -- Update the byte if the byte is enabled
+                cur_data_slv(i*8 + 7 downto i*8) := wdata(i*8 + 7 downto i*8);
+            end if;
+        end loop;
+        return unpack(cur_data_slv);
+    end write_byte_enable;
+    {% endif %}
     function sizeof (rec : {{reg_type_name}}) return integer is
     begin
         return {{register.used_bits}};
