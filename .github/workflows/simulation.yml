@@ -35,6 +35,8 @@ jobs:
           run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
         - name: Run VUnit tests
           run: set -o pipefail; buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done
+        - name: Cleanup
+          run: bash .github/cleanup.sh
   
   bsv-sim:
     needs: changes
@@ -61,3 +63,5 @@ jobs:
           working-directory: ./build
         - name: backup build-dir
           run: cp -R ./build /tmp/cobble_build_bkup
+        - name: Cleanup
+          run: bash .github/cleanup.sh
