@@ -130,8 +130,8 @@ begin
                         (others => '0');
     flash_cfifo_write <= '1' when r.flash_cmd_state = issue_flash_addr or r.flash_cmd_state = issue_flash_len else '0';
 
-    -- Let's put a 4kB buffer here as a starting point and see how it goes, this would allow 4 1024Byte max size tansactions
-    -- or we could shrink and say 2 2kB etc. We know we're only going read on this interface so we don't ahve to worry so much about
+    -- Let's put a 4kB buffer here as a starting point and see how it goes, this would allow 4 1024Byte max size transactions
+    -- or we could shrink and say 2 2kB etc. We know we're only going read on this interface so we don't have to worry so much about
     -- various concurrency issues here. This should fit in a single 32kb block ram on the FPGA
     dual_clock_simple_dpr_inst: entity work.dual_clock_simple_dpr
      generic map(
