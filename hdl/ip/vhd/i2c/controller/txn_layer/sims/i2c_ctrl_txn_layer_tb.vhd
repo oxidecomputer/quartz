@@ -2,11 +2,14 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright  Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std_unsigned.all;
+
+library osvvm;
+use osvvm.RandomPkg.RandomPType;
 
 library vunit_lib;
     context vunit_lib.com_context;
@@ -26,6 +29,7 @@ entity i2c_ctrl_txn_layer_tb is
 end entity;
 
 architecture tb of i2c_ctrl_txn_layer_tb is
+    constant CLK_PER_NS         : positive          := 8;
     constant I2C_TARGET_VC      : i2c_target_vc_t   := new_i2c_target_vc;
     constant TX_DATA_SOURCE_VC  : basic_source_t    := new_basic_source(8);
     constant RX_DATA_SINK_VC    : basic_sink_t      := new_basic_sink(8);
@@ -34,6 +38,7 @@ begin
 
     th: entity work.i2c_ctrl_txn_layer_th
         generic map (
+            CLK_PER_NS      => CLK_PER_NS,
             tx_source       => TX_DATA_SOURCE_VC,
             rx_sink         => RX_DATA_SINK_VC,
             i2c_target_vc   => I2C_TARGET_VC,
@@ -46,10 +51,22 @@ begin
         variable command    : cmd_t;
         variable ack        : boolean := false;
 
-        variable data           : std_logic_vector(7 downto 0);
-        variable exp_addr  : std_logic_vector(7 downto 0);
-        variable exp_data  : std_logic_vector(7 downto 0);
-        variable byte_len       : natural;
+        variable data       : std_logic_vector(7 downto 0);
+        variable exp_addr   : std_logic_vector(7 downto 0);
+        variable exp_data   : std_logic_vector(7 downto 0);
+        variable byte_len   : natural;
+
+        variable rnd            : RandomPType;
+
+        procedure generate_abort is
+        begin
+            -- DUT is operating in Fast Mode+, so the fscl period is 1000ns. Send the abort at
+            -- some point during the byte transfer. Begin halfway through the first bit period
+            -- (500 ns) to avoid a potential ACK conflict
+            wait for rnd.RandInt(550, 6000) * 1 ns;
+            push_abort(net, I2C_CMD_VC);
+            expect_stop(net, I2C_TARGET_VC);
+        end procedure;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -160,6 +177,56 @@ begin
                 end loop;
 
                 expect_stop(net, I2C_TARGET_VC);
+            elsif run("abort_transaction") then
+                -- create a command
+                exp_addr    := X"00";
+                byte_len    := 8;
+                command := (
+                    op      => RANDOM_READ,
+                    addr    => address(I2C_TARGET_VC),
+                    reg     => std_logic_vector(exp_addr),
+                    len     => to_std_logic_vector(byte_len, command.len'length)
+                );
+
+                -- Abort first START byte
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+                -- receive and drop the START event
+                expect_message(net, I2C_TARGET_VC, got_start);
+                -- abort first start byte
+                generate_abort;
+
+                -- Abort write byte
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+                -- receive and drop the START event
+                expect_message(net, I2C_TARGET_VC, got_start);
+                -- receive and drop the START byte
+                expect_message(net, I2C_TARGET_VC, address_matched);
+                -- abort during write byte
+                generate_abort;
+
+                -- Abort repeated start byte
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+                -- receive and drop the START event
+                expect_message(net, I2C_TARGET_VC, got_start);
+                -- receive and drop the START byte
+                expect_message(net, I2C_TARGET_VC, address_matched);
+                -- receive and drop the START event
+                expect_message(net, I2C_TARGET_VC, got_start);
+                -- abort during repeated start byte
+                generate_abort;
+
+                -- Abort repeated start byte
+                push_i2c_cmd(net, I2C_CMD_VC, command);
+                -- receive and drop the START event
+                expect_message(net, I2C_TARGET_VC, got_start);
+                -- receive and drop the START byte
+                expect_message(net, I2C_TARGET_VC, address_matched);
+                -- receive and drop the START event
+                expect_message(net, I2C_TARGET_VC, got_start);
+                -- receive and drop the START byte
+                expect_message(net, I2C_TARGET_VC, address_matched);
+                -- abort during read byte
+                generate_abort;
             end if;
         end loop;
 

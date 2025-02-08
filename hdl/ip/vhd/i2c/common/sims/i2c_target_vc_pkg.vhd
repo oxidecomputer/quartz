@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -69,6 +69,12 @@ package i2c_target_vc_pkg is
         variable addr   : std_logic_vector;
     );
 
+    procedure expect_abort(
+        signal net          : inout network_t;
+        constant vc         : i2c_target_vc_t;
+        variable aborted    : boolean;
+    );
+
 end package;
 
 package body i2c_target_vc_pkg is
@@ -115,8 +121,11 @@ package body i2c_target_vc_pkg is
         variable matched    : boolean;
     begin
         receive(net, vc.p_actor, msg);
+        -- a bit of a hack since check_equal is not implemented for msg_t
         matched := message_type(msg) = expected_msg;
-        check_true(matched, "Received message did not match expected message.");
+        if not matched then
+            unexpected_msg_type(message_type(msg));
+        end if;
     end procedure;
 
     procedure expect_stop (
@@ -159,6 +168,22 @@ package body i2c_target_vc_pkg is
         receive(net, vc.p_actor, msg);
         if message_type(msg) = got_byte then
             check_expected_was_written(buf(vc));
+        end if;
+    end procedure;
+
+    procedure expect_abort (
+        signal net          : inout network_t;
+        constant vc         : i2c_target_vc_t;
+        variable aborted    : boolean;
+    ) is
+        variable msg : msg_t;
+    begin
+        if aborted then
+            -- if we are aborted, expect the next event to to STOP
+            expect_stop(net, vc);
+        else
+            -- otherwise, pop an event to get it out of the queue
+            receive(net, vc.p_actor, msg);
         end if;
     end procedure;
 

@@ -24,6 +24,7 @@ use work.basic_stream_pkg.all;
 
 entity i2c_ctrl_txn_layer_th is
     generic (
+        CLK_PER_NS      : positive;
         tx_source       : basic_source_t;
         rx_sink         : basic_sink_t;
         i2c_target_vc   : i2c_target_vc_t;
@@ -32,6 +33,8 @@ entity i2c_ctrl_txn_layer_th is
 end entity;
 
 architecture th of i2c_ctrl_txn_layer_th is
+    constant CLK_PER_TIME : time := CLK_PER_NS * 1 ns;
+
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
@@ -48,6 +51,7 @@ architecture th of i2c_ctrl_txn_layer_th is
     -- command interface
     signal command          : cmd_t;
     signal command_valid    : std_logic;
+    signal abort            : std_logic;
     signal core_ready       : std_logic;
 
     -- streaming interfaces
@@ -58,12 +62,12 @@ begin
 
     -- set up a fastish clock for the sim
     -- env and release reset after a bit of time
-    clk   <= not clk after 4 ns;
+    clk   <= not clk after CLK_PER_TIME / 2;
     reset <= '0' after 200 ns;
 
-    dut: entity work.i2c_txn_layer
+    dut: entity work.i2c_ctrl_txn_layer
         generic map (
-            CLK_PER_NS  => 8,
+            CLK_PER_NS  => CLK_PER_NS,
             MODE        => FAST_PLUS
         )
         port map (
@@ -73,6 +77,7 @@ begin
             sda_if          => ctrl_sda_tristate,
             cmd             => command,
             cmd_valid       => command_valid,
+            abort           => abort,
             core_ready      => core_ready,
             tx_st_if        => tx_data_stream,
             rx_st_if        => rx_data_stream
@@ -85,6 +90,7 @@ begin
         port map (
             cmd     => command,
             valid   => command_valid,
+            abort   => abort,
             ready   => core_ready
         );
 

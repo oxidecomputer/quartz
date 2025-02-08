@@ -4,6 +4,15 @@
 --
 -- Copyright 2025 Oxide Computer Company
 
+-- I2C Controller Transaction Layer
+--
+-- This block orchestrates the actions to complete a supplied I2C command (`cmd`).
+--
+-- Notes:
+-- - For write transactions data is expected to be streamed in via `tx_st_if`
+-- - For read transactions data is expected to be streamed in via `rx_st_if`
+-- - A pulse of the `abort` signal will result in an I2C transaction being ended as fast as possible
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std_unsigned.all;
@@ -13,7 +22,7 @@ use work.tristate_if_pkg.all;
 
 use work.i2c_common_pkg.all;
 
-entity i2c_txn_layer is
+entity i2c_ctrl_txn_layer is
     generic (
         CLK_PER_NS  : positive;
         MODE        : mode_t;
@@ -29,6 +38,7 @@ entity i2c_txn_layer is
         -- I2C command interface
         cmd         : in cmd_t;
         cmd_valid   : in std_logic;
+        abort       : in std_logic;
         core_ready  : out std_logic;
 
         -- Transmit data stream
@@ -39,7 +49,7 @@ entity i2c_txn_layer is
     );
 end entity;
 
-architecture rtl of i2c_txn_layer is
+architecture rtl of i2c_ctrl_txn_layer is
 
     type state_t is (
         IDLE,
@@ -223,6 +233,13 @@ begin
                 end if;
         end case;
 
+        -- if a transaction is in progress and abort is asserted we should immediately STOP
+        if abort = '1' and sm_reg.state /= IDLE and sm_reg.state /= STOP
+                and sm_reg.state /= WAIT_STOP then
+            v.state         := STOP;
+            v.next_valid    := '1';
+        end if;
+
         -- next state logic
         v.do_start  := '1' when v.state = START else '0';
         v.do_stop   := '1' when v.state = STOP else '0';
@@ -234,7 +251,6 @@ begin
 
         sm_reg_next <= v;
     end process;
-
 
     reg_sm: process(clk, reset)
     begin
