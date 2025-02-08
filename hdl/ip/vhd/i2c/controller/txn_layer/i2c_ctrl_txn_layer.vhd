@@ -233,8 +233,9 @@ begin
                 end if;
         end case;
 
-        -- if a transaction is in progress and abort is asserted we should immediate STOP
-        if abort = '1' and v.state /= IDLE and v.state /= STOP and v.state /= WAIT_STOP then
+        -- if a transaction is in progress and abort is asserted we should immediately STOP
+        if abort = '1' and sm_reg.state /= IDLE and sm_reg.state /= STOP
+                and sm_reg.state /= WAIT_STOP then
             v.state         := STOP;
             v.next_valid    := '1';
         end if;

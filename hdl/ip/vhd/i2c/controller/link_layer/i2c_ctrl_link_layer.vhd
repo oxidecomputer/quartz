@@ -266,8 +266,13 @@ begin
             v.transition_sda_cntr_en := '0';
         end if;
 
-        -- Latch if a stop is requested to handle the case when it may need to happen before the end
-        -- of the transaction.
+        -- Set if a stop is requested to handle the case when it may need to happen before the end
+        -- of the transaction. This is then cleared as transition out of the STOP_SETUP state.
+        -- The combinatorial value of this signal is read elsewhwere in the state machine in an
+        -- effort to accommodate making the stop happen as quickly as possible. The intention is
+        -- to transition to a STOP during a normal transition point for I2C which is not necessarily
+        -- any cycle of the FPGA clk. At slower operating modes this does not matter much, but at
+        -- FAST_MODE_PLUS (1MHz) it starts to matter more.
         if sm_reg.stop_requested = '0' then
             v.stop_requested := '1' when tx_stop = '1' and txn_next_valid = '1' else '0';
         end if;
@@ -398,7 +403,7 @@ begin
                         -- at the next transition point release the bus
                         v.sda_oe        := '0';
                         v.ack_sending   := '0';
-                        v.state         := STOP_SDA when sm_reg.stop_requested else HANDLE_NEXT;
+                        v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     end if;
                 end if;
 
@@ -426,9 +431,8 @@ begin
 
         end case;
 
-        -- next state logic
         v.ready := '1' when v.state = IDLE or
-                            (v.state = HANDLE_NEXT and sm_reg.stop_requested = '0')
+                            (v.state = HANDLE_NEXT and v.stop_requested = '0')
                     else '0';
 
         sm_reg_next <= v;
