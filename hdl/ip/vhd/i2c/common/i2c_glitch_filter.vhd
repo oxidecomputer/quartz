@@ -18,6 +18,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
+use work.transforms_pkg.shift_in_at_0;
+
 entity i2c_glitch_filter is
     generic(
         -- number of register stages the n filter pipeline
@@ -86,11 +88,9 @@ begin
             last_sda <= filtered_sda;
             -- Using variables here to make the filtered outputs
             -- simultaneous more easily
-            nxt_scl_pipe := shift_left(scl_pipe, 1);
-            nxt_scl_pipe(0) := scl_syncd;
+            nxt_scl_pipe := shift_in_at_0(scl_pipe, scl_syncd);
             scl_pipe <= nxt_scl_pipe;  -- do the register assignment
-            nxt_sda_pipe := shift_left(sda_pipe, 1);
-            nxt_sda_pipe(0) := sda_syncd;
+            nxt_sda_pipe := shift_in_at_0(sda_pipe, sda_syncd);
             sda_pipe <= nxt_sda_pipe;  -- do the register assignment
 
             -- we use the variables set above here to make the filtered outputs

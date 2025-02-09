@@ -15,6 +15,7 @@ vhdl_unit(
         "txn_layer/*.vhd",]),
     deps = [
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
+        "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
         "//hdl/ip/vhd/common:countdown",
         "//hdl/ip/vhd/common:strobe",
         "//hdl/ip/vhd/common:streaming_if_pkg",

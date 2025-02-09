@@ -16,7 +16,8 @@ vhdl_unit(
     name = "i2c_glitch_filter",
     srcs = ["i2c_glitch_filter.vhd"],
     deps = [
-       "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/common:transforms_pkg",
+        "//hdl/ip/vhd/synchronizers:meta_sync",
     ],
     visibility = ['PUBLIC']
 )

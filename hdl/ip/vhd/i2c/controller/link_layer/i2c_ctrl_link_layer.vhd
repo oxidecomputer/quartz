@@ -77,6 +77,8 @@ architecture rtl of i2c_ctrl_link_layer is
     constant SDA_TRANSITION_TICKS   : positive :=
         to_integer(calc_ns(300, CLK_PER_NS, 5));
 
+    constant TSP_TICKS : positive := to_integer(calc_ns(SETTINGS.tsp_ns, CLK_PER_NS, 8));
+
     type state_t is (
         IDLE,
         WAIT_TBUF,
@@ -198,15 +200,22 @@ begin
     -- SDA Control
     --
 
-    -- TODO: this should be a glitch filter that means `tsp` per the spec
-    sda_in_sync: entity work.meta_sync
-        generic map (
-            STAGES      => 2
+    -- Right now the controller doesn't need much of what this block offers aside from SDA filtering
+    i2c_glitch_filter_inst: entity work.i2c_glitch_filter
+        generic map(
+            filter_cycles   => TSP_TICKS
         )
         port map(
-          async_input   => sda_if.i,
-          clk           => clk,
-          sycnd_output  => sda_in_syncd
+            clk             => clk,
+            reset           => reset,
+            raw_scl         => '1',
+            raw_sda         => sda_if.i,
+            filtered_scl    => open,
+            scl_fedge       => open,
+            scl_redge       => open,
+            filtered_sda    => sda_in_syncd,
+            sda_fedge       => open,
+            sda_redge       => open
         );
 
     -- This counter enforces `tvd` per the spec, ensuring we transition SDA only after an

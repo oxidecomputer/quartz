@@ -27,6 +27,7 @@ package i2c_common_pkg is
         sta_su_hd_ns    : positive; -- START set-up/hold time
         sto_su_ns       : positive; -- STOP set-up time
         sto_sta_buf_ns  : positive; -- bus free time between STOP and START
+        tsp_ns          : positive; -- pulse width of spikes to be suppressed by the input filter
     end record;
 
     function get_i2c_settings (constant mode : mode_t) return settings_t;
@@ -65,7 +66,8 @@ package body i2c_common_pkg is
                     250,
                     4700,
                     4000,
-                    4700
+                    4700,
+                    50 -- this is technically undefined in the spec
                  );
             when FAST =>
                 r := (
@@ -73,7 +75,8 @@ package body i2c_common_pkg is
                     100,
                     600,
                     600,
-                    1300
+                    1300,
+                    50
                 );
             when FAST_PLUS =>
                 r := (
@@ -81,7 +84,8 @@ package body i2c_common_pkg is
                     50,
                     260,
                     260,
-                    500
+                    500,
+                    50
                 );
         end case;
 
