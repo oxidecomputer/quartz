@@ -118,6 +118,8 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
                 fromInteger(qsfpPort14ControlOffset): read(qsfp_top.mod_controls[14]);
                 fromInteger(qsfpPort15ControlOffset): read(qsfp_top.mod_controls[15]);
                 fromInteger(qsfpI2cCtrlOffset): read(qsfp_top.i2c_ctrl);
+                fromInteger(qsfpSwPowerEn0Offset): read(qsfp_top.sw_power_en0);
+                fromInteger(qsfpSwPowerEn1Offset): read(qsfp_top.sw_power_en1);
                 fromInteger(qsfpPowerEn0Offset): read(qsfp_top.power_en0);
                 fromInteger(qsfpPowerEn1Offset): read(qsfp_top.power_en1);
                 fromInteger(qsfpPowerGood0Offset): read(qsfp_top.power_good0);
@@ -199,10 +201,10 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
                 update(spi_request.op, qsfp_top.i2c_bcast0, spi_request.wdata);
             fromInteger(qsfpI2cCtrlOffset):
                 update(spi_request.op, qsfp_top.i2c_ctrl, spi_request.wdata);
-            fromInteger(qsfpPowerEn0Offset):
-                update(spi_request.op, qsfp_top.power_en0, spi_request.wdata);
-            fromInteger(qsfpPowerEn1Offset):
-                update(spi_request.op, qsfp_top.power_en1, spi_request.wdata);
+            fromInteger(qsfpSwPowerEn0Offset):
+                update(spi_request.op, qsfp_top.sw_power_en0, spi_request.wdata);
+            fromInteger(qsfpSwPowerEn1Offset):
+                update(spi_request.op, qsfp_top.sw_power_en1, spi_request.wdata);
             fromInteger(qsfpModResetl0Offset):
                 update(spi_request.op, qsfp_top.mod_resetl0, spi_request.wdata);
             fromInteger(qsfpModResetl1Offset):
