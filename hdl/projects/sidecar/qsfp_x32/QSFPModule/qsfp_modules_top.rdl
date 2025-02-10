@@ -189,7 +189,31 @@ addrmap qsfp_modules_top {
     port_control PORT15_CONTROL;
 
     reg {
-        name = "Ports 0 -> 7 HSC Enable. Clear bit to remove module power.";
+        name = "Ports 0 -> 7 SW control of HSC enable. Clear bit to remove module power.";
+        field {} PORT7[7:7] = 1;
+        field {} PORT6[6:6] = 1;
+        field {} PORT5[5:5] = 1;
+        field {} PORT4[4:4] = 1;
+        field {} PORT3[3:3] = 1;
+        field {} PORT2[2:2] = 1;
+        field {} PORT1[1:1] = 1;
+        field {} PORT0[0:0] = 1;
+    } SW_POWER_EN0;
+
+    reg {
+        name = "Ports 8 -> 15 SW control of HSC enable. Clear bit to remove module power.";
+        field {} PORT15[7:7] = 1;
+        field {} PORT14[6:6] = 1;
+        field {} PORT13[5:5] = 1;
+        field {} PORT12[4:4] = 1;
+        field {} PORT11[3:3] = 1;
+        field {} PORT10[2:2] = 1;
+        field {} PORT9[1:1] = 1;
+        field {} PORT8[0:0] = 1;
+    } SW_POWER_EN1;
+
+    reg {
+        name = "Ports 0 -> 7 HSC enable pin state. Enabled when the corresponding SW_POWER_EN0 and MODPRSL0 bits are asserted.";
         default sw = r;
         field {} PORT7[7:7] = 1;
         field {} PORT6[6:6] = 1;
@@ -202,7 +226,7 @@ addrmap qsfp_modules_top {
     } POWER_EN0;
 
     reg {
-        name = "Ports 8 -> 15 HSC Enable. Clear bit to remove module power.";
+        name = "Ports 8 -> 15 HSC enable pin state. Enabled when the corresponding SW_POWER_EN1 and MODPRSL1 bits are asserted.";
         default sw = r;
         field {} PORT15[7:7] = 1;
         field {} PORT14[6:6] = 1;

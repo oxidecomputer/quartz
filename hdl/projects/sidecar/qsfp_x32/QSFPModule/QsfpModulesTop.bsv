@@ -52,8 +52,10 @@ interface Registers;
     interface ReadOnly#(I2cBusy1) i2c_busy1;
     interface Vector#(16, ReadOnly#(PortStatus)) mod_statuses;
     interface Vector#(16, Reg#(PortControl)) mod_controls;
-    interface Reg#(PowerEn0) power_en0;
-    interface Reg#(PowerEn1) power_en1;
+    interface Reg#(SwPowerEn0) sw_power_en0;
+    interface Reg#(SwPowerEn1) sw_power_en1;
+    interface ReadOnly#(PowerEn0) power_en0;
+    interface ReadOnly#(PowerEn1) power_en1;
     interface ReadOnly#(PowerGood0) power_good0;
     interface ReadOnly#(PowerGood1) power_good1;
     interface ReadOnly#(PowerGoodTimeout0) power_good_timeout0;
@@ -90,6 +92,8 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Reg#(I2cBcast0) i2c_bcast0      <- mkReg(defaultValue);
     Reg#(I2cBcast1) i2c_bcast1      <- mkReg(defaultValue);
     Reg#(I2cCtrl) i2c_ctrl          <- mkDReg(defaultValue);
+    Reg#(SwPowerEn0) sw_power_en0   <- mkReg(defaultValue);
+    Reg#(SwPowerEn1) sw_power_en1   <- mkReg(defaultValue);
     Reg#(PowerEn0) power_en0        <- mkReg(defaultValue);
     Reg#(PowerEn1) power_en1        <- mkReg(defaultValue);
     Reg#(ModResetl0) mod_resetl0    <- mkReg(defaultValue);
@@ -105,9 +109,9 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     Vector#(16, Reg#(Bool)) i2c_broadcast_enabled_r <- replicateM(mkReg(False));
 
     // Vectorize all the low speed module signals mapping into local registers.
-    Vector#(16, Bit#(1)) power_en_bits =
-        unpack({pack(power_en1), pack(power_en0)});
-    Vector#(16, Reg#(Bit#(1))) power_en_bits_r <- replicateM(mkReg(1));
+    Vector#(16, Bit#(1)) sw_power_en_bits =
+        unpack({pack(sw_power_en1), pack(sw_power_en0)});
+    Vector#(16, Reg#(Bit#(1))) sw_power_en_bits_r <- replicateM(mkReg(1));
 
     Vector#(16, Bit#(1)) resetl_bits =
         unpack({pack(mod_resetl1), pack(mod_resetl0)});
@@ -117,7 +121,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         unpack({pack(mod_lpmode1), pack(mod_lpmode0)});
     Vector#(16, Reg#(Bit#(1))) lpmode_bits_r <- replicateM(mkReg(1));
 
-
+    Vector#(16, Reg#(Bit#(1))) power_en_bits_r    <- replicateM(mkReg(0));
     Vector#(16, Reg#(Bit#(1))) pg_bits_r          <- replicateM(mkReg(0));
     Vector#(16, Reg#(Bit#(1))) pg_timeout_bits_r  <- replicateM(mkReg(0));
     Vector#(16, Reg#(Bit#(1))) pg_lost_bits_r     <- replicateM(mkReg(0));
@@ -134,15 +138,16 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
     (* fire_when_enabled *)
     rule do_module_regs;
          for (int i = 0; i < 16; i = i + 1) begin
-            // control
-            power_en_bits_r[i] <= power_en_bits[i];
-            resetl_bits_r[i] <= resetl_bits[i];
-            lpmode_bits_r[i] <= lpmode_bits[i];
+            // software control
+            sw_power_en_bits_r[i]   <= sw_power_en_bits[i];
+            resetl_bits_r[i]        <= resetl_bits[i];
+            lpmode_bits_r[i]        <= lpmode_bits[i];
 
             // pin state readbacks
-            pg_bits_r[i]          <= pack(qsfp_ports[i].pg);
-            modprsl_bits_r[i]     <= pack(qsfp_ports[i].modprsl);
-            intl_bits_r[i]        <= pack(qsfp_ports[i].intl);
+            power_en_bits_r[i]  <= pack(qsfp_ports[i].pins.power_en);
+            pg_bits_r[i]        <= pack(qsfp_ports[i].pg);
+            modprsl_bits_r[i]   <= pack(qsfp_ports[i].modprsl);
+            intl_bits_r[i]      <= pack(qsfp_ports[i].intl);
 
             // fault state readbacks
             pg_timeout_bits_r[i]  <= pack(qsfp_ports[i].pg_timeout);
@@ -159,7 +164,7 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
         // software controlled bits
         mkConnection(qsfp_ports[i].resetl, resetl_bits_r[i]);
         mkConnection(qsfp_ports[i].lpmode, lpmode_bits_r[i]);
-        mkConnection(qsfp_ports[i].power_en, power_en_bits_r[i]);
+        mkConnection(qsfp_ports[i].sw_power_en, sw_power_en_bits_r[i]);
 
         // tick fan out
         mkConnection(qsfp_ports[i].tick_1ms, tick_1ms_);
@@ -201,12 +206,16 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
             map(QsfpModuleController::get_status, qsfp_ports);
         interface mod_controls =
             map(QsfpModuleController::get_control, qsfp_ports);
-        interface Reg power_en0 = power_en0;
-        interface Reg power_en1 = power_en1;
+        interface Reg sw_power_en0 = sw_power_en0;
+        interface Reg sw_power_en1 = sw_power_en1;
         interface Reg mod_resetl0 = mod_resetl0;
         interface Reg mod_resetl1 = mod_resetl1;
         interface Reg mod_lpmode0 = mod_lpmode0;
         interface Reg mod_lpmode1 = mod_lpmode1;
+        interface ReadOnly power_en0 =
+            valueToReadOnly(unpack(pack(map(readReg, power_en_bits_r))[7:0]));
+        interface ReadOnly power_en1 = 
+            valueToReadOnly(unpack(pack(map(readReg, power_en_bits_r))[15:8]));
         interface ReadOnly power_good0 =
             valueToReadOnly(unpack(pack(map(readReg, pg_bits_r))[7:0]));
         interface ReadOnly power_good1 =

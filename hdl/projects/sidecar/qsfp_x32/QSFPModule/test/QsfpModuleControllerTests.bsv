@@ -58,8 +58,8 @@ interface Bench;
     // A way to expose if the I2C read/write is finished
     method Bool i2c_busy();
 
-    // Control of the hot swap power enable pin
-    method Action set_power_en(Bit#(1) v);
+    // Software control of the hot swap power enable pin
+    method Action set_sw_power_en(Bit#(1) v);
     // Readback of the enable pin
     method Bool hsc_en;
     // Control of the hot swap power good pin
@@ -115,9 +115,9 @@ module mkBench (Bench);
     mkConnection(controller.lpmode, lpmode_r);
 
     // Hot swap
-    Reg#(Bit#(1)) power_en_r  <- mkReg(1);
+    Reg#(Bit#(1)) sw_power_en_r  <- mkReg(1);
     Reg#(Bool) hsc_pg_r     <- mkReg(False);
-    mkConnection(controller.power_en, power_en_r);
+    mkConnection(controller.sw_power_en, sw_power_en_r);
     mkConnection(controller.pins.power_good, hsc_pg_r);
 
     Strobe#(16) tick_1khz   <-
@@ -273,8 +273,8 @@ module mkBench (Bench);
         lpmode_r    <= v;
     endmethod
 
-    method Action set_power_en(Bit#(1) v);
-        power_en_r <= v;
+    method Action set_sw_power_en(Bit#(1) v);
+        sw_power_en_r <= v;
     endmethod
 
     method Action set_hsc_pg(Bit#(1) v);
@@ -420,7 +420,7 @@ module mkRemovePowerEnableTest (Empty);
         assert_eq(unpack(bench.registers.port_status.error[2:0]),
             NoError,
             "NoPower should be present when attempting to communicate when the hot swap is stable.");
-        bench.set_power_en(0);
+        bench.set_sw_power_en(0);
         delay(2);
         bench.set_hsc_pg(0);
         // power good is debounced and thus won't transition immediately

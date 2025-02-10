@@ -97,7 +97,7 @@ interface QsfpModuleController;
     method Action lpmode(Bit#(1) val);
 
     // Software controlled hot swap controller power enable
-    method Action power_en(Bit#(1) val);
+    method Action sw_power_en(Bit#(1) val);
 
     // Power fault state from the controller
     method Bool pg;
@@ -388,7 +388,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method modprsl  = modprsl_;
     method intl     = intl_;
 
-    method power_en     = power_en_sw._write;
+    method sw_power_en  = power_en_sw._write;
     method pg           = hot_swap.pin_state.good;
     method pg_timeout   = hot_swap.timed_out;
     method pg_lost      = hot_swap.aborted;
