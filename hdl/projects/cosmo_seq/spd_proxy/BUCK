@@ -4,6 +4,7 @@ vhdl_unit(
     name = "spd_proxy_top",
     srcs = glob(["*.vhd"]),
     deps = [
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         "//hdl/ip/vhd/common:tristate_if_pkg",
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
         "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
