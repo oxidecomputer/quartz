@@ -3,26 +3,40 @@
 # Generated run.py from buck2
 import subprocess
 import argparse
+import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--output", dest="output", help="Explicit output python")
+parser.add_argument("--output", dest="output", help="Explicit output yosys json")
+parser.add_argument("--log", dest="log", help="Explicit output yosys log")
+parser.add_argument("--ghdl_stderr", dest="ghdl_stderr", help="Explicit output ghdl stderr")
 
 args = parser.parse_args()
 files_str = (
 {% for source in project.sources %}
 {% set suffix = source.path.suffix %}
 {% if suffix in [".vhd"] %}
-"{{source.path.absolute().as_posix()}}"
+"{{source.path.absolute().as_posix()}} "
 {% endif %}
 {% endfor %}
 )
 
 cmd = [
     "yosys",
+    "-l",
+    f"{args.log}",
     "-m",
     "ghdl",
     "-p",
     f'ghdl --std=08 {files_str} -e {{project.top_entity_name}}; {{project.synth_family}} -json {args.output}',
 ]
 
-a = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+#a = subprocess.run(cmd, stdout=subprocess.PIPE, check=False)
+yosys = subprocess.run(
+    cmd,
+    encoding="utf-8", 
+    check=True, 
+    capture_output=True)
+
+with open(args.ghdl_stderr, "w") as f:
+    f.write(yosys.stderr)
+sys.stderr.write(yosys.stderr)
