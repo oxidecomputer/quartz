@@ -66,27 +66,22 @@ begin
     -- Our I2C controller
     --
 
-    i2c_ctrl_link_layer_inst: entity work.i2c_ctrl_link_layer
+    i2c_ctrl_txn_layer_inst: entity work.i2c_ctrl_txn_layer
      generic map(
-        CLK_PER_NS => CLK_PER_NS,
-        MODE => I2C_MODE
+        CLK_PER_NS  => CLK_PER_NS,
+        MODE        => FAST_PLUS
     )
      port map(
-        clk             => clk,
-        reset           => reset,
-        scl_if          => fpga_scl,
-        sda_if          => fpga_sda,
-        txn_next_valid  => txn_next_valid,
-        ready           => ready,
-        tx_start        => tx_start,
-        tx_ack          => tx_ack,
-        tx_stop         => tx_stop,
-        tx_data         => tx_data,
-        tx_data_valid   => tx_data_valid,
-        tx_ackd         => tx_ackd,
-        tx_ackd_valid   => tx_ackd_valid,
-        rx_data         => rx_data,
-        rx_data_valid   => rx_data_valid
+        clk         => clk,
+        reset       => reset,
+        scl_if      => fpga_scl,
+        sda_if      => fpga_sda,
+        cmd         => cmd,
+        cmd_valid   => cmd_valid,
+        abort       => start_detected,
+        core_ready  => open,
+        tx_st_if    => tx_st_if,
+        rx_st_if    => rx_st_if
     );
 
 end architecture;
