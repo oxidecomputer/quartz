@@ -27,7 +27,7 @@ cmd = [
     "-m",
     "ghdl",
     "-p",
-    f'ghdl --std=08 {files_str} -e {{project.top_entity_name}}; {{project.synth_family}} -json {args.output}',
+    f'ghdl --std=08 --no-formal {files_str} -e {{project.top_entity_name}}; {{project.synth_family}} -json {args.output}',
 ]
 
 #a = subprocess.run(cmd, stdout=subprocess.PIPE, check=False)
