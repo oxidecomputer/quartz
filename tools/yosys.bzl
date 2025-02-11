@@ -73,13 +73,19 @@ def yosys_vhdl_synth(ctx):
     cmd.add(yosys_gen)
     cmd.add("--input", in_json_file)
     cmd.add("--output", yosys_py.as_output())
+   
 
     ctx.actions.run(cmd, category="yosys_synth_gen")
 
+    yosys_synth_log = ctx.actions.declare_output("synth.log")
+    yosys_ghdl_warns = ctx.actions.declare_output("ghdl_stderr.log")
     yosys_synth_cmd = cmd_args(hidden=[in_json_file, maps])
     yosys_synth_cmd.add(ctx.attrs._python[PythonToolchainInfo].interpreter)
     yosys_synth_cmd.add(yosys_py)
     yosys_synth_cmd.add("--output", yosys_json.as_output())
+    yosys_synth_cmd.add("--log", yosys_synth_log.as_output())
+    yosys_synth_cmd.add("--ghdl_stderr", yosys_ghdl_warns.as_output())
+
 
     ctx.actions.run(yosys_synth_cmd, category="yosys_run")
     providers.append(DefaultInfo(default_output=yosys_json))
@@ -92,6 +98,7 @@ def ice40_nextpnr(ctx, yoys_providers):
     yosys_json = yoys_providers[0].default_outputs[0]
 
     asc = ctx.actions.declare_output("{}.asc".format(ctx.attrs.name))
+    next_pnr_log = ctx.actions.declare_output("nextpnr.log")
     cmd = cmd_args()
     cmd.add(ctx.attrs._nextpnr_ice40[RunInfo])
     cmd.add(next_pnr_family_flags(ctx.attrs.family))
@@ -99,6 +106,7 @@ def ice40_nextpnr(ctx, yoys_providers):
     cmd.add("--pcf", ctx.attrs.pinmap)
     cmd.add("--json", yosys_json)
     cmd.add("--asc", asc.as_output())
+    cmd.add("--log", next_pnr_log.as_output())
 
     ctx.actions.run(cmd, category="next_pnr")
 
