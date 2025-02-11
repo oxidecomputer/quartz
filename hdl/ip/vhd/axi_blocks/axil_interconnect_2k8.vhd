@@ -11,7 +11,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
-use work.axilite_if_2008_pkg.all;
+use work.axilite_if_2k8_pkg.all;
 
 -- This is a somewhat naive implementation of an parameterized AXI-lite interconnect.
 -- It is intended to be function as an MVP implementation allowing for basic multi-responder
