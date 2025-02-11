@@ -114,8 +114,8 @@ begin
             hubris_compat <= unpack(resize(hubris_compat_pins, 32));
             if wready then
                 case to_integer(awaddr) is
-                    when FPGA_CHECKSUM_OFFSET => checksum <= unpack(wdata);
-                    when SCRATCHPAD_OFFSET => scratchpad <= unpack(wdata);
+                    when FPGA_CHECKSUM_OFFSET => checksum <= write_byte_enable(checksum, wdata, wstrb);
+                    when SCRATCHPAD_OFFSET => scratchpad <= write_byte_enable(scratchpad, wdata, wstrb);
                     when others => null;
                 end case;
             end if;
