@@ -14,7 +14,6 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.qspi_vc_pkg.all;
-use work.axil_common_pkg.all;
 use work.axil8x32_pkg;
 use work.espi_tb_pkg.all;
 

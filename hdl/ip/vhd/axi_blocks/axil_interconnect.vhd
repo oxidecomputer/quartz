@@ -11,6 +11,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
+use work.axilite_if_2008_pkg.all;
 use work.axil8x32_pkg;
 use work.axil26x32_pkg;
 
@@ -37,137 +38,92 @@ entity axil_interconnect is
 end entity;
 
 architecture rtl of axil_interconnect is
-
-    constant default_idx : integer := config_array'length;
-    -- We implement a catch-all responder that will respond with an error if no other responder does
-    -- so this signal is one larger than the number of responders
-    signal responder_sel : integer range 0 to config_array'length := default_idx;
-    signal write_done : std_logic;
-    signal read_done : std_logic;
-    signal in_txn : boolean;
-
+    signal responders_write_address_valid : std_logic_vector(config_array'range);
+    signal responders_write_address_ready : std_logic_vector(config_array'range);
+    signal responders_write_address_addr : tgt_addr8_t(config_array'range);
+    signal responders_write_data_valid : std_logic_vector(config_array'range);
+    signal responders_write_data_ready : std_logic_vector(config_array'range);
+    signal responders_write_data_data: tgt_dat32_t(config_array'range);
+    signal responders_write_data_strb: tgt_strb_t(config_array'range);
+    signal responders_write_response_ready : std_logic_vector(config_array'range);
+    signal responders_read_address_valid : std_logic_vector(config_array'range);
+    signal responders_read_address_addr : tgt_addr8_t(config_array'range);
+    signal responders_read_data_ready : std_logic_vector(config_array'range);
+    signal responders_write_response_resp : tgt_resp_t(config_array'range);
+    signal responders_write_response_valid : std_logic_vector(config_array'range);
+    signal responders_read_address_ready : std_logic_vector(config_array'range);
+    signal responders_read_data_resp : tgt_resp_t(config_array'range);
+    signal responders_read_data_valid : std_logic_vector(config_array'range);
+    signal responders_read_data_data : tgt_dat32_t(config_array'range);
+  
 begin
 
-    write_done <= '1' when initiator.write_response.valid = '1' and initiator.write_response.ready = '1' else
-                 '0';
-    read_done <= '1' when initiator.read_data.valid = '1' and initiator.read_data.ready = '1' else
-                '0';
+    axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
+     generic map(
+        initiator_addr_width => 26,
+        config_array => config_array
+    )
+     port map(
+        clk => clk,
+        reset => reset,
+        initiator_write_address_addr => initiator.write_address.addr,
+        initiator_write_address_valid => initiator.write_address.valid,
+        initiator_write_address_ready => initiator.write_address.ready,
+        initiator_write_data_data => initiator.write_data.data,
+        initiator_write_data_strb => initiator.write_data.strb,
+        initiator_write_data_ready => initiator.write_data.ready,
+        initiator_write_data_valid => initiator.write_data.valid,
+        initiator_write_response_valid => initiator.write_response.valid,
+        initiator_write_response_resp => initiator.write_response.resp,
+        initiator_write_response_ready => initiator.write_response.ready,
+        initiator_read_address_addr => initiator.read_address.addr,
+        initiator_read_address_ready => initiator.read_address.ready,
+        initiator_read_address_valid => initiator.read_address.valid,
+        initiator_read_data_valid => initiator.read_data.valid,
+        initiator_read_data_ready => initiator.read_data.ready,
+        initiator_read_data_resp => initiator.read_data.resp,
+        initiator_read_data_data => initiator.read_data.data,
+        responders_write_address_valid => responders_write_address_valid,
+        responders_write_address_ready => responders_write_address_ready,
+        responders_write_address_addr => responders_write_address_addr,
+        responders_write_data_valid => responders_write_data_valid,
+        responders_write_data_ready => responders_write_data_ready,
+        responders_write_data_data => responders_write_data_data,
+        responders_write_data_strb => responders_write_data_strb,
+        responders_write_response_ready => responders_write_response_ready,
+        responders_read_address_valid => responders_read_address_valid,
+        responders_read_address_addr => responders_read_address_addr,
+        responders_read_data_ready => responders_read_data_ready,
+        responders_write_response_resp => responders_write_response_resp,
+        responders_write_response_valid => responders_write_response_valid,
+        responders_read_address_ready => responders_read_address_ready,
+        responders_read_data_resp => responders_read_data_resp,
+        responders_read_data_valid => responders_read_data_valid,
+        responders_read_data_data => responders_read_data_data
+    );
 
-    -- we're going to stall all the transactions until we have decoded and selected a responder,
-    -- flipped the muxes and then we can let the txn_through, and we keep the responder selected until
-    -- the txn is done.
-    -- There's a lot of combo logic here, we'll see how this goes.
-    decode: process(clk, reset)
-    begin
-        if reset = '1' then
-            responder_sel <= default_idx;
-            in_txn <= false;
-        elsif rising_edge(clk) then
-            if initiator.write_address.valid = '1' then
-                for i in 0 to config_array'length - 1 loop
-                    if (to_integer(initiator.write_address.addr) >= to_integer(config_array(i).base_addr)) and
-                       (to_integer(initiator.write_address.addr) < to_integer(config_array(i).base_addr) + 2**config_array(i).addr_span_bits) then
-                        responder_sel <= i;
-                    end if;
-                end loop;
-                in_txn <= true;
-            elsif initiator.read_address.valid = '1' then
-                for i in 0 to config_array'length - 1 loop
-                    if (to_integer(initiator.read_address.addr)) >= to_integer(config_array(i).base_addr) and
-                       (to_integer(initiator.read_address.addr)) < to_integer(config_array(i).base_addr + 2**config_array(i).addr_span_bits) then
-                        responder_sel <= i;
-                    end if;
-                end loop;
-                in_txn <= true;
-            elsif write_done or read_done then
-                responder_sel <= default_idx;
-                in_txn <= false;
-            end if;
-        end if;
-    end process;
+    resp_gen: for i in config_array'range generate
+        -- Deal with stuff going into the responder blocks
 
-    mux: process(all)
-    begin
-        -- default no transaction state for all responders
-        for i in 0 to config_array'length - 1 loop
-            responders(i).write_address.valid <= '0';
-            responders(i).write_address.addr <= initiator.write_address.addr(responders(i).write_address.addr'length - 1 downto 0);
-            responders(i).write_data.valid <= '0';
-            responders(i).write_data.data <= initiator.write_data.data;
-            responders(i).write_data.strb <= initiator.write_data.strb;
-            responders(i).write_response.ready <= '0';
+        responders_write_address_ready(i) <= responders(i).write_address.ready;
+        responders_write_data_ready(i) <= responders(i).write_data.ready;
+        responders_write_response_resp(i) <= responders(i).write_response.resp;
+        responders_write_response_valid(i) <= responders(i).write_response.valid;
+        responders_read_address_ready(i) <= responders(i).read_address.ready;
+        responders_read_data_resp(i) <= responders(i).read_data.resp;
+        responders_read_data_valid(i) <= responders(i).read_data.valid;
+        responders_read_data_data(i) <= responders(i).read_data.data;
 
-            responders(i).read_address.valid <= '0';
-            responders(i).read_address.addr <= initiator.read_address.addr(responders(i).read_address.addr'length - 1 downto 0);
-            responders(i).read_data.ready <= '0';
+        -- Deal with stuff coming out of the responder blocks
+        responders(i).write_address.valid <= responders_write_address_valid(i);
+        responders(i).write_address.addr <= responders_write_address_addr(i);
+        responders(i).write_data.valid <= responders_write_data_valid (i);
+        responders(i).write_data.data <= responders_write_data_data(i);
+        responders(i).write_data.strb <= responders_write_data_strb(i);
+        responders(i).write_response.ready <= responders_write_response_ready(i);
+        responders(i).read_address.valid <= responders_read_address_valid(i);
+        responders(i).read_address.addr <= responders_read_address_addr(i);
+        responders(i).read_data.ready <= responders_read_data_ready(i);
 
-            -- This is a "hack" do deal with signal resolution, we need to assign drivers to all signals
-            -- even the output ones, so we assign them to 'Z' which is a high impedance state allowing the 
-            -- resolution function to resolve correctly (anything with a 'U' resolves to a 'U')
-            -- The LRM specifies that a signal assignment statement in a process creates drivers for every 
-            -- sub-element of the longest static prefix of the target. The longest static prefix of responders(i).<xyz> 
-            -- is `responders` (because `i` is non-static) which also, perhaps unexpectedly, includes all the input elements.
-            -- these are the "input" elements on the responder interface, so we assign them something so that the resolution
-            -- function works as expected.
-            responders(i).write_address.ready <= 'Z';
-            responders(i).read_address.ready <= 'Z';
-            responders(i).write_data.ready <= 'Z';
-            responders(i).write_response.valid <= 'Z';
-            responders(i).read_data.data <= (others => 'Z');
-            responders(i).read_data.valid <= 'Z';
-            responders(i).write_response.resp <= (others => 'Z');
-            responders(i).read_data.resp <= (others => 'Z');
-        end loop;
-
-        -- deal with in-txn muxing
-        if in_txn and responder_sel < default_idx then
-            -- responder mux
-            responders(responder_sel).write_address.valid <= initiator.write_address.valid;
-            responders(responder_sel).write_address.addr <= initiator.write_address.addr(responders(responder_sel).write_address.addr'length - 1 downto 0);
-            responders(responder_sel).write_data.valid <= initiator.write_data.valid;
-            responders(responder_sel).write_data.data <= initiator.write_data.data;
-            responders(responder_sel).write_data.strb <= initiator.write_data.strb;
-            responders(responder_sel).write_response.ready <= initiator.write_response.ready;
-
-            responders(responder_sel).read_address.valid <= initiator.read_address.valid;
-            responders(responder_sel).read_address.addr <= initiator.read_address.addr(responders(responder_sel).read_address.addr'length - 1 downto 0);
-            responders(responder_sel).read_data.ready <= initiator.read_data.ready;
-            -- initiator mux
-            initiator.write_address.ready <= responders(responder_sel).write_address.ready;
-            initiator.write_data.ready <= responders(responder_sel).write_data.ready;
-            initiator.write_response.resp <= responders(responder_sel).write_response.resp;
-            initiator.write_response.valid <= responders(responder_sel).write_response.valid;
-            initiator.read_address.ready <= responders(responder_sel).read_address.ready;
-            initiator.read_data.resp <= responders(responder_sel).read_data.resp;
-            initiator.read_data.valid <= responders(responder_sel).read_data.valid;
-            initiator.read_data.data <= responders(responder_sel).read_data.data;
-
-        elsif in_txn then
-            -- default response to not hang bus
-            initiator.write_address.ready <= '1';
-            initiator.write_data.ready <= '1';
-            initiator.write_response.resp <= SLVERR;
-            initiator.write_response.valid <= '1';
-            initiator.read_address.ready <= '1';
-            initiator.read_data.resp <= SLVERR;
-            initiator.read_data.valid <= '1';
-            initiator.read_data.data <= X"DEADBEEF";
-
-
-        else
-            -- hold for decode
-            -- default response to not hang bus
-            initiator.write_address.ready <= '0';
-            initiator.write_data.ready <= '0';
-            initiator.write_response.resp <= SLVERR;
-            initiator.write_response.valid <= '0';
-            initiator.read_address.ready <= '0';
-            initiator.read_data.resp <= SLVERR;
-            initiator.read_data.valid <= '0';
-            initiator.read_data.data <= (others => '0');
-        end if;
-    end process;
-    
-
-
+    end generate;
 end rtl;
