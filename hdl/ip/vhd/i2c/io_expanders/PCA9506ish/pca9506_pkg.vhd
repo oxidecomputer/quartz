@@ -23,6 +23,7 @@ package pca9506_pkg is
     );
 
     type pca9506_pin_t is array (0 to 4) of std_logic_vector(7 downto 0);
+    type multiple_pca9506_pin_t is array (natural range <>) of pca9506_pin_t;
 
     function get_irq_pend(
         cur_reg: io_type;
