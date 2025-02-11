@@ -67,6 +67,11 @@ bluespec_library('Countdown',
         'Countdown.bsv',
     ])
 
+bluespec_library('CounterRAM',
+    sources = [
+        'CounterRAM.bsv',
+    ])
+
 bluespec_library('Debouncer',
     sources = [
         'Debouncer.bsv',
