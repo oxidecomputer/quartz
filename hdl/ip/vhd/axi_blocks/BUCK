@@ -1,8 +1,22 @@
 load("//tools:hdl.bzl", "vhdl_unit")
 
 vhdl_unit(
-    name = "axilite_common_pkgs",
-    srcs = glob(["*pkg.vhd"]),
+    name = "axilite_common_pkg",
+    srcs = glob(["axil_common_pkg.vhd"]),
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axilite_if_2k8_pkg",
+    srcs = glob(["*2k8_pkg.vhd"]),
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axilite_if_2k19_pkg",
+    srcs = glob(["*2k19_pkg.vhd"]),
     standard = "2019",
     visibility = ['PUBLIC'],
 )
@@ -11,8 +25,21 @@ vhdl_unit(
     name = "axil_interconnect",
     srcs = glob(["axil_interconnect.vhd"]),
     deps = [
-        ":axilite_common_pkgs",
+        ":axilite_common_pkg",
+        ":axilite_if_2k19_pkg",
+        ":axil_interconnect_2k8",
     ],
     standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axil_interconnect_2k8",
+    srcs = glob(["axil_interconnect_2k8.vhd"]),
+    deps = [
+        ":axilite_common_pkg",
+        ":axilite_if_2k8_pkg",
+    ],
+    standard = "2008",
     visibility = ['PUBLIC'],
 )

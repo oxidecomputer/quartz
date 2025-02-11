@@ -45,7 +45,7 @@ vhdl_unit(
     srcs = ["info.vhd"],
     deps = [
         ":info_2k8",
-        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
         ],
     standard = "2019",
     visibility = ['PUBLIC']

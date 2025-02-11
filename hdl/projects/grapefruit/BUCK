@@ -47,7 +47,7 @@ vhdl_unit (
     srcs = glob(["base_regs/*.vhd"]),
     deps = [
         ":base_regs_map",
-        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
         ],
     standard = "2019",
 )
@@ -57,7 +57,7 @@ vhdl_unit (
     srcs = glob(["sgpio/*.vhd"]),
     deps = [
         ":gfruit_sgpio_regs",
-        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
         "//hdl/ip/vhd/sgpio:sgpio_top",
         ],
     standard = "2019",
@@ -76,7 +76,6 @@ vhdl_unit(
         "//hdl/ip/vhd/info:info",
         "//hdl/ip/vhd/espi:espi_top",
         "//hdl/ip/vhd/uart:axi_fifo_uart",
-        "//hdl/ip/vhd/axi_blocks:axilite_common_pkgs",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
