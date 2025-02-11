@@ -11,7 +11,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
-use work.axilite_if_2008_pkg.all;
+use work.axilite_if_2k8_pkg.all;
 use work.axil8x32_pkg;
 use work.axil26x32_pkg;
 
