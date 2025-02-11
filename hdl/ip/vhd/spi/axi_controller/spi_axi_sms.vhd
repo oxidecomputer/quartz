@@ -215,8 +215,6 @@ begin
             v.state := OPCODE;
             v.opcode := (others => '0');
             v.req_addr := (others => '0');
-
-            -- TODO: any more clearing needed?
         end if;
 
         spi_rin <= v;

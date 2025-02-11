@@ -65,7 +65,6 @@ def yosys_vhdl_synth(ctx):
     # depends on them. Buck2 is too smart such that since nothing depends
     # on them, it doesn't even build them 
     # This is a bit of a hack but it works for now.
-
     yosys_py = ctx.actions.declare_output("synth.py")
 
     yosys_gen = ctx.attrs._yosys_gen[RunInfo]
