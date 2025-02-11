@@ -330,8 +330,9 @@ begin
     wvalid <= axi_r.wvalid;
 
     wdata_and_strobe:process(all)
-        variable dat_shift: std_logic_vector(31 downto 0) := (others => '0');
+        variable dat_shift: std_logic_vector(31 downto 0);
     begin
+        dat_shift := (others => '0');
         dat_shift(7 downto 0) := axi_r.wdata;
         dat_shift := shift_left(dat_shift, to_integer(unsigned(axi_r.req_addr(1 downto 0))) * 8);
     
