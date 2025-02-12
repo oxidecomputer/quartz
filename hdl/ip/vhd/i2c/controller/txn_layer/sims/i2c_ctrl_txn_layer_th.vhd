@@ -14,7 +14,6 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.i2c_common_pkg.all;
-use work.i2c_common_pkg.all;
 use work.tristate_if_pkg.all;
 use work.stream8_pkg;
 
@@ -65,7 +64,7 @@ begin
     clk   <= not clk after CLK_PER_TIME / 2;
     reset <= '0' after 200 ns;
 
-    dut: entity work.i2c_ctrl_txn_layer
+    dut: entity work.i2c_txn_layer
         generic map (
             CLK_PER_NS  => CLK_PER_NS,
             MODE        => FAST_PLUS
