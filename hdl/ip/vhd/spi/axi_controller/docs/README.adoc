@@ -12,4 +12,5 @@ SPI instructions
 | 0x2| Bit set | hardware does a bit-wise OR with data and current register state | new_reg = old_reg \|\| data
 | 0x3| Bit clr | hardware does a bit-wise clear with data and current register state |new_reg = old_reg && !data
 | 0x5| Write bytes(s) no increment | Write one address location one or more times (internal byte address does not increment)
+| 0x6| Read bytes(s) no increment | Read one address location one or more times (internal byte address does not increment)
 |===
