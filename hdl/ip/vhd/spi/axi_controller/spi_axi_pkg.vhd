@@ -35,7 +35,7 @@ package body spi_axi_pkg is
 
     function is_known_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
     begin
-        -- known opcodes are 0-3
+        -- known opcodes are 0-3 and 5,6
         return unsigned(opcode) < 4 or 
             opcode = spi_opcode_write_no_addr_incr or
             opcode = spi_opcode_read_no_addr_incr;
@@ -43,7 +43,7 @@ package body spi_axi_pkg is
 
     function is_read_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
     begin
-        -- only read opcode we have
+        -- only 2 read opcodes we have
         return opcode = spi_opcode_read or opcode = spi_opcode_read_no_addr_incr;
     end function;
 
@@ -63,7 +63,7 @@ package body spi_axi_pkg is
 
     function is_rmw_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
     begin
-        -- write opcodes are 0, 2, and 3
+        -- read modify write opcodes are  2 and 3
         return opcode = spi_opcode_bit_set or
             opcode = spi_opcode_bit_clr;
     end function;
