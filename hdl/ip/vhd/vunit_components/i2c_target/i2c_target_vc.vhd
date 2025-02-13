@@ -14,18 +14,15 @@ library vunit_lib;
     context vunit_lib.vc_context;
 use vunit_lib.sync_pkg.all;
 
-use work.tristate_if_pkg.all;
-
 use work.i2c_target_vc_pkg.all;
 
 entity i2c_target_vc is
     generic (
-        i2c_target_vc   : i2c_target_vc_t
+        I2C_TARGET_VC   : i2c_target_vc_t
     );
     port (
-        -- Tri-state signals to I2C interface
-        scl_if          : view tristate_if;
-        sda_if          : view tristate_if;
+        scl : inout std_logic   := 'Z';
+        sda : inout std_logic   := 'Z';
     );
 end entity;
 
@@ -56,28 +53,30 @@ architecture model of i2c_target_vc is
     signal tx_bit_count     : unsigned(3 downto 0)          := (others => '0');
     signal tx_done          : boolean                       := FALSE;
 
-    signal scl_oe : std_logic := '0';
-    signal sda_oe : std_logic := '0';
+    signal scl_int  : std_logic := '1';
+    signal sda_int  : std_logic := '1';
+    signal scl_oe   : std_logic := '0';
+    signal sda_oe   : std_logic := '0';
 
     signal reg_addr     : unsigned(7 downto 0)  := (others => '0');
     signal addr_set     : boolean               := FALSE;
     signal addr_incr    : boolean               := FALSE;
 begin
-    -- I2C interface is open-drain
-    scl_if.o    <= '0';
-    sda_if.o    <= '0';
 
-    scl_if.oe   <= scl_oe;
-    sda_if.oe   <= sda_oe;
+    scl  <= '0' when scl_oe else 'Z';
+    sda  <= '0' when sda_oe else 'Z';
 
-    start_condition  <= sda_last = '1' and sda_if.i = '0' and scl_if.i = '1';
-    stop_condition   <= sda_last = '0' and sda_if.i = '1' and scl_if.i = '1';
+    scl_int <= to_x01(scl);
+    sda_int <= to_x01(sda);
+
+    start_condition  <= sda_last = '1' and sda_int = '0' and scl_int = '1';
+    stop_condition   <= sda_last = '0' and sda_int = '1' and scl_int = '1';
 
     -- sample SDA regularly to catch transitions
     sda_monitor: process
     begin
         wait for 20 ns;
-        sda_last    <= sda_if.i;
+        sda_last    <= sda_int;
     end process;
 
     transaction_sm: process
@@ -94,7 +93,7 @@ begin
             
             when START =>
                 event_msg   := new_msg(got_start);
-                send(net, i2c_target_vc.p_actor, event_msg);
+                send(net, I2C_TARGET_VC.p_actor, event_msg);
                 state       <= GET_START_BYTE;
 
             when GET_START_BYTE =>
@@ -103,15 +102,15 @@ begin
                 if stop_condition then
                     state   <= GET_STOP;
                 else
-                    if rx_data(7 downto 1) = address(i2c_target_vc) then
+                    if rx_data(7 downto 1) = address(I2C_TARGET_VC) then
                         state       <= SEND_ACK;
                         is_read     := rx_data(0) = '1';
                         event_msg   := new_msg(address_matched);
-                        send(net, i2c_target_vc.p_actor, event_msg);
+                        send(net, I2C_TARGET_VC.p_actor, event_msg);
                     else
                         state       <= SEND_NACK;
                         event_msg   := new_msg(address_different);
-                        send(net, i2c_target_vc.p_actor, event_msg);
+                        send(net, I2C_TARGET_VC.p_actor, event_msg);
                     end if;
                 end if;
 
@@ -131,9 +130,9 @@ begin
                     end if;
 
                     if addr_set then
-                        write_word(memory(i2c_target_vc), to_integer(reg_addr_v), rx_data);
+                        write_word(memory(I2C_TARGET_VC), to_integer(reg_addr_v), rx_data);
                         event_msg   := new_msg(got_byte);
-                        send(net, i2c_target_vc.p_actor, event_msg);
+                        send(net, I2C_TARGET_VC.p_actor, event_msg);
                         addr_incr   <= TRUE;
                     else
                         addr_set    <= TRUE;
@@ -142,7 +141,7 @@ begin
                 end if;
 
             when SEND_ACK =>
-                wait until (falling_edge(scl_if.i) and tx_done) or stop_condition;
+                wait until (falling_edge(scl) and tx_done) or stop_condition;
 
                 if stop_condition then
                     state   <= GET_STOP;
@@ -155,11 +154,11 @@ begin
                 end if;
 
             when SEND_NACK =>
-                wait until falling_edge(scl_if.i) or stop_condition;
+                wait until falling_edge(scl) or stop_condition;
                 state   <= GET_STOP;
 
             when SEND_BYTE =>
-                wait until (falling_edge(scl_if.i) and tx_done) or stop_condition;
+                wait until (falling_edge(scl) and tx_done) or stop_condition;
 
                 if stop_condition then
                     state   <= GET_STOP;
@@ -178,7 +177,7 @@ begin
                 end if;
 
                 event_msg           := new_msg(got_stop);
-                send(net, i2c_target_vc.p_actor, event_msg);
+                send(net, I2C_TARGET_VC.p_actor, event_msg);
                 state               <= IDLE;
                 addr_set            <= FALSE;
                 addr_incr           <= FALSE;
@@ -193,21 +192,21 @@ begin
 
     receive_sm: process
     begin
-        wait until rising_edge(scl_if.i);
+        wait until rising_edge(scl);
         rx_done <= FALSE;
         if state = GET_ACK then
             -- '0' = ACK, '1' = NACK
-            rx_ackd         <= TRUE when sda_if.i = '0' else FALSE;
+            rx_ackd         <= TRUE when sda_int = '0' else FALSE;
             rx_bit_count    <= to_unsigned(1, rx_bit_count'length);
         elsif state = GET_START_BYTE or state = GET_BYTE then
-            rx_data         <= rx_data(rx_data'high-1 downto rx_data'low) & sda_if.i;
+            rx_data         <= rx_data(rx_data'high-1 downto rx_data'low) & sda_int;
             rx_bit_count    <= rx_bit_count + 1;
         end if;
 
-        wait until falling_edge(scl_if.i) or start_condition or stop_condition;
-        if not falling_edge(scl_if.i) then
+        wait until falling_edge(scl) or start_condition or stop_condition;
+        if not falling_edge(scl) then
             rx_bit_count    <= (others => '0');
-            wait until falling_edge(scl_if.i);
+            wait until falling_edge(scl);
         end if;
 
         if ((state = GET_START_BYTE or state = GET_BYTE) and rx_bit_count = 8) or
@@ -221,7 +220,7 @@ begin
     transmit_sm: process
         variable txd : std_logic_vector(7 downto 0) := (others => '0');
     begin
-        wait until falling_edge(scl_if.i);
+        wait until falling_edge(scl);
         tx_done <= FALSE;
         -- delay the SDA transition to a bit after SCL falls to allow the controller to release SDA
         wait for 100 ns;
@@ -230,7 +229,7 @@ begin
             tx_bit_count    <= to_unsigned(1, tx_bit_count'length);
         elsif state = SEND_BYTE then
             if tx_bit_count = 0 then
-                txd := read_word(i2c_target_vc.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
+                txd := read_word(I2C_TARGET_VC.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
             else
                 txd := tx_data(tx_data'high-1 downto tx_data'low) & '1';
             end if;
@@ -242,7 +241,7 @@ begin
         end if;
         tx_data <= txd;
 
-        wait until rising_edge(scl_if.i);
+        wait until rising_edge(scl);
 
         if ((state = SEND_ACK or state = SEND_NACK) and tx_bit_count = 1) or
             (state = SEND_BYTE and tx_bit_count = 8) then

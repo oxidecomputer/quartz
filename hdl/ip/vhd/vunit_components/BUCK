@@ -21,8 +21,20 @@ vhdl_unit(
 )
 
 vhdl_unit(
+    name = "i2c_cmd_vc",
+    srcs = glob(["i2c_cmd/*.vhd"]),
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
     name = "i2c_controller_vc",
     srcs = glob(["i2c_controller/*.vhd"]),
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "i2c_target_vc",
+    srcs = glob(["i2c_target/*.vhd"]),
     visibility = ['PUBLIC'],
 )
 
@@ -36,7 +48,6 @@ third_party(
 vhdl_unit(
     name = "basic_stream",
     srcs = glob(["basic_stream/*.vhd"]),
-
     visibility = ['PUBLIC']
 )
 
