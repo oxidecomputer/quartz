@@ -7,23 +7,11 @@ vhdl_unit(
 )
 
 vhdl_unit(
-    name = "i2c_cmd_vc",
-    srcs = ["sims/i2c_cmd_vc.vhd", "sims/i2c_cmd_vc_pkg.vhd"],
-    visibility = ['PUBLIC']
-)
-
-vhdl_unit(
     name = "i2c_glitch_filter",
     srcs = ["i2c_glitch_filter.vhd"],
     deps = [
         "//hdl/ip/vhd/common:transforms_pkg",
         "//hdl/ip/vhd/synchronizers:meta_sync",
     ],
-    visibility = ['PUBLIC']
-)
-
-vhdl_unit(
-    name = "i2c_target_vc",
-    srcs = ["sims/i2c_target_vc.vhd", "sims/i2c_target_vc_pkg.vhd"],
     visibility = ['PUBLIC']
 )

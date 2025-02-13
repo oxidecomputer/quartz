@@ -18,7 +18,7 @@ use work.i2c_cmd_vc_pkg.all;
 
 entity i2c_cmd_vc is
     generic (
-        i2c_cmd_vc : i2c_cmd_vc_t
+        I2C_CMD_VC  : i2c_cmd_vc_t
     );
     port (
         cmd     : out cmd_t     := CMD_RESET;
@@ -38,7 +38,7 @@ begin
         variable is_read    : boolean;
         variable is_random  : boolean;
     begin
-        receive(net, i2c_cmd_vc.p_actor, msg);
+        receive(net, I2C_CMD_VC.p_actor, msg);
         msg_type := message_type(msg);
 
         if msg_type = push_i2c_cmd_msg then

@@ -39,10 +39,10 @@ begin
     th: entity work.i2c_ctrl_txn_layer_th
         generic map (
             CLK_PER_NS      => CLK_PER_NS,
-            tx_source       => TX_DATA_SOURCE_VC,
-            rx_sink         => RX_DATA_SINK_VC,
-            i2c_target_vc   => I2C_TARGET_VC,
-            i2c_cmd_vc      => I2C_CMD_VC
+            TX_SOURCE       => TX_DATA_SOURCE_VC,
+            RX_SINK         => RX_DATA_SINK_VC,
+            I2C_TARGET_VC   => I2C_TARGET_VC,
+            I2C_CMD_VC      => I2C_CMD_VC
         );
 
     bench: process

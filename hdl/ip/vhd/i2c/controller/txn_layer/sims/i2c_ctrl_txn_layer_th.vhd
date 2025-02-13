@@ -25,10 +25,10 @@ use work.basic_stream_pkg.all;
 entity i2c_ctrl_txn_layer_th is
     generic (
         CLK_PER_NS      : positive;
-        tx_source       : basic_source_t;
-        rx_sink         : basic_sink_t;
-        i2c_target_vc   : i2c_target_vc_t;
-        i2c_cmd_vc      : i2c_cmd_vc_t
+        TX_SOURCE       : basic_source_t;
+        RX_SINK         : basic_sink_t;
+        I2C_TARGET_VC   : i2c_target_vc_t;
+        I2C_CMD_VC      : i2c_cmd_vc_t
     );
 end entity;
 
@@ -38,11 +38,9 @@ architecture th of i2c_ctrl_txn_layer_th is
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
-    -- I2C interfaces
+    -- Controller Tristate interface
     signal ctrl_scl_tristate    : tristate;
     signal ctrl_sda_tristate    : tristate;
-    signal target_scl_tristate  : tristate;
-    signal target_sda_tristate  : tristate;
 
     -- I2C bus
     signal scl  : std_logic;
@@ -85,7 +83,7 @@ begin
 
     i2c_cmd_vc_inst: entity work.i2c_cmd_vc
         generic map (
-            i2c_cmd_vc => i2c_cmd_vc
+            I2C_CMD_VC => I2C_CMD_VC
         )
         port map (
             cmd     => command,
@@ -96,18 +94,16 @@ begin
 
     target: entity work.i2c_target_vc
         generic map (
-            i2c_target_vc => i2c_target_vc
+            I2C_TARGET_VC => I2C_TARGET_VC
         )
         port map (
-            scl_if.i    => target_scl_tristate.i,
-            scl_if.o    => target_scl_tristate.o,
-            scl_if.oe   => target_scl_tristate.oe,
-            sda_if      => target_sda_tristate
+            scl => scl,
+            sda => sda
         );
 
     tx_source_vc : entity work.basic_source
         generic map (
-            source  => tx_source
+            SOURCE  => TX_SOURCE
         )
         port map (
             clk     => clk,
@@ -118,7 +114,7 @@ begin
 
     rx_sink_vc : entity work.basic_sink
         generic map (
-            sink    => rx_sink
+            SINK    => RX_SINK
         )
         port map (
             clk     => clk,
@@ -127,40 +123,10 @@ begin
             data    => rx_data_stream.data
         );
 
-    -- wire the bus to the tristate inputs
+    -- wire the bus to the controller's tristate ports
+    scl <= ctrl_scl_tristate.o when ctrl_scl_tristate.oe else 'H';
+    sda <= ctrl_sda_tristate.o when ctrl_sda_tristate.oe else 'H';
     ctrl_scl_tristate.i     <= scl;
-    target_scl_tristate.i   <= scl;
     ctrl_sda_tristate.i     <= sda;
-    target_sda_tristate.i   <= sda;
-    i2c_bus_resolver: process(all)
-    begin
-        if ctrl_scl_tristate.oe = '1' and target_scl_tristate.oe = '0' then
-            -- controller has line
-            scl <= ctrl_scl_tristate.o;
-        elsif ctrl_scl_tristate.oe = '0' and target_scl_tristate.oe = '1' then
-            -- targeteral has line
-            scl <= target_scl_tristate.o;
-        elsif ctrl_scl_tristate.oe = '1' and target_scl_tristate.oe = '1' then
-            -- contention
-            scl <= 'Z';
-        else
-            -- line floats to pull-up
-            scl <= '1';
-        end if;
-
-        if ctrl_sda_tristate.oe = '1' and target_sda_tristate.oe = '0' then
-            -- controller has line
-            sda <= ctrl_sda_tristate.o;
-        elsif ctrl_sda_tristate.oe = '0' and target_sda_tristate.oe = '1' then
-            -- targeteral has line
-            sda <= target_sda_tristate.o;
-        elsif ctrl_sda_tristate.oe = '1' and target_sda_tristate.oe = '1' then
-            -- contention
-            sda <= 'Z';
-        else
-            -- line floats to pull-up
-            sda <= '1';
-        end if;
-    end process;
 
 end th;

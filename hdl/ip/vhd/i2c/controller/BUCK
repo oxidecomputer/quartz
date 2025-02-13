@@ -32,8 +32,8 @@ vunit_sim(
     srcs = glob(["txn_layer/sims/*.vhd"]),
     deps = [
         ":i2c_ctrl_txn_layer",
-        "//hdl/ip/vhd/i2c/common:i2c_cmd_vc",
-        "//hdl/ip/vhd/i2c/common:i2c_target_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_target_vc",
         "//hdl/ip/vhd/vunit_components:basic_stream"
     ],
     visibility = ['PUBLIC'],
