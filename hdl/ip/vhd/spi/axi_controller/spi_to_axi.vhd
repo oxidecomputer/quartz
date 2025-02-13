@@ -15,7 +15,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.spi_axi_pkg.all;
 
-entity spi_axi_sms is
+entity spi_to_axi is
     port (
         clk : in std_logic;
         reset : in std_logic;
@@ -61,7 +61,7 @@ entity spi_axi_sms is
     );
 end entity;
 
-architecture rtl of spi_axi_sms is
+architecture rtl of spi_to_axi is
 
     type spi_sm_t is (
         OPCODE,
@@ -158,7 +158,7 @@ begin
                 end if;
             when ADDR2 =>
                 if from_spi_valid and from_spi_ready then
-                    v.req_addr(15 downto 8) := from_spi_data;
+                    v.req_addr(7 downto 0) := from_spi_data;
                     if is_read_kind_opcode(spi_r.opcode) then
                         v.state := ISSUE_READ;
                     else
@@ -180,7 +180,9 @@ begin
                 end if;
                 if to_spi_valid = '1' and to_spi_ready = '1' then
                     v.to_spi_valid := '0';
-                    v.req_addr := v.req_addr + 1;  -- increment and go again
+                    if is_incr_opcode(spi_r.opcode) then
+                        v.req_addr := v.req_addr + 1;  -- increment and go again
+                    end if;
                     v.state := WAIT_SPI_READ_DATA_BYTE;
                 end if;
             when WAIT_SPI_READ_DATA_BYTE =>
@@ -201,7 +203,9 @@ begin
             when ISSUE_WRITE =>
                 if axi_r.state = IDLE then
                     v.from_spi_ready := '1';
-                    v.req_addr := v.req_addr + 1;  -- increment and go again
+                    if is_incr_opcode(spi_r.opcode) then
+                        v.req_addr := v.req_addr + 1;  -- increment and go again
+                    end if;
                     v.state := GET_WRITE_DATA_BYTE;
                 end if;
                 -- wait for axi handshake, incr addr wait for next spi transfer, then go back to GET_WRITE_DATA

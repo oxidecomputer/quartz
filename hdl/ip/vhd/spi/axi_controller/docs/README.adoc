@@ -1,15 +1,15 @@
 It supports Mode 0 (0,0) and mode3 (1,1) transfers. It is expected that there are fewer than 256 addressable registers, but we’re picking 16bit addressing for future extensibility without changing the protocol and to support a circular buffer for storing event history.
+Note that while we deal with byte addresses on the spi-side, the axl-lite protocol defines a minimum size of 32bits for the data bus, so peripherals
+on the axi-side of this controller must respect wstrobe (byte enables), and caution should be exercised with registers that have read side effects because the whole
+32bit register is fetched even if the spi block only needed 8bits of it.
 
 SPI instructions
 [cols=4,options="header"]
 |===
 |Opcode| Instruction Name | Description| Notes
-| 0x0 | Write byte(s)      | Write one or more contiguous bytes | 
+| 0x0 | Write byte(s)      | Write one or more contiguous bytes (internal byte address increments) | 
 | 0x1|  Read byte(s)      | Read one or more contiguous bytes|
 | 0x2| Bit set | hardware does a bit-wise OR with data and current register state | new_reg = old_reg \|\| data
 | 0x3| Bit clr | hardware does a bit-wise clear with data and current register state |new_reg = old_reg && !data
+| 0x5| Write bytes(s) no increment | Write one address location one or more times (internal byte address does not increment)
 |===
-
-Note that for the bit-set and bit-clear spi instructions, the AXI controller internally does a read-modify-write operation, resulting
-in a read of the current register state, a bitwise operation with the data, and a write back of the new register state.  These are
-not good operations to use if the registers you're modifiying have read-side effects.

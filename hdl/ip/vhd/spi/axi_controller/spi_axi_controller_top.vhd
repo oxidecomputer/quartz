@@ -86,7 +86,7 @@ begin
         tx_ready => to_spi_ready
     );
 
-    spi_axi_sms_inst: entity work.spi_axi_sms
+    spi_axi_sms_inst: entity work.spi_to_axi
      port map(
         clk => clk,
         reset => reset,
