@@ -175,7 +175,6 @@ begin
                 tx_buffer.empty <= '0';
             end if;
 
-            -- 
             if csn_syncd = '1' then
                 -- reset shifter, chip-sel is de-asserted
                 out_reg <= (others => '0');
@@ -192,7 +191,6 @@ begin
                     tx_bit_cnt <= (others => '0');
                 end if;
             end if;
-
             
         end if;
     end process;

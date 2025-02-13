@@ -14,11 +14,14 @@ package spi_axi_pkg is
     constant spi_opcode_read : std_logic_vector(3 downto 0) := "0001";
     constant spi_opcode_bit_set : std_logic_vector(3 downto 0) := "0010";
     constant spi_opcode_bit_clr : std_logic_vector(3 downto 0) := "0011";
+    constant spi_opcode_write_no_addr_incr : std_logic_vector(3 downto 0) := "0101";
+    constant spi_opcode_read_no_addr_incr : std_logic_vector(3 downto 0) := "0110";
 
     function is_known_opcode(opcode : std_logic_vector(3 downto 0)) return boolean;
     function is_read_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean;
     function is_write_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean;
     function is_rmw_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean;
+    function is_incr_opcode(opcode : std_logic_vector(3 downto 0)) return boolean;
 
     function bit_operation_by_opcode(
         opcode : std_logic_vector(3 downto 0);
@@ -33,19 +36,27 @@ package body spi_axi_pkg is
     function is_known_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
     begin
         -- known opcodes are 0-3
-        return unsigned(opcode) < 4;
+        return unsigned(opcode) < 4 or 
+            opcode = spi_opcode_write_no_addr_incr or
+            opcode = spi_opcode_read_no_addr_incr;
     end function;
 
     function is_read_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
     begin
         -- only read opcode we have
-        return opcode = spi_opcode_read;
+        return opcode = spi_opcode_read or opcode = spi_opcode_read_no_addr_incr;
+    end function;
+
+    function is_incr_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
+    begin
+        return opcode /= spi_opcode_write_no_addr_incr and opcode /= spi_opcode_read_no_addr_incr;
     end function;
 
     function is_write_kind_opcode(opcode : std_logic_vector(3 downto 0)) return boolean is
     begin
-        -- write opcodes are 0, 2, and 3
+        -- write opcodes are 0, 2, 3, and 5
         return opcode = spi_opcode_write or
+            opcode = spi_opcode_write_no_addr_incr or
             opcode = spi_opcode_bit_set or
             opcode = spi_opcode_bit_clr;
     end function;

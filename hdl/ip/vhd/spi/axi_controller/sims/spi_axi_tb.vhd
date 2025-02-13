@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -103,6 +103,66 @@ begin
                 -- no reach into the ram and see what is there now
                 wait for 1 us;
                 check_expected_was_written(buf2);
+            elsif run("multi-bit-set") then
+                -- Due to how the axi blocks by vunit work, we need to set up 2 buffers, one for the
+                -- read side and one for the write-side
+                -- READ SIDE is buf
+                -- set up the "memory to be read with a known value"
+                buf := allocate(rmemory, 1 * 64, alignment => 32);
+                -- WRITE SIDE is buf2
+                buf2 := allocate(wmemory, 1 * 64, alignment => 32);
+                -- Sick X"AA" into the read buffer, this is going to be our starting point for the bit-set
+                -- Use the simulation interface to set the data we're going to read back
+                expected_data := X"AA";
+                write_word(rmemory, 0, expected_data);
+                -- Our Write address now has X"AA" in it.
+                data := X"05";
+                push_byte(tx_queue, to_integer(data));
+                expected_data := expected_data or data;
+                set_expected_word(wmemory, 0, expected_data);
+
+                expected_data := X"0A";
+                write_word(rmemory, 1, expected_data);
+                -- Our Write address now has X"AA" in it.
+                data := X"50";
+                push_byte(tx_queue, to_integer(data));
+                expected_data := expected_data or data;
+                set_expected_word(wmemory, 1, expected_data);
+
+                -- issue spi write command for bit set with data bits
+                spi_send_stream(net, spi_opcode_bit_set, address, tx_queue, csn);
+                wait for 1 us;
+                check_expected_was_written(buf2);
+            elsif run("multi-bit-clr") then
+                -- Due to how the axi blocks by vunit work, we need to set up 2 buffers, one for the
+                -- read side and one for the write-side
+                -- READ SIDE is buf
+                -- set up the "memory to be read with a known value"
+                buf := allocate(rmemory, 1 * 64, alignment => 32);
+                -- WRITE SIDE is buf2
+                buf2 := allocate(wmemory, 1 * 64, alignment => 32);
+                -- Sick X"AA" into the read buffer, this is going to be our starting point for the bit-set
+                -- Use the simulation interface to set the data we're going to read back
+                expected_data := X"FF";
+                write_word(rmemory, 0, expected_data);
+                -- Our Write address now has X"AA" in it.
+                data := X"05";
+                push_byte(tx_queue, to_integer(data));
+                expected_data := expected_data and (not data);
+                set_expected_word(wmemory, 0, expected_data);
+
+                expected_data := X"FF";
+                write_word(rmemory, 1, expected_data);
+                -- Our Write address now has X"AA" in it.
+                data := X"50";
+                push_byte(tx_queue, to_integer(data));
+                expected_data := expected_data and (not data);
+                set_expected_word(wmemory, 1, expected_data);
+
+                -- issue spi write command for bit clr with data bits
+                spi_send_stream(net, spi_opcode_bit_clr, address, tx_queue, csn);
+                wait for 1 us;
+                check_expected_was_written(buf2);
             elsif run("single-bit-clr") then
                 -- Due to how the axi blocks by vunit work, we need to set up 2 buffers, one for the
                 -- read side and one for the write-side
@@ -164,7 +224,7 @@ begin
                     expected_data := expected_data + 1;
                  end loop;
                  spi_send_stream(net, spi_opcode_write, address, tx_queue, csn);
-                -- no reach into the ram and see what is there now
+                -- now reach into the ram and see what is there now
                 wait for 20 ns;
                 check_expected_was_written(buf);
             
@@ -192,6 +252,70 @@ begin
                    pop_stream(net, master_rstream, data);
                end loop;
                check_equal(data, expected_data, "Read data did not match expected");
+
+            elsif run("multi-read-no-incr") then                
+                -- set up the "memory to be read with a known value"
+                buf := allocate(rmemory, 4 * 32, alignment => 32);
+                -- Use the simulation interface to set the data we're going to read back
+                -- Load up 3 known bytes into the memory
+                expected_data := X"AA";
+                write_word(rmemory, 0, X"ACABAA");
+                -- TB will fault if DUT tries to write to this memory
+                set_permissions(rmemory, 0, read_only);
+                -- issue spi read command for multiple bytes. No early abort
+                for i in 0 to 2 loop
+                   push_byte(tx_queue, 0); -- push dummy data for the read
+                end loop;
+                spi_send_stream(net, spi_opcode_read_no_addr_incr, address, tx_queue, csn);
+                -- Read back word rx'd from DUT and check it matches expected.
+                -- we're going to have 3 dummy bytes here, skip them, keeping the 4th
+                expected_data := X"AA";
+                for i in 0 to 4 loop
+                   pop_stream(net, master_rstream, data);
+                   -- only check past the dummy data
+                   if i > 2 then
+                       check_equal(data, expected_data, "Read data did not match expected, iteration " & to_string(i-2));
+                       -- Not incrementing so we should only see x"AA" here
+                   end if;
+                end loop;
+            elsif run("multi-write-no-incr") then
+                    -- set up the "memory to be read with a known value"
+                    buf := allocate(wmemory, 1 * 64, alignment => 32);
+                    -- Can't use the simulation interface to set the data we're expected to write
+                    -- because we're going to issue multiple writes to the same location
+                    -- issue spi write command
+                    expected_data := X"AA";
+                    for i in 0 to 2 loop
+                        push_byte(tx_queue, to_integer(expected_data)); -- push dummy data for the read
+                        expected_data := expected_data + 1;
+                     end loop;
+                     spi_send_stream(net, spi_opcode_write_no_addr_incr, address, tx_queue, csn);
+                    -- now reach into the ram and see what is there now
+                    data := read_word(wmemory, 0, 1);
+                    wait for 20 ns;
+                    -- we over-incremented the expected data at the end of the for loop above
+                    expected_data := expected_data - 1;
+                    check_equal(data, expected_data, "Read data did not match expected");
+            elsif run("non-zero-addr-read") then
+                    -- set up the "memory to be read with a known value"
+                    buf := allocate(rmemory, 1 * 64, alignment => 32);
+                    -- Use the simulation interface to set the data we're going to read back
+                    expected_data := X"AA";
+                    write_word(rmemory, 0, expected_data);
+                    expected_data := expected_data + 1;
+                    write_word(rmemory, 1, expected_data);
+                    -- TB will fault if DUT tries to write to this memory
+                    set_permissions(rmemory, 0, read_only);
+                    set_permissions(rmemory, 1, read_only);
+                    -- issue spi read command (data is dummy byte here since this is a)
+                    address := X"0001";
+                    spi_send_byte(net, spi_opcode_read, address, (others => '0'), csn);
+                    -- Read back word rx'd from DUT and check it matches expected.
+                    -- -- we're going to have 3 dummy bytes here, skip them, keeping the 4th
+                    for i in 0 to 3 loop
+                        pop_stream(net, master_rstream, data);
+                    end loop;
+                    check_equal(data, expected_data, "Read data did not match expected");
             end if;
         end loop;
 
