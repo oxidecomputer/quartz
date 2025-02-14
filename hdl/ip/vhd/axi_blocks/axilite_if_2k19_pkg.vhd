@@ -10,7 +10,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
-package axilite_if_pkg is
+package axilite_if_2k19_pkg is
    generic (
       addr_width : integer
    );
@@ -106,6 +106,6 @@ package axilite_if_pkg is
 end package;
 
 -- Some common sizes expected to be used
-package axil8x32_pkg is new work.axilite_if_pkg generic map(addr_width => 8);
-package axil24x32_pkg is new work.axilite_if_pkg generic map(addr_width => 24);
-package axil26x32_pkg is new work.axilite_if_pkg generic map(addr_width => 26);
+package axil8x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 8);
+package axil24x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 24);
+package axil26x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 26);
