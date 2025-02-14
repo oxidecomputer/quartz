@@ -81,6 +81,7 @@ package body spi_axi_pkg is
             when spi_opcode_bit_clr =>
                 return rdata and (not wdata);
             when others =>
+                assert false report "invalid opcode for bit operation";
                 return rdata;
         end case;
 
