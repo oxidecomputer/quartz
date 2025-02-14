@@ -51,12 +51,12 @@ def yosys_vhdl_synth(ctx):
     maps = []
     json_maps = ctx.attrs.top.get(RDLJsonMaps)
     if json_maps != None:
-            for file in json_maps.files:
+            for file in set(json_maps.files):
                 new_file = ctx.actions.declare_output("maps", file.basename)
                 maps.append(ctx.actions.copy_file(new_file, file))
     html_maps = ctx.attrs.top.get(RDLHtmlMaps)
     if html_maps != None:
-            for file in html_maps.files:
+            for file in set(html_maps.files):
                 new_file = ctx.actions.declare_output("maps", file.basename)
                 maps.append(ctx.actions.copy_file(new_file, file))
 

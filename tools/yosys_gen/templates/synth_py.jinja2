@@ -11,14 +11,16 @@ parser.add_argument("--log", dest="log", help="Explicit output yosys log")
 parser.add_argument("--ghdl_stderr", dest="ghdl_stderr", help="Explicit output ghdl stderr")
 
 args = parser.parse_args()
-files_str = (
+files_list = [
 {% for source in project.sources %}
 {% set suffix = source.path.suffix %}
 {% if suffix in [".vhd"] %}
-"{{source.path.absolute().as_posix()}} "
+"{{source.path.absolute().as_posix()}}",
 {% endif %}
 {% endfor %}
-)
+]
+
+files_str = " ".join(files_list)
 
 cmd = [
     "yosys",
@@ -34,9 +36,11 @@ cmd = [
 yosys = subprocess.run(
     cmd,
     encoding="utf-8", 
-    check=True, 
+    check=False, 
     capture_output=True)
 
 with open(args.ghdl_stderr, "w") as f:
     f.write(yosys.stderr)
 sys.stderr.write(yosys.stderr)
+
+sys.exit(yosys.returncode)
