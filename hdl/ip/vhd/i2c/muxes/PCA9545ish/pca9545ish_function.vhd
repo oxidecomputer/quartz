@@ -50,10 +50,10 @@ end entity;
 architecture rtl of pca9545ish_function is
     function is_valid(
         data : std_logic_vector(7 downto 0);
-        allowed_to_enable : std_logic) return boolean is
+        enable_allowed : std_logic) return boolean is
     begin
         -- allow only writes of 0 even when we're not allowed to enable
-        if allowed_to_enable = '0' and data /= 0 then
+        if enable_allowed = '0' and data /= 0 then
             return false;
         end if;
         -- only allow clear and one-hot bits 0-2

@@ -68,7 +68,6 @@ set_io --warn-no-port fpga1_to_fpga2_io[2] E3
 set_io --warn-no-port fpga1_to_fpga2_io[3] H5
 set_io --warn-no-port fpga1_to_fpga2_io[4] E2
 set_io --warn-no-port fpga1_to_fpga2_io[5] G3
-set_io --warn-no-port fpga2_creset_l_r N11
 set_io --warn-no-port fpga2_spare_v3p3[0] E4
 set_io --warn-no-port fpga2_spare_v3p3[1] B2
 set_io --warn-no-port fpga2_spare_v3p3[2] F5
@@ -150,3 +149,4 @@ set_io --warn-no-port spi_sp_mux_to_fpga2_sck R11
 set_io --warn-no-port uart_fpga2_to_sp_dat N4
 set_io --warn-no-port uart_sp_to_fpga2_dat R1
 set_io --warn-no-port v12_mcio_a0hp_pg H6
+set_frequency clk_50mhz_fpga2 50
