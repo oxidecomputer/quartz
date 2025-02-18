@@ -316,7 +316,7 @@ module mkLoopbackTransceiver #(
 
     Reg#(UInt#(5)) disconnect_bit_select <- mkReg(0);
 
-    mkTestWatchdog((10 * n_characters_watchdog) + 10);
+    mkTestWatchdog((15 * n_characters_watchdog) + 10);
 
     (* fire_when_enabled *)
     rule do_transmit;

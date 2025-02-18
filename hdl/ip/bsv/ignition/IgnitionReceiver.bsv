@@ -341,16 +341,6 @@ module mkReceiver
                 channels[i].expect_idle <= True;
             end
 
-            // When an Idle set is received the running disparity of the link
-            // can be determined. This is idempotent and safe to set any time an
-            // Idle set is received.
-            if (idle1) begin
-                channels[i].rd <= RunningPositive;
-            end
-            else if (idle2) begin
-                channels[i].rd <= RunningNegative;
-            end
-
             // The link polarity gets to be adjusted once. Subsequent occurances
             // of inverted Idle sets are recorded as Invalid in the Idle history
             // and will trigger a link reset.
