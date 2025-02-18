@@ -41,6 +41,7 @@ entity pca9545ish_top is
         -- Signal to reset the mux-state out of band if desired.
         mux_reset: in std_logic;
         allowed_to_enable: in std_logic;
+        mux_is_active : out std_logic;
         -- I2C bus mux endpoint for control
         -- Does not support clock-stretching
         scl : in std_logic;
@@ -104,6 +105,7 @@ begin
         mux_reset => mux_reset,
         mux_sel => mux_sel,
         allowed_to_enable => allowed_to_enable,
+        mux_is_active => mux_is_active,
         inst_data => inst_data,
         inst_valid => inst_valid,
         inst_ready => inst_ready,
