@@ -109,8 +109,9 @@ begin
             hubris_compat <= rec_reset;
             scratchpad <= rec_reset;
         elsif rising_edge(clk) then
-            -- go ahead and flo this every cycle, it's external but not
-            -- changing
+            -- go ahead and flop this every cycle, it's external but not
+            -- changing.  Since we're not using this in decision logic, this should
+            -- suffice for synchronization.
             hubris_compat <= unpack(resize(hubris_compat_pins, 32));
             if wready then
                 case to_integer(awaddr) is

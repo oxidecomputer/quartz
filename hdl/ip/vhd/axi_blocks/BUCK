@@ -9,14 +9,14 @@ vhdl_unit(
 
 vhdl_unit(
     name = "axilite_if_2k8_pkg",
-    srcs = glob(["*2k8_pkg.vhd"]),
+    srcs = glob(["axilite*2k8_pkg.vhd"]),
     standard = "2008",
     visibility = ['PUBLIC'],
 )
 
 vhdl_unit(
     name = "axilite_if_2k19_pkg",
-    srcs = glob(["*2k19_pkg.vhd"]),
+    srcs = glob(["axilite*2k19_pkg.vhd"]),
     standard = "2019",
     visibility = ['PUBLIC'],
 )
@@ -41,5 +41,12 @@ vhdl_unit(
         ":axilite_if_2k8_pkg",
     ],
     standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axist_if_2k19_pkg",
+    srcs = glob(["axist*2k19_pkg.vhd"]),
+    standard = "2019",
     visibility = ['PUBLIC'],
 )

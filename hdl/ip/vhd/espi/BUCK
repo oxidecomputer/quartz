@@ -18,7 +18,7 @@ rdl_file(
 rdl_file(
     name = "espi_regs_rdl",
     src = "sys_regs/espi_regs.rdl",
-    outputs = ["espi_regs_pkg.vhd", "espi_regs.html"],
+    outputs = ["espi_regs_pkg.vhd", "espi_regs.html", "espi_regs.json"],
     visibility = ['PUBLIC']
 )
 

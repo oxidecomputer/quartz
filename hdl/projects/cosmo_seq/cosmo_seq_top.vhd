@@ -11,34 +11,44 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
+use work.axil_common_pkg.all;
+use work.axil26x32_pkg;
+use work.axil8x32_pkg;
+use work.axi_st8_pkg;
+
 entity cosmo_seq_top is
     port (
         -- Board clocks and resets
         clk_50mhz_fpga1_1 : in std_logic;
         clk_50mhz_fpga1_2 : in std_logic;
         clk_buff_m2_nic_rsw_to_fpga1_los_l : in std_logic;
+        sp_to_fpga1_system_reset_l : in std_logic;
         -- FMC interface
         fmc_sp_to_fpga1_clk : in std_logic;
         fmc_sp_to_fpga1_oe_l : in std_logic;
         fmc_sp_to_fpga1_we_l : in std_logic;
         fmc_sp_to_fpga1_wait_l : out std_logic;
-        fmc_sp_to_fpga1_cs1_l: in std_logic;
+        fmc_sp_to_fpga1_cs_l: in std_logic;
         fmc_sp_to_fpga1_adv_l : in std_logic;
         fmc_sp_to_fpga1_bl_l : in std_logic_vector(1 downto 0);
         fmc_sp_to_fpga1_da : inout std_logic_vector(15 downto 0);
         fmc_sp_to_fpga1_a : in std_logic_vector(23 downto 16);
         -- eSPI interfaces
         -- eSPI0
+        -- TODO: fix this up by swapping alert pins with
+        -- data because we didn't do this on the schematic naming
         fpga1_espi0_cs_l_buff_oe_en_l : out std_logic;  -- Don't want to be chip-selected while SP5 is off
         espi_sp5_to_fpga1_reset_l : in std_logic; -- Un-used currently
         espi0_sp5_to_fpga1_clk : in std_logic;
         espi0_sp5_to_fpga1_cs_l : in std_logic;
         espi0_sp5_to_fpga1_dat : inout std_logic_vector(3 downto 0);
+        espi0_fpga1_to_sp5_alert_l : in std_logic;  -- Un-used currently in-band alert
         -- eSPI1 (currently un-used)
         espi1_sp5_to_fpga1_clk : in std_logic;
         espi1_sp5_to_fpga1_clk_2 : in std_logic;
         espi1_sp5_to_fpga1_cs_l : in std_logic;
-        espi1_sp5_to_fpga1_dat : inout std_logic_vector(3 downto 0);
+        espi1_sp5_to_fpga1_dat : in std_logic_vector(3 downto 0);  --realy inout but unused
+        espi1_fpga1_to_sp5_alert_l : in std_logic;  -- really an out but unused
 
         -- Group A Power Rail control and PGs
         v12_ddr5_abcdef_a0_pg : in std_logic;
@@ -141,7 +151,6 @@ entity cosmo_seq_top is
         sp5_to_fpga1_slp_s5_l : in std_logic;
         v3p3_sp5_en : in std_logic;
         v3p3_sp5_pg : in std_logic;
-        sp_to_fpga1_system_reset_l : in std_logic;
         fpga1_to_sp5_rsmrst_l : out std_logic;
         fpga1_to_sp5_sys_reset_l : out std_logic;
         vddcr_cpu0_en : out std_logic;
@@ -232,7 +241,6 @@ entity cosmo_seq_top is
         
         fpga1_to_v12_ddr5_abcdef_hsc_en : in std_logic;
         fpga1_to_v12_ddr5_ghijkl_hsc_en : in std_logic;
-        fpga1_to_v1p2_fpga2_a2_ldo_en : in std_logic;
 
         m2b_to_fpga1_pedet : in std_logic;
         m2b_to_fpga1_prsnt_l : in std_logic;
@@ -281,47 +289,163 @@ architecture rtl of cosmo_seq_top is
     signal reset_125m : std_logic;
     signal clk_200m : std_logic;
     signal reset_200m : std_logic;
-    signal pll_locked_async : std_logic;
     signal reset_fmc : std_logic;
+    alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
+    constant INFO_RESP_IDX : integer := 0;
+    constant BRD_RESP_IDX: integer := 1;
+    constant SPINOR_RESP_IDX: integer := 2;
+    constant ESPI_RESP_IDX: integer := 3;
+    constant SEQ_RESP_IDX: integer := 4;
 
-    signal counter : unsigned(31 downto 0);
+    constant config_array : axil_responder_cfg_array_t := 
+        (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
+         BRD_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
+         SPINOR_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
+         ESPI_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8)
+         );
+    signal fmc_axi_if : axil26x32_pkg.axil_t;
+    signal responders : axil8x32_pkg.axil_array_t(config_array'range);
+    signal fmc_internal_data_out : std_logic_vector(15 downto 0);
+    signal fmc_data_out_enable: std_logic;
+
+    signal spinor_io_o : std_logic_vector(3 downto 0);
+    signal spinor_io_oe : std_logic_vector(3 downto 0);
+    signal espi_io_o : std_logic_vector(3 downto 0);
+    signal espi_io_oe : std_logic_vector(3 downto 0);
+
+    signal ipcc_uart_from_espi_axi_st : axi_st8_pkg.axi_st_t;
+    signal ipcc_uart_to_espi_axi_st : axi_st8_pkg.axi_st_t;
 
 begin
 
-    -- Xilinx PLL instantiation
-    pll: entity work.cosmo_pll
-    port map ( 
-        clk_50m => clk_50mhz_fpga1_1,
-        clk_125m => clk_125m,
-        clk_200m => clk_200m,
-        reset => not sp_to_fpga1_system_reset_l,
-        locked => pll_locked_async
-      
-    );
-
-    -- Reset synchronizer into the clock domains
-    reset_sync_inst: entity work.reset_sync
+    ---------------------------------------------
+    -- FMC to AXI Inteface from the SP
+    ---------------------------------------------
+    stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
     port map(
-        pll_locked_async => pll_locked_async,
+       chip_reset => reset_fmc,
+       fmc_clk => fmc_clk,
+       a(24) => '0',
+       a(23 downto 16) => fmc_sp_to_fpga1_a,
+       addr_data_in => fmc_sp_to_fpga1_da,
+       data_out => fmc_internal_data_out,
+       data_out_en => fmc_data_out_enable,
+       ne(3 downto 1) => "111",
+       ne(0) => fmc_sp_to_fpga1_cs_l,
+       noe => fmc_sp_to_fpga1_oe_l,
+       nwe => fmc_sp_to_fpga1_we_l,
+       nl => fmc_sp_to_fpga1_adv_l,
+       nwait => fmc_sp_to_fpga1_wait_l,
+       aclk => clk_125m,
+       aresetn => not reset_125m,
+       axi_if => fmc_axi_if
+   );
+    -- tristate control for the FMC data bus
+    fmc_sp_to_fpga1_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+
+   -- Axi decode/interconnect
+   axil_interconnect_inst: entity work.axil_interconnect
+    generic map(
+       config_array => config_array
+   )
+    port map(
+       clk => clk_125m,
+       reset => reset_125m,
+       initiator => fmc_axi_if,
+       responders => responders
+   );
+
+    -- Block that generates our clocks, resets and
+    -- deals with core board-level functionality
+    -- includes the common "info" block on the axi bus
+    board_support_inst: entity work.board_support
+     port map(
+        board_50mhz_clk => clk_50mhz_fpga1_1,
+        sp_fmc_clk => fmc_clk,
+        sp_system_reset_l => sp_to_fpga1_system_reset_l,
         clk_125m => clk_125m,
         reset_125m => reset_125m,
         clk_200m => clk_200m,
         reset_200m => reset_200m,
-        sp_fmc_clk => fmc_sp_to_fpga1_clk,
-        reset_fmc_clk => reset_fmc
+        reset_fmc => reset_fmc,
+        fpga1_status_led => fpga1_status_led,
+        hubris_compat_ver => seq_rev_id,
+        info_axi_if => responders(INFO_RESP_IDX)
     );
 
-
-    -- Blink an LED at some rate
-    led: process(clk_125m, reset_125m)
+    -- espi and flash interface block
+    espi_spinor_ss: entity work.sp5_espi_flash_subsystem
+     port map(
+        clk_125m => clk_125m,
+        reset_125m => reset_125m,
+        clk_200m => clk_200m,
+        reset_200m => reset_200m,
+        espi_axi_if => responders(ESPI_RESP_IDX),
+        espi_csn => espi0_sp5_to_fpga1_cs_l,
+        espi_clk => espi0_sp5_to_fpga1_clk,
+        espi_dat => espi0_sp5_to_fpga1_dat,
+        espi_dat_o => espi_io_o,
+        espi_dat_oe => espi_io_oe,
+        response_csn => open,  -- debugging with saleae if you have access
+        ipcc_uart_from_espi => ipcc_uart_from_espi_axi_st,
+        ipcc_uart_to_espi => ipcc_uart_to_espi_axi_st,
+        spinor_axi_if => responders(SPINOR_RESP_IDX),
+        spi_nor_csn => spi_fpga1_to_flash_cs_l,
+        spi_nor_clk => spi_fpga1_to_flash_clk,
+        spi_nor_dat => spi_fpga1_to_flash_dat,
+        spi_nor_dat_o => spinor_io_o,
+        spi_nor_dat_oe => spinor_io_oe
+    );
+    --Tristates for spi-nor flash pins and espi
+    spi_nor_espi_tris:process(all)
     begin
-        if reset_125m then
-            counter <= (others => '0');
-        elsif rising_edge(clk_125m) then
-            counter <= counter + 1;
-        end if;
+        for i in spi_fpga1_to_flash_dat'range loop
+            spi_fpga1_to_flash_dat(i) <= spinor_io_o(i) when spinor_io_oe(i) = '1' else 'Z';
+            espi0_sp5_to_fpga1_dat(i) <= espi_io_o(i) when espi_io_oe(i) = '1' else 'Z';
+        end loop;
     end process;
-    fpga1_status_led <= counter(20);
 
+    -- UART subsystem
+    sp5_uart_ss: entity work.sp5_uart_subsystem
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        -- UART pins
+        -- IPCC SP side
+        ipcc_from_sp => uart1_sp_to_fpga1_dat,
+        ipcc_to_sp => uart1_fpga1_to_sp_dat,
+        ipcc_from_sp_rts_l => uart1_sp_to_fpga1_rts_l,
+        ipcc_to_sp_rts_l => uart1_fpga1_to_sp_rts_l,
+        -- UART0 SP-side
+        console_from_sp => uart0_sp_to_fpga1_dat,
+        console_to_sp_dat => uart0_fpga1_to_sp_dat,
+        console_to_sp_rts_l => uart0_fpga1_to_sp_rts_l,
+        console_from_sp_rts_l => uart0_sp_to_fpga1_rts_l,
+        host_from_fpga => uart0_fpga1_to_sp5_dat_buff,
+        host_to_fpga => uart0_sp5_to_fpga1_dat,
+        host_from_fpga_rts_l => uart0_fpga1_to_sp5_rts_l_buff,
+        host_to_fpga_rts_l => uart0_sp5_to_fpga1_rts_l,
+        ipcc_from_espi => ipcc_uart_from_espi_axi_st,
+        ipcc_to_espi => ipcc_uart_to_espi_axi_st
+    );
+
+    -- Block that deals with sequencing the SP5 and nic etc
+    -- seq: entity work.sp5_sequencer
+    --  generic map(
+    --     CNTS_P_MS => CNTS_P_MS
+    -- )
+    --  port map(
+    --     clk => clk_125m,
+    --     reset => reset_125m,
+    --     axi_if => responders(SEQ_RESP_IDX),
+    --     a0_ok => a0_ok,
+    --     a0_idle => a0_idle,
+    --     ddr_bulk => ddr_bulk,
+    --     group_a => group_a,
+    --     group_b => group_b,
+    --     group_c => group_c,
+    --     sp5_seq_pins => sp5_seq_pins,
+    --     nic_rails => nic_rails
+    -- );
 
 end rtl;

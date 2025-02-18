@@ -45,7 +45,7 @@ set_property -dict { PACKAGE_PIN J17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_t
 set_property -dict { PACKAGE_PIN H17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_bl_l[0] }];
 set_property -dict { PACKAGE_PIN G17 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_bl_l[1] }];
 set_property -dict { PACKAGE_PIN F19 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_clk }];
-set_property -dict { PACKAGE_PIN H16 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_cs_l[1] }];
+set_property -dict { PACKAGE_PIN H16 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN L18 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_da[0] }];
 set_property -dict { PACKAGE_PIN L19 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_da[1] }];
 set_property -dict { PACKAGE_PIN M15 IOSTANDARD LVCMOS33 } [get_ports { fmc_sp_to_fpga1_da[2] }];
