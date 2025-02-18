@@ -102,7 +102,7 @@ def vhdl_toml_gen(ctx):
     # party since vhdl-ls only supports is_third_party at the library level. For now, we're going
     # to special case xpm if it exits in the worklib and set is_third_party to true
     if files_by_library_name.get("xpm", []):
-        files_by_library_name.update({"xpm": {"is_third_party": True}})
+        files_by_library_name['xpm']['is_third_party'] = True
     # Now load the vhdl from RDL files into worklib
     worklib_files = files_by_library_name.get("worklib", {"files": []}).get("files")
     worklib_files.extend(gen_vhdl)
