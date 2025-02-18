@@ -1,9 +1,29 @@
 load("//tools:hdl.bzl", "vhdl_unit")
 load("//tools:yosys.bzl", "ice40_bitstream")
 
+
+vhdl_unit(
+    name = "hp_subsystem_top",
+    srcs = glob(["hp_subsystem/*.vhd"]),
+    deps = [
+        "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
+    ],
+    standard = "2008",
+)
+
 vhdl_unit(
     name = "cosmo_hp_top",
     srcs = glob(["*.vhd"]),
+    deps = [
+        ":hp_subsystem_top",
+        "//hdl/ip/vhd/synchronizers:async_reset_bridge",
+        "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
+        "//hdl/ip/vhd/i2c/muxes/PCA9545ish:pca9545ish_top",
+        "//hdl/ip/vhd/i2c/target:i2c_phy_consolidator",
+        "//hdl/ip/vhd/spi/axi_controller:spi_axi_controller",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect_2k8",
+        "//hdl/ip/vhd/info:info_2k8",
+    ],
     standard = "2008",
 )
 
