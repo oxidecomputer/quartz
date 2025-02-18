@@ -11,34 +11,47 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
+use work.axil_common_pkg.all;
+use work.axil26x32_pkg;
+use work.axil8x32_pkg;
+use work.axi_st8_pkg;
+use work.time_pkg.all;
+
+use work.sequencer_io_pkg.all;
+
 entity cosmo_seq_top is
     port (
         -- Board clocks and resets
         clk_50mhz_fpga1_1 : in std_logic;
         clk_50mhz_fpga1_2 : in std_logic;
         clk_buff_m2_nic_rsw_to_fpga1_los_l : in std_logic;
+        sp_to_fpga1_system_reset_l : in std_logic;
         -- FMC interface
         fmc_sp_to_fpga1_clk : in std_logic;
         fmc_sp_to_fpga1_oe_l : in std_logic;
         fmc_sp_to_fpga1_we_l : in std_logic;
         fmc_sp_to_fpga1_wait_l : out std_logic;
-        fmc_sp_to_fpga1_cs1_l: in std_logic;
+        fmc_sp_to_fpga1_cs_l: in std_logic;
         fmc_sp_to_fpga1_adv_l : in std_logic;
         fmc_sp_to_fpga1_bl_l : in std_logic_vector(1 downto 0);
         fmc_sp_to_fpga1_da : inout std_logic_vector(15 downto 0);
         fmc_sp_to_fpga1_a : in std_logic_vector(23 downto 16);
         -- eSPI interfaces
         -- eSPI0
+        -- TODO: fix this up by swapping alert pins with
+        -- data because we didn't do this on the schematic naming
         fpga1_espi0_cs_l_buff_oe_en_l : out std_logic;  -- Don't want to be chip-selected while SP5 is off
         espi_sp5_to_fpga1_reset_l : in std_logic; -- Un-used currently
         espi0_sp5_to_fpga1_clk : in std_logic;
         espi0_sp5_to_fpga1_cs_l : in std_logic;
         espi0_sp5_to_fpga1_dat : inout std_logic_vector(3 downto 0);
+        espi0_fpga1_to_sp5_alert_l : in std_logic;  -- Un-used currently in-band alert
         -- eSPI1 (currently un-used)
         espi1_sp5_to_fpga1_clk : in std_logic;
         espi1_sp5_to_fpga1_clk_2 : in std_logic;
         espi1_sp5_to_fpga1_cs_l : in std_logic;
-        espi1_sp5_to_fpga1_dat : inout std_logic_vector(3 downto 0);
+        espi1_sp5_to_fpga1_dat : in std_logic_vector(3 downto 0);  --really inout but unused
+        espi1_fpga1_to_sp5_alert_l : in std_logic;  -- really an out but unused
 
         -- Group A Power Rail control and PGs
         v12_ddr5_abcdef_a0_pg : in std_logic;
@@ -63,6 +76,7 @@ entity cosmo_seq_top is
         fpga1_to_fan_central_hsc_disable : out std_logic;
         fpga1_to_fan_east_hsc_disable : out std_logic;
         fpga1_to_fan_west_hsc_disable : out std_logic;
+        -- misc alerts
         smbus_fan_central_hsc_to_fpga1_alert_l : in std_logic;
         smbus_fan_east_hsc_to_fpga1_alert_l : in std_logic;
         smbus_fan_west_hsc_to_fpga1_alert_l : in std_logic;
@@ -87,11 +101,8 @@ entity cosmo_seq_top is
         m2b_hsc_to_fpga1_fault_l : in std_logic;
         pwr_cont1_to_fpga1_alert_l : in std_logic;
         v0p96_nic_to_fpga1_alert_l : in std_logic;
-        v12p0_nic_a0hp_to_fpga1_fault_l : in std_logic;
         pwr_cont2_to_fpga1_alert_l : in std_logic;
         pwr_cont3_to_fpga1_alert_l : in std_logic;
-        pwr_cont3_to_fpga1_cfp : in std_logic;
-        pwr_cont3_to_fpga1_vrhot_n : in std_logic;
 
         -- SP5 BootRom SPI interface
         spi_fpga1_to_flash_clk : out std_logic;
@@ -99,11 +110,11 @@ entity cosmo_seq_top is
         spi_fpga1_to_flash_dat : inout std_logic_vector(3 downto 0);
 
         -- Spare and board-level status stuff
-        fpga1_to_sp_mux_ign_mux_sel : in std_logic;
-        fpga1_to_ign_trgt_fpga_creset : out std_logic;
+        fpga1_to_sp_mux_ign_mux_sel : out std_logic;
+        fpga1_to_ign_trgt_fpga_creset : out std_logic; -- swap to output when we want to use this
         seq_rev_id : in std_logic_vector(2 downto 0);
         fpga1_spare_v1p8 : in std_logic_vector(7 downto 0);
-        fpga1_spare_v3p3 : in std_logic_vector(7 downto 0);
+        fpga1_spare_v3p3 : inout std_logic_vector(7 downto 0);
         fpga1_status_led : out std_logic;
         fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
 
@@ -116,10 +127,11 @@ entity cosmo_seq_top is
         fpga1_to_nic_mfg_mode_l : out std_logic;
         nic_to_fpga1_ext_rst_l : in std_logic;
         v0p96_nic_vdd_a0hp_pg : in std_logic;
-        pcie_fpga1_to_nic_perst_l : in std_logic;
+        pcie_fpga1_to_nic_perst_l : out std_logic;
         v5p0_nic_a0hp_pg : in std_logic;
+        v12p0_nic_a0hp_to_fpga1_fault_l : in std_logic;
         v5p0_nic_a0hp_to_fpga1_fault_l : in std_logic;
-        fpga1_to_pcie_clk_buff_nic_oe_l : in std_logic;
+        fpga1_to_pcie_clk_buff_nic_oe_l : out std_logic;
         v1p1_nic_enet_a0hp_pg : in std_logic;
         v12p0_nic_a0hp_pg : in std_logic;
         v1p2_nic_enet_a0hp_pg : in std_logic;
@@ -127,42 +139,45 @@ entity cosmo_seq_top is
         v1p5_nic_a0hp_pg : in std_logic;
         sp5_to_nic_mfg_mode_l : in std_logic;
 
-        -- SP5 sequencing
+        -- SP5/DDR sequencing
+        pwr_cont3_to_fpga1_cfp : in std_logic;
+        pwr_cont3_to_fpga1_vrhot_n : in std_logic;
+        fpga1_to_v12_ddr5_abcdef_hsc_en : out std_logic;
+        fpga1_to_v12_ddr5_ghijkl_hsc_en : out std_logic;
         sp5_to_fpga1_thermtrip_l : in std_logic;
         pwr_cont1_to_fpga1_vddcr_cpu0_pg : in std_logic;
         pwr_cont1_to_fpga1_vddcr_cpu1_pg : in std_logic;
         pwr_cont1_to_fpga1_vddcr_soc_pg : in std_logic;
         pwr_cont1_to_fpga1_vddio_sp5_pg : in std_logic;
-        pwr_fpga1_to_v1p5_sp5_rtc_a2_en : in std_logic;
+        pwr_fpga1_to_v1p5_sp5_rtc_a2_en : out std_logic;
         pwr_v1p5_sp5_rtc_a2_to_fpga1_pg : in std_logic;
-        sp5_to_fpga1_pwrgd_out : in std_logic;
+        sp5_to_fpga1_pwrgd_out : in std_logic; -- spare readback from SP5
         sp5_to_fpga1_pwrok_unbuf : in std_logic;
         sp5_to_fpga1_slp_s3_l : in std_logic;
         sp5_to_fpga1_slp_s5_l : in std_logic;
-        v3p3_sp5_en : in std_logic;
+        v3p3_sp5_en : out std_logic;
         v3p3_sp5_pg : in std_logic;
-        sp_to_fpga1_system_reset_l : in std_logic;
         fpga1_to_sp5_rsmrst_l : out std_logic;
-        fpga1_to_sp5_sys_reset_l : out std_logic;
+        fpga1_to_sp5_sys_reset_l : out std_logic;  -- really an out but we don't use, external PU
         vddcr_cpu0_en : out std_logic;
         vddcr_cpu1_en : out std_logic;
         vddcr_soc_en : out std_logic;
         vddio_sp5_en : out std_logic;
-        v1p1_sp5_en : in std_logic;
+        v1p1_sp5_en : out std_logic;
         v1p1_sp5_pg : in std_logic;
-        fpga1_to_sp5_pwr_btn_l : in std_logic;
-        fpga1_to_sp5_pwrgd : in std_logic;
-        fpga1_to_sp5_reset_l : in std_logic;
+        fpga1_to_sp5_pwr_btn_l : out std_logic;
+        fpga1_to_sp5_pwrgd : out std_logic;
+        fpga1_to_sp5_reset_l : out std_logic;
         fpga1_to_sp5_romtype0 : in std_logic;
-        v1p8_sp5_en : in std_logic;
+        v1p8_sp5_en : out std_logic;
         v1p8_sp5_pg : in std_logic;
-
+        
         -- backplane interface
-        fpga1_to_bp_buff_output_en_l : in std_logic;
-        pcie_aux_fpga1_to_rsw_perst_l : in std_logic;
+        fpga1_to_bp_buff_output_en_l : out std_logic;
+        pcie_aux_fpga1_to_rsw_perst_l : out std_logic;
         pcie_aux_rsw_to_fpga1_prsnt_buff_l : in std_logic;
         pcie_aux_rsw_to_fpga1_pwrflt_buff_l : in std_logic;
-        fpga1_to_pcie_clk_buff_rsw_oe_l : in std_logic;
+        fpga1_to_pcie_clk_buff_rsw_oe_l : out std_logic;
         rsw_to_sp5_pcie_attached_buff_l : in std_logic;
 
         -- non-FMC SP interface things
@@ -212,27 +227,24 @@ entity cosmo_seq_top is
         -- I2C Hotplug stuff
         i2c_sp5_to_fpgax_hp_scl : inout std_logic;
         i2c_sp5_to_fpgax_hp_sda : inout std_logic;
+        -- I2C SP mux stuff
         i2c_sp_to_fpga1_scl : inout std_logic;
         i2c_sp_to_fpga1_sda : inout std_logic;
 
         fpga1_to_i2c_mux1_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux2_sel : out std_logic_vector(1 downto 0);
-        fpga1_to_i2c_mux3_sel : in std_logic_vector(1 downto 0);
-        fpga1_to_m2a_hsc_en : in std_logic;
-        fpga1_to_m2a_perst_l : in std_logic;
-        fpga1_to_m2b_hsc_en : in std_logic;
-        fpga1_to_m2b_perst_l : in std_logic;
-        fpga1_to_pcie_clk_buff_m2a_oe_l : in std_logic;
-        fpga1_to_pcie_clk_buff_m2b_oe_l : in std_logic;
+        fpga1_to_i2c_mux3_sel : out std_logic_vector(1 downto 0);
+        fpga1_to_m2a_hsc_en : out std_logic;
+        fpga1_to_m2a_perst_l : out std_logic;
+        fpga1_to_m2b_hsc_en : out std_logic;
+        fpga1_to_m2b_perst_l : out std_logic;
+        fpga1_to_pcie_clk_buff_m2a_oe_l : out std_logic;
+        fpga1_to_pcie_clk_buff_m2b_oe_l : out std_logic;
         m2a_to_fpga1_pedet : in std_logic;
         m2a_to_fpga1_prsnt_l : in std_logic;
         v3p3_m2a_a0hp_pg_l : in std_logic;
         v3p3_m2b_a0hp_pg_l : in std_logic;
         v3p3_nic_a0hp_pg : in std_logic;
-        
-        fpga1_to_v12_ddr5_abcdef_hsc_en : in std_logic;
-        fpga1_to_v12_ddr5_ghijkl_hsc_en : in std_logic;
-        fpga1_to_v1p2_fpga2_a2_ldo_en : in std_logic;
 
         m2b_to_fpga1_pedet : in std_logic;
         m2b_to_fpga1_prsnt_l : in std_logic;
@@ -281,47 +293,330 @@ architecture rtl of cosmo_seq_top is
     signal reset_125m : std_logic;
     signal clk_200m : std_logic;
     signal reset_200m : std_logic;
-    signal pll_locked_async : std_logic;
     signal reset_fmc : std_logic;
+    alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
+    constant INFO_RESP_IDX : integer := 0;
+    constant BRD_RESP_IDX: integer := 1;
+    constant SPINOR_RESP_IDX: integer := 2;
+    constant ESPI_RESP_IDX: integer := 3;
+    constant SEQ_RESP_IDX: integer := 4;
 
-    signal counter : unsigned(31 downto 0);
+    constant config_array : axil_responder_cfg_array_t := 
+        (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
+         BRD_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
+         SPINOR_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
+         ESPI_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
+         SEQ_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8)
+         );
+    signal fmc_axi_if : axil26x32_pkg.axil_t;
+    signal responders : axil8x32_pkg.axil_array_t(config_array'range);
+    signal fmc_internal_data_out : std_logic_vector(15 downto 0);
+    signal fmc_data_out_enable: std_logic;
+
+    signal spinor_io_o : std_logic_vector(3 downto 0);
+    signal spinor_io_oe : std_logic_vector(3 downto 0);
+    signal espi_io_o : std_logic_vector(3 downto 0);
+    signal espi_io_oe : std_logic_vector(3 downto 0);
+
+    signal ipcc_uart_from_espi_axi_st : axi_st8_pkg.axi_st_t;
+    signal ipcc_uart_to_espi_axi_st : axi_st8_pkg.axi_st_t;
+    signal a0_ok : std_logic;
+    signal a0_idle : std_logic;
+    signal ddr_bulk : ddr_bulk_power_t;
+    signal sp5_group_a : group_a_power_t;
+    signal sp5_group_b : group_b_power_t;
+    signal sp5_group_c : group_c_power_t;
+    signal nic_rails : nic_power_t;
+    signal sp5_seq_pins : sp5_seq_pins_t;
+    signal nic_seq_pins : nic_seq_pins_t;
+    signal early_power : early_power_t;
+    signal sp_scl_o : std_logic;
+    signal sp_scl_oe : std_logic;
+    signal sp_sda_o : std_logic;
+    signal sp_sda_oe : std_logic;
+    signal sp5_scl_o : std_logic;
+    signal sp5_scl_oe : std_logic;
+    signal sp5_sda_o : std_logic;
+    signal sp5_sda_oe : std_logic;
 
 begin
 
-    -- Xilinx PLL instantiation
-    pll: entity work.cosmo_pll
-    port map ( 
-        clk_50m => clk_50mhz_fpga1_1,
-        clk_125m => clk_125m,
-        clk_200m => clk_200m,
-        reset => not sp_to_fpga1_system_reset_l,
-        locked => pll_locked_async
-      
-    );
+    fpga1_spare_v3p3(7 downto 1) <= (others => 'Z');
+    -- misc things tied:
+    fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
+    fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
+    fpga1_to_sp_mux_ign_mux_sel <= '0';  -- Default until we decide what to do with it
+    fpga1_to_sp_irq_l <= (others => '1');
+    -- Enable various buffers when we're in A0:
+    fpga1_espi0_cs_l_buff_oe_en_l <= '0' when a0_ok else 'Z';
+    fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
+    fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
+    uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
 
-    -- Reset synchronizer into the clock domains
-    reset_sync_inst: entity work.reset_sync
+    -- TODO: need to sort out what to do about backplane/sidecar
+    fpga1_to_bp_buff_output_en_l <= 'Z';
+    pcie_aux_fpga1_to_rsw_perst_l <= '0';
+    fpga1_to_pcie_clk_buff_rsw_oe_l <= 'Z';
+
+
+    ---------------------------------------------
+    -- FMC to AXI Inteface from the SP
+    ---------------------------------------------
+    stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
     port map(
-        pll_locked_async => pll_locked_async,
+       chip_reset => reset_fmc,
+       fmc_clk => fmc_clk,
+       a(24) => '0',
+       a(23 downto 16) => fmc_sp_to_fpga1_a,
+       addr_data_in => fmc_sp_to_fpga1_da,
+       data_out => fmc_internal_data_out,
+       data_out_en => fmc_data_out_enable,
+       ne(3 downto 1) => "111",
+       ne(0) => fmc_sp_to_fpga1_cs_l,
+       noe => fmc_sp_to_fpga1_oe_l,
+       nwe => fmc_sp_to_fpga1_we_l,
+       nl => fmc_sp_to_fpga1_adv_l,
+       nwait => fmc_sp_to_fpga1_wait_l,
+       aclk => clk_125m,
+       aresetn => not reset_125m,
+       axi_if => fmc_axi_if
+   );
+    -- tristate control for the FMC data bus
+    fmc_sp_to_fpga1_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+
+   -- Axi decode/interconnect
+   axil_interconnect_inst: entity work.axil_interconnect
+    generic map(
+       config_array => config_array
+   )
+    port map(
+       clk => clk_125m,
+       reset => reset_125m,
+       initiator => fmc_axi_if,
+       responders => responders
+   );
+
+    -- Block that generates our clocks, resets and
+    -- deals with core board-level functionality
+    -- includes the common "info" block on the axi bus
+    board_support_inst: entity work.board_support
+     port map(
+        board_50mhz_clk => clk_50mhz_fpga1_1,
+        sp_fmc_clk => fmc_clk,
+        sp_system_reset_l => sp_to_fpga1_system_reset_l,
         clk_125m => clk_125m,
         reset_125m => reset_125m,
         clk_200m => clk_200m,
         reset_200m => reset_200m,
-        sp_fmc_clk => fmc_sp_to_fpga1_clk,
-        reset_fmc_clk => reset_fmc
+        reset_fmc => reset_fmc,
+        fpga1_status_led => fpga1_status_led,
+        hubris_compat_ver => seq_rev_id,
+        info_axi_if => responders(INFO_RESP_IDX)
     );
 
-
-    -- Blink an LED at some rate
-    led: process(clk_125m, reset_125m)
+    -- espi and flash interface block
+    -- espi and spi-nor blocks manage their own synchronization.
+    -- only a tiny portion of the espi design runs at 200MHz
+    -- all the system interfaces run at 125MHz for common clocking
+    espi_spinor_ss: entity work.sp5_espi_flash_subsystem
+     port map(
+        clk_125m => clk_125m,
+        reset_125m => reset_125m,
+        clk_200m => clk_200m,
+        reset_200m => reset_200m,
+        espi_axi_if => responders(ESPI_RESP_IDX),
+        espi_csn => espi0_sp5_to_fpga1_cs_l,
+        espi_clk => espi0_sp5_to_fpga1_clk,
+        espi_dat => espi0_sp5_to_fpga1_dat,
+        espi_dat_o => espi_io_o,
+        espi_dat_oe => espi_io_oe,
+        response_csn => open,  -- debugging with saleae if you have access
+        ipcc_uart_from_espi => ipcc_uart_from_espi_axi_st,
+        ipcc_uart_to_espi => ipcc_uart_to_espi_axi_st,
+        spinor_axi_if => responders(SPINOR_RESP_IDX),
+        spi_nor_csn => spi_fpga1_to_flash_cs_l,
+        spi_nor_clk => spi_fpga1_to_flash_clk,
+        spi_nor_dat => spi_fpga1_to_flash_dat,
+        spi_nor_dat_o => spinor_io_o,
+        spi_nor_dat_oe => spinor_io_oe
+    );
+    --Tristates for spi-nor flash pins and espi
+    spi_nor_espi_tris:process(all)
     begin
-        if reset_125m then
-            counter <= (others => '0');
-        elsif rising_edge(clk_125m) then
-            counter <= counter + 1;
-        end if;
+        for i in spi_fpga1_to_flash_dat'range loop
+            spi_fpga1_to_flash_dat(i) <= spinor_io_o(i) when spinor_io_oe(i) = '1' else 'Z';
+            espi0_sp5_to_fpga1_dat(i) <= espi_io_o(i) when espi_io_oe(i) = '1' else 'Z';
+        end loop;
     end process;
-    fpga1_status_led <= counter(20);
 
+    -- UART subsystem
+    -- stuff externally synchronized inside the UART block(s)
+    sp5_uart_ss: entity work.sp5_uart_subsystem
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        -- UART pins
+        -- IPCC SP side
+        ipcc_from_sp => uart1_sp_to_fpga1_dat,
+        ipcc_to_sp => uart1_fpga1_to_sp_dat,
+        ipcc_from_sp_rts_l => uart1_sp_to_fpga1_rts_l,
+        ipcc_to_sp_rts_l => uart1_fpga1_to_sp_rts_l,
+        -- UART0 SP-side
+        console_from_sp => uart0_sp_to_fpga1_dat,
+        console_to_sp_dat => uart0_fpga1_to_sp_dat,
+        console_to_sp_rts_l => uart0_fpga1_to_sp_rts_l,
+        console_from_sp_rts_l => uart0_sp_to_fpga1_rts_l,
+        -- UART0 SP5-side
+        host_from_fpga => uart0_fpga1_to_sp5_dat_buff,
+        host_to_fpga => uart0_sp5_to_fpga1_dat,
+        host_from_fpga_rts_l => uart0_fpga1_to_sp5_rts_l_buff,
+        host_to_fpga_rts_l => uart0_sp5_to_fpga1_rts_l,
+        uart_from_fpga => fpga1_spare_v3p3(0),
+        uart_to_fpga => '1',
+        uart_from_fpga_rts_l => open,
+        uart_to_fpga_rts_l => '0',
+        -- IPCC "UART" from espi
+        ipcc_from_espi => ipcc_uart_from_espi_axi_st,
+        ipcc_to_espi => ipcc_uart_to_espi_axi_st
+    );
 
+    -- SP I2C muxes
+    -- i2c is the only input, sycn'd inside the mux block(s)
+    sp_i2c_subsystem_inst: entity work.sp_i2c_subsystem
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        sp_scl => i2c_sp_to_fpga1_scl,
+        sp_scl_o => sp_scl_o,
+        sp_scl_oe => sp_scl_oe,
+        sp_sda => i2c_sp_to_fpga1_sda,
+        sp_sda_o => sp_sda_o,
+        sp_sda_oe => sp_sda_oe,
+        mux_reset => '0',
+        i2c_mux1_sel => fpga1_to_i2c_mux1_sel,
+        i2c_mux2_sel => fpga1_to_i2c_mux2_sel,
+        i2c_mux3_sel => fpga1_to_i2c_mux3_sel
+    );
+    --Tristates for spi-nor flash pins and espi
+    i2c_sp_to_fpga1_scl <= sp_scl_o when sp_scl_oe = '1' else 'Z';
+    i2c_sp_to_fpga1_sda <= sp_sda_o when sp_sda_oe = '1' else 'Z';
+
+    -- SP5 I2c hotplug expanders
+    -- Inputs synchronized inside the block
+    sp5_hotplug_subsystem_inst: entity work.sp5_hotplug_subsystem
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        sp5_i2c_sda => i2c_sp5_to_fpgax_hp_sda,
+        sp5_i2c_sda_o => sp5_sda_o,
+        sp5_i2c_sda_oe => sp5_sda_oe,
+        sp5_i2c_scl => i2c_sp5_to_fpgax_hp_scl,
+        sp5_i2c_scl_o => sp5_scl_o,
+        sp5_i2c_scl_oe => sp5_scl_oe,
+        a0_ok => a0_ok,
+        m2a_pedet => m2a_to_fpga1_pedet,
+        m2a_prsnt_l => m2a_to_fpga1_prsnt_l,
+        m2a_hsc_en => fpga1_to_m2a_hsc_en,
+        m2a_perst_l => fpga1_to_m2a_perst_l,
+        pcie_clk_buff_m2a_oe_l => fpga1_to_pcie_clk_buff_m2a_oe_l,
+        m2b_pedet => m2b_to_fpga1_pedet,
+        m2b_prsnt_l => m2b_to_fpga1_prsnt_l,
+        m2b_hsc_en => fpga1_to_m2b_hsc_en,
+        m2b_perst_l => fpga1_to_m2b_perst_l,
+        pcie_clk_buff_m2b_oe_l => fpga1_to_pcie_clk_buff_m2b_oe_l
+    );
+    --Tristates for spi-nor flash pins and espi
+    i2c_sp5_to_fpgax_hp_scl <= sp5_scl_o when sp5_scl_oe = '1' else 'Z';
+    i2c_sp5_to_fpgax_hp_sda <= sp5_sda_o when sp5_sda_oe = '1' else 'Z';
+
+    --Block that deals with sequencing the SP5 and nic etc
+    -- inputs synchronized inside the block
+    seq: entity work.sp5_sequencer
+     generic map(
+        CNTS_P_MS => calc_ms(desired_ms => 1, clk_period_ns => 8)
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders(SEQ_RESP_IDX),
+        a0_ok => a0_ok,
+        a0_idle => a0_idle,
+        early_power_pins => early_power,
+        ddr_bulk_pins => ddr_bulk,
+        group_a_pins => sp5_group_a,
+        group_b_pins => sp5_group_b,
+        group_c_pins => sp5_group_c,
+        sp5_seq_pins => sp5_seq_pins,
+        nic_rails_pins => nic_rails,
+        nic_seq_pins => nic_seq_pins
+    );
+
+    -- early power related pins
+    early_power.fan_central_hsc_pg <= fan_central_hsc_to_fpga1_pg;
+    early_power.fan_east_hsc_pg <= fan_east_hsc_to_fpga1_pg;
+    early_power.fan_west_hsc_pg <= fan_west_hsc_to_fpga1_pg;
+    early_power.fan_fail <= fan_to_fpga1_fan_fail;
+    fpga1_to_fan_central_hsc_disable <= early_power.fan_central_hsc_disable;
+    fpga1_to_fan_east_hsc_disable <= early_power.fan_east_hsc_disable;
+    fpga1_to_fan_west_hsc_disable <= early_power.fan_west_hsc_disable;
+
+    -- Bulk DDR power control and HSC readback
+    ddr_bulk.abcdef_hsc.pg <= v12_ddr5_abcdef_a0_pg;
+    fpga1_to_v12_ddr5_abcdef_hsc_en <= ddr_bulk.abcdef_hsc.enable;
+    ddr_bulk.ghijkl_hsc.pg <= v12_ddr5_ghijkl_a0_pg;
+    fpga1_to_v12_ddr5_ghijkl_hsc_en <= ddr_bulk.ghijkl_hsc.enable;
+    -- SP5 rails
+    -- group A enables and PGs
+    pwr_fpga1_to_v1p5_sp5_rtc_a2_en <= sp5_group_a.pwr_v1p5_rtc.enable;
+    sp5_group_a.pwr_v1p5_rtc.pg <= pwr_v1p5_sp5_rtc_a2_to_fpga1_pg;
+    v3p3_sp5_en <= sp5_group_a.v3p3_sp5_a1.enable;
+    sp5_group_a.v3p3_sp5_a1.pg <= v3p3_sp5_pg;
+    v1p8_sp5_en <= sp5_group_a.v1p8_sp5_a1.enable;
+    sp5_group_a.v1p8_sp5_a1.pg <= v1p8_sp5_pg;
+    -- group B enable and pg
+    v1p1_sp5_en <= sp5_group_b.v1p1_sp5.enable;
+    sp5_group_b.v1p1_sp5.pg <= v1p1_sp5_pg;
+    -- group C enables and pgs
+    vddio_sp5_en <= sp5_group_c.vddio_sp5_a0.enable;
+    sp5_group_c.vddio_sp5_a0.pg <= pwr_cont1_to_fpga1_vddio_sp5_pg;
+    vddcr_cpu1_en <= sp5_group_c.vddcr_cpu1.enable;
+    sp5_group_c.vddcr_cpu1.pg <= pwr_cont1_to_fpga1_vddcr_cpu1_pg;
+    vddcr_cpu0_en <= sp5_group_c.vddcr_cpu0.enable;
+    sp5_group_c.vddcr_cpu0.pg <= pwr_cont1_to_fpga1_vddcr_cpu0_pg;
+    vddcr_soc_en <= sp5_group_c.vddcr_soc.enable;
+    sp5_group_c.vddcr_soc.pg <= pwr_cont1_to_fpga1_vddcr_soc_pg;
+    -- nic rails
+    fpga1_to_nic_hsc_en <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.v1p5_nic_a0hp.pg <= v1p5_nic_a0hp_pg;
+    nic_rails.v1p2_nic_pcie_a0hp.pg <= v1p2_nic_pcie_a0hp_pg;
+    nic_rails.v1p2_nic_enet_a0hp.pg <= v1p2_nic_enet_a0hp_pg;
+    nic_rails.v3p3_nic_a0hp.pg <= v3p3_nic_a0hp_pg;
+    nic_rails.v1p1_nic_a0hp.pg <= v1p1_nic_enet_a0hp_pg;
+    -- TODO rev-1 cosmo missing readback on v1p4_nic_a0hp -- cascade enabled in hw from V5P0_NIC_A0HP
+    nic_rails.v0p96_nic_vdd_a0hp.pg <= v0p96_nic_vdd_a0hp_pg;
+    nic_rails.nic_hsc_12v.pg <= v12p0_nic_a0hp_pg;
+    nic_rails.nic_hsc_5v.pg <= v5p0_nic_a0hp_pg;
+
+    -- SP5 sequence-related pins
+    sp5_seq_pins.thermtrip_l <= sp5_to_fpga1_thermtrip_l;
+    fpga1_to_sp5_reset_l <= '0' when sp5_seq_pins.reset_l = '0' else 'Z';
+    sp5_seq_pins.pwr_ok <= sp5_to_fpga1_pwrok_unbuf;
+    fpga1_to_sp5_pwr_btn_l <= '0' when sp5_seq_pins.pwr_btn_l = '0' else 'Z';
+    sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
+    sp5_seq_pins.slp_s5_l <= sp5_to_fpga1_slp_s5_l;
+    fpga1_to_sp5_rsmrst_l <= sp5_seq_pins.rsmrst_l;
+    fpga1_to_sp5_pwrgd <= sp5_seq_pins.pwr_good;
+
+    -- Nic sequence-related pins
+    fpga1_to_nic_cld_rst_l <= nic_seq_pins.cld_rst_l;
+    fpga1_to_nic_eeprom_wp_l <= nic_seq_pins.eeprom_wp_l;
+    fpga1_to_pcie_clk_buff_nic_oe_l <= nic_seq_pins.nic_pcie_clk_buff_oe_l;
+    fpga1_to_nic_flash_wp_l <= nic_seq_pins.flash_wp_l;
+    fpga1_to_nic_mfg_mode_l <= nic_seq_pins.nic_mfg_mode_l;
+    nic_seq_pins.ext_rst_l <= nic_to_fpga1_ext_rst_l;
+    fpga1_to_nic_flash_eeprom_wp_buffer_oe_l <= nic_seq_pins.eeprom_wp_buffer_oe_l;
+    nic_seq_pins.sp5_mfg_mode_l <= sp5_to_nic_mfg_mode_l;
+    pcie_fpga1_to_nic_perst_l <= nic_seq_pins.perst_l;
+
+    
 end rtl;
