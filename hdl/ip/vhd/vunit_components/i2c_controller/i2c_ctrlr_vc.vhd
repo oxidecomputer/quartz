@@ -22,11 +22,13 @@ library vunit_lib;
     context vunit_lib.com_context;
 use vunit_lib.sync_pkg.all;
 
+use work.i2c_common_pkg.all;
 use work.i2c_ctrl_vc_pkg.all;
 
 entity i2c_controller_vc is
     generic (
-        i2c_ctrl_vc : i2c_ctrl_vc_t
+        i2c_ctrl_vc : i2c_ctrl_vc_t;
+        mode : mode_t := SIMULATION
     );
     port (
         scl : inout std_logic := 'Z';
@@ -35,10 +37,11 @@ entity i2c_controller_vc is
 end entity;
 
 architecture model of i2c_controller_vc is
-    constant sclk_per : time := 800 ns;
-    constant thd_sta : time := 200 ns;
-    constant tsu_sto : time := 200 ns;
-    constant tbuf : time := 200 ns;
+    constant settings : settings_t := get_i2c_settings(mode);
+    constant sclk_per : time := settings.fscl_period_ns * 1 ns;
+    constant thd_sta : time := settings.sta_su_hd_ns * 1 ns;
+    constant tsu_sto : time := settings.sto_su_ns * 1 ns;
+    constant tbuf : time := settings.sto_sta_buf_ns * 1 ns;
     type state_t is (IDLE, START, STOP, IN_DATA, OUT_DATA, ACK, NACK, GET_ACK_OR_NACK);
     signal state : state_t := IDLE;
     type flags_t is record

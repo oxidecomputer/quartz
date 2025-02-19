@@ -29,6 +29,7 @@ vhdl_unit(
 vhdl_unit(
     name = "i2c_controller_vc",
     srcs = glob(["i2c_controller/*.vhd"]),
+    deps = ["//hdl/ip/vhd/i2c/common:i2c_common_pkg"],
     visibility = ['PUBLIC'],
 )
 
