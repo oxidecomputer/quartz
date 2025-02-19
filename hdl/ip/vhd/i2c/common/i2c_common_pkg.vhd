@@ -14,6 +14,7 @@ package i2c_common_pkg is
     --
 
     type mode_t is (
+        SIMULATION, -- arbitrarily fast for simulation only
         STANDARD,   -- up to 100 Kbps
         FAST,       -- up to 400 Kbps
         FAST_PLUS   -- up to 1 Mbps
@@ -60,6 +61,15 @@ package body i2c_common_pkg is
         variable r : settings_t;
     begin
         case mode is
+            when SIMULATION =>
+                 r := (
+                    800,
+                    50, -- currently unused by our simulated controller
+                    200,
+                    200,
+                    200,
+                    50 -- currently unsed by our simulated controller
+                 );
             when STANDARD =>
                  r := (
                     10_000, -- 10^9 / 100_000Hz
