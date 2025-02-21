@@ -466,9 +466,9 @@ begin
     rx_data_valid   <= sm_reg.rx_data_valid;
 
     -- I2C is open-drain, so we only ever drive low
-    scl_if.o        <= '0';
+    scl_if.o        <= '0' when scl_oe else 'Z';
     scl_if.oe       <= scl_oe;
-    sda_if.o        <= '0';
+    sda_if.o        <= '0' when sm_reg.sda_oe else 'Z';
     sda_if.oe       <= sm_reg.sda_oe;
 
 end rtl;

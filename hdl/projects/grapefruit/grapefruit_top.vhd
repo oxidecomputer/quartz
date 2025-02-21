@@ -625,7 +625,7 @@ begin
                                 reg     => x"80",
                                 len     => x"10"
                             ),
-        i2c_command_valid   => '0',
+        -- i2c_command_valid   => '0',
         i2c_ctrlr_idle      => open,
         i2c_tx_st_if        => i2c_tx_st_if,
         i2c_rx_st_if        => i2c_rx_st_if

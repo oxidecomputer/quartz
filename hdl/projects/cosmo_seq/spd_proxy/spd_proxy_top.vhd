@@ -32,7 +32,7 @@ entity spd_proxy_top is
 
         -- FPGA I2C Interface
         i2c_command         : in cmd_t;
-        i2c_command_valid   : in std_logic;
+        i2c_command_valid   : in std_logic := '0';
         i2c_ctrlr_idle      : out std_logic;
         i2c_tx_st_if        : view stream8_pkg.st_sink_if;
         i2c_rx_st_if        : view stream8_pkg.st_source_if;
@@ -40,16 +40,28 @@ entity spd_proxy_top is
 end entity;
 
 architecture rtl of spd_proxy_top is
-    constant CPU_I2C_TSP_CYCLES : integer :=
+    constant DIMM_I2C_TSP_CYCLES : integer :=
         to_integer(calc_ns(get_i2c_settings(I2C_MODE).tsp_ns, CLK_PER_NS, 8));
+    constant CPU_I2C_TSP_CYCLES : integer :=
+        to_integer(calc_ns(get_i2c_settings(STANDARD).tsp_ns, CLK_PER_NS, 8));
     signal cpu_scl_filt         : std_logic;
     signal cpu_scl_fedge        : std_logic;
+    signal cpu_sda_filt         : std_logic;
     signal cpu_sda_fedge        : std_logic;
     signal cpu_sda_redge        : std_logic;
     signal cpu_start_detected   : std_logic;
     signal cpu_stop_detected    : std_logic;
     signal cpu_busy             : boolean;
     signal cpu_has_mux          : boolean;
+
+    signal dimm_scl_filt        : std_logic;
+    signal dimm_sda_filt        : std_logic;
+    signal dimm_sda_fedge       : std_logic;
+    signal dimm_sda_redge       : std_logic;
+
+    signal cpu_has_sda          : boolean;
+    signal cpu_sda_oe           : std_logic;
+    signal dimm_sda_oe          : std_logic;
 
     signal ctrlr_idle           : std_logic;
     signal ctrlr_scl_if         : tristate;
@@ -69,10 +81,27 @@ architecture rtl of spd_proxy_top is
     signal sda_sim_fedge    : std_logic;
     signal start_simulated  : std_logic;
 begin
+    dimm_glitch_filter_inst: entity work.i2c_glitch_filter
+        generic map(
+            filter_cycles   => DIMM_I2C_TSP_CYCLES
+        )
+        port map(
+            clk             => clk,
+            reset           => reset,
+            raw_scl         => dimm_scl_if.i,
+            raw_sda         => dimm_sda_if.i,
+            filtered_scl    => dimm_scl_filt,
+            scl_redge       => open,
+            scl_fedge       => open,
+            filtered_sda    => dimm_sda_filt,
+            sda_redge       => dimm_sda_redge,
+            sda_fedge       => dimm_sda_fedge
+        );
+
     --
     -- CPU bus monitoring
     --
-    i2c_glitch_filter_inst: entity work.i2c_glitch_filter
+    cpu_glitch_filter_inst: entity work.i2c_glitch_filter
         generic map(
             filter_cycles   => CPU_I2C_TSP_CYCLES
         )
@@ -84,7 +113,7 @@ begin
             filtered_scl    => cpu_scl_filt,
             scl_redge       => open,
             scl_fedge       => cpu_scl_fedge,
-            filtered_sda    => open,
+            filtered_sda    => cpu_sda_filt,
             sda_redge       => cpu_sda_redge,
             sda_fedge       => cpu_sda_fedge
         );
@@ -190,14 +219,40 @@ begin
     ctrlr_sda_if.i      <= fpga_sda_if.i when ctrlr_has_int_mux else '1';
 
     -- This mux controls if the CPU or the FPGA control the bus out to the DIMMs
-    cpu_has_mux     <= cpu_busy and i2c_ctrlr_idle = '1' and not need_start;
-    dimm_scl_if.o   <= cpu_scl_if.i when cpu_has_mux else fpga_scl_if.o;
-    dimm_scl_if.oe  <= not cpu_scl_if.i when cpu_has_mux else fpga_scl_if.oe;
-    dimm_sda_if.o   <= cpu_sda_if.i when cpu_has_mux else fpga_sda_if.o;
-    dimm_sda_if.oe  <= not cpu_sda_if.i when cpu_has_mux else fpga_sda_if.oe;
+    -- no need to control cpu_scl outputs as clock stretching is not supported
+
+
+
+    cpu_dimm_sda_arb: process(clk, reset)
+    begin
+        if reset then
+            cpu_has_sda     <= false;
+        elsif rising_edge(clk) and cpu_has_mux then
+            if not cpu_has_sda then
+                if cpu_sda_filt = '0' and dimm_sda_filt = '1' then
+                    cpu_has_sda     <= true;
+                end if;
+            elsif cpu_has_sda and cpu_sda_filt = '1' then
+                cpu_has_sda     <= dimm_sda_filt = '0';
+            end if;
+        end if;
+    end process;
+
+    dimm_scl_if.o       <= '0';
+    dimm_sda_if.o       <= '0';
+    cpu_sda_if.o        <= '0';
+
+    cpu_has_mux         <= cpu_busy and i2c_ctrlr_idle = '1' and not need_start;
+    dimm_scl_if.oe      <= not cpu_scl_filt when cpu_has_mux else fpga_scl_if.oe;
+
+    dimm_sda_oe     <= not cpu_sda_filt when cpu_has_sda else '0';
+    dimm_sda_if.oe  <= dimm_sda_oe when cpu_has_mux else fpga_sda_if.oe;
+
+    cpu_sda_oe      <= '0' when cpu_has_sda else not dimm_sda_filt;
+    cpu_sda_if.oe   <= cpu_sda_oe when cpu_has_mux else '0';
 
     -- Break the fpga input from the bus when it doesn't have the bus
-    fpga_scl_if.i  <= '1' when cpu_has_mux else dimm_scl_if.i;
-    fpga_sda_if.i  <= '1' when cpu_has_mux else dimm_sda_if.i;
+    fpga_scl_if.i  <= '1' when cpu_has_mux else dimm_scl_filt;
+    fpga_sda_if.i  <= '1' when cpu_has_mux else dimm_sda_filt;
 
 end architecture;

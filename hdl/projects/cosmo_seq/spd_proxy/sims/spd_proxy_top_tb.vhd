@@ -51,6 +51,7 @@ begin
         variable byte_idx   : natural;
 
         variable cpu_tx_q   : queue_t   := new_queue;
+        variable cpu_rx_q   : queue_t   := new_queue;
         variable cpu_ack_q  : queue_t   := new_queue;
         variable fpga_tx_q  : queue_t   := new_queue;
         variable fpga_exp_q : queue_t   := new_queue;
@@ -97,6 +98,9 @@ begin
                 end loop;
 
                 expect_stop(net, I2C_TGT_VC);
+            elsif run ("cpu_only_transaction") then
+                i2c_read_txn(net, address(I2C_TGT_VC), 1, cpu_rx_q, ack, I2C_CTRL_VC.p_actor);
+                check_true(ack, "Target should have ack'd its address");
             elsif run("cpu_transaction") then
                 -- Get the FPGA controller started on a transaction
                 init_controller;
