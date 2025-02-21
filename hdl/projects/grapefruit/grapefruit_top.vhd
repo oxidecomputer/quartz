@@ -570,8 +570,6 @@ begin
 
     i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
     i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
-    i3c_hpm_to_scm_dimm0_ghijkl_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm0_ghijkl_sda <= not counter(26);
 
     i3c_hpm_to_scm_dimm1_abcdef_scl <= not counter(26);
     i3c_hpm_to_scm_dimm1_abcdef_sda <= not counter(26);
@@ -580,13 +578,16 @@ begin
 
     i3c_scm_to_dimm0_abcdef_scl <= not counter(26);
     i3c_scm_to_dimm0_abcdef_sda <= not counter(26);
-    i3c_scm_to_dimm0_ghijkl_scl <= not counter(26);
-    i3c_scm_to_dimm0_ghijkl_sda <= not counter(26);
     
     i3c_scm_to_dimm1_abcdef_scl <= not counter(26);
     i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
     i3c_scm_to_dimm1_ghijkl_scl <= not counter(26);
     i3c_scm_to_dimm1_ghijkl_sda <= not counter(26);
 
-    
+    -- these signals are intentionally left unused due to the ruby rework on sapphire
+    -- i3c_hpm_to_scm_dimm0_ghijkl_scl
+    -- i3c_hpm_to_scm_dimm0_ghijkl_sda
+    -- i3c_scm_to_dimm0_ghijkl_scl
+    -- i3c_scm_to_dimm0_ghijkl_sda
+
 end rtl;
