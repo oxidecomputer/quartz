@@ -293,21 +293,11 @@ begin
                 v.sda_oe    := '0';
 
                 if tx_start then
-                    v.state         := WAIT_TBUF;
-                    v.counter       := STO_TO_STA_BUF_TICKS;
-                    v.count_load    := '1';
-                end if;
-
-            -- Wait out tbuf to ensure STOP/START spacing
-            when WAIT_TBUF =>
-                if sm_count_done then
-                    -- tbuf is always greater than or equal to the START setup requirement, skip to
-                    -- hold
+                    -- Coming back to IDLE after a transaction means we've waited out tbuf, and tbuf
+                    -- is always greater than or equal to the START setup requirement, skip to hold
                     v.state         := START_HOLD;
                     v.counter       := START_SETUP_HOLD_TICKS;
                     v.count_load    := '1';
-                else
-                    v.count_decr    := '1';
                 end if;
 
             when WAIT_REPEAT_START =>
@@ -369,7 +359,9 @@ begin
                         v.state         := ACK_RX;
                         v.bits_shifted  := 0;
                     elsif v.stop_requested then
-                        v.state         := STOP_SDA;
+                        -- this is a valid SDA transition cycle so drive SDA low and skip STOP_SDA
+                        v.state     := STOP_SCL;
+                        v.sda_oe    := '1';
                     else
                         v.sda_oe        := not sm_reg.tx_data(7);
                         v.tx_data       := sm_reg.tx_data(sm_reg.tx_data'high-1 downto sm_reg.tx_data'low) & '1';
@@ -433,7 +425,18 @@ begin
 
             when STOP_SETUP =>
                 if sm_count_done then
-                    v := SM_REG_RESET;
+                    v.state         := WAIT_TBUF;
+                    v.counter       := STO_TO_STA_BUF_TICKS;
+                    v.count_load    := '1';
+                    v.sda_oe        := '0';
+                else
+                    v.count_decr    := '1';
+                end if;
+
+            -- Wait out tbuf to ensure STOP/START spacing
+            when WAIT_TBUF =>
+                if sm_count_done then
+                    v   := SM_REG_RESET;
                 else
                     v.count_decr    := '1';
                 end if;

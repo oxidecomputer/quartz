@@ -14,7 +14,6 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.i2c_common_pkg.all;
-use work.i2c_common_pkg.all;
 use work.tristate_if_pkg.all;
 use work.stream8_pkg;
 
