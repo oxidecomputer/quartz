@@ -1,0 +1,13 @@
+python_binary(
+    name = 'cli',
+    main = 'cli.py',
+    deps = [':fpga_releaser_lib'],
+    visibility = ["PUBLIC"],
+)
+
+python_library(
+    name = 'fpga_releaser_lib',
+    srcs = glob(["*.py"]),
+    base_module = "fpga_releaser",
+    resources = glob(["*.toml"])
+)

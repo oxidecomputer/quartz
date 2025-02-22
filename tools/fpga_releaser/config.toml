@@ -1,0 +1,17 @@
+[cosmo-hp]
+job_name = "cosmo-hp-image"
+hubris_path = "drv/ice40-loader/cosmo-hp"
+builder = "buck2"
+toolchain = "yosys"
+
+[cosmo-seq]
+job_name = "cosmo-seq-image"
+hubris_path = "drv/spartan7-loader/cosmo-seq"
+builder = "buck2"
+toolchain = "vivado"
+
+[grapefruit]
+job_name = "gfruit-image"
+hubris_path = "drv/spartan7-loader/grapefruit"
+builder = "buck2"
+toolchain = "vivado"

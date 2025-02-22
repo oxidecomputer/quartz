@@ -34,6 +34,9 @@ vivado*.log
 /clockinfo.txt
 **/*clockInfo.txt
 *.txt
+*.zip
+*.fst
+*.vcd
 # Yep, even ignore Vivado core dump logs!
 *.log 
  

@@ -109,6 +109,22 @@ and use the shell to execute each line:
 
 `buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done`
 
+## Release tooling
+There's a rudimentary FPGA releaser tool that can be run as follows:
+`buck2 run //tools/fpga_releaser:cli -- --fpga <fpga-name> --hubris <path to root of hubris checkout>`
+This tool will fetch the latest main build of your chosen FPGA, download the build archive,
+collect the relevant files, create a GitHub releaes, copy the hubris-impacting files into the 
+appropriate location in hubris (for you to manually commit), write out the hubris README.md
+for these files and print some timing and utilization statistics.
+`--skip-gh` will skip doing the github release (mostly for testing)
+`--token` you can pass your github token in, your env will be checked for `GITHUB_TOKEN` if this is
+empty.
+
+Config information is stored in `tools/fpga_releaser/config.toml` which controls the fpga name
+to build image mapping, toolchain info, and hubris subdirectory information for each build.
+
+Currently, only buck2-based build archives are able to be processed, cobble-based stuff is
+not implemented.
 
 ## multitool
 multitool is a collection of quality of live utilities built in-tree for regular use, but whose
