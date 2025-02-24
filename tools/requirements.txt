@@ -3,5 +3,7 @@ click == 8.1.2
 Jinja2 == 3.1.5
 inflection == 0.5.1
 vunit_hdl == 5.0.0.dev5
-tomli-w == 1.0.0
+tomli-w == 1.2.0
+tomli == 2.2.1
 crc == 7.0.0
+requests == 2.32.3
