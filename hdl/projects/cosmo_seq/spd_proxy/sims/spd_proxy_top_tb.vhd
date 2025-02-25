@@ -39,43 +39,43 @@ begin
     bench: process
         alias reset is << signal th.reset : std_logic >>;
         variable rnd    : RandomPType;
-        variable i2c_ctrlr_msg : msg_t;
 
         variable command    : cmd_t;
-        variable ack        : boolean := false;
-
-        variable data       : std_logic_vector(7 downto 0);
-        variable exp_addr   : std_logic_vector(7 downto 0);
-        variable exp_data   : std_logic_vector(7 downto 0);
-        variable byte_len   : natural;
-        variable byte_idx   : natural;
+        variable txn_len    : natural   := 8;
 
         variable cpu_tx_q   : queue_t   := new_queue;
         variable cpu_rx_q   : queue_t   := new_queue;
         variable cpu_ack_q  : queue_t   := new_queue;
         variable fpga_tx_q  : queue_t   := new_queue;
-        variable fpga_exp_q : queue_t   := new_queue;
+        variable fpga_rx_q  : queue_t   := new_queue;
+        variable data_exp_q : queue_t   := new_queue;
 
-        -- helper to get the internal FPGA controller doing _something_ before we have the CPU
-        -- attempting to interrupt
-        procedure init_controller is
+        procedure checked_cpu_write_then_read is
         begin
-            -- arbitrary for the test
-            exp_addr    := X"00";
-            byte_len    := 8;
-            for i in 0 to byte_len - 1 loop
-                push_byte(fpga_tx_q, rnd.RandInt(0, 255));
+            -- start writing at a random address
+            push_byte(cpu_tx_q, rnd.RandInt(0, 255));
+            -- generate some random data to write
+            push_random_bytes(cpu_tx_q, txn_len);
+            -- save off a copy of the data to compare against later
+            data_exp_q := copy(cpu_tx_q);
+            i2c_write_txn(net, address(I2C_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
+            -- txn_len + START + register address
+            for i in 0 to txn_len + 1 loop
+                check_true(pop_boolean(cpu_ack_q), "Expected DIMMs to ack the CPU");
             end loop;
-            fpga_exp_q := copy(fpga_tx_q);
+            check_true(is_empty(cpu_ack_q), "Expected CPU ACK queue to be empty");
 
-            -- write some data in
-            command := (
-                op      => WRITE,
-                addr    => address(I2C_TGT_VC),
-                reg     => std_logic_vector(exp_addr), 
-                len     => to_std_logic_vector(byte_len, command.len'length)
-            );
-            issue_i2c_cmd(net, command, fpga_tx_q);
+            push_byte(cpu_tx_q, pop_byte(data_exp_q)); -- start reading at w/e address we wrote to
+            i2c_mixed_txn(net, address(I2C_TGT_VC), cpu_tx_q, txn_len, cpu_rx_q, cpu_ack_q, FALSE, I2C_CTRL_VC.p_actor);
+            check_true(pop_boolean(cpu_ack_q), "Expected DIMMs to ACK their address on WRITE");
+            check_true(pop_boolean(cpu_ack_q), "Expected DIMMs to ACK the the byte we write");
+            check_true(pop_boolean(cpu_ack_q), "Expected DIMMs to ACK their address on READ");
+            check_true(is_empty(cpu_ack_q), "Expected CPU ACK queue to be empty");
+
+            for i in 0 to txn_len-1 loop
+                check_equal(pop_byte(data_exp_q), pop_byte(cpu_rx_q), "Should have read what was written");
+            end loop;
+            check_true(is_empty(cpu_rx_q), "Expected CPU RX queue to be empty");
         end procedure;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -86,40 +86,45 @@ begin
         wait for 500 ns;  -- let the resets propagate
 
         while test_suite loop
-            if run("no_cpu_transaction") then
-                init_controller;
-
-                byte_idx := to_integer(exp_addr);
-                while not is_empty(fpga_exp_q) loop
-                    data        := to_std_logic_vector(pop_byte(fpga_exp_q), data'length);
-                    exp_addr    := to_std_logic_vector(byte_idx, exp_addr'length);
-                    check_written_byte(net, I2C_TGT_VC, data, exp_addr);
-                    byte_idx := byte_idx + 1;
-                end loop;
-
-                expect_stop(net, I2C_TGT_VC);
-            elsif run ("cpu_only_transaction") then
-                i2c_read_txn(net, address(I2C_TGT_VC), 1, cpu_rx_q, ack, I2C_CTRL_VC.p_actor);
-                check_true(ack, "Target should have ack'd its address");
-            elsif run("cpu_transaction") then
-                -- Get the FPGA controller started on a transaction
-                init_controller;
+            if run("fpga_only") then
+                -- Starting with an idle bus, let the FPGA controller do a transaction without
+                -- an interruption from the CPU
+                command := build_controller_write(X"00", txn_len, fpga_tx_q);
+                controller_write(net, command, fpga_tx_q);
+            elsif run("cpu_only") then
+                -- Starting with an idle bus, let the CPU do a write transaction then read it all
+                -- back out
+                checked_cpu_write_then_read;
+            elsif run("cpu_interrupt_fpga") then
+                -- Starting with an idle bus, get the FPGA moving on a transaction which will then
+                -- be interrupted by the CPU
+                command := build_controller_write(X"00", 8, fpga_tx_q);
+                controller_write(net, command, fpga_tx_q, FALSE); -- non-blocking
 
                 -- At some point into the transaction, have the CPU start its own
                 wait for rnd.RandInt(500, 4000) * 1 ns;
 
-                push_byte(cpu_tx_q, to_integer(rnd.RandSlv(0, 255, 8)));
-                i2c_write_txn(net, address(I2C_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
-
+                checked_cpu_write_then_read;
             elsif run("cpu_with_simulated_start") then
-                -- Get the FPGA controller started on a transaction
-                init_controller;
+                -- Starting with an idle bus, get the FPGA moving on a transaction which will then
+                -- be interrupted by the CPU
+                command := (
+                    op => READ,
+                    addr => address(I2C_TGT_VC),
+                    reg => X"00",
+                    len => to_std_logic_vector(txn_len, command.len'length)
+                );
+                -- we will be reading 0's as nothing has been written yet
+                for i in 0 to txn_len - 1 loop
+                    push_byte(data_exp_q, 0);
+                end loop;
+                -- we will issue a non blocking read since we just want to watch the CPU
+                -- interrupt it anyway
+                controller_read(net, command, fpga_rx_q, data_exp_q, FALSE);
 
                 -- At some point into the transaction, have the CPU start its own
                 wait for 9500 ns;
-
-                push_byte(cpu_tx_q, to_integer(rnd.RandSlv(0, 255, 8)));
-                i2c_write_txn(net, address(I2C_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
+                checked_cpu_write_then_read;
             end if;
         end loop;
 

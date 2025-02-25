@@ -120,8 +120,8 @@ entity grapefruit_top is
         i3c_scm_to_dimm0_ghijkl_sda: inout std_logic;
         i3c_scm_to_dimm1_abcdef_scl: inout std_logic;
         i3c_scm_to_dimm1_abcdef_sda: inout std_logic;
-        i3c_scm_to_dimm1_ghijkl_scl: inout std_logic;
-        i3c_scm_to_dimm1_ghijkl_sda: inout std_logic;
+        i3c_scm_to_dimm1_ghijkl_scl: out std_logic;
+        i3c_scm_to_dimm1_ghijkl_sda: out std_logic;
 
         hdt_scm_to_hpm_tck: out std_logic;
         hdt_scm_to_spm_tms: out std_logic;
@@ -592,8 +592,6 @@ begin
     
     i3c_scm_to_dimm1_abcdef_scl <= not counter(26);
     i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
-    i3c_scm_to_dimm1_ghijkl_scl <= not counter(26);
-    i3c_scm_to_dimm1_ghijkl_sda <= not counter(26);
 
     -- -- Ruby -> Grapefruit bus
     i3c_hpm_to_scm_dimm0_ghijkl_scl <= ruby_scl_if.o when ruby_scl_if.oe else 'Z';
@@ -609,7 +607,7 @@ begin
 
     spd_proxy_top_inst: entity work.spd_proxy_top
      generic map(
-        CLK_PER_NS  => 8,
+        CLK_PER_NS  => 20, -- clk @ 50MHz = 20ns period
         I2C_MODE    => FAST_PLUS
     )
      port map(
@@ -625,9 +623,12 @@ begin
                                 reg     => x"80",
                                 len     => x"10"
                             ),
-        -- i2c_command_valid   => '0',
-        i2c_ctrlr_idle      => open,
+        i2c_command_valid   => '0',
         i2c_tx_st_if        => i2c_tx_st_if,
-        i2c_rx_st_if        => i2c_rx_st_if
+        i2c_rx_st_if        => i2c_rx_st_if,
+        -- remove after debug
+        i2c_ctrlr_idle      => open,
+        cpu_has_sda         => i3c_scm_to_dimm1_ghijkl_scl,
+        dimm_has_sda        => i3c_scm_to_dimm1_ghijkl_sda
     );
 end rtl;

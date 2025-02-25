@@ -1,25 +1,27 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Fri Feb 21 21:51:02 2025
+[*] Tue Feb 25 21:42:13 2025
 [*]
-[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.spd_proxy_top_tb.cpu_transaction_e13d5379c3d590fe746ba9189081365671390392/nvc/spd_proxy_top_tb.fst"
-[dumpfile_mtime] "Fri Feb 21 21:49:31 2025"
-[dumpfile_size] 6245
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.spd_proxy_top_tb.cpu_only_d8d071ded9fe2c8c0d1e7acf1d193ed15f34fdb5/nvc/spd_proxy_top_tb.fst"
+[dumpfile_mtime] "Tue Feb 25 21:41:40 2025"
+[dumpfile_size] 7793
 [savefile] "/home/aaron/Oxide/git/quartz/hdl/projects/cosmo_seq/spd_proxy/sims/spd_proxy_top_tb.gtkw"
-[timestart] 99208000000
-[size] 1888 1283
-[pos] 1042 -22
-*-27.950308 100060000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[timestart] 0
+[size] 1632 1283
+[pos] -1 23
+*-38.539707 4200000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] spd_proxy_top_tb.
 [treeopen] spd_proxy_top_tb.th.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.
+[treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_glitch_filter_inst.
+[treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.dimm_glitch_filter_inst.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.
 [sst_width] 281
 [signals_width] 337
 [sst_expanded] 1
 [sst_vpaned_height] 382
-@29
+@28
 spd_proxy_top_tb.th.clk
 @200
 -CPU Bus
@@ -34,6 +36,13 @@ spd_proxy_top_tb.th.cpu_sda
 spd_proxy_top_tb.th.i2c_target_vc_inst.state
 spd_proxy_top_tb.th.dimm_scl
 spd_proxy_top_tb.th.dimm_sda
+@23
+spd_proxy_top_tb.th.i2c_target_vc_inst.reg_addr[7:0]
+@28
+spd_proxy_top_tb.th.i2c_target_vc_inst.rx_done
+spd_proxy_top_tb.th.i2c_target_vc_inst.rx_ackd
+@22
+spd_proxy_top_tb.th.i2c_target_vc_inst.rx_bit_count[3:0]
 @200
 -
 -FPGA Bus
@@ -49,9 +58,9 @@ spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_stop_detected
 spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_busy
 spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_has_mux
 spd_proxy_top_tb.th.spd_proxy_top_inst.ctrlr_has_int_mux
-spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_has_sda
-spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_sda_oe
-spd_proxy_top_tb.th.spd_proxy_top_inst.dimm_sda_oe
+spd_proxy_top_tb.th.spd_proxy_top_inst.sda_state
+spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_sda_filt
+spd_proxy_top_tb.th.spd_proxy_top_inst.dimm_sda_filt
 @200
 -
 -Simulated START State
