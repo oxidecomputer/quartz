@@ -13,6 +13,11 @@ package i2c_common_pkg is
     -- Link Layer
     --
 
+    type drive_t is (
+        OPEN_DRAIN,
+        PUSH_PULL
+    );
+
     type mode_t is (
         SIMULATION, -- arbitrarily fast for simulation only
         STANDARD,   -- up to 100 Kbps

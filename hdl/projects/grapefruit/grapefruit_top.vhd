@@ -600,11 +600,14 @@ begin
     ruby_sda_if.i   <= i3c_hpm_to_scm_dimm0_ghijkl_sda;
 
     -- -- Grapefruit -> DIMM bus
-    i3c_scm_to_dimm0_ghijkl_scl <= dimm_scl_if.o when dimm_scl_if.oe else 'Z';
+    -- i3c_scm_to_dimm0_ghijkl_scl <= dimm_scl_if.o when dimm_scl_if.oe else 'Z';
+    -- dimm_scl_if.i   <= i3c_scm_to_dimm0_ghijkl_scl;
+    -- i3c_scm_to_dimm0_ghijkl_sda <= dimm_sda_if.o when dimm_sda_if.oe else 'Z';
+    -- dimm_sda_if.i   <= i3c_scm_to_dimm0_ghijkl_sda;
+    i3c_scm_to_dimm0_ghijkl_scl <= '0' when dimm_scl_if.oe else '1';
     dimm_scl_if.i   <= i3c_scm_to_dimm0_ghijkl_scl;
-    i3c_scm_to_dimm0_ghijkl_sda <= dimm_sda_if.o when dimm_sda_if.oe else 'Z';
+    i3c_scm_to_dimm0_ghijkl_sda <= '0' when dimm_sda_if.oe else 'Z';
     dimm_sda_if.i   <= i3c_scm_to_dimm0_ghijkl_sda;
-
     spd_proxy_top_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS  => 20, -- clk @ 50MHz = 20ns period

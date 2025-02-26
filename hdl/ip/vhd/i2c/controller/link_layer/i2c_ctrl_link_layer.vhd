@@ -26,7 +26,8 @@ use work.i2c_common_pkg.all;
 entity i2c_ctrl_link_layer is
     generic (
         CLK_PER_NS  : positive;
-        MODE        : mode_t
+        MODE        : mode_t;
+        DRIVE       : drive_t;
     );
     port (
         clk             : in  std_logic;
@@ -118,7 +119,6 @@ architecture rtl of i2c_ctrl_link_layer is
         rx_data         : std_logic_vector(7 downto 0);
         rx_data_valid   : std_logic;
         tx_data         : std_logic_vector(7 downto 0);
-        sda_oe          : std_logic;
         rx_ack          : std_logic;
         rx_ack_valid    : std_logic;
     end record;
@@ -141,9 +141,8 @@ architecture rtl of i2c_ctrl_link_layer is
         (others => '0'),-- rx_data
         '0',            -- rx_data_valid
         (others => '0'),-- tx_data
-        '0',            -- sda_oe
-        '0',            -- rx_ack
-        '0'             -- rx_ack_valid
+        '0',            -- rx_ack_valid
+        '0'            -- rx_ack
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -158,6 +157,10 @@ architecture rtl of i2c_ctrl_link_layer is
 
     signal transition_sda   : std_logic;
     signal sda_in_syncd     : std_logic;
+
+    signal sda_oe   : std_logic;
+    signal sda_o    : std_logic;
+    signal scl_o    : std_logic;
 begin
 
     --
@@ -290,8 +293,6 @@ begin
 
             -- Ready and awaiting the next transaction
             when IDLE =>
-                v.sda_oe    := '0';
-
                 if tx_start then
                     -- Coming back to IDLE after a transaction means we've waited out tbuf, and tbuf
                     -- is always greater than or equal to the START setup requirement, skip to hold
@@ -311,8 +312,6 @@ begin
 
             -- In the event of a repeated START account for setup requirements
             when START_SETUP =>
-                v.sda_oe    := '0';
-
                 if sm_count_done then
                     v.state         := START_HOLD;
                     v.counter       := START_SETUP_HOLD_TICKS;
@@ -322,7 +321,6 @@ begin
                 end if;
 
             when START_HOLD =>
-                v.sda_oe    := '1';
                 if sm_count_done then
                     v.state         := HANDLE_NEXT;
                     v.scl_start     := '1'; -- drop SCL to finish START condition
@@ -359,11 +357,8 @@ begin
                         v.state         := ACK_RX;
                         v.bits_shifted  := 0;
                     elsif v.stop_requested then
-                        -- this is a valid SDA transition cycle so drive SDA low and skip STOP_SDA
                         v.state     := STOP_SCL;
-                        v.sda_oe    := '1';
                     else
-                        v.sda_oe        := not sm_reg.tx_data(7);
                         v.tx_data       := sm_reg.tx_data(sm_reg.tx_data'high-1 downto sm_reg.tx_data'low) & '1';
                         v.bits_shifted  := sm_reg.bits_shifted + 1;
                     end if;
@@ -371,8 +366,6 @@ begin
 
             -- See if the target ACKs
             when ACK_RX =>
-                v.sda_oe    := '0';
-
                 if scl_redge then
                     v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     v.rx_ack        := not sda_in_syncd;
@@ -381,8 +374,6 @@ begin
 
             -- Clock in a byte and then send an ACK
             when BYTE_RX =>
-                v.sda_oe    := '0';
-
                 if sm_reg.bits_shifted = 8 then
                     v.state         := ACK_TX;
                     v.rx_data_valid := '1';
@@ -394,15 +385,10 @@ begin
 
             -- ACK the target
             when ACK_TX =>
-                -- at the first transition_sda pulse start sending the (N)ACK
                 if transition_sda = '1' then
                     if sm_reg.ack_sending = '0' then
-                        v.sda_oe        := '1' when (tx_ack = '1' and v.stop_requested = '0')
-                                            else '0';
                         v.ack_sending   := '1';
                     else
-                        -- at the next transition point release the bus
-                        v.sda_oe        := '0';
                         v.ack_sending   := '0';
                         v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     end if;
@@ -412,7 +398,6 @@ begin
             when STOP_SDA =>
                 if transition_sda then
                     v.state     := STOP_SCL;
-                    v.sda_oe    := '1';
                 end if;
 
             when STOP_SCL =>
@@ -428,7 +413,6 @@ begin
                     v.state         := WAIT_TBUF;
                     v.counter       := STO_TO_STA_BUF_TICKS;
                     v.count_load    := '1';
-                    v.sda_oe        := '0';
                 else
                     v.count_decr    := '1';
                 end if;
@@ -465,10 +449,48 @@ begin
     rx_data         <= sm_reg.rx_data;
     rx_data_valid   <= sm_reg.rx_data_valid;
 
-    -- I2C is open-drain, so we only ever drive low
-    scl_if.o        <= '0' when scl_oe else 'Z';
+    scl_if.o        <= scl_o;
     scl_if.oe       <= scl_oe;
-    sda_if.o        <= '0' when sm_reg.sda_oe else 'Z';
-    sda_if.oe       <= sm_reg.sda_oe;
+
+    sda_if.o        <= sda_o;
+    sda_if.oe       <= sda_oe;
+
+    gen_drivers: if DRIVE = OPEN_DRAIN generate
+        scl_o   <= '0' when scl_oe else 'Z';
+        sda_o   <= '0' when sda_oe else 'Z';
+
+        process(clk, reset)
+        begin
+            if reset then
+                sda_oe  <= '0';
+            elsif rising_edge(clk) then
+                if sm_reg.state = IDLE or sm_reg.state = START_SETUP or sm_reg.state = ACK_RX
+                    or sm_reg.state = BYTE_RX then
+                    sda_oe  <= '0';
+                elsif sm_reg.state = START_HOLD or sm_reg.state = STOP_SCL then
+                    sda_oe  <= '1';
+                elsif sm_reg.state = BYTE_TX and transition_sda = '1' then
+                    if sm_reg.bits_shifted < 8  and sm_reg.stop_requested = '0' then
+                        sda_oe  <= not sm_reg.tx_data(7);
+                    end if;
+                elsif sm_reg.state = ACK_TX and transition_sda = '1' then
+                    -- at the first transition_sda pulse start sending the (N)ACK
+                    if sm_reg.ack_sending = '0' then
+                        sda_oe  <= '1' when (tx_ack = '1' and sm_reg.stop_requested = '0')
+                                            else '0';
+                    else
+                        -- at the next transition point release the bus
+                        sda_oe  <= '0';
+                    end if;
+                elsif sm_reg.state = STOP_SDA and transition_sda = '1' then
+                    -- drive SDA through final SCL cycle
+                    sda_oe  <= '1';
+                elsif sm_reg.state = STOP_SETUP and sm_count_done = '1' then
+                    sda_oe  <= '0';
+                end if;
+            end if;
+        end process;
+    elsif DRIVE = PUSH_PULL generate
+    end generate;
 
 end rtl;
