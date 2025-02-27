@@ -124,7 +124,7 @@ begin
             elsif run("write_and_read_many_bytes") then
                 -- arbitrary for the test
                 exp_addr    := X"00";
-                byte_len    := 8;
+                byte_len    := 16;
 
                 -- write some data in
                 command := (

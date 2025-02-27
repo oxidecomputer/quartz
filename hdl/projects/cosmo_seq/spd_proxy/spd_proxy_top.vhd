@@ -40,6 +40,10 @@ entity spd_proxy_top is
         i2c_ctrlr_idle      : out std_logic;
         cpu_has_sda         : out std_logic;
         dimm_has_sda        : out std_logic;
+        abort               : out std_logic;
+        stop_requested      : out std_logic;
+        tx_stop_dbg     : out std_logic;
+        txn_next_valid_dbg : out std_logic;
     );
 end entity;
 
@@ -213,7 +217,10 @@ begin
             abort       => cpu_busy,
             core_ready  => i2c_ctrlr_idle,
             tx_st_if    => i2c_tx_st_if,
-            rx_st_if    => i2c_rx_st_if
+            rx_st_if    => i2c_rx_st_if,
+            stop_requested => stop_requested,
+            tx_stop_dbg => tx_stop_dbg,
+            txn_next_valid_dbg => txn_next_valid_dbg
         );
 
     -- This mux controls if the I2C controller or the simulated START generator control the
@@ -279,6 +286,7 @@ begin
 
     cpu_has_sda     <= '1' when sda_state = CPU else '0';
     dimm_has_sda    <= '1' when sda_state = DIMM else '0';
+    abort           <= cpu_busy;
 
     cpu_has_mux     <= cpu_busy = '1' and i2c_ctrlr_idle = '1' and not need_start;
     dimm_scl_if.oe  <= '1' when cpu_has_mux else fpga_scl_if.oe;

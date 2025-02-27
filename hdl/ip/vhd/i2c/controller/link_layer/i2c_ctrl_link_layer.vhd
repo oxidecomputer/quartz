@@ -57,6 +57,11 @@ entity i2c_ctrl_link_layer is
         -- receive data
         rx_data         : out std_logic_vector(7 downto 0);
         rx_data_valid   : out std_logic;
+
+        -- TODO remove this
+        stop_requested : out std_logic;
+        tx_stop_dbg     : out std_logic;
+        txn_next_valid_dbg : out std_logic;
     );
 end entity;
 
@@ -192,8 +197,8 @@ begin
     scl_reg: process(clk, reset)
     begin
         if reset then
-            scl_o       <= '0';
-            scl_o_last  <= '0';
+            scl_o       <= '1';
+            scl_o_last  <= '1';
         elsif rising_edge(clk) then
             scl_o_last  <= scl_o;
 
@@ -262,7 +267,9 @@ begin
     --
     -- Link State Machine
     --
-
+    tx_stop_dbg       <= tx_stop;
+    txn_next_valid_dbg  <= txn_next_valid;
+    stop_requested <= sm_reg.stop_requested;
     sm_next_state: process(all)
         variable v  : sm_reg_t;
     begin

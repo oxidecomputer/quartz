@@ -114,12 +114,12 @@ entity grapefruit_top is
         i3c_hpm_to_scm_dimm1_ghijkl_scl: inout std_logic;
         i3c_hpm_to_scm_dimm1_ghijkl_sda: inout std_logic;
 
-        i3c_scm_to_dimm0_abcdef_scl: inout std_logic;
-        i3c_scm_to_dimm0_abcdef_sda: inout std_logic;
+        i3c_scm_to_dimm0_abcdef_scl: out std_logic;
+        i3c_scm_to_dimm0_abcdef_sda: out std_logic;
         i3c_scm_to_dimm0_ghijkl_scl: inout std_logic;
         i3c_scm_to_dimm0_ghijkl_sda: inout std_logic;
-        i3c_scm_to_dimm1_abcdef_scl: inout std_logic;
-        i3c_scm_to_dimm1_abcdef_sda: inout std_logic;
+        i3c_scm_to_dimm1_abcdef_scl: out std_logic;
+        i3c_scm_to_dimm1_abcdef_sda: out std_logic;
         i3c_scm_to_dimm1_ghijkl_scl: out std_logic;
         i3c_scm_to_dimm1_ghijkl_sda: out std_logic;
 
@@ -256,6 +256,10 @@ architecture rtl of grapefruit_top is
     -- stubs
     signal i2c_tx_st_if : stream8_pkg.data_channel;
     signal i2c_rx_st_if : stream8_pkg.data_channel;
+    constant FPGA_SPD_TRANSACTION : std_logic_vector(31 downto 0) :=
+        calc_us(10, 20, 32);
+    signal ctrlr_done : std_logic;
+    signal do_fpga_spd_txn : std_logic;
 begin
 
     espi_scm_to_hpm_alert_l <= 'Z';
@@ -579,19 +583,15 @@ begin
         sgpio1_ld => sgpio_scm_to_hpm_ld(1)
     );
 
-    i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
+    -- i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
+    -- i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
 
-    i3c_hpm_to_scm_dimm1_abcdef_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm1_abcdef_sda <= not counter(26);
-    i3c_hpm_to_scm_dimm1_ghijkl_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm1_ghijkl_sda <= not counter(26);
+    -- i3c_hpm_to_scm_dimm1_abcdef_scl <= not counter(26);
+    -- i3c_hpm_to_scm_dimm1_abcdef_sda <= not counter(26);
+    -- i3c_hpm_to_scm_dimm1_ghijkl_scl <= not counter(26);
+    -- i3c_hpm_to_scm_dimm1_ghijkl_sda <= not counter(26);
 
-    i3c_scm_to_dimm0_abcdef_scl <= not counter(26);
-    i3c_scm_to_dimm0_abcdef_sda <= not counter(26);
-    
-    i3c_scm_to_dimm1_abcdef_scl <= not counter(26);
-    i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
+
 
     -- -- Ruby -> Grapefruit bus
     i3c_hpm_to_scm_dimm0_ghijkl_scl <= ruby_scl_if.o when ruby_scl_if.oe else 'Z';
@@ -608,7 +608,26 @@ begin
     dimm_scl_if.i   <= i3c_scm_to_dimm0_ghijkl_scl;
     i3c_scm_to_dimm0_ghijkl_sda <= dimm_sda_if.o when dimm_sda_if.oe else 'Z';
     dimm_sda_if.i   <= i3c_scm_to_dimm0_ghijkl_sda;
-    spd_proxy_top_inst: entity work.spd_proxy_top
+
+    -- silly hacking things, connector J7
+    -- i3c_scm_to_dimm1_ghijkl_scl <= dimm_scl_if.oe; -- pin 5
+    i3c_scm_to_dimm1_ghijkl_sda <= do_fpga_spd_txn; -- pin 7
+    i3c_scm_to_dimm0_abcdef_scl <= ctrlr_done; -- pin 2
+    i3c_scm_to_dimm0_abcdef_sda <= dimm_scl_if.o; -- pin 4
+    -- i3c_scm_to_dimm1_abcdef_scl <= ; -- pin 1
+    -- i3c_scm_to_dimm1_abcdef_sda <= i3c_hpm_to_scm_dimm0_ghijkl_sda; -- pin 3
+
+    strobe_inst: entity work.strobe
+     generic map(
+        TICKS => to_integer(FPGA_SPD_TRANSACTION)
+    )
+     port map(
+        clk => clk,
+        reset => not reset_l,
+        enable => ctrlr_done,
+        strobe => do_fpga_spd_txn
+    );
+        spd_proxy_top_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS  => 20, -- clk @ 50MHz = 20ns period
         I2C_MODE    => FAST_PLUS
@@ -626,12 +645,16 @@ begin
                                 reg     => x"80",
                                 len     => x"10"
                             ),
-        i2c_command_valid   => '0',
+        i2c_command_valid   => do_fpga_spd_txn,
         i2c_tx_st_if        => i2c_tx_st_if,
         i2c_rx_st_if        => i2c_rx_st_if,
         -- remove after debug
-        i2c_ctrlr_idle      => open,
-        cpu_has_sda         => i3c_scm_to_dimm1_ghijkl_scl,
-        dimm_has_sda        => i3c_scm_to_dimm1_ghijkl_sda
+        i2c_ctrlr_idle      => ctrlr_done,
+        cpu_has_sda         => open,
+        dimm_has_sda        => open,
+        abort               => open,
+        stop_requested      => i3c_scm_to_dimm1_abcdef_sda,
+        tx_stop_dbg            => i3c_scm_to_dimm1_abcdef_scl,
+        txn_next_valid_dbg              => i3c_scm_to_dimm1_ghijkl_scl
     );
 end rtl;

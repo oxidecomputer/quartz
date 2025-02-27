@@ -46,6 +46,11 @@ entity i2c_ctrl_txn_layer is
 
         -- Received data stream
         rx_st_if    : view stream8_pkg.st_source_if;
+
+        -- TODO remove this
+        stop_requested        : out std_logic;
+        tx_stop_dbg     : out std_logic;
+        txn_next_valid_dbg : out std_logic;
     );
 end entity;
 
@@ -119,7 +124,10 @@ begin
         tx_ackd         => ll_ackd,
         tx_ackd_valid   => ll_ackd_valid,
         rx_data         => ll_rx_data,
-        rx_data_valid   => ll_rx_data_valid
+        rx_data_valid   => ll_rx_data_valid,
+        stop_requested  => stop_requested,
+        tx_stop_dbg     => tx_stop_dbg,
+        txn_next_valid_dbg => txn_next_valid_dbg
     );
 
     reg_sm_next: process(all)
@@ -248,7 +256,6 @@ begin
                             else tx_st_if.data;
         v.tx_byte_valid := txd_valid when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
                             else tx_st_if.valid;
-
         sm_reg_next <= v;
     end process;
 

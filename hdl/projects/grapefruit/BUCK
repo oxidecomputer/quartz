@@ -84,6 +84,7 @@ vhdl_unit(
         "//hdl/ip/vhd/common:streaming_if_pkg",
         "//hdl/ip/vhd/common:time_pkg",
         "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/synchronizers:tacd",
     ],
     standard = "2019",
 )

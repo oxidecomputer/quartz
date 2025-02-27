@@ -122,9 +122,10 @@ begin
             data    => rx_data_stream.data
         );
 
-    -- wire the bus to the controller's tristate ports
-    scl <= ctrl_scl_tristate.o when ctrl_scl_tristate.oe else 'H';
-    sda <= ctrl_sda_tristate.o when ctrl_sda_tristate.oe else 'H';
+    -- wire the bus to the controller's tristate ports, the controller is push-pull so we make it
+    -- open-drain here
+    scl <= '0' when (ctrl_scl_tristate.oe = '1' and ctrl_scl_tristate.o = '0') else 'H';
+    sda <= '0' when (ctrl_sda_tristate.oe = '1' and ctrl_sda_tristate.o = '0') else 'H';
     ctrl_scl_tristate.i     <= scl;
     ctrl_sda_tristate.i     <= sda;
 
