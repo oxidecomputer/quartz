@@ -26,7 +26,6 @@ entity i2c_ctrl_txn_layer is
     generic (
         CLK_PER_NS  : positive;
         MODE        : mode_t;
-        DRIVE       : drive_t;
     );
     port (
         clk         :   in  std_logic;
@@ -103,8 +102,7 @@ begin
     i2c_ctrl_link_layer_inst: entity work.i2c_ctrl_link_layer
      generic map(
         CLK_PER_NS  => CLK_PER_NS,
-        MODE        => MODE,
-        DRIVE       => DRIVE
+        MODE        => MODE
     )
      port map(
         clk             => clk,
@@ -141,7 +139,7 @@ begin
 
             -- watch for a new command to arrive then kick off a START
             when IDLE =>
-                if cmd_valid = '1' and ll_ready = '1' then
+                if cmd_valid = '1' and ll_ready = '1' and abort = '0' then
                     v.state     := START;
                     v.cmd       := cmd;
                 end if;

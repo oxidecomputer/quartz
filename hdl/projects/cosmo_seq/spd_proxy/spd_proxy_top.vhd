@@ -63,7 +63,7 @@ architecture rtl of spd_proxy_top is
     signal cpu_sda_redge        : std_logic;
     signal cpu_start_detected   : std_logic;
     signal cpu_stop_detected    : std_logic;
-    signal cpu_busy             : boolean;
+    signal cpu_busy             : std_logic;
     signal cpu_has_mux          : boolean;
 
     signal dimm_scl_filt        : std_logic;
@@ -136,13 +136,13 @@ begin
     bus_monitor: process(clk, reset)
     begin
         if reset then
-            cpu_busy    <= false;
+            cpu_busy    <= '0';
             need_start  <= false;
         elsif rising_edge(clk) then
             if cpu_start_detected then
-                cpu_busy    <= true;
+                cpu_busy    <= '1';
             elsif cpu_stop_detected then
-                cpu_busy    <= false;
+                cpu_busy    <= '0';
             end if;
 
             -- The FPGA still owns the bus and the START hold time as elapsed. This means before
@@ -210,7 +210,7 @@ begin
             sda_if      => ctrlr_sda_if,
             cmd         => i2c_command,
             cmd_valid   => i2c_command_valid,
-            abort       => cpu_start_detected,
+            abort       => cpu_busy,
             core_ready  => i2c_ctrlr_idle,
             tx_st_if    => i2c_tx_st_if,
             rx_st_if    => i2c_rx_st_if
@@ -242,7 +242,7 @@ begin
         elsif rising_edge(clk) then
             sda_next := sda_state;
             if cpu_has_mux then
-                if sda_update_cntr = DIMM_I2C_TSP_CYCLES + 5 then
+                if sda_update_cntr = DIMM_I2C_TSP_CYCLES + 7 then
                     case sda_state is
                         when NEITHER =>
                             if cpu_sda_filt = '0' and dimm_sda_filt = '1' then
@@ -280,14 +280,13 @@ begin
     cpu_has_sda     <= '1' when sda_state = CPU else '0';
     dimm_has_sda    <= '1' when sda_state = DIMM else '0';
 
-    cpu_has_mux     <= cpu_busy and i2c_ctrlr_idle = '1' and not need_start;
-    dimm_scl_if.o   <= '0';
-    dimm_scl_if.oe  <= not cpu_scl_filt when cpu_has_mux else fpga_scl_if.oe;
+    cpu_has_mux     <= cpu_busy = '1' and i2c_ctrlr_idle = '1' and not need_start;
+    dimm_scl_if.oe  <= '1' when cpu_has_mux else fpga_scl_if.oe;
+    dimm_scl_if.o   <= cpu_scl_filt when cpu_has_mux else fpga_scl_if.o;
 
     dimm_sda_oe     <= not cpu_sda_filt when sda_state = CPU else '0';
     dimm_sda_if.oe  <= dimm_sda_oe when cpu_has_mux else fpga_sda_if.oe;
-    dimm_sda_if.o   <= '0';
-
+    dimm_sda_if.o   <= '0' when cpu_has_mux else fpga_sda_if.o;
 
     cpu_sda_oe      <= not dimm_sda_filt when sda_state = DIMM else '0';
     cpu_sda_if.oe   <= cpu_sda_oe when cpu_has_mux else '0';
