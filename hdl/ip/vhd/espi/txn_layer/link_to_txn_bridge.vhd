@@ -135,6 +135,7 @@ qspi_resp_fifo: entity work.dcfifo_xpm
             -- NORMAL MODE
             txn_cmd.valid <= not qspi_cmd_slow_rempty;
             txn_cmd.data <= qspi_cmd_slow_rdata;
+            gen_cmd.ready <= '0';
             -- we don't drive qspi_cmd here b/c it's a fast signal
             qspi_cmd_rdack <= txn_cmd.valid and txn_cmd.ready;
             gen_resp.valid <= '0';
