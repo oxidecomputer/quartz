@@ -109,7 +109,7 @@ begin
     --  avail:
     --   if we read down to empty, move to not avail
     
-    orphan_timer: process(clk)
+    orphan_timer: process(clk, reset)
     begin
         if reset then
             fifo_thresh_timer <= (others => '0');
