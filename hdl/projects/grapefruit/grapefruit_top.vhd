@@ -257,7 +257,7 @@ architecture rtl of grapefruit_top is
     signal i2c_tx_st_if : stream8_pkg.data_channel;
     signal i2c_rx_st_if : stream8_pkg.data_channel;
     constant FPGA_SPD_TRANSACTION : std_logic_vector(31 downto 0) :=
-        calc_us(10, 20, 32);
+        calc_us(50, 8, 32);
     signal ctrlr_done : std_logic;
     signal do_fpga_spd_txn : std_logic;
 begin
@@ -622,19 +622,19 @@ begin
         TICKS => to_integer(FPGA_SPD_TRANSACTION)
     )
      port map(
-        clk => clk,
-        reset => not reset_l,
+        clk => clk_125m,
+        reset => reset_125m,
         enable => ctrlr_done,
         strobe => do_fpga_spd_txn
     );
         spd_proxy_top_inst: entity work.spd_proxy_top
      generic map(
-        CLK_PER_NS  => 20, -- clk @ 50MHz = 20ns period
+        CLK_PER_NS  => 8, -- clk @ 125MHz = 8ns period
         I2C_MODE    => FAST_PLUS
     )
      port map(
-        clk                 => clk,
-        reset               => not reset_l,
+        clk                 => clk_125m,
+        reset               => reset_125m,
         cpu_scl_if          => ruby_scl_if,
         cpu_sda_if          => ruby_sda_if,
         dimm_scl_if         => dimm_scl_if,
@@ -645,7 +645,7 @@ begin
                                 reg     => x"80",
                                 len     => x"10"
                             ),
-        i2c_command_valid   => do_fpga_spd_txn,
+        i2c_command_valid   => '0',
         i2c_tx_st_if        => i2c_tx_st_if,
         i2c_rx_st_if        => i2c_rx_st_if,
         -- remove after debug

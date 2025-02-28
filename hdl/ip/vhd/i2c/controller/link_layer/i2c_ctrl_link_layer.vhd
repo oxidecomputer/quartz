@@ -161,8 +161,8 @@ architecture rtl of i2c_ctrl_link_layer is
         (others => '0'),-- tx_data
         '0',            -- rx_ack
         '0',            -- rx_ack_valid
-        '0',            -- sda_o
-        '0'             -- sda_oe
+        '1',            -- sda_o
+        '1'             -- sda_oe
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -272,6 +272,7 @@ begin
     stop_requested <= sm_reg.stop_requested;
     sm_next_state: process(all)
         variable v  : sm_reg_t;
+        variable counter_done : boolean;
     begin
         v   := sm_reg;
 
@@ -305,6 +306,9 @@ begin
             v.stop_requested := '1' when tx_stop = '1' and txn_next_valid = '1' else '0';
         end if;
 
+        -- It takes a cycle for load to propagate and the counter to reflect the new value.
+        counter_done := sm_count_done = '1' and sm_reg.count_load = '0';
+
         case sm_reg.state is
 
             -- Ready and awaiting the next transaction
@@ -335,7 +339,7 @@ begin
                 v.sda_oe        := '1';
                 v.count_decr    := '1';
 
-                if sm_count_done then
+                if counter_done then
                     v.state         := START_HOLD;
                     v.counter       := START_SETUP_HOLD_TICKS;
                     v.count_load    := '1';
@@ -345,7 +349,7 @@ begin
                 v.sda_o         := '0';
                 v.sda_oe        := '1';
                 v.count_decr    := '1';
-                if sm_count_done then
+                if counter_done then
                     v.state         := HANDLE_NEXT;
                     v.scl_start     := '1'; -- drop SCL to finish START condition
                     v.scl_active    := '1'; -- begin free running counter for SCL transitions
@@ -400,7 +404,7 @@ begin
                 v.sda_oe        := '1';
                 v.count_decr    := '1';
 
-                if sm_count_done then
+                if counter_done then
                     v.to_rx_ack := '0';
                     if sm_reg.to_rx_ack then
                         v.state := ACK_RX;
@@ -467,7 +471,7 @@ begin
 
             when STOP_SETUP =>
                 v.count_decr    := '1';
-                if sm_count_done then
+                if counter_done then
                     v.state         := WAIT_TBUF;
                     v.counter       := STO_TO_STA_BUF_TICKS;
                     v.count_load    := '1';
@@ -478,7 +482,7 @@ begin
             -- Wait out tbuf to ensure STOP/START spacing
             when WAIT_TBUF =>
                 v.count_decr    := '1';
-                if sm_count_done then
+                if counter_done then
                     v   := SM_REG_RESET;
                 end if;
 
