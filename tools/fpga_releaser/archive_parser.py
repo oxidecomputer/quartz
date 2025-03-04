@@ -5,9 +5,14 @@
 # the nextpnr log at that same directory called nextpnr.log
 # all the stuff in the _maps_ directory at that same level
 
-def get_relevant_files_from_buck_zip(zip):
+def get_relevant_files_from_buck_zip(fpga_name, zip):
     zip_names = []
     for item in zip.infolist():
+        # folders use _ instead of -
+        if fpga_name not in item.filename and fpga_name.replace('-', '_') not in item.filename:
+            # filter out stuff without the fpga name in it
+            # (might be other projects if local build etc)
+            continue
         if item.filename.endswith(".bz2"):
             zip_names.append(item.filename)
         if "/maps/" in item.filename and (item.filename.endswith(".json") or item.filename.endswith(".html")):

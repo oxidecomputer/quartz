@@ -20,6 +20,7 @@ parser.add_argument("--token", default=None, help="Pass in your GitHub personal 
 parser.add_argument("--branch", default="main", help="Quartz branch to use for the artifact")
 parser.add_argument("--fpga", help="Name of FPGA project to release")
 parser.add_argument("--hubris", default=None, help="Path to hubris git checkout as target for copying files. Will skip if None")
+parser.add_argument("--local", default=False, action="store_true", help="Path to local build directory. Will skip if None")
 parser.add_argument("--skip-gh", default=False, action="store_true", help="Skip doing GH release. Note that doing this still generates release metadata that just will be wrong")
 parser.add_argument("--zip", default=None, help="Path to zip file to use instead of downloading from GitHub")
 
@@ -49,6 +50,15 @@ def main():
     print(f"Processing {args.fpga} with builder {project_info.builder}")
 
     # Get build archive
+    if args.local:
+        print("Using local build directory")
+        # make a zip file from the local build directory
+        zip_file = make_buck2_zip()
+        args.zip = str(zip_file)
+
+    if args.zip:
+        project_info.local = True
+    
     zip_file = process_gh_build(args, api, project_info.job_name)
     project_info.add_archive(zip_file)
     
@@ -99,10 +109,24 @@ def get_latest_artifact_info(api, fpga_name: str, branch: str = "main") -> dict:
     artifacts = sorted(artifacts, key=lambda x: arrow.get(x["created_at"]), reverse=True)
     return artifacts[0]
 
+
 def download_artifact(api: GhApi, artifact_inf: dict):
     print(f"Downloading artifact {artifact_inf['name']} from GH: {artifact_inf['workflow_run']['head_branch']}")
     r = requests.get(artifact_inf["archive_download_url"], auth=("oxidecomputer", os.getenv("GITHUB_TOKEN", None)))
     return zipfile.ZipFile(io.BytesIO(r.content))
+
+
+def make_buck2_zip():
+    """
+    Create a zip file from the buck2 build directory.
+    """
+    import shutil
+    # Create object of ZipFile
+    zipfile_path = Path.cwd() / Path("buck_out.zip")
+    folder = Path.cwd() / "buck-out" / "v2" / "gen" / "root"
+    shutil.make_archive(zipfile_path.with_suffix(''), 'zip', folder)
+    return zipfile_path
+
 
 if __name__ == '__main__':
     main()

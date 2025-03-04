@@ -28,6 +28,7 @@ class FPGAImage:
         self.gh_release_name = ""
         self.gh_release_url = ""
         self.gh_build_sha = ""
+        self.local = False
 
     @classmethod
     def from_dict(cls, fpga_name, data: dict):
@@ -77,7 +78,7 @@ class FPGAImage:
         """
         self.archive = archive
         if self.builder == "buck2":
-            self.filenames = get_relevant_files_from_buck_zip(self.archive)
+            self.filenames = get_relevant_files_from_buck_zip(self.name, self.archive)
 
     def add_build_sha(self, sha):
         self.gh_build_sha = sha
@@ -141,9 +142,13 @@ class FPGAImage:
             raise NotImplementedError
         
     def make_readme_contents(self):
-        txt = ("FPGA images and collateral are generated from:\n"
-               f"[this sha](https://github.com/oxidecomputer/quartz/commit/{self.gh_build_sha})\n"
-               f"[release]({self.gh_release_url})")
+        if not self.local:
+            txt = ("FPGA images and collateral are generated from:\n"
+                   f"[this sha](https://github.com/oxidecomputer/quartz/commit/{self.gh_build_sha})\n"
+                   f"[release]({self.gh_release_url})")
+        else:
+            # This is some local build
+            txt = ("FPGA images and collateral are generated from some hw guy's local build\n")
         return txt
         
 
@@ -154,11 +159,9 @@ def get_config(fpga_name):
     with open(config_toml, "rb") as f:
         config = tomli.load(f)
 
-        print(config.keys())
-
     known_fpga = config.get(fpga_name, None)
     if known_fpga is None:
         raise ValueError(f"FPGA {fpga_name} not found in config.")
 
     return FPGAImage.from_dict(fpga_name, config)
-            
+
