@@ -18,6 +18,8 @@ set report_file [lindex $argv 1]
 # synthesis related settings
 set_part {{project.part}}
 
+# Turn inferred latch warnings into errors
+
 # Load the sources
 {% for source in project.sources %}
 {% set suffix = source.path.suffix %}
@@ -57,3 +59,9 @@ report_utilization -file $report_file
 source {{file.absolute().as_posix()}}
 {% endfor %}
 write_checkpoint -force $output_checkpoint
+
+# WARNING: [Synth 8-327] inferring latch for variable ....
+if {[get_msg_config -count -id {Synth 8-327}] != 0} {
+    puts "ERROR: One or more inferred latches were found. Please check the synthesis report for details: WARNING: [Synth 8-327] inferring latch for...."
+    exit 1
+}
