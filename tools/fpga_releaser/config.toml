@@ -1,6 +1,6 @@
 [cosmo-hp]
 job_name = "cosmo-hp-image"
-hubris_path = "drv/ice40-loader/cosmo-hp"
+hubris_path = "drv/cosmo-seq-server/cosmo-hp"
 builder = "buck2"
 toolchain = "yosys"
 
