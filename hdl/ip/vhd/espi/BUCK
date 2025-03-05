@@ -2,21 +2,21 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "espi_spec_regs_pkg",
+    name = "espi_spec_regs_rdl",
     src = "espi_spec_regs.rdl",
     outputs = ["espi_spec_regs_pkg.vhd", "espi_spec_regs.html"],
     visibility = ['PUBLIC']
 )
 
 rdl_file(
-    name = "vwire_regs_pkg",
+    name = "vwire_regs_rdl",
     src = "vwire_channel/vwire_regs.rdl",
     outputs = ["vwire_regs_pkg.vhd", "vwire_regs.html"],
     visibility = ['PUBLIC']
 )
 
 rdl_file(
-    name = "espi_regs_pkg",
+    name = "espi_regs_rdl",
     src = "sys_regs/espi_regs.rdl",
     outputs = ["espi_regs_pkg.vhd", "espi_regs.html"],
     visibility = ['PUBLIC']
@@ -33,9 +33,9 @@ vhdl_unit(
         "vwire_channel/*.vhd",
         "*.vhd"]),
     deps = [
-        ":espi_spec_regs_pkg",
-        ":espi_regs_pkg",
-        ":vwire_regs_pkg",
+        ":espi_spec_regs_rdl",
+        ":espi_regs_rdl",
+        ":vwire_regs_rdl",
         "//hdl/ip/vhd/common:calc_pkg",
         "//hdl/ip/vhd/common:time_pkg",
         "//hdl/ip/vhd/synchronizers:meta_sync",

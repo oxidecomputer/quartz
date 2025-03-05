@@ -2,9 +2,9 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "i2c_mux_regs_pkg",
+    name = "emulated_pca9545_regs_rdl",
     src = "emulated_pca9545_regs.rdl",
-    outputs = ["i2c_mux_regs_pkg.vhd", "i2c_mux_regs.html"],
+    outputs = ["emulated_pca9545_regs_pkg.vhd", "emulated_pca9545_regs.html"],
     visibility = ['PUBLIC']
 )
 
@@ -14,7 +14,7 @@ vhdl_unit(
     srcs = glob(["*.vhd"]),
     deps = [
         "//hdl/ip/vhd/i2c/target:i2c_target_phy",
-        ":i2c_mux_regs_pkg",
+        ":emulated_pca9545_regs_rdl",
     ],
     visibility = ['PUBLIC']
 )

@@ -2,7 +2,7 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "info_regs_pkg",
+    name = "info_regs_rdl",
     src = "info_regs.rdl",
     outputs = ["info_regs_pkg.vhd", "info_regs.html"],
     visibility = ['PUBLIC']
@@ -32,7 +32,7 @@ vhdl_unit(
     srcs = ["info_2k8.vhd"],
     deps = [
         ":git_sha_pkg",
-        ":info_regs_pkg",
+        ":info_regs_rdl",
         ],
     standard = "2008",
     visibility = ['PUBLIC']

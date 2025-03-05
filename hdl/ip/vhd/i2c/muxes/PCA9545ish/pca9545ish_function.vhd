@@ -16,7 +16,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.i2c_base_types_pkg.all;
-use work.i2c_mux_regs_pkg.all;
+use work.emulated_pca9545_regs_pkg.all;
 
 
 entity pca9545ish_function is
