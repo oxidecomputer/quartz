@@ -2,7 +2,14 @@
 // This is SystemRDL description of the sw-accessible registers in the Gimlet
 // Sequencer FPGA.
 
+property addr_span_bytes {
+    type=number;
+    component=addrmap;
+    default=0x100;
+    };
+
 addrmap espi_regs {
+    
     name = "espi system registers";
     desc = "Registers accessible on the Axi bus for debug and testing of the espi target";
 

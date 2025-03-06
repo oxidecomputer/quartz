@@ -2,9 +2,9 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "pca9506_regs_pkg",
+    name = "pca9506_regs_rdl",
     src = "pca9506_regs.rdl",
-    outputs = ["pca9506_regs_pkg.vhd", "pca9506_regs_pkg.html"],
+    outputs = ["pca9506_regs_pkg.vhd", "pca9506_regs.html"],
     visibility = ['PUBLIC']
 )
 
@@ -13,7 +13,7 @@ vhdl_unit(
     srcs = glob(["*.vhd"]),
     deps = [
         "//hdl/ip/vhd/i2c/target:i2c_target_phy",
-        ":pca9506_regs_pkg",
+        ":pca9506_regs_rdl",
     ],
     visibility = ['PUBLIC']
 )

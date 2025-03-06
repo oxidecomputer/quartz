@@ -13,7 +13,7 @@ use ieee.numeric_std_unsigned.all;
 use work.axil_common_pkg.all;
 use work.axil8x32_pkg;
 
-use work.grapefruit_regs_pkg.all;
+use work.gfruit_regs_pkg.all;
 
 entity registers is 
     port (

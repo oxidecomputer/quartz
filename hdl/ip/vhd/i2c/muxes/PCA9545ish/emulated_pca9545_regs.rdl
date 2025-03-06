@@ -1,7 +1,7 @@
 // Copyright 2025 Oxide Computer Company
 // This is SystemRDL description of emulated i2c mux registers
 
-addrmap emulated_pca9545 {
+addrmap emulated_pca9545_regs {
     name = "pca9545 registers";
     desc = "Registers accessible on the i2c bus for controlling the emulated PCA9545 i2c mux";
 

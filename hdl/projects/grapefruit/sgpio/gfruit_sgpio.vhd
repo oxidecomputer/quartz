@@ -18,7 +18,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.axil8x32_pkg.all;
 
-use work.sgpio_regs_pkg.all;
+use work.gfruit_sgpio_regs_pkg.all;
 
 entity gfruit_sgpio is
     port (
