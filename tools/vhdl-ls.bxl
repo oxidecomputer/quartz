@@ -83,7 +83,7 @@ def vhdl_toml_gen(ctx):
             #ctx.output.print("No sources found for {}".format(file))
             continue
         lib_name = attrs.library.value()
-        # We allow empty library names, but need to dump them into a defaul
+        # We allow empty library names, but need to dump them into a default
         # library, and it can't be named "work" due to continued confusion
         # around 'work' not being an *actual* library name see
         # https://insights.sigasi.com/tech/work-not-vhdl-library/
@@ -97,6 +97,12 @@ def vhdl_toml_gen(ctx):
         files.extend(srcs)
         files_by_library_name.update({"{}".format(lib_name): {"files": files}})
     
+    # I'd like to find a better way of passing is_third_party in through the tooling, but it's 
+    # complicated by the fact that I'd need to figure out if all the files in a library are third
+    # party since vhdl-ls only supports is_third_party at the library level. For now, we're going
+    # to special case xpm if it exits in the worklib and set is_third_party to true
+    if files_by_library_name.get("xpm", []):
+        files_by_library_name.update({"xpm": {"is_third_party": True}})
     # Now load the vhdl from RDL files into worklib
     worklib_files = files_by_library_name.get("worklib", {"files": []}).get("files")
     worklib_files.extend(gen_vhdl)
