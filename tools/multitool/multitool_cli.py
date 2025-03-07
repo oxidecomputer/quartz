@@ -77,7 +77,22 @@ def vunit_files():
     ret = {}
     ret["vunit_lib"] = []
     ret["osvvm"] = []
-    for file in vunit_vhdl.rglob("*.vhd"):
+    excludes = [
+        "tb_com_codec.vhd",
+        "93",
+        "2002",
+        "MemoryPkg_c",
+        "ScoreboardPkg_int_c",
+        "ScoreboardPkg_slv_c",
+        "MemoryPkg_orig",
+        "VendorCovApiPkg_Aldec",
+        "location_pkg-body-2019"
+        
+    ]
+    vunit_vhdl_files = vunit_vhdl.rglob("*.vhd")
+    # filter out exclusions
+    vunit_vhdl_files = [f for f in vunit_vhdl_files if not any(ex in str(f) for ex in excludes)]
+    for file in vunit_vhdl_files:
         if "osvvm" in str(file):
             lib = "osvvm"
         else:
@@ -119,7 +134,9 @@ def vhdl_ls_toml_gen(args):
 
     # Now combine these with the vunit and osvvm files we just found
     vunit["vunit_lib"]["files"].extend(our_vunit_files)
+    vunit["vunit_lib"]["is_third_party"] = True
     osvvm["osvvm"]["files"].extend(our_osvvm_files)
+    osvvm["osvvm"]["is_third_party"] = True
 
     # Update the running structure with these new libraries
     vhdl_lsp_dict["libraries"].update(vunit)
@@ -181,7 +198,7 @@ format_parser.add_argument(
     "--no-fix", 
     action="store_true", 
     default=False,
-    help="Don't fix files, just print erros and warnings to stdout"
+    help="Don't fix files, just print errors and warnings to stdout"
 )
 
 # create the parser for the "lsp-toml" command
