@@ -1,20 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Tue Feb 25 21:42:13 2025
+[*] Fri Feb 28 22:34:47 2025
 [*]
-[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.spd_proxy_top_tb.cpu_only_d8d071ded9fe2c8c0d1e7acf1d193ed15f34fdb5/nvc/spd_proxy_top_tb.fst"
-[dumpfile_mtime] "Tue Feb 25 21:41:40 2025"
-[dumpfile_size] 7793
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.spd_proxy_top_tb.fpga_only_371830484086f5e0222e16b4b98776cce102e070/nvc/spd_proxy_top_tb.fst"
+[dumpfile_mtime] "Fri Feb 28 22:33:32 2025"
+[dumpfile_size] 5426
 [savefile] "/home/aaron/Oxide/git/quartz/hdl/projects/cosmo_seq/spd_proxy/sims/spd_proxy_top_tb.gtkw"
-[timestart] 0
-[size] 1632 1283
+[timestart] 7520000000
+[size] 1376 1283
 [pos] -1 23
-*-38.539707 4200000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-32.539707 10484000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] spd_proxy_top_tb.
 [treeopen] spd_proxy_top_tb.th.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.cpu_glitch_filter_inst.
-[treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.dimm_glitch_filter_inst.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.
 [treeopen] spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.
 [sst_width] 281
@@ -36,19 +35,28 @@ spd_proxy_top_tb.th.cpu_sda
 spd_proxy_top_tb.th.i2c_target_vc_inst.state
 spd_proxy_top_tb.th.dimm_scl
 spd_proxy_top_tb.th.dimm_sda
-@23
+@22
 spd_proxy_top_tb.th.i2c_target_vc_inst.reg_addr[7:0]
 @28
 spd_proxy_top_tb.th.i2c_target_vc_inst.rx_done
 spd_proxy_top_tb.th.i2c_target_vc_inst.rx_ackd
 @22
 spd_proxy_top_tb.th.i2c_target_vc_inst.rx_bit_count[3:0]
+@28
+spd_proxy_top_tb.th.i2c_cmd_vc_inst.valid
+spd_proxy_top_tb.th.i2c_target_vc_inst.tx_done
+@22
+spd_proxy_top_tb.th.i2c_target_vc_inst.tx_bit_count[3:0]
+@28
+spd_proxy_top_tb.th.i2c_target_vc_inst.sda_oe
 @200
 -
 -FPGA Bus
 @28
 spd_proxy_top_tb.th.spd_proxy_top_inst.fpga_scl_if.i
+spd_proxy_top_tb.th.spd_proxy_top_inst.fpga_sda_if.o
 spd_proxy_top_tb.th.spd_proxy_top_inst.fpga_sda_if.i
+spd_proxy_top_tb.th.spd_proxy_top_inst.fpga_sda_if.oe
 @200
 -
 -SPD Proxy Logic
@@ -83,5 +91,7 @@ spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.state
 @28
 spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.stop_requested
 spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.state
+@25
+spd_proxy_top_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.bits_shifted
 [pattern_trace] 1
 [pattern_trace] 0

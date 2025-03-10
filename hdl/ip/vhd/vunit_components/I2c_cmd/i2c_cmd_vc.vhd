@@ -60,7 +60,7 @@ begin
             valid   <= '1';
 
             -- once the command is accepted, release valid
-            wait until not ready;
+            wait for 1000 ns;
             valid   <= '0';
         elsif msg_type = abort_msg then
             abort   <= '1';

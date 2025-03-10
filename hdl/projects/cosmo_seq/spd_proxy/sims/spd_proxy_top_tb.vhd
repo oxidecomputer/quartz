@@ -90,6 +90,7 @@ begin
                 -- Starting with an idle bus, let the FPGA controller do a transaction without
                 -- an interruption from the CPU
                 command := build_controller_write(X"00", txn_len, fpga_tx_q);
+                -- controller_write(net, command, fpga_tx_q, FALSE);
                 controller_write(net, command, fpga_tx_q);
             elsif run("cpu_only") then
                 -- Starting with an idle bus, let the CPU do a write transaction then read it all

@@ -40,10 +40,6 @@ entity spd_proxy_top is
         i2c_ctrlr_idle      : out std_logic;
         cpu_has_sda         : out std_logic;
         dimm_has_sda        : out std_logic;
-        abort               : out std_logic;
-        stop_requested      : out std_logic;
-        tx_stop_dbg     : out std_logic;
-        txn_next_valid_dbg : out std_logic;
     );
 end entity;
 
@@ -94,6 +90,9 @@ architecture rtl of spd_proxy_top is
     signal sda_sim          : std_logic;
     signal sda_sim_fedge    : std_logic;
     signal start_simulated  : std_logic;
+
+    signal cpu_seen         : boolean;
+    signal fpga_txn_valid   : std_logic;
 begin
     dimm_glitch_filter_inst: entity work.i2c_glitch_filter
         generic map(
@@ -142,6 +141,7 @@ begin
         if reset then
             cpu_busy    <= '0';
             need_start  <= false;
+            cpu_seen    <= false;
         elsif rising_edge(clk) then
             if cpu_start_detected then
                 cpu_busy    <= '1';
@@ -155,6 +155,10 @@ begin
                 need_start  <= true;
             elsif start_simulated then
                 need_start  <= false;
+            end if;
+
+            if cpu_busy = '1' and not cpu_seen then
+                cpu_seen    <= true;
             end if;
         end if;
     end process;
@@ -201,6 +205,8 @@ begin
             done    => start_simulated
         );
 
+    fpga_txn_valid  <= '1' when cpu_seen and i2c_command_valid = '1' else '0';
+        -- fpga_txn_valid <= i2c_command_valid;
     -- FPGA I2C controller
     i2c_ctrl_txn_layer_inst: entity work.i2c_ctrl_txn_layer
         generic map(
@@ -213,14 +219,11 @@ begin
             scl_if      => ctrlr_scl_if,
             sda_if      => ctrlr_sda_if,
             cmd         => i2c_command,
-            cmd_valid   => i2c_command_valid,
+            cmd_valid   => fpga_txn_valid,
             abort       => cpu_busy,
             core_ready  => i2c_ctrlr_idle,
             tx_st_if    => i2c_tx_st_if,
-            rx_st_if    => i2c_rx_st_if,
-            stop_requested => stop_requested,
-            tx_stop_dbg => tx_stop_dbg,
-            txn_next_valid_dbg => txn_next_valid_dbg
+            rx_st_if    => i2c_rx_st_if
         );
 
     -- This mux controls if the I2C controller or the simulated START generator control the
@@ -286,7 +289,6 @@ begin
 
     cpu_has_sda     <= '1' when sda_state = CPU else '0';
     dimm_has_sda    <= '1' when sda_state = DIMM else '0';
-    abort           <= cpu_busy;
 
     cpu_has_mux     <= cpu_busy = '1' and i2c_ctrlr_idle = '1' and not need_start;
     dimm_scl_if.oe  <= '1' when cpu_has_mux else fpga_scl_if.oe;

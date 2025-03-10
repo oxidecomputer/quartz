@@ -193,6 +193,7 @@ begin
     receive_sm: process
     begin
         wait until rising_edge(scl);
+        wait for 1 fs;
         rx_done <= FALSE;
         if state = GET_ACK then
             -- '0' = ACK, '1' = NACK
@@ -221,9 +222,18 @@ begin
         variable txd : std_logic_vector(7 downto 0) := (others => '0');
     begin
         wait until falling_edge(scl);
+        wait for 1 fs;
         tx_done <= FALSE;
-        -- delay the SDA transition to a bit after SCL falls to allow the controller to release SDA
-        wait for 100 ns;
+
+        if (state = SEND_ACK or state = SEND_NACK or state = SEND_BYTE)
+            and tx_bit_count = 0 then
+            -- delay the SDA transition to a bit after SCL falls to allow the controller to release SDA
+            wait for 300 ns;
+        else
+            -- we are no longer driving the bus
+            sda_oe  <= '0';
+        end if;
+
         if state = SEND_ACK or state = SEND_NACK then
             sda_oe          <= '1' when state = SEND_ACK else '0';
             tx_bit_count    <= to_unsigned(1, tx_bit_count'length);

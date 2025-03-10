@@ -57,11 +57,6 @@ entity i2c_ctrl_link_layer is
         -- receive data
         rx_data         : out std_logic_vector(7 downto 0);
         rx_data_valid   : out std_logic;
-
-        -- TODO remove this
-        stop_requested : out std_logic;
-        tx_stop_dbg     : out std_logic;
-        txn_next_valid_dbg : out std_logic;
     );
 end entity;
 
@@ -84,7 +79,7 @@ architecture rtl of i2c_ctrl_link_layer is
     -- tightest requirement here (obviously) at 450ns, so by design we will always transition well
     -- prior to that since we don't have a reason not to. 
     constant SDA_TRANSITION_TICKS   : positive :=
-        to_integer(calc_ns(300, CLK_PER_NS, 5));
+        to_integer(calc_ns(400, CLK_PER_NS, 8));
 
     constant TSP_TICKS : positive := to_integer(calc_ns(SETTINGS.tsp_ns, CLK_PER_NS, 8));
 
@@ -267,9 +262,6 @@ begin
     --
     -- Link State Machine
     --
-    tx_stop_dbg       <= tx_stop;
-    txn_next_valid_dbg  <= txn_next_valid;
-    stop_requested <= sm_reg.stop_requested;
     sm_next_state: process(all)
         variable v  : sm_reg_t;
         variable counter_done : boolean;
@@ -281,8 +273,6 @@ begin
         v.count_decr    := '0';
         v.count_clr     := '0';
         v.scl_start     := '0';
-        v.rx_ack        := '0';
-        v.rx_ack_valid  := '0';
         v.rx_data_valid := '0';
 
         -- Every time we see a falling edge on SCL we count the number of cycles until we should
@@ -356,6 +346,7 @@ begin
                 end if;
 
             when HANDLE_NEXT =>
+                v.rx_ack_valid  := '0';
                 if v.stop_requested then
                     v.state := STOP_SDA;
                 elsif txn_next_valid then
@@ -372,23 +363,28 @@ begin
                         v.tx_data       := tx_data;
                     else
                         -- if nothing else, read
-                        v.state         := SDA_HANDOFF;
-                        v.counter       := SDA_HANDOFF_TICKS;
-                        v.count_load    := '1';
+                        v.state         := BYTE_RX;
+                        -- v.counter       := SDA_HANDOFF_TICKS;
+                        -- v.count_load    := '1';
                     end if;
                 end if;
 
             -- Clock out a byte and then wait for an ACK
             when BYTE_TX =>
+                -- release the bus 
                 v.sda_oe    := '1';
-                if transition_sda = '1' then
-                    if sm_reg.bits_shifted = 8 then
-                        v.state         := SDA_HANDOFF;
-                        v.counter       := SDA_HANDOFF_TICKS;
-                        v.count_load    := '1';
-                        v.to_rx_ack     := '1';
-                        v.bits_shifted  := 0;
-                    elsif v.stop_requested then
+
+                if sm_reg.bits_shifted = 8 and scl_fedge = '1' then
+                    v.state         := ACK_RX;
+                    v.bits_shifted  := 0;
+                elsif transition_sda = '1' then
+                    -- if sm_reg.bits_shifted = 8 then
+                        -- v.state         := ACK_RX;
+                        -- -- v.counter       := SDA_HANDOFF_TICKS;
+                        -- -- v.count_load    := '1';
+                        -- -- v.to_rx_ack     := '1';
+                        -- v.bits_shifted  := 0;
+                    if v.stop_requested then
                         -- this is a valid SDA transition cycle so drive SDA low and skip STOP_SDA
                         v.state := STOP_SCL;
                         v.sda_o := '0';
@@ -400,27 +396,28 @@ begin
                 end if;
 
             when SDA_HANDOFF =>
-                v.sda_o         := '1';
-                v.sda_oe        := '1';
-                v.count_decr    := '1';
+                -- v.sda_o         := '1';
+                -- v.sda_oe        := '1';
+                -- v.count_decr    := '1';
 
-                if counter_done then
+                -- if counter_done then
                     v.to_rx_ack := '0';
                     if sm_reg.to_rx_ack then
                         v.state := ACK_RX;
                     else
                         v.state := BYTE_RX;
                     end if;
-                end if;
+                -- end if;
 
             -- See if the target ACKs
             when ACK_RX =>
                 v.sda_oe    := '0';
 
                 if scl_redge then
-                    v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     v.rx_ack        := not sda_in_syncd;
+                elsif scl_fedge then
                     v.rx_ack_valid  := '1';
+                    v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                 end if;
 
             -- Clock in a byte and then send an ACK

@@ -611,9 +611,9 @@ begin
 
     -- silly hacking things, connector J7
     -- i3c_scm_to_dimm1_ghijkl_scl <= dimm_scl_if.oe; -- pin 5
-    i3c_scm_to_dimm1_ghijkl_sda <= do_fpga_spd_txn; -- pin 7
+    -- i3c_scm_to_dimm1_ghijkl_sda <= do_fpga_spd_txn; -- pin 7
     i3c_scm_to_dimm0_abcdef_scl <= ctrlr_done; -- pin 2
-    i3c_scm_to_dimm0_abcdef_sda <= dimm_scl_if.o; -- pin 4
+    i3c_scm_to_dimm0_abcdef_sda <= do_fpga_spd_txn; -- pin 4
     -- i3c_scm_to_dimm1_abcdef_scl <= ; -- pin 1
     -- i3c_scm_to_dimm1_abcdef_sda <= i3c_hpm_to_scm_dimm0_ghijkl_sda; -- pin 3
 
@@ -627,7 +627,7 @@ begin
         enable => ctrlr_done,
         strobe => do_fpga_spd_txn
     );
-        spd_proxy_top_inst: entity work.spd_proxy_top
+    spd_proxy_top_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS  => 8, -- clk @ 125MHz = 8ns period
         I2C_MODE    => FAST_PLUS
@@ -645,16 +645,12 @@ begin
                                 reg     => x"80",
                                 len     => x"10"
                             ),
-        i2c_command_valid   => '0',
+        i2c_command_valid   => do_fpga_spd_txn,
         i2c_tx_st_if        => i2c_tx_st_if,
         i2c_rx_st_if        => i2c_rx_st_if,
         -- remove after debug
         i2c_ctrlr_idle      => ctrlr_done,
-        cpu_has_sda         => open,
-        dimm_has_sda        => open,
-        abort               => open,
-        stop_requested      => i3c_scm_to_dimm1_abcdef_sda,
-        tx_stop_dbg            => i3c_scm_to_dimm1_abcdef_scl,
-        txn_next_valid_dbg              => i3c_scm_to_dimm1_ghijkl_scl
+        cpu_has_sda         => i3c_scm_to_dimm1_ghijkl_scl,
+        dimm_has_sda        => i3c_scm_to_dimm1_ghijkl_sda
     );
 end rtl;
