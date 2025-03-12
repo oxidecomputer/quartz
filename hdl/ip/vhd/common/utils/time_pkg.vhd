@@ -30,6 +30,11 @@ package time_pkg is
         return_size : positive
     ) return std_logic_vector;
 
+    function calc_ms (
+        desired_ms : positive;
+        clk_period_ns : positive
+    ) return positive;
+
     --! Determine clocks required at `clk_period_ns` to cross `desired_us` time (in microseconds)
     function calc_us (
         desired_us : positive;
@@ -43,6 +48,11 @@ package time_pkg is
         return_size : positive
     ) return std_logic_vector;
 
+    function calc_us (
+        desired_us : positive;
+        clk_period_ns : positive
+    ) return positive;
+
     --! Determine clocks required at `clk_period_ns` to cross `desired_ns` time (in nanoseconds)
     function calc_ns (
         desired_ns : positive;
@@ -55,6 +65,11 @@ package time_pkg is
         clk_period_ns : positive;
         return_size : positive
     ) return std_logic_vector;
+
+    function calc_ns (
+        desired_ns : positive;
+        clk_period_ns : positive
+    ) return positive;
 
     -- Not intended to be part of the public api, used by above functions
     function private_internal_calc (
@@ -92,6 +107,14 @@ package body time_pkg is
         return std_logic_vector(unsigned'(calc_us(desired_us, clk_period_ns, return_size)));
     end;
 
+    function calc_us (
+        desired_us : positive;
+        clk_period_ns : positive
+    ) return positive is
+    begin
+        return to_integer(calc_us(desired_us, clk_period_ns, 32));
+    end;
+
     function calc_ms (
         desired_ms : positive;
         clk_period_ns : positive;
@@ -113,6 +136,14 @@ package body time_pkg is
         return std_logic_vector(unsigned'(calc_ms(desired_ms, clk_period_ns, return_size)));
     end;
 
+    function calc_ms (
+        desired_ms : positive;
+        clk_period_ns : positive
+    ) return positive is
+    begin
+        return to_integer(calc_ms(desired_ms, clk_period_ns, 32));
+    end;
+
     function calc_ns (
         desired_ns : positive;
         clk_period_ns : positive;
@@ -131,6 +162,14 @@ package body time_pkg is
     ) return std_logic_vector is
     begin
         return std_logic_vector(unsigned'(calc_ns(desired_ns, clk_period_ns, return_size)));
+    end;
+
+    function calc_ns (
+        desired_ns : positive;
+        clk_period_ns : positive
+    ) return positive is
+    begin
+        return to_integer(calc_ns(desired_ns, clk_period_ns, 32));
     end;
 
     -- Private helper function, not intended to be part of the public api, used by above functions

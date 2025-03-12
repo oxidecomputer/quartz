@@ -4,7 +4,7 @@ load("//tools:rdl.bzl", "rdl_file")
 rdl_file(
     name = "info_regs_rdl",
     src = "info_regs.rdl",
-    outputs = ["info_regs_pkg.vhd", "info_regs.html"],
+    outputs = ["info_regs_pkg.vhd", "info_regs.html", "info_regs.json"],
     visibility = ['PUBLIC']
 )
 
@@ -12,6 +12,7 @@ rdl_file(
 # There are a lot of better ways this might be done, but this was the simplest.
 # It does mean there's a re-build for any change to the git repo, but for now that's fine.
 # Longer-term, we might evaluate backannotating ROMs or something with this build info
+# This also breaks windows due to shell use
 genrule(
     name = "git_sha",
     out = "git_sha_pkg.vhd",
