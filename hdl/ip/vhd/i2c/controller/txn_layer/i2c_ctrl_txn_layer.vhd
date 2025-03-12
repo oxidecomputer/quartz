@@ -139,7 +139,7 @@ begin
 
             -- watch for a new command to arrive then kick off a START
             when IDLE =>
-                if cmd_valid = '1' and ll_ready = '1' then
+                if cmd_valid = '1' and ll_ready = '1' and abort = '0' then
                     v.state     := START;
                     v.cmd       := cmd;
                 end if;

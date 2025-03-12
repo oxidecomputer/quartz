@@ -7,7 +7,9 @@
 -- I2C Control Link Layer
 --
 -- This block handles the bit-level details of an I2C transaction. It requires higher order logic
--- to actually orchestrate the transaction and is designed for use with i2c_ctrl_txn_layer.
+-- to actually orchestrate the transaction and is designed for use with i2c_ctrl_txn_layer. This
+-- block is written such that the tristate interfaces are push-pull, but that is trivial to change
+-- to open-drain at a higher level if desired.
 --
 -- Notes:
 -- - This block currently does not support block stretching.
@@ -118,32 +120,34 @@ architecture rtl of i2c_ctrl_link_layer is
         rx_data         : std_logic_vector(7 downto 0);
         rx_data_valid   : std_logic;
         tx_data         : std_logic_vector(7 downto 0);
-        sda_oe          : std_logic;
         rx_ack          : std_logic;
         rx_ack_valid    : std_logic;
+        sda_o           : std_logic;
+        sda_oe          : std_logic;
     end record;
 
     constant SM_REG_RESET   : sm_reg_t := (
-        IDLE,           -- state
-        0,              -- bits_shifted
-        '0',            -- ready
-        '0',            -- scl_start
-        '0',            -- scl_active
-        '0',            -- sda_hold
-        (others => '0'),-- counter
-        '0',            -- count_load
-        '0',            -- count_decr
-        '0',            -- count_clr
-        '0',            -- transition_sda_cntr_en
-        '0',            -- ack_sending
-        '0',            -- sr_scl_fedge_seen
-        '0',            -- stop_requested
-        (others => '0'),-- rx_data
-        '0',            -- rx_data_valid
-        (others => '0'),-- tx_data
-        '0',            -- sda_oe
-        '0',            -- rx_ack
-        '0'             -- rx_ack_valid
+        state => IDLE,
+        bits_shifted => 0,
+        ready => '0',
+        scl_start => '0',
+        scl_active => '0',
+        sda_hold => '0',
+        counter => (others => '0'),
+        count_load => '0',
+        count_decr => '0',
+        count_clr => '0',
+        transition_sda_cntr_en => '0',
+        ack_sending => '0',
+        sr_scl_fedge_seen => '0',
+        stop_requested => '0',
+        rx_data => (others => '0'),
+        rx_data_valid => '0',
+        tx_data => (others => '0'),
+        rx_ack => '0',
+        rx_ack_valid =>'0',
+        sda_o => '1',
+        sda_oe => '1'
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -151,8 +155,8 @@ architecture rtl of i2c_ctrl_link_layer is
     signal sm_count_done    : std_logic;
 
     signal scl_toggle   : std_logic;
-    signal scl_oe       : std_logic;
-    signal scl_oe_last  : std_logic;
+    signal scl_o        : std_logic;
+    signal scl_o_last   : std_logic;
     signal scl_redge    : std_logic;
     signal scl_fedge    : std_logic;
 
@@ -176,25 +180,23 @@ begin
         );
 
     scl_reg: process(clk, reset)
-        variable scl_oe_next : std_logic := '0';
     begin
         if reset then
-            scl_oe      <= '0';
-            scl_oe_last <= '0';
+            scl_o       <= '1';
+            scl_o_last  <= '1';
         elsif rising_edge(clk) then
-            scl_oe_last <= scl_oe;
-            scl_oe_next := not scl_oe;
+            scl_o_last  <= scl_o;
 
             if not sm_reg.scl_active then
-                scl_oe  <= '0';
+                scl_o   <= '1';
             elsif scl_toggle = '1' or sm_reg.scl_start = '1' then
-                scl_oe  <= scl_oe_next;
+                scl_o   <= not scl_o;
             end if;
         end if;
     end process;
 
-    scl_redge   <= '1' when scl_oe = '0' and scl_oe_last = '1' else '0';
-    scl_fedge   <= '1' when scl_oe = '1' and scl_oe_last = '0' else '0';
+    scl_redge   <= '1' when scl_o = '1' and scl_o_last = '0' else '0';
+    scl_fedge   <= '1' when scl_o = '0' and scl_o_last = '1' else '0';
 
     --
     -- SDA Control
@@ -252,7 +254,8 @@ begin
     --
 
     sm_next_state: process(all)
-        variable v  : sm_reg_t;
+        variable v : sm_reg_t;
+        variable counter_done : boolean;
     begin
         v   := sm_reg;
 
@@ -261,8 +264,6 @@ begin
         v.count_decr    := '0';
         v.count_clr     := '0';
         v.scl_start     := '0';
-        v.rx_ack        := '0';
-        v.rx_ack_valid  := '0';
         v.rx_data_valid := '0';
 
         -- Every time we see a falling edge on SCL we count the number of cycles until we should
@@ -286,11 +287,15 @@ begin
             v.stop_requested := '1' when tx_stop = '1' and txn_next_valid = '1' else '0';
         end if;
 
+        -- It takes a cycle for load to propagate and the counter to reflect the new value.
+        counter_done := sm_count_done = '1' and sm_reg.count_load = '0';
+
         case sm_reg.state is
 
             -- Ready and awaiting the next transaction
             when IDLE =>
-                v.sda_oe    := '0';
+                v.sda_o     := '1';
+                v.sda_oe    := '1';
 
                 if tx_start then
                     -- Coming back to IDLE after a transaction means we've waited out tbuf, and tbuf
@@ -311,27 +316,28 @@ begin
 
             -- In the event of a repeated START account for setup requirements
             when START_SETUP =>
-                v.sda_oe    := '0';
+                v.sda_o         := '1';
+                v.sda_oe        := '1';
+                v.count_decr    := '1';
 
-                if sm_count_done then
+                if counter_done then
                     v.state         := START_HOLD;
                     v.counter       := START_SETUP_HOLD_TICKS;
                     v.count_load    := '1';
-                else
-                    v.count_decr    := '1';
                 end if;
 
             when START_HOLD =>
-                v.sda_oe    := '1';
-                if sm_count_done then
+                v.sda_o         := '0';
+                v.sda_oe        := '1';
+                v.count_decr    := '1';
+                if counter_done then
                     v.state         := HANDLE_NEXT;
                     v.scl_start     := '1'; -- drop SCL to finish START condition
                     v.scl_active    := '1'; -- begin free running counter for SCL transitions
-                else
-                    v.count_decr    := '1';
                 end if;
 
             when HANDLE_NEXT =>
+                v.rx_ack_valid  := '0';
                 if v.stop_requested then
                     v.state := STOP_SDA;
                 elsif txn_next_valid then
@@ -353,17 +359,19 @@ begin
                 end if;
 
             -- Clock out a byte and then wait for an ACK
-            when BYTE_TX =>                    
-                if transition_sda = '1' then
+            when BYTE_TX =>
+                v.sda_oe    := '1';
+
+                if transition_sda then
                     if sm_reg.bits_shifted = 8 then
                         v.state         := ACK_RX;
                         v.bits_shifted  := 0;
                     elsif v.stop_requested then
                         -- this is a valid SDA transition cycle so drive SDA low and skip STOP_SDA
                         v.state     := STOP_SCL;
-                        v.sda_oe    := '1';
+                        v.sda_o     := '0';
                     else
-                        v.sda_oe        := not sm_reg.tx_data(7);
+                        v.sda_o         := sm_reg.tx_data(7);
                         v.tx_data       := sm_reg.tx_data(sm_reg.tx_data'high-1 downto sm_reg.tx_data'low) & '1';
                         v.bits_shifted  := sm_reg.bits_shifted + 1;
                     end if;
@@ -374,8 +382,9 @@ begin
                 v.sda_oe    := '0';
 
                 if scl_redge then
-                    v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     v.rx_ack        := not sda_in_syncd;
+                elsif scl_fedge then
+                    v.state         := STOP_SDA when v.stop_requested else HANDLE_NEXT;
                     v.rx_ack_valid  := '1';
                 end if;
 
@@ -394,11 +403,12 @@ begin
 
             -- ACK the target
             when ACK_TX =>
+                v.sda_oe := '1';
                 -- at the first transition_sda pulse start sending the (N)ACK
-                if transition_sda = '1' then
+                if transition_sda then
                     if sm_reg.ack_sending = '0' then
-                        v.sda_oe        := '1' when (tx_ack = '1' and v.stop_requested = '0')
-                                            else '0';
+                        v.sda_o         := '0' when (tx_ack = '1' and v.stop_requested = '0')
+                                            else '1';
                         v.ack_sending   := '1';
                     else
                         -- at the next transition point release the bus
@@ -412,6 +422,7 @@ begin
             when STOP_SDA =>
                 if transition_sda then
                     v.state     := STOP_SCL;
+                    v.sda_o     := '0';
                     v.sda_oe    := '1';
                 end if;
 
@@ -424,23 +435,21 @@ begin
                 end if;
 
             when STOP_SETUP =>
-                if sm_count_done then
+                v.count_decr    := '1';
+                if counter_done then
                     v.state         := WAIT_TBUF;
                     v.counter       := STO_TO_STA_BUF_TICKS;
                     v.count_load    := '1';
-                    v.sda_oe        := '0';
-                else
-                    v.count_decr    := '1';
+                    v.sda_o         := '1';
+                    v.sda_oe        := '1';
                 end if;
 
             -- Wait out tbuf to ensure STOP/START spacing
             when WAIT_TBUF =>
-                if sm_count_done then
+                v.count_decr    := '1';
+                if counter_done then
                     v   := SM_REG_RESET;
-                else
-                    v.count_decr    := '1';
                 end if;
-
         end case;
 
         v.ready := '1' when v.state = IDLE or
@@ -466,9 +475,9 @@ begin
     rx_data_valid   <= sm_reg.rx_data_valid;
 
     -- I2C is open-drain, so we only ever drive low
-    scl_if.o        <= '0';
-    scl_if.oe       <= scl_oe;
-    sda_if.o        <= '0';
+    scl_if.o        <= scl_o;
+    scl_if.oe       <= '1'; -- SCL stretching is not currently supported
+    sda_if.o        <= sm_reg.sda_o;
     sda_if.oe       <= sm_reg.sda_oe;
 
 end rtl;

@@ -141,7 +141,7 @@ begin
                 end if;
 
             when SEND_ACK =>
-                wait until (falling_edge(scl) and tx_done) or stop_condition;
+                wait until (falling_edge(scl_int) and tx_done) or stop_condition;
 
                 if stop_condition then
                     state   <= GET_STOP;
@@ -154,11 +154,11 @@ begin
                 end if;
 
             when SEND_NACK =>
-                wait until falling_edge(scl) or stop_condition;
+                wait until falling_edge(scl_int) or stop_condition;
                 state   <= GET_STOP;
 
             when SEND_BYTE =>
-                wait until (falling_edge(scl) and tx_done) or stop_condition;
+                wait until (falling_edge(scl_int) and tx_done) or stop_condition;
 
                 if stop_condition then
                     state   <= GET_STOP;
@@ -192,7 +192,8 @@ begin
 
     receive_sm: process
     begin
-        wait until rising_edge(scl);
+        wait until rising_edge(scl_int);
+        wait for 1 fs;
         rx_done <= FALSE;
         if state = GET_ACK then
             -- '0' = ACK, '1' = NACK
@@ -203,10 +204,10 @@ begin
             rx_bit_count    <= rx_bit_count + 1;
         end if;
 
-        wait until falling_edge(scl) or start_condition or stop_condition;
-        if not falling_edge(scl) then
+        wait until falling_edge(scl_int) or start_condition or stop_condition;
+        if not falling_edge(scl_int) then
             rx_bit_count    <= (others => '0');
-            wait until falling_edge(scl);
+            wait until falling_edge(scl_int);
         end if;
 
         if ((state = GET_START_BYTE or state = GET_BYTE) and rx_bit_count = 8) or
@@ -220,10 +221,17 @@ begin
     transmit_sm: process
         variable txd : std_logic_vector(7 downto 0) := (others => '0');
     begin
-        wait until falling_edge(scl);
+        wait until falling_edge(scl_int);
+        wait for 1 fs;
         tx_done <= FALSE;
-        -- delay the SDA transition to a bit after SCL falls to allow the controller to release SDA
-        wait for 100 ns;
+        -- if this is the first cycle owning the bus, wait some time for SDA to be released by the
+        -- controller
+        if tx_bit_count = 0 and (state = SEND_ACK or state = send_NACK or state = SEND_BYTE) then
+            -- release SDA so the controller can take the bus if needed, such as to send a STOP
+            sda_oe <= '0';
+            wait for 400 ns;
+        end if;
+
         if state = SEND_ACK or state = SEND_NACK then
             sda_oe          <= '1' when state = SEND_ACK else '0';
             tx_bit_count    <= to_unsigned(1, tx_bit_count'length);
@@ -241,7 +249,7 @@ begin
         end if;
         tx_data <= txd;
 
-        wait until rising_edge(scl);
+        wait until rising_edge(scl_int);
 
         if ((state = SEND_ACK or state = SEND_NACK) and tx_bit_count = 1) or
             (state = SEND_BYTE and tx_bit_count = 8) then
