@@ -36,6 +36,11 @@ entity spd_proxy_top is
         i2c_ctrlr_idle      : out std_logic;
         i2c_tx_st_if        : view stream8_pkg.st_sink_if;
         i2c_rx_st_if        : view stream8_pkg.st_source_if;
+
+        -- TODO remove
+        ctrlr_done  : out std_logic;
+        cpu_has_sda : out std_logic;
+        dimm_has_sda : out std_logic;
     );
 end entity;
 
@@ -84,9 +89,6 @@ architecture rtl of spd_proxy_top is
 
     signal cpu_seen         : boolean;
     signal fpga_txn_valid   : std_logic;
-
-    signal cpu_has_sda      : std_logic;
-    signal dimm_has_sda     : std_logic;
 begin
     dimm_glitch_filter_inst: entity work.i2c_glitch_filter
         generic map(
@@ -225,6 +227,8 @@ begin
             tx_st_if    => i2c_tx_st_if,
             rx_st_if    => i2c_rx_st_if
         );
+
+    ctrlr_done <= i2c_ctrlr_idle;
 
     -- for the internal bus, mux between our simulated start and internal controller
     ctrlr_has_int_mux   <= not need_start or i2c_ctrlr_idle = '0';
