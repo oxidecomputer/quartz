@@ -185,6 +185,7 @@ begin
                 scl <= 'Z';
                 wait until falling_edge(aligner_int);
                 sda <= 'Z';
+                scl <= '0';
             end procedure;
             procedure send_nack is
             begin
