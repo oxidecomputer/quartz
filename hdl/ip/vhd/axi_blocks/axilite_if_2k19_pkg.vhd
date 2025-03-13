@@ -15,12 +15,12 @@ package axilite_if_2k19_pkg is
       addr_width : integer
    );
 
-    -- Write address channel
-    type axil_write_address_t is record
-       valid : std_logic;
-       ready : std_logic;
-       addr : std_logic_vector(addr_width - 1 downto 0);
-    end record;
+   -- Write address channel
+   type axil_write_address_t is record
+      valid : std_logic;
+      ready : std_logic;
+      addr : std_logic_vector(addr_width - 1 downto 0);
+   end record;
 
    view aw_controller of axil_write_address_t is
       valid, addr : out;
