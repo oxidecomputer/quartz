@@ -29,6 +29,7 @@ entity pca9545ish_function is
         reset : in std_logic;
         mux_reset: in std_logic;
         mux_sel : out std_logic_vector(1 downto 0);
+        mux_is_active : out std_logic;
         allowed_to_enable : in std_logic;
         -- instruction interface
         inst_data : in std_logic_vector(7 downto 0);
@@ -111,6 +112,8 @@ begin
                         "11";
         end if;
     end process;
+
+    mux_is_active <= control_reg.b0 or control_reg.b1 or control_reg.b2;
 
     ack_logic: process(clk, reset)
     begin
