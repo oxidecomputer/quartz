@@ -1,0 +1,31 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "sequencer_regs_rdl",
+    src = "sequencer_regs.rdl",
+    outputs = [
+        "sequencer_regs_pkg.vhd", 
+        "sequencer_regs.html", 
+        "sequencer_regs.json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "sequencer",
+    srcs = glob(["*.vhd"]),
+    deps = [
+        ":sequencer_regs_rdl",
+    ],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)
+
+# vunit_sim(
+#     name = "sp5_sequencer_sim",
+#     srcs = glob(["sims/**/*.vhd"]),
+#     deps = [
+#     ],
+#     visibility = ['PUBLIC'],
+# )

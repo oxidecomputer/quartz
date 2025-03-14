@@ -2,6 +2,20 @@ load("//tools:hdl.bzl", "vhdl_unit", "black_box")
 load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
+rdl_file(
+    name = "cosmo_seq_top_rdl",
+    src = "cosmo_seq_top.rdl",
+    deps = [
+        "//hdl/ip/vhd/info:info_regs_rdl",
+        "//hdl/projects/cosmo_seq/sequencer:sequencer_regs_rdl",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_regs_rdl",
+        "//hdl/ip/vhd/espi:espi_regs_rdl",
+    ],
+    outputs = [
+        "cosmo_seq_top.html", 
+        "cosmo_seq_top.json"
+    ]
+)
 
 black_box (
     name = "cosmo_black_boxes",
@@ -10,18 +24,20 @@ black_box (
 # Shared with grapefruit
 vhdl_unit(
     name = "reset_sync",
-    srcs = ["clk_rst_infra/reset_sync.vhd"],
+    srcs = ["board_support/reset_sync.vhd"],
     deps = ["//hdl/ip/vhd/synchronizers:async_reset_bridge"],
     visibility = ["PUBLIC"],
 )
 
 vhdl_unit(
-    name = "cosmo_clks",
-    srcs = glob(["clk_rst_infra/*.vhd"], exclude = ["clk_rst_infra/reset_sync.vhd"]),
+    name = "board_support",
+    srcs = glob(["board_support/*.vhd"], exclude = ["board_support/reset_sync.vhd"]),
     deps = [
         ":reset_sync",
         ":cosmo_black_boxes",
+        "//hdl/ip/vhd/info:info",
     ],
+    standard = "2019",
 )
 
 
@@ -29,7 +45,16 @@ vhdl_unit(
     name = "cosmo_seq_top",
     srcs = ["cosmo_seq_top.vhd"],
     deps = [
-        ":cosmo_clks",
+        ":cosmo_seq_top_rdl",
+        ":board_support",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkg",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
+        "//hdl/projects/cosmo_seq/sp5_espi_flash_subsystem:sp5_espi_flash_subsystem",
+        "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
+        "//hdl/projects/cosmo_seq/sequencer:sequencer",
+        "//hdl/projects/cosmo_seq/sp_i2c_subsystem:sp_i2c_subsystem",
+        "//hdl/projects/cosmo_seq/sp5_hotplug_subsystem:sp5_hotplug_subsystem",
     ],
     standard = "2019",
 )
