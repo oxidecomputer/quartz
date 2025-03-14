@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Fri Feb  7 21:04:37 2025
+[*] Wed Mar 12 14:09:08 2025
 [*]
-[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_ctrl_txn_layer_tb.abort_transaction_5030992a55fd175f5a816e54580c7a725cf50715/nvc/i2c_ctrl_txn_layer_tb.fst"
-[dumpfile_mtime] "Fri Feb  7 16:35:44 2025"
-[dumpfile_size] 5828
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.i2c_ctrl_txn_layer_tb.write_and_read_one_byte_344489395475d58724aafb4fc63c500bd501b62f/nvc/i2c_ctrl_txn_layer_tb.fst"
+[dumpfile_mtime] "Wed Mar 12 14:04:36 2025"
+[dumpfile_size] 4352
 [savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/i2c/controller/txn_layer/sims/i2c_ctrl_txn_layer_tb.gtkw"
 [timestart] 0
-[size] 1344 1283
-[pos] 2559 23
-*-34.710972 86100000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[size] 1376 1283
+[pos] 2514 -22
+*-32.845215 8124000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] i2c_ctrl_txn_layer_tb.
 [treeopen] i2c_ctrl_txn_layer_tb.th.
 [treeopen] i2c_ctrl_txn_layer_tb.th.dut.
@@ -47,11 +47,13 @@ i2c_ctrl_txn_layer_tb.th.dut.abort
 -SCL
 @28
 i2c_ctrl_txn_layer_tb.th.dut.scl_if.i
+i2c_ctrl_txn_layer_tb.th.dut.scl_if.o
 i2c_ctrl_txn_layer_tb.th.dut.scl_if.oe
 @200
 -SDA
 @28
 i2c_ctrl_txn_layer_tb.th.dut.sda_if.i
+i2c_ctrl_txn_layer_tb.th.dut.sda_if.o
 i2c_ctrl_txn_layer_tb.th.dut.sda_if.oe
 @200
 -State
@@ -106,6 +108,7 @@ i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.counter[7:0]
 @28
 i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.decr
 i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.load
+@29
 i2c_ctrl_txn_layer_tb.th.dut.i2c_ctrl_link_layer_inst.sm_countdown.done
 @200
 -
@@ -127,15 +130,12 @@ i2c_ctrl_txn_layer_tb.th.tx_source_vc.data[7:0]
 -target Model
 -SCL
 @28
-i2c_ctrl_txn_layer_tb.th.target.scl_if.i
-i2c_ctrl_txn_layer_tb.th.target.scl_if.o
-i2c_ctrl_txn_layer_tb.th.target.scl_if.oe
+i2c_ctrl_txn_layer_tb.th.scl
 @200
 -SDA
 @28
-i2c_ctrl_txn_layer_tb.th.target.sda_if.i
-i2c_ctrl_txn_layer_tb.th.target.sda_if.o
-i2c_ctrl_txn_layer_tb.th.target.sda_if.oe
+i2c_ctrl_txn_layer_tb.th.sda
+i2c_ctrl_txn_layer_tb.th.target.sda_oe
 i2c_ctrl_txn_layer_tb.th.target.state
 i2c_ctrl_txn_layer_tb.th.target.start_condition
 i2c_ctrl_txn_layer_tb.th.target.stop_condition
