@@ -1,0 +1,376 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible registers in the Cosmo
+// Sequencer FPGA block.
+
+addrmap sequencer_regs {
+    name = "Power Sequencing Function";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+ 
+    // IRQ for faults
+    reg irq {
+           field {
+               desc = "Fan Fault";
+           } fanfault[1];
+           field {
+               desc = "Thermtrip- Thermal trip indicated from SP5 (sticky since fpga reset or last clear)";
+           } thermtrip[1];
+           field {
+               desc = "A1A0 MAPO- A fault in the A1-A0 domain(s) caused a MAPO (sticky since fpga reset or last clear)";
+           } a0mapo[1];
+           field {
+               desc = "Nic MAPO- A fault in the A0 domain caused a MAPO (sticky since fpga reset or last clear)";
+           } nicmapo[1];
+           field {
+               desc = "AMD PWROK falling edge while in >=A0 (sticky since fpga reset or last clear)";
+           } amd_pwrok_fedge[1];
+           field {
+               desc = "AMD RESET falling edge while in >=A0 (sticky since fpga reset or last clear)";
+           } amd_rstn_fedge[1];
+       };
+    // Set up interrupt registers using a common irq_type
+    irq IFR;
+    IFR->name = "Interrupt Flag Register";
+    irq IER;
+    IER->name = "Interrupt Enable Register";
+
+    reg {
+        name = "Sequencer Status Register";
+        default sw = r;
+        
+        field {
+            desc = "Fan power OK";
+        } fanpwrok[1] = 0;
+         field {
+            desc = "A0 power OK";
+        } a0pwrok[1] = 0;
+        field {
+            desc = "NIC power OK";
+        } nicpwrok[1] = 0;
+        field {
+            desc = "Interrupt Pending Status (set if any enabled IRQ has its flag set)";
+        } int_pend[31:31] = 0;
+    } status;
+
+    reg {
+        name = "Fan Hotswap Control";
+        field {
+            desc = "Fan East hotswap disable";
+        } fan_hsc_east_disable[1] = 0;
+        field {
+            desc = "Fan Central hotswap disable";
+        } fan_hsc_central_disable[1] = 0;
+         field {
+            desc = "Fan Central hotswap disable";
+        } fan_hsc_west_disable[1] = 0;
+    } early_power_ctrl;
+
+    reg {
+        default sw=r;
+        field {
+            desc = "Fan Fail: inversion of MAX31790ATI FAN_FAIL_N output (1=Fail asserted)";
+        } fan_fail[1] = 0;
+        field {
+            desc = "Readback of fan East hotswap PG pin";
+        } fan_hsc_east_pg[1] = 0;
+        field {
+            desc = "Readback of fan Central hotswap PG pin";
+        } fan_hsc_central_pg[1] = 0;
+         field {
+            desc = "Readback of fan West hotswap PG pin";
+        } fan_hsc_west_pg[1] = 0;
+        field {
+            desc = "Readback of fan East hotswap disable pin";
+        } fan_hsc_east_disable[1] = 0;
+        field {
+            desc = "Readback of fan Central hotswap disable pin";
+        } fan_hsc_central_disable[1] = 0;
+         field {
+            desc = "Readback of fan West hotswap disable pin";
+        } fan_hsc_west_disable[1] = 0;
+    } early_power_rdbks;
+    
+    reg {
+        name = "Power Sequence Control";
+        field {
+            desc = "A0 Group power enable (starts state machine). 
+            Note, no discrete A1 state control, it's a transitory state on the way to A0.
+            Set to '1' to start the A2->A0/HP sequence. Set to '0' to disable, power off.
+            Note that for fault cases, sw must clear and re-enable this bit as the state
+            machine only enables in response to rising edge changes.";
+        } a0_en[1] = 0;
+    } power_ctrl;
+
+    reg {
+        name = "A0 Sequence Status";
+        desc = "A0 'live' hubris 'api' state machine status. This is a stable api-like interface
+        over the actual state machine implementation. The internal representation has additional, 
+        implementation specific states and may change over time as we discover new things. See the 'raw'
+        register for the full-fidelity view of the state machine.";
+        default sw = r;
+
+         enum seq_state_machine {
+            IDLE = 8'h00 {desc = "";};
+            ENABLE_GRP_A = 8'h01 {desc = "";};
+            SP5_EARLY_CHECKPOINT = 8'h02 {desc = "";};
+            ENABLE_GRP_B = 8'h03 {desc = "";};
+            ENABLE_GRP_C = 8'h04 {desc = "";};
+            POWER_GOOD = 8'h05 {desc = "";};
+            SP5_FINAL_CHECKPOINT = 8'h08 {desc = "";};
+            DONE = 8'h09 {desc = "";};
+            DISABLING = 8'h0a {desc = "";};
+            FAULTED = 8'h0b {desc = "";};
+        };
+
+        field {
+            desc = "Sequencer Status";
+            encode = seq_state_machine;
+        } a0_sm[7:0];
+    } seq_api_status;
+
+     reg {
+        name = "A0 Sequence Raw Status";
+        desc = "This is an encoded view of the actual hw state machine. Here for debugging
+        but not for general use. See the 'api' register for the 'stable' view of the state machine.
+        Decode is implementation-defined, and may change as the FPGA implementation changes. See
+        your friendly hw engineer for a true decode if needed.";
+        default sw = r;
+
+        field {
+            desc = "Sequencer Raw Status";
+        } hw_sm[7:0];
+    } seq_raw_status;
+    
+    reg {
+        name = "Nic SM Status";
+        desc = "Nic 'live' hubris 'api' state machine status.This is a stable api-like interface
+        over the actual state machine implementation. The internal representation has additional, 
+        implementation specific states and may change over time as we discover new things. See the 'raw'
+        register for the full-fidelity view of the state machine.";
+        default sw = r;
+
+        enum nic_state_machine {
+            IDLE = 8'h00 {desc = "";};
+            ENABLE_POWER = 8'h01 {desc = "";};
+            NIC_RESET = 8'h02 {desc = "";};
+            DONE = 8'h03 {desc = "";};
+         };
+        field {
+            desc = "Nic SM Status";
+            encode = nic_state_machine;
+        } nic_sm[7:0];
+        // TODO: A1 state machine decode in here
+    } nic_api_status;
+
+    reg {
+        name = "NIC Sequence Raw Status";
+        desc = "This is an encoded view of the actual hw state machine. Here for debugging
+        but not for general use. See the 'api' register for the 'stable' view of the state machine.
+        Decode is implementation-defined, and may change as the FPGA implementation changes. See
+        your friendly hw engineer for a true decode if needed.";
+        default sw = r;
+
+        field {
+            desc = "NIC Sequencer Raw Status";
+        } hw_sm[7:0];
+    } nic_raw_status;
+
+
+     reg {
+        default sw=rw;
+        default onwrite=wclr;
+        field {
+            desc = "Falling edge counter of AMD's reset output while in A0/A0HP. Saturates at 255. Cleared by any write or starting a new power up";
+        } counts[7:0] = 0;
+    } amd_reset_fedges;
+
+    reg  {
+        default sw=rw;
+        default onwrite=wclr;
+        field {
+            desc = "Falling edge counter of AMD's PowerOK output while in A0/A0HP. Saturates at 255.  Cleared by any write or starting a new power up";
+        } counts[7:0] = 0;
+    } amd_pwrok_fedges;
+
+   // input/output readbacks on all the enables powers for A1/A0/NIC
+   // We build these up with the earliest supplies being the lowest order 
+   // bits so that max-hold can be done and will make sense to see the most supplies that sequenced up.
+   reg rails #(accesstype sw_kind = r) {
+        default sw=sw_kind;
+
+        field {
+            desc = "DDR ABCDEF Hot Swap 12V controller";
+        } abcdef_hsc[1];
+        field {
+            desc = "DDR GHIJKL Hot Swap 12V controller";
+        } ghijkl_hsc[1];
+        field {
+            desc = "Group A V1p5 RTC 1.5V";
+        } v1p5_rtc[1];
+        field {
+            desc = "Group A rail V3p3 SP5";
+        } v3p3_sp5[1];
+        field {
+            desc = "Group A rail V1p8 SP5";
+        } v1p8_sp5[1];
+        field {
+            desc = "Group B rail V1p1 SP5";
+        } v1p1_sp5[1];
+        field {
+            desc = "Group C VDDIO SP5";
+        } vddio_sp5[1];
+        field {
+            desc = "Group C VDDCR CPU1";
+        } vddcr_cpu1[1];
+        field {
+            desc = "Group C VDDCR CPU0";
+        } vddcr_cpu0[1];
+        field {
+            desc = "Group C VDDCR SOC";
+        } vddcr_soc[1];
+        field {
+            desc = "NIC nic_hsc_12v (discrete pg, shared enable with 5V)";
+        } nic_hsc_12v[1];
+        field {
+            desc = "NIC nic_hsc_5v (discrete pg, shared enable with 12V)";
+        } nic_hsc_5v[1];
+        field {
+            desc = "NIC v1p5_nic_a0hp (discrete pg, enable cascade from nic 5V)";
+        } v1p5_nic_a0hp[1];
+        field {
+            desc = "NIC v1p2_nic_pcie_a0hp (discrete pg, enable cascade from nic 5V)";
+        } v1p2_nic_pcie_a0hp[1];
+        field {
+            desc = "NIC v1p2_nic_enet_a0hp (discrete pg, enable cascade from nic 5V)";
+        } v1p2_nic_enet_a0hp[1];
+        field {
+            desc = "NIC v3p3_nic_a0hp (discrete pg, enable cascade from nic 5V)";
+        } v3p3_nic_a0hp[1];
+        field {
+            desc = "NIC v1p1_nic_a0hp (discrete pg, enable cascade from nic 5V)";
+        } v1p1_nic_a0hp[1];
+        field {
+            desc = "NIC v0p96_nic_vdd_a0hp (discrete pg, enable cascade from nic 5V)";
+        } v0p96_nic_vdd_a0hp[1];
+    };
+
+    rails #(.sw_kind(rw)) rail_enables ;
+    rail_enables->name = "Rail Enable Readbacks. (Out from FPGA)"; 
+
+    rails rail_pgs;
+    rail_pgs->name = "Rail Power Good status (live). (Inputs to FPGA)"; 
+
+    rails #(.sw_kind(rw)) rail_pgs_max_hold;
+    rail_pgs_max_hold->name = "Rail Power Good status (max hold). (Inputs to FPGA). Write clears, or sequence up clears";
+
+    reg {
+        name = "SP5 signal readbacks";
+        desc = "Live status and readbacks of our registers and responses back from the SP5
+        For tri-state cases, read '1' as 'Z'.  No inversions done here.";
+        default sw = r;
+        field {
+            desc = "Thermtrip_l live status, note: only valid when SP5 rails are up (From SP5)";
+        } thermtrip_l[1];
+        field {
+            desc = "reset_l live status, note: only valid when SP5 rails are up (From SP5)";
+        } reset_l[1];
+        field {
+            desc = "pwr_ok live status, note: only meaningful when SP5 rails are up (From SP5)";
+        } pwr_ok[1];
+        field {
+            desc = "slp_s3_l live status, note: only valid when SP5 rails are up (or being sequenced up) (From SP5)";
+        } slp_s3_l[1];
+        field {
+            desc = "slp_s5_l live status, note: only valid when SP5 rails are up (or being sequenced up) (From SP5)";
+        } slp_s5_l[1];
+        field {
+            desc = "rsmrst_l live status, (From FPGA to SP5)";
+        } rsmrst_l[1];
+        field {
+            desc = "pwr_btn_l live status, (From FPGA to SP5)";
+        } pwr_btn_l[1];
+        field {
+            desc = "pwr_btn_l live status, (From FPGA to SP5)";
+        } pwr_good[1];
+    } sp5_readbacks;
+
+    reg {
+        name = "Nic-related signal readbacks";
+        desc = "Live status and readbacks of our registers and responses back from the NIC
+        (and SP5 for MFG-mode)
+        For tri-state cases, read '1' as 'Z'.  No inversions done here.";
+        default sw = r;
+        field {
+            desc = "cld_rst_l live status, (From FPGA to NIC)";
+        } cld_rst_l[1];
+        field {
+            desc = "perst_l live status, (From FPGA to NIC)";
+        } perst_l[1];
+        field {
+            desc = "nic_mfg_mode_l live status, (From FPGA to NIC)";
+        } nic_mfg_mode_l[1];
+        field {
+            desc = "eeprom_wp_l live status, note: only valid when SP5 rails are up (From FPGA to eeprom)";
+        } eeprom_wp_l[1];
+        field {
+            desc = "eeprom_wp_buffer_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+        } eeprom_wp_buffer_oe_l[1];
+        field {
+            desc = "flash_wp_l live status, note: only valid when SP5 rails are up (From FPGA to flash)";
+        } flash_wp_l[1];
+        field {
+            desc = "nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+        } nic_pcie_clk_buff_oe_l[1];
+        field {
+            desc = "ext_rst_l live status, note: only valid when NIC rails are up (From NIC)";
+        } ext_rst_l[1];
+        field {
+            desc = "sp5_mfg_mode_l live status, (From SP5 to FPGA)";
+        } sp5_mfg_mode_l[1];
+    } nic_readbacks;
+
+    reg {
+        name = "Debug  enable";
+        desc = "Allow manual control over some I/O ping for debugging purposes";
+        field {
+            desc = "Ignore sp5 allows the sequencer to bypass any SP5-related handshakes
+            for power debugging. Some rails may not completely power up without a load-slammer
+            or other feedback device in place.";
+        } ignore_sp5[1] = 0;
+         field {
+            desc = "Set to mux in the nic_override signals instead of the normal nic control signals";
+        } nic_override[1] = 0;
+    } debug_enables;
+
+    reg {
+        name = "Nic Overrides";
+        desc = "Control over the nic signals for debugging purposes outside the sequencer logic";
+        field {
+            desc = "cld_rst_l live status, (From FPGA to NIC)";
+        } cld_rst_l[1] = 0;
+        field {
+            desc = "perst_l live status, (From FPGA to NIC)";
+        } perst_l[1] = 0;
+        field {
+            desc = "nic_mfg_mode_l live status, (From FPGA to NIC)";
+        } nic_mfg_mode_l[1] = 0;
+        field {
+            desc = "eeprom_wp_l live status, note: only valid when SP5 rails are up (From FPGA to eeprom)";
+        } eeprom_wp_l[1] = 0;
+        field {
+            desc = "eeprom_wp_buffer_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+        } eeprom_wp_buffer_oe_l[1] = 1;
+        field {
+            desc = "flash_wp_l live status, note: only valid when SP5 rails are up (From FPGA to flash)";
+        } flash_wp_l[1] = 0;
+        field {
+            desc = "nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+        } nic_pcie_clk_buff_oe_l[1] = 1;
+    } nic_overrides;
+    
+
+};
+   
