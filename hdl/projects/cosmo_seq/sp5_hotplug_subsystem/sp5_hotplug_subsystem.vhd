@@ -40,6 +40,17 @@ entity sp5_hotplug_subsystem is
         m2b_hsc_en : out std_logic;
         m2b_perst_l : out std_logic;
         pcie_clk_buff_m2b_oe_l : out std_logic;
+
+        -- T6 things
+        t6_power_en : out std_logic;
+        t6_perst_l : out std_logic;
+
+        -- Sidecar things
+        pcie_aux_rsw_perst_l : out std_logic;
+        pcie_aux_rsw_prsnt_buff_l : in std_logic;
+        pcie_aux_rsw_pwrflt_buff_l : in std_logic;
+        pcie_clk_buff_rsw_oe_l : out std_logic;
+        rsw_sp5_pcie_attached_buff_l : in std_logic;
     );
 end sp5_hotplug_subsystem;
 
@@ -102,10 +113,21 @@ begin
     -- not PEDET becomes emils
     io(1)(3) <= not m2b_pedet_sync;
 
-    -- TODO: Fix perstL with one-shot
+    -- TODO: Fix perstL with one-shot following power enable (bit 4)
     m2a_perst_l <= io_o(0)(4) when io_oe(0)(4) else '0';
     m2b_perst_l <= io_o(1)(4) when io_oe(1)(4) else '0';
-    
+
+    -- T6
+    t6_power_en <= io_o(2)(4) when io_oe(0)(4) else '0';
+    io(2)(3) <= '1';  -- PEDET for T6
+    io(2)(0) <= '1'; -- PRSNT_L for T6
+    t6_perst_l <= io_o(2)(4) when io_oe(2)(4) else '0';
+
+    -- Backplane connected switch
+    -- TODO: this stuff is likely not totally correct
+    pcie_aux_rsw_perst_l <= io_o(3)(4) when io_oe(3)(4) else '0'; -- TODO: oneshot?
+    io(3)(0) <= pcie_aux_rsw_prsnt_buff_l;
+    pcie_clk_buff_rsw_oe_l <= pcie_aux_rsw_prsnt_buff_l;  -- Is this right?
 
 
 

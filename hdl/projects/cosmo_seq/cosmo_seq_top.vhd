@@ -296,17 +296,17 @@ architecture rtl of cosmo_seq_top is
     signal reset_fmc : std_logic;
     alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
     constant INFO_RESP_IDX : integer := 0;
-    constant BRD_RESP_IDX: integer := 1;
-    constant SPINOR_RESP_IDX: integer := 2;
-    constant ESPI_RESP_IDX: integer := 3;
-    constant SEQ_RESP_IDX: integer := 4;
+    constant SPINOR_RESP_IDX: integer := 1;
+    constant ESPI_RESP_IDX: integer := 2;
+    constant SEQ_RESP_IDX: integer := 3;
+    constant SP_I2C_RESP_IDX: integer := 4;
 
     constant config_array : axil_responder_cfg_array_t := 
         (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
-         BRD_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
-         SPINOR_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
-         ESPI_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
-         SEQ_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8)
+         SPINOR_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
+         ESPI_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
+         SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
+         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
@@ -339,6 +339,9 @@ architecture rtl of cosmo_seq_top is
     signal sp5_sda_o : std_logic;
     signal sp5_sda_oe : std_logic;
 
+    signal sp5_t6_power_en : std_logic;
+    signal sp5_t6_perst_l : std_logic;
+
 begin
 
     fpga1_spare_v3p3(7 downto 1) <= (others => 'Z');
@@ -352,11 +355,6 @@ begin
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
-
-    -- TODO: need to sort out what to do about backplane/sidecar
-    fpga1_to_bp_buff_output_en_l <= 'Z';
-    pcie_aux_fpga1_to_rsw_perst_l <= '0';
-    fpga1_to_pcie_clk_buff_rsw_oe_l <= 'Z';
 
 
     ---------------------------------------------
@@ -486,13 +484,13 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
+        axi_if => responders(SP_I2C_RESP_IDX),
         sp_scl => i2c_sp_to_fpga1_scl,
         sp_scl_o => sp_scl_o,
         sp_scl_oe => sp_scl_oe,
         sp_sda => i2c_sp_to_fpga1_sda,
         sp_sda_o => sp_sda_o,
         sp_sda_oe => sp_sda_oe,
-        mux_reset => '0',
         i2c_mux1_sel => fpga1_to_i2c_mux1_sel,
         i2c_mux2_sel => fpga1_to_i2c_mux2_sel,
         i2c_mux3_sel => fpga1_to_i2c_mux3_sel
@@ -523,8 +521,16 @@ begin
         m2b_prsnt_l => m2b_to_fpga1_prsnt_l,
         m2b_hsc_en => fpga1_to_m2b_hsc_en,
         m2b_perst_l => fpga1_to_m2b_perst_l,
-        pcie_clk_buff_m2b_oe_l => fpga1_to_pcie_clk_buff_m2b_oe_l
+        pcie_clk_buff_m2b_oe_l => fpga1_to_pcie_clk_buff_m2b_oe_l,
+        t6_power_en => sp5_t6_power_en,
+        t6_perst_l => sp5_t6_perst_l,
+        pcie_aux_rsw_perst_l => pcie_aux_fpga1_to_rsw_perst_l,
+        pcie_aux_rsw_prsnt_buff_l => pcie_aux_rsw_to_fpga1_prsnt_buff_l,
+        pcie_aux_rsw_pwrflt_buff_l=> pcie_aux_rsw_to_fpga1_pwrflt_buff_l,
+        pcie_clk_buff_rsw_oe_l => fpga1_to_pcie_clk_buff_rsw_oe_l,
+        rsw_sp5_pcie_attached_buff_l =>rsw_to_sp5_pcie_attached_buff_l
     );
+
     --Tristates for spi-nor flash pins and espi
     i2c_sp5_to_fpgax_hp_scl <= sp5_scl_o when sp5_scl_oe = '1' else 'Z';
     i2c_sp5_to_fpgax_hp_sda <= sp5_sda_o when sp5_sda_oe = '1' else 'Z';
@@ -548,7 +554,9 @@ begin
         group_c_pins => sp5_group_c,
         sp5_seq_pins => sp5_seq_pins,
         nic_rails_pins => nic_rails,
-        nic_seq_pins => nic_seq_pins
+        nic_seq_pins => nic_seq_pins,
+        sp5_t6_power_en => sp5_t6_power_en,
+        sp5_t6_perst_l => sp5_t6_perst_l
     );
 
     -- early power related pins

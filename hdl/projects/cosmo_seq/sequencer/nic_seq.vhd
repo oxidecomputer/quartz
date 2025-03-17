@@ -25,6 +25,10 @@ entity nic_seq is
         debug_enables : in debug_enables_type;
         nic_overrides_reg : in nic_overrides_type;
 
+        -- From SP5 hotplug
+        sp5_t6_power_en : in std_logic;
+        sp5_t6_perst_l : in std_logic;
+
         nic_rails: view nic_power_at_fpga;
         nic_seq_pins: view nic_seq_at_fpga;
 
@@ -153,7 +157,7 @@ begin
                 -- write protect out of MFG modes
                 final_nic_outs.eeprom_wp_l <= not mfg_mode_l;
                 final_nic_outs.nic_mfg_mode_l <= mfg_mode_l;
-                final_nic_outs.perst_l <= nic_r.nic_perst_l;
+                final_nic_outs.perst_l <= nic_r.nic_perst_l and sp5_t6_perst_l;
                 final_nic_outs.cld_rst_l <= nic_r.nic_cld_rst_l;
             end if;
 

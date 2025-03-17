@@ -18,13 +18,14 @@ entity sp_i2c_subsystem is
         clk : in std_logic;
         reset : in std_logic;
 
+        axi_if : view axil8x32_pkg.axil_target;
+
         sp_scl : in std_logic;
         sp_scl_o : out std_logic;
         sp_scl_oe : out std_logic;
         sp_sda : in std_logic;
         sp_sda_o : out std_logic;
         sp_sda_oe : out std_logic;
-        mux_reset : in std_logic;
         i2c_mux1_sel : out std_logic_vector(1 downto 0);
         i2c_mux2_sel : out std_logic_vector(1 downto 0);
         i2c_mux3_sel : out std_logic_vector(1 downto 0);
@@ -50,9 +51,17 @@ architecture rtl of sp_i2c_subsystem is
     signal sp_tgt_sda_oe : std_logic_vector(mux_i2c_addr'range);
     signal mux_is_active : std_logic_vector(mux_i2c_addr'range);
     signal mux_sel : mux_sel_t(mux_i2c_addr'range);
+    signal mux_reset : std_logic;
 
 begin
 
+    regs: entity work.sp_i2c_subsystem_regs
+     port map(
+        clk => clk,
+        reset => reset,
+        axi_if => axi_if,
+        main_reset => mux_reset
+    );
 
      -------------------------------------
     -- SP I2C STUFF

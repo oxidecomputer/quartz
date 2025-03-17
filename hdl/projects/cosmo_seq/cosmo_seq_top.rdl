@@ -2,7 +2,8 @@ addrmap cosmo_seq_top {
     default regwidth = 32;
     // Instantiate 2 to test nesting
     info_regs info @ 0x0;
-    sequencer_regs sequencer @ 0x100;
-    spi_nor_regs spi_nor @ 0x0200;
-    espi_regs espi @ 0x0300;
+    spi_nor_regs spi_nor @ 0x0100;
+    espi_regs espi @ 0x0200;
+    sequencer_regs sequencer @ 0x300;
+    sp_i2c_regs sp_i2c @ 0x0400;
 };

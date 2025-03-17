@@ -28,17 +28,15 @@ begin
     -- for now, though we implement the most basic of models where the rails
     -- turn on when requested after some delay
 
-    -- The block we're interfacing with expects to be synchronized
-    process(clk)
-    begin
-        nic_rails.v1p5_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.v1p2_nic_pcie_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.v1p2_nic_enet_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.v3p3_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.v1p1_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.v0p96_nic_vdd_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.nic_hsc_12v.pg <= nic_rails.nic_hsc_12v.enable;
-        nic_rails.nic_hsc_5v.pg <= nic_rails.nic_hsc_12v.enable;
-    end process;
+
+
+    nic_rails.v1p5_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.v1p2_nic_pcie_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.v1p2_nic_enet_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.v3p3_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.v1p1_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.v0p96_nic_vdd_a0hp.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.nic_hsc_12v.pg <= nic_rails.nic_hsc_12v.enable;
+    nic_rails.nic_hsc_5v.pg <= nic_rails.nic_hsc_12v.enable;
 
 end model;
