@@ -10,6 +10,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.axil8x32_pkg;
 use work.pca9545_pkg.all;
 
 entity sp_i2c_subsystem is

@@ -66,13 +66,10 @@ architecture rtl of sequencer_regs is
 
     signal rails_pg_max : rails_type;
    
-    signal axi_int_read_ready : std_logic;
-    signal awready : std_logic;
-    signal bvalid : std_logic;
-    alias bready is axi_if.write_response.ready;
-    signal arready : std_logic;
-    signal rvalid : std_logic;
+
     signal rdata : std_logic_vector(31 downto 0);
+    signal active_read : std_logic;
+    signal active_write : std_logic;
 
 begin
 
@@ -140,59 +137,30 @@ begin
     a0_en_redge <= power_ctrl.a0_en and (not a0_en_last);
     amd_reset_l_fedge <= not sp5_readbacks.reset_l and amd_reset_l_last;
     amd_pwrok_fedge <= not sp5_readbacks.pwr_ok and amd_pwrok_last;
-    
-    -- Assign outputs to the record here
-    -- write_address channel
-    axi_if.write_address.ready <= awready;
-    -- write_data channel
-    axi_if.write_data.ready <= awready;
 
-    -- write_response channel
-    axi_if.write_response.resp <= OKAY;
-    axi_if.write_response.valid <= bvalid;
-
-    -- read_address channel
-    axi_if.read_address.ready <= arready;
-    -- read_data channel
-    axi_if.read_data.resp <= OKAY;
+    axil_target_txn_inst: entity work.axil_target_txn
+     port map(
+        clk => clk,
+        reset => reset,
+        arvalid => axi_if.read_address.valid,
+        arready => axi_if.read_address.ready,
+        awvalid => axi_if.write_address.valid,
+        awready => axi_if.write_address.ready,
+        wvalid => axi_if.write_data.valid,
+        wready => axi_if.write_data.ready,
+        bvalid => axi_if.write_response.valid,
+        bready => axi_if.write_response.ready,
+        bresp => axi_if.write_response.resp,
+        rvalid => axi_if.read_data.valid,
+        rready => axi_if.read_data.ready,
+        rresp => axi_if.read_data.resp,
+        active_read => active_read,
+        active_write => active_write
+    );
     axi_if.read_data.data <= rdata;
-    axi_if.read_data.valid <= rvalid;
-
-    arready <= not rvalid;
+    
 
 
-    axi_int_read_ready <=  axi_if.read_address.valid and arready;
-
-    -- axi transaction mgmt
-    axi_txn: process(clk, reset)
-    begin
-        if reset then
-            awready <= '0';
-            bvalid <= '0';
-            rvalid <= '0';
-        elsif rising_edge(clk) then
-            -- bvalid set on every write,
-            -- cleared after bvalid && bready
-            if awready then
-                bvalid <= '1';
-            elsif bready then
-                bvalid <= '0';
-            end if;
-
-            if axi_int_read_ready then
-                rvalid <= '1';
-            elsif axi_if.read_data.ready then
-                rvalid <= '0';
-            end if;
-
-            -- can accept a new write if we're not
-            -- responding to write already or
-            -- the write is not in progress
-            awready <= not awready and
-                       (axi_if.write_address.valid and axi_if.write_data.valid) and
-                       (not bvalid or bready);
-        end if;
-    end process;
 
     write_logic: process(clk, reset)
     begin
@@ -205,7 +173,7 @@ begin
             nic_overrides <= rec_reset;
 
         elsif rising_edge(clk) then
-            if axi_if.write_data.ready then
+            if active_write then
                 case to_integer(axi_if.write_address.addr) is
                     when IFR_OFFSET => ifr <= ifr and (not axi_if.write_data.data);
                     when IER_OFFSET => ier <= unpack(axi_if.write_data.data);
@@ -228,7 +196,7 @@ begin
         if reset then
             rdata <= (others => '0');
         elsif rising_edge(clk) then
-            if axi_int_read_ready then
+            if active_read then
                 case to_integer(axi_if.read_address.addr) is
                     when IFR_OFFSET => rdata <= pack(ifr);
                     when IER_OFFSET => rdata <= pack(ier);

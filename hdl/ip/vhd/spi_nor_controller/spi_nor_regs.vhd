@@ -40,65 +40,34 @@ end entity;
 
 architecture rtl of spi_nor_regs is
 
-    constant OKAY               : std_logic_vector(1 downto 0) := "00";
-    signal   axi_int_read_ready : std_logic;
-    signal   awready            : std_logic;
-    signal   wready             : std_logic;
-    signal   bvalid             : std_logic;
-    signal   bready             : std_logic;
-    signal   arready            : std_logic;
-    signal   rvalid             : std_logic;
     signal   rdata              : std_logic_vector(31 downto 0);
     signal   rx_fifo_ack        : std_logic;
+    signal active_write       : std_logic;
+    signal active_read        : std_logic;
 
 begin
 
-    -- unpack the record
-    axi_if.write_response.resp  <= OKAY;
-    axi_if.write_response.valid <= bvalid;
-    axi_if.read_data.resp       <= OKAY;
-    axi_if.write_data.ready     <= wready;
-    axi_if.write_address.ready  <= awready;
-    axi_if.read_address.ready   <= arready;
-    axi_if.read_data.data       <= rdata;
-    axi_if.read_data.valid      <= rvalid;
-    bready                      <= axi_if.write_response.ready;
+    axil_target_txn_inst: entity work.axil_target_txn
+    port map(
+       clk => clk,
+       reset => reset,
+       arvalid => axi_if.read_address.valid,
+       arready => axi_if.read_address.ready,
+       awvalid => axi_if.write_address.valid,
+       awready => axi_if.write_address.ready,
+       wvalid => axi_if.write_data.valid,
+       wready => axi_if.write_data.ready,
+       bvalid => axi_if.write_response.valid,
+       bready => axi_if.write_response.ready,
+       bresp => axi_if.write_response.resp,
+       rvalid => axi_if.read_data.valid,
+       rready => axi_if.read_data.ready,
+       rresp => axi_if.read_data.resp,
+       active_read => active_read,
+       active_write => active_write
+   );
+   axi_if.read_data.data <= rdata;
 
-    wready  <= awready;
-    arready <= not rvalid;
-
-    axi_int_read_ready <= axi_if.read_address.valid and arready;
-
-    -- axi transaction mgmt
-    axi_txn: process(clk, reset)
-    begin
-        if reset then
-            awready <= '0';
-            bvalid <= '0';
-            rvalid <= '0';
-        elsif rising_edge(clk) then
-            -- bvalid set on every write,
-            -- cleared after bvalid && bready
-            if awready then
-                bvalid <= '1';
-            elsif bready then
-                bvalid <= '0';
-            end if;
-
-            if axi_int_read_ready then
-                rvalid <= '1';
-            elsif axi_if.read_data.ready then
-                rvalid <= '0';
-            end if;
-
-            -- can accept a new write if we're not
-            -- responding to write already or
-            -- the write is not in progress
-            awready <= not awready and
-                       (axi_if.write_address.valid and axi_if.write_data.valid) and
-                       (not bvalid or bready);
-        end if;
-    end process;
 
 -- vsg_off
 write_logic: process(clk, reset)
@@ -115,7 +84,7 @@ begin
         go_strobe <= '0';  -- self clearing
         spicr.tx_fifo_reset <= '0';  -- self clearing
         spicr.rx_fifo_reset <= '0';  -- self clearing
-        if wready then
+        if active_write then
             case to_integer(axi_if.write_address.addr) is
                 when SPICR_OFFSET => spicr <= unpack(axi_if.write_data.data);
                 when DUMMYCYCLES_OFFSET => dummy_cycles <= unpack(axi_if.write_data.data);
@@ -133,9 +102,9 @@ end process;
 -- vsg_on
 
     tx_fifo_write_data <= axi_if.write_data.data;
-    tx_fifo_write      <= '1' when wready = '1' and to_integer(axi_if.write_address.addr) = TX_FIFO_WDATA_OFFSET else '0';
+    tx_fifo_write      <= '1' when active_write = '1' and to_integer(axi_if.write_address.addr) = TX_FIFO_WDATA_OFFSET else '0';
 
-    rx_fifo_read_ack <= '1' when axi_if.read_data.ready = '1' and rvalid = '1' and rx_fifo_ack = '1' else '0';
+    rx_fifo_read_ack <= '1' when axi_if.read_data.ready = '1' and axi_if.read_data.valid = '1' and rx_fifo_ack = '1' else '0';
    
 
 -- vsg_off
@@ -146,7 +115,7 @@ begin
         rx_fifo_ack <= '0';
     elsif rising_edge(clk) then
         rx_fifo_ack <= '0';
-        if axi_int_read_ready then
+        if active_read then
             case to_integer(axi_if.read_address.addr) is
                 when SPICR_OFFSET => rdata <= pack(spicr);
                 when SPISR_OFFSET => rdata <= pack(spisr);

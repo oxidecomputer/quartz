@@ -12,7 +12,7 @@ vhdl_unit(
     srcs = glob(["stm32h7*.vhd"]),
     deps = [
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg"
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19"
         ],
     standard = "2019",
     visibility = ["PUBLIC"],

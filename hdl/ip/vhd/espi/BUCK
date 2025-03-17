@@ -43,7 +43,7 @@ vhdl_unit(
         "//hdl/ip/vhd/crc:crc8atm_8wide",
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         "//hdl/ip/vhd/memories:dual_clock_simple_dpr",
         "//hdl/ip/vhd/uart:axi_fifo_uart",
         ],

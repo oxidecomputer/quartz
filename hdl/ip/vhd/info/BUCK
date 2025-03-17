@@ -34,6 +34,7 @@ vhdl_unit(
     deps = [
         ":git_sha_pkg",
         ":info_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k8",
         ],
     standard = "2008",
     visibility = ['PUBLIC']
@@ -46,7 +47,7 @@ vhdl_unit(
     srcs = ["info.vhd"],
     deps = [
         ":info_2k8",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         ],
     standard = "2019",
     visibility = ['PUBLIC']
