@@ -1,16 +1,33 @@
 load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 
 vhdl_unit(
+    name = "sda_arbiter",
+    srcs = glob(["sda_arbiter/*.vhd"]),
+    deps = [],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
     name = "spd_proxy_top",
     srcs = glob(["*.vhd"]),
     deps = [
+        ":sda_arbiter",
         "//hdl/ip/vhd/common:tristate_if_pkg",
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
         "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
         "//hdl/ip/vhd/i2c/controller:i2c_ctrl_txn_layer",
     ],
     standard = "2019",
-    visibility = ['PUBLIC']
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "sda_arbiter_tb",
+    srcs = glob(["sda_arbiter/sims/*.vhd"]),
+    deps = [
+        ":sda_arbiter",
+    ],
+    visibility = ['PUBLIC'],
 )
 
 vunit_sim(

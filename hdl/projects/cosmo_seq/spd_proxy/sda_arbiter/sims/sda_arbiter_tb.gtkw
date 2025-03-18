@@ -1,0 +1,31 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Mon Mar 17 12:06:15 2025
+[*]
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.sda_arbiter_tb.hysteresis_fba39672ff868058b296cfd50da9181a1eabe178/nvc/sda_arbiter_tb.fst"
+[dumpfile_mtime] "Mon Mar 17 12:06:00 2025"
+[dumpfile_size] 767
+[savefile] "/home/aaron/Oxide/git/quartz/hdl/projects/cosmo_seq/spd_proxy/sda_arbiter/sims/sda_arbiter_tb.gtkw"
+[timestart] 0
+[size] 2528 1283
+[pos] 1138 -22
+*-25.222696 100000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] sda_arbiter_tb.
+[sst_width] 221
+[signals_width] 313
+[sst_expanded] 1
+[sst_vpaned_height] 382
+@28
+sda_arbiter_tb.sda_arbiter_inst.clk
+sda_arbiter_tb.sda_arbiter_inst.reset
+sda_arbiter_tb.sda_arbiter_inst.enabled
+sda_arbiter_tb.sda_arbiter_inst.a
+sda_arbiter_tb.sda_arbiter_inst.b
+sda_arbiter_tb.sda_arbiter_inst.sda_state
+@25
+sda_arbiter_tb.sda_arbiter_inst.hysteresis_cntr
+@28
+sda_arbiter_tb.sda_arbiter_inst.a_grant
+sda_arbiter_tb.sda_arbiter_inst.b_grant
+[pattern_trace] 1
+[pattern_trace] 0
