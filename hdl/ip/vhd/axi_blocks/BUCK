@@ -8,15 +8,40 @@ vhdl_unit(
 )
 
 vhdl_unit(
-    name = "axilite_if_2k8_pkg",
-    srcs = glob(["*2k8_pkg.vhd"]),
+    name = "axil_target_txn",
+    srcs = glob(["axil_target_txn.vhd"]),
+    deps = [
+        ":axilite_common_pkg",
+    ],
+    standard = "2008"
+)
+
+vhdl_unit(
+    name = "axilite_if_2k8",
+    srcs = glob(["axilite*2k8_pkg.vhd"]),
+    # This stuff isn't *strictly* a dependency, but this provides
+    # a convenient way for downstream blocks to pull in one
+    # dep and get all the things they need for implementing an
+    # AXI-Lite interface.
+    deps = [
+        ":axil_target_txn",
+        ":axilite_common_pkg"
+    ],
     standard = "2008",
     visibility = ['PUBLIC'],
 )
 
 vhdl_unit(
-    name = "axilite_if_2k19_pkg",
-    srcs = glob(["*2k19_pkg.vhd"]),
+    name = "axilite_if_2k19",
+    srcs = glob(["axilite*2k19_pkg.vhd"]),
+     # This stuff isn't *strictly* a dependency, but this provides
+    # a convenient way for downstream blocks to pull in one
+    # dep and get all the things they need for implementing an
+    # AXI-Lite interface.
+    deps = [
+        ":axil_target_txn",
+        ":axilite_common_pkg"
+    ],
     standard = "2019",
     visibility = ['PUBLIC'],
 )
@@ -25,8 +50,7 @@ vhdl_unit(
     name = "axil_interconnect",
     srcs = glob(["axil_interconnect.vhd"]),
     deps = [
-        ":axilite_common_pkg",
-        ":axilite_if_2k19_pkg",
+        ":axilite_if_2k19",
         ":axil_interconnect_2k8",
     ],
     standard = "2019",
@@ -37,9 +61,15 @@ vhdl_unit(
     name = "axil_interconnect_2k8",
     srcs = glob(["axil_interconnect_2k8.vhd"]),
     deps = [
-        ":axilite_common_pkg",
-        ":axilite_if_2k8_pkg",
+        ":axilite_if_2k8",
     ],
     standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axist_if_2k19_pkg",
+    srcs = glob(["axist*2k19_pkg.vhd"]),
+    standard = "2019",
     visibility = ['PUBLIC'],
 )

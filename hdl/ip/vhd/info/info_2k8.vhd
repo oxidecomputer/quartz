@@ -53,8 +53,6 @@ entity info_2k8 is
 end entity;
 
 architecture rtl of info_2k8 is
-    constant OKAY               : std_logic_vector(1 downto 0) := "00";
-    signal   axi_int_read_ready : std_logic;
 
     constant identity : identity_type := rec_reset;
     constant version : version_type := rec_reset;
@@ -62,46 +60,32 @@ architecture rtl of info_2k8 is
     signal checksum : fpga_checksum_type := rec_reset;
     signal scratchpad : scratchpad_type := rec_reset;
     signal hubris_compat: hubris_compat_type := rec_reset;
+    signal active_read: std_logic;
+    signal active_write: std_logic;
 
 begin
-    bresp  <= OKAY;
-    rresp      <= OKAY;
 
-    wready  <= awready;
-    arready <= not rvalid;
+    axil_target_txn_inst: entity work.axil_target_txn
+    port map(
+       clk => clk,
+       reset => reset,
+       arvalid => arvalid,
+       arready => arready,
+       awvalid => awvalid,
+       awready =>awready,
+       wvalid => wvalid,
+       wready => wready,
+       bvalid => bvalid,
+       bready => bready,
+       bresp => bresp,
+       rvalid => rvalid,
+       rready => rready,
+       rresp =>rresp,
+       active_read => active_read,
+       active_write => active_write
+   );
 
-    axi_int_read_ready <= arvalid and arready;
 
-    -- axi transaction mgmt
-    axi_txn: process(clk, reset)
-    begin
-        if reset then
-            awready <= '0';
-            bvalid <= '0';
-            rvalid <= '0';
-        elsif rising_edge(clk) then
-            -- bvalid set on every write,
-            -- cleared after bvalid && bready
-            if awready then
-                bvalid <= '1';
-            elsif bready then
-                bvalid <= '0';
-            end if;
-
-            if axi_int_read_ready then
-                rvalid <= '1';
-            elsif rready then
-                rvalid <= '0';
-            end if;
-
-            -- can accept a new write if we're not
-            -- responding to write already or
-            -- the write is not in progress
-            awready <= not awready and
-                       (awvalid and wvalid) and
-                       (not bvalid or bready);
-        end if;
-    end process;
 
     write_logic: process(clk, reset)
     begin
@@ -109,10 +93,11 @@ begin
             hubris_compat <= rec_reset;
             scratchpad <= rec_reset;
         elsif rising_edge(clk) then
-            -- go ahead and flo this every cycle, it's external but not
-            -- changing
+            -- go ahead and flop this every cycle, it's external but not
+            -- changing.  Since we're not using this in decision logic, this should
+            -- suffice for synchronization.
             hubris_compat <= unpack(resize(hubris_compat_pins, 32));
-            if wready then
+            if active_write then
                 case to_integer(awaddr) is
                     when FPGA_CHECKSUM_OFFSET => checksum <= write_byte_enable(checksum, wdata, wstrb);
                     when SCRATCHPAD_OFFSET => scratchpad <= write_byte_enable(scratchpad, wdata, wstrb);
@@ -127,7 +112,7 @@ begin
         if reset then
             rdata <= (others => '0');
         elsif rising_edge(clk) then
-            if axi_int_read_ready then
+            if active_read then
                 case to_integer(araddr) is
                     when IDENTITY_OFFSET => rdata <= pack(identity);
                     when HUBRIS_COMPAT_OFFSET => rdata <= pack(hubris_compat);

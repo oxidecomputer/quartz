@@ -74,19 +74,23 @@ architecture rtl of i2c_ctrl_txn_layer is
         tx_byte         : std_logic_vector(7 downto 0);
         tx_byte_valid   : std_logic;
         next_valid      : std_logic;
+        txd             : std_logic_vector(7 downto 0);
+        txd_valid       : std_logic;
     end record;
 
     constant SM_REG_RESET : sm_reg_t := (
-        IDLE,           -- state
-        CMD_RESET,      -- cmd
-        false,          -- in_random_read
-        (others => '0'),-- bytes_done
-        '0',            -- do_start
-        '0',            -- do_ack
-        '0',            -- do_stop
-        (others => '0'),-- tx_byte
-        '0',            -- tx_byte_valid
-        '0'             -- next_valid
+        state => IDLE,
+        cmd => CMD_RESET,
+        in_random_read => false,
+        bytes_done => (others => '0'),
+        do_start => '0',
+        do_ack => '0',
+        do_stop => '0',
+        tx_byte => (others => '0'),
+        tx_byte_valid => '0',
+        next_valid => '0',
+        txd => (others => '0'),
+        txd_valid => '0'
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -125,21 +129,19 @@ begin
     reg_sm_next: process(all)
         variable v          : sm_reg_t;
         variable is_read    : std_logic;
-        variable txd        : std_logic_vector(7 downto 0);
-        variable txd_valid  : std_logic;
     begin
         v           := sm_reg;
         is_read     := '1' when sm_reg.cmd.op = READ or sm_reg.in_random_read else '0';
 
         -- single cycle pulses
         v.next_valid    := '0';
-        txd_valid       := '0';
+        v.txd_valid     := '0';
 
         case sm_reg.state is
 
             -- watch for a new command to arrive then kick off a START
             when IDLE =>
-                if cmd_valid = '1' and ll_ready = '1' then
+                if cmd_valid = '1' and ll_ready = '1' and abort = '0' then
                     v.state     := START;
                     v.cmd       := cmd;
                 end if;
@@ -150,8 +152,8 @@ begin
 
             -- wait for link layer to finish START sequence and load up the address byte
             when WAIT_START =>
-                txd       := sm_reg.cmd.addr & is_read;
-                txd_valid := '1';
+                v.txd       := sm_reg.cmd.addr & is_read;
+                v.txd_valid := '1';
                 if ll_ready then
                     v.next_valid    := '1';
                     v.state         := WAIT_ADDR_ACK;
@@ -170,8 +172,8 @@ begin
                         else
                             v.state     := WAIT_WRITE_ACK;
                             -- load up the register address
-                            txd         := sm_reg.cmd.reg;
-                            txd_valid   := '1';
+                            v.txd       := sm_reg.cmd.reg;
+                            v.txd_valid := '1';
                         end if;
                     else
                         -- TODO: address nack error
@@ -244,9 +246,9 @@ begin
         v.do_start  := '1' when v.state = START else '0';
         v.do_stop   := '1' when v.state = STOP else '0';
 
-        v.tx_byte       := txd when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
+        v.tx_byte       := v.txd when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
                             else tx_st_if.data;
-        v.tx_byte_valid := txd_valid when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
+        v.tx_byte_valid := v.txd_valid when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
                             else tx_st_if.valid;
 
         sm_reg_next <= v;

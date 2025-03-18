@@ -2,7 +2,14 @@
 // This is SystemRDL description of the sw-accessible registers in the Gimlet
 // Sequencer FPGA.
 
+property addr_span_bytes {
+    type=number;
+    component=addrmap;
+    default=0x100;
+    };
+
 addrmap espi_regs {
+    
     name = "espi system registers";
     desc = "Registers accessible on the Axi bus for debug and testing of the espi target";
 
@@ -88,7 +95,7 @@ addrmap espi_regs {
         name = "Command FIFO Byte Count FIFO";
         desc = "";
         field {
-            desc = "store command byte size in fifo. Beacause we are sending 4bytes at a time into the fifo, but only reading
+            desc = "store command byte size in fifo. Because we are sending 4bytes at a time into the fifo, but only reading
             1 byte at a time, we need to store the number of cmd bytes in the fifo. This allows queueing up multiple commands
             if desired. left over data bytes are discarded if this fifo is empty and there are <4 bytes left in cmd_fifo";
         } fifo_data[7:0] =  0;

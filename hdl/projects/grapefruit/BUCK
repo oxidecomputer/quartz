@@ -3,37 +3,37 @@ load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
 rdl_file(
-    name = "base_regs_map",
+    name = "gfruit_regs_rdl",
     src = "base_regs/gfruit_regs.rdl",
     outputs = [
-        "grapefruit_regs_pkg.vhd", 
-        "grapefruit_reg_map.html", 
-        "grapefruit_reg_map.json",
+        "gfruit_regs_pkg.vhd", 
+        "gfruit_regs.html", 
+        "gfruit_regs.json",
     ]
 )
 
 rdl_file(
-    name = "gfruit_sgpio_regs",
-    src = "sgpio/gfruit_sgpio.rdl",
+    name = "gfruit_sgpio_regs_rdl",
+    src = "sgpio/gfruit_sgpio_regs.rdl",
     outputs = [
-        "sgpio_regs_pkg.vhd", 
-        "sgpio_reg_map.html", 
-        "sgpio_reg_map.json",
+        "gfruit_sgpio_regs_pkg.vhd", 
+        "gfruit_sgpio_regs.html", 
+        "gfruit_sgpio_regs.json",
     ]
 )
 
 rdl_file(
-    name = "gfruit_top_regs",
+    name = "gfruit_top_rdl",
     src = "gfruit_top.rdl",
     deps = [
-        ":base_regs_map",
-        ":gfruit_sgpio_regs",
-        "//hdl/ip/vhd/spi_nor_controller:spi_nor_rdl",
-        "//hdl/ip/vhd/espi:espi_regs_pkg",
+        ":gfruit_regs_rdl",
+        ":gfruit_sgpio_regs_rdl",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_regs_rdl",
+        "//hdl/ip/vhd/espi:espi_regs_rdl",
     ],
     outputs = [
-        "gfruit_top_map.html", 
-        "gfruit_top_map.json"
+        "gfruit_top.html", 
+        "gfruit_top.json"
     ]
 )
 
@@ -46,8 +46,8 @@ vhdl_unit (
     name = "base_regs",
     srcs = glob(["base_regs/*.vhd"]),
     deps = [
-        ":base_regs_map",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        ":gfruit_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         ],
     standard = "2019",
 )
@@ -56,8 +56,8 @@ vhdl_unit (
     name = "gfruit_sgpio",
     srcs = glob(["sgpio/*.vhd"]),
     deps = [
-        ":gfruit_sgpio_regs",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        ":gfruit_sgpio_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         "//hdl/ip/vhd/sgpio:sgpio_top",
         ],
     standard = "2019",
@@ -69,7 +69,7 @@ vhdl_unit(
     srcs = ["grapefruit_top.vhd"],
     deps = [
         ":base_regs",
-        ":gfruit_top_regs",
+        ":gfruit_top_rdl",
         ":gfruit_sgpio",
         ":gfruit_black_boxes",
         "//hdl/projects/cosmo_seq:reset_sync",

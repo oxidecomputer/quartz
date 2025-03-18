@@ -1,0 +1,222 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+// Copyright 2024 Oxide Computer Company
+//
+// This is SystemRDL description of the sw-accesible registers in the
+// grapefruit dev board FPGA.
+
+addrmap gfruit_sgpio_regs {
+    name = "Grapefruit FPGA";
+    desc = "Register description of the Grapefruit FPGA";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "CH0 Outputs";
+        field {
+            desc = "HAWAII_HEARTBEAT";
+        } hbt[15:15] = 0;
+        field {
+            desc = "MB_SCM_HPM_STBY_RDY";
+        } stb_rdy[14:14] = 0;
+        field {
+            desc = "UNUSED_OUTS";
+        } unused[13:12] = 0;
+        field {
+            desc = "HPM_BMC_GPIOY3-??";
+        } y3[11:11] =  0;
+        field {
+            desc = "HPM_BMC_GPIOA5-MGMT_SMBUS_DATA";
+        } a5[10:10] =  1;
+        field {
+            desc = "HPM_BMC_GPIOA4-MGMT_SMBUS_CLK";
+        } a4[9:9] =  1;
+        field {
+            desc = "HPM_BMC_GPIOV7-GPIO_OUTPUT_9";
+        } v7[8:8] =  0;
+        field {
+            desc = "HPM_BMC_GPIOV6-GPIO_OUTPUT_8";
+        } v6[7:7] =  0;
+        field {
+            desc = "HPM_BMC_GPIOV5-GPIO_OUTPUT_7";
+        } v5[6:6] =  0;
+        field {
+            desc = "HPM_BMC_GPIOV3-GPIO_OUTPUT_6";
+        } v3[5:5] =  0;
+        field {
+            desc = "HPM_BMC_GPION7-BMC_READY";
+        } n7[4:4] =  1;
+        field {
+            desc = "HPM_BMC_GPIOL5-??";
+        } l5[3:3] =  1;
+        field {
+            desc = "HPM_BMC_GPIOL4-??";
+        } l4[2:2] =  0;
+        field {
+            desc = "HPM_BMC_GPIOH3-??";
+        } h3[1:1] =  0;
+        field {
+            desc = "HPM_BMC_GPIOH0-MGMT_ASSERT_LOCAL_LOCK";
+        } h0[0:0] =  0;
+
+    } OUT0;
+
+    reg {
+        name = "CH0 Inputs";
+
+        default sw = r;
+
+        field {
+            desc = "HPM_BMC_GPIOG7-BMC_SCM_FPGA_UART_RX";
+        } g7[15:15] =  0;
+        field {
+            desc = "HPM_BMC_GPIOP6-MGMT_SYS_MON_PWR_GOOD";
+        } p6[14:14] =  0;
+        field {
+            desc = "HPM_BMC_GPIOP4-MGMT_SYS_MON_NMI_BTN_L";
+        } p4[13:13] =  0;
+        field {
+            desc = "HPM_BMC_GPIOP2-MGMT_SYS_MON_PWR_BTN_L";
+        } p2[12:12] =  0;
+        field {
+            desc = "HPM_BMC_GPIOP0-MGMT_SYS_MON_RST_BTN_L";
+        } p0[11:11] =  0;
+        field {
+            desc = "HPM_BMC_GPION6-DEBUG_INPUT1";
+        } n6[10:10] =  0;
+        field {
+            desc = "HPM_BMC_GPION5-MGMT_AC_LOSS_L";
+        } n5[9:9] =  0;
+        field {
+            desc = "HPM_BMC_GPION4-MGMT_SYS_MON_ATX_PWR_OK";
+        } n4[8:8] =  0;
+        field {
+            desc = "HPM_BMC_GPION3-MGMT_SYS_MON_P1_THERMTRIP_L";
+        } n3[7:7] =  0;
+        field {
+            desc = "HPM_BMC_GPION2-MGMT_SYS_MON_P0_THERMTRIP_L";
+        } n2[6:6] =  0;
+        field {
+            desc = "HPM_BMC_GPION1-MGMT_SYS_MON_P1_PROCHOT_L";
+        } n1[5:5] =  0;
+        field {
+            desc = "HPM_BMC_GPION0-MGMT_SYS_MON_P0_PROCHOT_L";
+        } n0[4:4] =  0;
+        field {
+            desc = "HPM_BMC_GPIOI6-MGMT_SYS_MON_RESET_L";
+        } i6[3:3] =  0;
+        field {
+            desc = "HPM_BMC_GPIOB7-P1_PRESENT_L";
+        } b7[2:2] =  0;
+        field {
+            desc = "HPM_BMC_GPIOB5-P0_PRESENT_L";
+        } b5[1:1] =  0;
+        field {
+            desc = "HPM_BMC_GPIOB4-MGMT_SYS_MON_POST_COMPLETE";
+        } b4[0:0] =  0;
+
+    } IN0;
+
+    reg {
+        name = "CH1 Outputs";
+        
+        field {
+            desc = "HPM_BMC_GPIOG6-BMC_SCM_FPGA_UART_TX";
+        } g6[14:14] =  1;
+        field {
+            desc = "HPM_BMC_GPIOP5-MGMT_ASSERT_NMI_BTN_L";
+        } p5[13:13] =  1;
+        field {
+            desc = "HPM_BMC_GPIOP3-MGMT_ASSERT_PWR_BTN_L";
+        } p3[12:12] =  1;
+        field {
+            desc = "HPM_BMC_GPIOP1-MGMT_ASSERT_RST_BTN_L";
+        } p1[11:11] =  1;
+        field {
+            desc = "HPM_BMC_GPIOO5-JTAG_TRST_N";
+        } o5[10:10] =  1;
+        field {
+            desc = "HPM_BMC_GPIOO4-GPIO_OUTPUT_5";
+        } o4[9:9] =  0;
+        field {
+            desc = "HPM_BMC_GPIOO3-GPIO_OUTPUT_4";
+        } o3[8:8] =  0;
+        field {
+            desc = "HPM_BMC_GPIOO2-GPIO_OUTPUT_3";
+        } o2[7:7] =  0;
+        field {
+            desc = "HPM_BMC_GPIOO1-GPIO_OUTPUT_2";
+        } o1[6:6] =  0;
+        field {
+            desc = "HHPM_BMC_GPIOO0-GPIO_OUTPUT_1";
+        } o0[5:5] =  0;
+        field {
+            desc = "HPM_BMC_GPIOM2-MGMT_ASSERT_CLR_CMOS";
+        } m2[4:4] =  0;
+        field {
+            desc = "HPM_BMC_GPIOM1-MGMT_ASSERT_P1_PROCHOT";
+        } m1[3:3] =  0;
+        field {
+            desc = "HPM_BMC_GPIOM0-MGMT_ASSERT_P0_PROCHOT";
+        } m0[2:2] =  0;
+        field {
+            desc = "HPM_BMC_GPIOH2-MGMT_SOC_RESET_L";
+        } h2[1:1] =  1;
+        field {
+            desc = "HPM_BMC_GPIOH1-MGMT_ASERT_WARM_RST_BTN_L";
+        } h1[0:0] =  1;
+
+    } OUT1;
+
+    reg {
+        name = "CH1 Inputs";
+
+        default sw = r;
+        
+        field {
+            desc = "MGMT_SMBUS_ALERT_L";
+        } uu1[15:15] =  0;
+        field {
+            desc = "HPM_BMC_GPIOI7-??";
+        } i7[14:14] =  0;
+        field {
+            desc = "ESPI_BOOT_SEL";
+        } espi_sel[13:13] =  0;
+        field {
+            desc = "I2C_BMC_MB_ALERT_s";
+        } uu[12:9] =  0;
+        field {
+            desc = "HPM_BMC_GPIOS7-GPIO_INPUT_6";
+        } s7[8:8] =  0;
+        field {
+            desc = "HPM_BMC_GPIOS6-GPIO_INPUT_5";
+        } s6[7:7] =  0;
+        field {
+            desc = "HPM_BMC_GPIOS5-GPIO_INPUT_4";
+        } s5[6:6] =  0;
+        field {
+            desc = "HPM_BMC_GPIOS4-GPIO_INPUT_3";
+        } s4[5:5] =  0;
+        field {
+            desc = "HPM_BMC_GPIOQ4-GPIO_INPUT_2";
+        } q4[4:4] =  0;
+        field {
+            desc = "HPM_BMC_GPIOQ3-GPIO_INPUT_1";
+        } q3[3:3] =  0;
+        field {
+            desc = "HPM_BMC_GPIOM5-??";
+        } m5[2:2] =  0;
+        field {
+            desc = "HPM_BMC_GPIOM4-??";
+        } m4[1:1] =  0;
+        field {
+            desc = "HPM_BMC_GPIOM3-??";
+        } m3[0:0] =  0;
+
+    } IN1;
+    
+};

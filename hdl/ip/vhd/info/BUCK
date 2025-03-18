@@ -2,9 +2,9 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "info_regs_pkg",
+    name = "info_regs_rdl",
     src = "info_regs.rdl",
-    outputs = ["info_regs_pkg.vhd", "info_regs.html"],
+    outputs = ["info_regs_pkg.vhd", "info_regs.html", "info_regs.json"],
     visibility = ['PUBLIC']
 )
 
@@ -12,6 +12,7 @@ rdl_file(
 # There are a lot of better ways this might be done, but this was the simplest.
 # It does mean there's a re-build for any change to the git repo, but for now that's fine.
 # Longer-term, we might evaluate backannotating ROMs or something with this build info
+# This also breaks windows due to shell use
 genrule(
     name = "git_sha",
     out = "git_sha_pkg.vhd",
@@ -32,7 +33,8 @@ vhdl_unit(
     srcs = ["info_2k8.vhd"],
     deps = [
         ":git_sha_pkg",
-        ":info_regs_pkg",
+        ":info_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k8",
         ],
     standard = "2008",
     visibility = ['PUBLIC']
@@ -45,7 +47,7 @@ vhdl_unit(
     srcs = ["info.vhd"],
     deps = [
         ":info_2k8",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         ],
     standard = "2019",
     visibility = ['PUBLIC']

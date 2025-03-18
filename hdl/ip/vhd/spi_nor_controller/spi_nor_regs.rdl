@@ -7,7 +7,7 @@
 // This is SystemRDL description of the sw-accesible registers in the
 // grapefruit dev board FPGA.
 
-addrmap nor_flash_regs {
+addrmap spi_nor_regs {
     name = "SPI/QSPI NOR flash controller";
     desc = "";
 

@@ -129,13 +129,16 @@ def convert_addr_map_only(
 
     json_obj = dict()
     if isinstance(obj, AddrmapNode):
+
         json_obj["type"] = "addrmap"
+        json_obj["addr_span_bytes"] = obj.size
     elif isinstance(obj, RegfileNode):
         json_obj["type"] = "regfile"
     else:
         raise RuntimeError
 
     json_obj["inst_name"] = obj.inst_name
+    json_obj["orig_type_name"] = obj.orig_type_name
     json_obj["addr_offset"] = obj.address_offset
 
     json_obj["children"] = []
@@ -157,8 +160,10 @@ def convert_addrmap_or_regfile(
     json_obj = dict()
     if isinstance(obj, AddrmapNode):
         json_obj["type"] = "addrmap"
+        json_obj["addr_span_bytes"] = obj.size
     elif isinstance(obj, RegfileNode):
         json_obj["type"] = "regfile"
+        json_obj["addr_span_bytes"] = obj.size
     else:
         raise RuntimeError
 

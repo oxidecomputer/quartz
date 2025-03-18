@@ -2,7 +2,7 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "i2c_ctrl_regs_pkg",
+    name = "i2c_ctrl_regs_rdl",
     src = "regs/i2c_ctrl_regs.rdl",
     outputs = ["i2c_ctrl_regs_pkg.vhd", "i2c_ctrl_regs.html"],
     visibility = ['PUBLIC']
