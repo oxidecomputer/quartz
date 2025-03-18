@@ -90,7 +90,7 @@ begin
             when IDLE =>
                 wait on start_condition;
                 state <= START;
-            
+
             when START =>
                 event_msg   := new_msg(got_start);
                 send(net, I2C_TARGET_VC.p_actor, event_msg);
