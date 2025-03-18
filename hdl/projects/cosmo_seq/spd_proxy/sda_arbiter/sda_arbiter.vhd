@@ -8,7 +8,7 @@
 -- essentially connected but proxied by the FPGA. It assumes the inactive state for the bus is high,
 -- and then monitors for `a` or `b` to pull the line low. It will then grant whichever side pulled
 -- the line low the bus until that side releases it, at which point after HYSTERESIS_CYCLES both
--- sides will be resambled again.
+-- sides will be resampled again.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -16,7 +16,7 @@ use ieee.numeric_std.all;
 
 entity sda_arbiter is
     generic (
-        HYSTERESIS_CYCLES : integer
+        HYSTERESIS_CYCLES : natural
     );
     port (
         clk     : in std_logic;
@@ -37,7 +37,7 @@ architecture rtl of sda_arbiter is
         GRANT_B
     );
     signal sda_state : sda_control_t;
-    signal hysteresis_cntr : natural;
+    signal hysteresis_cntr : natural range 0 to HYSTERESIS_CYCLES;
 begin
 
     a_grant <= '1' when sda_state = GRANT_A else '0';
@@ -48,6 +48,7 @@ begin
     begin
         if reset then
             sda_state       <= NONE;
+            hysteresis_cntr <= 0;
         elsif rising_edge(clk) then
             if enabled then
                 if hysteresis_cntr = HYSTERESIS_CYCLES then
