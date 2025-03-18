@@ -47,7 +47,7 @@ vhdl_unit (
     srcs = glob(["base_regs/*.vhd"]),
     deps = [
         ":gfruit_regs_rdl",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         ],
     standard = "2019",
 )
@@ -57,7 +57,7 @@ vhdl_unit (
     srcs = glob(["sgpio/*.vhd"]),
     deps = [
         ":gfruit_sgpio_regs_rdl",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         "//hdl/ip/vhd/sgpio:sgpio_top",
         ],
     standard = "2019",

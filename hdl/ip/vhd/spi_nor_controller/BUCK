@@ -25,7 +25,7 @@ vhdl_unit(
     deps = [
         ":spi_nor_regs_rdl",
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
-        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         ],
     visibility = ["PUBLIC"],
 )
