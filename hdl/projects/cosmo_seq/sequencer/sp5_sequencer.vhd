@@ -49,6 +49,9 @@ entity sp5_sequencer is
         -- nic sequencing I/O
         nic_seq_pins: view nic_seq_at_fpga;
 
+        sp5_t6_power_en : in std_logic;
+        sp5_t6_perst_l : in std_logic;
+
 
     );
 end entity;
@@ -236,6 +239,8 @@ begin
         upstream_ok => a0_ok,
         nic_overrides_reg => nic_overrides,
         debug_enables => debug_enables,
+        sp5_t6_power_en => sp5_t6_power_en,
+        sp5_t6_perst_l => sp5_t6_perst_l,
         nic_rails => nic_rails,
         nic_seq_pins => nic_seq
     );

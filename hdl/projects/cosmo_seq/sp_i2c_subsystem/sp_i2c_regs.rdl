@@ -1,0 +1,20 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible registers in the Cosmo
+// Sequencer FPGA block.
+
+addrmap sp_i2c_regs {
+    name = "SP controllable I2C out of band management registers";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+ 
+    reg  {
+
+           field {
+               desc = "Reset the FPGA-controlled I2C muxes on the, write '1', self clearing ";
+           } main_bus_reset[1];
+       } mux_resets;
+
+};

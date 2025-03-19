@@ -29,9 +29,5 @@ begin
     -- for now, though we implement the most basic of models where the rails
     -- turn on when requested after some delay
 
-    -- The block we're interfacing with expects to be synchronized
-    process(clk)
-    begin
-        rail.pg <= rail.enable;
-    end process;
+    rail.pg <= rail.enable;
 end model;

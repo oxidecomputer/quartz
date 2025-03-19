@@ -22,10 +22,10 @@ vhdl_unit(
     standard = "2019",
 )
 
-# vunit_sim(
-#     name = "sp5_sequencer_sim",
-#     srcs = glob(["sims/**/*.vhd"]),
-#     deps = [
-#     ],
-#     visibility = ['PUBLIC'],
-# )
+vunit_sim(
+    name = "sp5_seq_sim",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+    ],
+    visibility = ['PUBLIC'],
+)

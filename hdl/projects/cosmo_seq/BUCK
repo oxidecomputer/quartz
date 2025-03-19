@@ -7,6 +7,7 @@ rdl_file(
     src = "cosmo_seq_top.rdl",
     deps = [
         "//hdl/ip/vhd/info:info_regs_rdl",
+        "//hdl/projects/cosmo_seq/sp_i2c_subsystem:sp_i2c_regs_rdl",
         "//hdl/projects/cosmo_seq/sequencer:sequencer_regs_rdl",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_regs_rdl",
         "//hdl/ip/vhd/espi:espi_regs_rdl",
