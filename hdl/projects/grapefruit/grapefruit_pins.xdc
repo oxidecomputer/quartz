@@ -130,6 +130,8 @@ set_property -dict { PACKAGE_PIN Y3 IOSTANDARD LVCMOS18 } [get_ports { espi_hpm_
 set_property SLEW FAST [get_ports espi_hpm_to_scm_dat[*]]
 set_property -dict { PACKAGE_PIN AA6 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm0_abcdef_scl }];
 set_property -dict { PACKAGE_PIN AB6 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm0_abcdef_sda }];
+# we have pullups applied to the i3c_hpm_to_scm_dimm0_ghijkl bus for experimentation getting the SPD
+# proxying working with Ruby in a setup that requires a bit of rework.
 set_property -dict { PACKAGE_PIN Y6 IOSTANDARD LVCMOS18 PULLUP TRUE } [get_ports { i3c_hpm_to_scm_dimm0_ghijkl_scl }];
 set_property -dict { PACKAGE_PIN Y5 IOSTANDARD LVCMOS18 PULLUP TRUE } [get_ports { i3c_hpm_to_scm_dimm0_ghijkl_sda }];
 set_property -dict { PACKAGE_PIN Y4 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_abcdef_scl }];
@@ -138,6 +140,8 @@ set_property -dict { PACKAGE_PIN AB3 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_
 set_property -dict { PACKAGE_PIN AB2 IOSTANDARD LVCMOS18 } [get_ports { i3c_hpm_to_scm_dimm1_ghijkl_sda }];
 set_property -dict { PACKAGE_PIN AA1 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_abcdef_scl }];
 set_property -dict { PACKAGE_PIN AB5 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm0_abcdef_sda }];
+# we have pullups applied to the i3c_scm_to_dimm0_ghijkl bus for experimentation getting the SPD
+# proxying working with Ruby in a setup that requires a bit of rework.
 set_property -dict { PACKAGE_PIN AB4 IOSTANDARD LVCMOS18 PULLUP TRUE } [get_ports { i3c_scm_to_dimm0_ghijkl_scl }];
 set_property -dict { PACKAGE_PIN V8 IOSTANDARD LVCMOS18 PULLUP TRUE } [get_ports { i3c_scm_to_dimm0_ghijkl_sda }];
 set_property -dict { PACKAGE_PIN W8 IOSTANDARD LVCMOS18 } [get_ports { i3c_scm_to_dimm1_abcdef_scl }];
