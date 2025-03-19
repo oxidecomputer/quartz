@@ -13,7 +13,10 @@ use ieee.numeric_std_unsigned.all;
 use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
+use work.i2c_common_pkg.all;
+use work.stream8_pkg;
 use work.time_pkg.all;
+use work.tristate_if_pkg.all;
 
 entity grapefruit_top is
     port (
@@ -244,7 +247,14 @@ architecture rtl of grapefruit_top is
     signal sp5_owns_flash : std_logic;
     signal spi_nor_block_data_o : std_logic_vector(3 downto 0);
     signal spi_nor_block_data_oe : std_logic_vector(3 downto 0);
-   
+
+    signal ruby_scl_if : tristate;
+    signal ruby_sda_if : tristate;
+    signal dimm_scl_if : tristate;
+    signal dimm_sda_if : tristate;
+    -- stubs
+    signal i2c_tx_st_if : stream8_pkg.data_channel;
+    signal i2c_rx_st_if : stream8_pkg.data_channel;
 begin
 
     espi_scm_to_hpm_alert_l <= 'Z';
@@ -568,26 +578,36 @@ begin
         sgpio1_ld => sgpio_scm_to_hpm_ld(1)
     );
 
-    i3c_hpm_to_scm_dimm0_abcdef_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm0_abcdef_sda <= not counter(26);
+    -- Ruby -> Grapefruit bus (filtered in SPD block)
+    i3c_hpm_to_scm_dimm0_ghijkl_scl <= ruby_scl_if.o when ruby_scl_if.oe else 'Z';
+    ruby_scl_if.i   <= i3c_hpm_to_scm_dimm0_ghijkl_scl;
+    i3c_hpm_to_scm_dimm0_ghijkl_sda <= ruby_sda_if.o when ruby_sda_if.oe else 'Z';
+    ruby_sda_if.i   <= i3c_hpm_to_scm_dimm0_ghijkl_sda;
 
-    i3c_hpm_to_scm_dimm1_abcdef_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm1_abcdef_sda <= not counter(26);
-    i3c_hpm_to_scm_dimm1_ghijkl_scl <= not counter(26);
-    i3c_hpm_to_scm_dimm1_ghijkl_sda <= not counter(26);
+    -- Grapefruit -> DIMM bus (filtered in SPD block)
+    i3c_scm_to_dimm0_ghijkl_scl <= dimm_scl_if.o when dimm_scl_if.oe else 'Z';
+    dimm_scl_if.i   <= i3c_scm_to_dimm0_ghijkl_scl;
+    i3c_scm_to_dimm0_ghijkl_sda <= dimm_sda_if.o when dimm_sda_if.oe else 'Z';
+    dimm_sda_if.i   <= i3c_scm_to_dimm0_ghijkl_sda;
 
-    i3c_scm_to_dimm0_abcdef_scl <= not counter(26);
-    i3c_scm_to_dimm0_abcdef_sda <= not counter(26);
-    
-    i3c_scm_to_dimm1_abcdef_scl <= not counter(26);
-    i3c_scm_to_dimm1_abcdef_sda <= not counter(26);
-    i3c_scm_to_dimm1_ghijkl_scl <= not counter(26);
-    i3c_scm_to_dimm1_ghijkl_sda <= not counter(26);
-
-    -- these signals are intentionally left unused due to the ruby rework on sapphire
-    -- i3c_hpm_to_scm_dimm0_ghijkl_scl
-    -- i3c_hpm_to_scm_dimm0_ghijkl_sda
-    -- i3c_scm_to_dimm0_ghijkl_scl
-    -- i3c_scm_to_dimm0_ghijkl_sda
+    -- Wiring this in with the i2c_cmd interface disabled so it will just pass through the CPU/DIMM
+    -- comminication for now.
+    spd_proxy_top_inst: entity work.spd_proxy_top
+        generic map(
+            CLK_PER_NS  => 8, -- clk @ 125MHz = 8ns period
+            I2C_MODE    => FAST_PLUS
+        )
+        port map(
+            clk                 => clk_125m,
+            reset               => reset_125m,
+            cpu_scl_if          => ruby_scl_if,
+            cpu_sda_if          => ruby_sda_if,
+            dimm_scl_if         => dimm_scl_if,
+            dimm_sda_if         => dimm_sda_if,
+            i2c_command         => CMD_RESET,
+            i2c_command_valid   => '0',
+            i2c_tx_st_if        => i2c_tx_st_if,
+            i2c_rx_st_if        => i2c_rx_st_if
+        );
 
 end rtl;
