@@ -42,11 +42,9 @@ begin
         variable i2c_ctrlr_msg : msg_t;
 
         variable command    : cmd_t;
-        variable ack        : boolean := false;
 
         variable data       : std_logic_vector(7 downto 0);
         variable exp_addr   : std_logic_vector(7 downto 0);
-        variable exp_data   : std_logic_vector(7 downto 0);
         variable byte_len   : natural;
         variable byte_idx   : natural;
 
@@ -59,6 +57,15 @@ begin
         -- attempting to interrupt
         procedure init_controller is
         begin
+            -- we gate the FPGA controller on seeing CPU activity before it will start talking, so
+            -- fake that out
+            i2c_ctrlr_msg := new_msg(i2c_send_start);
+            send(net, I2C_CTRL_VC.p_actor, i2c_ctrlr_msg);
+            expect_start(net, I2C_TGT_VC);
+            i2c_ctrlr_msg := new_msg(i2c_send_stop);
+            send(net, I2C_CTRL_VC.p_actor, i2c_ctrlr_msg);
+            expect_stop(net, I2C_TGT_VC);
+
             -- arbitrary for the test
             exp_addr    := X"00";
             byte_len    := 8;

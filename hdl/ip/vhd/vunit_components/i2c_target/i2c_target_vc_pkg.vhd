@@ -51,6 +51,11 @@ package i2c_target_vc_pkg is
         constant expected_msg   : msg_type_t;
     );
 
+    procedure expect_start (
+        signal net  : inout network_t;
+        constant vc : i2c_target_vc_t;
+    );
+
     procedure expect_stop (
         signal net  : inout network_t;
         constant vc : i2c_target_vc_t;
@@ -126,6 +131,14 @@ package body i2c_target_vc_pkg is
         if not matched then
             unexpected_msg_type(message_type(msg));
         end if;
+    end procedure;
+
+    procedure expect_start (
+        signal net      : inout network_t;
+        constant vc     : i2c_target_vc_t;
+    ) is
+    begin
+        expect_message(net, vc, got_start);
     end procedure;
 
     procedure expect_stop (
