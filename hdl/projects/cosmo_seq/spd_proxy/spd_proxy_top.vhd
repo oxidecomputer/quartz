@@ -65,7 +65,6 @@ architecture rtl of spd_proxy_top is
     signal cpu_sda_oe           : std_logic;
     signal dimm_sda_oe          : std_logic;
 
-    signal ctrlr_idle           : std_logic;
     signal ctrlr_scl_if         : tristate;
     signal ctrlr_sda_if         : tristate;
     signal ctrlr_has_int_mux    : boolean;
@@ -137,6 +136,7 @@ begin
             cpu_busy                <= '0';
             need_start              <= false;
             cpu_first_start_seen    <= false;
+            cpu_seen                <= false;
         elsif rising_edge(clk) then
             if cpu_start_detected then
                 cpu_busy                <= '1';
@@ -147,7 +147,7 @@ begin
 
             -- The FPGA still owns the bus and the START hold time as elapsed. This means before
             -- the mux is swapped we need to simulate a START condition .
-            if ctrlr_idle = '0' and cpu_scl_fedge = '1' then
+            if i2c_ctrlr_idle = '0' and cpu_scl_fedge = '1' then
                 need_start  <= true;
             elsif start_simulated then
                 need_start  <= false;
@@ -227,10 +227,11 @@ begin
         );
 
     -- for the internal bus, mux between our simulated start and internal controller
-    fpga_scl_if.o   <= scl_sim when need_start else ctrlr_scl_if.o;
-    fpga_scl_if.oe  <= '1' when need_start else ctrlr_scl_if.oe;
-    fpga_sda_if.o   <= sda_sim when need_start else ctrlr_sda_if.o;
-    fpga_sda_if.oe  <= '1' when need_start else ctrlr_sda_if.oe;
+    ctrlr_has_int_mux   <= not need_start or i2c_ctrlr_idle = '0';
+    fpga_scl_if.o       <= ctrlr_scl_if.o when ctrlr_has_int_mux else scl_sim;
+    fpga_scl_if.oe      <= ctrlr_scl_if.oe when ctrlr_has_int_mux else '1';
+    fpga_sda_if.o       <= ctrlr_sda_if.o when ctrlr_has_int_mux else sda_sim;
+    fpga_sda_if.oe      <= ctrlr_sda_if.oe when ctrlr_has_int_mux else '1';
 
     -- Break the fpga input from the bus when it doesn't have the bus
     -- The I2C link layer filters SDA so we will feed it the unfiltered signal
