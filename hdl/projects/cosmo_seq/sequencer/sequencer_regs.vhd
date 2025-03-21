@@ -45,7 +45,6 @@ end entity;
 architecture rtl of sequencer_regs is
     signal ifr : irq_type;
     signal ier : irq_type;
-    signal int_pend : std_logic;
 
     signal status : status_type;
 
@@ -167,6 +166,7 @@ begin
         if reset then
             ifr <= reset_0s;
             ier <= reset_0s;
+            early_power_ctrl <= rec_reset;
             power_ctrl <= rec_reset;
             rails_pg_max <= reset_0s;
             debug_enables <= rec_reset;

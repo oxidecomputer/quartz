@@ -110,7 +110,6 @@ package sequencer_io_pkg is
        abcdef_hsc : power_rail_t;
        ghijkl_hsc : power_rail_t;
     end record;
-    function control_enables_by(en: std_logic) return ddr_bulk_power_t;
     function is_power_good(power_group: ddr_bulk_power_t) return boolean;
     -- FPGA's view of the world as the controller and recipient of
     -- the feedback
@@ -127,7 +126,6 @@ package sequencer_io_pkg is
         v3p3_sp5_a1 : power_rail_t;
         v1p8_sp5_a1 : power_rail_t;
     end record;
-    function control_enables_by(en: std_logic) return group_a_power_t;
     function is_power_good(power_group: group_a_power_t) return boolean;
     view group_a_power_at_fpga of group_a_power_t is
         pwr_v1p5_rtc : view power_rail_at_fpga;
@@ -140,7 +138,6 @@ package sequencer_io_pkg is
     type group_b_power_t is record
         v1p1_sp5 : power_rail_t;
     end record;
-    function control_enables_by(en: std_logic) return group_b_power_t;
     function is_power_good(power_group: group_b_power_t) return boolean;
     view group_b_power_at_fpga of group_b_power_t is
         v1p1_sp5 : view power_rail_at_fpga;
@@ -155,7 +152,6 @@ package sequencer_io_pkg is
         vddcr_cpu0 : power_rail_t;
         vddcr_soc : power_rail_t;
     end record;
-    function control_enables_by(en: std_logic) return group_c_power_t;
     function is_power_good(power_group: group_c_power_t) return boolean;
     view group_c_power_at_fpga of group_c_power_t is
         vddio_sp5_a0 : view power_rail_at_fpga;
@@ -178,8 +174,6 @@ package sequencer_io_pkg is
         nic_hsc_12v : power_rail_t;  -- two rails are bonded together for enable
         nic_hsc_5v : cascade_power_rail_t;  -- but have separate readbacks
     end record;
-
-    function control_enables_by(en: std_logic) return nic_power_t;
     function is_power_good(power_group: nic_power_t) return boolean;
     view nic_power_at_fpga of nic_power_t is
         v1p5_nic_a0hp : view cascade_power_rail_at_fpga;  
@@ -199,60 +193,24 @@ end package;
 package body sequencer_io_pkg is
 
      -- Functions for DDR bulk
-     function control_enables_by(en: std_logic) return ddr_bulk_power_t is
-        variable ret_enables : ddr_bulk_power_t;
-    begin
-        ret_enables.abcdef_hsc.enable := en;
-        ret_enables.abcdef_hsc.pg := 'Z'; 
-        ret_enables.ghijkl_hsc.enable := en;
-        ret_enables.ghijkl_hsc.pg := 'Z'; 
-    end function;
     function is_power_good(power_group: ddr_bulk_power_t) return boolean is
     begin
         return (power_group.abcdef_hsc.pg and  power_group.ghijkl_hsc.pg) = '1';
     end function;
 
     -- Functions for groupA
-    function control_enables_by(en: std_logic) return group_a_power_t is
-        variable ret_enables : group_a_power_t;
-    begin
-        ret_enables.pwr_v1p5_rtc.enable := en;
-        ret_enables.pwr_v1p5_rtc.pg := 'Z'; 
-        ret_enables.v3p3_sp5_a1.enable := en;
-        ret_enables.v3p3_sp5_a1.pg := 'Z'; 
-        ret_enables.v1p8_sp5_a1.enable := en;
-        ret_enables.v1p8_sp5_a1.pg := 'Z';
-    end function;
     function is_power_good(power_group: group_a_power_t) return boolean is
     begin
         return (power_group.pwr_v1p5_rtc.pg and  power_group.v3p3_sp5_a1.pg and power_group.v1p8_sp5_a1.pg) = '1';
     end function;
     
     -- Functions for groupB
-    function control_enables_by(en: std_logic) return group_b_power_t is
-        variable ret_enables : group_b_power_t;
-    begin
-        ret_enables.v1p1_sp5.enable := en;
-        ret_enables.v1p1_sp5.pg := 'Z'; 
-    end function;
     function is_power_good(power_group: group_b_power_t) return boolean is
     begin
         return power_group.v1p1_sp5.pg = '1';
     end function;
 
     -- Functions for groupc
-    function control_enables_by(en: std_logic) return group_c_power_t is
-        variable ret_enables : group_c_power_t;
-    begin
-        ret_enables.vddio_sp5_a0.enable := en;
-        ret_enables.vddio_sp5_a0.pg := 'Z';
-        ret_enables.vddcr_cpu1.enable := en;
-        ret_enables.vddcr_cpu1.pg := 'Z';
-        ret_enables.vddcr_cpu0.enable := en;
-        ret_enables.vddcr_cpu0.pg := 'Z';
-        ret_enables.vddcr_soc.enable := en;
-        ret_enables.vddcr_soc.pg := 'Z';
-    end function;
     function is_power_good(power_group: group_c_power_t) return boolean is
     begin
         return (power_group.vddio_sp5_a0.pg and 
@@ -260,21 +218,6 @@ package body sequencer_io_pkg is
             power_group.vddcr_cpu0.pg and
             power_group.vddcr_soc.pg
             ) = '1';
-    end function;
-
-    function control_enables_by(en: std_logic) return nic_power_t is
-        variable ret_enables : nic_power_t;
-    begin
-        ret_enables.v1p5_nic_a0hp.pg := 'Z';
-        ret_enables.v1p2_nic_pcie_a0hp.pg := 'Z';
-        ret_enables.v1p2_nic_enet_a0hp.pg := 'Z';
-        ret_enables.v3p3_nic_a0hp.pg := 'Z';
-        ret_enables.v1p1_nic_a0hp.pg := 'Z';
-        ret_enables.v0p96_nic_vdd_a0hp.pg := 'Z';
-        ret_enables.nic_hsc_12v.pg := 'Z';
-        ret_enables.nic_hsc_12v.enable := en;
-        ret_enables.nic_hsc_5v.pg := 'Z';
-      
     end function;
     function is_power_good(power_group: nic_power_t) return boolean is
     begin

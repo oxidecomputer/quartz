@@ -403,12 +403,25 @@ begin
         end if;
     end process;
 
+    sp5_seq_pins.pwr_btn_l <= seq_r.pwr_btn_l;
+    sp5_seq_pins.rsmrst_l <= seq_r.rsm_rst_l;
+    sp5_seq_pins.pwr_good <= seq_r.pwr_good;
+
     -- Use the internal sm registers to drive the various enable outputs
     -- there's no combo logic here, this is just bonding sm-internal registers
     -- to the enable pins
-    ddr_bulk <= control_enables_by(seq_r.ddr_bulk_en);
-    group_a <= control_enables_by(seq_r.group_a_en);
-    group_b <= control_enables_by(seq_r.group_b_en);
-    group_c <= control_enables_by(seq_r.group_c_en);
+    ddr_bulk.abcdef_hsc.enable <= seq_r.ddr_bulk_en;
+    ddr_bulk.ghijkl_hsc.enable <= seq_r.ddr_bulk_en;
+
+    group_a.pwr_v1p5_rtc.enable <= seq_r.group_a_en;
+    group_a.v3p3_sp5_a1.enable <= seq_r.group_a_en;
+    group_a.v1p8_sp5_a1.enable <= seq_r.group_a_en;
+
+    group_b.v1p1_sp5.enable <= seq_r.group_b_en;
+
+    group_c.vddio_sp5_a0.enable <= seq_r.group_c_en;
+    group_c.vddcr_cpu1.enable <= seq_r.group_c_en;
+    group_c.vddcr_cpu0.enable <= seq_r.group_c_en;
+    group_c.vddcr_soc.enable <= seq_r.group_c_en;
     a0_faulted <= seq_r.faulted;
 end rtl;

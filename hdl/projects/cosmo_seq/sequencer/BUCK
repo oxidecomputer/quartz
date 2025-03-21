@@ -17,15 +17,18 @@ vhdl_unit(
     srcs = glob(["*.vhd"]),
     deps = [
         ":sequencer_regs_rdl",
+        "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
     ],
     visibility = ["PUBLIC"],
     standard = "2019",
 )
 
 vunit_sim(
-    name = "sp5_seq_sim",
+    name = "sp5_seq_tb",
     srcs = glob(["sims/**/*.vhd"]),
-    deps = [
+    deps = [":sequencer",
     ],
     visibility = ['PUBLIC'],
+    standard = "2019",
 )
