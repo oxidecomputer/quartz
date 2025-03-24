@@ -1,0 +1,153 @@
+// Bank 0
+LOCATE COMP "rsw0_examax_to_fpga_sled_present_l" SITE "A8";
+IOBUF PORT "rsw0_examax_to_fpga_sled_present_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "rsw1_examax_to_fpga_sled_present_l" SITE "A9";
+IOBUF PORT "rsw1_examax_to_fpga_sled_present_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "pcie_examax_to_fpga_sled_present_l" SITE "B8";
+IOBUF PORT "pcie_examax_to_fpga_sled_present_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
+// Bank 1
+LOCATE COMP "fpga_to_pcie_sled_i2c_buffer_en" SITE "E13";
+IOBUF PORT "fpga_to_pcie_sled_i2c_buffer_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_pcie_cem_i2c_buffer_en" SITE "E14";
+IOBUF PORT "fpga_to_pcie_cem_i2c_buffer_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_vsc7448_reset_l" SITE "A14";
+IOBUF PORT "fpga_to_vsc7448_reset_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_vsc8504_reset_l_v3p3" SITE "A15";
+IOBUF PORT "fpga_to_vsc8504_reset_l_v3p3" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sled_pcie_attached_l" SITE "C19";
+IOBUF PORT "fpga_to_sled_pcie_attached_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "pcie_aux_sled_to_fpga_perst_l" SITE "B19";
+IOBUF PORT "pcie_aux_sled_to_fpga_perst_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "pcie_aux_fpga_to_sled_pwrflt_l" SITE "A18";
+IOBUF PORT "pcie_aux_fpga_to_sled_pwrflt_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "pcie_aux_fpga_to_sled_prsnt_l" SITE "A19";
+IOBUF PORT "pcie_aux_fpga_to_sled_prsnt_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "smbus_pcie_aux_sled_to_fpga_sda" SITE "A21";
+IOBUF PORT "smbus_pcie_aux_sled_to_fpga_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
+LOCATE COMP "smbus_pcie_aux_sled_to_fpga_scl" SITE "A23";
+IOBUF PORT "smbus_pcie_aux_sled_to_fpga_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
+
+// Bank 2
+LOCATE COMP "fpga_ign_lvds_link0_led_en_l" SITE "C25";
+IOBUF PORT "fpga_ign_lvds_link0_led_en_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_ign_lvds_link1_led_en_l" SITE "C26";
+IOBUF PORT "fpga_ign_lvds_link1_led_en_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_status_led_en_l" SITE "B26";
+IOBUF PORT "fpga_status_led_en_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
+// Bank 3
+// 50 MHz clock
+LOCATE COMP "clk_50mhz_fpga" SITE "H25";
+FREQUENCY PORT "clk_50mhz_fpga" 50 MHZ;
+IOBUF PORT "clk_50mhz_fpga" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_v12_pcie_efuse_en" SITE "L25";
+IOBUF PORT "fpga_to_v12_pcie_efuse_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_v3p3_pcie_efuse_en" SITE "M26";
+IOBUF PORT "fpga_to_v3p3_pcie_efuse_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "v3p3_pcie_pg" SITE "L26";
+IOBUF PORT "v3p3_pcie_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "v12_pcie_pg" SITE "N26";
+IOBUF PORT "v12_pcie_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "smbus_pcie_aux_fpga_to_cem_scl" SITE "P25";
+IOBUF PORT "smbus_pcie_aux_fpga_to_cem_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
+LOCATE COMP "smbus_pcie_aux_fpga_to_cem_sda" SITE "T25";
+IOBUF PORT "smbus_pcie_aux_fpga_to_cem_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
+LOCATE COMP "pcie_aux_cem_to_fpga_prsnt_l" SITE "U25";
+IOBUF PORT "pcie_aux_cem_to_fpga_prsnt_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "pcie_aux_fpga_to_cem_perst_l" SITE "U26";
+IOBUF PORT "pcie_aux_fpga_to_cem_perst_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_pcie_aux_refclk_buffer_oe0_l" SITE "V24";
+IOBUF PORT "fpga_to_pcie_aux_refclk_buffer_oe0_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_pcie_aux_refclk_buffer_oe1_l" SITE "W26";
+IOBUF PORT "fpga_to_pcie_aux_refclk_buffer_oe1_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_pcie_aux_refclk_buffer_pd_l" SITE "W25";
+IOBUF PORT "fpga_to_pcie_aux_refclk_buffer_pd_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_pcie_aux_refclk_buffer_bw_sel" SITE "W24";
+IOBUF PORT "fpga_to_pcie_aux_refclk_buffer_bw_sel" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
+// Bank 6
+LOCATE COMP "vbus_sys_hsc_to_fpga_fault_l" SITE "H3";
+IOBUF PORT "VBUS_SYS_HSC_TO_FPGA_FAULT_L" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_vbus_sys_hsc_restart_l" SITE "J3";
+IOBUF PORT "fpga_to_vbus_sys_hsc_restart_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_vbus_sled_hsc_en" SITE "H2";
+IOBUF PORT "fpga_to_vbus_sled_hsc_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vbus_sled_hsc_to_fpga_fault_l" SITE "H1";
+IOBUF PORT "vbus_sled_hsc_to_fpga_fault_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_vbus_sled_hsc_restart_l" SITE "K2";
+IOBUF PORT "fpga_to_vbus_sled_hsc_restart_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "vbus_sled_pg" SITE "J1";
+IOBUF PORT "vbus_sled_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[6]" SITE "L2";
+IOBUF PORT "fpga_to_debug_spare_io[6]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[2]" SITE "M1";
+IOBUF PORT "fpga_to_debug_spare_io[2]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[4]" SITE "L1";
+IOBUF PORT "fpga_to_debug_spare_io[4]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[0]" SITE "N1";
+IOBUF PORT "fpga_to_debug_spare_io[0]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[7]" SITE "N2";
+IOBUF PORT "fpga_to_debug_spare_io[7]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[3]" SITE "P2";
+IOBUF PORT "fpga_to_debug_spare_io[3]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[5]" SITE "P1";
+IOBUF PORT "fpga_to_debug_spare_io[5]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_debug_spare_io[1]" SITE "R1";
+IOBUF PORT "fpga_to_debug_spare_io[1]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "hcv_code[2]" SITE "V1";
+IOBUF PORT "hcv_code[2]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "hcv_code[1]" SITE "U2";
+IOBUF PORT "hcv_code[1]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "hcv_code[0]" SITE "U1";
+IOBUF PORT "hcv_code[0]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "power_button_to_fpga_l" SITE "T1";
+IOBUF PORT "power_button_to_fpga_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_power_led_en" SITE "V3";
+IOBUF PORT "fpga_to_power_led_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_irq_l[2]" SITE "W1";
+IOBUF PORT "fpga_to_sp_irq_l[2]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_irq_l[1]" SITE "W2";
+IOBUF PORT "fpga_to_sp_irq_l[1]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_irq_l[0]" SITE "W3";
+IOBUF PORT "fpga_to_sp_irq_l[0]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
+// Bank 7
+LOCATE COMP "lvds_fpga_to_sled_link1_dc_p" SITE "C2";
+LOCATE COMP "lvds_fpga_to_sled_link1_dc_n" SITE "C1";
+IOBUF PORT "lvds_fpga_to_sled_link1_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
+LOCATE COMP "lvds_sled_to_fpga_link1_dc_p" SITE "C4";
+LOCATE COMP "lvds_sled_to_fpga_link1_dc_n" SITE "C3";
+IOBUF PORT "lvds_sled_to_fpga_link1_dc_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
+LOCATE COMP "lvds_fpga_to_sled_link0_dc_p" SITE "D4";
+LOCATE COMP "lvds_fpga_to_sled_link0_dc_n" SITE "D3";
+IOBUF PORT "lvds_fpga_to_sled_link0_dc_p" PULLMODE=NONE IO_TYPE=LVDS;
+LOCATE COMP "lvds_sled_to_fpga_link0_dc_p" SITE "F2";
+LOCATE COMP "lvds_sled_to_fpga_link0_dc_n" SITE "F1";
+IOBUF PORT "lvds_sled_to_fpga_link0_dc_p" PULLMODE=NONE IO_TYPE=LVDS DIFFRESISTOR=100;
+
+// Bank 8
+LOCATE COMP "fpga_cfg[2]" SITE "AD4";
+IOBUF PORT "fpga_cfg[2]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_cfg[1]" SITE "AE4";
+IOBUF PORT "fpga_cfg[1]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_cfg[0]" SITE "AF4";
+IOBUF PORT "fpga_cfg[0]" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "sp_to_fpga_init_l" SITE "AF3";
+IOBUF PORT "sp_to_fpga_init_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "sp_to_fpga_program_l" SITE "AB4";
+IOBUF PORT "sp_to_fpga_program_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "fpga_to_sp_done" SITE "AC4";
+IOBUF PORT "fpga_to_sp_done" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "sp_to_fpga_design_reset_l" SITE "AA1";
+IOBUF PORT "sp_to_fpga_design_reset_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_fpga_sdo_to_sp_sdi_r" SITE "AD2";
+IOBUF PORT "spi_fpga_sdo_to_sp_sdi_r" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_sdo_to_fpga_sdi" SITE "AE2";
+IOBUF PORT "spi_sp_sdo_to_fpga_sdi" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_to_fpga_config_cs_l" SITE "AB2";
+IOBUF PORT "spi_sp_to_fpga_config_cs_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_to_fpga_user_cs_l" SITE "AC2";
+IOBUF PORT "spi_sp_to_fpga_user_cs_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+LOCATE COMP "spi_sp_to_fpga_sck" SITE "AD3";
+IOBUF PORT "spi_sp_to_fpga_sck" PULLMODE=NONE IO_TYPE=LVCMOS33;
