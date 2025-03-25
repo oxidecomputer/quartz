@@ -7,6 +7,7 @@ cobble:
   - 'hdl/projects/gimlet/**/*'
   - 'hdl/projects/icestick/**/*'
   - 'hdl/projects/ignitionlet/**/*'
+  - 'hdl/projects/minibar/**/*'
   - 'hdl/projects/psc/**/*'
   - 'hdl/projects/sidecar/**/*'
   - 'hdl/projects/ulx3s/**/*'
