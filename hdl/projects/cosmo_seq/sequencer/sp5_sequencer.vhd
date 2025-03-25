@@ -126,6 +126,8 @@ begin
         seq_raw_status => seq_raw_status,
         nic_api_status => nic_api_status,
         nic_raw_status => nic_raw_status,
+        debug_enables => debug_enables,
+        nic_overrides => nic_overrides,
         rails_en_rdbk => rails_en_rdbk,
         rails_pg_rdbk => rails_pg_rdbk,
         sp5_readbacks => sp5_readbacks,
@@ -205,6 +207,9 @@ begin
     nic_readbacks.perst_l <= nic_seq.perst_l;
     nic_readbacks.cld_rst_l <= nic_seq.cld_rst_l;
 
+    fans_power_ok <= early_power.fan_west_hsc_pg and 
+                     early_power.fan_central_hsc_pg and 
+                     early_power.fan_east_hsc_pg;
     a1_a0_seq_inst: entity work.a1_a0_seq
      generic map(
         CNTS_P_MS => CNTS_P_MS

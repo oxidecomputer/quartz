@@ -27,8 +27,13 @@ architecture model of sp5_model is
 begin
 
     -- this is the sunny day sequence
-    sm: process(all)
+    sm: process
     begin
+        sp5_pins.thermtrip_l <= '0';
+        sp5_pins.reset_l <= '0';
+        sp5_pins.slp_s3_l <= '0';
+        sp5_pins.slp_s5_l <= '0';
+
         case state is
             when IDLE =>
                 wait until rising_edge(sp5_pins.rsmrst_l);

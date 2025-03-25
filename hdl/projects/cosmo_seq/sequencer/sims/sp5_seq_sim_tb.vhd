@@ -14,6 +14,9 @@ library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.vc_context;
 
+use work.sp5_seq_sim_pkg.all;
+use work.sequencer_regs_pkg.all;
+
 
 entity sp5_seq_sim_tb is
     generic (
@@ -39,8 +42,9 @@ begin
         wait for 500 ns;  -- let the resets propagate
 
         while test_suite loop
-            if run("") then
-                null;
+            if run("normal_enable") then
+                write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);
+                wait for 1 ms;
             end if;
         end loop;
 
