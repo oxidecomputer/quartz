@@ -22,6 +22,7 @@ entity nic_seq is
 
         sw_enable : in std_logic;
         upstream_ok : in std_logic;
+        nic_idle : out std_logic;
         debug_enables : in debug_enables_type;
         nic_overrides_reg : in nic_overrides_type;
 
@@ -66,6 +67,8 @@ architecture rtl of nic_seq is
     signal final_nic_outs : nic_overrides_type;
 
 begin
+
+    nic_idle <= '1' when nic_r.state = IDLE else '0';
 
     nic_sm:process(all)
         variable v : nic_r_t;
