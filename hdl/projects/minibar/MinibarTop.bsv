@@ -114,9 +114,8 @@ module mkMinibarTop(MinibarTop);
     method fpga_to_v3p3_pcie_efuse_en = 1;
 
     // Setup refclk buffer output enables
-    method fpga_to_pcie_aux_refclk_buffer_oe0_l = 0;
+    method fpga_to_pcie_aux_refclk_buffer_oe0_l = 1;
     method fpga_to_pcie_aux_refclk_buffer_oe1_l = 1;
-
     // Keep clock buffer in in power down mode
     method fpga_to_pcie_aux_refclk_buffer_pd_l = 0;
     // Put clock buffer in "PLL with Low Bandwidth"
