@@ -13,6 +13,7 @@ jobs:
       grapefruit: ${{ steps.filter.outputs.grapefruit }}
       cosmo_hp: ${{ steps.filter.outputs.cosmo_hp }}
       cosmo_seq: ${{ steps.filter.outputs.cosmo_seq }}
+      cosmo_ignition: ${{ steps.filter.outputs.cosmo_ignition }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +26,7 @@ jobs:
   vunit-sim:
     needs: changes
     # This is starting to get a bit ugly here
-    if: ${{ needs.changes.outputs.buck2 == 'true' || needs.changes.outputs.grapefruit == 'true' || needs.changes.outputs.cosmo_hp == 'true' || needs.changes.outputs.cosmo_seq == 'true'}}
+    if: ${{ needs.changes.outputs.buck2 == 'true' || needs.changes.outputs.grapefruit == 'true' || needs.changes.outputs.cosmo_hp == 'true' || needs.changes.outputs.cosmo_seq == 'true' || needs.changes.outputs.cosmo_ignition == 'true'}}
     runs-on: self-hosted
     steps:
         - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."

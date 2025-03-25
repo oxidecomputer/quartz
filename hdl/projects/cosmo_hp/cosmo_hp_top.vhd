@@ -4,7 +4,7 @@
 --
 -- Copyright 2025 Oxide Computer Company
 
--- Cosmo Front Hot-plug FPGA targeting an ice40 HX8k
+-- Cosmo Ignition FPGA top targeting an ice40 HX8k
 
 
 library ieee;
