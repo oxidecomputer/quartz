@@ -1,9 +1,51 @@
+rdl('minibar_controller_registers',
+    sources = [
+        'minibar_controller.rdl',
+    ],
+    outputs = [
+        'MinibarRegsPkg.bsv',
+        'minibar_regs.html',
+        'minibar_regs.adoc',
+        'minibar_regs.json',
+    ])
+
+bluespec_library('MinibarRegsPkg',
+    sources = [
+        ':minibar_controller_registers#MinibarRegsPkg.bsv',
+    ],
+    deps = [
+        ':minibar_controller_registers',
+        '//hdl/ip/bsv:RegCommon',
+    ])
+
+bluespec_library('MinibarSpiServer',
+    sources = [
+        'MinibarSpiServer.bsv',
+    ],
+    deps = [
+        '//hdl/ip/bsv:CommonInterfaces',
+        '//hdl/ip/bsv:GitVersion',
+        '//hdl/ip/bsv:RegCommon',
+        ':MinibarRegsPkg',
+    ])
+
+bluespec_library('MinibarController',
+    sources = [
+        'MinibarController.bsv',
+    ],
+    deps = [
+        ':MinibarSpiServer',
+        '//hdl/ip/bsv/examples:Blinky',
+        '//hdl/ip/bsv/interfaces:SPI',
+    ])
+
 bluespec_library('MinibarTop',
     sources = [
         'MinibarTop.bsv'
     ],
     deps = [
-        '//hdl/ip/bsv/examples:Blinky',
+        ':MinibarController',
+        '//hdl/ip/bsv:IOSync',
     ],
     using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.
@@ -13,7 +55,9 @@ bluespec_library('MinibarTop',
         ]
     })
 
-bluespec_verilog('mkMinibarTop',
+# Bitstream
+
+bluespec_verilog('mkMinibarTopV',
     top = 'MinibarTop.bsv',
     modules = [
         'mkMinibarTop',
@@ -25,15 +69,15 @@ bluespec_verilog('mkMinibarTop',
 yosys_design('minibar_top',
     top_module = 'mkMinibarTop',
     sources = [
-        ':mkMinibarTop#mkMinibarTop',
+        ':mkMinibarTopV#mkMinibarTop',
         '//vnd/bluespec:Verilog.v#Verilog.v',
     ],
     deps = [
-        ':mkMinibarTop',
+        ':mkMinibarTopV',
         '//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ecp5_bitstream('minibar_hcv_a',
+nextpnr_ecp5_bitstream('minibar_controller_hcv_a',
     env = 'minibar',
     design = ':minibar_top#minibar_top.json',
     deps = [

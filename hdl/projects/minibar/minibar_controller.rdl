@@ -1,0 +1,176 @@
+// Copyright 2025 Oxide Computer Company
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+addrmap minibar_controller {
+    name = "Minibar Controller";
+    desc = "Register description of the Minibar Controller";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    //
+    // Identification Registers
+    // Read-only bits showing 0x1de
+    //
+    reg {
+        name = "Identification 0";
+        default sw = r;
+
+        field {
+            desc = "Byte 0 of ID";
+        } ID0[7:0] = 0x01;
+    } ID0;
+
+    reg {
+        name = "Identification 1";
+        default sw = r;
+
+        field {
+            desc = "Byte 1 of ID";
+        } ID1[7:0] = 0xde;
+    } ID1;
+
+    reg {
+        name = "Identification 2";
+        default sw = r;
+
+        field {
+            desc = "Byte 2 of ID";
+        } ID2[7:0] = 0x5b;
+    } ID2;
+
+    reg {
+        name = "Identification 3";
+        default sw = r;
+
+        field {
+            desc = "Byte 3 of ID";
+        } ID3[7:0] = 0xae;
+    } ID3;
+
+    //
+    // Hardware Compatibility Version
+    // See RFD 438
+    //
+    reg {
+        name = "Hardware Compatibility Version Code";
+        default sw = r;
+        field {
+            desc = "HCV Code";
+        } data[7:0] = 0;
+    } HCV;
+
+    //
+    // Checksum utilized by the SP
+    //
+    reg {
+        name = "Checksum 0";
+        field {
+            desc = "checksum[31..24]";
+        } CS0[7:0] = 0;
+    } CS0;
+
+    reg {
+        name = "Checksum 1";
+        field {
+            desc = "checksum[23..16]";
+        } CS1[7:0] = 0;
+    } CS1;
+
+    reg {
+        name = "Checksum 2";
+        field {
+            desc = "checksum[15..8]";
+        } CS2[7:0] = 0;
+    } CS2;
+
+    reg {
+        name = "Checksum 3";
+        field {
+            desc = "checksum[7..0]";
+        } CS3[7:0] = 0;
+    } CS3;
+
+    reg {
+        name = "Version 0";
+        default sw = r;
+
+        field {
+            desc = "version[31..24]";
+        } data[7:0] = 0;
+    } VERSION0;
+
+    reg {
+        name = "Version 1";
+        default sw = r;
+
+        field {
+            desc = "version[23..16]";
+        } data[7:0] = 0;
+    } VERSION1;
+
+    reg {
+        name = "Version 2";
+        default sw = r;
+
+        field {
+            desc = "version[15..8]";
+        } data[7:0] = 0;
+    } VERSION2;
+
+    reg {
+        name = "Version 3";
+        default sw = r;
+
+        field {
+            desc = "version[7..0]";
+        } data[7:0] = 0;
+    } VERSION3;
+
+    reg {
+        name = "Short SHA 0";
+        default sw = r;
+
+        field {
+            desc = "sha[31..24]";
+        } data[7:0] = 0;
+    } SHA0;
+
+    reg {
+        name = "Short SHA 1";
+        default sw = r;
+
+        field {
+            desc = "sha[23..16]";
+        } data[7:0] = 0;
+    } SHA1;
+
+    reg {
+        name = "Short SHA 2";
+        default sw = r;
+
+        field {
+            desc = "sha[15..8]";
+        } data[7:0] = 0;
+    } SHA2;
+
+    reg {
+        name = "Short SHA 3";
+        default sw = r;
+        field {
+            desc = "sha[7..0]";
+        } data[7:0] = 0;
+    } SHA3;
+
+    reg {
+        name = "Scratchpad";
+
+        field {
+            desc = "Scribble Register for read-write use";
+        } SCRATCHPAD[7:0] = 0;
+    } SCRATCHPAD;
+};

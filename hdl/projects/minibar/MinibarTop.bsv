@@ -9,7 +9,13 @@ package MinibarTop;
 import Clocks::*;
 import TriState::*;
 
+// Oxide
 import Blinky::*;
+import IOSync::*;
+import SPI::*;
+
+// Minibar
+import MinibarController::*;
 
 (* always_enabled *)
 interface MinibarTop;
@@ -94,14 +100,30 @@ endinterface
 module mkMinibarTop(MinibarTop);
 
     // Synchronize the default reset to the default clock.
-    Clock clk_50mhz <- exposeCurrentClock();
-    Reset reset_sync <- mkAsyncResetFromCR(2, clk_50mhz);
+    Clock clk_50mhz     <- exposeCurrentClock();
+    Reset reset_synced  <- mkAsyncResetFromCR(2, clk_50mhz);
+
+    // instantiate the logical controller so it can be wired out to physical pins
+    MinibarController controller <- mkMinibarController(defaultValue, reset_by reset_synced);
+
+    // SPI peripheral synchronization
+    InputReg#(Bit#(1), 2) csn   <- mkInputSyncFor(controller.spi.csn);
+    InputReg#(Bit#(1), 2) sclk  <- mkInputSyncFor(controller.spi.sclk);
+    InputReg#(Bit#(1), 2) sdi   <- mkInputSyncFor(controller.spi.copi);
+    ReadOnly#(Bit#(1)) sdo      <- mkOutputSyncFor(controller.spi.cipo);
+
 
     //
-    // Blinky to show sign of life
+    // Physical pin connections
     //
-    Blinky#(50_000_000) blinky_inst <- Blinky::mkBlinky();
-    method Bit#(1) fpga_status_led_en_l = blinky_inst.led[0];
+
+    method Bit#(1) fpga_status_led_en_l = controller.blinky.led[0];
+
+    // SPI pins to syncrhonizers
+    method spi_sp_to_fpga_user_cs_l = sync(csn);
+    method spi_sp_to_fpga_sck       = sync(sclk);
+    method spi_sp_sdo_to_fpga_sdi   = sync(sdi);
+    method spi_fpga_sdo_to_sp_sdi_r = sdo;
 
     // Deassert VSC7448 reset
     method fpga_to_vsc7448_reset_l = 1;
