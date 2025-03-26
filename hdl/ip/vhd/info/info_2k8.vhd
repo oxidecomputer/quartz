@@ -55,7 +55,6 @@ end entity;
 architecture rtl of info_2k8 is
 
     constant identity : identity_type := rec_reset;
-    constant version : version_type := rec_reset;
     constant git_info : git_info_type := (sha => short_sha);
     signal checksum : fpga_checksum_type := rec_reset;
     signal scratchpad : scratchpad_type := rec_reset;
@@ -116,7 +115,6 @@ begin
                 case to_integer(araddr) is
                     when IDENTITY_OFFSET => rdata <= pack(identity);
                     when HUBRIS_COMPAT_OFFSET => rdata <= pack(hubris_compat);
-                    when VERSION_OFFSET => rdata <= pack(version);
                     when GIT_INFO_OFFSET => rdata <= pack(git_info);
                     when FPGA_CHECKSUM_OFFSET => rdata <= pack(checksum);
                     when SCRATCHPAD_OFFSET => rdata <= pack(scratchpad);

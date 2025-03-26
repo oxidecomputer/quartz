@@ -30,16 +30,6 @@ addrmap info_regs {
     } hubris_compat;
 
     reg {
-        name = "Version";
-        desc = "";
-
-        field {
-            default sw = r;
-            desc = "Read-only bits showing 0x1de";
-        } data[32] =  0x1de;
-    } version;
-
-    reg {
         name = "GIT SHORT SHA";
         desc = "";
 
