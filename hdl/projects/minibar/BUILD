@@ -35,6 +35,7 @@ bluespec_library('MinibarController',
     ],
     deps = [
         ':MinibarSpiServer',
+        '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv/examples:Blinky',
         '//hdl/ip/bsv/interfaces:SPI',
     ])

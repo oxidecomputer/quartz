@@ -12,9 +12,11 @@ import TriState::*;
 // Oxide
 import Blinky::*;
 import IOSync::*;
+import PowerRail::*;
 import SPI::*;
 
 // Minibar
+import MinibarSpiServer::*;
 import MinibarController::*;
 
 (* always_enabled *)
@@ -59,15 +61,15 @@ interface MinibarTop;
     method Bit#(1) fpga_status_led_en_l;
 
     // Power
-    method Bit#(1) fpga_to_v12_pcie_efuse_en;
-    (* prefix = "" *) method Action v12_pcie_pg(Bit#(1) v12_pcie_pg);
-    method Bit#(1) fpga_to_v3p3_pcie_efuse_en;
-    (* prefix = "" *) method Action v3p3_pcie_pg(Bit#(1) v3p3_pcie_pg);
-    method Bit#(1) fpga_to_vbus_sled_hsc_en;
-    (* prefix = "" *) method Action vbus_sled_pg(Bit#(1) vbus_sled_pg);
+    method Bool fpga_to_v12_pcie_efuse_en;
+    (* prefix = "" *) method Action v12_pcie_pg(Bool v12_pcie_pg);
+    method Bool fpga_to_v3p3_pcie_efuse_en;
+    (* prefix = "" *) method Action v3p3_pcie_pg(Bool v3p3_pcie_pg);
+    method Bool fpga_to_vbus_sled_hsc_en;
+    (* prefix = "" *) method Action vbus_sled_pg(Bool vbus_sled_pg);
     (* prefix = "" *) method Action vbus_sys_hsc_to_fpga_fault_l(Bit#(1) vbus_sys_hsc_to_fpga_fault_l);
     method Bit#(1) fpga_to_vbus_sys_hsc_restart_l;
-    (* prefix = "" *) method Action vbus_sled_hsc_to_fpga_fault_l(Bit#(1) vbus_sled_hsc_to_fpga_fault_l);
+    (* prefix = "" *) method Action vbus_sled_hsc_to_fpga_fault_l(Bool vbus_sled_hsc_to_fpga_fault_l);
     method Bit#(1) fpga_to_vbus_sled_hsc_restart_l;
 
     // Debug
@@ -112,6 +114,20 @@ module mkMinibarTop(MinibarTop);
     InputReg#(Bit#(1), 2) sdi   <- mkInputSyncFor(controller.spi.copi);
     ReadOnly#(Bit#(1)) sdo      <- mkOutputSyncFor(controller.spi.cipo);
 
+    // Power rail synchronization
+    ReadOnly#(Bool) v12_en     <- mkOutputSyncFor(controller.v12_pcie.en);
+    InputReg#(Bool, 2) v12_pg  <- mkInputSyncFor(controller.v12_pcie.pg);
+
+    ReadOnly#(Bool) v3p3_en    <- mkOutputSyncFor(controller.v3p3_pcie.en);
+    InputReg#(Bool, 2) v3p3_pg <- mkInputSyncFor(controller.v3p3_pcie.pg);
+
+    ReadOnly#(Bool) vbus_en         <- mkOutputSyncFor(controller.vbus_sled.en);
+    InputReg#(Bool, 2) vbus_pg      <- mkInputSyncFor(controller.vbus_sled.pg);
+    InputReg#(Bool, 2) vbus_fault   <- mkInputSyncFor(controller.vbus_sled.fault);
+
+    // Miscellaneous pins which we expose to software for control or readback
+    InputReg#(Bit#(1), 2) vbus_sys_fault    <- mkInputSyncFor(controller.top_regs.vbus_sys_fault);
+    InputReg#(Bit#(3), 2) hcv               <- mkInputSyncFor(controller.top_regs.hcv_code);
 
     //
     // Physical pin connections
@@ -125,15 +141,31 @@ module mkMinibarTop(MinibarTop);
     method spi_sp_sdo_to_fpga_sdi   = sync(sdi);
     method spi_fpga_sdo_to_sp_sdi_r = sdo;
 
+    // Power rails
+    method fpga_to_v12_pcie_efuse_en = v12_en;
+    method v12_pcie_pg = sync(v12_pg);
+
+    method fpga_to_v3p3_pcie_efuse_en = v3p3_en;
+    method v3p3_pcie_pg = sync(v3p3_pg);
+
+    method fpga_to_vbus_sled_hsc_en = vbus_en;
+    method vbus_sled_pg = sync(vbus_pg);
+    method vbus_sled_hsc_to_fpga_fault_l = sync_inverted(vbus_fault);
+    // method Bit#(1) fpga_to_vbus_sled_hsc_restart_l;
+
+    // This rail automatically enables when power is applied to the board. Additionally, its PG
+    // signal is not 
+    method vbus_sys_hsc_to_fpga_fault_l = sync_inverted(vbus_sys_fault);
+    // method Bit#(1) fpga_to_vbus_sys_hsc_restart_l;
+
+    // Hardware Compatibility Version
+    method hcv_code = sync(hcv);
+
     // Deassert VSC7448 reset
     method fpga_to_vsc7448_reset_l = 1;
 
     // Deassert VSC8504 reset
     method fpga_to_vsc8504_reset_l_v3p3 = 1;
-
-    // Enable PCIe power
-    method fpga_to_v12_pcie_efuse_en = 1;
-    method fpga_to_v3p3_pcie_efuse_en = 1;
 
     // Setup refclk buffer output enables
     method fpga_to_pcie_aux_refclk_buffer_oe0_l = 1;
@@ -146,9 +178,6 @@ module mkMinibarTop(MinibarTop);
     // Do not restart the HSCs
     method fpga_to_vbus_sys_hsc_restart_l = 1;
     method fpga_to_vbus_sled_hsc_restart_l = 1;
-
-    // Disable the main HSC
-    method fpga_to_vbus_sled_hsc_en = 0;
 
     // Turn on the Power LED
     method fpga_to_power_led_en = 1;

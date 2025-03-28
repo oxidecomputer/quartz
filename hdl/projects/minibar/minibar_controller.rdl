@@ -154,6 +154,16 @@ addrmap minibar_controller {
         } data[7:0] = 0;
     } SHA3;
 
+    reg {
+        name = "Scratchpad";
+
+        field {
+            desc = "Scribble Register for read-write use";
+        } SCRATCHPAD[7:0] = 0;
+    } SCRATCHPAD;
+
+    // Miscellaneous Top-level Registers
+
     //
     // Hardware Compatibility Version
     // See RFD 438
@@ -163,14 +173,14 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "HCV Code";
-        } data[7:0] = 0;
+        } code[2:0] = 0;
     } HCV;
 
     reg {
-        name = "Scratchpad";
-
+        name = "VBUS_SYS Readbacks";
+        default sw = r;
         field {
-            desc = "Scribble Register for read-write use";
-        } SCRATCHPAD[7:0] = 0;
-    } SCRATCHPAD;
+            desc = "Inverted value of the vbus_sys_hsc_to_fpga_fault_l pin";
+        } fault[0:0] = 0;
+    } VBUS_SYS_RDBK;
 };

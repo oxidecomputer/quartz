@@ -26,13 +26,30 @@ typedef RegResp#(8) SpiResponse;
 
 typedef Server#(SpiRequest, SpiResponse) SpiServer;
 
-module mkSpiServer (SpiServer);
-    Reg#(SpiRequest) spi_request   <- mkReg(SpiRequest{address: 0, wdata: 0, op: NOOP});
+interface MinibarTopRegs;
+    method Action vbus_sys_fault(Bit#(1) val);
+    method Action hcv_code(Bit#(3) val);
+endinterface
+
+interface MinibarSpiServer;
+    interface SpiServer spi_if;
+    interface MinibarTopRegs top_regs;
+endinterface
+
+module mkSpiServer (MinibarSpiServer);
+    Reg#(SpiRequest) spi_request <- mkReg(SpiRequest{address: 0, wdata: 0, op: NOOP});
     Wire#(SpiResponse) spi_response <- mkWire();
 
+    // Signals to map to registers
+    Wire#(Bit#(1)) vbus_sys_fault_w <- mkWire();
+    Wire#(Bit#(3)) hcv_code_w       <- mkWire();
+
+    // registers interal to the SPI server
     ConfigReg#(Scratchpad) scratchpad   <- mkConfigReg(defaultValue);
     Vector#(4, ConfigReg#(Cs0)) checksum
         <- replicateM(mkConfigReg(defaultValue));
+    ConfigReg#(Hcv) hcv_reg <- mkConfigReg(defaultValue);
+    ConfigReg#(VbusSysRdbk) vbus_sys_reg <- mkConfigReg(defaultValue);
 
     (* fire_when_enabled *)
     rule do_spi_read(spi_request.op == READ || spi_request.op == READ_NO_ADDR_INCR);
@@ -65,6 +82,16 @@ module mkSpiServer (SpiServer);
             // Scratchpad
             fromInteger(scratchpadOffset): read(scratchpad);
 
+            // HCV
+            fromInteger(hcvOffset): read( Hcv {
+                code: hcv_code_w
+            });
+
+            // VBUS SYS readbacks
+            fromInteger(vbusSysRdbkOffset): read( VbusSysRdbk {
+                fault: vbus_sys_fault_w
+            });
+
             default: read(8'hff);
             endcase;
 
@@ -84,8 +111,15 @@ module mkSpiServer (SpiServer);
         endcase
     endrule
 
-    interface Put request = toPut(asIfc(spi_request));
-    interface Get response = toGet(asIfc(spi_response));
+    interface MinibarTopRegs top_regs;
+        method vbus_sys_fault = vbus_sys_fault_w._write;
+        method hcv_code = hcv_code_w._write;
+    endinterface
+
+    interface SpiServer spi_if;
+        interface Put request = toPut(asIfc(spi_request));
+        interface Get response = toGet(asIfc(spi_response));
+    endinterface
 endmodule
 
 // Turn the read of a register into an ActionValue.
