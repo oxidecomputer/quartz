@@ -53,18 +53,6 @@ addrmap minibar_controller {
     } ID3;
 
     //
-    // Hardware Compatibility Version
-    // See RFD 438
-    //
-    reg {
-        name = "Hardware Compatibility Version Code";
-        default sw = r;
-        field {
-            desc = "HCV Code";
-        } data[7:0] = 0;
-    } HCV;
-
-    //
     // Checksum utilized by the SP
     //
     reg {
@@ -165,6 +153,18 @@ addrmap minibar_controller {
             desc = "sha[7..0]";
         } data[7:0] = 0;
     } SHA3;
+
+    //
+    // Hardware Compatibility Version
+    // See RFD 438
+    //
+    reg {
+        name = "Hardware Compatibility Version Code";
+        default sw = r;
+        field {
+            desc = "HCV Code";
+        } data[7:0] = 0;
+    } HCV;
 
     reg {
         name = "Scratchpad";
