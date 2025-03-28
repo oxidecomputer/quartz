@@ -8,25 +8,45 @@ package MinibarController;
 
 // BSV
 import Connectable::*;
+import Vector::*;
 
 // Oxide
 import Blinky::*;
+import IgnitionController::*;
+import PowerRail::*;
 import SPI::*;
+import Strobe::*;
 
 // Minibar
+import MinibarMiscRegs::*;
+import MinibarPcie::*;
 import MinibarSpiServer::*;
 
+// Parameters used to configure various things within the design
+// system_frequency_hz  - main clock domain for the design
+// vbus_pg_timeout_ms   - how long to wait for PG on the VBUS rail before aborting
+// pcie_pg_timeout_ms   -- how long to wait for PG on the PCIE rails before aborting
+//
 typedef struct {
     Integer system_frequency_hz;
+    Integer vbus_pg_timeout_ms;
+    Integer pcie_pg_timeout_ms;
 } Parameters;
 
 instance DefaultValue#(Parameters);
-    defaultValue = Parameters {system_frequency_hz: 50_000_000};
+    defaultValue = Parameters {
+        system_frequency_hz: 50_000_000,
+        vbus_pg_timeout_ms: 25, // arbitrarily chosen
+        pcie_pg_timeout_ms: 25  // arbitrarily chosen
+    };
 endinstance
 
 interface MinibarController;
-    interface SpiPeripheralPins spi;
     interface Blinky#(50_000_000) blinky;
+    interface MinibarMiscRegs::Pins misc;
+    interface MinibarPcie::Pins pcie;
+    interface SpiPeripheralPins spi;
+    interface Vector#(2, Controller) ignition_controllers;
 endinterface
 
 module mkMinibarController#(Parameters parameters) (MinibarController);
@@ -36,11 +56,41 @@ module mkMinibarController#(Parameters parameters) (MinibarController);
     Blinky#(50_000_000) blinky_inst <- Blinky::mkBlinky();
 
     //
+    // Useful timer for the rest of the design
+    //
+    Strobe#(20) tick_1khz   <-
+        mkLimitStrobe(1, parameters.system_frequency_hz / 1000, 0);
+    mkFreeRunningStrobe(tick_1khz);
+
+    //
+    // A collection of miscellaneous registers we wrap up in a single module
+    //
+    MinibarMiscRegs misc_regs <- mkMinibarMiscRegs(parameters.vbus_pg_timeout_ms);
+
+    //
+    // A block to support the operations and test sled<->CEM PCIe
+    //
+    MinibarPcie pcie_ <- mkMinibarPcie(parameters.pcie_pg_timeout_ms);
+
+    //
+    // Ignition Controllers
+    //
+    Vector#(2, IgnitionController::Controller)
+        ignition_controllers_ <- replicateM(mkController(defaultValue));
+    mkConnection(asIfc(tick_1khz), asIfc(ignition_controllers_[0].tick_1khz));
+    mkConnection(asIfc(tick_1khz), asIfc(ignition_controllers_[1].tick_1khz));
+    mkConnection(ignition_controllers_[0].status().target_present, misc_regs.ignition_target0_present);
+    mkConnection(ignition_controllers_[1].status().target_present, misc_regs.ignition_target1_present);
+
+    //
     // SPI Peripheral
     //
     SpiPeripheralPhy spi_phy    <- mkSpiPeripheralPhy();
     SpiDecodeIF spi_decoder     <- mkSpiRegDecode();
-    SpiServer spi_server        <- mkSpiServer();
+    SpiServer spi_server        <- mkSpiServer(
+        misc_regs.registers,
+        pcie_.registers,
+        register_pages(ignition_controllers_));
 
     mkConnection(spi_phy.decoder_if, spi_decoder.spi_byte);
     mkConnection(spi_decoder.reg_con, spi_server);
@@ -48,8 +98,11 @@ module mkMinibarController#(Parameters parameters) (MinibarController);
     //
     // Interfaces to physical pins
     //
-    interface SpiPeripheralPins spi = spi_phy.pins;
-    interface blinky                = blinky_inst;
+    interface blinky                    = blinky_inst;
+    interface misc                      = misc_regs.pins;
+    interface pcie                      = pcie_.pins;
+    interface SpiPeripheralPins spi     = spi_phy.pins;
+    interface Vector ignition_controllers = ignition_controllers_;
 endmodule
 
 endpackage: MinibarController

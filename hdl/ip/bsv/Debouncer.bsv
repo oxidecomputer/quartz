@@ -40,6 +40,8 @@ interface Debouncer#(
     method one_bit_type _read();
     method Action _write(one_bit_type val);
     method Action send();
+    method Bool rising_edge();
+    method Bool falling_edge();
 endinterface
 
 module mkDebouncer#(
@@ -57,6 +59,9 @@ module mkDebouncer#(
 
     Reg#(Bool) assertion_edge <- mkReg(False);
     Reg#(Bool) deassertion_edge <- mkReg(False);
+
+    Reg#(Bool) redge <- mkReg(False);
+    Reg#(Bool) fedge <- mkReg(False);
 
     Reg#(UInt#(TLog#(TMax#(assert_duration, deassert_duration)))) counter
         <- mkReg(0);
@@ -88,9 +93,23 @@ module mkDebouncer#(
         end
     endrule
 
+    (* fire_when_enabled *)
+    rule do_edge_detect;
+        if ((assertion_edge && counter == fromInteger(valueOf(assert_duration))) ||
+                (deassertion_edge && counter == fromInteger(valueOf(deassert_duration)))) begin
+            redge <= assertion_edge;
+            fedge <= deassertion_edge;
+        end else begin
+            redge <= False;
+            fedge <= False;
+        end
+    endrule
+
     method _read = output_r;
     method _write = input_raw._write;
     method send = tick.send();
+    method rising_edge = redge;
+    method falling_edge = fedge;
 endmodule
 
 // Implementing connecting a PulseWire to a Debouncer as a convenience.
@@ -163,8 +182,22 @@ module mkDebouncerTest (Empty);
                 "Output should not be set until debounce duration has elapsed");
             dut.send();
         endaction
-        assert_set(dut,
-            "Output should be set after debounce duration has elapsed");
+        action
+            assert_set(dut,
+                "Output should be set after debounce duration has elapsed");
+            assert_true(dut.rising_edge(),
+                "Rising edge should pulse when the output gets set.");
+            assert_false(dut.falling_edge(),
+                "Falling edge should not pulse when the output gets set.");
+        endaction
+        action
+            assert_set(dut,
+                "Output should be set after debounce duration has elapsed");
+            assert_false(dut.rising_edge(),
+                "Rising edge should not pulse when the output has been set.");
+            assert_false(dut.falling_edge(),
+                "Falling edge should not pulse when the output has been set.");
+        endaction
 
         // debounce the reverse transition
         in <= 0;
@@ -175,8 +208,22 @@ module mkDebouncerTest (Empty);
                 "Output should be set until debounce duration has elapsed");
             dut.send();
         endaction
-        assert_not_set(dut,
-            "Output should not be set after debounce duration has elapsed");
+        action
+            assert_not_set(dut,
+                "Output should not be set after debounce duration has elapsed");
+            assert_false(dut.rising_edge(),
+                "Rising edge should not pulse when the output gets cleared.");
+            assert_true(dut.falling_edge(),
+                "Falling edge should pulse when the output gets cleared.");
+        endaction
+        action
+            assert_not_set(dut,
+                "Output should not be set after debounce duration has elapsed");
+            assert_false(dut.rising_edge(),
+                "Rising edge should not pulse when the output has been cleared.");
+            assert_false(dut.falling_edge(),
+                "Falling edge should pulse when the output has been cleared.");
+        endaction
     endseq);
 endmodule
 

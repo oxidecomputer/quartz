@@ -1,5 +1,6 @@
 rdl('minibar_controller_registers',
     sources = [
+        '../../ip/bsv/ignition/ignition_controller.rdl',
         'minibar_controller.rdl',
     ],
     outputs = [
@@ -18,15 +19,40 @@ bluespec_library('MinibarRegsPkg',
         '//hdl/ip/bsv:RegCommon',
     ])
 
+bluespec_library('MinibarMiscRegs',
+    sources = [
+        'MinibarMiscRegs.bsv',
+    ],
+    deps = [
+        ':MinibarRegsPkg',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:Debouncer',
+        '//hdl/ip/bsv:PowerRail',
+    ])
+
+bluespec_library('MinibarPcie',
+    sources = [
+        'MinibarPcie.bsv',
+    ],
+    deps = [
+        ':MinibarRegsPkg',
+        '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:PowerRail',
+    ])
+
 bluespec_library('MinibarSpiServer',
     sources = [
         'MinibarSpiServer.bsv',
     ],
     deps = [
+        ':MinibarRegsPkg',
+        ':MinibarMiscRegs',
+        ':MinibarPcie',
         '//hdl/ip/bsv:CommonInterfaces',
         '//hdl/ip/bsv:GitVersion',
         '//hdl/ip/bsv:RegCommon',
-        ':MinibarRegsPkg',
+        '//hdl/ip/bsv/ignition:Controller',
+        '//hdl/ip/bsv/ignition:ControllerRegisters',
     ])
 
 bluespec_library('MinibarController',
@@ -35,7 +61,10 @@ bluespec_library('MinibarController',
     ],
     deps = [
         ':MinibarSpiServer',
+        '//hdl/ip/bsv:Strobe',
         '//hdl/ip/bsv/examples:Blinky',
+        '//hdl/ip/bsv/ignition:Controller',
+        '//hdl/ip/bsv/ignition:Transceiver',
         '//hdl/ip/bsv/interfaces:SPI',
     ])
 
@@ -46,6 +75,9 @@ bluespec_library('MinibarTop',
     deps = [
         ':MinibarController',
         '//hdl/ip/bsv:IOSync',
+        '//hdl/ip/bsv:SerialIO',
+        '//hdl/ip/bsv:Strobe',
+        '//hdl/ip/bsv/ignition:Transceiver',
     ],
     using = {
         # The folling script is needed to fix the inout syntax used in the generated Verilog.
