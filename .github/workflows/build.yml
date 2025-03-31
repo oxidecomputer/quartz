@@ -13,6 +13,7 @@ jobs:
       grapefruit: ${{ steps.filter.outputs.grapefruit }}
       cosmo_hp: ${{ steps.filter.outputs.cosmo_hp }}
       cosmo_seq: ${{ steps.filter.outputs.cosmo_seq }}
+      cosmo_ignition: ${{ steps.filter.outputs.cosmo_ignition }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,6 +88,28 @@ jobs:
         - uses: actions/upload-artifact@v4
           with:
             name: cosmo-hp-image
+            path: "./buck-out/v2/gen/root/**/*"
+        - name: Cleanup
+          run: bash .github/cleanup.sh
+  cosmo_ignition:
+    needs: changes
+    if: ${{ needs.changes.outputs.buck2 == 'true' ||  needs.changes.outputs.cosmo_ignition == 'true' }}
+    runs-on: self-hosted
+    steps:
+        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+        - name: Check out repository code
+          uses: actions/checkout@v4
+          with:
+            submodules: 'true'
+        - name: Update pip reqs
+          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+        - name: buck path
+          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
+        - name: Build cosmo_ignition bitstream
+          run: buck2 build //hdl/projects/cosmo_ignition:cosmo_ignition --show-output
+        - uses: actions/upload-artifact@v4
+          with:
+            name: cosmo-ignition-image
             path: "./buck-out/v2/gen/root/**/*"
         - name: Cleanup
           run: bash .github/cleanup.sh

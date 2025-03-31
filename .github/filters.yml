@@ -29,3 +29,6 @@ cosmo_hp:
 
 cosmo_seq:
   - 'hdl/projects/cosmo_seq/**/*'
+
+cosmo_ignition:
+  - 'hdl/projects/cosmo_ignition/**/*'
