@@ -240,6 +240,7 @@ begin
      port map(
         clk => clk,
         reset => reset,
+        nic_idle => nic_idle,
         sw_enable => power_ctrl.a0_en,
         upstream_ok => a0_ok,
         nic_overrides_reg => nic_overrides,

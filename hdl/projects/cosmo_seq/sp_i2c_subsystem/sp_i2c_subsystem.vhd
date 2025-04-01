@@ -19,6 +19,7 @@ entity sp_i2c_subsystem is
         reset : in std_logic;
 
         axi_if : view axil8x32_pkg.axil_target;
+        in_a0 : in std_logic;
 
         sp_scl : in std_logic;
         sp_scl_o : out std_logic;
@@ -52,6 +53,7 @@ architecture rtl of sp_i2c_subsystem is
     signal mux_is_active : std_logic_vector(mux_i2c_addr'range);
     signal mux_sel : mux_sel_t(mux_i2c_addr'range);
     signal mux_reset : std_logic;
+    constant deselected : std_logic_vector(1 downto 0) := "11";
 
 begin
 
@@ -111,7 +113,28 @@ begin
     end generate;
     
     -- Set up the mux-sels here
-    i2c_mux1_sel <= mux_sel(0);
+    -- Note that i2c_mux_1_sel was not properly isolated into the hotplug domain
+    -- in hardware so we need to prevent hubris from accidentally enabling it when
+    -- the domain is down. This will be OK as a workaround on the first spin and
+    -- remaining boards even after the fix is in place. We're going to mask the
+    -- mux_sel signal to prevent it from being driven when the domain is down.
+    -- https://github.com/oxidecomputer/hardware-cosmo/issues/641
+    -- The mux will still ACK, and effectively block other mux channels in this
+    -- group, so this should be software transparent. TBD if we need an additional
+    -- delay as the bus comes up?
+    process(clk, reset)
+    begin
+        if reset = '1' then
+            i2c_mux1_sel <= deselected;
+        elsif rising_edge(clk) then
+            if in_a0 then
+                i2c_mux1_sel <= mux_sel(0);
+            else
+                i2c_mux1_sel <= deselected;
+            end if;
+        end if;
+    end process;
+    -- No workarounds needed for these:
     i2c_mux2_sel <= mux_sel(1);
     i2c_mux3_sel <= mux_sel(2);
 end rtl;

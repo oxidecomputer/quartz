@@ -484,6 +484,7 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
+        in_a0 => a0_ok,
         axi_if => responders(SP_I2C_RESP_IDX),
         sp_scl => i2c_sp_to_fpga1_scl,
         sp_scl_o => sp_scl_o,

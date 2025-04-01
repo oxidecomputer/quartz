@@ -29,10 +29,6 @@ begin
     -- this is the sunny day sequence
     sm: process
     begin
-        sp5_pins.thermtrip_l <= '0';
-        sp5_pins.reset_l <= '0';
-        sp5_pins.slp_s3_l <= '0';
-        sp5_pins.slp_s5_l <= '0';
 
         case state is
             when IDLE =>
@@ -40,6 +36,7 @@ begin
                 state <= RSM_RST;
 
             when RSM_RST =>
+                wait for 10 us;
                 state <= WAIT_FOR_PB;
 
             when WAIT_FOR_PB =>
@@ -64,6 +61,7 @@ begin
                     state <= IDLE;
                 end if;
         end case;
+        wait until rising_edge(clk);
     end process;
     -- power button fedge, max 360us to slp_sx_edges
 
