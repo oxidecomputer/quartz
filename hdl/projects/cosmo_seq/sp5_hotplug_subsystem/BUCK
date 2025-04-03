@@ -2,10 +2,20 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 vhdl_unit(
+    name = "perst_oneshot",
+    srcs = ["perst_oneshot.vhd"],
+    deps = [
+        "//hdl/ip/vhd/common:calc_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
     name = "sp5_hotplug_subsystem",
     srcs = ["sp5_hotplug_subsystem.vhd",
     ],
     deps = [
+        ":perst_oneshot",
         "//hdl/ip/vhd/synchronizers:meta_sync",
         "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
     ],
