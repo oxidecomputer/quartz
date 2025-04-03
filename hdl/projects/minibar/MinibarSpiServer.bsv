@@ -16,9 +16,13 @@ import Vector::*;
 // Oxide
 import git_version::*;
 import CommonInterfaces::*;
+import IgnitionController::*;
+import IgnitionControllerRegisters::*;
 import RegCommon::*;
 
 // Minibar
+import MinibarMiscRegs::*;
+import MinibarPcie::*;
 import MinibarRegsPkg::*;
 
 typedef RegRequest#(16, 8) SpiRequest;
@@ -26,10 +30,16 @@ typedef RegResp#(8) SpiResponse;
 
 typedef Server#(SpiRequest, SpiResponse) SpiServer;
 
-module mkSpiServer (SpiServer);
-    Reg#(SpiRequest) spi_request   <- mkReg(SpiRequest{address: 0, wdata: 0, op: NOOP});
+module mkSpiServer #(
+        MinibarMiscRegs::Registers misc,
+        MinibarPcie::Registers pcie,
+        Vector#(2, IgnitionController::Registers) ignition_controllers
+    )
+        (SpiServer);
+    Reg#(SpiRequest) spi_request <- mkReg(SpiRequest{address: 0, wdata: 0, op: NOOP});
     Wire#(SpiResponse) spi_response <- mkWire();
 
+    // registers interal to the SPI server
     ConfigReg#(Scratchpad) scratchpad   <- mkConfigReg(defaultValue);
     Vector#(4, ConfigReg#(Cs0)) checksum
         <- replicateM(mkConfigReg(defaultValue));
@@ -65,6 +75,65 @@ module mkSpiServer (SpiServer);
             // Scratchpad
             fromInteger(scratchpadOffset): read(scratchpad);
 
+            // HCV
+            fromInteger(hcvOffset): read(misc.hcv);
+
+            // Sled Connector Presence
+            fromInteger(sledPresenceOffset): read(misc.sled_presence);
+
+            // Power stuff
+            fromInteger(vbusSysRdbkOffset): read(misc.vbus_sys_rdbk);
+            fromInteger(powerCtrlOffset): read(misc.power_ctrl);
+            fromInteger(vbusSledOffset): read(misc.vbus_sled);
+
+            // Switches
+            fromInteger(switchResetCtrlOffset): read(misc.switch_reset_ctrl);
+
+            // PCIe
+            fromInteger(pciePowerCtrlOffset): read(pcie.power_ctrl);
+            fromInteger(v12PcieOffset): read(pcie.v12_pcie);
+            fromInteger(v3p3PcieOffset): read(pcie.v3p3_pcie);
+            fromInteger(pcieRefclkCtrlOffset): read(pcie.refclk_ctrl);
+            fromInteger(pcieCtrlOffset): read(pcie.pcie_ctrl);
+            fromInteger(pcieRdbkOffset): read(pcie.pcie_rdbk);
+
+            // Ignition
+            fromInteger(ignitionTargetsPresentOffset): read(misc.ignition_targets_present);
+            // Controller 0
+            fromInteger(ignitionController0ControllerStateOffset): read(ignition_controllers[0].controller_state);
+            fromInteger(ignitionController0ControllerLinkStatusOffset): read(ignition_controllers[0].controller_link_status);
+            fromInteger(ignitionController0TargetSystemTypeOffset): read(ignition_controllers[0].target_system_type);
+            fromInteger(ignitionController0TargetSystemStatusOffset): read(ignition_controllers[0].target_system_status);
+            fromInteger(ignitionController0TargetSystemFaultsOffset): read(ignition_controllers[0].target_system_faults);
+            fromInteger(ignitionController0TargetRequestStatusOffset): read(ignition_controllers[0].target_request_status);
+            fromInteger(ignitionController0TargetLink0StatusOffset): read(ignition_controllers[0].target_link0_status);
+            fromInteger(ignitionController0TargetLink1StatusOffset): read(ignition_controllers[0].target_link1_status);
+            fromInteger(ignitionController0TargetRequestOffset): read(ignition_controllers[0].target_request);
+            fromInteger(ignitionController0ControllerStatusReceivedCountOffset): read_volatile(ignition_controllers[0].controller_status_received_count);
+            fromInteger(ignitionController0ControllerHelloSentCountOffset): read_volatile(ignition_controllers[0].controller_hello_sent_count);
+            fromInteger(ignitionController0ControllerRequestSentCountOffset): read_volatile(ignition_controllers[0].controller_request_sent_count);
+            fromInteger(ignitionController0ControllerMessageDroppedCountOffset): read_volatile(ignition_controllers[0].controller_message_dropped_count);
+            fromInteger(ignitionController0ControllerLinkEventsSummaryOffset): read(ignition_controllers[0].controller_link_counters.summary);
+            fromInteger(ignitionController0TargetLink0EventsSummaryOffset): read(ignition_controllers[0].target_link0_counters.summary);
+            fromInteger(ignitionController0TargetLink1EventsSummaryOffset): read(ignition_controllers[0].target_link1_counters.summary);
+            // Controller 0
+            fromInteger(ignitionController1ControllerStateOffset): read(ignition_controllers[1].controller_state);
+            fromInteger(ignitionController1ControllerLinkStatusOffset): read(ignition_controllers[1].controller_link_status);
+            fromInteger(ignitionController1TargetSystemTypeOffset): read(ignition_controllers[1].target_system_type);
+            fromInteger(ignitionController1TargetSystemStatusOffset): read(ignition_controllers[1].target_system_status);
+            fromInteger(ignitionController1TargetSystemFaultsOffset): read(ignition_controllers[1].target_system_faults);
+            fromInteger(ignitionController1TargetRequestStatusOffset): read(ignition_controllers[1].target_request_status);
+            fromInteger(ignitionController1TargetLink0StatusOffset): read(ignition_controllers[1].target_link0_status);
+            fromInteger(ignitionController1TargetLink1StatusOffset): read(ignition_controllers[1].target_link1_status);
+            fromInteger(ignitionController1TargetRequestOffset): read(ignition_controllers[1].target_request);
+            fromInteger(ignitionController1ControllerStatusReceivedCountOffset): read_volatile(ignition_controllers[1].controller_status_received_count);
+            fromInteger(ignitionController1ControllerHelloSentCountOffset): read_volatile(ignition_controllers[1].controller_hello_sent_count);
+            fromInteger(ignitionController1ControllerRequestSentCountOffset): read_volatile(ignition_controllers[1].controller_request_sent_count);
+            fromInteger(ignitionController1ControllerMessageDroppedCountOffset): read_volatile(ignition_controllers[1].controller_message_dropped_count);
+            fromInteger(ignitionController1ControllerLinkEventsSummaryOffset): read(ignition_controllers[1].controller_link_counters.summary);
+            fromInteger(ignitionController1TargetLink0EventsSummaryOffset): read(ignition_controllers[1].target_link0_counters.summary);
+            fromInteger(ignitionController1TargetLink1EventsSummaryOffset): read(ignition_controllers[1].target_link1_counters.summary);
+
             default: read(8'hff);
             endcase;
 
@@ -75,12 +144,28 @@ module mkSpiServer (SpiServer);
 
     (* fire_when_enabled *)
     rule do_spi_write;
+        function do_update(r) = update(spi_request.op, r, spi_request.wdata);
         case (spi_request.address)
-            fromInteger(cs0Offset): update(spi_request.op, checksum[0], spi_request.wdata);
-            fromInteger(cs1Offset): update(spi_request.op, checksum[1], spi_request.wdata);
-            fromInteger(cs2Offset): update(spi_request.op, checksum[2], spi_request.wdata);
-            fromInteger(cs3Offset): update(spi_request.op, checksum[3], spi_request.wdata);
-            fromInteger(scratchpadOffset): update(spi_request.op, scratchpad, spi_request.wdata);
+            fromInteger(cs0Offset): do_update(checksum[0]);
+            fromInteger(cs1Offset): do_update(checksum[1]);
+            fromInteger(cs2Offset): do_update(checksum[2]);
+            fromInteger(cs3Offset): do_update(checksum[3]);
+            fromInteger(scratchpadOffset): do_update(scratchpad);
+            fromInteger(powerCtrlOffset): do_update(misc.power_ctrl);
+            fromInteger(pciePowerCtrlOffset): do_update(pcie.power_ctrl);
+            fromInteger(pcieCtrlOffset): do_update(pcie.pcie_ctrl);
+            fromInteger(pcieRefclkCtrlOffset): do_update(pcie.refclk_ctrl);
+            fromInteger(switchResetCtrlOffset): do_update(misc.switch_reset_ctrl);
+            fromInteger(ignitionController0ControllerStateOffset): do_update(ignition_controllers[0].controller_state);
+            fromInteger(ignitionController0TargetRequestOffset): do_update(ignition_controllers[0].target_request);
+            fromInteger(ignitionController0ControllerLinkEventsSummaryOffset): do_update(ignition_controllers[0].controller_link_counters.summary);
+            fromInteger(ignitionController0TargetLink0EventsSummaryOffset): do_update(ignition_controllers[0].target_link0_counters.summary);
+            fromInteger(ignitionController0TargetLink1EventsSummaryOffset): do_update(ignition_controllers[0].target_link1_counters.summary);
+            fromInteger(ignitionController1ControllerStateOffset): do_update(ignition_controllers[1].controller_state);
+            fromInteger(ignitionController1TargetRequestOffset): do_update(ignition_controllers[1].target_request);
+            fromInteger(ignitionController1ControllerLinkEventsSummaryOffset): do_update(ignition_controllers[1].controller_link_counters.summary);
+            fromInteger(ignitionController1TargetLink0EventsSummaryOffset): do_update(ignition_controllers[1].target_link0_counters.summary);
+            fromInteger(ignitionController1TargetLink1EventsSummaryOffset): do_update(ignition_controllers[1].target_link1_counters.summary);
         endcase
     endrule
 
@@ -92,6 +177,14 @@ endmodule
 function ActionValue#(SpiResponse) read(t v)
         provisos (Bits#(t, 8));
     return actionvalue
+        return SpiResponse {readdata: pack(v)};
+    endactionvalue;
+endfunction
+
+function ActionValue#(SpiResponse) read_volatile(ActionValue#(t) av)
+        provisos (Bits#(t, 8));
+    return actionvalue
+        let v <- av;
         return SpiResponse {readdata: pack(v)};
     endactionvalue;
 endfunction
