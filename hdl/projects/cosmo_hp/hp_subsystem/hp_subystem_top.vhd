@@ -147,6 +147,12 @@ architecture rtl of hp_subsystem_top is
 
     signal from_sp5 : from_sp5_io_t;
     signal to_sp5 : to_sp5_io_t;
+    constant FIVE_MS : integer := 250000; -- 5ms for the duty cycle timer
+    signal duty_cycle : integer := 0; -- Duty cycle for the PWM, 0-100%
+    signal pwm_cntr : unsigned(7 downto 0); -- Counter for the PWM
+    signal cem_led_pwm : std_logic := '0'; -- PWM output for the CEM LED
+    signal dc_timer: unsigned(31 downto 0) := (others => '0'); -- Timer for the duty cycle
+
     
 
 begin
@@ -248,6 +254,54 @@ begin
         from_cem => from_cem_pre_sync,
         from_cem_syncd => from_cem_syncd
     );
+
+    pwm: process(clk, reset)
+    begin
+        if reset = '1' then
+            -- Reset the sync'd signals
+            duty_cycle <= 0; -- reset the duty cycle
+            pwm_cntr <= (others => '0'); -- reset the counter
+            cem_led_pwm <= '0'; -- default to 0 when reset
+            dc_timer <= (others => '0');
+        elsif rising_edge(clk) then
+            if pwm_cntr < 99 then
+                -- Increment the counter until we reach 100, this is our sync period
+                pwm_cntr <= pwm_cntr + 1;
+            else
+                -- Reset the counter after 100 cycles, this allows us to sync every 100 cycles
+                pwm_cntr <= (others => '0');
+            end if;
+            if pwm_cntr < duty_cycle then
+                -- If the counter is less than the duty cycle, assert the pwm signal
+                cem_led_pwm <= '1';
+            else
+                -- Otherwise, deassert the pwm signal
+                cem_led_pwm <= '0';
+            end if;
+
+            -- Want 100 steps of duty cycle over 0.5s so 5 ms/tick
+            if dc_timer < FIVE_MS and to_cem(0).pwren ='1'  then
+                -- Increment the timer until we reach 5ms
+                dc_timer <= dc_timer + 1;
+            else
+               if duty_cycle < 100 then
+                    -- Increase the duty cycle by 1 until we reach 100%
+                    duty_cycle <= duty_cycle + 1;
+                end if;
+                -- Reset the timer after reaching 5ms
+                dc_timer <= (others => '0');
+            end if;
+
+            if to_cem(0).pwren = '0' then
+                -- If the first CEM's power is off, reset the duty cycle to 0
+                -- to avoid PWM when not powered
+                duty_cycle <= 0;
+            end if;
+
+
+ 
+        end if;
+    end process pwm;
 
     -- Put the per-cem logic here and loop it
     cem_logic_gen: for i in from_cem_syncd'range generate

@@ -73,6 +73,9 @@ def main():
     gh_releaser.do_gh_release(api, project_info, args.skip_gh)
 
     # put files in hubris location
+    if args.hubris is None:
+        print("No hubris path provided, skipping materialization of files")
+        return
     hubris_path = Path(args.hubris) / Path(project_info.hubris_path)
     print(f"Materializing files at {hubris_path} for hubris commit")
     project_info.materialize_relevant_files(hubris_path, exclusions=hubris_ignore)
