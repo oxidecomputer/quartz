@@ -25,6 +25,11 @@ entity pca9506_top is
         clk : in std_logic;
         reset : in std_logic;
 
+        -- optional inband reset, can be used to reset the I/O expander
+        -- this can be used if you need to "emulate" power-down behavior of the PCA9506
+        -- but we don't actually power down.
+        inband_reset : in std_logic := '0';
+
         -- I2C bus mux endpoint for control
         -- Does not support clock-stretching
         scl : in std_logic;
@@ -130,6 +135,7 @@ begin
         data_in => write_data,
         data_out => read_data,
         output_disable => '0',
+        inband_reset => inband_reset, -- allow inband reset to reset the registers
         io => io,
         io_oe => io_oe,
         io_o => io_o,

@@ -25,6 +25,7 @@ entity pca9506_regs is
 
         -- io interface
         output_disable: in std_logic;
+        inband_reset : in std_logic; -- inband reset, can be used to reset the I/O expander
         io : in pca9506_pin_t;
         io_oe : out pca9506_pin_t;
         io_o : out pca9506_pin_t;
@@ -219,6 +220,34 @@ begin
                     when others =>
                         null;
                 end case;
+            end if;
+
+            if inband_reset then
+                ip0_reg  <= reset_0s;
+                ip1_reg  <= reset_0s;
+                ip2_reg  <= reset_0s;
+                ip3_reg  <= reset_0s;
+                ip4_reg  <= reset_0s;
+                op0_reg  <= reset_0s;
+                op1_reg  <= reset_0s;
+                op2_reg  <= reset_0s;
+                op3_reg  <= reset_0s;
+                op4_reg  <= reset_0s;
+                pi0_reg  <= reset_0s;
+                pi1_reg  <= reset_0s;
+                pi2_reg  <= reset_0s;
+                pi3_reg  <= reset_0s;
+                pi4_reg  <= reset_0s;
+                ioc0_reg <= reset_1s;
+                ioc1_reg <= reset_1s;
+                ioc2_reg <= reset_1s;
+                ioc3_reg <= reset_1s;
+                ioc4_reg <= reset_1s;  
+                msk0_reg <= reset_1s;
+                msk1_reg <= reset_1s;
+                msk2_reg <= reset_1s;
+                msk3_reg <= reset_1s;
+                msk4_reg <= reset_1s;
             end if;
 
         end if;

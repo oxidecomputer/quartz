@@ -11,8 +11,13 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.pca9506_pkg.all;
+use work.time_pkg.all; -- for calc_ms and calc_us
 
 entity sp5_hotplug_subsystem is
+    generic(
+        PERST_US_ONESHOT : integer := 100000; -- 100ms for Tpvperl, this is used in the oneshot
+        NS_PER_CLK : integer := 8
+    );
     port(
         clk : in std_logic;
         reset : in std_logic;
@@ -61,6 +66,12 @@ architecture rtl of sp5_hotplug_subsystem is
     signal io_o : pca9506_pin_t;
     signal m2a_pedet_sync : std_logic;
     signal m2b_pedet_sync : std_logic;
+    signal m2b_power_en : std_logic;
+    signal m2a_power_en : std_logic;
+    signal pcie_aux_power_en : std_logic;
+    constant PERST_CNTS : integer := calc_us(
+        desired_us => PERST_US_ONESHOT,  -- 100ms for Tpvperl
+        clk_period_ns => NS_PER_CLK);
 
 begin
 
@@ -93,6 +104,7 @@ begin
         sda => sp5_i2c_sda,
         sda_o => sp5_i2c_sda_o,
         sda_oe => sp5_i2c_sda_oe,
+        inband_reset => not a0_ok,  -- shove this thing in reset when we're not in A0
         io => io,
         io_oe => io_oe,
         io_o => io_o,
@@ -113,9 +125,31 @@ begin
     -- not PEDET becomes emils
     io(1)(3) <= not m2b_pedet_sync;
 
-    -- TODO: Fix perstL with one-shot following power enable (bit 4)
-    m2a_perst_l <= io_o(0)(4) when io_oe(0)(4) else '0';
-    m2b_perst_l <= io_o(1)(4) when io_oe(1)(4) else '0';
+    m2a_power_en <= io_o(0)(4) when io_oe(0)(4) else '0';
+    -- U.2 and M.2 devices require 100us minimum reference clock stable before PERST# inactive (Tperst-clk), 
+    -- and 100ms minimum power stable to PERST# inactive (Tpvperl). 
+    m2a_perst_oneshot: entity work.perst_oneshot
+     generic map(
+        PERST_CNTS => PERST_CNTS
+     )
+     port map(
+        clk => clk,
+        reset => reset,
+        power_en => m2a_power_en,
+        perst_l => m2a_perst_l
+    );
+    m2b_power_en <= io_o(1)(4) when io_oe(1)(4) else '0';
+    
+    m2b_perst_oneshot: entity work.perst_oneshot
+     generic map(
+        PERST_CNTS => PERST_CNTS
+    )
+     port map(
+        clk => clk,
+        reset => reset,
+        power_en => m2a_power_en,
+        perst_l => m2b_perst_l
+    );
 
     -- T6
     t6_power_en <= io_o(2)(4) when io_oe(0)(4) else '0';
@@ -125,7 +159,17 @@ begin
 
     -- Backplane connected switch
     -- TODO: this stuff is likely not totally correct
-    pcie_aux_rsw_perst_l <= io_o(3)(4) when io_oe(3)(4) else '0'; -- TODO: oneshot?
+    pcie_aux_power_en <= io_o(3)(4) when io_oe(3)(4) else '0'; -- TODO: oneshot?
+    pcie_perst_oneshot: entity work.perst_oneshot
+     generic map(
+        PERST_CNTS => PERST_CNTS
+    )
+     port map(
+        clk => clk,
+        reset => reset,
+        power_en => pcie_aux_power_en,
+        perst_l => pcie_aux_rsw_perst_l
+    );
     io(3)(0) <= pcie_aux_rsw_prsnt_buff_l;
     pcie_clk_buff_rsw_oe_l <= pcie_aux_rsw_prsnt_buff_l;  -- Is this right?
 
