@@ -181,7 +181,7 @@ architecture rtl of cosmo_hp_top is
     constant mux_i2c_addr:  io_i2c_addr_t(0 to 4) := (
         b"1110_000",  -- Mux 4: CEMs A, B, C
         b"1110_001",  -- Mux 5: CEMS D, E, F
-        b"1110_010",  -- Mux 6: CEM G, MCIO1, MCIO2
+        b"1110_010",  -- Mux 6: MCIO1, MCIO2, CEM G
         b"1110_011",  -- Mux 7: CEM H, I, J
         b"1110_100"   -- Mux 8: Front Bus
     );
