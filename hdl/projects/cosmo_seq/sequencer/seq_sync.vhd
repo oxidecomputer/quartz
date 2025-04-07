@@ -37,6 +37,8 @@ entity seq_sync is
     end entity;
 
 architecture rtl of seq_sync is
+   signal  nic_sync_5v_hsc_pg_l : std_logic;
+   signal nic_sync_12v_hsc_pg_l : std_logic;
 begin
 
     -- Early power sync stuff
@@ -223,15 +225,18 @@ begin
     port map(
        async_input => nic_rails_pins.nic_hsc_12v.pg,
        clk => clk,
-       sycnd_output => nic_rails.nic_hsc_12v.pg
+       sycnd_output => nic_sync_12v_hsc_pg_l
     );
     nic_hsc_5v: entity work.meta_sync
     port map(
        async_input => nic_rails_pins.nic_hsc_5v.pg,
        clk => clk,
-       sycnd_output => nic_rails.nic_hsc_5v.pg
+       sycnd_output => nic_sync_5v_hsc_pg_l
     );
+    -- TODO: maybe clean up the PG_Ls here
 
+    nic_rails.nic_hsc_5v.pg <= not nic_sync_5v_hsc_pg_l;
+    nic_rails.nic_hsc_12v.pg  <= not nic_sync_12v_hsc_pg_l;
     -- nic sync-related stuff
     nic_seq_pins.cld_rst_l <= nic_seq.cld_rst_l;
     nic_seq_pins.perst_l <= nic_seq.perst_l;

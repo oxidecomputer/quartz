@@ -52,7 +52,10 @@ architecture rtl of a1_a0_seq is
     constant TEN_MS : integer := 20 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
     constant TWENTY_ONE_MS: integer := 21 * ONE_MS;
+    constant FOURTY_MS: integer := 40 * ONE_MS;
     constant ONE_HUNDRED_FOUR_MS: integer := 104 * ONE_MS;
+    constant TWO_HUNDRED_MS: integer := 200 * ONE_MS;
+    constant TWO_TWENTY_MS: integer := 220 * ONE_MS;
 
     
 
@@ -207,7 +210,7 @@ begin
         case seq_r.state is
             when IDLE =>
                 v.is_cosmo := '0';  -- assert after power-up
-                v.pwr_btn_l := '0';  -- assert after power up, don't cross-drive
+                v.pwr_btn_l := '1';  -- assert after power up, don't cross-drive, tris at top
                 v.ddr_bulk_en := '0';
                 v.group_a_en := '0';
                 v.group_b_en := '0';
@@ -251,7 +254,6 @@ begin
                     -- these are expected to remain up.
                     v.group_a_expected := '1';  
                     v.ddr_bulk_expected := '1';
-                    v.pwr_btn_l := '1';
                 end if;
             --  Release RSM_RST_L
             when RSM_RST_DEASSERT =>
@@ -263,13 +265,11 @@ begin
                 v.cnts := seq_r.cnts + 1;
                 -- We can "push" the button in this state, this is handled on the falling edge
                 -- we'll give 20ms after rsm_rst release, then hit the button for a ms and release
-                if seq_r.cnts = TWENTY_MS then
+                if seq_r.cnts = TWO_HUNDRED_MS then
                     v.pwr_btn_l := '0';
                 end if;
-                if seq_r.cnts = TWENTY_ONE_MS then
+                if seq_r.cnts = TWO_TWENTY_MS then
                     v.pwr_btn_l := '1';
-                end if;
-                if seq_r.cnts = ONE_HUNDRED_FOUR_MS then
                     v.state := SLP_CHECKPOINT;
                     v.cnts := (others => '0');
                 end if;

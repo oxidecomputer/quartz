@@ -37,7 +37,7 @@ architecture rtl of board_support is
 
     signal sp_system_reset_syncd : std_logic;
     signal pll_locked_async : std_logic;
-    signal led_counter : unsigned(20 downto 0);
+    signal led_counter : unsigned(27 downto 0);
 
 begin
 
@@ -86,7 +86,7 @@ begin
             led_counter <= led_counter + 1;
         end if;
     end process;
-    fpga1_status_led <= led_counter(20);
+    fpga1_status_led <= led_counter(25);
 
     -- Put the "info" common block here
     info_inst: entity work.info
