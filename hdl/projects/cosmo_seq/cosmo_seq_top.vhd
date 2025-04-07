@@ -344,7 +344,11 @@ architecture rtl of cosmo_seq_top is
 
 begin
 
-    fpga1_spare_v3p3(7 downto 1) <= (others => 'Z');
+    fpga1_spare_v3p3(7 downto 5) <= (others => 'Z');
+    fpga1_spare_v3p3(1) <=  sp5_seq_pins.pwr_btn_l;
+    fpga1_spare_v3p3(2) <=  sp5_seq_pins.rsmrst_l;
+    fpga1_spare_v3p3(3) <=  sp5_seq_pins.slp_s3_l;
+    fpga1_spare_v3p3(4) <=  sp5_seq_pins.slp_s5_l;
     -- misc things tied:
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
@@ -358,14 +362,15 @@ begin
 
 
     ---------------------------------------------
-    -- FMC to AXI Inteface from the SP
+    -- FMC to AXI Interface from the SP
     ---------------------------------------------
     stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
     port map(
        chip_reset => reset_fmc,
        fmc_clk => fmc_clk,
-       a(24) => '0',
-       a(23 downto 16) => fmc_sp_to_fpga1_a,
+       a(24 downto 20) => "00000",
+       a(19 downto 16) => fmc_sp_to_fpga1_a(19 downto 16),
+       --a(23 downto 16) => fmc_sp_to_fpga1_a,
        addr_data_in => fmc_sp_to_fpga1_da,
        data_out => fmc_internal_data_out,
        data_out_en => fmc_data_out_enable,
@@ -571,9 +576,11 @@ begin
 
     -- Bulk DDR power control and HSC readback
     ddr_bulk.abcdef_hsc.pg <= v12_ddr5_abcdef_a0_pg;
-    fpga1_to_v12_ddr5_abcdef_hsc_en <= ddr_bulk.abcdef_hsc.enable;
+    --fpga1_to_v12_ddr5_abcdef_hsc_en <= ddr_bulk.abcdef_hsc.enable;
+    fpga1_to_v12_ddr5_abcdef_hsc_en <= '1';
     ddr_bulk.ghijkl_hsc.pg <= v12_ddr5_ghijkl_a0_pg;
-    fpga1_to_v12_ddr5_ghijkl_hsc_en <= ddr_bulk.ghijkl_hsc.enable;
+    --fpga1_to_v12_ddr5_ghijkl_hsc_en <= ddr_bulk.ghijkl_hsc.enable;
+    fpga1_to_v12_ddr5_ghijkl_hsc_en  <= '1';
     -- SP5 rails
     -- group A enables and PGs
     pwr_fpga1_to_v1p5_sp5_rtc_a2_en <= sp5_group_a.pwr_v1p5_rtc.enable;
