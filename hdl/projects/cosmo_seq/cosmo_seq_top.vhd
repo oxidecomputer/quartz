@@ -344,11 +344,12 @@ architecture rtl of cosmo_seq_top is
 
 begin
 
-    fpga1_spare_v3p3(7 downto 5) <= (others => 'Z');
+    fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
     fpga1_spare_v3p3(1) <=  sp5_seq_pins.pwr_btn_l;
     fpga1_spare_v3p3(2) <=  sp5_seq_pins.rsmrst_l;
     fpga1_spare_v3p3(3) <=  sp5_seq_pins.slp_s3_l;
     fpga1_spare_v3p3(4) <=  sp5_seq_pins.slp_s5_l;
+    fpga1_spare_v3p3(5) <=  sp5_seq_pins.pwr_good;
     -- misc things tied:
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
@@ -576,11 +577,9 @@ begin
 
     -- Bulk DDR power control and HSC readback
     ddr_bulk.abcdef_hsc.pg <= v12_ddr5_abcdef_a0_pg;
-    --fpga1_to_v12_ddr5_abcdef_hsc_en <= ddr_bulk.abcdef_hsc.enable;
-    fpga1_to_v12_ddr5_abcdef_hsc_en <= '1';
+    fpga1_to_v12_ddr5_abcdef_hsc_en <= ddr_bulk.abcdef_hsc.enable;
     ddr_bulk.ghijkl_hsc.pg <= v12_ddr5_ghijkl_a0_pg;
-    --fpga1_to_v12_ddr5_ghijkl_hsc_en <= ddr_bulk.ghijkl_hsc.enable;
-    fpga1_to_v12_ddr5_ghijkl_hsc_en  <= '1';
+    fpga1_to_v12_ddr5_ghijkl_hsc_en <= ddr_bulk.ghijkl_hsc.enable;
     -- SP5 rails
     -- group A enables and PGs
     pwr_fpga1_to_v1p5_sp5_rtc_a2_en <= sp5_group_a.pwr_v1p5_rtc.enable;
