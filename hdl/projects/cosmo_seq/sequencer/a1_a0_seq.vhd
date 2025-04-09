@@ -340,16 +340,11 @@ begin
                     v.state := DONE;
                 end if;
             when DONE =>
-                -- Even in the disable case, we need to wait for any downstream
-                -- rails to go down before we can turn off these.
-                if sw_enable = '0' and downstream_idle = '1' then
-                    -- take away power good, then wait before yanking
-                    -- the rails
-                    v.pwr_good := '0';
-                    v.state := SAFE_DISABLE;
-                    v.cnts := (others => '0');
-                end if;
+               null;  
+               -- Only faults, or disablement can take us out of DONE
+               -- which are unconditionally handled below.
             when SAFE_DISABLE =>
+                v.pwr_good := '0';
                 if seq_r.cnts = TWO_MS then
                     -- controlled de-sequence
                     -- we're turning rails off next clock
@@ -381,6 +376,25 @@ begin
             end if;
         end if;
 
+        -- When disabling, we need to wait for any downstream
+        -- rails to go down before we can turn off these.
+        if sw_enable = '0' and downstream_idle = '1' then
+            -- take away power good, then wait before yanking
+            -- the rails
+            v.pwr_good := '0';
+            if seq_r.state >= ASSERT_PWRGOOD then
+                -- Since we've told the AMD processor we're power-good
+                -- We now need to tell it we're not power good
+                v.state := SAFE_DISABLE;
+            else
+                -- Had not gotten up to power good state
+                -- so just go back to idle, IDLE state will clear
+                -- any enables
+                v.state := IDLE;
+            end if;
+            v.state := SAFE_DISABLE;
+            v.cnts := (others => '0');
+        end if;
 
         seq_rin <= v;
     end process;
