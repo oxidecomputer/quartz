@@ -64,7 +64,7 @@ addrmap sequencer_regs {
             desc = "Fan Central hotswap disable";
         } fan_hsc_central_disable[1] = 0;
          field {
-            desc = "Fan Central hotswap disable";
+            desc = "Fan West hotswap disable";
         } fan_hsc_west_disable[1] = 0;
     } early_power_ctrl;
 

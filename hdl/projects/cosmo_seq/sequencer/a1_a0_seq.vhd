@@ -56,6 +56,7 @@ architecture rtl of a1_a0_seq is
     constant ONE_HUNDRED_FOUR_MS: integer := 104 * ONE_MS;
     constant TWO_HUNDRED_MS: integer := 200 * ONE_MS;
     constant TWO_TWENTY_MS: integer := 220 * ONE_MS;
+    constant FOUR_HUNDRED_MS: integer := 200 * ONE_MS;
 
     
 
@@ -247,7 +248,7 @@ begin
                 if is_power_good(group_a) then
                     v.cnts := seq_r.cnts + 1;
                 end if;
-                if seq_r.cnts = TEN_MS then
+                if seq_r.cnts = FOUR_HUNDRED_MS then
                     v.cnts := (others => '0');
                     v.state := RSM_RST_DEASSERT;
                     -- we enable fault monitoring here on the group A rails and DDR, until we de-sequence
@@ -284,6 +285,8 @@ begin
                     v.state := GROUP_B_EN;
                 end if;
             -- Enable Group B supplies
+            -- TODO: We need a pause/sync with hubris here after they have checked
+            -- for CPU present and the proper core types etc.
             when GROUP_B_EN =>
                 v.group_b_en := '1';
                 v.state := GROUP_B_PG_AND_WAIT;
@@ -315,7 +318,7 @@ begin
                 if is_power_good(group_c) then
                     v.cnts := seq_r.cnts + 1;
                 end if;
-                if seq_r.cnts = ONE_MS then
+                if seq_r.cnts = TWO_MS then
                     v.cnts := (others => '0');
                     v.state := ASSERT_PWRGOOD;
                     -- we enable fault monitoring here on the group C rails, until we de-sequence
@@ -344,6 +347,7 @@ begin
                -- Only faults, or disablement can take us out of DONE
                -- which are unconditionally handled below.
             when SAFE_DISABLE =>
+                v.cnts := seq_r.cnts + 1;
                 v.pwr_good := '0';
                 if seq_r.cnts = TWO_MS then
                     -- controlled de-sequence
@@ -376,25 +380,25 @@ begin
             end if;
         end if;
 
+        -- TODO: Add back this stuff back once we get sequencing working
         -- When disabling, we need to wait for any downstream
         -- rails to go down before we can turn off these.
-        if sw_enable = '0' and downstream_idle = '1' then
-            -- take away power good, then wait before yanking
-            -- the rails
-            v.pwr_good := '0';
-            if seq_r.state >= ASSERT_PWRGOOD then
-                -- Since we've told the AMD processor we're power-good
-                -- We now need to tell it we're not power good
-                v.state := SAFE_DISABLE;
-            else
-                -- Had not gotten up to power good state
-                -- so just go back to idle, IDLE state will clear
-                -- any enables
-                v.state := IDLE;
-            end if;
-            v.state := SAFE_DISABLE;
-            v.cnts := (others => '0');
-        end if;
+        --if sw_enable = '0' and downstream_idle = '1' then
+        --    -- take away power good, then wait before yanking
+         --   -- the rails
+        --    v.pwr_good := '0';
+        --    if seq_r.state >= ASSERT_PWRGOOD then
+        --        -- Since we've told the AMD processor we're power-good
+        --        -- We now need to tell it we're not power good
+        --        v.state := SAFE_DISABLE;
+        --    else
+        --        -- Had not gotten up to power good state
+         --       -- so just go back to idle, IDLE state will clear
+        --        -- any enables
+        --        v.state := IDLE;
+        --    end if;
+        --   v.cnts := (others => '0');
+        --end if;
 
         seq_rin <= v;
     end process;
