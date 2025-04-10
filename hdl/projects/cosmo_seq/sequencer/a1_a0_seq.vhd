@@ -57,7 +57,9 @@ architecture rtl of a1_a0_seq is
     constant TWO_HUNDRED_MS: integer := 200 * ONE_MS;
     constant TWO_TWENTY_MS: integer := 220 * ONE_MS;
     constant FOUR_HUNDRED_MS: integer := 200 * ONE_MS;
-
+    constant SIX_HUNDRED_MS: integer := 600 * ONE_MS;
+    constant SIX_TWENTY_MS: integer := 620 * ONE_MS;
+    constant ONE_SECOND: integer := 1000 * ONE_MS;
     
 
      -- This is going into a "RAW" register, 
@@ -197,6 +199,8 @@ begin
             -- To re-enable, we require software to generate a rising_edge
             -- here, by clearing the enable and then setting it again
             v.enable_pend := '1';
+             -- we'll use this to clear the faulted flag
+             v.faulted := '0';
         end if;
 
         -- Fault monitoring, if we expect a rail to be up and it's not
@@ -222,10 +226,6 @@ begin
                 v.group_c_expected := '0';
                 v.ddr_bulk_expected := '0';
                 v.cnts := (others => '0');
-                if sw_enable = '0' then
-                    -- we'll use this to clear the faulted flag
-                    v.faulted := '0';
-                end if;
                 if seq_r.enable_pend and upstream_ok then
                     v.state := DDR_BULK_EN;
                     v.enable_pend := '0';
@@ -248,7 +248,7 @@ begin
                 if is_power_good(group_a) then
                     v.cnts := seq_r.cnts + 1;
                 end if;
-                if seq_r.cnts = FOUR_HUNDRED_MS then
+                if seq_r.cnts = ONE_SECOND then
                     v.cnts := (others => '0');
                     v.state := RSM_RST_DEASSERT;
                     -- we enable fault monitoring here on the group A rails and DDR, until we de-sequence
@@ -266,10 +266,10 @@ begin
                 v.cnts := seq_r.cnts + 1;
                 -- We can "push" the button in this state, this is handled on the falling edge
                 -- we'll give 20ms after rsm_rst release, then hit the button for a ms and release
-                if seq_r.cnts = TWO_HUNDRED_MS then
+                if seq_r.cnts = SIX_HUNDRED_MS then
                     v.pwr_btn_l := '0';
                 end if;
-                if seq_r.cnts = TWO_TWENTY_MS then
+                if seq_r.cnts = SIX_TWENTY_MS then
                     v.pwr_btn_l := '1';
                     v.state := SLP_CHECKPOINT;
                     v.cnts := (others => '0');

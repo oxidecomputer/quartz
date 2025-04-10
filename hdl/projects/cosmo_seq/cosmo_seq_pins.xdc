@@ -13,11 +13,12 @@ set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { dimm_i_
 set_property -dict { PACKAGE_PIN Y18 IOSTANDARD LVCMOS33 } [get_ports { dimm_j_pg }];
 set_property -dict { PACKAGE_PIN V16 IOSTANDARD LVCMOS33 } [get_ports { dimm_k_pg }];
 set_property -dict { PACKAGE_PIN U16 IOSTANDARD LVCMOS33 } [get_ports { dimm_l_pg }];
-set_property -dict { PACKAGE_PIN W3 IOSTANDARD LVCMOS18 } [get_ports { espi0_fpga1_to_sp5_alert_l }];
+# Not matching sch due to Alert and dat0 being swapped in AMD config but we didn't change sch names
+#set_property -dict { PACKAGE_PIN U2 IOSTANDARD LVCMOS18 } [get_ports { espi0_fpga1_to_sp5_alert_l }];
 set_property -dict { PACKAGE_PIN U3 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_clk }];
 set_property -dict { PACKAGE_PIN T3 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN U4 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_dat[0] }];
-set_property -dict { PACKAGE_PIN Y3 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_dat[1] }];
+set_property -dict { PACKAGE_PIN W3 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_dat[1] }];
 set_property -dict { PACKAGE_PIN U1 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_dat[2] }];
 set_property -dict { PACKAGE_PIN U2 IOSTANDARD LVCMOS18 } [get_ports { espi0_sp5_to_fpga1_dat[3] }];
 set_property -dict { PACKAGE_PIN N3 IOSTANDARD LVCMOS18 } [get_ports { espi1_fpga1_to_sp5_alert_l }];
@@ -119,7 +120,7 @@ set_property -dict { PACKAGE_PIN T2 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_
 set_property -dict { PACKAGE_PIN AB10 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_pwr_btn_l }];
 set_property -dict { PACKAGE_PIN L7 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_pwrgd }];
 set_property -dict { PACKAGE_PIN L4 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_reset_l }];
-set_property -dict { PACKAGE_PIN AA8 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_romtype[0] }];
+set_property -dict { PACKAGE_PIN AA8 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_romtype0 }];
 set_property -dict { PACKAGE_PIN AB7 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_rsmrst_l }];
 set_property -dict { PACKAGE_PIN AA7 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_sp5_sys_reset_l }];
 set_property -dict { PACKAGE_PIN E11 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_int_l }];
@@ -146,9 +147,9 @@ set_property -dict { PACKAGE_PIN H4 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1
 set_property -dict { PACKAGE_PIN J2 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_tck }];
 set_property -dict { PACKAGE_PIN K4 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_tms }];
 set_property -dict { PACKAGE_PIN K2 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_trst_l }];
-set_property -dict { PACKAGE_PIN H5 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_xtrig_l[5] }];
-set_property -dict { PACKAGE_PIN H7 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_xtrig_l[6] }];
-set_property -dict { PACKAGE_PIN H6 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_xtrig_l[7] }];
+set_property -dict { PACKAGE_PIN H5 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_xtrig5_l}];
+set_property -dict { PACKAGE_PIN H7 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_xtrig6_l}];
+set_property -dict { PACKAGE_PIN H6 IOSTANDARD LVCMOS18 } [get_ports { hdt_fpga1_to_mux_xtrig7_l }];
 set_property -dict { PACKAGE_PIN H3 IOSTANDARD LVCMOS18 } [get_ports { hdt_mux_to_fpga1_dat }];
 set_property -dict { PACKAGE_PIN N6 IOSTANDARD LVCMOS18 } [get_ports { i2c_sp5_to_fpgax_hp_scl }];
 set_property -dict { PACKAGE_PIN P7 IOSTANDARD LVCMOS18 } [get_ports { i2c_sp5_to_fpgax_hp_sda }];
@@ -171,7 +172,6 @@ set_property -dict { PACKAGE_PIN G7 IOSTANDARD LVCMOS33 } [get_ports { m2b_hsc_t
 set_property -dict { PACKAGE_PIN Y21 IOSTANDARD LVCMOS33} [get_ports { m2b_to_fpga1_pedet }];
 set_property -dict { PACKAGE_PIN W21 IOSTANDARD LVCMOS33 } [get_ports { m2b_to_fpga1_prsnt_l }];
 set_property -dict { PACKAGE_PIN E18 IOSTANDARD LVCMOS33 } [get_ports { main_hsc_to_fpga1_alert_l }];
-set_property -dict { PACKAGE_PIN U17 IOSTANDARD LVCMOS33 } [get_ports { nettp59[1] }];
 set_property -dict { PACKAGE_PIN D2 IOSTANDARD LVCMOS33 } [get_ports { nic_to_fpga1_ext_rst_l }];
 set_property -dict { PACKAGE_PIN N17 IOSTANDARD LVCMOS33 } [get_ports { pcie_aux_fpga1_to_rsw_perst_l }];
 set_property -dict { PACKAGE_PIN N20 IOSTANDARD LVCMOS33 } [get_ports { pcie_aux_rsw_to_fpga1_prsnt_buff_l }];
@@ -220,10 +220,9 @@ set_property -dict { PACKAGE_PIN L8 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fp
 set_property -dict { PACKAGE_PIN W7 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_spd_host_ctrl_l }];
 set_property -dict { PACKAGE_PIN L5 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_thermtrip_l }];
 set_property -dict { PACKAGE_PIN T1 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_nic_mfg_mode_l }];
-set_property -dict { PACKAGE_PIN M22 IOSTANDARD LVCMOS33 } [get_ports { sp_to_fpga1_cfg_dat }];
 set_property -dict { PACKAGE_PIN C15 IOSTANDARD LVCMOS33 } [get_ports { sp_to_fpga1_system_reset_l }];
 set_property -dict { PACKAGE_PIN N1 IOSTANDARD LVCMOS18 } [get_ports { spi0_sp5_to_fpga1_cs_l }];
-set_property -dict { PACKAGE_PIN P3 }IOSTANDARD LVCMOS18  [get_ports { spi1_sp5_to_fpga1_cs_l }];
+set_property -dict { PACKAGE_PIN P3 IOSTANDARD LVCMOS18 } [get_ports { spi1_sp5_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN P2 IOSTANDARD LVCMOS18 } [get_ports { spi2_sp5_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN E15 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga1_to_flash_clk }];
 set_property -dict { PACKAGE_PIN C17 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga1_to_flash_cs_l }];
