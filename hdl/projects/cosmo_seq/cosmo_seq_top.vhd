@@ -38,8 +38,6 @@ entity cosmo_seq_top is
         fmc_sp_to_fpga1_a : in std_logic_vector(23 downto 16);
         -- eSPI interfaces
         -- eSPI0
-        -- TODO: fix this up by swapping alert pins with
-        -- data because we didn't do this on the schematic naming
         fpga1_espi0_cs_l_buff_oe_en_l : out std_logic;  -- Don't want to be chip-selected while SP5 is off
         espi_sp5_to_fpga1_reset_l : in std_logic; -- Un-used currently
         espi0_sp5_to_fpga1_clk : in std_logic;
@@ -113,8 +111,9 @@ entity cosmo_seq_top is
         fpga1_to_sp_mux_ign_mux_sel : out std_logic;
         fpga1_to_ign_trgt_fpga_creset : out std_logic; -- swap to output when we want to use this
         seq_rev_id : in std_logic_vector(2 downto 0);
-        fpga1_spare_v1p8 : in std_logic_vector(7 downto 0);
-        fpga1_spare_v3p3 : inout std_logic_vector(7 downto 0);
+
+        fpga1_spare_v1p8 : out std_logic_vector(7 downto 0);
+        fpga1_spare_v3p3 : out std_logic_vector(7 downto 0);
         fpga1_status_led : out std_logic;
         fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
 
@@ -189,11 +188,22 @@ entity cosmo_seq_top is
         fpga1_to_sp_misc_d : in std_logic;
 
         -- Un-USED SP5 things
+        -- hdt_conn_to_mux_testen : out std_logic;
+        -- hdt_fpga1_to_mux_dat : out std_logic;
+        -- hdt_fpga1_to_mux_dbreq_l : out std_logic;
+        -- hdt_fpga1_to_mux_en_l : out std_logic;
+        -- hdt_fpga1_to_mux_sel : out std_logic;
+        -- hdt_fpga1_to_mux_tck : out std_logic;
+        -- hdt_fpga1_to_mux_tms : out std_logic;
+        -- hdt_fpga1_to_mux_trst_l : out std_logic;
+        -- hdt_fpga1_to_mux_xtrig5_l : out std_logic;
+        -- hdt_fpga1_to_mux_xtrig6_l : out std_logic;
+        -- hdt_fpga1_to_mux_xtrig7_l : out std_logic;
         hdt_conn_to_mux_testen : in std_logic;
         hdt_fpga1_to_mux_dat : in std_logic;
         hdt_fpga1_to_mux_dbreq_l : in std_logic;
-        hdt_fpga1_to_mux_en_l : out std_logic;
-        hdt_fpga1_to_mux_sel : out std_logic;
+        hdt_fpga1_to_mux_en_l : in std_logic;
+        hdt_fpga1_to_mux_sel : in std_logic;
         hdt_fpga1_to_mux_tck : in std_logic;
         hdt_fpga1_to_mux_tms : in std_logic;
         hdt_fpga1_to_mux_trst_l : in std_logic;
@@ -273,8 +283,8 @@ entity cosmo_seq_top is
         uart1_fpga1_to_sp5_dat_buff : out std_logic;
         uart1_sp5_to_fpga1_dat : in std_logic;
         -- SPARE UART for hw usage
-        uart_local_fpga1_to_sp_dat_r : in std_logic;
-        uart_local_fpga1_to_sp_rts_l_r : in std_logic;
+        uart_local_fpga1_to_sp_dat : in std_logic;
+        uart_local_fpga1_to_sp_rts_l : in std_logic;
         uart_local_sp_to_fpga1_dat : in std_logic;
         uart_local_sp_to_fpga1_rts_l : in std_logic;
         
@@ -343,6 +353,8 @@ architecture rtl of cosmo_seq_top is
     signal sp5_t6_perst_l : std_logic;
     signal espi_resp_csn : std_logic;
 
+
+    signal fpga1_to_pcie_clk_buff_rsw_oe_l_int : std_logic;
 begin
 
     -- espi_dbg: process(clk_200m, reset_200m)
@@ -369,14 +381,23 @@ begin
     fpga1_to_sp_mux_ign_mux_sel <= '0';  -- Default until we decide what to do with it
     fpga1_to_sp_irq_l <= (others => '1');
     -- Enable various buffers when we're in A0:
-    fpga1_espi0_cs_l_buff_oe_en_l <= '0' when a0_ok else 'Z';
+    fpga1_espi0_cs_l_buff_oe_en_l <= '0' when sp5_seq_pins.pwr_good else 'Z';
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
 
-    hdt_fpga1_to_mux_en_l <= '0';
-    hdt_fpga1_to_mux_sel <= sp5_group_a.v1p8_sp5_a1.enable;
+    -- hdt_fpga1_to_mux_en_l <= 'Z';
+    -- hdt_fpga1_to_mux_sel <= '0';
 
+    -- hdt_conn_to_mux_testen <= '0';
+    -- hdt_fpga1_to_mux_dat <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_dbreq_l <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_tck <= sp5_group_a.v1p8_sp5_a1.enable;
+    -- hdt_fpga1_to_mux_tms <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_trst_l <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_xtrig5_l  <= 'Z';
+    -- hdt_fpga1_to_mux_xtrig6_l <= 'Z';
+    -- hdt_fpga1_to_mux_xtrig7_l  <= 'Z';
 
     ---------------------------------------------
     -- FMC to AXI Interface from the SP
@@ -550,9 +571,11 @@ begin
         pcie_aux_rsw_perst_l => pcie_aux_fpga1_to_rsw_perst_l,
         pcie_aux_rsw_prsnt_buff_l => pcie_aux_rsw_to_fpga1_prsnt_buff_l,
         pcie_aux_rsw_pwrflt_buff_l=> pcie_aux_rsw_to_fpga1_pwrflt_buff_l,
-        pcie_clk_buff_rsw_oe_l => fpga1_to_pcie_clk_buff_rsw_oe_l,
+        pcie_clk_buff_rsw_oe_l => fpga1_to_pcie_clk_buff_rsw_oe_l_int,
         rsw_sp5_pcie_attached_buff_l =>rsw_to_sp5_pcie_attached_buff_l
     );
+
+    fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
 
     --Tristates for spi-nor flash pins and espi
     i2c_sp5_to_fpgax_hp_scl <= sp5_scl_o when sp5_scl_oe = '1' else 'Z';
@@ -641,7 +664,7 @@ begin
     -- Nic sequence-related pins
     fpga1_to_nic_cld_rst_l <= nic_seq_pins.cld_rst_l;
     fpga1_to_nic_eeprom_wp_l <= nic_seq_pins.eeprom_wp_l;
-    fpga1_to_pcie_clk_buff_nic_oe_l <= nic_seq_pins.nic_pcie_clk_buff_oe_l;
+    fpga1_to_pcie_clk_buff_nic_oe_l <= '0' when nic_seq_pins.nic_pcie_clk_buff_oe_l = '0' else 'Z';
     fpga1_to_nic_flash_wp_l <= nic_seq_pins.flash_wp_l;
     fpga1_to_nic_mfg_mode_l <= nic_seq_pins.nic_mfg_mode_l;
     nic_seq_pins.ext_rst_l <= nic_to_fpga1_ext_rst_l;
