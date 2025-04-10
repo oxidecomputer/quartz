@@ -10,9 +10,9 @@ def check_and_report_timing(timing_log) -> bool:
         if start and pause and "WNS(ns)" in line:
             pause = False
         
-        if start and not pause and line.trim():
+        if start and not pause and line.strip():
             print(line)
-        elif start and not pause and line.trim() == "":
+        elif start and not pause and line.strip() == "":
             stop = True
 
         if "All user specified timing constraints are met." in line:
@@ -37,9 +37,9 @@ def report_utilization(utilization_log) -> None:
             print(last_line)
             pause = False
         
-        if start and not pause and line.trim():
+        if start and not pause and line.strip():
             print(line)
-        elif start and not pause and line.trim() == "":
+        elif start and not pause and line.strip() == "":
             stop = True
             pause = False
         
