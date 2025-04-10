@@ -95,8 +95,9 @@ module mkDebouncer#(
 
     (* fire_when_enabled *)
     rule do_edge_detect;
-        if ((assertion_edge && counter == fromInteger(valueOf(assert_duration))) ||
-                (deassertion_edge && counter == fromInteger(valueOf(deassert_duration)))) begin
+        if (output_r != input_last && 
+            ((assertion_edge && counter == fromInteger(valueOf(assert_duration))) ||
+                (deassertion_edge && counter == fromInteger(valueOf(deassert_duration))))) begin
             redge <= assertion_edge;
             fedge <= deassertion_edge;
         end else begin

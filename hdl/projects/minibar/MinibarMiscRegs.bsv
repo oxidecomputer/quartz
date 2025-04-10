@@ -10,6 +10,7 @@ package MinibarMiscRegs;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
+import DReg::*;
 
 // Oxide
 import CommonFunctions::*;
@@ -51,11 +52,11 @@ interface MinibarMiscRegs;
     interface Pins pins;
     method Action ignition_target0_present(Bool val);
     method Action ignition_target1_present(Bool val);
-    method Action tick_1ms(Bool val);
+    interface PulseWire tick_1ms;
 endinterface
 
 module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
-    Wire#(Bool) tick_1ms_   <- mkWire();
+    Reg#(Bool) tick <- mkDReg(False);
     // Registers to wrap up and expose
     Reg#(Bit#(1)) vbus_sys_fault_r  <- mkReg(0);
     Reg#(Bit#(3)) hcv_code_r        <- mkReg(0);
@@ -71,40 +72,45 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
 
     // Apply a 100ms debouncer to the button presses
     Debouncer#(100, 100, Bit#(1)) power_button  <- mkDebouncer(0);
-    mkConnection(asIfc(tick_1ms_), asIfc(power_button));
 
     // VBUS rail under FPGA control
-    PowerRail#(8) vbus_rail <- mkPowerRailDisableOnAbort(pg_timeout_ms);
+    PowerRail#(10) vbus_rail <- mkPowerRailDisableOnAbort(pg_timeout_ms);
     // Register the enable state to work around some inellegance in the PowerRail module
-    Reg#(Bool) vbus_en_r    <- mkReg(False);
+    Reg#(Bool) vbus_en_r        <- mkReg(False);
+    Reg#(Bool) new_sw_vbus_en   <- mkDReg(False);
 
     (* fire_when_enabled *)
-    rule do_power_rail_ticks (tick_1ms_);
+    rule do_tick (tick);
         vbus_rail.send();
+        power_button.send();
     endrule
 
     (* fire_when_enabled *)
     rule do_power_control;
-        let toggle_power = power_button.rising_edge();
-        let disable_power = power_control.vbus_sled_en == 0
-                            || vbus_rail.timed_out()
-                            || vbus_rail.aborted()
-                            || (toggle_power && vbus_en_r);
-        let enable_power = !vbus_en_r && (power_control.vbus_sled_en == 1 || toggle_power);
-    
-        if (disable_power) begin
-            vbus_rail.set_enable(False);
-            vbus_en_r <= False;
-        end else if (enable_power) begin
+        let toggle_power    = power_button.rising_edge();
+        let sw_enable       = new_sw_vbus_en && power_control.vbus_sled_en == 1;
+        let sw_disable      = new_sw_vbus_en && power_control.vbus_sled_en == 0;
+        let disable_power   = sw_disable || vbus_rail.timed_out() || vbus_rail.aborted() || (toggle_power && vbus_en_r);
+        let enable_power    = !vbus_en_r && (sw_enable || toggle_power);
+
+        if (enable_power) begin
             vbus_rail.set_enable(True);
-            vbus_en_r <= True;
+            vbus_en_r       <= True;
+        end else if (disable_power) begin
+            vbus_rail.set_enable(False);
+            vbus_en_r       <= False;
         end
     endrule
 
     method ignition_target0_present = ignt_tgt0_present._write;
-    method ignition_target1_present = ignt_tgt1_present._write; 
+    method ignition_target1_present = ignt_tgt1_present._write;
 
-    method tick_1ms = tick_1ms_._write;
+    interface PulseWire tick_1ms;
+        method _read = tick;
+        method Action send();
+            tick <= True;
+        endmethod
+    endinterface
 
     interface Pins pins;
         method vbus_sys_fault = vbus_sys_fault_r._write;
@@ -136,7 +142,13 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
             VbusSysRdbk {
                 fault: vbus_sys_fault_r
             });
-        interface power_ctrl = power_control;
+        interface Reg power_ctrl;
+            method _read = power_control;
+            method Action _write(PowerCtrl v);
+                power_control   <= v;
+                new_sw_vbus_en  <= True;
+            endmethod
+        endinterface
         interface vbus_sled = valueToReadOnly(
             PowerRailState {
                 enable_pin: pack(vbus_rail.pin_state().enable),

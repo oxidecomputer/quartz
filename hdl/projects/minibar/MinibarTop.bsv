@@ -86,7 +86,7 @@ interface MinibarTop;
     (* prefix = "" *) method Action hcv_code(Bit#(3) hcv_code);
 
     // Chassis features
-    (* prefix = "" *) method Action power_button_to_fpga_l(Bit#(1) power_button_to_fpga_l);
+    (* prefix = "" *) method Action power_button_to_fpga(Bit#(1) power_button_to_fpga);
     method Bit#(1) fpga_to_power_led_en;
 
     // SP
@@ -247,7 +247,7 @@ module mkMinibarTop(MinibarTop);
     method fpga_to_vbus_sys_hsc_restart_l = ~vbus_sys_restart;
 
     // The power button and LED are part of the Minibar chassis.
-    method power_button_to_fpga_l = sync_inverted(power_button);
+    method power_button_to_fpga = sync(power_button);
     method fpga_to_power_led_en = power_led;
 
     // Hardware Compatibility Version
@@ -279,8 +279,17 @@ module mkMinibarTop(MinibarTop);
     method fpga_to_vsc7448_reset_l = ~vsc7448_reset;
     method fpga_to_vsc8504_reset_l_v3p3 = ~vsc8504_reset;
 
-    // These can be wired to things to be helpful later
-    method fpga_to_debug_spare_io = 0;
+    // These can be wired to things to be helpful later (J8)
+    method Bit#(8) fpga_to_debug_spare_io = {
+        1'b0, // pin 10
+        1'b0, // pin 9
+        1'b0, // pin 8
+        1'b0, // pin 7
+        1'b0, // pin 4
+        1'b0, // pin 3
+        1'b0, // pin 2
+        1'b0  // pin 1
+    };
 
     // We do not have any IRQs yet
     method fpga_to_sp_irq_l = 1;
