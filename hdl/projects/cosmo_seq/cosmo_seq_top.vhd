@@ -114,7 +114,7 @@ entity cosmo_seq_top is
         fpga1_to_ign_trgt_fpga_creset : out std_logic; -- swap to output when we want to use this
         seq_rev_id : in std_logic_vector(2 downto 0);
         fpga1_spare_v1p8 : in std_logic_vector(7 downto 0);
-        fpga1_spare_v3p3 : inout std_logic_vector(7 downto 0);
+        fpga1_spare_v3p3 : out std_logic_vector(7 downto 0);
         fpga1_status_led : out std_logic;
         fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
 
@@ -345,24 +345,24 @@ architecture rtl of cosmo_seq_top is
 
 begin
 
-    -- espi_dbg: process(clk_200m, reset_200m)
-    -- begin
-    --     if rising_edge(clk_200m) then
-    --         fpga1_spare_v3p3(1) <= espi0_sp5_to_fpga1_clk;
-    --         fpga1_spare_v3p3(2) <= espi0_sp5_to_fpga1_cs_l;
-    --         fpga1_spare_v3p3(3) <= espi0_sp5_to_fpga1_dat(0);
-    --         fpga1_spare_v3p3(4) <= espi0_sp5_to_fpga1_dat(1);
-    --         fpga1_spare_v3p3(5) <= espi_resp_csn;
-    --     end if;
-    -- end process;
-    -- fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
-    fpga1_spare_v3p3(1) <=  sp5_seq_pins.pwr_btn_l;
-    fpga1_spare_v3p3(2) <=  sp5_seq_pins.rsmrst_l;
-    fpga1_spare_v3p3(3) <=  sp5_seq_pins.slp_s3_l;
-    fpga1_spare_v3p3(4) <=  sp5_seq_pins.slp_s5_l;
-    fpga1_spare_v3p3(5) <=  sp5_seq_pins.pwr_good;
-    fpga1_spare_v3p3(6) <= sp5_seq_pins.thermtrip_l;
-    fpga1_spare_v3p3(7) <= sp5_seq_pins.reset_l;
+    espi_dbg: process(clk_200m, reset_200m)
+    begin
+        if rising_edge(clk_200m) then
+            fpga1_spare_v3p3(1) <= espi0_sp5_to_fpga1_clk;
+            fpga1_spare_v3p3(2) <= espi0_sp5_to_fpga1_cs_l;
+            fpga1_spare_v3p3(3) <= espi0_sp5_to_fpga1_dat(0);
+            fpga1_spare_v3p3(4) <= espi0_sp5_to_fpga1_dat(1);
+            fpga1_spare_v3p3(5) <= espi_resp_csn;
+        end if;
+    end process;
+    fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
+    -- fpga1_spare_v3p3(1) <=  sp5_seq_pins.pwr_btn_l;
+    -- fpga1_spare_v3p3(2) <=  sp5_seq_pins.rsmrst_l;
+    -- fpga1_spare_v3p3(3) <=  sp5_seq_pins.slp_s3_l;
+    -- fpga1_spare_v3p3(4) <=  sp5_seq_pins.slp_s5_l;
+    -- fpga1_spare_v3p3(5) <=  sp5_seq_pins.pwr_good;
+    -- fpga1_spare_v3p3(6) <= sp5_seq_pins.thermtrip_l;
+    -- fpga1_spare_v3p3(7) <= sp5_seq_pins.reset_l;
     -- misc things tied:
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
