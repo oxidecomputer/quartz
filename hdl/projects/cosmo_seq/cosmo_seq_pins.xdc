@@ -162,7 +162,7 @@ set_property -dict { PACKAGE_PIN Y6 IOSTANDARD LVCMOS18 } [get_ports { i3c_fpga1
 set_property -dict { PACKAGE_PIN C19 IOSTANDARD LVCMOS33 } [get_ports { i3c_fpga1_to_dimm_oe_l }];
 set_property -dict { PACKAGE_PIN AA1 IOSTANDARD LVCMOS18 } [get_ports { i3c_sp5_to_fpga1_abcdef_scl }];
 set_property -dict { PACKAGE_PIN AA2 IOSTANDARD LVCMOS18 } [get_ports { i3c_sp5_to_fpga1_abcdef_sda }];
-set_property -dict { PACKAGE_PIN AB6 IOSTANDARD LVCMOS18 } [get_ports { i3c_sp5_to_fpga1_ghijkl_scl_}];
+set_property -dict { PACKAGE_PIN AB6 IOSTANDARD LVCMOS18 } [get_ports { i3c_sp5_to_fpga1_ghijkl_scl }];
 set_property -dict { PACKAGE_PIN AA6 IOSTANDARD LVCMOS18 } [get_ports { i3c_sp5_to_fpga1_ghijkl_sda }];
 set_property -dict { PACKAGE_PIN C18 IOSTANDARD LVCMOS33 } [get_ports { i3c_sp5_to_fpga1_oe_l }];
 set_property -dict { PACKAGE_PIN E5 IOSTANDARD LVCMOS33 } [get_ports { m2a_hsc_to_fpga1_fault_l }];

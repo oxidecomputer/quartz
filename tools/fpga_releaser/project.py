@@ -88,6 +88,7 @@ class FPGAImage:
 
     def report_timing(self):
         log = self._get_timing_report()
+        print(self.toolchain)
         if self.toolchain == "yosys":
             import fpga_releaser.yosys as yosys
             yosys.check_and_report_timing(log)

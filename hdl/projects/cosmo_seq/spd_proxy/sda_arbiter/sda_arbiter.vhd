@@ -37,6 +37,7 @@ architecture rtl of sda_arbiter is
         GRANT_B
     );
     signal sda_state : sda_control_t;
+    signal last_grant : sda_control_t;
     signal hysteresis_cntr : natural range 0 to HYSTERESIS_CYCLES;
 begin
 
@@ -44,46 +45,54 @@ begin
     b_grant <= '1' when sda_state = GRANT_B else '0';
 
     arbitration : process(clk, reset)
-        variable sda_next : sda_control_t;
     begin
         if reset then
             sda_state       <= NONE;
+            last_grant      <= NONE;
             hysteresis_cntr <= 0;
         elsif rising_edge(clk) then
             if enabled then
-                if hysteresis_cntr = HYSTERESIS_CYCLES then
+
                     case sda_state is
                         when NONE =>
-                            if a = '0' and b = '1' then
-                                sda_next    := GRANT_A;
-                            elsif a = '1' and b = '0' then
-                                sda_next    := GRANT_B;
+                            -- We were came from GRANT_A so a was high.
+                            if last_grant = GRANT_A and a = '0' then
+                                sda_state    <= GRANT_A;
+                            -- We were came from GRANT_B so B was high
+                            elsif last_grant = GRANT_B and b = '0' then
+                                sda_state    <= GRANT_B;
+                            -- else wait our counter and then decide
+                            elsif hysteresis_cntr = HYSTERESIS_CYCLES then
+                                if a = '0' and b = '1' then
+                                    sda_state    <= GRANT_A;
+                                elsif a = '1' and b = '0' then
+                                    sda_state    <= GRANT_B;
+                                end if;
+                            else 
+                                hysteresis_cntr <= hysteresis_cntr + 1;
                             end if;
 
                         when GRANT_A =>
+                            -- A is done, go back to NONE
                             if a = '1' then
-                                sda_next    := NONE;
+                                sda_state  <= NONE;
+                                last_grant <= GRANT_A;
+                                hysteresis_cntr <= 0;
                             end if;
 
                         when GRANT_B =>
+                            -- A is done, go back to NONE
                             if b = '1' then
-                                sda_next    := NONE;
+                                last_grant <= GRANT_B;
+                                sda_state   <= NONE;
+                                hysteresis_cntr <= 0;
                             end if;
                     end case;
 
-                    -- arbitration changed, enforce hysteresis
-                    if sda_next /= sda_state then
-                        hysteresis_cntr <= 0;
-                    end if;
-                else
-                    hysteresis_cntr <= hysteresis_cntr + 1;
-                end if;
             else
-                sda_next        := NONE;
+                sda_state  <= NONE;
                 hysteresis_cntr <= 0;
             end if;
-
-            sda_state <= sda_next;
         end if;
     end process;
 
