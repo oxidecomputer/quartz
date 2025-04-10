@@ -216,7 +216,7 @@ addrmap minibar_controller {
         field {
             desc = "State of the FPGA-internal power rail sequencer";
             encode = state;
-        } state[7:5] = 0;
+        } state[6:4] = 0;
 
         field {
             desc = "Status of the enable pin";

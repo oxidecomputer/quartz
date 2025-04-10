@@ -36,7 +36,8 @@ module mkSpiServer #(
         Vector#(2, IgnitionController::Registers) ignition_controllers
     )
         (SpiServer);
-    Reg#(SpiRequest) spi_request <- mkReg(SpiRequest{address: 0, wdata: 0, op: NOOP});
+    PulseWire start_request <- mkPulseWire();
+    Wire#(SpiRequest) spi_request <- mkWire(); // SpiRequest{address: 0, wdata: 0, op: NOOP});
     Wire#(SpiResponse) spi_response <- mkWire();
 
     // registers interal to the SPI server
@@ -45,7 +46,7 @@ module mkSpiServer #(
         <- replicateM(mkConfigReg(defaultValue));
 
     (* fire_when_enabled *)
-    rule do_spi_read(spi_request.op == READ || spi_request.op == READ_NO_ADDR_INCR);
+    rule do_spi_read(start_request && (spi_request.op == READ || spi_request.op == READ_NO_ADDR_INCR));
         let reader =
             case (spi_request.address)
             // ID, see RDL for the (default) values.
@@ -143,7 +144,7 @@ module mkSpiServer #(
     endrule
 
     (* fire_when_enabled *)
-    rule do_spi_write;
+    rule do_spi_write(start_request);
         function do_update(r) = update(spi_request.op, r, spi_request.wdata);
         case (spi_request.address)
             fromInteger(cs0Offset): do_update(checksum[0]);
@@ -169,7 +170,12 @@ module mkSpiServer #(
         endcase
     endrule
 
-    interface Put request = toPut(asIfc(spi_request));
+    interface Put request;
+        method Action put(new_spi_request);
+            start_request.send();
+            spi_request <= new_spi_request;
+        endmethod
+    endinterface
     interface Get response = toGet(asIfc(spi_response));
 endmodule
 

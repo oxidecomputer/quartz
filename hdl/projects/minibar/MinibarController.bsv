@@ -36,7 +36,7 @@ typedef struct {
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
         system_frequency_hz: 50_000_000,
-        vbus_pg_timeout_ms: 25, // arbitrarily chosen
+        vbus_pg_timeout_ms: 500, // arbitrarily chosen
         pcie_pg_timeout_ms: 25  // arbitrarily chosen
     };
 endinstance
@@ -66,6 +66,7 @@ module mkMinibarController#(Parameters parameters) (MinibarController);
     // A collection of miscellaneous registers we wrap up in a single module
     //
     MinibarMiscRegs misc_regs <- mkMinibarMiscRegs(parameters.vbus_pg_timeout_ms);
+    mkConnection(asIfc(tick_1khz), asIfc(misc_regs.tick_1ms));
 
     //
     // A block to support the operations and test sled<->CEM PCIe
