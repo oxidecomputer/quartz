@@ -192,8 +192,8 @@ entity cosmo_seq_top is
         hdt_conn_to_mux_testen : in std_logic;
         hdt_fpga1_to_mux_dat : in std_logic;
         hdt_fpga1_to_mux_dbreq_l : in std_logic;
-        hdt_fpga1_to_mux_en_l : in std_logic;
-        hdt_fpga1_to_mux_sel : in std_logic;
+        hdt_fpga1_to_mux_en_l : out std_logic;
+        hdt_fpga1_to_mux_sel : out std_logic;
         hdt_fpga1_to_mux_tck : in std_logic;
         hdt_fpga1_to_mux_tms : in std_logic;
         hdt_fpga1_to_mux_trst_l : in std_logic;
@@ -341,15 +341,28 @@ architecture rtl of cosmo_seq_top is
 
     signal sp5_t6_power_en : std_logic;
     signal sp5_t6_perst_l : std_logic;
+    signal espi_resp_csn : std_logic;
 
 begin
 
-    fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
+    -- espi_dbg: process(clk_200m, reset_200m)
+    -- begin
+    --     if rising_edge(clk_200m) then
+    --         fpga1_spare_v3p3(1) <= espi0_sp5_to_fpga1_clk;
+    --         fpga1_spare_v3p3(2) <= espi0_sp5_to_fpga1_cs_l;
+    --         fpga1_spare_v3p3(3) <= espi0_sp5_to_fpga1_dat(0);
+    --         fpga1_spare_v3p3(4) <= espi0_sp5_to_fpga1_dat(1);
+    --         fpga1_spare_v3p3(5) <= espi_resp_csn;
+    --     end if;
+    -- end process;
+    -- fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
     fpga1_spare_v3p3(1) <=  sp5_seq_pins.pwr_btn_l;
     fpga1_spare_v3p3(2) <=  sp5_seq_pins.rsmrst_l;
     fpga1_spare_v3p3(3) <=  sp5_seq_pins.slp_s3_l;
     fpga1_spare_v3p3(4) <=  sp5_seq_pins.slp_s5_l;
     fpga1_spare_v3p3(5) <=  sp5_seq_pins.pwr_good;
+    fpga1_spare_v3p3(6) <= sp5_seq_pins.thermtrip_l;
+    fpga1_spare_v3p3(7) <= sp5_seq_pins.reset_l;
     -- misc things tied:
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
@@ -360,6 +373,9 @@ begin
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
+
+    hdt_fpga1_to_mux_en_l <= '0';
+    hdt_fpga1_to_mux_sel <= sp5_group_a.v1p8_sp5_a1.enable;
 
 
     ---------------------------------------------
@@ -434,7 +450,7 @@ begin
         espi_dat => espi0_sp5_to_fpga1_dat,
         espi_dat_o => espi_io_o,
         espi_dat_oe => espi_io_oe,
-        response_csn => open,  -- debugging with saleae if you have access
+        response_csn => espi_resp_csn,  -- debugging with saleae if you have access
         ipcc_uart_from_espi => ipcc_uart_from_espi_axi_st,
         ipcc_uart_to_espi => ipcc_uart_to_espi_axi_st,
         spinor_axi_if => responders(SPINOR_RESP_IDX),
