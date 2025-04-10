@@ -15,7 +15,10 @@ use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
 use work.axi_st8_pkg;
+use work.i2c_common_pkg.all;
+use work.stream8_pkg;
 use work.time_pkg.all;
+use work.tristate_if_pkg.all;
 
 use work.sequencer_io_pkg.all;
 
@@ -343,6 +346,19 @@ architecture rtl of cosmo_seq_top is
     signal sp5_t6_perst_l : std_logic;
     signal espi_resp_csn : std_logic;
 
+    signal sp5_abcdef_scl_if : tristate;
+    signal sp5_abcdef_sda_if : tristate;
+    signal sp5_ghijkl_scl_if : tristate;
+    signal sp5_ghijkl_sda_if : tristate;
+    signal dimm_abcdef_scl_if : tristate;
+    signal dimm_abcdef_sda_if : tristate;
+    signal dimm_ghijkl_scl_if : tristate;
+    signal dimm_ghijkl_sda_if : tristate;
+    -- stubs
+    signal i2c_tx_abcdef_st_if : stream8_pkg.data_channel;
+    signal i2c_rx_abcdef_st_if : stream8_pkg.data_channel;
+    signal i2c_tx_ghijkl_st_if : stream8_pkg.data_channel;
+    signal i2c_rx_ghijkl_st_if : stream8_pkg.data_channel;
 begin
 
     espi_dbg: process(clk_200m, reset_200m)
@@ -649,5 +665,68 @@ begin
     nic_seq_pins.sp5_mfg_mode_l <= sp5_to_nic_mfg_mode_l;
     pcie_fpga1_to_nic_perst_l <= nic_seq_pins.perst_l;
 
-    
+    --
+    -- DDR SPD Proxy
+    --
+
+    -- SP5 <-> FPGA busses (filtered in proxy block)
+    i3c_sp5_to_fpga1_abcdef_scl <= sp5_abcdef_scl_if.o when sp5_abcdef_scl_if.oe else 'Z';
+    sp5_abcdef_scl_if.i <= i3c_sp5_to_fpga1_abcdef_scl;
+    i3c_sp5_to_fpga1_abcdef_sda <= sp5_abcdef_sda_if.o when sp5_abcdef_sda_if.oe else 'Z';
+    sp5_abcdef_sda_if.i <= i3c_sp5_to_fpga1_abcdef_sda;
+
+    i3c_sp5_to_fpga1_ghijkl_scl <= sp5_ghijkl_scl_if.o when sp5_ghijkl_scl_if.oe else 'Z';
+    sp5_ghijkl_scl_if.i <= i3c_sp5_to_fpga1_ghijkl_scl;
+    i3c_sp5_to_fpga1_ghijkl_sda <= sp5_ghijkl_sda_if.o when sp5_ghijkl_sda_if.oe else 'Z';
+    sp5_ghijkl_sda_if.i <= i3c_sp5_to_fpga1_ghijkl_sda;
+
+    -- FPGA <-> DIMMs busses (filtered in proxy block)
+    i3c_fpga1_to_dimm_abcdef_scl <= sp5_abcdef_scl_if.o when sp5_abcdef_scl_if.oe else 'Z';
+    sp5_abcdef_scl_if.i <= i3c_fpga1_to_dimm_abcdef_scl;
+    i3c_fpga1_to_dimm_abcdef_sda <= sp5_abcdef_sda_if.o when sp5_abcdef_sda_if.oe else 'Z';
+    sp5_abcdef_sda_if.i <= i3c_fpga1_to_dimm_abcdef_sda;
+
+    i3c_fpga1_to_dimm_ghijkl_scl <= sp5_ghijkl_scl_if.o when sp5_ghijkl_scl_if.oe else 'Z';
+    sp5_ghijkl_scl_if.i <= i3c_fpga1_to_dimm_ghijkl_scl;
+    i3c_fpga1_to_dimm_ghijkl_sda <= sp5_ghijkl_sda_if.o when sp5_ghijkl_sda_if.oe else 'Z';
+    sp5_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
+
+    spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
+     generic map(
+        CLK_PER_NS => 8,
+        I2C_MODE => FAST_PLUS
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        cpu_scl_if => sp5_abcdef_scl_if,
+        cpu_sda_if => sp5_abcdef_sda_if,
+        dimm_scl_if => dimm_abcdef_scl_if,
+        dimm_sda_if => dimm_abcdef_sda_if,
+        i2c_command => CMD_RESET,
+        i2c_command_valid => '0',
+        i2c_ctrlr_idle => open,
+        i2c_tx_st_if => i2c_tx_abcdef_st_if,
+        i2c_rx_st_if => i2c_rx_abcdef_st_if
+    );
+
+    spd_proxy_top_ghijkl_inst: entity work.spd_proxy_top
+     generic map(
+        CLK_PER_NS => 8,
+        I2C_MODE => FAST_PLUS
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        cpu_scl_if => sp5_ghijkl_scl_if,
+        cpu_sda_if => sp5_ghijkl_sda_if,
+        dimm_scl_if => dimm_ghijkl_scl_if,
+        dimm_sda_if => dimm_ghijkl_sda_if,
+        i2c_command => CMD_RESET,
+        i2c_command_valid => '0',
+        i2c_ctrlr_idle => open,
+        i2c_tx_st_if => i2c_tx_ghijkl_st_if,
+        i2c_rx_st_if => i2c_rx_ghijkl_st_if
+    );
+
 end rtl;
