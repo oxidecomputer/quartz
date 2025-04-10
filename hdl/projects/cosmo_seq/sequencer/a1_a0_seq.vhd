@@ -49,6 +49,7 @@ end entity;
 architecture rtl of a1_a0_seq is
     constant ONE_MS : integer := 1 * CNTS_P_MS;
     constant TWO_MS : integer := 2 * ONE_MS;
+    constant THREE_MS : integer := 3 * ONE_MS;
     constant TEN_MS : integer := 20 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
     constant TWENTY_ONE_MS: integer := 21 * ONE_MS;
@@ -57,7 +58,9 @@ architecture rtl of a1_a0_seq is
     constant TWO_HUNDRED_MS: integer := 200 * ONE_MS;
     constant TWO_TWENTY_MS: integer := 220 * ONE_MS;
     constant FOUR_HUNDRED_MS: integer := 200 * ONE_MS;
-
+    constant SIX_HUNDRED_MS: integer := 600 * ONE_MS;
+    constant SIX_TWENTY_MS: integer := 620 * ONE_MS;
+    constant ONE_SECOND: integer := 1000 * ONE_MS;
     
 
      -- This is going into a "RAW" register, 
@@ -90,7 +93,7 @@ architecture rtl of a1_a0_seq is
         ddr_bulk_en: std_logic;
         group_a_en: std_logic;
         group_b_en: std_logic;
-        group_c_en: std_logic;
+        group_c_en: std_logic_vector(3 downto 0);
         rsm_rst_l : std_logic;
         pwr_btn_l : std_logic;
         pwr_good : std_logic;
@@ -110,7 +113,7 @@ architecture rtl of a1_a0_seq is
         '0', 
         '0', 
         '0',
-        '0',
+        (others => '0'),
         '0',
         '1',
         '0',
@@ -197,6 +200,8 @@ begin
             -- To re-enable, we require software to generate a rising_edge
             -- here, by clearing the enable and then setting it again
             v.enable_pend := '1';
+             -- we'll use this to clear the faulted flag
+             v.faulted := '0';
         end if;
 
         -- Fault monitoring, if we expect a rail to be up and it's not
@@ -215,17 +220,13 @@ begin
                 v.ddr_bulk_en := '0';
                 v.group_a_en := '0';
                 v.group_b_en := '0';
-                v.group_c_en := '0';
+                v.group_c_en := (others => '0');
                 v.rsm_rst_l := '0';
                 v.group_a_expected := '0';
                 v.group_b_expected := '0';
                 v.group_c_expected := '0';
                 v.ddr_bulk_expected := '0';
                 v.cnts := (others => '0');
-                if sw_enable = '0' then
-                    -- we'll use this to clear the faulted flag
-                    v.faulted := '0';
-                end if;
                 if seq_r.enable_pend and upstream_ok then
                     v.state := DDR_BULK_EN;
                     v.enable_pend := '0';
@@ -248,7 +249,7 @@ begin
                 if is_power_good(group_a) then
                     v.cnts := seq_r.cnts + 1;
                 end if;
-                if seq_r.cnts = FOUR_HUNDRED_MS then
+                if seq_r.cnts = ONE_SECOND then
                     v.cnts := (others => '0');
                     v.state := RSM_RST_DEASSERT;
                     -- we enable fault monitoring here on the group A rails and DDR, until we de-sequence
@@ -305,8 +306,22 @@ begin
                     v.group_b_expected := '1';  
                 end if;
             when GROUP_C_EN =>
-                v.group_c_en := '1';
-                v.state := GROUP_C_PG_AND_WAIT;
+                -- Stage enables
+                v.cnts := seq_r.cnts + 1;
+                v.group_c_en(0) := '1';
+                if seq_r.cnts = ONE_MS then
+                    v.group_c_en(1) := '1';
+                end if;
+                if seq_r.cnts = TWO_MS then
+                    v.group_c_en(2) := '1';
+                end if;
+                if seq_r.cnts = THREE_MS then
+                    v.group_c_en(3) := '1';
+                    v.state := GROUP_C_PG_AND_WAIT;
+                    v.cnts := (others => '0');
+                end if;
+
+                --v.state := GROUP_C_PG_AND_WAIT;
             -- Wait for Group C supplies stable for at least 1ms minimum
             -- Note that Hubris probably has to enable some of these via
             -- PMBus so we might sit here for a bit
@@ -437,9 +452,9 @@ begin
 
     group_b.v1p1_sp5.enable <= seq_r.group_b_en;
 
-    group_c.vddio_sp5_a0.enable <= seq_r.group_c_en;
-    group_c.vddcr_cpu1.enable <= seq_r.group_c_en;
-    group_c.vddcr_cpu0.enable <= seq_r.group_c_en;
-    group_c.vddcr_soc.enable <= seq_r.group_c_en;
+    group_c.vddio_sp5_a0.enable <= seq_r.group_c_en(0);
+    group_c.vddcr_cpu1.enable <= seq_r.group_c_en(3);
+    group_c.vddcr_cpu0.enable <= seq_r.group_c_en(2);
+    group_c.vddcr_soc.enable <= seq_r.group_c_en(1);
     a0_faulted <= seq_r.faulted;
 end rtl;
