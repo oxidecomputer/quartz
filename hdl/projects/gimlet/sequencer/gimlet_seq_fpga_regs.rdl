@@ -769,4 +769,12 @@ addrmap gimlet_seq_fpga {
     FLT_GROUPB_PG->name = "Group B PGs latched at fault";
     Groupc_Pg FLT_GROUPC_PG;
     FLT_GROUPC_PG->name = "Group C PGs latched at fault";
+
+    reg {
+        name = "Miscellaneous control register";
+
+        field {
+            desc = "Control of the seq_proxy_sp3_to_rsw_pwren_l pin (inverted by FPGA, so a '1' here will drive the pin low)";
+        } RSW_PWREN[0:0] = 0;
+    } MISC_CTRL;
 };

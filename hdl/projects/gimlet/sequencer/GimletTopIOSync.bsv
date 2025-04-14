@@ -471,7 +471,7 @@ module mkGimletSeqTop (SeqPins);
         method seq_to_clk_ntest = dummy_high._read;
         method seq_to_fan_hp_en = dummy_high._read;  // Default fo fan power enable
         method seq_to_vtt_efgh_en = inner.a0_pins.vtt_ef.en;
-        method seq_proxy_sp3_to_rsw_pwren_l = dummy_low._read;
+        method seq_proxy_sp3_to_rsw_pwren_l = ~inner.reg_pins.seq_to_rsw_pwren;
         method seq_to_sp_interrupt = inner.reg_pins.seq_to_sp_interrupt;
         method seq_to_led_en_l = dummy_low._read;  //TODO: blinky!
         method seq_to_nic_v0p9_a0hp_en = inner.nic_pins.v0p9_a0hp.en;
