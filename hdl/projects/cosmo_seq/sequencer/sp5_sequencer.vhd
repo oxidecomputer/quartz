@@ -241,7 +241,7 @@ begin
         clk => clk,
         reset => reset,
         nic_idle => nic_idle,
-        sw_enable => power_ctrl.a0_en,
+        sw_enable => '0',
         upstream_ok => a0_ok,
         nic_overrides_reg => nic_overrides,
         debug_enables => debug_enables,
