@@ -113,7 +113,7 @@ entity cosmo_seq_top is
         seq_rev_id : in std_logic_vector(2 downto 0);
 
         fpga1_spare_v1p8 : inout std_logic_vector(7 downto 0);
-        fpga1_spare_v3p3 : inout std_logic_vector(7 downto 0);
+        fpga1_spare_v3p3 : out std_logic_vector(7 downto 0);
         fpga1_status_led : out std_logic;
         fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
 
@@ -166,7 +166,7 @@ entity cosmo_seq_top is
         v1p1_sp5_pg : in std_logic;
         fpga1_to_sp5_pwr_btn_l : out std_logic;
         fpga1_to_sp5_pwrgd : out std_logic;
-        fpga1_to_sp5_reset_l : out std_logic;
+        fpga1_to_sp5_reset_l : in std_logic;
         fpga1_to_sp5_romtype0 : in std_logic;
         v1p8_sp5_en : out std_logic;
         v1p8_sp5_pg : in std_logic;
@@ -654,7 +654,7 @@ begin
 
     -- SP5 sequence-related pins
     sp5_seq_pins.thermtrip_l <= sp5_to_fpga1_thermtrip_l;
-    fpga1_to_sp5_reset_l <= '0' when sp5_seq_pins.reset_l = '0' else 'Z';
+    sp5_seq_pins.reset_l <= fpga1_to_sp5_reset_l;
     sp5_seq_pins.pwr_ok <= sp5_to_fpga1_pwrok_unbuf;
     fpga1_to_sp5_pwr_btn_l <= '0' when sp5_seq_pins.pwr_btn_l = '0' else 'Z';
     sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
