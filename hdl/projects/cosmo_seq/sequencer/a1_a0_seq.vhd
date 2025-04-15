@@ -358,7 +358,11 @@ begin
                     v.state := DONE;
                 end if;
             when DONE =>
-               null;  
+                if sw_enable = '0' then
+                    v.pwr_good := '0';
+                    v.state := SAFE_DISABLE;
+                    v.cnts := (others => '0');
+                end if;
                -- Only faults, or disablement can take us out of DONE
                -- which are unconditionally handled below.
             when SAFE_DISABLE =>

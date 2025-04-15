@@ -377,7 +377,7 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-            fpga1_spare_v1p8 <= (others => 'Z');
+            fpga1_spare_v1p8(7 downto 6) <= (others => '0');
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
             fpga1_spare_v1p8(3) <= espi0_sp5_to_fpga1_dat(0);
@@ -386,13 +386,14 @@ begin
         end if;
     end process;
     -- fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
-    fpga1_spare_v3p3(1) <= sp5_seq_pins.pwr_btn_l;
-    fpga1_spare_v3p3(2) <= sp5_seq_pins.rsmrst_l;
-    fpga1_spare_v3p3(3) <= sp5_seq_pins.slp_s3_l;
+    fpga1_spare_v3p3(0) <= i3c_sp5_to_fpga1_abcdef_sda;
+    fpga1_spare_v3p3(1) <= i3c_sp5_to_fpga1_abcdef_scl;
+    fpga1_spare_v3p3(2) <= i3c_sp5_to_fpga1_ghijkl_sda;
+    fpga1_spare_v3p3(3) <= i3c_sp5_to_fpga1_ghijkl_scl;
     fpga1_spare_v3p3(4) <= sp5_seq_pins.slp_s5_l;
     fpga1_spare_v3p3(5) <= sp5_seq_pins.pwr_good;
     fpga1_spare_v3p3(6) <= sp5_seq_pins.thermtrip_l;
-    fpga1_spare_v3p3(7) <= sp5_seq_pins.reset_l;
+    --fpga1_spare_v3p3(7) <= sp5_seq_pins.reset_l;
     -- misc things tied:
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
@@ -403,6 +404,8 @@ begin
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
+    i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
+    i3c_fpga1_to_dimm_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
 
     -- hdt_fpga1_to_mux_en_l <= 'Z';
     -- hdt_fpga1_to_mux_sel <= '0';
@@ -530,7 +533,7 @@ begin
         host_to_fpga => uart0_sp5_to_fpga1_dat,
         host_from_fpga_rts_l => uart0_fpga1_to_sp5_rts_l_buff,
         host_to_fpga_rts_l => uart0_sp5_to_fpga1_rts_l,
-        uart_from_fpga => fpga1_spare_v3p3(0),
+        uart_from_fpga => fpga1_spare_v3p3(7),
         uart_to_fpga => '1',
         uart_from_fpga_rts_l => open,
         uart_to_fpga_rts_l => '0',
@@ -699,24 +702,20 @@ begin
     sp5_abcdef_scl_if.i <= i3c_sp5_to_fpga1_abcdef_scl;
     i3c_sp5_to_fpga1_abcdef_sda <= sp5_abcdef_sda_if.o when sp5_abcdef_sda_if.oe else 'Z';
     sp5_abcdef_sda_if.i <= i3c_sp5_to_fpga1_abcdef_sda;
-
     i3c_sp5_to_fpga1_ghijkl_scl <= sp5_ghijkl_scl_if.o when sp5_ghijkl_scl_if.oe else 'Z';
     sp5_ghijkl_scl_if.i <= i3c_sp5_to_fpga1_ghijkl_scl;
     i3c_sp5_to_fpga1_ghijkl_sda <= sp5_ghijkl_sda_if.o when sp5_ghijkl_sda_if.oe else 'Z';
     sp5_ghijkl_sda_if.i <= i3c_sp5_to_fpga1_ghijkl_sda;
-
-    -- FPGA <-> DIMMs busses (filtered in proxy block)
-    i3c_fpga1_to_dimm_abcdef_scl <= sp5_abcdef_scl_if.o when sp5_abcdef_scl_if.oe else 'Z';
-    sp5_abcdef_scl_if.i <= i3c_fpga1_to_dimm_abcdef_scl;
-    i3c_fpga1_to_dimm_abcdef_sda <= sp5_abcdef_sda_if.o when sp5_abcdef_sda_if.oe else 'Z';
-    sp5_abcdef_sda_if.i <= i3c_fpga1_to_dimm_abcdef_sda;
-
-    i3c_fpga1_to_dimm_ghijkl_scl <= sp5_ghijkl_scl_if.o when sp5_ghijkl_scl_if.oe else 'Z';
-    sp5_ghijkl_scl_if.i <= i3c_fpga1_to_dimm_ghijkl_scl;
-    i3c_fpga1_to_dimm_ghijkl_sda <= sp5_ghijkl_sda_if.o when sp5_ghijkl_sda_if.oe else 'Z';
-    sp5_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
-
-    spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
+        -- FPGA <-> DIMMs busses (filtered in proxy block)
+    i3c_fpga1_to_dimm_abcdef_scl <= dimm_abcdef_scl_if.o when dimm_abcdef_scl_if.oe else 'Z';
+    dimm_abcdef_scl_if.i <= i3c_fpga1_to_dimm_abcdef_scl;
+    i3c_fpga1_to_dimm_abcdef_sda <= dimm_abcdef_sda_if.o when dimm_abcdef_sda_if.oe else 'Z';
+    dimm_abcdef_sda_if.i <= i3c_fpga1_to_dimm_abcdef_sda;
+        i3c_fpga1_to_dimm_ghijkl_scl <= dimm_ghijkl_scl_if.o when dimm_ghijkl_scl_if.oe else 'Z';
+    dimm_ghijkl_scl_if.i <= i3c_fpga1_to_dimm_ghijkl_scl;
+    i3c_fpga1_to_dimm_ghijkl_sda <= dimm_ghijkl_sda_if.o when dimm_ghijkl_sda_if.oe else 'Z';
+    dimm_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
+        spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS => 8,
         I2C_MODE => FAST_PLUS
@@ -734,8 +733,7 @@ begin
         i2c_tx_st_if => i2c_tx_abcdef_st_if,
         i2c_rx_st_if => i2c_rx_abcdef_st_if
     );
-
-    spd_proxy_top_ghijkl_inst: entity work.spd_proxy_top
+        spd_proxy_top_ghijkl_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS => 8,
         I2C_MODE => FAST_PLUS

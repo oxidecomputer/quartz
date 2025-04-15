@@ -125,6 +125,8 @@ begin
             sda_fedge       => cpu_sda_fedge
         );
 
+    cpu_scl_if.o <= '0';
+    cpu_scl_if.oe <= '0';
     -- on a START we need to request the controller abort any in-progress transaction
     cpu_start_detected  <= '1' when cpu_scl_filt = '1' and cpu_sda_fedge = '1' else '0';
     -- on a STOP we know the CPU is done and we can resume our work
@@ -242,7 +244,7 @@ begin
 
     sda_arbiter_inst: entity work.sda_arbiter
         generic map(
-            HYSTERESIS_CYCLES => DIMM_I2C_TSP_CYCLES + 7 -- 7 is a bit of a swag given Ruby testing
+            HYSTERESIS_CYCLES => DIMM_I2C_TSP_CYCLES + 500 -- 7 is a bit of a swag given Ruby testing
         )
         port map(
             clk     => clk,
