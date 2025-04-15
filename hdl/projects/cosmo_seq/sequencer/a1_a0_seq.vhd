@@ -398,22 +398,23 @@ begin
         -- TODO: Add back this stuff back once we get sequencing working
         -- When disabling, we need to wait for any downstream
         -- rails to go down before we can turn off these.
-        --if sw_enable = '0' and downstream_idle = '1' then
-        --    -- take away power good, then wait before yanking
-         --   -- the rails
-        --    v.pwr_good := '0';
-        --    if seq_r.state >= ASSERT_PWRGOOD then
-        --        -- Since we've told the AMD processor we're power-good
-        --        -- We now need to tell it we're not power good
-        --        v.state := SAFE_DISABLE;
-        --    else
-        --        -- Had not gotten up to power good state
-         --       -- so just go back to idle, IDLE state will clear
-        --        -- any enables
-        --        v.state := IDLE;
-        --    end if;
-        --   v.cnts := (others => '0');
-        --end if;
+        if sw_enable = '0' and downstream_idle = '1' then
+           -- take away power good, then wait before yanking
+           -- the rails
+           v.pwr_good := '0';
+           if seq_r.state >= ASSERT_PWRGOOD and seq_r.state <= DONE  then
+               -- Since we've told the AMD processor we're power-good
+               -- We now need to tell it we're not power good
+               v.state := SAFE_DISABLE;
+               v.cnts := (others => '0');
+           elsif seq_r.state /= SAFE_DISABLE then
+               -- Had not gotten up to power good state
+               -- so just go back to idle, IDLE state will clear
+               -- any enables
+               v.state := IDLE;
+
+           end if;
+        end if;
 
         seq_rin <= v;
     end process;
@@ -439,6 +440,7 @@ begin
     sp5_seq_pins.pwr_btn_l <= seq_r.pwr_btn_l;
     sp5_seq_pins.rsmrst_l <= seq_r.rsm_rst_l;
     sp5_seq_pins.pwr_good <= seq_r.pwr_good;
+    sp5_seq_pins.is_cosmo <= seq_r.is_cosmo;
 
     -- Use the internal sm registers to drive the various enable outputs
     -- there's no combo logic here, this is just bonding sm-internal registers
