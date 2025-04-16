@@ -96,6 +96,10 @@ architecture rtl of espi_target_top is
     signal qspi_mode_vec_fast : std_logic_vector(1 downto 0);
     signal wait_states_fast: std_logic_vector(3 downto 0);
     signal wait_states_slow: std_logic_vector(3 downto 0);
+    signal post_code : std_logic_vector(31 downto 0);
+    signal post_code_valid : std_logic;
+    signal espi_reset_strobe : std_logic;
+    signal espi_reset_strobe_syncd : std_logic;
 
 begin
 
@@ -168,7 +172,7 @@ begin
         wait_states => wait_states_fast,
         qspi_mode => encode(qspi_mode_vec_fast),
         alert_needed => alert_needed_fast,
-        espi_reset => open
+        espi_reset => espi_reset_strobe
     );
 
     -- debug_link_layer
@@ -194,6 +198,16 @@ begin
        async_input => alert_needed_slow,
        clk => clk_200m,
        sycnd_output => alert_needed_fast
+   );
+
+   espi_reset_pulse_sync:entity work.tacd
+    port map(
+       clk_launch => clk_200m,
+       reset_launch => reset_200m,
+       pulse_in_launch => espi_reset_strobe,
+       clk_latch => clk,
+       reset_latch => reset,
+       pulse_out_latch => espi_reset_strobe_syncd
    );
 
 
@@ -223,7 +237,10 @@ begin
        reset => reset,
        axi_if => axi_if,
        msg_en => msg_en,
-       dbg_chan => dbg_chan
+       dbg_chan => dbg_chan,
+       post_code => post_code,
+       post_code_valid => post_code_valid,
+       espi_reset => espi_reset_strobe_syncd
    );
 
     -- txn layer blocks
@@ -234,6 +251,8 @@ begin
             is_rx_crc_byte  => is_rx_crc_byte,
             is_tx_crc_byte  => is_tx_crc_byte,
             regs_if         => regs_if,
+            post_code       => post_code,
+            post_code_valid => post_code_valid,
             vwire_if        => vwire_if,
             chip_sel_active => chip_sel_active,
             data_to_host    => txn_resp,

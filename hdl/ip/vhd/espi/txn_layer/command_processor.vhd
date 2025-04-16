@@ -30,6 +30,8 @@ entity command_processor is
         vwire_if       : view vwire_cmd_side;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
+        post_code      : out std_logic_vector(31 downto 0);
+        post_code_valid : out std_logic;
         aborted_due_to_bad_crc : out boolean;
         -- flash channel requests
         flash_req : view flash_chan_req_source;
@@ -79,6 +81,7 @@ architecture rtl of command_processor is
         vwire_wstrobe   : std_logic;
         valid_redge    : boolean;
         reset_strobe   : std_logic;
+        io_wr_data    : std_logic_vector(31 downto 0);
         hdr_idx        : integer range 0 to 11;
         rem_addr_bytes : integer range 0 to 7;
         rem_data_bytes : integer range 0 to 2048;
@@ -98,6 +101,7 @@ architecture rtl of command_processor is
         '0',
         false, 
         '0',
+        (others => '0'),
         0, 
         0, 
         0
@@ -173,6 +177,8 @@ begin
     flash_req.flash_np_enqueue_req <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_put_flash_np and r.cmd_header.cycle_kind = flash_read else false;
     flash_req.flash_get_req        <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_get_flash_c else false;
 
+    post_code <= r.io_wr_data;
+    post_code_valid <= '1' when r.cmd_header.opcode.value = opcode_put_iowr_short_4byte and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.write <= '1' when r.cmd_header.opcode.value = opcode_set_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.read  <= '1' when r.cmd_header.opcode.value = opcode_get_configuration and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';
     regs_if.addr  <= r.cfg_addr;
@@ -356,6 +362,10 @@ begin
             when parse_iowr_put =>
                 if data_from_host.valid then
                     v.hdr_idx := v.hdr_idx + 1;
+                    if r.hdr_idx > 1 then
+                        -- we have a 32bit data word, LSB first
+                        v.io_wr_data := by_byte_lsb_first(v.io_wr_data, data_from_host.data, r.hdr_idx - 2);
+                    end if;
                     if r.hdr_idx = 5 then
                         v.state := crc;
                     end if;

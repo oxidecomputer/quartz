@@ -24,6 +24,8 @@ entity txn_layer_top is
 
         -- register layer connections
         regs_if : view    bus_side;
+        post_code      : out std_logic_vector(31 downto 0);
+        post_code_valid : out std_logic;
         -- vwire channel connections
         vwire_if : view vwire_cmd_side;
         -- flash channel status
@@ -123,6 +125,8 @@ begin
             clear_rx_crc    => clear_rx_crc,
             command_header  => command_header,
             response_done   => response_done,
+            post_code       => post_code,
+            post_code_valid => post_code_valid,
             aborted_due_to_bad_crc => aborted_due_to_bad_crc,
             is_rx_crc_byte  => is_rx_crc_byte,
             chip_sel_active => chip_sel_active,
