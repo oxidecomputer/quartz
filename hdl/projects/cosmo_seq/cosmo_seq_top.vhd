@@ -228,7 +228,7 @@ entity cosmo_seq_top is
         spi2_sp5_to_fpga1_cs_l : in std_logic;
         sp5_to_fpga1_alert_l : in std_logic;
         sp5_to_fpga1_debug : out std_logic_vector(2 downto 1);
-        sp5_to_fpga1_genint_l : in std_logic; 
+        sp5_to_fpga1_genint_l : out std_logic; 
         sp5_to_fpga1_smerr_l : in std_logic;
 
         -- I3C DDR stuff
@@ -320,13 +320,15 @@ architecture rtl of cosmo_seq_top is
     constant ESPI_RESP_IDX: integer := 2;
     constant SEQ_RESP_IDX: integer := 3;
     constant SP_I2C_RESP_IDX: integer := 4;
+    constant SP5_HP_RESP_IDX : integer := 5;
 
     constant config_array : axil_responder_cfg_array_t := 
         (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
          SPINOR_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
          ESPI_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
          SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
-         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8)
+         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
+         SP5_HP_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
@@ -362,6 +364,7 @@ architecture rtl of cosmo_seq_top is
     signal sp5_t6_power_en : std_logic;
     signal sp5_t6_perst_l : std_logic;
     signal espi_resp_csn : std_logic;
+    signal hp_int_n : std_logic;
 
     signal fpga1_to_pcie_clk_buff_rsw_oe_l_int : std_logic;
 
@@ -575,12 +578,14 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
+        axi_if => responders(SP5_HP_RESP_IDX),
         sp5_i2c_sda => i2c_sp5_to_fpgax_hp_sda,
         sp5_i2c_sda_o => sp5_sda_o,
         sp5_i2c_sda_oe => sp5_sda_oe,
         sp5_i2c_scl => i2c_sp5_to_fpgax_hp_scl,
         sp5_i2c_scl_o => sp5_scl_o,
         sp5_i2c_scl_oe => sp5_scl_oe,
+        int_n => hp_int_n,
         a0_ok => a0_ok,
         m2a_pedet => m2a_to_fpga1_pedet,
         m2a_prsnt_l => m2a_to_fpga1_prsnt_l,
@@ -600,6 +605,8 @@ begin
         pcie_clk_buff_rsw_oe_l => fpga1_to_pcie_clk_buff_rsw_oe_l_int,
         rsw_sp5_pcie_attached_buff_l =>rsw_to_sp5_pcie_attached_buff_l
     );
+
+    sp5_to_fpga1_genint_l <= '0' when hp_int_n = '0' else 'Z';
 
     fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
 

@@ -49,6 +49,7 @@ begin
         variable ack_status : boolean := false;
         variable user_int       : integer;
         variable user_slv8      : std_logic_vector(7 downto 0);
+        variable data_32         : std_logic_vector(31 downto 0);
 
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -68,6 +69,9 @@ begin
                 read_pca9506_reg(net, addr0, IOC0_OFFSET, 1, rx_queue, ack_queue);
                 check_equal(pop_byte(rx_queue), 255, "Non-reset value read from IOC0_OFFSET expander 0");
                 check_true(is_empty(rx_queue), "rx queue not empty");
+                -- check via axi also
+                read_bus(net, bus_handle, To_StdLogicVector(IOC0_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(X"000000FF"), "Non-reset value read from IOC0_OFFSET expander 0 via axi");
 
                 -- check other device
                 -- read a default value from an internal register
@@ -290,11 +294,17 @@ begin
                         wait for 200 ns; -- allow synchronization etc
                         -- check the output port
                         check_equal(io0_o(i)(j), '1', "Output bit " & to_string(j) & " on port " & to_string(i) & " not setting correctly");
+                        -- check the readback matches
+                        read_pca9506_reg(net, addr0, IP0_OFFSET + i, 1, rx_queue, ack_queue);
+                        check_equal(pop_byte(rx_queue), user_int, "IP0_OFFSET expander 0 doesn't read back output state");
+
                         -- set back to 0
                         single_write_pca9506_reg(net, addr0, OP0_OFFSET + i, to_std_logic_vector(0, 8), ack_status);
                         wait for 200 ns; -- allow synchronization etc
                         -- check the output port
                         check_equal(io0_o(i)(j), '0', "Output bit " & to_string(j) & " on port " & to_string(i) & " not clearing correctly");
+                        read_pca9506_reg(net, addr0, IP0_OFFSET + i, 1, rx_queue, ack_queue);
+                        check_equal(pop_byte(rx_queue), 0, "IP0_OFFSET expander 0 doesn't read back output state");
                     end loop;
                     
                 end loop; --     

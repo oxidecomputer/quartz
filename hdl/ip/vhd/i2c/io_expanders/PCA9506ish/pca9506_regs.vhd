@@ -23,6 +23,31 @@ entity pca9506_regs is
         data_in: in std_logic_vector(7 downto 0);
         data_out: out std_logic_vector(7 downto 0);
 
+        -- axi interface
+        -- GHDL/yosys based toolchains
+        -- write address channel
+        awvalid : in std_logic;
+        awready : out std_logic;
+        awaddr : in std_logic_vector(7 downto 0) ;
+        -- write data channel
+        wvalid : in std_logic;
+        wready : out std_logic;
+        wdata : in std_logic_vector(31 downto 0);
+        wstrb : in std_logic_vector(3 downto 0); -- un-used
+        -- write response channel
+        bvalid : out std_logic;
+        bready : in std_logic;
+        bresp : out std_logic_vector(1 downto 0);
+        -- read address channel
+        arvalid : in std_logic;
+        arready : out std_logic;
+        araddr : in std_logic_vector(7 downto 0);
+        -- read data channel
+        rvalid : out std_logic;
+        rready : in std_logic;
+        rdata : out std_logic_vector(31 downto 0);
+        rresp : out std_logic_vector(1 downto 0);
+
         -- io interface
         output_disable: in std_logic;
         inband_reset : in std_logic; -- inband reset, can be used to reset the I/O expander
@@ -75,8 +100,31 @@ architecture rtl of pca9506_regs is
     signal msk2_reg : io_type;
     signal msk3_reg : io_type;
     signal msk4_reg : io_type;
+    signal active_read : std_logic;
+    signal active_write : std_logic;
 
 begin
+
+    axil_target_txn_inst: entity work.axil_target_txn
+    port map(
+       clk => clk,
+       reset => reset,
+       arvalid => arvalid,
+       arready => arready,
+       awvalid => awvalid,
+       awready =>awready,
+       wvalid => wvalid,
+       wready => wready,
+       bvalid => bvalid,
+       bready => bready,
+       bresp => bresp,
+       rvalid => rvalid,
+       rready => rready,
+       rresp => rresp,
+       active_read => active_read,
+       active_write => active_write
+   );
+
 
     -- assign register outputs to output pins unconditionally
     io_o(0) <= pack(op0_reg);
@@ -160,16 +208,16 @@ begin
             msk4_reg <= reset_1s;
 
         elsif rising_edge(clk) then
-            -- deal with inputs:  
-            --TODO deal with inversion
-            ip0_reg <= unpack(io(0));
-            ip1_reg <= unpack(io(1));
-            ip2_reg <= unpack(io(2));
-            ip3_reg <= unpack(io(3));
-            ip4_reg <= unpack(io(4));
+            -- deal with inputs, these either read the input pin or show the 
+            -- current output value depending on whether this is and input or output 
+            ip0_reg <= pi_reads_inputs_or_outputs(unpack(io(0)), op0_reg, ioc0_reg);
+            ip1_reg <= pi_reads_inputs_or_outputs(unpack(io(1)), op1_reg, ioc1_reg);
+            ip2_reg <= pi_reads_inputs_or_outputs(unpack(io(2)), op2_reg, ioc2_reg);
+            ip3_reg <= pi_reads_inputs_or_outputs(unpack(io(3)), op3_reg, ioc3_reg);
+            ip4_reg <= pi_reads_inputs_or_outputs(unpack(io(4)), op4_reg, ioc4_reg);
             -- deal with registers that are writeable by the
             -- i2c system
-            -- TODO: deal with ext_reset
+
             if write_strobe = '1' then
                 case to_integer(cmd_ptr.pointer) is
                     -- IP registers don't accept writes
@@ -349,6 +397,46 @@ begin
                     data_out <= (others => '0');
             end case;
 
+        end if;
+    end process;
+
+
+    axi_read_logic: process(clk, reset)
+    begin
+        if reset then
+            rdata <= (others => '0');
+        elsif rising_edge(clk) then
+            if active_read then
+                case to_integer(araddr) is
+                    when IP0_OFFSET => rdata <= X"000000" & pack(ip0_reg xor pi0_reg);
+                    when IP1_OFFSET => rdata <= X"000000" & pack(ip1_reg xor pi1_reg);
+                    when IP2_OFFSET => rdata <= X"000000" & pack(ip2_reg xor pi2_reg);
+                    when IP3_OFFSET => rdata <= X"000000" & pack(ip3_reg xor pi3_reg);
+                    when IP4_OFFSET => rdata <= X"000000" & pack(ip4_reg xor pi4_reg);
+                    when OP0_OFFSET => rdata <= X"000000" & pack(op0_reg);
+                    when OP1_OFFSET => rdata <= X"000000" & pack(op1_reg);
+                    when OP2_OFFSET => rdata <= X"000000" & pack(op2_reg);
+                    when OP3_OFFSET => rdata <= X"000000" & pack(op3_reg);
+                    when OP4_OFFSET => rdata <= X"000000" & pack(op4_reg);
+                    when PI0_OFFSET => rdata <= X"000000" & pack(pi0_reg);
+                    when PI1_OFFSET => rdata <= X"000000" & pack(pi1_reg);
+                    when PI2_OFFSET => rdata <= X"000000" & pack(pi2_reg);
+                    when PI3_OFFSET => rdata <= X"000000" & pack(pi3_reg);
+                    when PI4_OFFSET => rdata <= X"000000" & pack(pi4_reg);
+                    when IOC0_OFFSET => rdata <=  X"000000" & pack(ioc0_reg);
+                    when IOC1_OFFSET => rdata <=  X"000000" & pack(ioc1_reg);
+                    when IOC2_OFFSET => rdata <=  X"000000" & pack(ioc2_reg);
+                    when IOC3_OFFSET => rdata <=  X"000000" & pack(ioc3_reg);
+                    when IOC4_OFFSET => rdata <=  X"000000" & pack(ioc4_reg);
+                    when MSK0_OFFSET => rdata <=  X"000000" & pack(msk0_reg);
+                    when MSK1_OFFSET => rdata <=  X"000000" & pack(msk1_reg);
+                    when MSK2_OFFSET => rdata <=  X"000000" & pack(msk2_reg);
+                    when MSK3_OFFSET => rdata <=  X"000000" & pack(msk3_reg);
+                    when MSK4_OFFSET => rdata <=  X"000000" & pack(msk4_reg);
+                    when others =>
+                        rdata <= (others => '0');
+                end case;
+            end if;
         end if;
     end process;
 
