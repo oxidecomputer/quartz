@@ -6,4 +6,5 @@ addrmap cosmo_seq_top {
     espi_regs espi @ 0x0200;
     sequencer_regs sequencer @ 0x300;
     sp_i2c_regs sp_i2c @ 0x0400;
+    pca9506_regs fpga1_hotplug @ 0x0500;
 };

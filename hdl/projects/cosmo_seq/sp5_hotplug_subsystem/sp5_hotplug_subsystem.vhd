@@ -10,6 +10,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.axil8x32_pkg.all;
 use work.pca9506_pkg.all;
 use work.time_pkg.all; -- for calc_ms and calc_us
 
@@ -28,8 +29,11 @@ entity sp5_hotplug_subsystem is
         sp5_i2c_scl : in std_logic;
         sp5_i2c_scl_o : out std_logic;
         sp5_i2c_scl_oe : out std_logic;
+        int_n : out std_logic;
 
         a0_ok : in std_logic;
+
+        axi_if : view axil_target;
 
         -- M.2 things
         --m.2a
@@ -90,7 +94,7 @@ begin
    );
 
 
-
+   
     pca9506_top_inst: entity work.pca9506_top
      generic map(
         i2c_addr => i2c_io_addr
@@ -105,10 +109,27 @@ begin
         sda_o => sp5_i2c_sda_o,
         sda_oe => sp5_i2c_sda_oe,
         inband_reset => not a0_ok,  -- shove this thing in reset when we're not in A0
+        awvalid => axi_if.write_address.valid,
+        awready => axi_if.write_address.ready,
+        awaddr  => axi_if.write_address.addr,
+        wvalid  => axi_if.write_data.valid,
+        wready  => axi_if.write_data.ready,
+        wdata => axi_if.write_data.data,
+        wstrb => (others => '0'),
+        bvalid  => axi_if.write_response.valid,
+        bready  => axi_if.write_response.ready,
+        bresp =>  axi_if.write_response.resp,
+        arvalid => axi_if.read_address.valid,
+        arready => axi_if.read_address.ready,
+        araddr  => axi_if.read_address.addr,
+        rvalid  => axi_if.read_data.valid,
+        rready  => axi_if.read_data.ready,
+        rdata => axi_if.read_data.data,
+        rresp => axi_if.read_data.resp,
         io => io,
         io_oe => io_oe,
         io_o => io_o,
-        int_n => open
+        int_n => int_n
     );
 
     -- M.2A

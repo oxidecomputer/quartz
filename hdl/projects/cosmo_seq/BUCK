@@ -11,6 +11,7 @@ rdl_file(
         "//hdl/projects/cosmo_seq/sequencer:sequencer_regs_rdl",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_regs_rdl",
         "//hdl/ip/vhd/espi:espi_regs_rdl",
+        "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_regs_rdl",
     ],
     outputs = [
         "cosmo_seq_top.html", 
@@ -70,5 +71,5 @@ vivado_bitstream(
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
-    post_synth_tcl_files=glob(["*ila.tcl"]),
+    #post_synth_tcl_files=glob(["*ila.tcl"]),
 )
