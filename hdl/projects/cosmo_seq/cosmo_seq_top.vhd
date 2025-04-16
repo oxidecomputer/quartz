@@ -116,7 +116,14 @@ entity cosmo_seq_top is
         seq_rev_id : in std_logic_vector(2 downto 0);
 
         fpga1_spare_v1p8 : out std_logic_vector(7 downto 0);
-        fpga1_spare_v3p3 : out std_logic_vector(7 downto 0);
+        fpga1_spare_v3p3_0 : out std_logic;
+        fpga1_spare_v3p3_1 : out std_logic;
+        fpga1_spare_v3p3_2 : out std_logic;
+        fpga1_spare_v3p3_3 : out std_logic;
+        fpga1_spare_v3p3_4 : in std_logic;
+        fpga1_spare_v3p3_5 : in std_logic;
+        fpga1_spare_v3p3_6 : out std_logic;
+        fpga1_spare_v3p3_7 : out std_logic;
         fpga1_status_led : out std_logic;
         fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
 
@@ -220,7 +227,7 @@ entity cosmo_seq_top is
         spi1_sp5_to_fpga1_cs_l : in std_logic;
         spi2_sp5_to_fpga1_cs_l : in std_logic;
         sp5_to_fpga1_alert_l : in std_logic;
-        sp5_to_fpga1_debug : in std_logic_vector(2 downto 1);
+        sp5_to_fpga1_debug : out std_logic_vector(2 downto 1);
         sp5_to_fpga1_genint_l : in std_logic; 
         sp5_to_fpga1_smerr_l : in std_logic;
 
@@ -377,7 +384,8 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-            fpga1_spare_v1p8(7 downto 6) <= (others => '0');
+            fpga1_spare_v1p8(7) <= i2c_sp5_to_fpgax_hp_sda;
+            fpga1_spare_v1p8(6) <= i2c_sp5_to_fpgax_hp_scl;
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
             fpga1_spare_v1p8(3) <= espi0_sp5_to_fpga1_dat(0);
@@ -385,15 +393,6 @@ begin
             fpga1_spare_v1p8(5) <= espi_resp_csn;
         end if;
     end process;
-    -- fpga1_spare_v3p3(7 downto 6) <= (others => 'Z');
-    fpga1_spare_v3p3(0) <= i3c_sp5_to_fpga1_abcdef_sda;
-    fpga1_spare_v3p3(1) <= i3c_sp5_to_fpga1_abcdef_scl;
-    fpga1_spare_v3p3(2) <= i3c_sp5_to_fpga1_ghijkl_sda;
-    fpga1_spare_v3p3(3) <= i3c_sp5_to_fpga1_ghijkl_scl;
-    fpga1_spare_v3p3(4) <= sp5_seq_pins.slp_s5_l;
-    fpga1_spare_v3p3(5) <= sp5_seq_pins.pwr_good;
-    fpga1_spare_v3p3(6) <= sp5_seq_pins.thermtrip_l;
-    --fpga1_spare_v3p3(7) <= sp5_seq_pins.reset_l;
     -- misc things tied:
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
@@ -533,13 +532,19 @@ begin
         host_to_fpga => uart0_sp5_to_fpga1_dat,
         host_from_fpga_rts_l => uart0_fpga1_to_sp5_rts_l_buff,
         host_to_fpga_rts_l => uart0_sp5_to_fpga1_rts_l,
-        uart_from_fpga => fpga1_spare_v3p3(7),
+        uart_from_fpga => open,
         uart_to_fpga => '1',
         uart_from_fpga_rts_l => open,
         uart_to_fpga_rts_l => '0',
         -- IPCC "UART" from espi
         ipcc_from_espi => ipcc_uart_from_espi_axi_st,
-        ipcc_to_espi => ipcc_uart_to_espi_axi_st
+        ipcc_to_espi => ipcc_uart_to_espi_axi_st,
+        -- 
+        dbg_mux_en => '1',
+        dbg_pins_uart_out => fpga1_spare_v3p3_7,
+        dbg_pins_uart_out_rts_l => fpga1_spare_v3p3_4,
+        dbg_pins_uart_in => fpga1_spare_v3p3_5,
+        dbg_pins_uart_in_rts_l => fpga1_spare_v3p3_6
     );
 
     -- SP I2C muxes
@@ -680,6 +685,8 @@ begin
     sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
     sp5_seq_pins.slp_s5_l <= sp5_to_fpga1_slp_s5_l;
     fpga1_to_sp5_rsmrst_l <= sp5_seq_pins.rsmrst_l;
+    sp5_to_fpga1_debug(1) <= sp5_seq_pins.is_cosmo;
+    sp5_to_fpga1_debug(2) <= 'Z';
     fpga1_to_sp5_pwrgd <= sp5_seq_pins.pwr_good;
 
     -- Nic sequence-related pins
@@ -715,7 +722,8 @@ begin
     dimm_ghijkl_scl_if.i <= i3c_fpga1_to_dimm_ghijkl_scl;
     i3c_fpga1_to_dimm_ghijkl_sda <= dimm_ghijkl_sda_if.o when dimm_ghijkl_sda_if.oe else 'Z';
     dimm_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
-        spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
+    
+    spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS => 8,
         I2C_MODE => FAST_PLUS

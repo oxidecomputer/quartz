@@ -41,6 +41,13 @@ entity sp5_uart_subsystem is
         ipcc_from_espi : view axi_st_sink;
         ipcc_to_espi : view axi_st_source;
 
+        -- debug UART mux
+        dbg_mux_en : in std_logic;
+        dbg_pins_uart_out : out std_logic;
+        dbg_pins_uart_out_rts_l : in std_logic;
+        dbg_pins_uart_in : in std_logic;
+        dbg_pins_uart_in_rts_l : out std_logic
+
     );
 end entity;
 
@@ -50,9 +57,17 @@ architecture rtl of sp5_uart_subsystem is
     signal console_host_to_sp : axi_st_t;
     signal console_sp_to_host : axi_st_t;
 
+    signal fgpa_sp_to_host_int : std_logic;
+    signal fpga_sp_to_host_int_rts_l : std_logic;
+
 begin
 
-    uart_from_fpga <= host_to_fpga;
+    -- inputs from host, outputs to debug header
+    dbg_pins_uart_out <= host_to_fpga when dbg_mux_en = '1' else '1';
+    dbg_pins_uart_in_rts_l <= host_to_fpga_rts_l when dbg_mux_en = '1' else '1';
+    -- outputs to host, inputs from debug header
+    host_from_fpga <= dbg_pins_uart_in when dbg_mux_en = '1' else fgpa_sp_to_host_int;
+    host_from_fpga_rts_l <= dbg_pins_uart_out_rts_l when dbg_mux_en = '1' else fpga_sp_to_host_int_rts_l;
 
     -- UARTs
     -- SP UART #0  -- Expected to be console uart sp-side
@@ -95,8 +110,8 @@ begin
         clk => clk,
         reset => reset,
         rx_pin => host_to_fpga,
-        tx_pin => host_from_fpga,
-        rts_pin => host_from_fpga_rts_l,
+        tx_pin => fgpa_sp_to_host_int,
+        rts_pin => fpga_sp_to_host_int_rts_l,
         cts_pin => host_to_fpga_rts_l,
         axi_clk => clk,
         axi_reset => reset,
