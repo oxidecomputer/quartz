@@ -242,6 +242,8 @@ begin
         reset => reset,
         nic_idle => nic_idle,
         sw_enable => power_ctrl.a0_en,
+        raw_state => nic_raw_status,
+        api_state => open,
         upstream_ok => a0_ok,
         nic_overrides_reg => nic_overrides,
         debug_enables => debug_enables,

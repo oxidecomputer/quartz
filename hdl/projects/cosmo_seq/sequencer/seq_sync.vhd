@@ -152,6 +152,7 @@ begin
     sp5_seq_pins.rsmrst_l <= sp5_seq.rsmrst_l;
     sp5_seq_pins.pwr_btn_l <= sp5_seq.pwr_btn_l;
     sp5_seq_pins.pwr_good <= sp5_seq.pwr_good;
+    sp5_seq_pins.is_cosmo <= sp5_seq.is_cosmo;
     thermtrip_l_sync: entity work.meta_sync
     port map(
        async_input => sp5_seq_pins.thermtrip_l,

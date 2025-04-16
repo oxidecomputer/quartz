@@ -26,6 +26,9 @@ entity nic_seq is
         debug_enables : in debug_enables_type;
         nic_overrides_reg : in nic_overrides_type;
 
+        raw_state : out nic_raw_status_type;
+        api_state : out nic_api_status_type;
+
         -- From SP5 hotplug
         sp5_t6_power_en : in std_logic;
         sp5_t6_perst_l : in std_logic;
@@ -68,6 +71,8 @@ architecture rtl of nic_seq is
 
 begin
 
+    raw_state.hw_sm <= std_logic_vector(to_unsigned(state_t'pos(nic_r.state), raw_state.hw_sm'length));
+    
     nic_idle <= '1' when nic_r.state = IDLE else '0';
 
     nic_sm:process(all)
