@@ -12,11 +12,14 @@ use ieee.numeric_std_unsigned.all;
 library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
+    context vunit_lib.vc_context;
 
 use work.i2c_ctrl_vc_pkg.all;
 
 package i2c_pca9506ish_sim_pkg is
 
+    constant bus_handle : bus_master_t := new_bus(data_length => 32,
+    address_length => 8);
     constant i2c_ctrl_vc : i2c_ctrl_vc_t := new_i2c_ctrl_vc("i2c_ctrl_vc");
 
     -- Some helper functions for writing test benches.
