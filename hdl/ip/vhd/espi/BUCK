@@ -40,6 +40,7 @@ vhdl_unit(
         "//hdl/ip/vhd/common:time_pkg",
         "//hdl/ip/vhd/synchronizers:meta_sync",
         "//hdl/ip/vhd/synchronizers:bacd",
+        "//hdl/ip/vhd/synchronizers:tacd",
         "//hdl/ip/vhd/crc:crc8atm_8wide",
         "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",

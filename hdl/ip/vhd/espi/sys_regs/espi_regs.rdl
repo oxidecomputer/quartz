@@ -108,4 +108,12 @@ addrmap espi_regs {
             desc = "";
         } bytes[7:0] =  32;
      } uart_thresh;
+
+    reg {
+        name = "Last Post Code (0x47 PUT_IOWR_SHORT) Payload";
+        desc = "";
+        field {
+            desc = "MSB is bit 31";
+        } payload[31:0] =  0;
+    } last_post_code;
 };
