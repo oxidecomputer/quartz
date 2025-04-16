@@ -21,6 +21,9 @@ entity espi_regs is
         -- axi interface
         axi_if : view axil_target;
         msg_en : out std_logic;
+        post_code      : in std_logic_vector(31 downto 0);
+        post_code_valid : in std_logic;
+        espi_reset : in std_logic;
         -- debug interface
         dbg_chan : view dbg_regs_if
 
@@ -38,6 +41,7 @@ architecture rtl of espi_regs is
     signal   resp_fifo_ack      : std_logic;
     signal active_read        : std_logic;
     signal active_write       : std_logic;
+    signal last_post_code_reg : last_post_code_type;
 
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
@@ -72,6 +76,7 @@ begin
     begin
         if reset then
             control_reg <= rec_reset;
+            last_post_code_reg <= rec_reset;
         elsif rising_edge(clk) then
             control_reg.cmd_fifo_reset <= '0';  -- self clearing
             control_reg.cmd_size_fifo_reset <= '0';  -- self clearing
@@ -81,6 +86,11 @@ begin
                     when CONTROL_OFFSET => control_reg <= unpack(axi_if.write_data.data);
                     when others => null;
                 end case;
+            end if;
+            if espi_reset then
+                last_post_code_reg <= rec_reset;
+            elsif post_code_valid then
+               last_post_code_reg <= unpack(post_code);
             end if;
         end if;
     end process;
@@ -107,6 +117,7 @@ begin
                     when RESP_FIFO_RDATA_OFFSET => 
                         rdata <= dbg_chan.rd.data;
                         resp_fifo_ack <= '1';
+                    when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
                     when others =>
                         rdata <= (others => '0');
                 end case;

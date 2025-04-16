@@ -436,3 +436,7 @@ dismissDialog("Set Up Debug"); // J (dialog0)
 selectTab((HResource) null, (HResource) null, "Tcl Console", 0); // aa
 selectCodeEditor(RDIResource.TclConsoleView_TCL_CONSOLE_CODE_EDITOR, 677, 142); // cD (RDIResource.TclConsoleView_TCL_CONSOLE_CODE_EDITOR)
 typeControlKey(RDIResource.TclConsoleView_TCL_CONSOLE_CODE_EDITOR, "RDIResource.TclConsoleView_TCL_CONSOLE_CODE_EDITOR", 'c'); // cD (RDIResource.TclConsoleView_TCL_CONSOLE_CODE_EDITOR)
+// HMemoryUtils.trashcanNow. Engine heap size: 2,665 MB. GUI used memory: 130 MB. Current time: 4/16/25, 4:30:54 PM CDT
+// HMemoryUtils.trashcanNow. Engine heap size: 2,665 MB. GUI used memory: 113 MB. Current time: 4/16/25, 5:00:54 PM CDT
+// HMemoryUtils.trashcanNow. Engine heap size: 2,665 MB. GUI used memory: 111 MB. Current time: 4/16/25, 5:30:54 PM CDT
+// HMemoryUtils.trashcanNow. Engine heap size: 2,665 MB. GUI used memory: 111 MB. Current time: 4/16/25, 6:00:54 PM CDT
