@@ -12,6 +12,7 @@ use work.pca9506_pkg.all;
 use work.pca9506_regs_pkg.all;
 
 entity pca9506_regs is
+    generic(DEBUG : string := "FALSE");
     port (
         clk : in std_logic;
         reset : in std_logic;
@@ -61,6 +62,7 @@ entity pca9506_regs is
 end entity;
 
 architecture rtl of pca9506_regs is
+    attribute MARK_DEBUG : string;
 
     signal ip0_reg : io_type;
     signal ip1_reg : io_type;
@@ -102,10 +104,15 @@ architecture rtl of pca9506_regs is
     signal msk4_reg : io_type;
     signal active_read : std_logic;
     signal active_write : std_logic;
+    attribute MARK_DEBUG of active_read : signal is DEBUG;
+    attribute MARK_DEBUG of active_write : signal is DEBUG;
 
 begin
 
     axil_target_txn_inst: entity work.axil_target_txn
+    generic map(
+        DEBUG => DEBUG 
+    )
     port map(
        clk => clk,
        reset => reset,
@@ -407,32 +414,33 @@ begin
             rdata <= (others => '0');
         elsif rising_edge(clk) then
             if active_read then
+                -- byte addresses so we need to shift down
                 case to_integer(araddr) is
-                    when IP0_OFFSET => rdata <= X"000000" & pack(ip0_reg xor pi0_reg);
-                    when IP1_OFFSET => rdata <= X"000000" & pack(ip1_reg xor pi1_reg);
-                    when IP2_OFFSET => rdata <= X"000000" & pack(ip2_reg xor pi2_reg);
-                    when IP3_OFFSET => rdata <= X"000000" & pack(ip3_reg xor pi3_reg);
-                    when IP4_OFFSET => rdata <= X"000000" & pack(ip4_reg xor pi4_reg);
-                    when OP0_OFFSET => rdata <= X"000000" & pack(op0_reg);
-                    when OP1_OFFSET => rdata <= X"000000" & pack(op1_reg);
-                    when OP2_OFFSET => rdata <= X"000000" & pack(op2_reg);
-                    when OP3_OFFSET => rdata <= X"000000" & pack(op3_reg);
-                    when OP4_OFFSET => rdata <= X"000000" & pack(op4_reg);
-                    when PI0_OFFSET => rdata <= X"000000" & pack(pi0_reg);
-                    when PI1_OFFSET => rdata <= X"000000" & pack(pi1_reg);
-                    when PI2_OFFSET => rdata <= X"000000" & pack(pi2_reg);
-                    when PI3_OFFSET => rdata <= X"000000" & pack(pi3_reg);
-                    when PI4_OFFSET => rdata <= X"000000" & pack(pi4_reg);
-                    when IOC0_OFFSET => rdata <=  X"000000" & pack(ioc0_reg);
-                    when IOC1_OFFSET => rdata <=  X"000000" & pack(ioc1_reg);
-                    when IOC2_OFFSET => rdata <=  X"000000" & pack(ioc2_reg);
-                    when IOC3_OFFSET => rdata <=  X"000000" & pack(ioc3_reg);
-                    when IOC4_OFFSET => rdata <=  X"000000" & pack(ioc4_reg);
-                    when MSK0_OFFSET => rdata <=  X"000000" & pack(msk0_reg);
-                    when MSK1_OFFSET => rdata <=  X"000000" & pack(msk1_reg);
-                    when MSK2_OFFSET => rdata <=  X"000000" & pack(msk2_reg);
-                    when MSK3_OFFSET => rdata <=  X"000000" & pack(msk3_reg);
-                    when MSK4_OFFSET => rdata <=  X"000000" & pack(msk4_reg);
+                    when IP0_OFFSET * 4 => rdata <= X"000000" & pack(ip0_reg xor pi0_reg);
+                    when IP1_OFFSET * 4 => rdata <= X"000000" & pack(ip1_reg xor pi1_reg);
+                    when IP2_OFFSET * 4 => rdata <= X"000000" & pack(ip2_reg xor pi2_reg);
+                    when IP3_OFFSET * 4 => rdata <= X"000000" & pack(ip3_reg xor pi3_reg);
+                    when IP4_OFFSET * 4 => rdata <= X"000000" & pack(ip4_reg xor pi4_reg);
+                    when OP0_OFFSET * 4 => rdata <= X"000000" & pack(op0_reg);
+                    when OP1_OFFSET * 4 => rdata <= X"000000" & pack(op1_reg);
+                    when OP2_OFFSET * 4 => rdata <= X"000000" & pack(op2_reg);
+                    when OP3_OFFSET * 4 => rdata <= X"000000" & pack(op3_reg);
+                    when OP4_OFFSET * 4 => rdata <= X"000000" & pack(op4_reg);
+                    when PI0_OFFSET * 4 => rdata <= X"000000" & pack(pi0_reg);
+                    when PI1_OFFSET * 4 => rdata <= X"000000" & pack(pi1_reg);
+                    when PI2_OFFSET * 4 => rdata <= X"000000" & pack(pi2_reg);
+                    when PI3_OFFSET * 4 => rdata <= X"000000" & pack(pi3_reg);
+                    when PI4_OFFSET * 4 => rdata <= X"000000" & pack(pi4_reg);
+                    when IOC0_OFFSET * 4 => rdata <=  X"000000" & pack(ioc0_reg);
+                    when IOC1_OFFSET * 4 => rdata <=  X"000000" & pack(ioc1_reg);
+                    when IOC2_OFFSET * 4 => rdata <=  X"000000" & pack(ioc2_reg);
+                    when IOC3_OFFSET * 4 => rdata <=  X"000000" & pack(ioc3_reg);
+                    when IOC4_OFFSET * 4 => rdata <=  X"000000" & pack(ioc4_reg);
+                    when MSK0_OFFSET * 4 => rdata <=  X"000000" & pack(msk0_reg);
+                    when MSK1_OFFSET * 4 => rdata <=  X"000000" & pack(msk1_reg);
+                    when MSK2_OFFSET * 4 => rdata <=  X"000000" & pack(msk2_reg);
+                    when MSK3_OFFSET * 4 => rdata <=  X"000000" & pack(msk3_reg);
+                    when MSK4_OFFSET * 4 => rdata <=  X"000000" & pack(msk4_reg);
                     when others =>
                         rdata <= (others => '0');
                 end case;

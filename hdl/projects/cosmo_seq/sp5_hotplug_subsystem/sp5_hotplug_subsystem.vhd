@@ -30,7 +30,6 @@ entity sp5_hotplug_subsystem is
         sp5_i2c_scl_o : out std_logic;
         sp5_i2c_scl_oe : out std_logic;
         int_n : out std_logic;
-
         a0_ok : in std_logic;
 
         axi_if : view axil_target;
@@ -42,6 +41,7 @@ entity sp5_hotplug_subsystem is
         m2a_hsc_en : out std_logic;
         m2a_perst_l : out std_logic;
         pcie_clk_buff_m2a_oe_l : out std_logic;
+        m2a_pwr_fault_l : in std_logic;
 
         --m.2b
         m2b_pedet : in std_logic;
@@ -49,6 +49,7 @@ entity sp5_hotplug_subsystem is
         m2b_hsc_en : out std_logic;
         m2b_perst_l : out std_logic;
         pcie_clk_buff_m2b_oe_l : out std_logic;
+        m2b_pwr_fault_l : in std_logic;
 
         -- T6 things
         t6_power_en : out std_logic;
@@ -65,7 +66,7 @@ end sp5_hotplug_subsystem;
 
 architecture rtl of sp5_hotplug_subsystem is
     constant i2c_io_addr : std_logic_vector(6 downto 0) := b"0100_010";
-    signal io : pca9506_pin_t;
+    signal io : pca9506_pin_t := (others => (others => '0'));
     signal io_oe : pca9506_pin_t;
     signal io_o : pca9506_pin_t;
     signal m2a_pedet_sync : std_logic;
@@ -136,6 +137,8 @@ begin
     m2a_hsc_en <= io_o(0)(4) when io_oe(0)(4) else '0';
     pcie_clk_buff_m2a_oe_l <= io_o(0)(4) when io_oe(0)(4) else 'Z';  -- enable clock when power enabled
     io(0)(0) <= m2a_prsnt_l;
+    io(0)(1) <= m2a_pwr_fault_l;
+    io(0)(2) <= '1'; -- attnsw_l
     -- not PEDET becomes emils
     io(0)(3) <= not m2a_pedet_sync;
 
@@ -143,6 +146,8 @@ begin
     m2b_hsc_en <= io_o(1)(4) when io_oe(1)(4) else '0';
     pcie_clk_buff_m2b_oe_l <= io_o(1)(4) when io_oe(1)(4) else 'Z';  -- enable clock when power enabled
     io(1)(0) <= m2b_prsnt_l;
+    io(1)(1) <= m2b_pwr_fault_l;
+    io(1)(2) <= '1'; -- attnsw_l
     -- not PEDET becomes emils
     io(1)(3) <= not m2b_pedet_sync;
 
@@ -175,7 +180,9 @@ begin
     -- T6
     t6_power_en <= io_o(2)(4) when io_oe(0)(4) else '0';
     io(2)(3) <= '1';  -- PEDET for T6
-    io(2)(0) <= '1'; -- PRSNT_L for T6
+    io(2)(1) <= '1'; -- TODO: power fault l
+    io(2)(2) <= '1'; -- attnsw_l
+    io(2)(0) <= '0'; -- PRSNT_L for T6
     t6_perst_l <= io_o(2)(4) when io_oe(2)(4) else '0';
 
     -- Backplane connected switch
@@ -192,6 +199,9 @@ begin
         perst_l => pcie_aux_rsw_perst_l
     );
     io(3)(0) <= pcie_aux_rsw_prsnt_buff_l;
+    io(3)(3) <= '1';  -- PEDET for T6
+    io(3)(1) <= '1'; -- TODO: power fault l
+    io(3)(2) <= '1'; -- attnsw_l
     pcie_clk_buff_rsw_oe_l <= pcie_aux_rsw_prsnt_buff_l;  -- Is this right?
 
 

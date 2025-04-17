@@ -19,7 +19,8 @@ entity pca9506_top is
     generic(
         -- i2c address of the mux
         i2c_addr : std_logic_vector(6 downto 0);
-        giltch_filter_cycles : integer := 5
+        giltch_filter_cycles : integer := 5;
+        DEBUG : string := "FALSE"
     );
     port(
         clk : in std_logic;
@@ -152,6 +153,9 @@ begin
 
     -- registers block
     pca9506_regs_inst: entity work.pca9506_regs
+    generic map(
+        DEBUG => DEBUG
+    )
      port map(
         clk => clk,
         reset => reset,
