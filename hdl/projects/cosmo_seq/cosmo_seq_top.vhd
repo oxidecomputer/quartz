@@ -125,7 +125,8 @@ entity cosmo_seq_top is
         fpga1_spare_v3p3_6 : out std_logic;
         fpga1_spare_v3p3_7 : out std_logic;
         fpga1_status_led : out std_logic;
-        fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
+        fpga2_to_fpga1_io : in std_logic_vector(2 downto 0);
+        fpga1_to_fpga2_io : out std_logic_vector(2 downto 0);
 
         -- T6 NIC sequencing
         fpga1_to_nic_cld_rst_l : out std_logic;
@@ -397,6 +398,7 @@ begin
         end if;
     end process;
     -- misc things tied:
+    fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
     fpga1_to_sp_mux_ign_mux_sel <= '0';  -- Default until we decide what to do with it
@@ -591,11 +593,13 @@ begin
         m2a_prsnt_l => m2a_to_fpga1_prsnt_l,
         m2a_hsc_en => fpga1_to_m2a_hsc_en,
         m2a_perst_l => fpga1_to_m2a_perst_l,
+        m2a_pwr_fault_l => m2a_hsc_to_fpga1_fault_l,
         pcie_clk_buff_m2a_oe_l => fpga1_to_pcie_clk_buff_m2a_oe_l,
         m2b_pedet => m2b_to_fpga1_pedet,
         m2b_prsnt_l => m2b_to_fpga1_prsnt_l,
         m2b_hsc_en => fpga1_to_m2b_hsc_en,
         m2b_perst_l => fpga1_to_m2b_perst_l,
+        m2b_pwr_fault_l => m2b_hsc_to_fpga1_fault_l,
         pcie_clk_buff_m2b_oe_l => fpga1_to_pcie_clk_buff_m2b_oe_l,
         t6_power_en => sp5_t6_power_en,
         t6_perst_l => sp5_t6_perst_l,

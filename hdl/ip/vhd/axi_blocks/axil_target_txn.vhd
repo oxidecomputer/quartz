@@ -11,6 +11,7 @@ use ieee.numeric_std.all;
 use work.axil_common_pkg.all;
 
 entity axil_target_txn is
+    generic(DEBUG : string := "FALSE");
     port (
         clk : in std_logic;
         reset : in std_logic;
@@ -34,7 +35,20 @@ entity axil_target_txn is
     );
 end entity;
 architecture rtl of axil_target_txn is
+    attribute MARK_DEBUG : string;
+    signal debug_active_read : std_logic;
+    signal debug_active_write : std_logic;
+    signal debug_rvalid : std_logic;
+    signal debug_rready : std_logic;
+    signal debug_wvalid : std_logic;
+    signal debug_wready : std_logic;
 
+    attribute MARK_DEBUG of debug_active_read : signal is DEBUG;
+    attribute MARK_DEBUG of debug_active_write : signal is DEBUG;
+    attribute MARK_DEBUG of debug_rvalid : signal is DEBUG;
+    attribute MARK_DEBUG of debug_rready : signal is DEBUG;
+    attribute MARK_DEBUG of debug_wvalid : signal is DEBUG;
+    attribute MARK_DEBUG of debug_wready : signal is DEBUG;
 begin
 
     bresp  <= OKAY;
@@ -46,6 +60,12 @@ begin
     active_read <=  arvalid and arready;
     active_write <= awready;
 
+    debug_active_read <= active_read;
+    debug_active_write <= active_write;
+    debug_rvalid <= rvalid;
+    debug_rready <= rready;
+    debug_wvalid <= wvalid;
+    debug_wready <= wready;
 
     -- axi transaction mgmt
     -- Common block for axi transaction management
