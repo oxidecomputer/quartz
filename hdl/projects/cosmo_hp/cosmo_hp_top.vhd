@@ -142,7 +142,9 @@ entity cosmo_hp_top is
         fpga2_to_mcio_prpe: in std_logic; -- TODO, confirm Hi-Z works with yosys + ghdl
         fpga2_to_v12_mcio_a0hp_hsc_en: out std_logic;
         -- FPGA1 I/F
-        fpga1_to_fpga2_io: in std_logic_vector(5 downto 0); 
+        -- MSBs of bus are from fpga1
+        fpga1_to_fpga2_io: in std_logic_vector(2 downto 0);
+        fpga2_to_fpga1_io: out std_logic_vector(2 downto 0);
         -- FPGA misc I/O
         fpga2_spare_v3p3: in std_logic_vector(7 downto 0);
         fpga2_status_led: out std_logic;
@@ -268,6 +270,8 @@ architecture rtl of cosmo_hp_top is
     signal fpga2_to_clk_buff_cemi_oe_l_int : std_logic;
     signal fpga2_to_clk_buff_cemj_oe_l_int : std_logic;
 begin
+
+    fpga2_to_fpga1_io <= (others => 'Z');
 
     -------------------------------------
     -- Basic Board support stuff

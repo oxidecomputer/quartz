@@ -69,6 +69,6 @@ set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -setup 2
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -hold 1
 
-set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v3p3[*]}]
+set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v3p3*}]
 set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v1p8[*]}]
 
