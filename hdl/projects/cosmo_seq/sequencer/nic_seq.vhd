@@ -83,6 +83,7 @@ begin
 
         case nic_r.state is
             when IDLE =>
+                v.nic_power_en := '0';
                 v.nic_perst_l := '0';
                 v.nic_cld_rst_l := '0';
                 v.nic_clk_en_l := '1';
