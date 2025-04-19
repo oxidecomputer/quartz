@@ -61,7 +61,7 @@ begin
         elsif rising_edge(clk) then
             -- Follow the SP5's power control signal
             -- one-shot on sharkfins
-            cem_perst_l <=  from_sp5.pwren_l;
+            cem_perst_l <=  not from_sp5.pwren_l;
         end if;
     end process;
 

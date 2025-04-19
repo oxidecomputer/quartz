@@ -221,7 +221,9 @@ architecture rtl of cosmo_hp_top is
     signal pca_int_n : std_logic_vector(io_i2c_addr'length - 1 downto 0);
 
     constant config_array : axil_responder_cfg_array_t := 
-    (0 => (base_addr => x"00000000", addr_span_bits => 8)
+    (0 => (base_addr => x"00000000", addr_span_bits => 8),
+     1 => (base_addr => x"00000100", addr_span_bits => 8),
+     2 => (base_addr => x"00000200", addr_span_bits => 8)
      );
 
     signal sp_write_address_addr : std_logic_vector(15 downto 0);
@@ -269,9 +271,30 @@ architecture rtl of cosmo_hp_top is
     signal fpga2_to_clk_buff_cemh_oe_l_int : std_logic;
     signal fpga2_to_clk_buff_cemi_oe_l_int : std_logic;
     signal fpga2_to_clk_buff_cemj_oe_l_int : std_logic;
+    signal fpga2_to_cema_perst_l_int : std_logic;
+    signal fpga2_to_cemb_perst_l_int : std_logic;
+    signal fpga2_to_cemc_perst_l_int : std_logic;
+    signal fpga2_to_cemd_perst_l_int : std_logic;
+    signal fpga2_to_ceme_perst_l_int : std_logic;
+    signal fpga2_to_cemf_perst_l_int : std_logic;
+    signal fpga2_to_cemg_perst_l_int : std_logic;
+    signal fpga2_to_cemh_perst_l_int : std_logic;
+    signal fpga2_to_cemi_perst_l_int : std_logic;
+    signal fpga2_to_cemj_perst_l_int : std_logic;
+    alias in_a0_unsyncd is fpga1_to_fpga2_io(2);
+    signal in_a0 : std_logic;
+    alias amd_gen_int is fpga2_to_fpga1_io(2); -- goes to fpga1 which can do the alert generation
+    
 begin
 
     fpga2_to_fpga1_io <= (others => 'Z');
+
+    meta_sync_inst: entity work.meta_sync
+     port map(
+        async_input => in_a0_unsyncd,
+        clk => clk_50m,
+        sycnd_output => in_a0
+    );
 
     -------------------------------------
     -- Basic Board support stuff
@@ -447,6 +470,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
          port map(
             clk => clk_50m,
             reset => reset_50m,
+            inband_reset => not in_a0,
             scl => sp5_tgt_scl(i),
             scl_o => sp5_tgt_scl_o(i),
             scl_oe => sp5_tgt_scl_oe(i),
@@ -456,10 +480,29 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
             io => pca_io(i),
             io_oe => pca_io_oe(i),
             io_o => pca_io_o(i),
-            int_n => pca_int_n(i)
+            int_n => pca_int_n(i),
+            awvalid => responders_write_address_valid(i+1),
+            awready => responders_write_address_ready(i+1),
+            awaddr => responders_write_address_addr(i+1),
+            wvalid => responders_write_data_valid(i+1),
+            wready => responders_write_data_ready(i+1),
+            wdata => responders_write_data_data(i+1),
+            wstrb => responders_write_data_strb(i+1),
+            bvalid => responders_write_response_valid(i+1),
+            bready => responders_write_response_ready(i+1),
+            bresp => responders_write_response_resp(i+1),
+            arvalid => responders_read_address_valid(i+1),
+            arready => responders_read_address_ready(i+1),
+            araddr => responders_read_address_addr(i+1),
+            rvalid => responders_read_data_valid(i+1),
+            rready => responders_read_data_ready(i+1),
+            rdata => responders_read_data_data(i+1),
+            rresp => responders_read_data_resp(i+1)
+
         );
     end generate;
-    
+
+    amd_gen_int <= and pca_int_n;  -- bitwise, assert any time any of the irqs is low
     -------------------------------------
     -- SP I2C STUFF
     -------------------------------------
@@ -530,6 +573,17 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
     fpga2_to_clk_buff_cemh_oe_l <= '0' when fpga2_to_clk_buff_cemh_oe_l_int = '0' else 'Z';
     fpga2_to_clk_buff_cemi_oe_l <= '0' when fpga2_to_clk_buff_cemi_oe_l_int = '0' else 'Z';
     fpga2_to_clk_buff_cemj_oe_l <= '0' when fpga2_to_clk_buff_cemj_oe_l_int = '0' else 'Z';
+
+    fpga2_to_cema_perst_l <= '0' when fpga2_to_cema_perst_l_int = '0' else 'Z';
+    fpga2_to_cemb_perst_l <= '0' when fpga2_to_cemb_perst_l_int = '0' else 'Z';
+    fpga2_to_cemc_perst_l <= '0' when fpga2_to_cemc_perst_l_int = '0' else 'Z';
+    fpga2_to_cemd_perst_l <= '0' when fpga2_to_cemd_perst_l_int = '0' else 'Z';
+    fpga2_to_ceme_perst_l <= '0' when fpga2_to_ceme_perst_l_int = '0' else 'Z';
+    fpga2_to_cemf_perst_l <= '0' when fpga2_to_cemf_perst_l_int = '0' else 'Z';
+    fpga2_to_cemg_perst_l <= '0' when fpga2_to_cemg_perst_l_int = '0' else 'Z';
+    fpga2_to_cemh_perst_l <= '0' when fpga2_to_cemh_perst_l_int = '0' else 'Z';
+    fpga2_to_cemi_perst_l <= '0' when fpga2_to_cemi_perst_l_int = '0' else 'Z';
+    fpga2_to_cemj_perst_l <= '0' when fpga2_to_cemj_perst_l_int = '0' else 'Z';
         -- CEM sync logic etc
     hp_subsystem_top_inst: entity work.hp_subsystem_top
      port map(
@@ -542,7 +596,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cema_to_fpga2_pwrflt_l => cema_to_fpga2_pwrflt_l,
         cema_to_fpga2_sharkfin_present => cema_to_fpga2_sharkfin_present,
         fpga2_to_cema_attnled => fpga2_to_cema_attnled,
-        fpga2_to_cema_perst_l => fpga2_to_cema_perst_l,
+        fpga2_to_cema_perst_l => fpga2_to_cema_perst_l_int,
         fpga2_to_cema_pwren => fpga2_to_cema_pwren,
         fpga2_to_clk_buff_cema_oe_l => fpga2_to_clk_buff_cema_oe_l_int,
         cemb_to_fpga2_alert_l => cemb_to_fpga2_alert_l,
@@ -552,7 +606,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemb_to_fpga2_pwrflt_l => cemb_to_fpga2_pwrflt_l,
         cemb_to_fpga2_sharkfin_present => cemb_to_fpga2_sharkfin_present,
         fpga2_to_cemb_attnled => fpga2_to_cemb_attnled,
-        fpga2_to_cemb_perst_l => fpga2_to_cemb_perst_l,
+        fpga2_to_cemb_perst_l => fpga2_to_cemb_perst_l_int,
         fpga2_to_cemb_pwren => fpga2_to_cemb_pwren,
         fpga2_to_clk_buff_cemb_oe_l => fpga2_to_clk_buff_cemb_oe_l_int,
         cemc_to_fpga2_alert_l => cemc_to_fpga2_alert_l,
@@ -562,7 +616,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemc_to_fpga2_pwrflt_l => cemc_to_fpga2_pwrflt_l,
         cemc_to_fpga2_sharkfin_present => cemc_to_fpga2_sharkfin_present,
         fpga2_to_cemc_attnled => fpga2_to_cemc_attnled,
-        fpga2_to_cemc_perst_l => fpga2_to_cemc_perst_l,
+        fpga2_to_cemc_perst_l => fpga2_to_cemc_perst_l_int,
         fpga2_to_cemc_pwren => fpga2_to_cemc_pwren,
         fpga2_to_clk_buff_cemc_oe_l => fpga2_to_clk_buff_cemc_oe_l_int,
         cemd_to_fpga2_alert_l => cemd_to_fpga2_alert_l,
@@ -572,7 +626,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemd_to_fpga2_pwrflt_l => cemd_to_fpga2_pwrflt_l,
         cemd_to_fpga2_sharkfin_present => cemd_to_fpga2_sharkfin_present,
         fpga2_to_cemd_attnled => fpga2_to_cemd_attnled,
-        fpga2_to_cemd_perst_l => fpga2_to_cemd_perst_l,
+        fpga2_to_cemd_perst_l => fpga2_to_cemd_perst_l_int,
         fpga2_to_cemd_pwren => fpga2_to_cemd_pwren,
         fpga2_to_clk_buff_cemd_oe_l => fpga2_to_clk_buff_cemd_oe_l_int,
         ceme_to_fpga2_alert_l => ceme_to_fpga2_alert_l,
@@ -582,7 +636,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         ceme_to_fpga2_pwrflt_l => ceme_to_fpga2_pwrflt_l,
         ceme_to_fpga2_sharkfin_present => ceme_to_fpga2_sharkfin_present,
         fpga2_to_ceme_attnled => fpga2_to_ceme_attnled,
-        fpga2_to_ceme_perst_l => fpga2_to_ceme_perst_l,
+        fpga2_to_ceme_perst_l => fpga2_to_ceme_perst_l_int,
         fpga2_to_ceme_pwren => fpga2_to_ceme_pwren,
         fpga2_to_clk_buff_ceme_oe_l => fpga2_to_clk_buff_ceme_oe_l_int,
         cemf_to_fpga2_alert_l => cemf_to_fpga2_alert_l,
@@ -592,7 +646,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemf_to_fpga2_pwrflt_l => cemf_to_fpga2_pwrflt_l,
         cemf_to_fpga2_sharkfin_present => cemf_to_fpga2_sharkfin_present,
         fpga2_to_cemf_attnled => fpga2_to_cemf_attnled,
-        fpga2_to_cemf_perst_l => fpga2_to_cemf_perst_l,
+        fpga2_to_cemf_perst_l => fpga2_to_cemf_perst_l_int,
         fpga2_to_cemf_pwren => fpga2_to_cemf_pwren,
         fpga2_to_clk_buff_cemf_oe_l => fpga2_to_clk_buff_cemf_oe_l_int,
         cemg_to_fpga2_alert_l => cemg_to_fpga2_alert_l,
@@ -602,7 +656,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemg_to_fpga2_pwrflt_l => cemg_to_fpga2_pwrflt_l,
         cemg_to_fpga2_sharkfin_present => cemg_to_fpga2_sharkfin_present,
         fpga2_to_cemg_attnled => fpga2_to_cemg_attnled,
-        fpga2_to_cemg_perst_l => fpga2_to_cemg_perst_l,
+        fpga2_to_cemg_perst_l => fpga2_to_cemg_perst_l_int,
         fpga2_to_cemg_pwren => fpga2_to_cemg_pwren,
         fpga2_to_clk_buff_cemg_oe_l => fpga2_to_clk_buff_cemg_oe_l_int,
         cemh_to_fpga2_alert_l => cemh_to_fpga2_alert_l,
@@ -612,7 +666,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemh_to_fpga2_pwrflt_l => cemh_to_fpga2_pwrflt_l,
         cemh_to_fpga2_sharkfin_present => cemh_to_fpga2_sharkfin_present,
         fpga2_to_cemh_attnled => fpga2_to_cemh_attnled,
-        fpga2_to_cemh_perst_l => fpga2_to_cemh_perst_l,
+        fpga2_to_cemh_perst_l => fpga2_to_cemh_perst_l_int,
         fpga2_to_cemh_pwren => fpga2_to_cemh_pwren,
         fpga2_to_clk_buff_cemh_oe_l => fpga2_to_clk_buff_cemh_oe_l_int,
         cemi_to_fpga2_alert_l => cemi_to_fpga2_alert_l,
@@ -622,7 +676,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemi_to_fpga2_pwrflt_l => cemi_to_fpga2_pwrflt_l,
         cemi_to_fpga2_sharkfin_present => cemi_to_fpga2_sharkfin_present,
         fpga2_to_cemi_attnled => fpga2_to_cemi_attnled,
-        fpga2_to_cemi_perst_l => fpga2_to_cemi_perst_l,
+        fpga2_to_cemi_perst_l => fpga2_to_cemi_perst_l_int,
         fpga2_to_cemi_pwren => fpga2_to_cemi_pwren,
         fpga2_to_clk_buff_cemi_oe_l => fpga2_to_clk_buff_cemi_oe_l_int,
         cemj_to_fpga2_alert_l => cemj_to_fpga2_alert_l,
@@ -632,7 +686,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         cemj_to_fpga2_pwrflt_l => cemj_to_fpga2_pwrflt_l,
         cemj_to_fpga2_sharkfin_present => cemj_to_fpga2_sharkfin_present,
         fpga2_to_cemj_attnled => fpga2_to_cemj_attnled,
-        fpga2_to_cemj_perst_l => fpga2_to_cemj_perst_l,
+        fpga2_to_cemj_perst_l => fpga2_to_cemj_perst_l_int,
         fpga2_to_cemj_pwren => fpga2_to_cemj_pwren,
         fpga2_to_clk_buff_cemj_oe_l => fpga2_to_clk_buff_cemj_oe_l_int,
         io => pca_io,
