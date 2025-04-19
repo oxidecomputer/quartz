@@ -26,6 +26,11 @@ entity link_to_txn_bridge is
         -- control signals
         -- slow clock domain
         txn_gen_enabled : in std_logic;
+        espi_reset_slow : in std_logic;
+
+        -- control signals
+        -- fast clock domain
+        espi_reset_fast : in std_logic;
 
         -- To/From the qspi link layer
         -- Fast clock domain
@@ -48,6 +53,7 @@ entity link_to_txn_bridge is
 end entity;
 
 architecture rtl of link_to_txn_bridge is
+    attribute mark_debug : string;
     signal qspi_cmd_wfull : std_logic;
     signal qspi_cmd_slow_rempty : std_logic;
     signal qspi_cmd_slow_rdata : std_logic_vector(7 downto 0);
@@ -55,9 +61,16 @@ architecture rtl of link_to_txn_bridge is
     signal qspi_resp_rempty : std_logic;
     signal qspi_cs_n_syncd : std_logic;
     signal qspi_resp_slow_write_en : std_logic;
+    attribute mark_debug of qspi_resp_slow_write_en : signal is "true";
     signal qspi_resp_rdata : std_logic_vector(7 downto 0);
     signal qspi_resp_rdack : std_logic;
     signal qspi_resp_slow_wfull : std_logic;
+    signal fifo_reset_fast : std_logic;
+    signal fifo_reset_slow : std_logic;
+    signal cmd_rusedwds : std_logic_vector(4 downto 0);
+    attribute mark_debug of cmd_rusedwds : signal is "true";
+    signal resp_wusedwds : std_logic_vector(8 downto 0);
+    attribute mark_debug of resp_wusedwds : signal is "true";
 
 begin
 
@@ -68,6 +81,28 @@ begin
         sycnd_output => qspi_cs_n_syncd
     );
 
+
+    -- I don't love this pattern but we're going to combine the system reset with the 
+    -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
+    -- of every boot.
+    rst_combine:process(clk_200m, reset_200m)
+     begin
+        if reset_200m = '1' then
+            fifo_reset_fast <= '1';
+        elsif rising_edge(clk_200m) then
+            fifo_reset_fast <= espi_reset_fast;
+        end if;
+    end process;
+
+    rst_slow_combine:process(clk, reset)
+    begin
+       if reset = '1' then
+            fifo_reset_slow <= '1';
+       elsif rising_edge(clk) then
+            fifo_reset_slow <= espi_reset_slow;
+       end if;
+    end process;
+
 -- CMD Clock cross from fast to slow domains
 qspi_cmd_fifo: entity work.dcfifo_xpm
  generic map(
@@ -77,7 +112,7 @@ qspi_cmd_fifo: entity work.dcfifo_xpm
 )
  port map(
     wclk => clk_200m,
-    reset => reset_200m,
+    reset => fifo_reset_fast,
     write_en => qspi_cmd.valid and qspi_cmd.ready,
     wdata => qspi_cmd.data,
     wfull => qspi_cmd_wfull,
@@ -86,7 +121,7 @@ qspi_cmd_fifo: entity work.dcfifo_xpm
     rdata => qspi_cmd_slow_rdata,
     rdreq => qspi_cmd_rdack,
     rempty => qspi_cmd_slow_rempty,
-    rusedwds => open
+    rusedwds => cmd_rusedwds
 );
 qspi_cmd.ready <= not qspi_cmd_wfull; -- always drive this, it's a fast domain signal
 
@@ -99,11 +134,11 @@ qspi_resp_fifo: entity work.dcfifo_xpm
 )
  port map(
     wclk => clk,
-    reset => reset,
+    reset => fifo_reset_slow,
     write_en => qspi_resp_slow_write_en,
     wdata => txn_resp.data,
     wfull => qspi_resp_slow_wfull,
-    wusedwds => open,
+    wusedwds => resp_wusedwds,
     rclk => clk_200m,
     rdata => qspi_resp_rdata,
     rdreq => qspi_resp_rdack,
