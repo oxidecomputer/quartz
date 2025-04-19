@@ -244,7 +244,7 @@ begin
 
     sda_arbiter_inst: entity work.sda_arbiter
         generic map(
-            HYSTERESIS_CYCLES => DIMM_I2C_TSP_CYCLES + 500 -- 7 is a bit of a swag given Ruby testing
+            HYSTERESIS_CYCLES => DIMM_I2C_TSP_CYCLES + 7 -- 7 is a bit of a swag given Ruby testing
         )
         port map(
             clk     => clk,
