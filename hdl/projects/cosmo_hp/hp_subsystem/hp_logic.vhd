@@ -46,7 +46,7 @@ begin
             to_cem <= (others => '0');
             to_sp5 <= (others => '0');
         elsif rising_edge(clk) then
-            to_cem <= to_cem_pins_from_hp(from_cem, from_sp5);
+            to_cem <= to_cem_pins_from_hp(from_sp5);
             to_cem.attnled <= cem_led_pwm and (from_sp5.atnled or cem_led_force);
 
             to_sp5 <= to_sp5_in_pins_from_cem(from_cem);
@@ -61,7 +61,7 @@ begin
         elsif rising_edge(clk) then
             -- Follow the SP5's power control signal
             -- one-shot on sharkfins
-            cem_perst_l <=  from_sp5.pwren_l;
+            cem_perst_l <=  not from_sp5.pwren_l;
         end if;
     end process;
 
@@ -72,6 +72,8 @@ begin
         elsif rising_edge(clk) then
             -- Follow the CEM's power good signal
             -- turn clock on when CEM is powered/present
+            -- TODO: we can be smarter about this if we want to
+            -- right now if you pop a U.2 the clock stays on.
             cem_clk_en_l <= from_cem.pg_l;
         end if;
     end process;

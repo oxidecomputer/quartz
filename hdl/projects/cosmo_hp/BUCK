@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:yosys.bzl", "ice40_bitstream")
 
 
@@ -24,6 +24,15 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axil_interconnect_2k8",
         "//hdl/ip/vhd/info:info_2k8",
     ],
+    standard = "2008",
+)
+
+vunit_sim(
+    name = "cem_aic_hp_tb",
+    srcs = glob(["hp_subsystem/sims/**/*.vhd"]),
+    deps = [":hp_subsystem_top",
+    ],
+    visibility = ['PUBLIC'],
     standard = "2008",
 )
 
