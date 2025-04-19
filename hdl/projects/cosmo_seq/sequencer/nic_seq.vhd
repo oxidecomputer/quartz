@@ -112,6 +112,7 @@ begin
             when EARLY_CLD_RST =>
                 -- We release reset "early" 
                 v.nic_cld_rst_l := '1';
+                v.cnts := nic_r.cnts + 1;
                 if nic_r.cnts = TWENTY_MS then
                     v.state := EARLY_PERST;
                     v.cnts := (others => '0');
@@ -120,7 +121,7 @@ begin
             when EARLY_PERST =>
                 -- We release reset "early" 
                 v.state := DONE;
-                v.nic_perst_l := '0';
+                v.nic_perst_l := '1';
 
             when DONE =>
                 -- nothing downstream to worry about just go back to idle

@@ -388,6 +388,7 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
+            fpga1_spare_v1p8(0) <= hp_int_n;
             fpga1_spare_v1p8(7) <= i2c_sp5_to_fpgax_hp_sda;
             fpga1_spare_v1p8(6) <= i2c_sp5_to_fpgax_hp_scl;
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
