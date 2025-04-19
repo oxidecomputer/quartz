@@ -159,6 +159,8 @@ begin
                 put_flash_read(net, X"00000000", 32, response_code, status,  crc_ok);
                 wait_for_alert(net);
             elsif run("read_flash") then
+                send_reset(net);
+                wait for 10 us;
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';
                 set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
@@ -194,6 +196,11 @@ begin
 
                 -- would normally wait for the completion alert now
                 wait for 300 us;
+                get_status(net, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                wait for 1 us;
+                send_reset(net);
+                wait for 10 us;
             elsif run("oob_no_pec_uart") then
                 enable_debug_mode(net);
                 -- Send UART data which will then be looped back and rx'd
