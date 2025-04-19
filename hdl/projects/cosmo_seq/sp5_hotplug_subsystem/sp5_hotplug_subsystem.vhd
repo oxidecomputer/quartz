@@ -134,7 +134,7 @@ begin
     );
 
     -- M.2A
-    m2a_hsc_en <= io_o(0)(4) when io_oe(0)(4) else '0';
+    m2a_hsc_en <= not io_o(0)(4) when io_oe(0)(4) else '0';
     pcie_clk_buff_m2a_oe_l <= io_o(0)(4) when io_oe(0)(4) else 'Z';  -- enable clock when power enabled
     io(0)(0) <= m2a_prsnt_l;
     io(0)(1) <= m2a_pwr_fault_l;
@@ -143,7 +143,7 @@ begin
     io(0)(3) <= not m2a_pedet_sync;
 
     -- M.2B
-    m2b_hsc_en <= io_o(1)(4) when io_oe(1)(4) else '0';
+    m2b_hsc_en <= not io_o(1)(4) when io_oe(1)(4) else '0';
     pcie_clk_buff_m2b_oe_l <= io_o(1)(4) when io_oe(1)(4) else 'Z';  -- enable clock when power enabled
     io(1)(0) <= m2b_prsnt_l;
     io(1)(1) <= m2b_pwr_fault_l;
@@ -151,7 +151,6 @@ begin
     -- not PEDET becomes emils
     io(1)(3) <= not m2b_pedet_sync;
 
-    m2a_power_en <= io_o(0)(4) when io_oe(0)(4) else '0';
     -- U.2 and M.2 devices require 100us minimum reference clock stable before PERST# inactive (Tperst-clk), 
     -- and 100ms minimum power stable to PERST# inactive (Tpvperl). 
     m2a_perst_oneshot: entity work.perst_oneshot
@@ -161,10 +160,9 @@ begin
      port map(
         clk => clk,
         reset => reset,
-        power_en => m2a_power_en,
+        power_en => m2a_hsc_en,
         perst_l => m2a_perst_l
     );
-    m2b_power_en <= io_o(1)(4) when io_oe(1)(4) else '0';
     
     m2b_perst_oneshot: entity work.perst_oneshot
      generic map(
@@ -173,21 +171,21 @@ begin
      port map(
         clk => clk,
         reset => reset,
-        power_en => m2a_power_en,
+        power_en => m2b_hsc_en,
         perst_l => m2b_perst_l
     );
 
     -- T6
-    t6_power_en <= io_o(2)(4) when io_oe(0)(4) else '0';
+    t6_power_en <= not io_o(2)(4) when io_oe(0)(4) else '0';
     io(2)(3) <= '1';  -- PEDET for T6
     io(2)(1) <= '1'; -- TODO: power fault l
     io(2)(2) <= '1'; -- attnsw_l
     io(2)(0) <= '0'; -- PRSNT_L for T6
-    t6_perst_l <= io_o(2)(4) when io_oe(2)(4) else '0';
+    t6_perst_l <= t6_power_en;
 
     -- Backplane connected switch
     -- TODO: this stuff is likely not totally correct
-    pcie_aux_power_en <= io_o(3)(4) when io_oe(3)(4) else '0'; -- TODO: oneshot?
+    pcie_aux_power_en <= not io_o(3)(4) when io_oe(3)(4) else '0';
     pcie_perst_oneshot: entity work.perst_oneshot
      generic map(
         PERST_CNTS => PERST_CNTS
