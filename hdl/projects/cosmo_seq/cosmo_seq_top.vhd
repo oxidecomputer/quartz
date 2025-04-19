@@ -382,6 +382,8 @@ architecture rtl of cosmo_seq_top is
     signal i2c_rx_abcdef_st_if : stream8_pkg.data_channel;
     signal i2c_tx_ghijkl_st_if : stream8_pkg.data_channel;
     signal i2c_rx_ghijkl_st_if : stream8_pkg.data_channel;
+    alias front_hp_irq_n : std_logic is fpga2_to_fpga1_io(2);
+    signal front_hp_irq_n_syncd : std_logic;
 
 begin
 
@@ -611,7 +613,13 @@ begin
         rsw_sp5_pcie_attached_buff_l =>rsw_to_sp5_pcie_attached_buff_l
     );
 
-    sp5_to_fpga1_genint_l <= '0' when hp_int_n = '0' else 'Z';
+    meta_sync_inst: entity work.meta_sync
+     port map(
+        async_input => front_hp_irq_n,
+        clk => clk_125m,
+        sycnd_output => front_hp_irq_n_syncd
+    );
+    sp5_to_fpga1_genint_l <= '0' when hp_int_n = '0' or front_hp_irq_n_syncd = '0' else 'Z';
 
     fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
 
