@@ -11,6 +11,29 @@ use ieee.numeric_std.all;
 
 package cem_hp_io_pkg is
 
+    -- Sharkfin Relevant signal descriptions
+    -- sharkfin_present: '1' if sharkfin is present, '0' if not. pin A05 on CEM connector. PU on sharkfin.
+    -- IFDET_L: '0' for PCIe U.2 drives. Pass Thru from U.2 connector on sharkfin. PU on Mobo.
+    -- PERST_L: output from FPGA, should be tri-state to not cross power domains. PU on Mobo.
+    -- ALERT_L: smbus alert. PU on Mobo to A2 rail
+    -- PG_L: power good from CEM. PU on mobo. AIC's drive this low as it doubles as a presence strap.
+    -- PWRFLT_L: power fault from CEM. PU on mobo. AIC's
+    -- PRSNT_L: sharkfin passthru drive presence. PU on Mobo. only x4 AIC's drive this low, x1 AIC's leave it high.
+    --     SFF-8639 says this is *de-asserted* high when a valid device is present (and ifdet_l is low):
+
+    -- Want:
+    -- hotplug presence (PRSNT_L = '0') when:
+    -- 1. Sharkfin is present, and a valid U.2 SSD is present:
+    --     IFDET_L = '0' and sharkfin_present = '1' and PRSNT_L = '1'
+    -- 2. AIC is present:
+    --     sharkfin_present = '0' and PG_L = '0' (AIC presence strap) (PRSNT_L is don't care, only low for x4 AIC's)
+    -- ?? How does PG_L want to work with all of this?
+    -- PWREN = '1' when (valid U.2 SSD is present or AIC is present) and hotplog slot is powered on.
+    -- EMILs = '1' when we have a sharkfin installed and wrong kind of SSD
+    --    IFDET_L = '1' and sharkfin_present = '1' and PRSNT_L = '0'
+    -- clock_en_l follows PRSNT_L
+    -- PERST_L follows PWREN, sharkfins guarantee timings via on-board hw
+
     -- What we get from the CEM
     type cem_to_fpga_io_t is record
         alert_l : std_logic;
@@ -70,7 +93,7 @@ package cem_hp_io_pkg is
     function to_sp5_io(rec: fpga_to_hp_io_t) return std_logic_vector;
     function from_sp5_io(o: std_logic_vector(7 downto 0); oe: std_logic_vector(7 downto 0)) return hp_to_fpga_io_t;
     function to_sp5_in_pins_from_cem(cem : cem_to_fpga_io_t) return fpga_to_hp_io_t;
-    function to_cem_pins_from_hp(cem : cem_to_fpga_io_t; hp: hp_to_fpga_io_t) return fpga_to_cem_io_t;
+    function to_cem_pins_from_hp(hp: hp_to_fpga_io_t) return fpga_to_cem_io_t;
 
     function to_vec(cem: cem_to_fpga_io_t) return std_logic_vector;
     function from_vec(vec: std_logic_vector(CEM_INPUT_BIT_COUNT -1 downto 0)) return cem_to_fpga_io_t;
@@ -85,20 +108,21 @@ end package;
 package body cem_hp_io_pkg is
 
     function to_vec(cem: cem_to_fpga_io_t) return std_logic_vector is
+        variable vec : std_logic_vector(CEM_INPUT_BIT_COUNT - 1 downto 0);
     begin
-        return
-                cem.alert_l &
+        vec :=  cem.alert_l &
                 cem.ifdet_l &
                 cem.pg_l &
                 cem.prsnt_l &
                 cem.pwrflt_l &
                 cem.sharkfin_present;
+        return vec;
     end function;
 
     function to_record_array(vec: interim_sync_t) return from_cem_t is
         variable cem : from_cem_t;
     begin
-        for i in 0 to CEM_INPUT_BIT_COUNT - 1 loop
+        for i in vec'range loop
             cem(i) := from_vec(vec(i));
         end loop;
         return cem;
@@ -135,34 +159,35 @@ package body cem_hp_io_pkg is
     function invalid_ssd_present(cem : cem_to_fpga_io_t) return boolean is
     begin
         -- Invalid SSD is installed if we have a sharkfin present, and
-        -- ifdet is low.
-        return sharkfin_present(cem) and cem.ifdet_l = '0';
+        -- ifdet is high but something is in the slot
+        return sharkfin_present(cem) and cem.ifdet_l = '1' and cem.prsnt_l = '0';
     end function;
 
     function valid_ssd_present(cem : cem_to_fpga_io_t) return boolean is
     begin
-        -- Invalid SSD is installed if we have a sharkfin present, and
-        -- ifdet is low.
-        return sharkfin_present(cem) and cem.ifdet_l = '1';
+        -- Valid SSD is installed if we have a sharkfin present, and
+        -- ifdet is low and something is in the slot
+        return sharkfin_present(cem) and cem.ifdet_l = '0' and cem.prsnt_l = '1';
     end function;
 
     function to_sp5_in_pins_from_cem(cem : cem_to_fpga_io_t) return fpga_to_hp_io_t is
         variable to_hp: fpga_to_hp_io_t;
     begin
          -- general logic to the SP5
-        to_hp.present_l := '0' when valid_ssd_present(cem) or aic_present(cem) else '1';
+        to_hp.present_l := '0' when aic_present(cem) or valid_ssd_present(cem) else '1';
         to_hp.pwrflt_l := cem.pwrflt_l;
         to_hp.atnsw_l := '1'; -- not used
         to_hp.emils := '1' when invalid_ssd_present(cem) else '0';
         return to_hp;
     end function;
 
-    function to_cem_pins_from_hp(cem : cem_to_fpga_io_t; hp: hp_to_fpga_io_t) return fpga_to_cem_io_t is
+    function to_cem_pins_from_hp(hp: hp_to_fpga_io_t) return fpga_to_cem_io_t is
         variable to_cem: fpga_to_cem_io_t;
     begin
          -- general logic to the SP5
         to_cem.attnled := hp.atnled;
-        to_cem.pwren := '1' when hp.pwren_l = '0' and (valid_ssd_present(cem) or aic_present(cem)) else '0';
+        -- TODO: we need to fix this design eventually
+        to_cem.pwren := '1' when hp.pwren_l = '0' else '0';
         return to_cem;
     end function;
 

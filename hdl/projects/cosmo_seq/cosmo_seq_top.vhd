@@ -383,14 +383,26 @@ architecture rtl of cosmo_seq_top is
     signal i2c_tx_ghijkl_st_if : stream8_pkg.data_channel;
     signal i2c_rx_ghijkl_st_if : stream8_pkg.data_channel;
 
+    signal amd_hp_irq_n_final : std_logic;
+    alias fpga2_hp_irq_n_unsyncd : std_logic is fpga2_to_fpga1_io(2);
+    signal fpga2_hp_irq_n : std_logic;
+    alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
+
 begin
+
+    meta_sync_inst: entity work.meta_sync
+     port map(
+        async_input => fpga2_hp_irq_n_unsyncd,
+        clk => clk_125m,
+        sycnd_output => fpga2_hp_irq_n
+    );
 
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-            fpga1_spare_v1p8(0) <= hp_int_n;
-            fpga1_spare_v1p8(7) <= i2c_sp5_to_fpgax_hp_sda;
-            fpga1_spare_v1p8(6) <= i2c_sp5_to_fpgax_hp_scl;
+            fpga1_spare_v1p8(0) <= 'Z';
+            fpga1_spare_v1p8(7) <= 'Z';
+            fpga1_spare_v1p8(6) <= 'Z';
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
             fpga1_spare_v1p8(3) <= espi0_sp5_to_fpga1_dat(0);
@@ -611,7 +623,11 @@ begin
         rsw_sp5_pcie_attached_buff_l =>rsw_to_sp5_pcie_attached_buff_l
     );
 
-    sp5_to_fpga1_genint_l <= '0' when hp_int_n = '0' else 'Z';
+    a0_ok_to_fpga2 <= a0_ok;  -- A0 OK signal to fpga2, used for power sequencing
+
+    -- combine fpga signals cosmo revA
+    amd_hp_irq_n_final <= '0' when fpga2_hp_irq_n = '0' or hp_int_n = '0' else '1';
+    sp5_to_fpga1_genint_l <= '0' when amd_hp_irq_n_final = '0' else 'Z';
 
     fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
 
