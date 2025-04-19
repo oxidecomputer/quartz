@@ -382,6 +382,8 @@ architecture rtl of cosmo_seq_top is
     signal i2c_rx_abcdef_st_if : stream8_pkg.data_channel;
     signal i2c_tx_ghijkl_st_if : stream8_pkg.data_channel;
     signal i2c_rx_ghijkl_st_if : stream8_pkg.data_channel;
+    alias front_hp_irq_n : std_logic is fpga2_to_fpga1_io(2);
+    signal front_hp_irq_n_syncd : std_logic;
 
     signal amd_hp_irq_n_final : std_logic;
     alias fpga2_hp_irq_n_unsyncd : std_logic is fpga2_to_fpga1_io(2);
@@ -400,13 +402,8 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-<<<<<<< Updated upstream
-            fpga1_spare_v1p8(0) <= 'Z';
-            fpga1_spare_v1p8(7) <= 'Z';
-=======
             fpga1_spare_v1p8(0) <= uart1_fpga1_to_sp_dat;
             fpga1_spare_v1p8(7) <= uart1_sp_to_fpga1_dat;
->>>>>>> Stashed changes
             fpga1_spare_v1p8(6) <= 'Z';
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;

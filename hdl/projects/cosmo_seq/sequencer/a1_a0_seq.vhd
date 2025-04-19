@@ -94,7 +94,7 @@ architecture rtl of a1_a0_seq is
         ddr_bulk_en: std_logic;
         group_a_en: std_logic;
         group_b_en: std_logic;
-        group_c_en: std_logic_vector(3 downto 0);
+        group_c_en: std_logic;
         rsm_rst_l : std_logic;
         pwr_btn_l : std_logic;
         pwr_good : std_logic;
@@ -115,7 +115,7 @@ architecture rtl of a1_a0_seq is
         '0', 
         '0', 
         '0',
-        (others => '0'),
+        '0',
         '0',
         '1',
         '0',
@@ -224,7 +224,7 @@ begin
                 v.ddr_bulk_en := '0';
                 v.group_a_en := '0';
                 v.group_b_en := '0';
-                v.group_c_en := (others => '0');
+                v.group_c_en := '0';
                 v.rsm_rst_l := '0';
                 v.group_a_expected := '0';
                 v.group_b_expected := '0';
@@ -311,19 +311,9 @@ begin
                 end if;
             when GROUP_C_EN =>
                 -- Stage enables
-                v.cnts := seq_r.cnts + 1;
-                v.group_c_en(0) := '1';
-                if seq_r.cnts = ONE_MS then
-                    v.group_c_en(1) := '1';
-                end if;
-                if seq_r.cnts = TWO_MS then
-                    v.group_c_en(2) := '1';
-                end if;
-                if seq_r.cnts = THREE_MS then
-                    v.group_c_en(3) := '1';
-                    v.state := GROUP_C_PG_AND_WAIT;
-                    v.cnts := (others => '0');
-                end if;
+                v.group_c_en := '1';
+                v.state := GROUP_C_PG_AND_WAIT;
+                v.cnts := (others => '0');
 
                 --v.state := GROUP_C_PG_AND_WAIT;
             -- Wait for Group C supplies stable for at least 1ms minimum
@@ -468,9 +458,9 @@ begin
 
     group_b.v1p1_sp5.enable <= seq_r.group_b_en;
 
-    group_c.vddio_sp5_a0.enable <= seq_r.group_c_en(0);
-    group_c.vddcr_cpu1.enable <= seq_r.group_c_en(3);
-    group_c.vddcr_cpu0.enable <= seq_r.group_c_en(2);
-    group_c.vddcr_soc.enable <= seq_r.group_c_en(1);
+    group_c.vddio_sp5_a0.enable <= seq_r.group_c_en;
+    group_c.vddcr_cpu1.enable <= seq_r.group_c_en;
+    group_c.vddcr_cpu0.enable <= seq_r.group_c_en;
+    group_c.vddcr_soc.enable <= seq_r.group_c_en;
     a0_faulted <= seq_r.faulted;
 end rtl;

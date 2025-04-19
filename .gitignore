@@ -31,6 +31,7 @@ clockinfo.txt
 clockInfo.txt
 vivado*.jou
 vivado*.log
+vivado*.str
 /clockinfo.txt
 **/*clockInfo.txt
 *.txt
