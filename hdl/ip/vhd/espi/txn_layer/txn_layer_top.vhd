@@ -47,6 +47,7 @@ entity txn_layer_top is
         oob_free : in std_logic;
 
         -- Link-layer connections
+        espi_reset : in std_logic;
         is_rx_crc_byte     : out   boolean;
         is_tx_crc_byte     : out   boolean;
         chip_sel_active : in    std_logic;
@@ -88,6 +89,10 @@ begin
             elsif data_from_host.valid = '1' then
                 txn_byte_count <= txn_byte_count + 1;
             end if;
+
+            if espi_reset = '1' then
+                txn_byte_count <= (others => '0');
+            end if;
         end if;
     end process;
 
@@ -117,6 +122,7 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
+            espi_reset      => espi_reset,
             regs_if         => regs_if,
             vwire_if        => vwire_if,
             flash_req       => flash_req,
@@ -137,6 +143,7 @@ begin
         port map (
             clk            => clk,
             reset          => reset,
+            espi_reset     => espi_reset,
             command_header => command_header,
             response_done  => response_done,
             regs_if        => resp_regs_if,

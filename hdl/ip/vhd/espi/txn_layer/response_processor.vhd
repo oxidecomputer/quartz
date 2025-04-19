@@ -22,6 +22,7 @@ entity response_processor is
         clk   : in    std_logic;
         reset : in    std_logic;
 
+        espi_reset : in std_logic;
         clear_tx_crc   : out   std_logic;
         regs_if        : in    resp_reg_if;
         command_header : in    espi_cmd_header;
@@ -41,6 +42,8 @@ entity response_processor is
 end entity;
 
 architecture rtl of response_processor is
+
+    attribute mark_debug : string;
 
     type response_state_t is (
         idle,
@@ -96,6 +99,8 @@ architecture rtl of response_processor is
 
     signal r, rin : reg_type;
 
+    attribute mark_debug of r        : signal is "TRUE";
+
     signal response_chan_mux : response_hdr_t;
     signal resp_data : std_logic_vector(7 downto 0);
 
@@ -127,7 +132,7 @@ begin
 
     response_done <= r.response_done;
 
-    -- We need to issue alterts when the live status does not match the last-sent
+    -- We need to issue alerts when the live status does not match the last-sent
     -- status
     alert_needed <= true when r.has_responded and live_status /= r.status else false;
     -- Response classes:
@@ -318,6 +323,11 @@ begin
             v.cur_data := pack(live_status)(7 downto 0);
         elsif r.state = STATUS then
             v.cur_data := pack(r.status)(15 downto 8);
+        end if;
+
+        if espi_reset = '1' then
+            -- Reset the command processor state machine
+            v := reg_reset;
         end if;
         -- -- abort the transaction if we're not selected
         -- if not chip_sel_active then

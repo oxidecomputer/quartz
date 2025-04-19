@@ -24,6 +24,7 @@ entity espi_spec_regs is
         reset : in    std_logic;
 
         regs_if : view regs_side;
+        espi_reset : in std_logic;
 
         qspi_mode            : out   qspi_mode_t;
         wait_states          : out   std_logic_vector(3 downto 0);
@@ -111,6 +112,15 @@ begin
                 -- TODO: we may want to tie this out to the flash enable mux eventually, but for now
                 -- it's fine
                 ch3_capabilities.flash_channel_ready <= ch3_capabilities.flash_channel_enable;
+            end if;
+
+            if espi_reset then
+                -- Reset all registers on eSPI reset
+                gen_capabilities <= rec_reset;
+                ch0_capabilities <= rec_reset;
+                ch1_capabilities <= rec_reset;
+                ch2_capabilities <= rec_reset;
+                ch3_capabilities <= rec_reset;
             end if;
         end if;
     end process;

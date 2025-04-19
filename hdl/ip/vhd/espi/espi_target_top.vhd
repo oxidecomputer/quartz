@@ -43,6 +43,7 @@ entity espi_target_top is
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
+        flash_fifo_clear : out std_logic;
         -- Interfaces to the UART block
         to_sp_uart_data : out std_logic_vector(7 downto 0);
         to_sp_uart_valid: out std_logic;
@@ -217,6 +218,8 @@ begin
        reset_200m => reset_200m,
        clk => clk,
        reset => reset,
+       espi_reset_fast => espi_reset_strobe,
+       espi_reset_slow => espi_reset_strobe_syncd,
        txn_gen_enabled => dbg_chan.enabled,
        qspi_cmd => qspi_cmd,
        qspi_resp => qspi_resp,
@@ -248,6 +251,7 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
+            espi_reset      => espi_reset_strobe_syncd,
             is_rx_crc_byte  => is_rx_crc_byte,
             is_tx_crc_byte  => is_tx_crc_byte,
             regs_if         => regs_if,
@@ -281,6 +285,7 @@ begin
         port map (
             clk            => clk,
             reset          => reset,
+            espi_reset     => espi_reset_strobe_syncd,
             regs_if        => regs_if,
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
@@ -295,6 +300,7 @@ begin
        request => flash_req,
        response => flash_resp,
        enabled => flash_channel_enable,
+       flash_fifo_clear => flash_fifo_clear,
        flash_np_free => flash_np_free,
        flash_c_avail => flash_c_avail,
        flash_cfifo_data => flash_cfifo_data,
@@ -309,6 +315,7 @@ begin
     port map(
        clk => clk,
        reset => reset,
+       espi_reset => espi_reset_strobe_syncd,
        host_to_sp_espi => host_to_sp_espi,
        sp_to_host_espi => sp_to_host_espi,
        to_sp_uart_data => to_sp_uart_data,

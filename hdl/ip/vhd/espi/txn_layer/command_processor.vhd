@@ -23,6 +23,8 @@ entity command_processor is
         clk   : in    std_logic;
         reset : in    std_logic;
 
+        espi_reset : in    std_logic;
+
         -- register layer connections
         running_crc    : in    std_logic_vector(7 downto 0);
         clear_rx_crc   : out   std_logic;
@@ -432,6 +434,11 @@ begin
                 null;
         end case;
         is_rx_crc_byte <= true when r.state = crc else false;
+
+        if espi_reset = '1' then
+            -- Reset the command processor state machine
+            v := reg_reset;
+        end if;
         rin <= v;
     end process;
 
