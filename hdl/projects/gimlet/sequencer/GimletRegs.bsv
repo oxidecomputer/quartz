@@ -21,6 +21,7 @@ import A0Block::*;
 
 interface RegPins;
     method Bit#(1) seq_to_sp_interrupt;
+    method Bit#(1) seq_to_rsw_pwren;
     method Action brd_rev(BoardRev value);
 endinterface
 
@@ -64,6 +65,7 @@ module mkGimletRegs(GimletRegIF);
     
     // Misc IO registers
     ConfigReg#(ClkgenStatus) clkgen_out_status <- mkReg(unpack(0)); // TODO: FIX ME clkgenOutStatusOffset
+    ConfigReg#(MiscCtrl) misc_ctrl <- mkReg(defaultValue);
 
     ConfigReg#(IrqType) irq_en_reg <- mkReg(unpack(0));
     ConfigReg#(IrqType) irq_cause_reg <- mkReg(unpack(0));
@@ -227,6 +229,7 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(fltA0SmstatusOffset) : readdata <= tagged Valid ({'h0, pack(flt_a0_sm)});
             fromInteger(fltGroupbPgOffset) : readdata <= tagged Valid (pack(flt_a0_groupB_pg));
             fromInteger(fltGroupcPgOffset) : readdata <= tagged Valid (pack(flt_a0_groupC_pg));
+            fromInteger(miscCtrlOffset) : readdata <= tagged Valid (pack(misc_ctrl));
             default : readdata <= tagged Valid ('hff);
         endcase
     endrule
@@ -255,7 +258,8 @@ module mkGimletRegs(GimletRegIF);
         fpga_cs3 <= reg_update(fpga_cs3, fpga_cs3, address, cs3Offset, operation, writedata);
         dbgCtrl_reg <= reg_update(dbgCtrl_reg, dbgCtrl_reg, address, dbgCtrlOffset, operation, writedata); // Normal sw register
         power_control <= reg_update(power_control, power_control, address, pwrCtrlOffset, operation, writedata);
-        
+        misc_ctrl <= reg_update(misc_ctrl, misc_ctrl, address, miscCtrlOffset, operation, writedata);
+
         // This is a super ugly hack to synthesize a write of the reset value when A0_ok goes bad
         // There has to be a better way of doing this!!!
         if (a0_ok == 1) begin
@@ -381,6 +385,7 @@ module mkGimletRegs(GimletRegIF);
 
     interface RegPins pins;
         method seq_to_sp_interrupt = irq_block.irq_pin;
+        method seq_to_rsw_pwren = misc_ctrl.rsw_pwren;
         method brd_rev = brd_rev._write;
     endinterface
 
