@@ -43,6 +43,7 @@ entity espi_target_top is
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
+        flash_fifo_clear : out std_logic;
         -- Interfaces to the UART block
         to_sp_uart_data : out std_logic_vector(7 downto 0);
         to_sp_uart_valid: out std_logic;
@@ -96,6 +97,10 @@ architecture rtl of espi_target_top is
     signal qspi_mode_vec_fast : std_logic_vector(1 downto 0);
     signal wait_states_fast: std_logic_vector(3 downto 0);
     signal wait_states_slow: std_logic_vector(3 downto 0);
+    signal post_code : std_logic_vector(31 downto 0);
+    signal post_code_valid : std_logic;
+    signal espi_reset_strobe : std_logic;
+    signal espi_reset_strobe_syncd : std_logic;
 
 begin
 
@@ -168,7 +173,7 @@ begin
         wait_states => wait_states_fast,
         qspi_mode => encode(qspi_mode_vec_fast),
         alert_needed => alert_needed_fast,
-        espi_reset => open
+        espi_reset => espi_reset_strobe
     );
 
     -- debug_link_layer
@@ -196,6 +201,16 @@ begin
        sycnd_output => alert_needed_fast
    );
 
+   espi_reset_pulse_sync:entity work.tacd
+    port map(
+       clk_launch => clk_200m,
+       reset_launch => reset_200m,
+       pulse_in_launch => espi_reset_strobe,
+       clk_latch => clk,
+       reset_latch => reset,
+       pulse_out_latch => espi_reset_strobe_syncd
+   );
+
 
    link_to_txn_bridge_inst: entity work.link_to_txn_bridge
     port map(
@@ -203,6 +218,8 @@ begin
        reset_200m => reset_200m,
        clk => clk,
        reset => reset,
+       espi_reset_fast => espi_reset_strobe,
+       espi_reset_slow => espi_reset_strobe_syncd,
        txn_gen_enabled => dbg_chan.enabled,
        qspi_cmd => qspi_cmd,
        qspi_resp => qspi_resp,
@@ -223,7 +240,10 @@ begin
        reset => reset,
        axi_if => axi_if,
        msg_en => msg_en,
-       dbg_chan => dbg_chan
+       dbg_chan => dbg_chan,
+       post_code => post_code,
+       post_code_valid => post_code_valid,
+       espi_reset => espi_reset_strobe_syncd
    );
 
     -- txn layer blocks
@@ -231,9 +251,12 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
+            espi_reset      => espi_reset_strobe_syncd,
             is_rx_crc_byte  => is_rx_crc_byte,
             is_tx_crc_byte  => is_tx_crc_byte,
             regs_if         => regs_if,
+            post_code       => post_code,
+            post_code_valid => post_code_valid,
             vwire_if        => vwire_if,
             chip_sel_active => chip_sel_active,
             data_to_host    => txn_resp,
@@ -262,6 +285,7 @@ begin
         port map (
             clk            => clk,
             reset          => reset,
+            espi_reset     => espi_reset_strobe_syncd,
             regs_if        => regs_if,
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
@@ -276,6 +300,7 @@ begin
        request => flash_req,
        response => flash_resp,
        enabled => flash_channel_enable,
+       flash_fifo_clear => flash_fifo_clear,
        flash_np_free => flash_np_free,
        flash_c_avail => flash_c_avail,
        flash_cfifo_data => flash_cfifo_data,
@@ -290,6 +315,7 @@ begin
     port map(
        clk => clk,
        reset => reset,
+       espi_reset => espi_reset_strobe_syncd,
        host_to_sp_espi => host_to_sp_espi,
        sp_to_host_espi => sp_to_host_espi,
        to_sp_uart_data => to_sp_uart_data,

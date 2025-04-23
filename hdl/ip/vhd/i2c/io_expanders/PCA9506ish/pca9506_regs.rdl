@@ -1,21 +1,14 @@
 // Copyright 2025 Oxide Computer Company
 // This is SystemRDL description of emulated i2c mux registers
-
-addrmap pca9506_regs {
-    name = "pca9506 registers";
-    desc = "Registers accessible on the i2c bus for controlling the emulated PCA9545 i2c mux";
-
-    default regwidth = 8;
-    default sw = rw;
-    default hw = r;
-
+regfile pca9506_raw_regs #(longint unsigned SIZE = 8) {
+    default regwidth = SIZE;
     reg io {
         field {
             desc = "bits for current port";
         } bits[7:0];
     };
 
-    io ip0 @ 0x00;
+    io ip0;
     ip0->name = "Ip0"; 
     ip0->desc = "I/O port input state after polarity inversion (if enabled)";
     ip0.bits->sw = r;
@@ -40,7 +33,7 @@ addrmap pca9506_regs {
     ip4->desc = "I/O port input state after polarity inversion (if enabled)";
     ip4.bits->sw = r;
 
-    io op0 @ 0x08;
+    io op0 %= SIZE/8 * 8;
     op0->name = "Op0"; 
     op0->desc = "These registers reflect the outgoing logic levels of the pins defined as outputs by the
 I/O Configuration register. Bit values in these registers have no effect on pins defined
@@ -75,7 +68,7 @@ I/O Configuration register. Bit values in these registers have no effect on pins
 as inputs. In turn, reads from these registers reflect the values that are in the flip-flops
 controlling the output selection, not the actual pin values.";
 
-    io pi0 @ 0x10;
+    io pi0 %= SIZE/8 * 8;
     pi0->name = "pi0"; 
     pi0->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
 
@@ -95,7 +88,7 @@ controlling the output selection, not the actual pin values.";
     pi4->name = "pi4"; 
     pi4->desc = "Polarity Inversion of inputs. 0: no inversion, 1: invert input";
 
-    io ioc0 @ 0x18;
+    io ioc0 %= SIZE/8 * 8;
     ioc0->name = "ioc0"; 
     ioc0->desc = "Config registers. 0: output, 1: input";
     ioc0.bits->reset = 0xff;
@@ -120,7 +113,7 @@ controlling the output selection, not the actual pin values.";
     ioc4->desc = "Config registers. 0: output, 1: input";
     ioc4.bits->reset = 0xff;
 
-    io msk0 @ 0x20;
+    io msk0 %= SIZE/8 * 8;
     msk0->name = "msk0"; 
     msk0->desc = "Mx[y] = 0: A level change at the I/O will generate an interrupt if IOx_y defined as input
 (Cx[y] in IOC register = 1).
@@ -159,5 +152,18 @@ defined as input (Cx[y] in IOC register = 1).";
 Mx[y] = 1: A level change in the input port will not generate an interrupt if IOx_y
 defined as input (Cx[y] in IOC register = 1).";
     msk4.bits->reset = 0xff;
+
+};
+
+addrmap pca9506_regs {
+    name = "pca9506 registers";
+    desc = "Registers accessible on the i2c bus for controlling the emulated PCA9545 i2c mux";
+
+    default regwidth = 8;
+    default accesswidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    pca9506_raw_regs #(.SIZE(8)) i2c;
 
 };

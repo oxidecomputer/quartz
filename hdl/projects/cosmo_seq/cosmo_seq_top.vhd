@@ -15,7 +15,10 @@ use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
 use work.axi_st8_pkg;
+use work.i2c_common_pkg.all;
+use work.stream8_pkg;
 use work.time_pkg.all;
+use work.tristate_if_pkg.all;
 
 use work.sequencer_io_pkg.all;
 
@@ -38,8 +41,6 @@ entity cosmo_seq_top is
         fmc_sp_to_fpga1_a : in std_logic_vector(23 downto 16);
         -- eSPI interfaces
         -- eSPI0
-        -- TODO: fix this up by swapping alert pins with
-        -- data because we didn't do this on the schematic naming
         fpga1_espi0_cs_l_buff_oe_en_l : out std_logic;  -- Don't want to be chip-selected while SP5 is off
         espi_sp5_to_fpga1_reset_l : in std_logic; -- Un-used currently
         espi0_sp5_to_fpga1_clk : in std_logic;
@@ -113,10 +114,19 @@ entity cosmo_seq_top is
         fpga1_to_sp_mux_ign_mux_sel : out std_logic;
         fpga1_to_ign_trgt_fpga_creset : out std_logic; -- swap to output when we want to use this
         seq_rev_id : in std_logic_vector(2 downto 0);
-        fpga1_spare_v1p8 : in std_logic_vector(7 downto 0);
-        fpga1_spare_v3p3 : inout std_logic_vector(7 downto 0);
+
+        fpga1_spare_v1p8 : out std_logic_vector(7 downto 0);
+        fpga1_spare_v3p3_0 : out std_logic;
+        fpga1_spare_v3p3_1 : out std_logic;
+        fpga1_spare_v3p3_2 : out std_logic;
+        fpga1_spare_v3p3_3 : out std_logic;
+        fpga1_spare_v3p3_4 : in std_logic;
+        fpga1_spare_v3p3_5 : in std_logic;
+        fpga1_spare_v3p3_6 : out std_logic;
+        fpga1_spare_v3p3_7 : out std_logic;
         fpga1_status_led : out std_logic;
-        fpga1_to_fpga2_io : in std_logic_vector(5 downto 0);
+        fpga2_to_fpga1_io : in std_logic_vector(2 downto 0);
+        fpga1_to_fpga2_io : out std_logic_vector(2 downto 0);
 
         -- T6 NIC sequencing
         fpga1_to_nic_cld_rst_l : out std_logic;
@@ -167,7 +177,7 @@ entity cosmo_seq_top is
         v1p1_sp5_pg : in std_logic;
         fpga1_to_sp5_pwr_btn_l : out std_logic;
         fpga1_to_sp5_pwrgd : out std_logic;
-        fpga1_to_sp5_reset_l : out std_logic;
+        fpga1_to_sp5_reset_l : in std_logic;
         fpga1_to_sp5_romtype0 : in std_logic;
         v1p8_sp5_en : out std_logic;
         v1p8_sp5_pg : in std_logic;
@@ -189,6 +199,17 @@ entity cosmo_seq_top is
         fpga1_to_sp_misc_d : in std_logic;
 
         -- Un-USED SP5 things
+        -- hdt_conn_to_mux_testen : out std_logic;
+        -- hdt_fpga1_to_mux_dat : out std_logic;
+        -- hdt_fpga1_to_mux_dbreq_l : out std_logic;
+        -- hdt_fpga1_to_mux_en_l : out std_logic;
+        -- hdt_fpga1_to_mux_sel : out std_logic;
+        -- hdt_fpga1_to_mux_tck : out std_logic;
+        -- hdt_fpga1_to_mux_tms : out std_logic;
+        -- hdt_fpga1_to_mux_trst_l : out std_logic;
+        -- hdt_fpga1_to_mux_xtrig5_l : out std_logic;
+        -- hdt_fpga1_to_mux_xtrig6_l : out std_logic;
+        -- hdt_fpga1_to_mux_xtrig7_l : out std_logic;
         hdt_conn_to_mux_testen : in std_logic;
         hdt_fpga1_to_mux_dat : in std_logic;
         hdt_fpga1_to_mux_dbreq_l : in std_logic;
@@ -207,8 +228,8 @@ entity cosmo_seq_top is
         spi1_sp5_to_fpga1_cs_l : in std_logic;
         spi2_sp5_to_fpga1_cs_l : in std_logic;
         sp5_to_fpga1_alert_l : in std_logic;
-        sp5_to_fpga1_debug : in std_logic_vector(2 downto 1);
-        sp5_to_fpga1_genint_l : in std_logic; 
+        sp5_to_fpga1_debug : out std_logic_vector(2 downto 1);
+        sp5_to_fpga1_genint_l : out std_logic; 
         sp5_to_fpga1_smerr_l : in std_logic;
 
         -- I3C DDR stuff
@@ -273,8 +294,8 @@ entity cosmo_seq_top is
         uart1_fpga1_to_sp5_dat_buff : out std_logic;
         uart1_sp5_to_fpga1_dat : in std_logic;
         -- SPARE UART for hw usage
-        uart_local_fpga1_to_sp_dat_r : in std_logic;
-        uart_local_fpga1_to_sp_rts_l_r : in std_logic;
+        uart_local_fpga1_to_sp_dat : in std_logic;
+        uart_local_fpga1_to_sp_rts_l : in std_logic;
         uart_local_sp_to_fpga1_dat : in std_logic;
         uart_local_sp_to_fpga1_rts_l : in std_logic;
         
@@ -300,13 +321,15 @@ architecture rtl of cosmo_seq_top is
     constant ESPI_RESP_IDX: integer := 2;
     constant SEQ_RESP_IDX: integer := 3;
     constant SP_I2C_RESP_IDX: integer := 4;
+    constant SP5_HP_RESP_IDX : integer := 5;
 
     constant config_array : axil_responder_cfg_array_t := 
         (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
          SPINOR_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
          ESPI_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
          SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
-         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8)
+         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
+         SP5_HP_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
@@ -341,31 +364,91 @@ architecture rtl of cosmo_seq_top is
 
     signal sp5_t6_power_en : std_logic;
     signal sp5_t6_perst_l : std_logic;
+    signal espi_resp_csn : std_logic;
+    signal hp_int_n : std_logic;
+
+    signal fpga1_to_pcie_clk_buff_rsw_oe_l_int : std_logic;
+
+    signal sp5_abcdef_scl_if : tristate;
+    signal sp5_abcdef_sda_if : tristate;
+    signal sp5_ghijkl_scl_if : tristate;
+    signal sp5_ghijkl_sda_if : tristate;
+    signal dimm_abcdef_scl_if : tristate;
+    signal dimm_abcdef_sda_if : tristate;
+    signal dimm_ghijkl_scl_if : tristate;
+    signal dimm_ghijkl_sda_if : tristate;
+    -- stubs
+    signal i2c_tx_abcdef_st_if : stream8_pkg.data_channel;
+    signal i2c_rx_abcdef_st_if : stream8_pkg.data_channel;
+    signal i2c_tx_ghijkl_st_if : stream8_pkg.data_channel;
+    signal i2c_rx_ghijkl_st_if : stream8_pkg.data_channel;
+    alias front_hp_irq_n : std_logic is fpga2_to_fpga1_io(2);
+    signal front_hp_irq_n_syncd : std_logic;
+
+    signal amd_hp_irq_n_final : std_logic;
+    alias fpga2_hp_irq_n_unsyncd : std_logic is fpga2_to_fpga1_io(2);
+    signal fpga2_hp_irq_n : std_logic;
+    alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
 
 begin
 
-    fpga1_spare_v3p3(7 downto 1) <= (others => 'Z');
+    meta_sync_inst: entity work.meta_sync
+     port map(
+        async_input => fpga2_hp_irq_n_unsyncd,
+        clk => clk_125m,
+        sycnd_output => fpga2_hp_irq_n
+    );
+
+    espi_dbg: process(clk_200m, reset_200m)
+    begin
+        if rising_edge(clk_200m) then
+            fpga1_spare_v1p8(0) <= i2c_sp5_to_fpgax_hp_sda;
+            fpga1_spare_v1p8(7) <= i2c_sp5_to_fpgax_hp_scl;
+            fpga1_spare_v1p8(6) <= amd_hp_irq_n_final;
+            fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
+            fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
+            fpga1_spare_v1p8(3) <= espi0_sp5_to_fpga1_dat(0);
+            fpga1_spare_v1p8(4) <= espi0_sp5_to_fpga1_dat(1);
+            fpga1_spare_v1p8(5) <= espi_resp_csn;
+        end if;
+    end process;
     -- misc things tied:
+    fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
     fpga1_to_sp_mux_ign_mux_sel <= '0';  -- Default until we decide what to do with it
     fpga1_to_sp_irq_l <= (others => '1');
     -- Enable various buffers when we're in A0:
-    fpga1_espi0_cs_l_buff_oe_en_l <= '0' when a0_ok else 'Z';
+    fpga1_espi0_cs_l_buff_oe_en_l <= '0' when sp5_seq_pins.pwr_good else 'Z';
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
+    i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
+    i3c_fpga1_to_dimm_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
 
+    -- hdt_fpga1_to_mux_en_l <= 'Z';
+    -- hdt_fpga1_to_mux_sel <= '0';
+
+    -- hdt_conn_to_mux_testen <= '0';
+    -- hdt_fpga1_to_mux_dat <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_dbreq_l <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_tck <= sp5_group_a.v1p8_sp5_a1.enable;
+    -- hdt_fpga1_to_mux_tms <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_trst_l <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
+    -- hdt_fpga1_to_mux_xtrig5_l  <= 'Z';
+    -- hdt_fpga1_to_mux_xtrig6_l <= 'Z';
+    -- hdt_fpga1_to_mux_xtrig7_l  <= 'Z';
 
     ---------------------------------------------
-    -- FMC to AXI Inteface from the SP
+    -- FMC to AXI Interface from the SP
     ---------------------------------------------
     stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
     port map(
        chip_reset => reset_fmc,
        fmc_clk => fmc_clk,
-       a(24) => '0',
-       a(23 downto 16) => fmc_sp_to_fpga1_a,
+       a(24 downto 20) => "00000",
+       a(19 downto 16) => fmc_sp_to_fpga1_a(19 downto 16),
+       --a(23 downto 16) => fmc_sp_to_fpga1_a,
        addr_data_in => fmc_sp_to_fpga1_da,
        data_out => fmc_internal_data_out,
        data_out_en => fmc_data_out_enable,
@@ -428,7 +511,7 @@ begin
         espi_dat => espi0_sp5_to_fpga1_dat,
         espi_dat_o => espi_io_o,
         espi_dat_oe => espi_io_oe,
-        response_csn => open,  -- debugging with saleae if you have access
+        response_csn => espi_resp_csn,  -- debugging with saleae if you have access
         ipcc_uart_from_espi => ipcc_uart_from_espi_axi_st,
         ipcc_uart_to_espi => ipcc_uart_to_espi_axi_st,
         spinor_axi_if => responders(SPINOR_RESP_IDX),
@@ -469,13 +552,19 @@ begin
         host_to_fpga => uart0_sp5_to_fpga1_dat,
         host_from_fpga_rts_l => uart0_fpga1_to_sp5_rts_l_buff,
         host_to_fpga_rts_l => uart0_sp5_to_fpga1_rts_l,
-        uart_from_fpga => fpga1_spare_v3p3(0),
+        uart_from_fpga => open,
         uart_to_fpga => '1',
         uart_from_fpga_rts_l => open,
         uart_to_fpga_rts_l => '0',
         -- IPCC "UART" from espi
         ipcc_from_espi => ipcc_uart_from_espi_axi_st,
-        ipcc_to_espi => ipcc_uart_to_espi_axi_st
+        ipcc_to_espi => ipcc_uart_to_espi_axi_st,
+        -- 
+        dbg_mux_en => '1',
+        dbg_pins_uart_out => fpga1_spare_v3p3_7,
+        dbg_pins_uart_out_rts_l => fpga1_spare_v3p3_4,
+        dbg_pins_uart_in => fpga1_spare_v3p3_5,
+        dbg_pins_uart_in_rts_l => fpga1_spare_v3p3_6
     );
 
     -- SP I2C muxes
@@ -506,31 +595,43 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
+        axi_if => responders(SP5_HP_RESP_IDX),
         sp5_i2c_sda => i2c_sp5_to_fpgax_hp_sda,
         sp5_i2c_sda_o => sp5_sda_o,
         sp5_i2c_sda_oe => sp5_sda_oe,
         sp5_i2c_scl => i2c_sp5_to_fpgax_hp_scl,
         sp5_i2c_scl_o => sp5_scl_o,
         sp5_i2c_scl_oe => sp5_scl_oe,
+        int_n => hp_int_n,
         a0_ok => a0_ok,
         m2a_pedet => m2a_to_fpga1_pedet,
         m2a_prsnt_l => m2a_to_fpga1_prsnt_l,
         m2a_hsc_en => fpga1_to_m2a_hsc_en,
         m2a_perst_l => fpga1_to_m2a_perst_l,
+        m2a_pwr_fault_l => m2a_hsc_to_fpga1_fault_l,
         pcie_clk_buff_m2a_oe_l => fpga1_to_pcie_clk_buff_m2a_oe_l,
         m2b_pedet => m2b_to_fpga1_pedet,
         m2b_prsnt_l => m2b_to_fpga1_prsnt_l,
         m2b_hsc_en => fpga1_to_m2b_hsc_en,
         m2b_perst_l => fpga1_to_m2b_perst_l,
+        m2b_pwr_fault_l => m2b_hsc_to_fpga1_fault_l,
         pcie_clk_buff_m2b_oe_l => fpga1_to_pcie_clk_buff_m2b_oe_l,
         t6_power_en => sp5_t6_power_en,
         t6_perst_l => sp5_t6_perst_l,
         pcie_aux_rsw_perst_l => pcie_aux_fpga1_to_rsw_perst_l,
         pcie_aux_rsw_prsnt_buff_l => pcie_aux_rsw_to_fpga1_prsnt_buff_l,
         pcie_aux_rsw_pwrflt_buff_l=> pcie_aux_rsw_to_fpga1_pwrflt_buff_l,
-        pcie_clk_buff_rsw_oe_l => fpga1_to_pcie_clk_buff_rsw_oe_l,
+        pcie_clk_buff_rsw_oe_l => fpga1_to_pcie_clk_buff_rsw_oe_l_int,
         rsw_sp5_pcie_attached_buff_l =>rsw_to_sp5_pcie_attached_buff_l
     );
+
+    a0_ok_to_fpga2 <= a0_ok;  -- A0 OK signal to fpga2, used for power sequencing
+
+    -- combine fpga signals cosmo revA
+    amd_hp_irq_n_final <= '0' when fpga2_hp_irq_n = '0' or hp_int_n = '0' else '1';
+    sp5_to_fpga1_genint_l <= '0' when amd_hp_irq_n_final = '0' else 'Z';
+
+    fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
 
     --Tristates for spi-nor flash pins and espi
     i2c_sp5_to_fpgax_hp_scl <= sp5_scl_o when sp5_scl_oe = '1' else 'Z';
@@ -608,18 +709,20 @@ begin
 
     -- SP5 sequence-related pins
     sp5_seq_pins.thermtrip_l <= sp5_to_fpga1_thermtrip_l;
-    fpga1_to_sp5_reset_l <= '0' when sp5_seq_pins.reset_l = '0' else 'Z';
+    sp5_seq_pins.reset_l <= fpga1_to_sp5_reset_l;
     sp5_seq_pins.pwr_ok <= sp5_to_fpga1_pwrok_unbuf;
     fpga1_to_sp5_pwr_btn_l <= '0' when sp5_seq_pins.pwr_btn_l = '0' else 'Z';
     sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
     sp5_seq_pins.slp_s5_l <= sp5_to_fpga1_slp_s5_l;
     fpga1_to_sp5_rsmrst_l <= sp5_seq_pins.rsmrst_l;
+    sp5_to_fpga1_debug(1) <= sp5_seq_pins.is_cosmo;
+    sp5_to_fpga1_debug(2) <= 'Z';
     fpga1_to_sp5_pwrgd <= sp5_seq_pins.pwr_good;
 
     -- Nic sequence-related pins
     fpga1_to_nic_cld_rst_l <= nic_seq_pins.cld_rst_l;
     fpga1_to_nic_eeprom_wp_l <= nic_seq_pins.eeprom_wp_l;
-    fpga1_to_pcie_clk_buff_nic_oe_l <= nic_seq_pins.nic_pcie_clk_buff_oe_l;
+    fpga1_to_pcie_clk_buff_nic_oe_l <= '0' when nic_seq_pins.nic_pcie_clk_buff_oe_l = '0' else 'Z';
     fpga1_to_nic_flash_wp_l <= nic_seq_pins.flash_wp_l;
     fpga1_to_nic_mfg_mode_l <= nic_seq_pins.nic_mfg_mode_l;
     nic_seq_pins.ext_rst_l <= nic_to_fpga1_ext_rst_l;
@@ -627,5 +730,64 @@ begin
     nic_seq_pins.sp5_mfg_mode_l <= sp5_to_nic_mfg_mode_l;
     pcie_fpga1_to_nic_perst_l <= nic_seq_pins.perst_l;
 
+    --
+    -- DDR SPD Proxy
+    --
+
+    -- SP5 <-> FPGA busses (filtered in proxy block)
+    i3c_sp5_to_fpga1_abcdef_scl <= sp5_abcdef_scl_if.o when sp5_abcdef_scl_if.oe else 'Z';
+    sp5_abcdef_scl_if.i <= i3c_sp5_to_fpga1_abcdef_scl;
+    i3c_sp5_to_fpga1_abcdef_sda <= sp5_abcdef_sda_if.o when sp5_abcdef_sda_if.oe else 'Z';
+    sp5_abcdef_sda_if.i <= i3c_sp5_to_fpga1_abcdef_sda;
+    i3c_sp5_to_fpga1_ghijkl_scl <= sp5_ghijkl_scl_if.o when sp5_ghijkl_scl_if.oe else 'Z';
+    sp5_ghijkl_scl_if.i <= i3c_sp5_to_fpga1_ghijkl_scl;
+    i3c_sp5_to_fpga1_ghijkl_sda <= sp5_ghijkl_sda_if.o when sp5_ghijkl_sda_if.oe else 'Z';
+    sp5_ghijkl_sda_if.i <= i3c_sp5_to_fpga1_ghijkl_sda;
+        -- FPGA <-> DIMMs busses (filtered in proxy block)
+    i3c_fpga1_to_dimm_abcdef_scl <= dimm_abcdef_scl_if.o when dimm_abcdef_scl_if.oe else 'Z';
+    dimm_abcdef_scl_if.i <= i3c_fpga1_to_dimm_abcdef_scl;
+    i3c_fpga1_to_dimm_abcdef_sda <= dimm_abcdef_sda_if.o when dimm_abcdef_sda_if.oe else 'Z';
+    dimm_abcdef_sda_if.i <= i3c_fpga1_to_dimm_abcdef_sda;
+        i3c_fpga1_to_dimm_ghijkl_scl <= dimm_ghijkl_scl_if.o when dimm_ghijkl_scl_if.oe else 'Z';
+    dimm_ghijkl_scl_if.i <= i3c_fpga1_to_dimm_ghijkl_scl;
+    i3c_fpga1_to_dimm_ghijkl_sda <= dimm_ghijkl_sda_if.o when dimm_ghijkl_sda_if.oe else 'Z';
+    dimm_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
     
+    spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
+     generic map(
+        CLK_PER_NS => 8,
+        I2C_MODE => FAST_PLUS
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        cpu_scl_if => sp5_abcdef_scl_if,
+        cpu_sda_if => sp5_abcdef_sda_if,
+        dimm_scl_if => dimm_abcdef_scl_if,
+        dimm_sda_if => dimm_abcdef_sda_if,
+        i2c_command => CMD_RESET,
+        i2c_command_valid => '0',
+        i2c_ctrlr_idle => open,
+        i2c_tx_st_if => i2c_tx_abcdef_st_if,
+        i2c_rx_st_if => i2c_rx_abcdef_st_if
+    );
+        spd_proxy_top_ghijkl_inst: entity work.spd_proxy_top
+     generic map(
+        CLK_PER_NS => 8,
+        I2C_MODE => FAST_PLUS
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        cpu_scl_if => sp5_ghijkl_scl_if,
+        cpu_sda_if => sp5_ghijkl_sda_if,
+        dimm_scl_if => dimm_ghijkl_scl_if,
+        dimm_sda_if => dimm_ghijkl_sda_if,
+        i2c_command => CMD_RESET,
+        i2c_command_valid => '0',
+        i2c_ctrlr_idle => open,
+        i2c_tx_st_if => i2c_tx_ghijkl_st_if,
+        i2c_rx_st_if => i2c_rx_ghijkl_st_if
+    );
+
 end rtl;

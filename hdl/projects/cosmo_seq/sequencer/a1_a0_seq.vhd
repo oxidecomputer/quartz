@@ -32,6 +32,7 @@ entity a1_a0_seq is
         ignore_sp5 : in std_logic;
         raw_state : out seq_raw_status_type;
         api_state : out seq_api_status_type;
+        therm_trip : out std_logic;
         -- DDR Hotswap
         ddr_bulk: view ddr_bulk_power_at_fpga;
         -- group A supplies
@@ -49,11 +50,18 @@ end entity;
 architecture rtl of a1_a0_seq is
     constant ONE_MS : integer := 1 * CNTS_P_MS;
     constant TWO_MS : integer := 2 * ONE_MS;
+    constant THREE_MS : integer := 3 * ONE_MS;
     constant TEN_MS : integer := 20 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
     constant TWENTY_ONE_MS: integer := 21 * ONE_MS;
+    constant FOURTY_MS: integer := 40 * ONE_MS;
     constant ONE_HUNDRED_FOUR_MS: integer := 104 * ONE_MS;
-
+    constant TWO_HUNDRED_MS: integer := 200 * ONE_MS;
+    constant TWO_TWENTY_MS: integer := 220 * ONE_MS;
+    constant FOUR_HUNDRED_MS: integer := 200 * ONE_MS;
+    constant SIX_HUNDRED_MS: integer := 600 * ONE_MS;
+    constant SIX_TWENTY_MS: integer := 620 * ONE_MS;
+    constant ONE_SECOND: integer := 1000 * ONE_MS;
     
 
      -- This is going into a "RAW" register, 
@@ -96,6 +104,7 @@ architecture rtl of a1_a0_seq is
         ddr_bulk_expected: std_logic;
         faulted: std_logic;
         is_cosmo : std_logic;
+        therm_trip : std_logic;
     end record;
 
     constant seq_r_t_reset : seq_r_t := (
@@ -109,6 +118,7 @@ architecture rtl of a1_a0_seq is
         '0',
         '0',
         '1',
+        '0',
         '0',
         '0',
         '0',
@@ -193,6 +203,9 @@ begin
             -- To re-enable, we require software to generate a rising_edge
             -- here, by clearing the enable and then setting it again
             v.enable_pend := '1';
+            -- we'll use this to clear the faulted flags
+            v.faulted := '0';
+            v.therm_trip := '0';
         end if;
 
         -- Fault monitoring, if we expect a rail to be up and it's not
@@ -207,7 +220,7 @@ begin
         case seq_r.state is
             when IDLE =>
                 v.is_cosmo := '0';  -- assert after power-up
-                v.pwr_btn_l := '0';  -- assert after power up, don't cross-drive
+                v.pwr_btn_l := '1';  -- assert after power up, don't cross-drive, tris at top
                 v.ddr_bulk_en := '0';
                 v.group_a_en := '0';
                 v.group_b_en := '0';
@@ -218,10 +231,6 @@ begin
                 v.group_c_expected := '0';
                 v.ddr_bulk_expected := '0';
                 v.cnts := (others => '0');
-                if sw_enable = '0' then
-                    -- we'll use this to clear the faulted flag
-                    v.faulted := '0';
-                end if;
                 if seq_r.enable_pend and upstream_ok then
                     v.state := DDR_BULK_EN;
                     v.enable_pend := '0';
@@ -244,14 +253,13 @@ begin
                 if is_power_good(group_a) then
                     v.cnts := seq_r.cnts + 1;
                 end if;
-                if seq_r.cnts = TEN_MS then
+                if seq_r.cnts = ONE_SECOND then
                     v.cnts := (others => '0');
                     v.state := RSM_RST_DEASSERT;
                     -- we enable fault monitoring here on the group A rails and DDR, until we de-sequence
                     -- these are expected to remain up.
                     v.group_a_expected := '1';  
                     v.ddr_bulk_expected := '1';
-                    v.pwr_btn_l := '1';
                 end if;
             --  Release RSM_RST_L
             when RSM_RST_DEASSERT =>
@@ -263,13 +271,11 @@ begin
                 v.cnts := seq_r.cnts + 1;
                 -- We can "push" the button in this state, this is handled on the falling edge
                 -- we'll give 20ms after rsm_rst release, then hit the button for a ms and release
-                if seq_r.cnts = TWENTY_MS then
+                if seq_r.cnts = TWO_HUNDRED_MS then
                     v.pwr_btn_l := '0';
                 end if;
-                if seq_r.cnts = TWENTY_ONE_MS then
+                if seq_r.cnts = TWO_TWENTY_MS then
                     v.pwr_btn_l := '1';
-                end if;
-                if seq_r.cnts = ONE_HUNDRED_FOUR_MS then
                     v.state := SLP_CHECKPOINT;
                     v.cnts := (others => '0');
                 end if;
@@ -284,6 +290,8 @@ begin
                     v.state := GROUP_B_EN;
                 end if;
             -- Enable Group B supplies
+            -- TODO: We need a pause/sync with hubris here after they have checked
+            -- for CPU present and the proper core types etc.
             when GROUP_B_EN =>
                 v.group_b_en := '1';
                 v.state := GROUP_B_PG_AND_WAIT;
@@ -302,8 +310,12 @@ begin
                     v.group_b_expected := '1';  
                 end if;
             when GROUP_C_EN =>
+                -- Stage enables
                 v.group_c_en := '1';
                 v.state := GROUP_C_PG_AND_WAIT;
+                v.cnts := (others => '0');
+
+                --v.state := GROUP_C_PG_AND_WAIT;
             -- Wait for Group C supplies stable for at least 1ms minimum
             -- Note that Hubris probably has to enable some of these via
             -- PMBus so we might sit here for a bit
@@ -315,7 +327,7 @@ begin
                 if is_power_good(group_c) then
                     v.cnts := seq_r.cnts + 1;
                 end if;
-                if seq_r.cnts = ONE_MS then
+                if seq_r.cnts = TWO_MS then
                     v.cnts := (others => '0');
                     v.state := ASSERT_PWRGOOD;
                     -- we enable fault monitoring here on the group C rails, until we de-sequence
@@ -340,16 +352,16 @@ begin
                     v.state := DONE;
                 end if;
             when DONE =>
-                -- Even in the disable case, we need to wait for any downstream
-                -- rails to go down before we can turn off these.
-                if sw_enable = '0' and downstream_idle = '1' then
-                    -- take away power good, then wait before yanking
-                    -- the rails
+                if sw_enable = '0' or sp5_seq_pins.thermtrip_l = '0' then
                     v.pwr_good := '0';
                     v.state := SAFE_DISABLE;
                     v.cnts := (others => '0');
                 end if;
+               -- Only faults, or disablement can take us out of DONE
+               -- which are unconditionally handled below.
             when SAFE_DISABLE =>
+                v.cnts := seq_r.cnts + 1;
+                v.pwr_good := '0';
                 if seq_r.cnts = TWO_MS then
                     -- controlled de-sequence
                     -- we're turning rails off next clock
@@ -363,6 +375,10 @@ begin
                 end if;
 
         end case;
+
+        if seq_r.state > GROUP_A_PG_AND_WAIT and sp5_seq_pins.thermtrip_l = '0' then
+            v.therm_trip := '1';
+        end if;
 
         -- fault and MAPO case that are monitored in all non-IDLE cases
         if seq_r.state /= IDLE then
@@ -381,6 +397,26 @@ begin
             end if;
         end if;
 
+        -- TODO: Add back this stuff back once we get sequencing working
+        -- When disabling, we need to wait for any downstream
+        -- rails to go down before we can turn off these.
+        if sw_enable = '0' and downstream_idle = '1' then
+           -- take away power good, then wait before yanking
+           -- the rails
+           v.pwr_good := '0';
+           if seq_r.state >= ASSERT_PWRGOOD and seq_r.state <= DONE  then
+               -- Since we've told the AMD processor we're power-good
+               -- We now need to tell it we're not power good
+               v.state := SAFE_DISABLE;
+               v.cnts := (others => '0');
+           elsif seq_r.state /= SAFE_DISABLE then
+               -- Had not gotten up to power good state
+               -- so just go back to idle, IDLE state will clear
+               -- any enables
+               v.state := IDLE;
+
+           end if;
+        end if;
 
         seq_rin <= v;
     end process;
@@ -406,6 +442,9 @@ begin
     sp5_seq_pins.pwr_btn_l <= seq_r.pwr_btn_l;
     sp5_seq_pins.rsmrst_l <= seq_r.rsm_rst_l;
     sp5_seq_pins.pwr_good <= seq_r.pwr_good;
+    sp5_seq_pins.is_cosmo <= seq_r.is_cosmo;
+
+    therm_trip <= seq_r.therm_trip;
 
     -- Use the internal sm registers to drive the various enable outputs
     -- there's no combo logic here, this is just bonding sm-internal registers

@@ -24,6 +24,8 @@ entity uart_channel_top is
         -- Clock and reset
         clk : in std_logic;
         reset : in std_logic;
+
+        espi_reset : in std_logic;
         
         -- eSPI Transaction interface
         host_to_sp_espi : view uart_data_sink;
@@ -70,6 +72,7 @@ architecture rtl of uart_channel_top is
    constant hold_thresh: natural := 32;
    type orphan_state_t is (MASKED, NOT_MASKED);
    signal orphan_state: orphan_state_t;
+   signal fifo_reset : std_logic;
 
 begin
 
@@ -135,6 +138,23 @@ begin
                         orphan_state <= MASKED;
                     end if;
             end case;
+
+            if espi_reset then
+                fifo_thresh_timer <= (others => '0');
+                orphan_state <= MASKED;
+            end if;
+        end if;
+    end process;
+
+    -- I don't love this pattern but we're going to combine the system reset with the 
+    -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
+    -- of every boot.
+    rst_combine:process(clk, reset)
+     begin
+        if reset = '1' then
+           fifo_reset <= '1';
+        elsif rising_edge(clk) then
+           fifo_reset <= espi_reset;
         end if;
     end process;
 
@@ -149,7 +169,7 @@ begin
     )
      port map(
         wclk => clk,
-        reset => reset,
+        reset => fifo_reset,
         write_en => host_to_sp_espi.ready and host_to_sp_espi.valid,
         wdata => host_to_sp_espi.data,
         wfull => rx_wfull,
@@ -169,7 +189,7 @@ begin
     )
      port map(
         wclk => clk,
-        reset => reset,
+        reset => fifo_reset,
         write_en => from_sp_uart_valid and from_sp_uart_ready,
         wdata => from_sp_uart_data,
         wfull => tx_wfull,

@@ -18,6 +18,9 @@ use work.i2c_pca9506ish_sim_pkg.all;
 
 use work.pca9506_pkg.all;
 
+use work.axil8x32_pkg;
+
+
 entity i2c_pca9506ish_th is
 end entity;
 
@@ -40,6 +43,8 @@ architecture th of i2c_pca9506ish_th is
     signal tgt_sda_o : std_logic_vector(1 downto 0);
     signal tgt_sda_oe : std_logic_vector(1 downto 0);
 
+    signal axi_if      : axil8x32_pkg.axil_t;
+
     signal io0 : pca9506_pin_t := (others => (others => '0'));
     signal io0_oe : pca9506_pin_t;
     signal io0_o : pca9506_pin_t;
@@ -56,6 +61,31 @@ begin
     -- and release reset after a bit of time
     clk   <= not clk after 4 ns;
     reset <= '0' after 200 ns;
+
+    axi_lite_master_inst: entity vunit_lib.axi_lite_master
+        generic map (
+            bus_handle => bus_handle
+        )
+        port map (
+            aclk    => clk,
+            arready => axi_if.read_address.ready,
+            arvalid => axi_if.read_address.valid,
+            araddr  => axi_if.read_address.addr,
+            rready  => axi_if.read_data.ready,
+            rvalid  => axi_if.read_data.valid,
+            rdata   => axi_if.read_data.data,
+            rresp   => axi_if.read_data.resp,
+            awready => axi_if.write_address.ready,
+            awvalid => axi_if.write_address.valid,
+            awaddr  => axi_if.write_address.addr,
+            wready  => axi_if.write_data.ready,
+            wvalid  => axi_if.write_data.valid,
+            wdata   => axi_if.write_data.data,
+            wstrb   => axi_if.write_data.strb,
+            bvalid  => axi_if.write_response.valid,
+            bready  => axi_if.write_response.ready,
+            bresp   => axi_if.write_response.resp
+        );
 
     i2c_controller_vc_inst: entity work.i2c_controller_vc
      generic map(
@@ -77,6 +107,25 @@ begin
      port map(
         clk => clk,
         reset => reset,
+
+        arready => axi_if.read_address.ready,
+        arvalid => axi_if.read_address.valid,
+        araddr  => axi_if.read_address.addr,
+        rready  => axi_if.read_data.ready,
+        rvalid  => axi_if.read_data.valid,
+        rdata   => axi_if.read_data.data,
+        rresp   => axi_if.read_data.resp,
+        awready => axi_if.write_address.ready,
+        awvalid => axi_if.write_address.valid,
+        awaddr  => axi_if.write_address.addr,
+        wready  => axi_if.write_data.ready,
+        wvalid  => axi_if.write_data.valid,
+        wdata   => axi_if.write_data.data,
+        wstrb   => axi_if.write_data.strb,
+        bvalid  => axi_if.write_response.valid,
+        bready  => axi_if.write_response.ready,
+        bresp   => axi_if.write_response.resp,
+
         scl => tgt_scl(0),
         scl_o => tgt_scl_o(0),
         scl_oe => tgt_scl_oe(0),

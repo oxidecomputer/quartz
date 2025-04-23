@@ -12,6 +12,7 @@ use work.pca9506_pkg.all;
 use work.pca9506_regs_pkg.all;
 
 entity pca9506_regs is
+    generic(DEBUG : string := "FALSE");
     port (
         clk : in std_logic;
         reset : in std_logic;
@@ -22,6 +23,31 @@ entity pca9506_regs is
         read_strobe: in std_logic;
         data_in: in std_logic_vector(7 downto 0);
         data_out: out std_logic_vector(7 downto 0);
+
+        -- axi interface
+        -- GHDL/yosys based toolchains
+        -- write address channel
+        awvalid : in std_logic;
+        awready : out std_logic;
+        awaddr : in std_logic_vector(7 downto 0) ;
+        -- write data channel
+        wvalid : in std_logic;
+        wready : out std_logic;
+        wdata : in std_logic_vector(31 downto 0);
+        wstrb : in std_logic_vector(3 downto 0); -- un-used
+        -- write response channel
+        bvalid : out std_logic;
+        bready : in std_logic;
+        bresp : out std_logic_vector(1 downto 0);
+        -- read address channel
+        arvalid : in std_logic;
+        arready : out std_logic;
+        araddr : in std_logic_vector(7 downto 0);
+        -- read data channel
+        rvalid : out std_logic;
+        rready : in std_logic;
+        rdata : out std_logic_vector(31 downto 0);
+        rresp : out std_logic_vector(1 downto 0);
 
         -- io interface
         output_disable: in std_logic;
@@ -36,6 +62,7 @@ entity pca9506_regs is
 end entity;
 
 architecture rtl of pca9506_regs is
+    attribute MARK_DEBUG : string;
 
     signal ip0_reg : io_type;
     signal ip1_reg : io_type;
@@ -75,8 +102,36 @@ architecture rtl of pca9506_regs is
     signal msk2_reg : io_type;
     signal msk3_reg : io_type;
     signal msk4_reg : io_type;
+    signal active_read : std_logic;
+    signal active_write : std_logic;
+    attribute MARK_DEBUG of active_read : signal is DEBUG;
+    attribute MARK_DEBUG of active_write : signal is DEBUG;
 
 begin
+
+    axil_target_txn_inst: entity work.axil_target_txn
+    generic map(
+        DEBUG => DEBUG 
+    )
+    port map(
+       clk => clk,
+       reset => reset,
+       arvalid => arvalid,
+       arready => arready,
+       awvalid => awvalid,
+       awready =>awready,
+       wvalid => wvalid,
+       wready => wready,
+       bvalid => bvalid,
+       bready => bready,
+       bresp => bresp,
+       rvalid => rvalid,
+       rready => rready,
+       rresp => rresp,
+       active_read => active_read,
+       active_write => active_write
+   );
+
 
     -- assign register outputs to output pins unconditionally
     io_o(0) <= pack(op0_reg);
@@ -160,61 +215,61 @@ begin
             msk4_reg <= reset_1s;
 
         elsif rising_edge(clk) then
-            -- deal with inputs:  
-            --TODO deal with inversion
-            ip0_reg <= unpack(io(0));
-            ip1_reg <= unpack(io(1));
-            ip2_reg <= unpack(io(2));
-            ip3_reg <= unpack(io(3));
-            ip4_reg <= unpack(io(4));
+            -- deal with inputs, these either read the input pin or show the 
+            -- current output value depending on whether this is and input or output 
+            ip0_reg <= pi_reads_inputs_or_outputs(unpack(io(0)), op0_reg, ioc0_reg);
+            ip1_reg <= pi_reads_inputs_or_outputs(unpack(io(1)), op1_reg, ioc1_reg);
+            ip2_reg <= pi_reads_inputs_or_outputs(unpack(io(2)), op2_reg, ioc2_reg);
+            ip3_reg <= pi_reads_inputs_or_outputs(unpack(io(3)), op3_reg, ioc3_reg);
+            ip4_reg <= pi_reads_inputs_or_outputs(unpack(io(4)), op4_reg, ioc4_reg);
             -- deal with registers that are writeable by the
             -- i2c system
-            -- TODO: deal with ext_reset
+
             if write_strobe = '1' then
                 case to_integer(cmd_ptr.pointer) is
                     -- IP registers don't accept writes
-                    when OP0_OFFSET =>
+                    when I2C_OP0_OFFSET =>
                         op0_reg <= unpack(data_in);
-                    when OP1_OFFSET =>
+                    when I2C_OP1_OFFSET =>
                         op1_reg <= unpack(data_in);
-                    when OP2_OFFSET =>
+                    when I2C_OP2_OFFSET =>
                         op2_reg <= unpack(data_in);
-                    when OP3_OFFSET =>
+                    when I2C_OP3_OFFSET =>
                         op3_reg <= unpack(data_in);
-                    when OP4_OFFSET =>
+                    when I2C_OP4_OFFSET =>
                         op4_reg <= unpack(data_in);
 
-                    when PI0_OFFSET =>
+                    when I2C_PI0_OFFSET =>
                         pi0_reg <= unpack(data_in);
-                    when PI1_OFFSET =>
+                    when I2C_PI1_OFFSET =>
                         pi1_reg <= unpack(data_in);
-                    when PI2_OFFSET =>
+                    when I2C_PI2_OFFSET =>
                         pi2_reg <= unpack(data_in);
-                    when PI3_OFFSET =>
+                    when I2C_PI3_OFFSET =>
                         pi3_reg <= unpack(data_in);
-                    when PI4_OFFSET =>
+                    when I2C_PI4_OFFSET =>
                         pi4_reg <= unpack(data_in);
 
-                    when IOC0_OFFSET =>
+                    when I2C_IOC0_OFFSET =>
                         ioc0_reg <= unpack(data_in);
-                    when IOC1_OFFSET =>
+                    when I2C_IOC1_OFFSET =>
                         ioc1_reg <= unpack(data_in);
-                    when IOC2_OFFSET =>
+                    when I2C_IOC2_OFFSET =>
                         ioc2_reg <= unpack(data_in);
-                    when IOC3_OFFSET =>
+                    when I2C_IOC3_OFFSET =>
                         ioc3_reg <= unpack(data_in);
-                    when IOC4_OFFSET =>
+                    when I2C_IOC4_OFFSET =>
                         ioc4_reg <= unpack(data_in);
 
-                    when MSK0_OFFSET =>
+                    when I2C_MSK0_OFFSET =>
                         msk0_reg <= unpack(data_in);
-                    when MSK1_OFFSET =>
+                    when I2C_MSK1_OFFSET =>
                         msk1_reg <= unpack(data_in);
-                    when MSK2_OFFSET =>
+                    when I2C_MSK2_OFFSET =>
                         msk2_reg <= unpack(data_in);
-                    when MSK3_OFFSET =>
+                    when I2C_MSK3_OFFSET =>
                         msk3_reg <= unpack(data_in);
-                    when MSK4_OFFSET =>
+                    when I2C_MSK4_OFFSET =>
                         msk4_reg <= unpack(data_in);
 
                     when others =>
@@ -272,7 +327,7 @@ begin
             -- we have to keep track of the last-read 
             -- register state for interrupt generation.
             case to_integer(cmd_ptr.pointer) is
-                when IP0_OFFSET =>
+                when I2C_IP0_OFFSET =>
                     -- deal with inversion, but only for the read
                     -- interface, the irq detection stuff deals
                     -- with the raw values (non-inverted)
@@ -280,75 +335,116 @@ begin
                     if read_strobe then
                         ip0_reg_irq_at_last_read <= ip0_reg;
                     end if;
-                when IP1_OFFSET =>
+                when I2C_IP1_OFFSET =>
                     data_out <= pack(ip1_reg xor pi1_reg);
                     if read_strobe then
                         ip1_reg_irq_at_last_read <= ip1_reg;
                     end if;
-                when IP2_OFFSET =>
+                when I2C_IP2_OFFSET =>
                     data_out <= pack(ip2_reg xor pi2_reg);
                     if read_strobe then
                         ip2_reg_irq_at_last_read <= ip2_reg;
                     end if;
-                when IP3_OFFSET =>
+                when I2C_IP3_OFFSET =>
                     data_out <= pack(ip3_reg xor pi3_reg);
                     if read_strobe then
                         ip3_reg_irq_at_last_read <= ip3_reg;
                     end if;
-                when IP4_OFFSET =>
+                when I2C_IP4_OFFSET =>
                     data_out <= pack(ip4_reg xor pi4_reg);
                     if read_strobe then
                         ip4_reg_irq_at_last_read <= ip4_reg;
                     end if;
 
-                when OP0_OFFSET =>
+                when I2C_OP0_OFFSET =>
                     data_out <= pack(op0_reg);
-                when OP1_OFFSET =>
+                when I2C_OP1_OFFSET =>
                     data_out <= pack(op1_reg);
-                when OP2_OFFSET =>
+                when I2C_OP2_OFFSET =>
                     data_out <= pack(op2_reg);
-                when OP3_OFFSET =>
+                when I2C_OP3_OFFSET =>
                     data_out <= pack(op3_reg);
-                when OP4_OFFSET =>
+                when I2C_OP4_OFFSET =>
                     data_out <= pack(op4_reg);
 
-                when PI0_OFFSET =>
+                when I2C_PI0_OFFSET =>
                     data_out <= pack(pi0_reg);
-                when PI1_OFFSET =>
+                when I2C_PI1_OFFSET =>
                     data_out <= pack(pi1_reg);
-                when PI2_OFFSET =>
+                when I2C_PI2_OFFSET =>
                     data_out <= pack(pi2_reg);
-                when PI3_OFFSET =>
+                when I2C_PI3_OFFSET =>
                     data_out <= pack(pi3_reg);
-                when PI4_OFFSET =>
+                when I2C_PI4_OFFSET =>
                     data_out <= pack(pi4_reg);
 
-                when IOC0_OFFSET =>
+                when I2C_IOC0_OFFSET =>
                     data_out <= pack(ioc0_reg);
-                when IOC1_OFFSET =>
+                when I2C_IOC1_OFFSET =>
                     data_out <= pack(ioc1_reg);
-                when IOC2_OFFSET =>
+                when I2C_IOC2_OFFSET =>
                     data_out <= pack(ioc2_reg);
-                when IOC3_OFFSET =>
+                when I2C_IOC3_OFFSET =>
                     data_out <= pack(ioc3_reg);
-                when IOC4_OFFSET =>
+                when I2C_IOC4_OFFSET =>
                     data_out <= pack(ioc4_reg);
 
-                when MSK0_OFFSET =>
+                when I2C_MSK0_OFFSET =>
                     data_out <= pack(msk0_reg);
-                when MSK1_OFFSET =>
+                when I2C_MSK1_OFFSET =>
                     data_out <= pack(msk1_reg);
-                when MSK2_OFFSET =>
+                when I2C_MSK2_OFFSET =>
                     data_out <= pack(msk2_reg);
-                when MSK3_OFFSET =>
+                when I2C_MSK3_OFFSET =>
                     data_out <= pack(msk3_reg);
-                when MSK4_OFFSET =>
+                when I2C_MSK4_OFFSET =>
                     data_out <= pack(msk4_reg);
 
                 when others =>
                     data_out <= (others => '0');
             end case;
 
+        end if;
+    end process;
+
+
+    axi_read_logic: process(clk, reset)
+    begin
+        if reset then
+            rdata <= (others => '0');
+        elsif rising_edge(clk) then
+            if active_read then
+                -- byte addresses so we need to shift down
+                case to_integer(araddr) is
+                    when I2C_IP0_OFFSET * 4 => rdata <= X"000000" & pack(ip0_reg xor pi0_reg);
+                    when I2C_IP1_OFFSET * 4 => rdata <= X"000000" & pack(ip1_reg xor pi1_reg);
+                    when I2C_IP2_OFFSET * 4 => rdata <= X"000000" & pack(ip2_reg xor pi2_reg);
+                    when I2C_IP3_OFFSET * 4 => rdata <= X"000000" & pack(ip3_reg xor pi3_reg);
+                    when I2C_IP4_OFFSET * 4 => rdata <= X"000000" & pack(ip4_reg xor pi4_reg);
+                    when I2C_OP0_OFFSET * 4 => rdata <= X"000000" & pack(op0_reg);
+                    when I2C_OP1_OFFSET * 4 => rdata <= X"000000" & pack(op1_reg);
+                    when I2C_OP2_OFFSET * 4 => rdata <= X"000000" & pack(op2_reg);
+                    when I2C_OP3_OFFSET * 4 => rdata <= X"000000" & pack(op3_reg);
+                    when I2C_OP4_OFFSET * 4 => rdata <= X"000000" & pack(op4_reg);
+                    when I2C_PI0_OFFSET * 4 => rdata <= X"000000" & pack(pi0_reg);
+                    when I2C_PI1_OFFSET * 4 => rdata <= X"000000" & pack(pi1_reg);
+                    when I2C_PI2_OFFSET * 4 => rdata <= X"000000" & pack(pi2_reg);
+                    when I2C_PI3_OFFSET * 4 => rdata <= X"000000" & pack(pi3_reg);
+                    when I2C_PI4_OFFSET * 4 => rdata <= X"000000" & pack(pi4_reg);
+                    when I2C_IOC0_OFFSET * 4 => rdata <=  X"000000" & pack(ioc0_reg);
+                    when I2C_IOC1_OFFSET * 4 => rdata <=  X"000000" & pack(ioc1_reg);
+                    when I2C_IOC2_OFFSET * 4 => rdata <=  X"000000" & pack(ioc2_reg);
+                    when I2C_IOC3_OFFSET * 4 => rdata <=  X"000000" & pack(ioc3_reg);
+                    when I2C_IOC4_OFFSET * 4 => rdata <=  X"000000" & pack(ioc4_reg);
+                    when I2C_MSK0_OFFSET * 4 => rdata <=  int_pend(0) & 23x"0" & pack(msk0_reg);
+                    when I2C_MSK1_OFFSET * 4 => rdata <=  int_pend(1) & 23x"0" & pack(msk1_reg);
+                    when I2C_MSK2_OFFSET * 4 => rdata <=  int_pend(2) & 23x"0" & pack(msk2_reg);
+                    when I2C_MSK3_OFFSET * 4 => rdata <=  int_pend(3) & 23x"0" & pack(msk3_reg);
+                    when I2C_MSK4_OFFSET * 4 => rdata <=  int_pend(4) & 23x"0" & pack(msk4_reg);
+                    when others =>
+                        rdata <= (others => '0');
+                end case;
+            end if;
         end if;
     end process;
 

@@ -46,6 +46,7 @@ entity link_layer is
 end entity;
 
 architecture rtl of link_layer is
+    attribute mark_debug : string;
     signal sclk_cnts : std_logic_vector(15 downto 0);
     signal sclk_last : std_logic;
     signal in_command_phase : boolean;
@@ -66,7 +67,11 @@ architecture rtl of link_layer is
     signal active_alert : std_logic;
     signal ta_edge_vec : std_logic_vector(3 downto 0);
     signal in_response_phase_delayed : boolean;
-    
+    attribute mark_debug of send_waits : signal is "TRUE";
+    attribute mark_debug of rem_waits : signal is "TRUE";
+    attribute mark_debug of response_post_mux : signal is "TRUE";
+    attribute mark_debug of ta_edge_vec : signal is "TRUE";
+    attribute mark_debug of response_byte_ack : signal is "TRUE";
 
 begin
 
@@ -223,7 +228,10 @@ begin
             -- helper variables
             csn_fedge := cs_n = '0' and csn_last = '1';
             response_xfr := true when response_post_mux.valid and response_post_mux.ready else false;
-            if csn_fedge then
+            if cs_n = '1' then
+                rem_waits <= (others => '0');
+                send_waits <= '1';
+            elsif csn_fedge then
                 rem_waits <= wait_states - 1; -- 0 indexed
                 send_waits <= '1';
             elsif rem_waits > 0 and response_xfr then

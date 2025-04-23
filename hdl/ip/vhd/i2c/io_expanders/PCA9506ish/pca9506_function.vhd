@@ -19,6 +19,7 @@ entity pca9506ish_function is
     port(
         clk : in std_logic;
         reset : in std_logic;
+        inband_reset : in std_logic;
         -- PHY interface
         -- instruction interface
         inst_data : in std_logic_vector(7 downto 0);
@@ -93,6 +94,10 @@ begin
                 v.increment := '0';
                 v.data_valid := '0';
                 v.post_ack_state := IDLE;
+                if inband_reset then
+                    -- reset the pointer register
+                    v.cmd_reg := default_reset;
+                end if;
                 if txn_header.valid = '1' and txn_header.tgt_addr = i2c_addr then
                     v.state := ACK;
                     if txn_header.read_write_n = '0' then
@@ -121,6 +126,8 @@ begin
                     v.state := ACK;
                     v.write_strobe := '1';
                     v.increment := v.cmd_reg.ai;
+                    -- TODO: real PCA devices don't ack on writes to the IP registers as they're read-only
+                    -- we don't expect our devices are actually doing this so this isn't currently implemented
                 end if;
 
             when DO_READ =>

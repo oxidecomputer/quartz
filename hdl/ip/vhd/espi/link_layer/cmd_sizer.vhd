@@ -32,9 +32,11 @@ entity cmd_sizer is
 end entity;
 
 architecture rtl of cmd_sizer is
+    attribute mark_debug : string;
     type state_t is (idle, opcode, cycle_type, tag_len, len, inband_reset, size_known, invalid);
 
     type reg_type is record
+        espi_reset_pend: std_logic;
         espi_reset: std_logic;
         state : state_t;
         hdr: hdr_t;
@@ -43,12 +45,14 @@ architecture rtl of cmd_sizer is
 
     constant rec_reset: reg_type := (
         '0',
+        '0',
         idle,
         rec_reset,
         rec_reset
     );
 
     signal r, rin: reg_type;
+    attribute mark_debug of r : signal is "TRUE";
 begin
 
     size_info <= r.size_info;
@@ -65,7 +69,9 @@ begin
 
         case r.state is
             when idle =>
+                v.espi_reset_pend := '0';
                 v.size_info.valid := '0';
+                v.size_info.size := (others => '0');
                 if byte_transfer then
                     v.state := opcode;
                     v.hdr.opcode := cmd.data;
@@ -104,7 +110,6 @@ begin
                 if byte_transfer then
                     v.state := len;
                     v.hdr.len(7 downto 0) := cmd.data(7 downto 0);
-                    v.state := len;
                 end if;
                 if cs_n = '1' then
                     v.size_info.valid := '0';
@@ -129,10 +134,6 @@ begin
                     v.size_info.valid := '0';
                     v.state := idle;
                 end if;
-                if cs_n = '1' then
-                    v.size_info.valid := '0';
-                    v.state := idle;
-                end if;
 
             when invalid =>
                 v.size_info.invalid := '1';
@@ -144,10 +145,13 @@ begin
             when inband_reset =>
                 -- 2nd byte of reset also opcode_reset
                 if byte_transfer = '1' and cmd.data = opcode_reset then
-                    v.espi_reset := '1';
+                    v.espi_reset_pend := '1';
                 end if;
                 if cs_n = '1' then
+                    v.espi_reset := r.espi_reset_pend;
+                    v.espi_reset_pend := '0';
                     v.size_info.valid := '0';
+                    v.size_info.invalid := '0';
                     v.state := idle;
                 end if;
         end case;
