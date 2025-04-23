@@ -272,20 +272,20 @@ addrmap minibar_controller {
             PllBypass = 2'h2 {desc = "PLL Bypass";};
         };
         field {
-            desc = "fpga_to_pcie_aux_refclk_buffer_bw_sel pin control";
+            desc = "fpga_to_pcie_aux_refclk_buffer_bw_sel pin control. Default to High Bandwidth since sleds will have SSC enabled.";
             encode = bw_sel;
-        } bw_sel[4:3] = 0;
+        } bw_sel[4:3] = 1;
 
         field {
             desc = "fpga_to_pcie_aux_refclk_buffer_pd_l pin control (active high, FPGA will invert)";
-        } pd[2:2] = 0;
+        } pd[2:2] = 1;
 
         field {
-            desc = "fpga_to_pcie_aux_refclk_buffer_oe1_l pin control (active high, FPGA will invert)";
-        } oe1[1:1] = 0;
+            desc = "fpga_to_pcie_aux_refclk_buffer_oe1_l pin control (active high, FPGA will invert). Goes to slot.";
+        } oe1[1:1] = 1;
 
         field {
-            desc = "fpga_to_pcie_aux_refclk_buffer_oe0_l pin control (active high, FPGA will invert)";
+            desc = "fpga_to_pcie_aux_refclk_buffer_oe0_l pin control (active high, FPGA will invert). Goes to test points.";
         } oe0[0:0] = 0;
     } PCIE_REFCLK_CTRL;
 
@@ -314,15 +314,15 @@ addrmap minibar_controller {
         default sw = r;
 
         field {
-            desc = "pcie_aux_fpga_to_cem_prsnt_l pin readback (normalized to active high)";
+            desc = "pcie_aux_cem_to_fpga_prsnt_l pin readback (normalized to active high)";
         } cem_prsnt[5:5] = 0;
 
         field {
-            desc = "pcie_aux_sled_to_fpga_perst_l pin readback (normalized to active high)";
+            desc = "pcie_aux_fpga_to_cem_perst_l pin readback (normalized to active high)";
         } cem_perst[4:4] = 0;
 
         field {
-            desc = "pcie_aux_fpga_to_cem_prsnt_l pin readback (normalized to active high)";
+            desc = "pcie_aux_fpga_to_sled_prsnt_l pin readback (normalized to active high)";
         } sled_prsnt[1:1] = 0;
 
         field {
