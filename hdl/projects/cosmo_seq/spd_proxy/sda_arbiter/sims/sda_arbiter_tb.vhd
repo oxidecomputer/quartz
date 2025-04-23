@@ -93,20 +93,17 @@ begin
                 a <= '0';
                 wait until a_grant = '1';
 
-                -- release A bus and assert B bus, expecting the arbitration not to change before
-                -- HYSTERESIS_CYCLES has passed
+                -- release A bus and assert B bus, expecting the A bus to have lost arbitration but
+                -- the B bus not to be granted it before HYSTERESIS_CYCLES has passed
                 a <= '1';
                 b <= '0';
 
-                while cycle_counter <= HYSTERESIS_CYCLES loop
-                    wait for CLK_PER_TIME;
-                    check_true(a_grant = '1', "Bus A should be granted the bus.");
-                    check_true(b_grant = '0', "Bus B should not be granted the bus.");
-                    cycle_counter := cycle_counter + 1;
-                end loop;
+                -- let arbitration propagate
+                wait for CLK_PER_TIME; 
+                check_true(a_grant = '1', "Bus A should still be granted the bus.");
+                check_true(b_grant = '0', "Bus B should not be granted the bus.");
 
-                -- after the initial hysteresis period, neither bus should be granted arbitration
-                cycle_counter := 0;
+                -- After one cycle, the A bus will have lost arbitrartion
                 while cycle_counter <= HYSTERESIS_CYCLES loop
                     wait for CLK_PER_TIME;
                     check_true(a_grant = '0', "Bus A should not be granted the bus.");
