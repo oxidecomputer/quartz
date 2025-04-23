@@ -400,8 +400,13 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
+<<<<<<< Updated upstream
             fpga1_spare_v1p8(0) <= 'Z';
             fpga1_spare_v1p8(7) <= 'Z';
+=======
+            fpga1_spare_v1p8(0) <= uart1_fpga1_to_sp_dat;
+            fpga1_spare_v1p8(7) <= uart1_sp_to_fpga1_dat;
+>>>>>>> Stashed changes
             fpga1_spare_v1p8(6) <= 'Z';
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;

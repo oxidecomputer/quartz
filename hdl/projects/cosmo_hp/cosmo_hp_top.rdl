@@ -9,13 +9,10 @@ addrmap pca9506_axi_regs {
     pca9506_raw_regs #(.SIZE(32)) i2c;
 
 };
-addrmap cosmo_seq_top {
+addrmap cosmo_hp_top {
     default regwidth = 32;
     // Instantiate 2 to test nesting
     info_regs info @ 0x0;
-    spi_nor_regs spi_nor @ 0x0100;
-    espi_regs espi @ 0x0200;
-    sequencer_regs sequencer @ 0x300;
-    sp_i2c_regs sp_i2c @ 0x0400;
-    pca9506_axi_regs fpga1_hotplug @ 0x0500;
+    pca9506_axi_regs cemAtoE_hotplug @ 0x0100;
+    pca9506_axi_regs cemFtoJ_hotplug @ 0x0200;
 };
