@@ -283,13 +283,15 @@ architecture rtl of cosmo_hp_top is
     signal fpga2_to_cemj_perst_l_int : std_logic;
     alias in_a0_unsyncd is fpga1_to_fpga2_io(2);
     signal in_a0 : std_logic;
-    alias amd_gen_int is fpga2_to_fpga1_io(2); -- goes to fpga1 which can do the alert generation
+    alias amd_gen_int_l is fpga2_to_fpga1_io(2); -- goes to fpga1 which can do the alert generation
+    signal amd_gen_int : std_logic;
     
 begin
 
-    fpga2_to_fpga1_io <= (others => 'Z');
+    fpga2_to_fpga1_io(1 downto 0) <= (others => 'Z');
+    amd_gen_int_l <= amd_gen_int;  -- connect the alert generation to fpga1
 
-    fpga2_spare_v3p3(7) <= cema_to_fpga2_ifdet_l;
+    fpga2_spare_v3p3(7) <= amd_gen_int_l;
     fpga2_spare_v3p3(6) <= cema_to_fpga2_pg_l;
     fpga2_spare_v3p3(5) <= cema_to_fpga2_prsnt_l;
     fpga2_spare_v3p3(4) <= cema_to_fpga2_pwrflt_l;

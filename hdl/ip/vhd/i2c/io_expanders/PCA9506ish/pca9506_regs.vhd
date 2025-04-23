@@ -436,11 +436,11 @@ begin
                     when I2C_IOC2_OFFSET * 4 => rdata <=  X"000000" & pack(ioc2_reg);
                     when I2C_IOC3_OFFSET * 4 => rdata <=  X"000000" & pack(ioc3_reg);
                     when I2C_IOC4_OFFSET * 4 => rdata <=  X"000000" & pack(ioc4_reg);
-                    when I2C_MSK0_OFFSET * 4 => rdata <=  X"000000" & pack(msk0_reg);
-                    when I2C_MSK1_OFFSET * 4 => rdata <=  X"000000" & pack(msk1_reg);
-                    when I2C_MSK2_OFFSET * 4 => rdata <=  X"000000" & pack(msk2_reg);
-                    when I2C_MSK3_OFFSET * 4 => rdata <=  X"000000" & pack(msk3_reg);
-                    when I2C_MSK4_OFFSET * 4 => rdata <=  X"000000" & pack(msk4_reg);
+                    when I2C_MSK0_OFFSET * 4 => rdata <=  int_pend(0) & 23x"0" & pack(msk0_reg);
+                    when I2C_MSK1_OFFSET * 4 => rdata <=  int_pend(1) & 23x"0" & pack(msk1_reg);
+                    when I2C_MSK2_OFFSET * 4 => rdata <=  int_pend(2) & 23x"0" & pack(msk2_reg);
+                    when I2C_MSK3_OFFSET * 4 => rdata <=  int_pend(3) & 23x"0" & pack(msk3_reg);
+                    when I2C_MSK4_OFFSET * 4 => rdata <=  int_pend(4) & 23x"0" & pack(msk4_reg);
                     when others =>
                         rdata <= (others => '0');
                 end case;
