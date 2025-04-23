@@ -69,13 +69,7 @@ begin
                 read_pca9506_reg(net, addr0, I2C_IOC0_OFFSET, 1, rx_queue, ack_queue);
                 check_equal(pop_byte(rx_queue), 255, "Non-reset value read from IOC0_OFFSET expander 0");
                 check_true(is_empty(rx_queue), "rx queue not empty");
-<<<<<<< Updated upstream
-                -- check via axi also
-                read_bus(net, bus_handle, To_StdLogicVector(IOC0_OFFSET, bus_handle.p_address_length), data_32);
-=======
-                -- check via axi also (4byte address strides)
                 read_bus(net, bus_handle, To_StdLogicVector(I2C_IOC0_OFFSET * 4, bus_handle.p_address_length), data_32);
->>>>>>> Stashed changes
                 check_equal(data_32, std_logic_vector'(X"000000FF"), "Non-reset value read from IOC0_OFFSET expander 0 via axi");
 
                 -- check other device
