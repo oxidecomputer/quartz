@@ -74,7 +74,6 @@ architecture rtl of sequencer_regs is
 
 begin
 
-    ifr.thermtrip <= not therm_trip_last and therm_trip;
     -- non-axi-specific logic
     seq_regs_specific: process(clk, reset)
     begin
@@ -178,6 +177,8 @@ begin
             nic_overrides <= rec_reset;
 
         elsif rising_edge(clk) then
+            ifr.thermtrip <= ifr.thermtrip or (not therm_trip_last and therm_trip);
+
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
                     when IFR_OFFSET => ifr <= ifr and (not axi_if.write_data.data);

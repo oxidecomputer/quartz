@@ -43,10 +43,26 @@ end entity;
 
 architecture rtl of nic_seq is
     constant ONE_MS : integer := 1 * CNTS_P_MS;
-    constant THIRTY_MS : integer := 30 * ONE_MS;
+    constant TEN_MS : integer := 10 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
+    constant THIRTY_MS : integer := 30 * ONE_MS;
 
     type state_t is ( IDLE, PWR_EN, WAIT_FOR_PGS, EARLY_CLD_RST, EARLY_PERST, DONE );
+
+    type reset_state_t is (IN_RESET, CLD_RST_DELAY, CLD_RST_DEASSERTED, PERST_DEASSERTED);
+    type rst_r_t is record
+        state : reset_state_t;
+        cnts  : unsigned(31 downto 0);
+        nic_perst_l : std_logic;
+        nic_cld_rst_l : std_logic;
+    end record;
+
+    constant rst_r_reset : rst_r_t := (
+        state => IN_RESET,
+        cnts => (others => '0'),
+        nic_perst_l => '0',
+        nic_cld_rst_l => '0'
+    );
 
     type nic_r_t is record
         state : state_t;
@@ -66,6 +82,8 @@ architecture rtl of nic_seq is
         nic_clk_en_l => '1'
     );
     signal nic_r, nic_rin : nic_r_t;
+
+    signal rst_nic_r, rst_nic_rin : rst_r_t;
 
     signal final_nic_outs : nic_overrides_type;
 
@@ -137,12 +155,66 @@ begin
     end process;
 
 
+    -- When the SP5 disconnects the NIC, we need to put it in "reset"
+    -- but we actually need to strobe cld_rst_l and perst_l since we
+    -- might have mucked with the mfg_mode pins. This logic re-sequences
+    -- them.
+    nic_rst_sm:process(all)
+        variable v : rst_r_t;
+    begin
+        v := rst_nic_r;
+
+        case rst_nic_r.state is
+
+            when IN_RESET =>
+                v.nic_perst_l := '0';
+                v.nic_cld_rst_l := '0';
+                v.cnts := (others => '0');
+                if nic_r.state = DONE and sp5_t6_perst_l = '1' and debug_enables.force_nic_reset = '0' then
+                    v.state := CLD_RST_DELAY;
+                end if;
+            when CLD_RST_DELAY =>
+                if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
+                    v.state := IN_RESET;
+                else
+                    v.cnts := rst_nic_r.cnts + 1;
+                    if rst_nic_r.cnts = TWENTY_MS then
+                        v.state := CLD_RST_DEASSERTED;
+                        v.cnts := (others => '0');
+                    end if;
+                end if;
+
+            when CLD_RST_DEASSERTED =>
+                if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
+                    v.state := IN_RESET;
+                else
+                    v.nic_cld_rst_l := '1';
+                    v.cnts := rst_nic_r.cnts + 1;
+                    if rst_nic_r.cnts = TEN_MS then
+                        v.state := PERST_DEASSERTED;
+                        v.cnts := (others => '0');
+                    end if;
+                end if;
+
+            when PERST_DEASSERTED =>
+                v.nic_perst_l := '1';
+                if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
+                    v.state := IN_RESET;
+                end if;
+        end case;
+
+        rst_nic_rin <= v;
+    end process;
+
+
     reg: process(clk, reset)
     begin
         if reset then
             nic_r <= nic_r_reset;
+            rst_nic_r <= rst_r_reset;
         elsif rising_edge(clk) then
             nic_r <= nic_rin;
+            rst_nic_r <= rst_nic_rin;
         end if;
     end process;
 
@@ -156,6 +228,10 @@ begin
             final_nic_outs <= (others => '0');
         elsif rising_edge(clk) then
             mfg_mode_l := nic_seq_pins.sp5_mfg_mode_l;
+            if debug_enables.force_mfg_mode then
+                -- force mfg mode for debug overriding SP5 control
+                mfg_mode_l := '0';
+            end if;
             if debug_enables.nic_override then
                 final_nic_outs <= nic_overrides_reg;
             else
@@ -167,8 +243,17 @@ begin
                 -- write protect out of MFG modes
                 final_nic_outs.eeprom_wp_l <= not mfg_mode_l;
                 final_nic_outs.nic_mfg_mode_l <= mfg_mode_l;
-                final_nic_outs.perst_l <= nic_r.nic_perst_l and sp5_t6_perst_l;
-                final_nic_outs.cld_rst_l <= nic_r.nic_cld_rst_l;
+                if nic_r.state /= DONE then
+                    -- First state machine has exclusive control of these pins at the  beginning until we're all the way up
+                    final_nic_outs.perst_l <= nic_r.nic_perst_l;
+                    final_nic_outs.cld_rst_l <= nic_r.nic_cld_rst_l;
+                else
+                    -- Now we're sequenced up, either the sequencer or the follower has control
+                    -- active low so this is functioning as a logical OR
+                    final_nic_outs.perst_l <= nic_r.nic_perst_l and rst_nic_r.nic_perst_l;
+                    final_nic_outs.cld_rst_l <= nic_r.nic_cld_rst_l and rst_nic_r.nic_cld_rst_l;
+                end if;
+                
             end if;
 
         end if;

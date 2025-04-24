@@ -343,6 +343,12 @@ addrmap sequencer_regs {
          field {
             desc = "Set to mux in the nic_override signals instead of the normal nic control signals";
         } nic_override[1] = 0;
+        field {
+            desc = "Used for manually controlling the nic reset for debugging purposes";
+        } force_nic_reset[1] = 0;
+        field {
+            desc = "Let other logic run but directly force mfg mode_l to be asserted when set";
+        } force_mfg_mode[1] = 0;
     } debug_enables;
 
     reg {
