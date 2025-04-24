@@ -84,7 +84,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "version[31..24]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } VERSION0;
 
     reg {
@@ -92,7 +92,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "version[23..16]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } VERSION1;
 
     reg {
@@ -100,7 +100,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "version[15..8]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } VERSION2;
 
     reg {
@@ -108,7 +108,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "version[7..0]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } VERSION3;
 
     reg {
@@ -116,7 +116,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "sha[31..24]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } SHA0;
 
     reg {
@@ -124,7 +124,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "sha[23..16]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } SHA1;
 
     reg {
@@ -132,7 +132,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "sha[15..8]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } SHA2;
 
     reg {
@@ -140,7 +140,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "sha[7..0]";
-        } data[7:0] = 0;
+        } DATA[7:0] = 0;
     } SHA3;
 
     reg {
@@ -159,7 +159,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "HCV Code";
-        } code[2:0] = 0;
+        } CODE[2:0] = 0;
     } HCV;
 
     reg {
@@ -167,15 +167,15 @@ addrmap minibar_controller {
 
         field {
             desc = "Inverted value of pcie_examax_to_fpga_sled_present_l pin";
-        } pcie_present[2:2] = 0;
+        } PCIE_PRESENT[2:2] = 0;
 
         field {
             desc = "Inverted value of rsw1_examax_to_fpga_sled_present_l pin";
-        } rsw1_present[1:1] = 0;
+        } RSW1_PRESENT[1:1] = 0;
 
         field {
             desc = "Inverted value of rsw0_examax_to_fpga_sled_present_l pin";
-        } rsw0_present[0:0] = 0;
+        } RSW0_PRESENT[0:0] = 0;
     } SLED_PRESENCE;
 
     reg {
@@ -183,7 +183,7 @@ addrmap minibar_controller {
         default sw = r;
         field {
             desc = "Inverted value of the vbus_sys_hsc_to_fpga_fault_l pin";
-        } fault[0:0] = 0;
+        } FAULT[0:0] = 0;
     } VBUS_SYS_RDBK;
 
     reg {
@@ -191,15 +191,15 @@ addrmap minibar_controller {
 
         field {
             desc = "fpga_to_vbus_sys_hsc_restart_l pin control (active high, FPGA will invert)";
-        } vbus_sys_restart[5:5] = 0;
+        } VBUS_SYS_RESTART[5:5] = 0;
 
         field {
             desc = "fpga_to_vbus_sled_hsc_restart_l pin control (active high, FPGA will invert)";
-        } vbus_sled_restart[4:4] = 0;
+        } VBUS_SLED_RESTART[4:4] = 0;
 
         field {
             desc = "fpga_to_vbus_sled_hsc_en pin control";
-        } vbus_sled_en[0:0] = 0;
+        } VBUS_SLED_EN[0:0] = 0;
     } POWER_CTRL;
 
     reg power_rail_state {
@@ -216,19 +216,19 @@ addrmap minibar_controller {
         field {
             desc = "State of the FPGA-internal power rail sequencer";
             encode = state;
-        } state[6:4] = 0;
+        } STATE[6:4] = 0;
 
         field {
             desc = "Status of the enable pin";
-        } enable_pin[2:2] = 0;
+        } ENABLE_PIN[2:2] = 0;
 
         field {
             desc = "Status of the power good pin";
-        } pg_pin[1:1] = 0;
+        } PG_PIN[1:1] = 0;
 
         field {
             desc = "Status of the fault pin (normalized to '1'=fault)";
-        } fault_pin[0:0] = 0;
+        } FAULT_PIN[0:0] = 0;
     };
 
     power_rail_state vbus_sled;
@@ -238,11 +238,11 @@ addrmap minibar_controller {
 
         field {
             desc = "fpga_to_vsc7448_reset_l pin control (active high, FPGA will invert)";
-        } vsc7448_reset[1:1] = 0;
+        } VSC7448_RESET[1:1] = 0;
 
         field {
             desc = "fpga_to_vsc8504_reset_l_3p3 pin control (active high, FPGA will invert)";
-        } vsc8504_reset[0:0] = 0;
+        } VSC8504_RESET[0:0] = 0;
     } SWITCH_RESET_CTRL;
 
     //
@@ -254,10 +254,10 @@ addrmap minibar_controller {
 
         field {
             desc = "fpga_to_v12_pcie_efuse_en pin control";
-        } v12_pcie_en[1:1] = 1;
+        } V12_PCIE_EN[1:1] = 1;
         field {
             desc = "fpga_to_v3p3_pcie_efuse_en pin control";
-        } v3p3_pcie_en[0:0] = 1;
+        } V3P3_PCIE_EN[0:0] = 1;
     } PCIE_POWER_CTRL;
 
     power_rail_state v12_pcie;
@@ -272,21 +272,21 @@ addrmap minibar_controller {
             PllBypass = 2'h2 {desc = "PLL Bypass";};
         };
         field {
-            desc = "fpga_to_pcie_aux_refclk_buffer_bw_sel pin control";
+            desc = "fpga_to_pcie_aux_refclk_buffer_bw_sel pin control. Default to High Bandwidth since sleds will have SSC enabled.";
             encode = bw_sel;
-        } bw_sel[4:3] = 0;
+        } BW_SEL[4:3] = 1;
 
         field {
             desc = "fpga_to_pcie_aux_refclk_buffer_pd_l pin control (active high, FPGA will invert)";
-        } pd[2:2] = 0;
+        } PD[2:2] = 1;
 
         field {
-            desc = "fpga_to_pcie_aux_refclk_buffer_oe1_l pin control (active high, FPGA will invert)";
-        } oe1[1:1] = 0;
+            desc = "fpga_to_pcie_aux_refclk_buffer_oe1_l pin control (active high, FPGA will invert). Goes to slot.";
+        } OE1[1:1] = 1;
 
         field {
-            desc = "fpga_to_pcie_aux_refclk_buffer_oe0_l pin control (active high, FPGA will invert)";
-        } oe0[0:0] = 0;
+            desc = "fpga_to_pcie_aux_refclk_buffer_oe0_l pin control (active high, FPGA will invert). Goes to test points.";
+        } OE0[0:0] = 0;
     } PCIE_REFCLK_CTRL;
 
     reg {
@@ -294,19 +294,19 @@ addrmap minibar_controller {
 
         field {
             desc = "control of pcie_aux_fpga_to_sled_pwrflt_l (active high, FPGA will invert)";
-        } sled_pwrflt[3:3] = 0;
+        } SLED_PWRFLT[3:3] = 0;
 
         field {
             desc = "control of fpga_to_sled_pcie_attached_l (active high, FPGA will invert)";
-        } attached[2:2] = 0;
+        } ATTACHED[2:2] = 0;
 
         field {
             desc = "control of fpga_to_pcie_cem_i2c_buffer_en";
-        } cem_i2c_en[1:1] = 1;
+        } CEM_I2C_EN[1:1] = 1;
 
         field {
             desc = "control of fpga_to_pcie_sled_i2c_buffer_en";
-        } sled_i2c_en[0:0] = 1;
+        } SLED_I2C_EN[0:0] = 1;
     } PCIE_CTRL;
 
     reg {
@@ -314,20 +314,20 @@ addrmap minibar_controller {
         default sw = r;
 
         field {
-            desc = "pcie_aux_fpga_to_cem_prsnt_l pin readback (normalized to active high)";
-        } cem_prsnt[5:5] = 0;
+            desc = "pcie_aux_cem_to_fpga_prsnt_l pin readback (normalized to active high)";
+        } CEM_PRSNT[5:5] = 0;
+
+        field {
+            desc = "pcie_aux_fpga_to_cem_perst_l pin readback (normalized to active high)";
+        } CEM_PERST[4:4] = 0;
+
+        field {
+            desc = "pcie_aux_fpga_to_sled_prsnt_l pin readback (normalized to active high)";
+        } SLED_PRSNT[1:1] = 0;
 
         field {
             desc = "pcie_aux_sled_to_fpga_perst_l pin readback (normalized to active high)";
-        } cem_perst[4:4] = 0;
-
-        field {
-            desc = "pcie_aux_fpga_to_cem_prsnt_l pin readback (normalized to active high)";
-        } sled_prsnt[1:1] = 0;
-
-        field {
-            desc = "pcie_aux_sled_to_fpga_perst_l pin readback (normalized to active high)";
-        } sled_perst[0:0] = 0;
+        } SLED_PERST[0:0] = 0;
     } PCIE_RDBK;
 
     //
@@ -339,11 +339,11 @@ addrmap minibar_controller {
 
         field {
             desc = "Target 1 present";
-        } target1_present[1:1] = 0;
+        } TARGET1_PRESENT[1:1] = 0;
 
         field {
             desc = "Target 0 present";
-        } target0_present[0:0] = 0;
+        } TARGET0_PRESENT[0:0] = 0;
     } IGNITION_TARGETS_PRESENT;
 
     ignition_controller IGNITION_CONTROLLER0 @ 0x100;
