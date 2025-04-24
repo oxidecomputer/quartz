@@ -19,7 +19,8 @@ entity pca9506_top is
     generic(
         -- i2c address of the mux
         i2c_addr : std_logic_vector(6 downto 0);
-        giltch_filter_cycles : integer := 5
+        giltch_filter_cycles : integer := 5;
+        DEBUG : string := "FALSE"
     );
     port(
         clk : in std_logic;
@@ -29,6 +30,31 @@ entity pca9506_top is
         -- this can be used if you need to "emulate" power-down behavior of the PCA9506
         -- but we don't actually power down.
         inband_reset : in std_logic := '0';
+
+        -- optional axi interface
+        -- GHDL/yosys based toolchains
+        -- write address channel
+        awvalid : in std_logic := '0';
+        awready : out std_logic;
+        awaddr : in std_logic_vector(7 downto 0) := (others => '0');
+        -- write data channel
+        wvalid : in std_logic := '0';
+        wready : out std_logic;
+        wdata : in std_logic_vector(31 downto 0) := (others => '0');
+        wstrb : in std_logic_vector(3 downto 0) := (others => '0');
+        -- write response channel
+        bvalid : out std_logic;
+        bready : in std_logic := '0';
+        bresp : out std_logic_vector(1 downto 0);
+        -- read address channel
+        arvalid : in std_logic := '0';
+        arready : out std_logic;
+        araddr : in std_logic_vector(7 downto 0) := (others => '0');
+        -- read data channel
+        rvalid : out std_logic;
+        rready : in std_logic := '0';
+        rdata : out std_logic_vector(31 downto 0);
+        rresp : out std_logic_vector(1 downto 0);
 
         -- I2C bus mux endpoint for control
         -- Does not support clock-stretching
@@ -106,6 +132,7 @@ begin
      port map(
         clk => clk,
         reset => reset,
+        inband_reset => inband_reset, -- allow inband reset to reset the registers
         inst_data => inst_data,
         inst_valid => inst_valid,
         inst_ready => inst_ready,
@@ -126,6 +153,9 @@ begin
 
     -- registers block
     pca9506_regs_inst: entity work.pca9506_regs
+    generic map(
+        DEBUG => DEBUG
+    )
      port map(
         clk => clk,
         reset => reset,
@@ -136,6 +166,23 @@ begin
         data_out => read_data,
         output_disable => '0',
         inband_reset => inband_reset, -- allow inband reset to reset the registers
+        awvalid => awvalid,
+        awready => awready,
+        awaddr => awaddr,
+        wvalid => wvalid,
+        wready => wready,
+        wdata => wdata,
+        wstrb => wstrb,
+        bvalid => bvalid,
+        bready => bready,
+        bresp => bresp,
+        arvalid  => arvalid,
+        arready  => arready,
+        araddr => araddr,
+        rvalid => rvalid,
+        rready => rready,
+        rdata  => rdata,
+        rresp => rresp,
         io => io,
         io_oe => io_oe,
         io_o => io_o,

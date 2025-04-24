@@ -24,6 +24,8 @@ entity txn_layer_top is
 
         -- register layer connections
         regs_if : view    bus_side;
+        post_code      : out std_logic_vector(31 downto 0);
+        post_code_valid : out std_logic;
         -- vwire channel connections
         vwire_if : view vwire_cmd_side;
         -- flash channel status
@@ -45,6 +47,7 @@ entity txn_layer_top is
         oob_free : in std_logic;
 
         -- Link-layer connections
+        espi_reset : in std_logic;
         is_rx_crc_byte     : out   boolean;
         is_tx_crc_byte     : out   boolean;
         chip_sel_active : in    std_logic;
@@ -86,6 +89,10 @@ begin
             elsif data_from_host.valid = '1' then
                 txn_byte_count <= txn_byte_count + 1;
             end if;
+
+            if espi_reset = '1' then
+                txn_byte_count <= (others => '0');
+            end if;
         end if;
     end process;
 
@@ -115,6 +122,7 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
+            espi_reset      => espi_reset,
             regs_if         => regs_if,
             vwire_if        => vwire_if,
             flash_req       => flash_req,
@@ -123,6 +131,8 @@ begin
             clear_rx_crc    => clear_rx_crc,
             command_header  => command_header,
             response_done   => response_done,
+            post_code       => post_code,
+            post_code_valid => post_code_valid,
             aborted_due_to_bad_crc => aborted_due_to_bad_crc,
             is_rx_crc_byte  => is_rx_crc_byte,
             chip_sel_active => chip_sel_active,
@@ -133,6 +143,7 @@ begin
         port map (
             clk            => clk,
             reset          => reset,
+            espi_reset     => espi_reset,
             command_header => command_header,
             response_done  => response_done,
             regs_if        => resp_regs_if,

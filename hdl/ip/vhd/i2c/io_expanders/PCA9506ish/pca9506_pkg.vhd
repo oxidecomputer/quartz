@@ -42,6 +42,11 @@ package pca9506_pkg is
         pointer: std_logic_vector(5 downto 0) -- register number
     ) return std_logic_vector;
 
+    function pi_reads_inputs_or_outputs(
+        io: io_type;
+        op: io_type;
+        ioc: io_type
+    ) return io_type ;
 
 
 end package;
@@ -81,5 +86,26 @@ package body pca9506_pkg is
 
         -- increment the 3 lsb by one from 0 to 4, wrapping around to 0
         return pointer(5 downto 3) & lsbs;
+    end function;
+
+    function pi_reads_inputs_or_outputs(
+        io: io_type;
+        op: io_type;
+        ioc: io_type
+    ) return io_type is
+        variable pi : io_type;
+    begin
+        for i in io.bits'range loop
+            if ioc.bits(i) = '0' then
+                -- this pin is an output, we should "read" the output value
+                -- as an input
+                pi.bits(i) := op.bits(i);
+            else
+                -- this pin is an input, we should "read" the input value
+                -- as an input
+                pi.bits(i) := io.bits(i);
+            end if;
+        end loop;
+        return pi;
     end function;
 end package body pca9506_pkg;

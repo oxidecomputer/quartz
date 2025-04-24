@@ -17,6 +17,7 @@ vhdl_unit(
     deps = [
         ":perst_oneshot",
         "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
         "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
     ],
     standard = "2019",

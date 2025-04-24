@@ -1,6 +1,19 @@
-load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
 load("//tools:yosys.bzl", "ice40_bitstream")
 
+rdl_file(
+    name = "cosmo_hp_top_rdl",
+    src = "cosmo_hp_top.rdl",
+    deps = [
+        "//hdl/ip/vhd/info:info_regs_rdl",
+        "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_regs_rdl",
+    ],
+    outputs = [
+        "cosmo_hp_top.html", 
+        "cosmo_hp_top.json"
+    ]
+)
 
 vhdl_unit(
     name = "hp_subsystem_top",
@@ -15,6 +28,7 @@ vhdl_unit(
     name = "cosmo_hp_top",
     srcs = glob(["*.vhd"]),
     deps = [
+        ":cosmo_hp_top_rdl",
         ":hp_subsystem_top",
         "//hdl/ip/vhd/synchronizers:async_reset_bridge",
         "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
@@ -24,6 +38,15 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axil_interconnect_2k8",
         "//hdl/ip/vhd/info:info_2k8",
     ],
+    standard = "2008",
+)
+
+vunit_sim(
+    name = "cem_aic_hp_tb",
+    srcs = glob(["hp_subsystem/sims/**/*.vhd"]),
+    deps = [":hp_subsystem_top",
+    ],
+    visibility = ['PUBLIC'],
     standard = "2008",
 )
 

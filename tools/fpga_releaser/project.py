@@ -88,9 +88,13 @@ class FPGAImage:
 
     def report_timing(self):
         log = self._get_timing_report()
+        print(self.toolchain)
         if self.toolchain == "yosys":
             import fpga_releaser.yosys as yosys
             yosys.check_and_report_timing(log)
+        elif self.toolchain == "vivado":
+            import fpga_releaser.xilinx as vivado
+            vivado.check_and_report_timing(log)
 
     def report_utilization(self):
         log = self._get_fit_report()

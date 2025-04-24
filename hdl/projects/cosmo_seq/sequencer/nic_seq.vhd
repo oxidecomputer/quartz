@@ -26,6 +26,9 @@ entity nic_seq is
         debug_enables : in debug_enables_type;
         nic_overrides_reg : in nic_overrides_type;
 
+        raw_state : out nic_raw_status_type;
+        api_state : out nic_api_status_type;
+
         -- From SP5 hotplug
         sp5_t6_power_en : in std_logic;
         sp5_t6_perst_l : in std_logic;
@@ -68,6 +71,8 @@ architecture rtl of nic_seq is
 
 begin
 
+    raw_state.hw_sm <= std_logic_vector(to_unsigned(state_t'pos(nic_r.state), raw_state.hw_sm'length));
+    
     nic_idle <= '1' when nic_r.state = IDLE else '0';
 
     nic_sm:process(all)
@@ -78,6 +83,7 @@ begin
 
         case nic_r.state is
             when IDLE =>
+                v.nic_power_en := '0';
                 v.nic_perst_l := '0';
                 v.nic_cld_rst_l := '0';
                 v.nic_clk_en_l := '1';
@@ -106,6 +112,7 @@ begin
             when EARLY_CLD_RST =>
                 -- We release reset "early" 
                 v.nic_cld_rst_l := '1';
+                v.cnts := nic_r.cnts + 1;
                 if nic_r.cnts = TWENTY_MS then
                     v.state := EARLY_PERST;
                     v.cnts := (others => '0');
@@ -114,7 +121,7 @@ begin
             when EARLY_PERST =>
                 -- We release reset "early" 
                 v.state := DONE;
-                v.nic_perst_l := '0';
+                v.nic_perst_l := '1';
 
             when DONE =>
                 -- nothing downstream to worry about just go back to idle

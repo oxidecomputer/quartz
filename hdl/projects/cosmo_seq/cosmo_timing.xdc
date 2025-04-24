@@ -69,4 +69,38 @@ set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -setup 2
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -hold 1
 
+set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v3p3*}]
+set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v1p8[*]}]
 
+# #######################
+# eSPI Interface
+# #######################
+# Create a virtual clock, to represent the source clock of the espi interface
+create_clock -name sp5_espi_clk_ext -period 15.000;
+# TODO: This is likely not correct but I need to re-write the link-layer logic again
+# and then re-constrain
+# 20MHz espi constraints, 50ns clock periods.
+# ESPI interface has 2.2ns of trace delay
+# AMD says 7ns of data setup
+# AMD says 0.3ns of data hold
+# AMD Data output valid time min 1 max 3
+# in delay max = tco_ext to max delay ext to fpga
+# in delay min = minTco_ext to min delay ext to fpga
+# out delay max = ext setup + max delay fpga to external
+# out delay min = ext hold + min delay fpga to external
+
+# when sending to the SP5, it's going to take 2.2ns of trace time, and it needs to be there
+# Clock took 2.2 ns to get to us, it's going to take 2.2ns of trace time to get back to the SP5
+# and SP5 wants 7 ns of setup time. We also eat ~4ns by syncing the espi clock.
+
+# outputs
+# max = 7ns (SP5's needed setup time) + clock delay to FPGA (2.2ns) + return delay (2.2ns)
+# min = .3ns (SP5's needed hold time) + clock delay to FPGA (2.2ns) + return delay (2.2ns)
+set_output_delay -clock sp5_espi_clk_ext -max 11.4 [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_output_delay -clock sp5_espi_clk_ext -min 4.7 [get_ports espi0_sp5_to_fpga1_dat[*]]
+
+# Data 
+# max= 7.5ns (1/2 period) + 3ns (maxreal tco)
+# min= 7.5ns (1/2 period) + 1ns (min real tco)
+set_input_delay -clock sp5_espi_clk_ext -max 10.5 [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_input_delay -clock sp5_espi_clk_ext -min 8.5 [get_ports espi0_sp5_to_fpga1_dat[*]]

@@ -130,7 +130,7 @@ entity hp_subsystem_top is
         fpga2_to_cemj_perst_l : out std_logic;
         fpga2_to_cemj_pwren : out std_logic;
         fpga2_to_clk_buff_cemj_oe_l : out std_logic;
-        -- I/O expander
+        -- to/from I/O expander
         io : out multiple_pca9506_pin_t(0 to 1);
         io_o : in multiple_pca9506_pin_t(0 to 1);
         io_oe : in multiple_pca9506_pin_t(0 to 1)
@@ -228,7 +228,7 @@ begin
     from_cem_pre_sync(9).sharkfin_present <= cemj_to_fpga2_sharkfin_present;
 
     -- Deal with I/O expander here
-    pca_gen: for i in io'range generate -- outer 0 to 1 loop for each pca
+    pca_gen: for i in io'range generate -- outer 0 to 1 loop for each pca device
         port_gen: for j in pca9506_pin_t'range generate -- inner 0 to 4 loop for each port
             -- A (0) = 0,0
             -- B (1) = 0,1
@@ -240,10 +240,8 @@ begin
             -- H (7) = 1,2
             -- I (8) = 1,3
             -- J (9) = 1,4
-
-
-            io(i)(j) <= to_sp5_io(to_sp5(5*i + j));
-            from_sp5(5*i + j) <= from_sp5_io(io_o(i)(j), io_oe(i)(j));
+            io(i)(j) <= to_sp5_io(to_sp5(pca9506_pin_t'length*i + j));
+            from_sp5(pca9506_pin_t'length*i + j) <= from_sp5_io(io_o(i)(j), io_oe(i)(j));
         end generate;
     end generate;
 

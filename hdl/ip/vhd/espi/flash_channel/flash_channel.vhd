@@ -37,6 +37,7 @@ entity flash_channel is
         -- command fifo
         flash_cfifo_data : out std_logic_vector(31 downto 0);
         flash_cfifo_write: out std_logic;
+        flash_fifo_clear : out std_logic;
         -- readback fifo
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
@@ -99,6 +100,7 @@ architecture rtl of flash_channel is
 
 begin
 
+    flash_fifo_clear <= '1' when not enabled else '0';
     dbg_regs: process (clk, reset)
     begin
         if reset then
@@ -287,7 +289,10 @@ begin
                 end if;
         end case;
 
-
+        if not enabled then
+            -- If we're not enabled, reset the state machine
+            v := reg_reset;
+        end if;
         rin <= v;
     end process;
 

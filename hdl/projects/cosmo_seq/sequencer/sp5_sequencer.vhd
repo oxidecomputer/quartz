@@ -72,7 +72,7 @@ architecture rtl of sp5_sequencer is
     -- power not idle could mean we're in the middle of a sequence up or down
     signal nic_ok : std_logic;
     signal nic_idle : std_logic;
-
+    signal therm_trip : std_logic;
     signal early_power : early_power_t;
     signal ddr_bulk : ddr_bulk_power_t;
     signal group_a : group_a_power_t;
@@ -122,6 +122,7 @@ begin
         early_power_ctrl => early_power_ctrl,
         early_power_rdbks => early_power_rdbks,
         power_ctrl => power_ctrl,
+        therm_trip => therm_trip,
         seq_api_status => seq_api_status,
         seq_raw_status => seq_raw_status,
         nic_api_status => nic_api_status,
@@ -219,6 +220,7 @@ begin
         reset => reset,
         upstream_ok => fans_power_ok,
         downstream_idle => nic_idle,
+        therm_trip => therm_trip,
         a0_ok => a0_ok,
         a0_idle => a0_idle,
         a0_faulted => open,
@@ -242,6 +244,8 @@ begin
         reset => reset,
         nic_idle => nic_idle,
         sw_enable => power_ctrl.a0_en,
+        raw_state => nic_raw_status,
+        api_state => open,
         upstream_ok => a0_ok,
         nic_overrides_reg => nic_overrides,
         debug_enables => debug_enables,

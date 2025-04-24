@@ -52,9 +52,23 @@ architecture rtl of sp5_espi_flash_subsystem is
     signal flash_rfifo_data : std_logic_vector(7 downto 0);
     signal flash_rfifo_rdack : std_logic;
     signal flash_rfifo_rempty : std_logic;
+    signal flash_fifo_clear : std_logic;
+    signal fifo_reset : std_logic;
 
 
 begin
+
+        -- I don't love this pattern but we're going to combine the system reset with the 
+    -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
+    -- of every boot.
+    rst_combine:process(clk_125m, reset_125m)
+     begin
+        if reset_200m = '1' then
+           fifo_reset <= '1';
+        elsif rising_edge(clk_125m) then
+           fifo_reset <= flash_fifo_clear;
+        end if;
+    end process;
     
     -- eSPI block -> SPI NOR  FIFO
     espi_spinor_cmd_fifo: entity work.dcfifo_xpm
@@ -65,7 +79,7 @@ begin
     )
      port map(
         wclk => clk_125m,  -- eSPI slow dclock
-        reset => reset_125m,
+        reset => fifo_reset,
         write_en => flash_cfifo_write,
         wdata => flash_cfifo_data,
         wfull => open,
@@ -85,7 +99,7 @@ begin
     )
      port map(
         wclk => clk_125m,  -- spi nor clock
-        reset => reset_125m,
+        reset => fifo_reset,
         write_en => espi_data_fifo_write,
         wdata => espi_data_fifo_wdata,
         wfull => open,
@@ -114,17 +128,18 @@ begin
         io_o => espi_dat_o,
         io_oe => espi_dat_oe,
         response_csn => response_csn,
+        flash_fifo_clear => flash_fifo_clear,
         flash_cfifo_data => flash_cfifo_data,
         flash_cfifo_write => flash_cfifo_write,
         flash_rfifo_data => flash_rfifo_data,
         flash_rfifo_rdack => flash_rfifo_rdack,
         flash_rfifo_rempty => flash_rfifo_rempty,
-        to_sp_uart_data => ipcc_uart_to_espi.data,
-        to_sp_uart_valid => ipcc_uart_to_espi.valid,
-        to_sp_uart_ready => ipcc_uart_to_espi.ready,
-        from_sp_uart_data => ipcc_uart_from_espi.data,
-        from_sp_uart_valid => ipcc_uart_from_espi.valid,
-        from_sp_uart_ready => ipcc_uart_from_espi.ready
+        to_sp_uart_data => ipcc_uart_from_espi.data, 
+        to_sp_uart_valid => ipcc_uart_from_espi.valid,
+        to_sp_uart_ready => ipcc_uart_from_espi.ready,
+        from_sp_uart_data => ipcc_uart_to_espi.data,
+        from_sp_uart_valid => ipcc_uart_to_espi.valid,
+        from_sp_uart_ready => ipcc_uart_to_espi.ready
     );
 
 

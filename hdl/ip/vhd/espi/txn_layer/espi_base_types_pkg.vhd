@@ -333,7 +333,7 @@ package body espi_base_types_pkg is
         -- the controller enables the peripheral
         ret.flash_np_avail := '0';
         ret.flash_c_avail := '0';
-        ret.flash_np_free := '1';
+        ret.flash_np_free := '0';
         ret.flash_c_free := '1';
         ret.oob_avail := '0';
         ret.vwire_avail := '0';
