@@ -33,6 +33,7 @@ entity a1_a0_seq is
         raw_state : out seq_raw_status_type;
         api_state : out seq_api_status_type;
         therm_trip : out std_logic;
+        smerr_assert : out std_logic;
         -- DDR Hotswap
         ddr_bulk: view ddr_bulk_power_at_fpga;
         -- group A supplies
@@ -105,6 +106,7 @@ architecture rtl of a1_a0_seq is
         faulted: std_logic;
         is_cosmo : std_logic;
         therm_trip : std_logic;
+        smerr_assert : std_logic;
     end record;
 
     constant seq_r_t_reset : seq_r_t := (
@@ -118,6 +120,7 @@ architecture rtl of a1_a0_seq is
         '0',
         '0',
         '1',
+        '0',
         '0',
         '0',
         '0',
@@ -206,6 +209,7 @@ begin
             -- we'll use this to clear the faulted flags
             v.faulted := '0';
             v.therm_trip := '0';
+            v.smerr_assert := '0';
         end if;
 
         -- Fault monitoring, if we expect a rail to be up and it's not
@@ -352,7 +356,7 @@ begin
                     v.state := DONE;
                 end if;
             when DONE =>
-                if sw_enable = '0' or sp5_seq_pins.thermtrip_l = '0' then
+                if sw_enable = '0' or sp5_seq_pins.thermtrip_l = '0' or sp5_seq_pins.smerr_l = '0' then
                     v.pwr_good := '0';
                     v.state := SAFE_DISABLE;
                     v.cnts := (others => '0');
@@ -378,6 +382,10 @@ begin
 
         if seq_r.state > GROUP_A_PG_AND_WAIT and sp5_seq_pins.thermtrip_l = '0' then
             v.therm_trip := '1';
+        end if;
+
+        if seq_r.state > GROUP_A_PG_AND_WAIT and sp5_seq_pins.smerr_l = '0' then
+            v.smerr_assert := '1';
         end if;
 
         -- fault and MAPO case that are monitored in all non-IDLE cases
@@ -445,6 +453,7 @@ begin
     sp5_seq_pins.is_cosmo <= seq_r.is_cosmo;
 
     therm_trip <= seq_r.therm_trip;
+    smerr_assert <= seq_r.smerr_assert;
 
     -- Use the internal sm registers to drive the various enable outputs
     -- there's no combo logic here, this is just bonding sm-internal registers

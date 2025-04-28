@@ -87,6 +87,7 @@ architecture rtl of sp5_sequencer is
     signal nic_readbacks : nic_readbacks_type;
     signal nic_overrides : nic_overrides_type;
     signal debug_enables : debug_enables_type;
+    signal smerr_assert : std_logic;
     
 
 
@@ -123,6 +124,7 @@ begin
         early_power_rdbks => early_power_rdbks,
         power_ctrl => power_ctrl,
         therm_trip => therm_trip,
+        smerr_assert => smerr_assert,
         seq_api_status => seq_api_status,
         seq_raw_status => seq_raw_status,
         nic_api_status => nic_api_status,
@@ -197,6 +199,7 @@ begin
     sp5_readbacks.pwr_ok <= sp5_seq.pwr_ok;
     sp5_readbacks.reset_l <= sp5_seq.reset_l;
     sp5_readbacks.thermtrip_l <= sp5_seq.thermtrip_l;
+    sp5_readbacks.smerr_l <= sp5_seq.smerr_l;
     -- NIC sequencing readbacks
     nic_readbacks.nic_pcie_clk_buff_oe_l <= nic_seq.nic_pcie_clk_buff_oe_l;
     nic_readbacks.flash_wp_l <= nic_seq.flash_wp_l;
@@ -221,6 +224,7 @@ begin
         upstream_ok => fans_power_ok,
         downstream_idle => nic_idle,
         therm_trip => therm_trip,
+        smerr_assert => smerr_assert,
         a0_ok => a0_ok,
         a0_idle => a0_idle,
         a0_faulted => open,

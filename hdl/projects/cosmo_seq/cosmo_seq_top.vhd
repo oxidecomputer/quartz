@@ -709,6 +709,7 @@ begin
 
     -- SP5 sequence-related pins
     sp5_seq_pins.thermtrip_l <= sp5_to_fpga1_thermtrip_l;
+    sp5_seq_pins.smerr_l <= sp5_to_fpga1_smerr_l;
     sp5_seq_pins.reset_l <= fpga1_to_sp5_reset_l;
     sp5_seq_pins.pwr_ok <= sp5_to_fpga1_pwrok_unbuf;
     fpga1_to_sp5_pwr_btn_l <= '0' when sp5_seq_pins.pwr_btn_l = '0' else 'Z';

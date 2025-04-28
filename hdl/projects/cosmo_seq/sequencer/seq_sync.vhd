@@ -159,6 +159,12 @@ begin
        clk => clk,
        sycnd_output => sp5_seq.thermtrip_l
     );
+   smerr_l_sync: entity work.meta_sync
+      port map(
+         async_input => sp5_seq_pins.smerr_l,
+         clk => clk,
+         sycnd_output => sp5_seq.smerr_l
+   );
     reset_l_sync: entity work.meta_sync
     port map(
        async_input => sp5_seq_pins.reset_l,

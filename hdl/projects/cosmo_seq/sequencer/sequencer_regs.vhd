@@ -28,6 +28,7 @@ entity sequencer_regs is
         seq_api_status : in seq_api_status_type;
         seq_raw_status : in seq_raw_status_type;
         therm_trip : in std_logic;
+        smerr_assert : in std_logic;
         -- from nic block
         nic_api_status : in nic_api_status_type;
         nic_raw_status : in nic_raw_status_type;
@@ -71,6 +72,7 @@ architecture rtl of sequencer_regs is
     signal active_read : std_logic;
     signal active_write : std_logic;
     signal therm_trip_last : std_logic;
+    signal smerr_assert_last : std_logic;
 
 begin
 
@@ -79,6 +81,7 @@ begin
     begin
         if reset then
             therm_trip_last <= '0';
+            smerr_assert_last <= '0';
             a0_en_last <= '0';
             amd_reset_l_last <= '0';
             amd_pwrok_last <= '0';
@@ -91,6 +94,7 @@ begin
             
         elsif rising_edge(clk) then
             therm_trip_last <= therm_trip;
+            smerr_assert_last <= smerr_assert;
             a0_en_last <= power_ctrl.a0_en;
             amd_reset_l_last <= sp5_readbacks.reset_l;
             amd_pwrok_last <= sp5_readbacks.pwr_ok;
@@ -178,6 +182,7 @@ begin
 
         elsif rising_edge(clk) then
             ifr.thermtrip <= ifr.thermtrip or (not therm_trip_last and therm_trip);
+            ifr.smerr_assert <= ifr.smerr_assert or (not smerr_assert_last and smerr_assert);
 
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
