@@ -75,8 +75,6 @@ set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v1p8[*]}]
 # #######################
 # eSPI Interface
 # #######################
-# Create a virtual clock, to represent the source clock of the espi interface
-#create_clock -name sp5_espi_clk_ext -period 15.000;
 # TODO: This is likely not correct but I need to re-write the link-layer logic again
 # and then re-constrain
 # 20MHz espi constraints, 50ns clock periods.
@@ -96,13 +94,12 @@ set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v1p8[*]}]
 # outputs
 # max = 7ns (SP5's needed setup time) + clock delay to FPGA (2.2ns) + return delay (2.2ns)
 # min = .3ns (SP5's needed hold time) + clock delay to FPGA (2.2ns) + return delay (2.2ns)
-#set_output_delay -clock sp5_espi_clk_ext -max 11.4 [get_ports espi0_sp5_to_fpga1_dat[*]]
-#set_output_delay -clock sp5_espi_clk_ext -min 4.7 [get_ports espi0_sp5_to_fpga1_dat[*]]
+
 
 # Data 
 # max= 7.5ns (1/2 period) + 3ns (maxreal tco)
 # min= 7.5ns (1/2 period) + 1ns (min real tco)
-#set_input_delay -clock sp5_espi_clk_ext -max 10.5 [get_ports espi0_sp5_to_fpga1_dat[*]]
-#set_input_delay -clock sp5_espi_clk_ext -min 8.5 [get_ports espi0_sp5_to_fpga1_dat[*]]
+
+# This is a stop-gap to provide some kind of output timing constraints per the eSPI base spec
 set_max_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 6
 set_min_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 0
