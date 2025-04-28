@@ -222,7 +222,7 @@ entity cosmo_seq_top is
         hdt_fpga1_to_mux_xtrig6_l : in std_logic;
         hdt_fpga1_to_mux_xtrig7_l : in std_logic;
         hdt_mux_to_fpga1_dat : in std_logic;
-        fpga1_to_sp5_apml_xltr_en : in std_logic;
+        fpga1_to_sp5_apml_xltr_en : out std_logic;
         fpga1_to_sp5_espi_kbrst_l : in std_logic;
         spi0_sp5_to_fpga1_cs_l : in std_logic;
         spi1_sp5_to_fpga1_cs_l : in std_logic;
@@ -402,8 +402,8 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-            fpga1_spare_v1p8(0) <= i2c_sp5_to_fpgax_hp_sda;
-            fpga1_spare_v1p8(7) <= i2c_sp5_to_fpgax_hp_scl;
+            fpga1_spare_v1p8(0) <= i2c_sp_to_fpga1_scl;
+            fpga1_spare_v1p8(7) <= i2c_sp_to_fpga1_sda;
             fpga1_spare_v1p8(6) <= amd_hp_irq_n_final;
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
@@ -420,6 +420,7 @@ begin
     fpga1_to_sp_irq_l <= (others => '1');
     -- Enable various buffers when we're in A0:
     fpga1_espi0_cs_l_buff_oe_en_l <= '0' when sp5_seq_pins.pwr_good else 'Z';
+    fpga1_to_sp5_apml_xltr_en <= sp5_seq_pins.pwr_good;
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
@@ -709,6 +710,7 @@ begin
 
     -- SP5 sequence-related pins
     sp5_seq_pins.thermtrip_l <= sp5_to_fpga1_thermtrip_l;
+    sp5_seq_pins.smerr_l <= sp5_to_fpga1_smerr_l;
     sp5_seq_pins.reset_l <= fpga1_to_sp5_reset_l;
     sp5_seq_pins.pwr_ok <= sp5_to_fpga1_pwrok_unbuf;
     fpga1_to_sp5_pwr_btn_l <= '0' when sp5_seq_pins.pwr_btn_l = '0' else 'Z';

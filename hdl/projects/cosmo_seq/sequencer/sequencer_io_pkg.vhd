@@ -44,6 +44,7 @@ package sequencer_io_pkg is
         rsmrst_l : std_logic;
         pwr_btn_l : std_logic;
         pwr_good : std_logic;
+        smerr_l : std_logic;
         is_cosmo : std_logic; -- uses SP5_TO_FPGA1_DEBUG1 high at power up to indicate cosmo
     end record;
     -- FPGA's view of the world as the controller and recipient of
@@ -54,6 +55,7 @@ package sequencer_io_pkg is
         pwr_ok : in;
         slp_s3_l : in;
         slp_s5_l : in;
+        smerr_l : in;
         rsmrst_l : out;
         pwr_btn_l : out;
         pwr_good : out;

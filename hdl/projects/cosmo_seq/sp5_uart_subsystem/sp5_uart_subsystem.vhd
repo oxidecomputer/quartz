@@ -63,12 +63,17 @@ architecture rtl of sp5_uart_subsystem is
 begin
 
     -- inputs from host, outputs to debug header
-    dbg_pins_uart_out <= host_to_fpga when dbg_mux_en = '1' else '1';
-    dbg_pins_uart_in_rts_l <= host_to_fpga_rts_l when dbg_mux_en = '1' else '1';
-    -- outputs to host, inputs from debug header
-    host_from_fpga <= dbg_pins_uart_in when dbg_mux_en = '1' else fgpa_sp_to_host_int;
-    host_from_fpga_rts_l <= dbg_pins_uart_out_rts_l when dbg_mux_en = '1' else fpga_sp_to_host_int_rts_l;
-
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            dbg_pins_uart_out <= host_to_fpga when dbg_mux_en = '1' else '1';
+            dbg_pins_uart_in_rts_l <= host_to_fpga_rts_l when dbg_mux_en = '1' else '1';
+            -- outputs to host, inputs from debug header
+            host_from_fpga <= dbg_pins_uart_in when dbg_mux_en = '1' else fgpa_sp_to_host_int;
+            host_from_fpga_rts_l <= dbg_pins_uart_out_rts_l when dbg_mux_en = '1' else fpga_sp_to_host_int_rts_l;
+        end if;
+    end process;
+    
     -- UARTs
     -- SP UART #0  -- Expected to be console uart sp-side
     sp_uart0: entity work.axi_fifo_st_uart
