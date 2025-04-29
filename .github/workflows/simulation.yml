@@ -39,7 +39,7 @@ jobs:
         - name: buck path
           run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
         - name: Run VUnit tests
-          run: set -o pipefail; buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done
+          run: set -o pipefail; buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do echo "$line"; eval "$line" ; done
         - name: Cleanup
           run: bash .github/cleanup.sh
   
