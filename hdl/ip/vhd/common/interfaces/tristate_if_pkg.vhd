@@ -11,11 +11,15 @@ use ieee.std_logic_1164.all;
 
 package tristate_if_pkg is
 
+
+
     type tristate is record
         i   : std_logic;
         o   : std_logic;
         oe  : std_logic;
     end record;
+
+    type tristate_array is array (natural range <>) of tristate;
 
     view tristate_if of tristate is
         i       : in;

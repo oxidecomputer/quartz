@@ -19,7 +19,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std_unsigned.all;
 
-use work.stream8_pkg;
 use work.tristate_if_pkg.all;
 use work.time_pkg.all;
 
@@ -100,7 +99,7 @@ architecture rtl of i2c_ctrl_link_layer is
     type sm_reg_t is record
         -- state
         state           : state_t;
-        bits_shifted    : natural range 0 to 8;
+        bits_shifted    : natural range 0 to 9;
 
         -- control
         ready                   : std_logic;
@@ -278,7 +277,7 @@ begin
 
         -- Set if a stop is requested to handle the case when it may need to happen before the end
         -- of the transaction. This is then cleared as transition out of the STOP_SETUP state.
-        -- The combinatorial value of this signal is read elsewhwere in the state machine in an
+        -- The combinatorial value of this signal is read elsewhere in the state machine in an
         -- effort to accommodate making the stop happen as quickly as possible. The intention is
         -- to transition to a STOP during a normal transition point for I2C which is not necessarily
         -- any cycle of the FPGA clk. At slower operating modes this does not matter much, but at
@@ -392,7 +391,7 @@ begin
             when BYTE_RX =>
                 v.sda_oe    := '0';
 
-                if sm_reg.bits_shifted = 8 then
+                if sm_reg.bits_shifted = 8 and scl_fedge = '1' then
                     v.state         := ACK_TX;
                     v.rx_data_valid := '1';
                     v.bits_shifted  := 0;

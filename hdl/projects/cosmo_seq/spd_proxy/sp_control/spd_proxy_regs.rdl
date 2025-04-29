@@ -1,0 +1,89 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible registers in the Cosmo
+// Sequencer FPGA block.
+
+addrmap spd_proxy_regs {
+    name = "spd_proxy";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+ 
+   
+    reg {
+        name = "command";
+        desc = "Allow manual control over some I/O ping for debugging purposes, a write here initiates the command";
+
+         field {
+            desc = "length of the command in bytes";
+        } len[8] = 0;
+        field {
+            desc = "Register address";
+        } reg_addr[8] = 0;
+        field {
+            desc = "i2c/i3c bus address";
+        } bus_addr[7] = 0;
+        field {
+            desc = "READ=0b00, WRITE= 0b01, RANDOM=0b10";
+        } op[2] = 0;
+    } spd_cmd;
+
+    reg {
+        name = "fifo_ctrl";
+        desc = "Control of the fifos";
+
+        field {
+            desc = "Set to one to reset RX FIFO. Cleared by hardware after FIFO reset.";
+        } rx_fifo_reset[15:15] =  0;
+        field {
+            desc = "Set to one put RX FIFO in auto increment mode.";
+        } rx_fifo_auto_inc[14:14] =  1;
+        field {
+            desc = "Set to one to reset TX FIFO. Cleared by hardware after FIFO reset.";
+        } tx_fifo_reset[7:7] =  0;
+         field {
+            desc = "Set to one put TX FIFO in auto increment mode.";
+        } tx_fifo_auto_inc[6:6] =  1;
+    } fifo_ctrl;
+
+    reg {
+        name = "TX FIFO Write Data Register";
+        desc = "";
+        field {
+            desc = "Writing stores data in fifo";
+        } fifo_data[31:0] =  0;
+    } tx_fifo_wdata;
+
+    reg {
+        name = "RX FIFO Write Data Pointer";
+        desc = "";
+        field {
+            desc = "Set to 0 to 'empty' the data";
+        } addr[31:0] =  0;
+    } rx_fifo_waddr;
+    reg {
+        name = "RX FIFO Read Data Pointer";
+        desc = "";
+        field {
+            desc = "Set to 0 to start reading the data";
+        } addr[31:0] =  0;
+    } rx_fifo_raddr;
+
+    reg {
+        name = "RX FIFO Available Data";
+        desc = "";
+        field {
+            desc = "Byte count of data in RX FIFO";
+        } data[31:0] =  0;
+    } rx_fifo_data_avail;
+
+    reg {
+        name = "RX FIFO Read Data Register";
+        desc = "";
+        field {
+            desc = "Note: in auto-inc mode. reading side-effects the data by moving the raddr pointer";
+        } data[31:0] =  0;
+    } rx_fifo_rdata;
+    
+};

@@ -6,6 +6,7 @@ rdl_file(
     name = "cosmo_seq_top_rdl",
     src = "cosmo_seq_top.rdl",
     deps = [
+        "//hdl/projects/cosmo_seq/spd_proxy:spd_proxy_regs_rdl",
         "//hdl/ip/vhd/info:info_regs_rdl",
         "//hdl/projects/cosmo_seq/sp_i2c_subsystem:sp_i2c_regs_rdl",
         "//hdl/projects/cosmo_seq/sequencer:sequencer_regs_rdl",
@@ -51,7 +52,6 @@ vhdl_unit(
         ":board_support",
         "//hdl/ip/vhd/axi_blocks:axilite_common_pkg",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
-        "//hdl/ip/vhd/common:streaming_if_pkg",
         "//hdl/ip/vhd/common:tristate_if_pkg",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
         "//hdl/projects/cosmo_seq/sp5_espi_flash_subsystem:sp5_espi_flash_subsystem",

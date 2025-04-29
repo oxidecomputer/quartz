@@ -52,6 +52,7 @@ package i2c_common_pkg is
         len     : std_logic_vector(7 downto 0);
     end record;
     constant CMD_RESET  : cmd_t := (READ, (others => '0'), (others => '0'), (others => '0'));
+    type cmd_t_array is array (natural range <>) of cmd_t;
 
 end package;
 
@@ -68,7 +69,7 @@ package body i2c_common_pkg is
                     200,
                     200,
                     200,
-                    50 -- currently unsed by our simulated controller
+                    50 -- currently unused by our simulated controller
                  );
             when STANDARD =>
                  r := (

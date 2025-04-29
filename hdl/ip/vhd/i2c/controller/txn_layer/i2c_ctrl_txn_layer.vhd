@@ -17,7 +17,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std_unsigned.all;
 
-use work.stream8_pkg;
+use work.axi_st8_pkg;
 use work.tristate_if_pkg.all;
 
 use work.i2c_common_pkg.all;
@@ -42,10 +42,10 @@ entity i2c_ctrl_txn_layer is
         core_ready  : out std_logic;
 
         -- Transmit data stream
-        tx_st_if    : view stream8_pkg.st_sink_if;
+        tx_st_if    : view axi_st8_pkg.axi_st_sink;
 
         -- Received data stream
-        rx_st_if    : view stream8_pkg.st_source_if;
+        rx_st_if    : view axi_st8_pkg.axi_st_source;
     );
 end entity;
 
@@ -67,6 +67,7 @@ architecture rtl of i2c_ctrl_txn_layer is
         state           : state_t;
         cmd             : cmd_t;
         in_random_read  : boolean;
+        cnts            : std_logic_vector(15 downto 0);
         bytes_done      : std_logic_vector(7 downto 0);
         do_start        : std_logic;
         do_ack          : std_logic;
@@ -82,6 +83,7 @@ architecture rtl of i2c_ctrl_txn_layer is
         state => IDLE,
         cmd => CMD_RESET,
         in_random_read => false,
+        cnts => (others => '0'),
         bytes_done => (others => '0'),
         do_start => '0',
         do_ack => '0',
@@ -144,6 +146,7 @@ begin
                 if cmd_valid = '1' and ll_ready = '1' and abort = '0' then
                     v.state     := START;
                     v.cmd       := cmd;
+                    v.cnts      := (others => '0');
                 end if;
 
             -- single cycle state to initiate a START
@@ -162,6 +165,7 @@ begin
             -- wait for address byte to have been sent and for the peripheral to ACK
             when WAIT_ADDR_ACK =>
                 if ll_ready = '1' and ll_ackd_valid = '1' then
+                    v.cnts := sm_reg.cnts + 1;
                     v.next_valid    := '1';
                     if ll_ackd then
                         v.bytes_done := (others => '0');
@@ -176,12 +180,13 @@ begin
                             v.txd_valid := '1';
                         end if;
                     else
-                        -- TODO: address nack error
-                        v.state := STOP;
+                        -- TODO: byte nack error
+                        v.state         := STOP;
                     end if;
                 end if;
 
-            -- read as many bytes as requested, nacking and transitioning to STOP when done
+            -- read as many bytes as requested and ack them
+            -- nacking and transitioning to STOP when done
             when READ =>
                 v.next_valid    := ll_ready;
 

@@ -1,4 +1,16 @@
 load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "spd_proxy_regs_rdl",
+    src = "sp_control/spd_proxy_regs.rdl",
+    outputs = [
+        "spd_proxy_regs_pkg.vhd", 
+        "spd_proxy_regs.html", 
+        "spd_proxy_regs.json",
+    ],
+    visibility = ["PUBLIC"],
+)
 
 vhdl_unit(
     name = "sda_arbiter",
@@ -9,15 +21,26 @@ vhdl_unit(
 
 vhdl_unit(
     name = "spd_proxy_top",
-    srcs = glob(["*.vhd"]),
+    srcs = glob(["*.vhd", "sp_control/*.vhd"]),
     deps = [
+        ":spd_proxy_regs_rdl",
         ":sda_arbiter",
+        "//hdl/ip/vhd/memories:mixed_width_simple_dpr",
         "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
         "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
         "//hdl/ip/vhd/i2c/controller:i2c_ctrl_txn_layer",
     ],
     standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "spd_shared_sim_pkg",
+    srcs = glob(["sims/*tb_pkg.vhd"]),
+    deps = [],
     visibility = ['PUBLIC'],
 )
 
@@ -31,10 +54,25 @@ vunit_sim(
 )
 
 vunit_sim(
-    name = "spd_proxy_top_tb",
-    srcs = glob(["sims/*.vhd"]),
+    name = "spd_proxy_tb",
+    srcs = glob(["sims/spd_proxy_tb/*.vhd"]),
     deps = [
         ":spd_proxy_top",
+        ":spd_shared_sim_pkg",
+        "//hdl/ip/vhd/vunit_components:basic_stream",
+        "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_target_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_controller_vc"
+    ],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "spd_proxy_top_tb",
+    srcs = glob(["sims/*.vhd"], exclude = ["sims/*tb_pkg.vhd"]),
+    deps = [
+        ":spd_proxy_top",
+        ":spd_shared_sim_pkg",
         "//hdl/ip/vhd/vunit_components:basic_stream",
         "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
         "//hdl/ip/vhd/vunit_components:i2c_target_vc",

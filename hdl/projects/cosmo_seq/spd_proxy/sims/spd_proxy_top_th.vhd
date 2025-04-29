@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2025 Oxide Computer Company
+-- Copyright 2024 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -13,126 +13,152 @@ library vunit_lib;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
+use work.axil8x32_pkg;
 use work.i2c_common_pkg.all;
 use work.tristate_if_pkg.all;
-use work.stream8_pkg;
-
-use work.spd_proxy_top_tb_pkg.all;
+use work.spd_proxy_tb_pkg.all;
 
 entity spd_proxy_top_th is
 end entity;
 
 architecture th of spd_proxy_top_th is
-    constant CLK_PER_TIME : time := CLK_PER_NS * 1 ns;
 
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
-    signal cpu_scl  : std_logic;
-    signal cpu_sda  : std_logic;
-    signal dimm_scl : std_logic;
-    signal dimm_sda : std_logic;
+    signal axi_if      : axil8x32_pkg.axil_t;
+    signal dimm_abcdef_scl : std_logic;
+    signal dimm_abcdef_sda : std_logic;
+    signal dimm_ghijkl_scl : std_logic;
+    signal dimm_ghijkl_sda : std_logic;
+    signal cpu_abcdef_scl : std_logic;
+    signal cpu_abcdef_sda : std_logic;
+    signal cpu_ghijkl_scl : std_logic;
+    signal cpu_ghijkl_sda : std_logic;
+    signal cpu_scl_if0  : tristate;
+    signal cpu_sda_if0  : tristate;
+    signal cpu_scl_if1  : tristate;
+    signal cpu_sda_if1  : tristate;
+    signal dimm_scl_if0  : tristate;
+    signal dimm_sda_if0  : tristate;
+    signal dimm_scl_if1  : tristate;
+    signal dimm_sda_if1  : tristate;
 
-    signal cpu_proxy_scl_if     : tristate;
-    signal cpu_proxy_sda_if     : tristate;
-    signal dimm_proxy_scl_if    : tristate;
-    signal dimm_proxy_sda_if    : tristate;
-
-    signal command          : cmd_t;
-    signal command_valid    : std_logic;
-    signal controller_ready : std_logic;
-    signal tx_data_stream   : stream8_pkg.data_channel;
-    signal rx_data_stream   : stream8_pkg.data_channel;
 begin
 
-    clk     <= not clk after CLK_PER_TIME / 2;
-    reset   <= '0' after 200 ns;
+    -- set up a fastish clock for the sim env
+    -- and release reset after a bit of time
+    clk   <= not clk after 4 ns;
+    reset <= '0' after 200 ns;
 
-    -- simulated CPU I2C controller
-    i2c_controller_vc_inst: entity work.i2c_controller_vc
-        generic map(
-            I2C_CTRL_VC => I2C_CTRL_VC,
-            MODE        => STANDARD
-        )
-        port map(
-            scl => cpu_scl,
-            sda => cpu_sda
-        );
-
-    -- simulated DIMM I2C target
-    i2c_target_vc_inst: entity work.i2c_target_vc
-        generic map(
-            I2C_TARGET_VC => I2C_TGT_VC
-        )
-        port map(
-            scl => dimm_scl,
-            sda => dimm_sda
-        );
-
-    -- DUT: the SPD proxy
-    spd_proxy_top_inst: entity work.spd_proxy_top
-        generic map(
-            CLK_PER_NS  => CLK_PER_NS,
-            I2C_MODE    => FAST_PLUS
-        )
-        port map(
-            clk                 => clk,
-            reset               => reset,
-            cpu_scl_if          => cpu_proxy_scl_if,
-            cpu_sda_if          => cpu_proxy_sda_if,
-            dimm_scl_if         => dimm_proxy_scl_if,
-            dimm_sda_if         => dimm_proxy_sda_if,
-            i2c_command         => command,
-            i2c_command_valid   => command_valid,
-            i2c_ctrlr_idle      => controller_ready,
-            i2c_tx_st_if        => tx_data_stream,
-            i2c_rx_st_if        => rx_data_stream
-        );
-
-    -- I2C simulation support infrastructure
-    i2c_cmd_vc_inst: entity work.i2c_cmd_vc
+    axi_lite_master_inst: entity vunit_lib.axi_lite_master
         generic map (
-            I2C_CMD_VC => I2C_CMD_VC
+            bus_handle => bus_handle
         )
         port map (
-            cmd     => command,
-            valid   => command_valid,
-            abort   => open,
-            ready   => controller_ready
+            aclk    => clk,
+            arready => axi_if.read_address.ready,
+            arvalid => axi_if.read_address.valid,
+            araddr  => axi_if.read_address.addr,
+            rready  => axi_if.read_data.ready,
+            rvalid  => axi_if.read_data.valid,
+            rdata   => axi_if.read_data.data,
+            rresp   => axi_if.read_data.resp,
+            awready => axi_if.write_address.ready,
+            awvalid => axi_if.write_address.valid,
+            awaddr  => axi_if.write_address.addr,
+            wready  => axi_if.write_data.ready,
+            wvalid  => axi_if.write_data.valid,
+            wdata   => axi_if.write_data.data,
+            wstrb   => axi_if.write_data.strb,
+            bvalid  => axi_if.write_response.valid,
+            bready  => axi_if.write_response.ready,
+            bresp   => axi_if.write_response.resp
         );
 
-    tx_source_vc : entity work.basic_source
-        generic map (
-            SOURCE  => TX_DATA_SOURCE_VC
-        )
-        port map (
-            clk     => clk,
-            valid   => tx_data_stream.valid,
-            ready   => tx_data_stream.ready,
-            data    => tx_data_stream.data
-        );
+     -- simulated CPU I2C controller
+    cpu_abcdef_vc: entity work.i2c_controller_vc
+    generic map(
+        I2C_CTRL_VC => I2C_CTRL_VC,
+        MODE        => SIMULATION
+    )
+    port map(
+        scl => cpu_abcdef_scl,
+        sda => cpu_abcdef_sda
+    );
 
-    rx_sink_vc : entity work.basic_sink
-        generic map (
-            SINK    => RX_DATA_SINK_VC
-        )
-        port map (
-            clk     => clk,
-            valid   => rx_data_stream.valid,
-            ready   => rx_data_stream.ready,
-            data    => rx_data_stream.data
-        );
+    cpu_abcdef_scl <= cpu_scl_if0.o when cpu_scl_if0.oe else 'H';
+    cpu_scl_if0.i <= cpu_abcdef_scl;
 
-    -- wire the CPU to the proxy DUT
-    cpu_scl <= cpu_proxy_scl_if.o when cpu_proxy_scl_if.oe else 'H';
-    cpu_sda <= cpu_proxy_sda_if.o when cpu_proxy_sda_if.oe else 'H';
-    cpu_proxy_scl_if.i  <= cpu_scl;
-    cpu_proxy_sda_if.i  <= cpu_sda;
+    cpu_abcdef_sda <= cpu_sda_if0.o when cpu_sda_if0.oe else 'H';
+    cpu_sda_if0.i <= cpu_abcdef_sda;
 
-    -- wire the proxy DUT to the DIMMs
-    dimm_scl <= dimm_proxy_scl_if.o when dimm_proxy_scl_if.oe else 'H';
-    dimm_sda <= dimm_proxy_sda_if.o when dimm_proxy_sda_if.oe else 'H';
-    dimm_proxy_scl_if.i <= dimm_scl;
-    dimm_proxy_sda_if.i <= dimm_sda;
+     -- simulated DIMM I2C target
+    dimm_abcdef_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM1_TGT_VC
+    )
+    port map(
+        scl => dimm_abcdef_scl,
+        sda => dimm_abcdef_sda
+    );
 
-end architecture;
+    dimm_abcdef_scl <= dimm_scl_if0.o when dimm_scl_if0.oe else 'H';
+    dimm_scl_if0.i <= dimm_abcdef_scl;
+    
+    dimm_abcdef_sda <= dimm_sda_if0.o when dimm_sda_if0.oe else 'H';
+    dimm_sda_if0.i <= dimm_abcdef_sda;
+
+    cpu_ghijkl_vc: entity work.i2c_controller_vc
+    generic map(
+        I2C_CTRL_VC => I2C_CTRL_VC,
+        MODE        => SIMULATION
+    )
+    port map(
+        scl => cpu_ghijkl_scl,
+        sda => cpu_ghijkl_sda
+    );
+
+    cpu_ghijkl_scl <= cpu_scl_if1.o when cpu_scl_if1.oe else 'H';
+    cpu_scl_if1.i <= cpu_ghijkl_scl;
+    cpu_ghijkl_sda <= cpu_sda_if1.o when cpu_sda_if1.oe else 'H';
+    cpu_sda_if1.i <= cpu_ghijkl_sda;
+
+    dimm_ghijkl_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM2_TGT_VC
+    )
+    port map(
+        scl => dimm_ghijkl_scl,
+        sda => dimm_ghijkl_sda
+    );
+
+    dimm_ghijkl_scl <= dimm_scl_if1.o when dimm_scl_if1.oe else 'H';
+    dimm_scl_if1.i <= dimm_ghijkl_scl;
+    
+    dimm_ghijkl_sda <= dimm_sda_if1.o when dimm_sda_if1.oe else 'H';
+    dimm_sda_if1.i <= dimm_ghijkl_sda;
+
+
+    DUT: entity work.spd_proxy_top
+     generic map(
+        CLK_PER_NS => CLK_PER_NS,
+        I2C_MODE => SIMULATION,
+        NUM_BUSSES => 2
+    )
+     port map(
+        clk => clk,
+        reset => reset,
+        axi_if => axi_if,
+        cpu_scl_if0 => cpu_scl_if0,
+        cpu_sda_if0 => cpu_sda_if0,
+        cpu_scl_if1 => cpu_scl_if1,
+        cpu_sda_if1 => cpu_sda_if1,
+        dimm_scl_if0 => dimm_scl_if0,
+        dimm_sda_if0 => dimm_sda_if0,
+        dimm_scl_if1 => dimm_scl_if1,
+        dimm_sda_if1 => dimm_sda_if1
+    );
+    
+
+end th;
