@@ -307,32 +307,18 @@ typedef SampledSerialIOTxInout#(5) IgnitionIO;
 
 module mkIgnitionIOs #(
         Integer bank_id,
-        Vector#(n, IgnitionController::Controller) controllers)
+        Vector#(n, Tuple2#(Bool, GetPut#(Bit#(1)))) txrs)
             (Vector#(n, IgnitionIO));
     // The modulo 5 causes the strobe instances for different banks to be offset
     // in phase. This avoids all transceivers switching at once and instead
     // spreads out the transmit activity.
     Strobe#(3) tx_strobe <- mkLimitStrobe(1, 5, fromInteger(bank_id % 5));
 
-    function to_serial(txr) = txr.serial;
-
-    Transceivers#(n) txrs <- mkTransceivers();
-    Vector#(n, IgnitionIO) io <- zipWithM(
-        mkSampledSerialIOWithTxStrobeInout(tx_strobe),
-        map(tx_enabled, controllers),
-        map(to_serial, txrs.txrs));
-
     mkFreeRunningStrobe(tx_strobe);
-    zipWithM(mkConnection, map(transceiver_client, controllers), txrs.txrs);
 
-    // Create a registered copy of the first Controller tick to help P&R.
-    Reg#(Bool) watchdog_tick <- mkRegU();
-
-    (* fire_when_enabled *)
-    rule do_receiver_watchdog;
-        watchdog_tick <= controllers[0].tick_1khz;
-        if (watchdog_tick) txrs.tick_1khz();
-    endrule
+    Vector#(n, IgnitionIO) io <- mapM(
+        uncurry(mkSampledSerialIOWithTxStrobeInout(tx_strobe)),
+        txrs);
 
     return io;
 endmodule
@@ -366,10 +352,10 @@ module mkSidecarMainboardControllerTop
             controller.registers.tofino,
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
-            register_pages(controller.ignition_controllers),
+            controller.ignition_controller,
             controller.registers.fans,
-            asIfc(controller.registers.front_io_hsc),
-            reset_by reset_sync);
+            controller.registers.front_io_hsc,
+                reset_by reset_sync);
 
     InputReg#(Bit#(1), 2) csn <- mkInputSyncFor(spi_phy.pins.csn);
     InputReg#(Bit#(1), 2) sclk <- mkInputSyncFor(spi_phy.pins.sclk);
@@ -530,59 +516,75 @@ module mkSidecarMainboardControllerTop
     // further down in this module how the transceiver channels map to device
     // pins.
     //
+
+    ControllerTransceiver#(36)
+            ignition_txr <- mkControllerTransceiver36(reset_by reset_sync);
+
+    mkConnection(ignition_txr, controller.ignition_controller.txr);
+
+    // Connect the transceiver watchdog timer.
+    (* fire_when_enabled *)
+    rule do_ignition_txr_watchdog (controller.ignition_tick_1khz);
+        ignition_txr.tick_1khz();
+    endrule
+
+    //
     // Cubbies
     //
-    Vector#(8, IgnitionController::Controller)
+
+    Vector#(8, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank2 = vec(
-            controller.ignition_controllers[15],
-            controller.ignition_controllers[14],
-            controller.ignition_controllers[13],
-            controller.ignition_controllers[12],
-            controller.ignition_controllers[11],
-            controller.ignition_controllers[10],
-            controller.ignition_controllers[9],
-            controller.ignition_controllers[19]);
-    Vector#(6, IgnitionController::Controller)
+            ignition_txr.serial[15],
+            ignition_txr.serial[14],
+            ignition_txr.serial[13],
+            ignition_txr.serial[12],
+            ignition_txr.serial[11],
+            ignition_txr.serial[10],
+            ignition_txr.serial[9],
+            ignition_txr.serial[19]);
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank3_0 = vec(
-            controller.ignition_controllers[18],
-            controller.ignition_controllers[17],
-            controller.ignition_controllers[16],
-            controller.ignition_controllers[8],
-            controller.ignition_controllers[4],
-            controller.ignition_controllers[7]);
-    Vector#(6, IgnitionController::Controller)
+            ignition_txr.serial[18],
+            ignition_txr.serial[17],
+            ignition_txr.serial[16],
+            ignition_txr.serial[8],
+            ignition_txr.serial[4],
+            ignition_txr.serial[7]);
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank3_1 = vec(
-            controller.ignition_controllers[1],
-            controller.ignition_controllers[0],
-            controller.ignition_controllers[6],
-            controller.ignition_controllers[5],
-            controller.ignition_controllers[3],
-            controller.ignition_controllers[2]);
-    Vector#(6, IgnitionController::Controller)
+            ignition_txr.serial[1],
+            ignition_txr.serial[0],
+            ignition_txr.serial[6],
+            ignition_txr.serial[5],
+            ignition_txr.serial[3],
+            ignition_txr.serial[2]);
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank6_0 = vec(
-            controller.ignition_controllers[20],
-            controller.ignition_controllers[21],
-            controller.ignition_controllers[22],
-            controller.ignition_controllers[23],
-            controller.ignition_controllers[24],
-            controller.ignition_controllers[25]);
-    Vector#(6, IgnitionController::Controller)
+            ignition_txr.serial[20],
+            ignition_txr.serial[21],
+            ignition_txr.serial[22],
+            ignition_txr.serial[23],
+            ignition_txr.serial[24],
+            ignition_txr.serial[25]);
+    Vector#(6, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank6_1 = vec(
-            controller.ignition_controllers[30],
-            controller.ignition_controllers[31],
-            controller.ignition_controllers[27],
-            controller.ignition_controllers[26],
-            controller.ignition_controllers[28],
-            controller.ignition_controllers[29]);
+            ignition_txr.serial[30],
+            ignition_txr.serial[31],
+            ignition_txr.serial[27],
+            ignition_txr.serial[26],
+            ignition_txr.serial[28],
+            ignition_txr.serial[29]);
+
     //
     // PSC 0/1, Sidecar B, local Target
     //
-    Vector#(4, IgnitionController::Controller)
+
+    Vector#(4, Tuple2#(Bool, GetPut#(Bit#(1))))
         ignition_bank7 = vec(
-            controller.ignition_controllers[32],
-            controller.ignition_controllers[33],
-            controller.ignition_controllers[34],
-            controller.ignition_controllers[35]);
+            ignition_txr.serial[32],
+            ignition_txr.serial[33],
+            ignition_txr.serial[34],
+            ignition_txr.serial[35]);
 
     // Allocate the Transceivers and IO adapters for the banks of Controllers.
     // The bank id passed to `mkIgnitionIOs(..)` is used to derive a TX strobe

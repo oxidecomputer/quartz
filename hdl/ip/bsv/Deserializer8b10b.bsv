@@ -8,8 +8,10 @@ package Deserializer8b10b;
 
 export DeserializedCharacter(..);
 export Deserializer(..);
+export DeserializerClient(..);
 export mkDeserializer;
 
+import Connectable::*;
 import GetPut::*;
 import FIFO::*;
 import FIFOF::*;
@@ -37,6 +39,12 @@ interface Deserializer;
     // Bit invert any characters returned, allowing any polarity inversion of
     // incoming bits to be undone.
     method Action invert_polarity();
+endinterface
+
+interface DeserializerClient;
+    interface PutS#(DeserializedCharacter) character;
+    method Bool search_for_comma();
+    method Bool invert_polarity();
 endinterface
 
 // A minimal implementation of the `Deserializer` interface. This module expects
@@ -100,5 +108,21 @@ module mkDeserializer (Deserializer);
     method search_for_comma = search_for_comma_.send;
     method invert_polarity = invert_polarity_.send;
 endmodule
+
+instance Connectable#(Deserializer, DeserializerClient);
+    module mkConnection #(Deserializer des, DeserializerClient client) (Empty);
+        mkConnection(des.character, client.character);
+
+        (* fire_when_enabled *)
+        rule do_search_for_comma (client.search_for_comma);
+            des.search_for_comma();
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_invert_polarity (client.invert_polarity);
+            des.invert_polarity();
+        endrule
+    endmodule
+endinstance
 
 endpackage

@@ -39,9 +39,9 @@ bluesim_tests('TofinoDebugPortTests',
         'mkDirectWriteTest',
     ],
     deps = [
-        '//hdl/projects/sidecar/mainboard:TofinoDebugPort',
-        '//hdl/ip/bsv/I2C:I2CPeripheralModel',
         '//hdl/ip/bsv:TestUtils',
+        '//hdl/ip/bsv/I2C:I2CPeripheralModel',
+        '//hdl/projects/sidecar/mainboard:TofinoDebugPort',
     ])
 
 bluesim_tests('Tofino2SequencerTests',
@@ -69,9 +69,9 @@ bluesim_tests('Tofino2SequencerTests',
     ],
     deps = [
         '//hdl/ip/bsv:PowerRail',
-        '//hdl/projects/sidecar/mainboard:Tofino2Sequencer',
         '//hdl/ip/bsv:Strobe',
         '//hdl/ip/bsv:TestUtils',
+        '//hdl/projects/sidecar/mainboard:Tofino2Sequencer',
     ])
 
 bluesim_tests('MainboardControllerTests',
@@ -81,7 +81,27 @@ bluesim_tests('MainboardControllerTests',
         'mkFrontIOHSCTest',
     ],
     deps = [
-        '//hdl/ip/bsv:PowerRail',
         '//hdl/projects/sidecar/mainboard:SidecarMainboardController',
+        '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv:TestUtils',
+    ])
+
+bluesim_tests('SpiServerTests',
+    suite = 'SidecarMainboardControllerSpiServerTests.bsv',
+    env = '//bluesim_default',
+    modules = [
+        'mkReadIdTest',
+        'mkReadIgnitionCounterTest',
+        'mkReadIgnitionPortCountTest',
+        'mkReadIgnitionPresenceSummaryTest',
+        'mkReadIgnitionTargetStatusTest',
+        'mkReadIgnitionTransceiverStateTest',
+        'mkSetIgnitionTransmitterOutputEnableModeTest',
+    ],
+    deps = [
+        '//hdl/ip/bsv:FanModule',
+        '//hdl/ip/bsv:PowerRail',
+        '//hdl/ip/bsv:TestUtils',
+        '//hdl/ip/bsv/ignition/test:TestHelpers',
+        '//hdl/projects/sidecar/mainboard:SidecarMainboardController',
     ])
