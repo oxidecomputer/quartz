@@ -67,7 +67,7 @@ package body calc_pkg is
             count         := count * 2;
             bits_required := bits_required + 1;
         end loop;
-        -- Beacuse 0 counts, as long as we have more than 1 bit required,
+        -- Because 0 counts, as long as we have more than 1 bit required,
         -- we need to subtract 1 from the number found above since 8 bits
         -- can represent 256 values
         if bits_required > 1 then

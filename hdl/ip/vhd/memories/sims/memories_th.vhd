@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -34,13 +34,21 @@ architecture th of memories_th is
     alias  rusedwds        : std_logic_vector(4 downto 0) is read_side_reads(12 downto 8);
     alias  rempty          : std_logic is read_side_reads(13);
 
-    signal dpr_write_side_control : std_logic_vector(12 downto 0);
-    alias  dpr_write              : std_logic is dpr_write_side_control(12);
-    alias  dpr_waddr              : std_logic_vector(3 downto 0) is dpr_write_side_control(11 downto 8);
-    alias  dpr_wdata              : std_logic_vector(7 downto 0) is dpr_write_side_control(7 downto 0);
+    signal dpr_write_side_control : std_logic_vector(20 downto 0);
+    alias  dpr_write              : std_logic is dpr_write_side_control(dpr_write_side_control'left);
+    alias  dpr_waddr              : std_logic_vector(3 downto 0) is dpr_write_side_control(19 downto 16);
+    alias  dpr_wdata              : std_logic_vector(15 downto 0) is dpr_write_side_control(15 downto 0);
 
     signal dpr_raddr : std_logic_vector(3 downto 0);
-    signal dpr_rdata : std_logic_vector(7 downto 0);
+    signal dpr_rdata : std_logic_vector(15 downto 0);
+
+    signal mixed_dpr_write_side_control : std_logic_vector(20 downto 0);
+    alias  mixed_dpr_write              : std_logic is mixed_dpr_write_side_control(mixed_dpr_write_side_control'left);
+    alias  mixed_dpr_waddr              : std_logic_vector(3 downto 0) is mixed_dpr_write_side_control(19 downto 16);
+    alias  mixed_dpr_wdata              : std_logic_vector(7 downto 0) is mixed_dpr_write_side_control(7 downto 0);
+
+    signal mixed_dpr_raddr : std_logic_vector(2 downto 0);
+    signal mixed_dpr_rdata : std_logic_vector(15 downto 0);
 
 begin
 
@@ -109,7 +117,7 @@ begin
     --------------------------------------------------------------------------------
     simple_dpr_dut: entity work.dual_clock_simple_dpr
         generic map (
-            data_width => 8,
+            data_width => 16,
             num_words  => 16,
             reg_output => false
         )
@@ -125,7 +133,7 @@ begin
 
     dpr_write_side_gpios: entity work.sim_gpio
         generic map (
-            out_num_bits => 13,
+            out_num_bits => 21,
             in_num_bits  => 1,
             actor_name   => "dpr_write_side"
         )
@@ -138,13 +146,57 @@ begin
     dpr_read_side_gpios: entity work.sim_gpio
         generic map (
             out_num_bits => 4,
-            in_num_bits  => 8,
+            in_num_bits  => 16,
             actor_name   => "dpr_read_side"
         )
         port map (
             clk      => clk_b,
             gpio_in  => dpr_rdata,
             gpio_out => dpr_raddr
+        );
+
+
+     --------------------------------------------------------------------------------
+    -- Dual Port mixed RAM DUT
+    --------------------------------------------------------------------------------
+    simple_mixed_dpr_dut: entity work.mixed_width_simple_dpr
+        generic map (
+            write_width => 8,
+            read_width  => 16,
+            write_num_words => 16  -- 16bytes, 8 read words
+        )
+        port map (
+            wclk  => clk_a,
+            waddr => mixed_dpr_waddr,
+            wdata => mixed_dpr_wdata,
+            wren  => mixed_dpr_write,
+            rclk  => clk_b,
+            raddr => mixed_dpr_raddr,
+            rdata => mixed_dpr_rdata
+        );
+
+        mixed_dpr_write_side_gpios: entity work.sim_gpio
+        generic map (
+            out_num_bits => 21,
+            in_num_bits  => 1,
+            actor_name   => "mixed_dpr_write_side"
+        )
+        port map (
+            clk        => clk_a,
+            gpio_in(0) => '0',
+            gpio_out   => mixed_dpr_write_side_control
+        );
+
+        mixed_dpr_read_side_gpios: entity work.sim_gpio
+        generic map (
+            out_num_bits => 3,
+            in_num_bits  => 16,
+            actor_name   => "mixed_dpr_read_side"
+        )
+        port map (
+            clk      => clk_b,
+            gpio_in  => mixed_dpr_rdata,
+            gpio_out => mixed_dpr_raddr
         );
 
 end th;
