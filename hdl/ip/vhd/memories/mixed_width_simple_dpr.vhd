@@ -88,7 +88,11 @@ architecture ram of mixed_width_simple_dpr is
             end if;
         end process;
     
-        rdata_int <= ram(to_integer(raddr));
+        rd:process(all)
+        begin
+                rdata_int <= ram(to_integer(raddr));
+        end process;
+
     else generate
         -- Write side is smaller so the decodes flip from above, write side writes to ram array natively
         -- and the read side has to expand the data out.

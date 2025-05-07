@@ -143,8 +143,7 @@ begin
     DUT: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS => CLK_PER_NS,
-        I2C_MODE => SIMULATION,
-        NUM_BUSSES => 2
+        I2C_MODE => SIMULATION
     )
      port map(
         clk => clk,

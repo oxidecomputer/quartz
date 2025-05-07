@@ -33,6 +33,19 @@ package i2c_common_pkg is
 
     function get_i2c_settings (constant mode : mode_t) return settings_t;
 
+    type txn_status_code_t is (
+        SUCCESS,
+        NACK_BUS_ADDR,
+        NACK_DURING_WRITE,
+        ABORTED
+    );
+
+    type txn_status_t is record
+        code : txn_status_code_t;
+        code_valid : std_logic;
+        busy : std_logic;
+    end record;
+
     --
     -- Transaction Layer
     --

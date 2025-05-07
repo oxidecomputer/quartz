@@ -40,6 +40,8 @@ entity i2c_ctrl_txn_layer is
         cmd_valid   : in std_logic;
         abort       : in std_logic;
         core_ready  : out std_logic;
+        -- I2C status
+        txn_status : out txn_status_t;
 
         -- Transmit data stream
         tx_st_if    : view axi_st8_pkg.axi_st_sink;
@@ -77,6 +79,7 @@ architecture rtl of i2c_ctrl_txn_layer is
         next_valid      : std_logic;
         txd             : std_logic_vector(7 downto 0);
         txd_valid       : std_logic;
+        status          : txn_status_t;
     end record;
 
     constant SM_REG_RESET : sm_reg_t := (
@@ -92,7 +95,8 @@ architecture rtl of i2c_ctrl_txn_layer is
         tx_byte_valid => '0',
         next_valid => '0',
         txd => (others => '0'),
-        txd_valid => '0'
+        txd_valid => '0',
+        status => (SUCCESS, '0', '0')
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -103,6 +107,8 @@ architecture rtl of i2c_ctrl_txn_layer is
     signal ll_rx_data       : std_logic_vector(7 downto 0);
     signal ll_rx_data_valid : std_logic;
 begin
+
+    txn_status <= sm_reg.status;
 
     -- The block that handles the link layer of the protocol
     i2c_ctrl_link_layer_inst: entity work.i2c_ctrl_link_layer
@@ -147,6 +153,7 @@ begin
                     v.state     := START;
                     v.cmd       := cmd;
                     v.cnts      := (others => '0');
+                    v.status    := (code => SUCCESS, code_valid => '0', busy => '1');
                 end if;
 
             -- single cycle state to initiate a START
@@ -180,7 +187,7 @@ begin
                             v.txd_valid := '1';
                         end if;
                     else
-                        -- TODO: byte nack error
+                        v.status.code := NACK_BUS_ADDR;
                         v.state         := STOP;
                     end if;
                 end if;
@@ -222,7 +229,7 @@ begin
                             v.state             := WRITE;
                         end if;
                     else
-                        -- TODO: byte nack error
+                        v.status.code := NACK_DURING_WRITE;
                         v.state         := STOP;
                     end if;
                 end if;
@@ -236,6 +243,7 @@ begin
             -- once STOP has finished move back to IDLE
             when WAIT_STOP =>
                 if ll_ready then
+                    v.status    := (code =>  sm_reg.status.code, code_valid => '1', busy => '0');
                     v.state := IDLE;
                 end if;
         end case;
@@ -245,6 +253,7 @@ begin
                 and sm_reg.state /= WAIT_STOP then
             v.state         := STOP;
             v.next_valid    := '1';
+            v.status.code   := ABORTED;
         end if;
 
         -- next state logic

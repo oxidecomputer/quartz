@@ -24,7 +24,6 @@ entity i2c_ctrl is
         scl_if      : view tristate_if;
         sda_if      : view tristate_if;
 
-        -- AXI register interface
     );
 end entity;
 

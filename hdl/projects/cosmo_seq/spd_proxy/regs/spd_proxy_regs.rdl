@@ -1,0 +1,140 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible registers in the Cosmo
+// Sequencer FPGA block.
+
+addrmap spd_proxy_regs {
+    name = "spd_proxy";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+ 
+   
+    reg {
+        name = "spd_ctrl";
+        desc = "Pre-fetch the SPD data from the DIMMs";
+
+         field {
+            desc = "Set to initiate a SPD cache read. Cleared by hardware after the read is complete.";
+        } start[0:0] =  0;
+    } spd_ctrl;
+
+    reg {
+        name = "fifo_ctrl";
+        desc = "Control of the fifos, shared settings for both DIMM busses";
+
+        field {
+            desc = "Set to one to reset RX FIFO. Cleared by hardware after FIFO reset.";
+        } rx_fifo_reset[15:15] =  0;
+        field {
+            desc = "Set to one put RX FIFO in auto increment mode.";
+        } rx_fifo_auto_inc[14:14] =  1;
+        field {
+            desc = "Set to one to reset TX FIFO. Cleared by hardware after FIFO reset.";
+        } tx_fifo_reset[7:7] =  0;
+         field {
+            desc = "Set to one put TX FIFO in auto increment mode.";
+        } tx_fifo_auto_inc[6:6] =  1;
+    } fifo_ctrl;
+
+
+    reg cmd {
+        name = "command";
+        desc = "Allow manual control over some I/O ping for debugging purposes, a write here initiates the command";
+
+        field {
+            desc = "READ=0b00, WRITE= 0b01, RANDOM=0b10";
+        } op[25:24] = 0;
+
+        field {
+            desc = "i2c/i3c bus address";
+        } bus_addr[22:16] = 0;
+
+        field {
+            desc = "Register address";
+        } reg_addr[15:8] = 0;
+
+        field {
+            desc = "length of the payload in bytes";
+        } len[7:0] = 0;
+        
+    };
+
+    reg tx_fifo_wdata{
+        name = "TX FIFO Write Data Register";
+        desc = "";
+        default sw = w;
+        field {
+            desc = "Writing stores data in fifo";
+        } data[31:0] =  0;
+    };
+
+    reg tx_fifo_waddr {
+        name = "TX FIFO WDATA Data Pointer";
+        default sw = r;
+        desc = "";
+        field {
+            desc = "Live pointer in 32bit words to DPR";
+        } addr[31:0] =  0;
+    };
+
+
+    reg rx_fifo_raddr {
+        name = "RX FIFO Read Data Pointer";
+        default sw = r;
+        desc = "";
+        field {
+            desc = "Live pointer in 32bit words to DPR";
+        } addr[31:0] =  0;
+    };
+
+    reg rx_byte_count{
+        name = "RX FIFO Available Data";
+        desc = "";
+        default sw = r;
+        field {
+            desc = "Byte count of data in RX FIFO";
+        } data[31:0] =  0;
+    };
+
+    reg rx_fifo_rdata{
+        name = "RX FIFO Read Data Register";
+        desc = "";
+        default sw = r;
+        field {
+            desc = "Note: in auto-inc mode. reading side-effects the data by moving the raddr pointer";
+        } data[31:0] =  0;
+    };
+    
+    reg {
+        name = "SPD Present";
+        desc = "Indicates if the DIMM is present (via SPD ack)";
+        default sw = r;
+        field {
+            desc = "ghijkl (g = lsb) spd ack'd";
+        } bus1[13:8] =  0;
+        field {
+            desc = "abcdef (a = lsb) spd ack'd";
+        } bus0[5:0] =  0;
+    } spd_present;
+
+    cmd bus0_cmd;
+    bus0_cmd->name = "command for the abcdef DIMM bus";
+    tx_fifo_wdata bus0_tx_wdata;
+    bus0_tx_wdata->name = "TX FIFO entry point for the abcdef DIMM bus";
+    tx_fifo_waddr bus0_tx_waddr;
+    rx_fifo_raddr bus0_rx_raddr;
+    rx_byte_count bus0_rx_byte_count;
+    rx_fifo_rdata bus0_rx_rdata;
+    
+    cmd bus1_cmd;
+    bus1_cmd->name = "command for the ghijkl DIMM bus";
+    tx_fifo_wdata bus1_tx_wdata;
+    tx_fifo_waddr bus1_tx_waddr;
+    bus1_tx_wdata->name = "TX FIFO entry point for the ghijkl DIMM bus";
+    rx_fifo_raddr bus1_rx_raddr;
+    rx_byte_count bus1_rx_byte_count;
+    rx_fifo_rdata bus1_rx_rdata;
+    
+};

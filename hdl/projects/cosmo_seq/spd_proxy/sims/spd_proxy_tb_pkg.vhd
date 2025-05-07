@@ -27,7 +27,7 @@ package spd_proxy_tb_pkg is
     -- Verification Components
     constant I2C_CTRL_VC        : i2c_ctrl_vc_t     := new_i2c_ctrl_vc("cpu_i2c_vc");
     constant I2C_DIMM1_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1_i2c_vc");
-    constant I2C_DIMM2_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2_i2c_vc");
+    constant I2C_DIMM2_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2_i2c_vc", b"1010000");
     constant I2C_CMD_VC         : i2c_cmd_vc_t      := new_i2c_cmd_vc;
     constant TX_DATA_SOURCE_VC  : basic_source_t    := new_basic_source(8);
     constant RX_DATA_SINK_VC    : basic_sink_t      := new_basic_sink(8);

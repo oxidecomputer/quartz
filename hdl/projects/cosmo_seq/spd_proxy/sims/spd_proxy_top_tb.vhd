@@ -35,7 +35,8 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
-        variable cmd : spd_cmd_type;
+        variable cmd : cmd_type;
+        variable data32 : std_logic_vector(31 downto 0);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -45,7 +46,7 @@ begin
         wait for 500 ns;  -- let the resets propagate
 
         while test_suite loop
-            if run("sp_spd_short_read") then
+            if run("sp_txn_short_read") then
                 -- We want to use the new SPD interface via axi to issue
                 -- a simple read to the DIMM as a starting point.
                 -- Set up the buffer in the DIMM with a response
@@ -60,11 +61,18 @@ begin
                     reg_addr => X"00",
                     len => X"03"
                 );
-                write_bus(net, bus_handle, To_StdLogicVector(SPD_CMD_OFFSET, bus_handle.p_address_length), pack(cmd));
-                wait for 60 us;
+                write_bus(net, bus_handle, To_StdLogicVector(BUS0_CMD_OFFSET, bus_handle.p_address_length), pack(cmd));
                 -- Wait for the response
+                -- Expect to get 3 bytes back, so poll until we see that in the FIFO
+                data32 := 32x"3";
+                wait_until_read_equals(net, bus_handle, To_StdLogicVector(BUS0_RX_BYTE_COUNT_OFFSET, bus_handle.p_address_length), data32);
                 -- check the response.
+                read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RDATA_OFFSET, bus_handle.p_address_length), data32);
+                check_match(data32, std_logic_vector'(X"--CCBBAA"), "Read data mismatch");
                 null;
+            elsif run("spd_sm_prefetch") then
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_CTRL_OFFSET, bus_handle.p_address_length), 32x"1");
+                wait for 9 ms;
             end if;
         end loop;
 

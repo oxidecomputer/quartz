@@ -331,7 +331,7 @@ architecture rtl of cosmo_seq_top is
          SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
          SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
          SP5_HP_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8),
-         SPD_PROXY_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8)
+         SPD_PROXY_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
@@ -397,8 +397,8 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-            fpga1_spare_v1p8(0) <= i2c_sp_to_fpga1_scl;
-            fpga1_spare_v1p8(7) <= i2c_sp_to_fpga1_sda;
+            fpga1_spare_v1p8(0) <= i3c_fpga1_to_dimm_abcdef_scl;
+            fpga1_spare_v1p8(7) <= i3c_fpga1_to_dimm_abcdef_sda;
             fpga1_spare_v1p8(6) <= amd_hp_irq_n_final;
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
@@ -749,8 +749,7 @@ begin
     spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
      generic map(
         CLK_PER_NS => 8,
-        I2C_MODE => FAST_PLUS,
-        NUM_BUSSES => 2
+        I2C_MODE => FAST_PLUS
     )
      port map(
         clk => clk_125m,

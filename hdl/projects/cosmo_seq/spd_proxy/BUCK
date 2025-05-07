@@ -3,7 +3,7 @@ load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
     name = "spd_proxy_regs_rdl",
-    src = "sp_control/spd_proxy_regs.rdl",
+    src = "regs/spd_proxy_regs.rdl",
     outputs = [
         "spd_proxy_regs_pkg.vhd", 
         "spd_proxy_regs.html", 
@@ -21,12 +21,13 @@ vhdl_unit(
 
 vhdl_unit(
     name = "spd_proxy_top",
-    srcs = glob(["*.vhd", "sp_control/*.vhd"]),
+    srcs = glob(["*.vhd", "regs/*.vhd", "proxy_channel/*.vhd"]),
     deps = [
         ":spd_proxy_regs_rdl",
         ":sda_arbiter",
         "//hdl/ip/vhd/memories:mixed_width_simple_dpr",
         "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/arb_mux_demux:arbiter",
         "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",

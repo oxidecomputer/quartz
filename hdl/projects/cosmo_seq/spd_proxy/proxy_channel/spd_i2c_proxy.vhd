@@ -17,7 +17,6 @@ entity spd_i2c_proxy is
     generic (
         CLK_PER_NS  : positive;
         I2C_MODE    : mode_t;
-        ACTIVE_DRIVE : boolean := false
     );
     port (
         clk         : in std_logic;
@@ -35,6 +34,7 @@ entity spd_i2c_proxy is
         i2c_command         : in cmd_t;
         i2c_command_valid   : in std_logic;
         i2c_ctrlr_idle      : out std_logic;
+        i2c_ctrlr_status    : out txn_status_t;
         i2c_tx_st_if        : view axi_st8_pkg.axi_st_sink;
         i2c_rx_st_if        : view axi_st8_pkg.axi_st_source;
     );
@@ -84,7 +84,6 @@ architecture rtl of spd_i2c_proxy is
     signal start_simulated  : std_logic;
 
     signal cpu_seen         : boolean;
-    signal fpga_txn_valid   : std_logic;
 
     signal cpu_has_sda      : std_logic;
     signal dimm_has_sda     : std_logic;
@@ -156,13 +155,6 @@ begin
                 need_start  <= false;
             end if;
 
-            -- -- TODO: enabling the internal controller should probably just be an external thing
-            -- -- from registers the SP can set. While proxy is not enabled, we should just assume the
-            -- -- CPU always owns the bus.
-            -- -- after the first START/STOP detection, register that we've seen CPU activity
-            -- if cpu_first_start_seen and cpu_stop_detected = '1' and not cpu_seen then
-            --     cpu_seen    <= true;
-            -- end if;
         end if;
     end process;
 
@@ -222,6 +214,7 @@ begin
             cmd         => i2c_command,
             cmd_valid   => i2c_command_valid,
             abort       => cpu_busy,
+            txn_status  => i2c_ctrlr_status,
             core_ready  => i2c_ctrlr_idle,
             tx_st_if    => i2c_tx_st_if,
             rx_st_if    => i2c_rx_st_if
