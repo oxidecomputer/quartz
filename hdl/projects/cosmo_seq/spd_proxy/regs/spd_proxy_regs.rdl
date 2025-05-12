@@ -118,6 +118,32 @@ addrmap spd_proxy_regs {
             desc = "abcdef (a = lsb) spd ack'd";
         } bus0[5:0] =  0;
     } spd_present;
+    reg {
+        name = "spd_cache_select";
+        desc = "Choose which DIMM SPD cache to read from. Addresses match present bit index in above register ";
+
+         field {
+            desc = "Set to initiate a SPD cache read. Cleared by hardware after the read is complete.";
+        } idx[7:0] =  0;
+    } spd_select;
+
+    reg {
+        name = "Current read_ptr in SPD Cache for selected DIMM";
+        desc = "";
+        field {
+            desc = "in 32bit words, can write to move around 0-255 for 1024 bytes in 32bit words";
+        } addr[7:0] =  0;
+    } spd_rd_ptr;
+    reg {
+        name = "Current read-data for selected DIMM, reading auto-increments the read pointer";
+        desc = "";
+        default sw = r;
+        field {
+            desc = "in 32bit words";
+        } data[31:0] =  0;
+    } spd_rdata;
+    
+    
 
     cmd bus0_cmd;
     bus0_cmd->name = "command for the abcdef DIMM bus";

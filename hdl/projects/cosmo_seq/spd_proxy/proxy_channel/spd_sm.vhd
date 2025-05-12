@@ -22,18 +22,19 @@ entity spd_sm is
 
         fetch_spd_info  : in std_logic;
         spd_present : out std_logic_vector(NUM_DIMMS_ON_BUS - 1 downto 0);
+        dimm_idx : out natural range 0 to NUM_DIMMS_ON_BUS - 1;
+        sm_done : out std_logic;
         -- some handshaking with the i2c controller
         -- and arbitration
         arb_grant : in std_logic;
         arb_req   : out std_logic;
-
-        i2c_bus_arb_lost : in std_logic;  -- big CPU stomped on us
         spd_rom_addr : out std_logic_vector(9 downto 0);
 
         -- I2C command interface
         i2c_ctrlr_status    : in txn_status_t;
         i2c_command         : out cmd_t;
         i2c_command_valid   : out std_logic;
+        i2c_rx_st_if        : view axi_st8_pkg.axi_st_monitor;
         i2c_tx_st_if        : view axi_st8_pkg.axi_st_source;
     );
 
@@ -87,11 +88,13 @@ architecture rtl of spd_sm is
     signal i2c_aborted : std_logic;
 begin
     
+    sm_done <= '1' when r.state = DONE else '0';
     arb_req <= r.arb_req;
     spd_rom_addr <= std_logic_vector(r.spd_addr);
     spd_present <= r.present;
     i2c_tx_st_if.data <= std_logic_vector(resize(r.hub_page_idx, 8));
     i2c_tx_st_if.valid <= '1' when r.state = SET_PAGE else '0';
+    dimm_idx <= r.dimm_idx;
 
     i2c_command <=
         ( 
@@ -182,6 +185,11 @@ begin
                     v.cmd_valid := '1';
                     v.pend := '1';
                 end if;
+                -- valid read-data from i2c block
+                if i2c_rx_st_if.ready = '1' and i2c_rx_st_if.valid = '1' then
+                    v.spd_addr := r.spd_addr + 1;
+                end if;
+
                 -- We can get a response, in which case we can move on,
                 -- or we can get a NACK, which means nothing is there
                 -- or we can lose i2c arbitration due to SP5 trying

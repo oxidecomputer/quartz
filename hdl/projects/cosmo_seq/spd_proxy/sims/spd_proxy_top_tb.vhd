@@ -71,8 +71,16 @@ begin
                 check_match(data32, std_logic_vector'(X"--CCBBAA"), "Read data mismatch");
                 null;
             elsif run("spd_sm_prefetch") then
+                write_word(memory(I2C_DIMM1_TGT_VC), 16#80#, X"AA");
+                write_word(memory(I2C_DIMM1_TGT_VC), 16#81#, X"BB");
+                write_word(memory(I2C_DIMM1_TGT_VC), 16#82#, X"CC");
+                write_word(memory(I2C_DIMM1_TGT_VC), 16#83#, X"DD");
                 write_bus(net, bus_handle, To_StdLogicVector(SPD_CTRL_OFFSET, bus_handle.p_address_length), 32x"1");
                 wait for 9 ms;
+                -- Pick DIMM 5 on channel 0
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), 32x"5");
+                read_bus(net, bus_handle, To_StdLogicVector(SPD_RDATA_OFFSET, bus_handle.p_address_length), data32);
+                check_match(data32, std_logic_vector'(X"DDCCBBAA"), "Read data mismatch");
             end if;
         end loop;
 

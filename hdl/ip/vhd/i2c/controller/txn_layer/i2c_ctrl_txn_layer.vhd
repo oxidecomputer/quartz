@@ -262,8 +262,15 @@ begin
 
         v.tx_byte       := v.txd when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
                             else tx_st_if.data;
+        -- Due to the way the link-layer works it decides whether it is transmitting or receiving
+        -- based on the tx_byte_valid signal. Given that normal streaming sources expect to be able to
+        -- assert valid any time data is available, we gate this from the link layer here since we
+        -- know whether we're  tx'ing or rx'ing at this layer.  The ready below was already
+        -- gated this way but the link-layer would start transmitting when it should have been rx'ing
+        -- if this was set and not gated.
+        -- I don't love this fix and it feels fragile but it works for now.
         v.tx_byte_valid := v.txd_valid when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
-                            else tx_st_if.valid;
+                            else tx_st_if.valid when sm_reg.state = WRITE or sm_reg.state = WAIT_WRITE_ACK else '0';
 
         sm_reg_next <= v;
     end process;

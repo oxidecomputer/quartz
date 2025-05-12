@@ -49,6 +49,9 @@ architecture rtl of spd_regs is
     signal buffer1_if : txn_buf_ctrl_t;
     signal ch0_rx_dpr_pop : std_logic;
     signal ch1_rx_dpr_pop : std_logic;
+    signal spd_select : spd_select_type;
+    signal spd_rd_ptr : spd_rd_ptr_type;
+    signal spd_fifo_pop : std_logic;
 
 
 
@@ -72,10 +75,9 @@ begin
     );
     bus0.start_prefetch <= spd_ctrl.start;
     bus0.i2c_cmd_valid <= cmd0_valid_flag;
-    bus0.i2c_tx_st_if.data <= (others => '0');
-    bus0.i2c_tx_st_if.valid <= '0';
-    bus0.i2c_rx_st_if.ready <= '1'; -- No back-pressure for now
     bus0.req <= '0';
+    bus0.selected_dimm <= 4x"0" & spd_select.idx(3 downto 0);
+    bus0.rd_addr <= spd_rd_ptr.addr;
 
     bus1.i2c_cmd <= ( 
         op => mk_op(cmd1),
@@ -85,8 +87,9 @@ begin
     );
     bus1.start_prefetch <= spd_ctrl.start;
     bus1.i2c_cmd_valid <= cmd1_valid_flag;
-    bus1.i2c_rx_st_if.ready <= '1'; -- No back-pressure for now
     bus1.req <= '0';
+    bus1.selected_dimm <= 4x"0" & spd_select.idx(7 downto 4);
+    bus1.rd_addr <= spd_rd_ptr.addr;
     
     buffer0_if.rx_fifo_pop <= ch0_rx_dpr_pop;
     buffer0_if.rx_fifo_reset <= fifo_ctrl.rx_fifo_reset;
@@ -157,6 +160,8 @@ begin
             cmd0_valid_flag <= '0';
             cmd1_valid_flag <= '0';
             spd_ctrl <= rec_reset;
+            spd_select <= rec_reset;
+            spd_rd_ptr <= rec_reset;
 
         elsif rising_edge(clk) then
             cmd0_valid_flag <= '0';
@@ -167,11 +172,18 @@ begin
             fifo_ctrl.rx_fifo_reset <= '0'; -- flags so these clear after set also
             fifo_ctrl.tx_fifo_reset <= '0'; -- flags so these clear after set also
 
+            if spd_fifo_pop then
+                spd_rd_ptr.addr <= spd_rd_ptr.addr + 1;
+            end if; 
+
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
                     when SPD_CTRL_OFFSET => 
                        spd_ctrl <= unpack(axi_if.write_data.data);
                     when FIFO_CTRL_OFFSET => fifo_ctrl <= unpack(axi_if.write_data.data);
+                    when SPD_SELECT_OFFSET => spd_select <= unpack(axi_if.write_data.data);
+                    when SPD_RD_PTR_OFFSET => spd_rd_ptr <= unpack(axi_if.write_data.data);
+
                     when BUS0_CMD_OFFSET => 
                         cmd0 <= unpack(axi_if.write_data.data);
                         cmd0_valid_flag <= '1';
@@ -198,11 +210,13 @@ begin
             ch0_rx_dpr_pop <= '0';
             ch1_rx_dpr_pop <= '0';
             rdata <= (others => '0');
+            spd_fifo_pop <= '0';
             spd_present <= rec_reset;
 
         elsif rising_edge(clk) then
             ch0_rx_dpr_pop <= '0';
             ch1_rx_dpr_pop <= '0';
+            spd_fifo_pop <= '0';
 
             spd_present.bus0 <= resize(bus0.spd_present, spd_present.bus0'length);
             spd_present.bus1 <= resize(bus1.spd_present, spd_present.bus1'length);
@@ -211,6 +225,15 @@ begin
                 case to_integer(unsigned(axi_if.read_address.addr)) is
                     when FIFO_CTRL_OFFSET => rdata <= pack(fifo_ctrl);
                     when SPD_PRESENT_OFFSET => rdata <= pack(spd_present);
+                    when SPD_SELECT_OFFSET => rdata <= pack(spd_select);
+                    when SPD_RD_PTR_OFFSET => rdata <= pack(spd_rd_ptr);
+                    when SPD_RDATA_OFFSET =>
+                        spd_fifo_pop <= '1';
+                        if spd_select.idx < 8 then
+                            rdata <= bus0.rd_data;
+                        else
+                            rdata <= bus1.rd_data;
+                        end if;
                     when BUS0_CMD_OFFSET => rdata <= pack(cmd0);
                     when BUS0_TX_WADDR_OFFSET => rdata <= resize(buffer0_if.tx_waddr,rdata'length);
                     when BUS0_RX_RADDR_OFFSET => rdata <= resize(buffer0_if.rx_raddr,rdata'length);

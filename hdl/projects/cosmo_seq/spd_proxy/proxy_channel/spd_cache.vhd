@@ -20,6 +20,8 @@ entity spd_cache is
         -- available bytes by waddr pos
         selected: in std_logic;
         waddr       : in std_logic_vector(9 downto 0);
+        raddr       : in std_logic_vector(7 downto 0);
+        rdata       : out std_logic_vector(31 downto 0);
         -- streaming bus from i2c controller
         i2c_rx_st_if        : view axi_st8_pkg.axi_st_sink
 
@@ -47,8 +49,8 @@ begin
         wdata => i2c_rx_st_if.data,
         wren => write_enable,
         rclk => clk,
-        raddr => (others => '0'),
-        rdata => open
+        raddr => raddr,
+        rdata => rdata
     );
     -- we're going to have read addresses in terms of 32-bit words
     -- fifo_rem_data <= 

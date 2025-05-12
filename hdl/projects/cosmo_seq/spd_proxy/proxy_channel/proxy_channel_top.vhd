@@ -46,7 +46,7 @@ end entity;
 architecture rtl of proxy_channel_top is
     signal selected : std_logic_vector(NUM_DIMMS_ON_BUS - 1 downto 0);
     signal spd_present : std_logic_vector(NUM_DIMMS_ON_BUS - 1 downto 0);
-    signal sm_not_done : std_logic;
+    signal sm_done : std_logic;
     signal selected_dimm_idx : natural range 0 to NUM_DIMMS_ON_BUS - 1;
     signal i2c_rx_st_if : axi_st8_pkg.axi_st_t;
     signal i2c_rx_st_if_cache : axi_st8_pkg.axi_st_t;
@@ -59,8 +59,21 @@ architecture rtl of proxy_channel_top is
     signal requests : std_logic_vector(1 downto 0);
     signal grants : std_logic_vector(1 downto 0);
     signal i2c_ctrlr_status : txn_status_t;
+    signal spd_rom_waddr : std_logic_vector(9 downto 0);
+    type rdata_array_t is array (0 to NUM_DIMMS_ON_BUS - 1) of std_logic_vector(31 downto 0);
+    signal cache_rdata : rdata_array_t;
 
 begin
+
+    reg_rd_mux: process(all)
+    begin
+        regs_if.rd_data <= (others => '0');
+        for i in 0 to NUM_DIMMS_ON_BUS - 1 loop
+            if to_integer(unsigned(regs_if.selected_dimm)) = i then
+                regs_if.rd_data <= cache_rdata(i);
+            end if;
+        end loop;
+    end process;
 
     -- For-generate our cache blocks here, one for each possible DIMM
     cache_gen: for i in 0 to NUM_DIMMS_ON_BUS - 1 generate
@@ -69,7 +82,9 @@ begin
                 clk => clk,
                 reset => reset,
                 selected => selected(i),
-                waddr => (others => '0'), 
+                waddr => spd_rom_waddr,
+                rdata =>cache_rdata(i),
+                raddr => regs_if.rd_addr,
                 i2c_rx_st_if => i2c_rx_st_if_cache
             );
     end generate;
@@ -85,7 +100,7 @@ begin
             selected <= (others => '0');
         elsif rising_edge(clk) then
             selected <= (others => '0');
-            if sm_not_done then
+            if not sm_done then
                 selected(selected_dimm_idx) <= '1';
             end if;
         end if;
@@ -100,14 +115,17 @@ begin
         clk => clk,
         reset => reset,
         fetch_spd_info => regs_if.start_prefetch,
+        dimm_idx => selected_dimm_idx,
+        sm_done => sm_done,
         arb_req => requests(0),
         arb_grant => grants(0),
         spd_present => spd_present,
-        i2c_bus_arb_lost => '0',
+        spd_rom_addr => spd_rom_waddr,
         i2c_ctrlr_status => i2c_ctrlr_status,
         i2c_command => i2c_command_sm,
         i2c_command_valid => i2c_command_sm_valid,
-        i2c_tx_st_if => i2c_tx_st_if_sm
+        i2c_tx_st_if => i2c_tx_st_if_sm,
+        i2c_rx_st_if => i2c_rx_st_if_cache
     );
 
     regs_if.spd_present <= std_logic_vector(resize(unsigned(spd_present), regs_if.spd_present'length));
