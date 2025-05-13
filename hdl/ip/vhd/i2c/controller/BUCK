@@ -18,8 +18,8 @@ vhdl_unit(
         "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
         "//hdl/ip/vhd/common:countdown",
         "//hdl/ip/vhd/common:strobe",
-        "//hdl/ip/vhd/common:streaming_if_pkg",
         "//hdl/ip/vhd/common:tristate_if_pkg",
+       "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
         "//hdl/ip/vhd/common:time_pkg",
         "//hdl/ip/vhd/synchronizers:meta_sync"
     ],

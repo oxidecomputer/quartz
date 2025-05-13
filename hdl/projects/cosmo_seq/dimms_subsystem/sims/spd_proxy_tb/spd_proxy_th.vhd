@@ -15,14 +15,14 @@ library vunit_lib;
 
 use work.i2c_common_pkg.all;
 use work.tristate_if_pkg.all;
-use work.stream8_pkg;
+use work.axi_st8_pkg;
 
-use work.spd_proxy_top_tb_pkg.all;
+use work.spd_proxy_tb_pkg.all;
 
-entity spd_proxy_top_th is
+entity spd_proxy_th is
 end entity;
 
-architecture th of spd_proxy_top_th is
+architecture th of spd_proxy_th is
     constant CLK_PER_TIME : time := CLK_PER_NS * 1 ns;
 
     signal clk   : std_logic := '0';
@@ -41,8 +41,8 @@ architecture th of spd_proxy_top_th is
     signal command          : cmd_t;
     signal command_valid    : std_logic;
     signal controller_ready : std_logic;
-    signal tx_data_stream   : stream8_pkg.data_channel;
-    signal rx_data_stream   : stream8_pkg.data_channel;
+    signal tx_data_stream   : axi_st8_pkg.axi_st_t;
+    signal rx_data_stream   : axi_st8_pkg.axi_st_t;
 begin
 
     clk     <= not clk after CLK_PER_TIME / 2;
@@ -62,7 +62,7 @@ begin
     -- simulated DIMM I2C target
     i2c_target_vc_inst: entity work.i2c_target_vc
         generic map(
-            I2C_TARGET_VC => I2C_TGT_VC
+            I2C_TARGET_VC => I2C_DIMM1_TGT_VC
         )
         port map(
             scl => dimm_scl,
@@ -70,7 +70,7 @@ begin
         );
 
     -- DUT: the SPD proxy
-    spd_proxy_top_inst: entity work.spd_proxy_top
+    spd_proxy_top_inst: entity work.spd_i2c_proxy
         generic map(
             CLK_PER_NS  => CLK_PER_NS,
             I2C_MODE    => FAST_PLUS

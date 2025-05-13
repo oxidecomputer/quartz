@@ -9,11 +9,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.i2c_common_pkg.all;
-use work.stream8_pkg;
+use work.axi_st8_pkg;
 use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 
-entity spd_proxy_top is
+entity spd_i2c_proxy is
     generic (
         CLK_PER_NS  : positive;
         I2C_MODE    : mode_t;
@@ -34,12 +34,13 @@ entity spd_proxy_top is
         i2c_command         : in cmd_t;
         i2c_command_valid   : in std_logic;
         i2c_ctrlr_idle      : out std_logic;
-        i2c_tx_st_if        : view stream8_pkg.st_sink_if;
-        i2c_rx_st_if        : view stream8_pkg.st_source_if;
+        i2c_ctrlr_status    : out txn_status_t;
+        i2c_tx_st_if        : view axi_st8_pkg.axi_st_sink;
+        i2c_rx_st_if        : view axi_st8_pkg.axi_st_source;
     );
 end entity;
 
-architecture rtl of spd_proxy_top is
+architecture rtl of spd_i2c_proxy is
     -- TODO: Just use a single TSP constant?
     constant DIMM_I2C_TSP_CYCLES : integer :=
         to_integer(calc_ns(get_i2c_settings(I2C_MODE).tsp_ns, CLK_PER_NS, 8));
@@ -83,7 +84,6 @@ architecture rtl of spd_proxy_top is
     signal start_simulated  : std_logic;
 
     signal cpu_seen         : boolean;
-    signal fpga_txn_valid   : std_logic;
 
     signal cpu_has_sda      : std_logic;
     signal dimm_has_sda     : std_logic;
@@ -155,13 +155,6 @@ begin
                 need_start  <= false;
             end if;
 
-            -- TODO: enabling the internal controller should probably just be an external thing
-            -- from registers the SP can set. While proxy is not enabled, we should just assume the
-            -- CPU always owns the bus.
-            -- after the first START/STOP detection, register that we've seen CPU activity
-            if cpu_first_start_seen and cpu_stop_detected = '1' and not cpu_seen then
-                cpu_seen    <= true;
-            end if;
         end if;
     end process;
 
@@ -207,8 +200,6 @@ begin
             done    => start_simulated
         );
 
-    fpga_txn_valid <= '1' when cpu_seen and i2c_command_valid = '1' else '0';
-
     -- FPGA I2C controller
     i2c_ctrl_txn_layer_inst: entity work.i2c_ctrl_txn_layer
         generic map(
@@ -221,8 +212,9 @@ begin
             scl_if      => ctrlr_scl_if,
             sda_if      => ctrlr_sda_if,
             cmd         => i2c_command,
-            cmd_valid   => fpga_txn_valid,
+            cmd_valid   => i2c_command_valid,
             abort       => cpu_busy,
+            txn_status  => i2c_ctrlr_status,
             core_ready  => i2c_ctrlr_idle,
             tx_st_if    => i2c_tx_st_if,
             rx_st_if    => i2c_rx_st_if
@@ -258,11 +250,13 @@ begin
 
     cpu_has_mux     <= '1' when cpu_busy = '1' and i2c_ctrlr_idle = '1' and not need_start 
                         else '0';
+
+    
     dimm_scl_if.oe  <= '1' when cpu_has_mux else fpga_scl_if.oe;
     dimm_scl_if.o   <= cpu_scl_filt when cpu_has_mux else fpga_scl_if.o;
 
-    dimm_sda_oe     <= not cpu_sda_filt when cpu_has_sda else '0';
-    dimm_sda_if.oe  <= dimm_sda_oe when cpu_has_mux else fpga_sda_if.oe;
+    dimm_sda_oe     <= '1' when cpu_has_sda = '1' and cpu_sda_filt = '0' else '0';
+    dimm_sda_if.oe  <= dimm_sda_oe when cpu_has_mux else fpga_sda_if.oe and not fpga_sda_if.o;
     dimm_sda_if.o   <= '0' when cpu_has_mux else fpga_sda_if.o;
 
     cpu_sda_oe      <= not dimm_sda_filt when dimm_has_sda else '0';

@@ -20,14 +20,6 @@ vhdl_unit(
 # Interfaces
 
 vhdl_unit(
-    name = "streaming_if_pkg",
-    srcs = glob(["interfaces/streaming_if_pkg.vhd"]),
-    deps = [],
-    standard = "2019",
-    visibility = ['PUBLIC']
-)
-
-vhdl_unit(
     name = "tristate_if_pkg",
     srcs = glob(["interfaces/tristate_if_pkg.vhd"]),
     deps = [],

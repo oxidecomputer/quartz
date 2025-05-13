@@ -17,6 +17,8 @@ package tristate_if_pkg is
         oe  : std_logic;
     end record;
 
+    type tristate_array is array (natural range <>) of tristate;
+
     view tristate_if of tristate is
         i       : in;
         o, oe   : out;

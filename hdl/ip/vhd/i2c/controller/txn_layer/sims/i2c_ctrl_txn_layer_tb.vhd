@@ -173,6 +173,7 @@ begin
                 for byte_idx in 0 to byte_len - 1 loop
                     exp_data := std_logic_vector(to_std_logic_vector(byte_idx, exp_data'length));
                     pop_basic_stream(net, RX_DATA_SINK_VC, data);
+                    wait for 1 us;
                     check_equal(data, exp_data, "Expected read data to match");
                 end loop;
 

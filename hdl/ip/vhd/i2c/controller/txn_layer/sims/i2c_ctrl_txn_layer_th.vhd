@@ -15,7 +15,7 @@ library vunit_lib;
 
 use work.i2c_common_pkg.all;
 use work.tristate_if_pkg.all;
-use work.stream8_pkg;
+use work.axi_st8_pkg;
 
 use work.i2c_cmd_vc_pkg.all;
 use work.i2c_target_vc_pkg.all;
@@ -52,8 +52,8 @@ architecture th of i2c_ctrl_txn_layer_th is
     signal core_ready       : std_logic;
 
     -- streaming interfaces
-    signal tx_data_stream   : stream8_pkg.data_channel;
-    signal rx_data_stream   : stream8_pkg.data_channel;
+    signal tx_data_stream   : axi_st8_pkg.axi_st_t;
+    signal rx_data_stream   : axi_st8_pkg.axi_st_t;
 
 begin
 

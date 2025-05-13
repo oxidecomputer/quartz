@@ -17,7 +17,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std_unsigned.all;
 
-use work.stream8_pkg;
+use work.axi_st8_pkg;
 use work.tristate_if_pkg.all;
 
 use work.i2c_common_pkg.all;
@@ -40,12 +40,14 @@ entity i2c_ctrl_txn_layer is
         cmd_valid   : in std_logic;
         abort       : in std_logic;
         core_ready  : out std_logic;
+        -- I2C status
+        txn_status : out txn_status_t;
 
         -- Transmit data stream
-        tx_st_if    : view stream8_pkg.st_sink_if;
+        tx_st_if    : view axi_st8_pkg.axi_st_sink;
 
         -- Received data stream
-        rx_st_if    : view stream8_pkg.st_source_if;
+        rx_st_if    : view axi_st8_pkg.axi_st_source;
     );
 end entity;
 
@@ -67,6 +69,7 @@ architecture rtl of i2c_ctrl_txn_layer is
         state           : state_t;
         cmd             : cmd_t;
         in_random_read  : boolean;
+        cnts            : std_logic_vector(15 downto 0);
         bytes_done      : std_logic_vector(7 downto 0);
         do_start        : std_logic;
         do_ack          : std_logic;
@@ -76,12 +79,14 @@ architecture rtl of i2c_ctrl_txn_layer is
         next_valid      : std_logic;
         txd             : std_logic_vector(7 downto 0);
         txd_valid       : std_logic;
+        status          : txn_status_t;
     end record;
 
     constant SM_REG_RESET : sm_reg_t := (
         state => IDLE,
         cmd => CMD_RESET,
         in_random_read => false,
+        cnts => (others => '0'),
         bytes_done => (others => '0'),
         do_start => '0',
         do_ack => '0',
@@ -90,7 +95,8 @@ architecture rtl of i2c_ctrl_txn_layer is
         tx_byte_valid => '0',
         next_valid => '0',
         txd => (others => '0'),
-        txd_valid => '0'
+        txd_valid => '0',
+        status => (SUCCESS, '0', '0')
     );
 
     signal sm_reg, sm_reg_next    : sm_reg_t;
@@ -101,6 +107,8 @@ architecture rtl of i2c_ctrl_txn_layer is
     signal ll_rx_data       : std_logic_vector(7 downto 0);
     signal ll_rx_data_valid : std_logic;
 begin
+
+    txn_status <= sm_reg.status;
 
     -- The block that handles the link layer of the protocol
     i2c_ctrl_link_layer_inst: entity work.i2c_ctrl_link_layer
@@ -144,6 +152,8 @@ begin
                 if cmd_valid = '1' and ll_ready = '1' and abort = '0' then
                     v.state     := START;
                     v.cmd       := cmd;
+                    v.cnts      := (others => '0');
+                    v.status    := (code => SUCCESS, code_valid => '0', busy => '1');
                 end if;
 
             -- single cycle state to initiate a START
@@ -162,6 +172,7 @@ begin
             -- wait for address byte to have been sent and for the peripheral to ACK
             when WAIT_ADDR_ACK =>
                 if ll_ready = '1' and ll_ackd_valid = '1' then
+                    v.cnts := sm_reg.cnts + 1;
                     v.next_valid    := '1';
                     if ll_ackd then
                         v.bytes_done := (others => '0');
@@ -176,12 +187,13 @@ begin
                             v.txd_valid := '1';
                         end if;
                     else
-                        -- TODO: address nack error
-                        v.state := STOP;
+                        v.status.code := NACK_BUS_ADDR;
+                        v.state         := STOP;
                     end if;
                 end if;
 
-            -- read as many bytes as requested, nacking and transitioning to STOP when done
+            -- read as many bytes as requested and ack them
+            -- nacking and transitioning to STOP when done
             when READ =>
                 v.next_valid    := ll_ready;
 
@@ -217,7 +229,7 @@ begin
                             v.state             := WRITE;
                         end if;
                     else
-                        -- TODO: byte nack error
+                        v.status.code := NACK_DURING_WRITE;
                         v.state         := STOP;
                     end if;
                 end if;
@@ -231,6 +243,7 @@ begin
             -- once STOP has finished move back to IDLE
             when WAIT_STOP =>
                 if ll_ready then
+                    v.status    := (code =>  sm_reg.status.code, code_valid => '1', busy => '0');
                     v.state := IDLE;
                 end if;
         end case;
@@ -240,6 +253,7 @@ begin
                 and sm_reg.state /= WAIT_STOP then
             v.state         := STOP;
             v.next_valid    := '1';
+            v.status.code   := ABORTED;
         end if;
 
         -- next state logic
@@ -248,8 +262,15 @@ begin
 
         v.tx_byte       := v.txd when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
                             else tx_st_if.data;
+        -- Due to the way the link-layer works it decides whether it is transmitting or receiving
+        -- based on the tx_byte_valid signal. Given that normal streaming sources expect to be able to
+        -- assert valid any time data is available, we gate this from the link layer here since we
+        -- know whether we're  tx'ing or rx'ing at this layer.  The ready below was already
+        -- gated this way but the link-layer would start transmitting when it should have been rx'ing
+        -- if this was set and not gated.
+        -- I don't love this fix and it feels fragile but it works for now.
         v.tx_byte_valid := v.txd_valid when sm_reg.state = WAIT_START or sm_reg.state = WAIT_ADDR_ACK
-                            else tx_st_if.valid;
+                            else tx_st_if.valid when sm_reg.state = WRITE or sm_reg.state = WAIT_WRITE_ACK else '0';
 
         sm_reg_next <= v;
     end process;

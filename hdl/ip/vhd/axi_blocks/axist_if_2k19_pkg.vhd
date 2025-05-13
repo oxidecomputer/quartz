@@ -26,6 +26,15 @@ package axist_if_2k19_pkg is
        ready : in;
     end view;
     alias axi_st_sink is axi_st_source'converse;
+    -- This is a monitor view consisting of all inputs
+    -- useful for monitoring transfers without participating in
+    -- the handshake or back-pressure
+    view axi_st_monitor of axi_st_t is
+        valid : in; 
+        data : in;
+        ready : in;
+    end view;
+    type axi_st_array_t is array (natural range <>) of axi_st_t;
     
     -- Basic AXI streaming interface, with last flag
     type axi_st_pkt_t is record
@@ -39,6 +48,7 @@ package axist_if_2k19_pkg is
        ready : in;
     end view;
     alias axi_st_pkt_sink is axi_st_pkt_source'converse;
+    type axi_st_pkt_array_t is array (natural range <>) of axi_st_pkt_t;
 end package;
 
 -- Some common sizes expected to be used

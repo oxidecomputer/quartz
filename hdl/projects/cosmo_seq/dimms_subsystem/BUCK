@@ -1,0 +1,83 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "dimm_regs_rdl",
+    src = "regs/dimm_regs.rdl",
+    outputs = [
+        "dimm_regs_pkg.vhd", 
+        "dimm_regs.html", 
+        "dimm_regs.json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "sda_arbiter",
+    srcs = glob(["sda_arbiter/*.vhd"]),
+    deps = [],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "dimms_subsystem_top",
+    srcs = glob(["*.vhd", "regs/*.vhd", "proxy_channel/*.vhd"]),
+    deps = [
+        ":dimm_regs_rdl",
+        ":sda_arbiter",
+        "//hdl/ip/vhd/memories:mixed_width_simple_dpr",
+        "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/arb_mux_demux:arbiter",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
+        "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
+        "//hdl/ip/vhd/i2c/controller:i2c_ctrl_txn_layer",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "spd_shared_sim_pkg",
+    srcs = glob(["sims/*tb_pkg.vhd"]),
+    deps = [],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "sda_arbiter_tb",
+    srcs = glob(["sda_arbiter/sims/*.vhd"]),
+    deps = [
+        ":sda_arbiter",
+    ],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "spd_proxy_tb",
+    srcs = glob(["sims/spd_proxy_tb/*.vhd"]),
+    deps = [
+        ":dimms_subsystem_top",
+        ":spd_shared_sim_pkg",
+        "//hdl/ip/vhd/vunit_components:basic_stream",
+        "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_target_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_controller_vc"
+    ],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "spd_proxy_top_tb",
+    srcs = glob(["sims/*.vhd"], exclude = ["sims/*tb_pkg.vhd"]),
+    deps = [
+        ":dimms_subsystem_top",
+        ":spd_shared_sim_pkg",
+        "//hdl/ip/vhd/vunit_components:basic_stream",
+        "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_target_vc",
+        "//hdl/ip/vhd/vunit_components:i2c_controller_vc"
+    ],
+    visibility = ['PUBLIC'],
+)

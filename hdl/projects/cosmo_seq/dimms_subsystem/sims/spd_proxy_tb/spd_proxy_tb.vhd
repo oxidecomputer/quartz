@@ -23,18 +23,18 @@ use work.i2c_common_pkg.all;
 use work.i2c_ctrl_vc_pkg.all;
 use work.i2c_target_vc_pkg.all;
 
-use work.spd_proxy_top_tb_pkg.all;
+use work.spd_proxy_tb_pkg.all;
 
-entity spd_proxy_top_tb is
+entity spd_proxy_tb is
     generic (
         runner_cfg : string
     );
 end entity;
 
-architecture tb of spd_proxy_top_tb is
+architecture tb of spd_proxy_tb is
 begin
 
-    th: entity work.spd_proxy_top_th;
+    th: entity work.spd_proxy_th;
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
@@ -57,15 +57,6 @@ begin
         -- attempting to interrupt
         procedure init_controller is
         begin
-            -- we gate the FPGA controller on seeing CPU activity before it will start talking, so
-            -- fake that out
-            i2c_ctrlr_msg := new_msg(i2c_send_start);
-            send(net, I2C_CTRL_VC.p_actor, i2c_ctrlr_msg);
-            expect_start(net, I2C_TGT_VC);
-            i2c_ctrlr_msg := new_msg(i2c_send_stop);
-            send(net, I2C_CTRL_VC.p_actor, i2c_ctrlr_msg);
-            expect_stop(net, I2C_TGT_VC);
-
             -- arbitrary for the test
             exp_addr    := X"00";
             byte_len    := 8;
@@ -77,7 +68,7 @@ begin
             -- write some data in
             command := (
                 op      => WRITE,
-                addr    => address(I2C_TGT_VC),
+                addr    => address(I2C_DIMM1_TGT_VC),
                 reg     => std_logic_vector(exp_addr), 
                 len     => to_std_logic_vector(byte_len, command.len'length)
             );
@@ -99,11 +90,10 @@ begin
                 while not is_empty(fpga_exp_q) loop
                     data        := to_std_logic_vector(pop_byte(fpga_exp_q), data'length);
                     exp_addr    := to_std_logic_vector(byte_idx, exp_addr'length);
-                    check_written_byte(net, I2C_TGT_VC, data, exp_addr);
+                    check_written_byte(net, I2C_DIMM1_TGT_VC, data, exp_addr);
                     byte_idx := byte_idx + 1;
                 end loop;
-
-                expect_stop(net, I2C_TGT_VC);
+                expect_stop(net, I2C_DIMM1_TGT_VC);
             elsif run("cpu_transaction") then
                 -- Get the FPGA controller started on a transaction
                 init_controller;
@@ -112,7 +102,7 @@ begin
                 wait for rnd.RandInt(500, 4000) * 1 ns;
 
                 push_byte(cpu_tx_q, to_integer(rnd.RandSlv(0, 255, 8)));
-                i2c_write_txn(net, address(I2C_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
+                i2c_write_txn(net, address(I2C_DIMM1_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
 
             elsif run("cpu_with_simulated_start") then
                 -- Get the FPGA controller started on a transaction
@@ -122,7 +112,7 @@ begin
                 wait for 9500 ns;
 
                 push_byte(cpu_tx_q, to_integer(rnd.RandSlv(0, 255, 8)));
-                i2c_write_txn(net, address(I2C_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
+                i2c_write_txn(net, address(I2C_DIMM1_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
             end if;
         end loop;
 
