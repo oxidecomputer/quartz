@@ -11,8 +11,6 @@ use ieee.std_logic_1164.all;
 
 package tristate_if_pkg is
 
-
-
     type tristate is record
         i   : std_logic;
         o   : std_logic;

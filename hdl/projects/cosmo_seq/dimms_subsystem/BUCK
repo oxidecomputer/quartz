@@ -2,12 +2,12 @@ load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
-    name = "spd_proxy_regs_rdl",
-    src = "regs/spd_proxy_regs.rdl",
+    name = "dimm_regs_rdl",
+    src = "regs/dimm_regs.rdl",
     outputs = [
-        "spd_proxy_regs_pkg.vhd", 
-        "spd_proxy_regs.html", 
-        "spd_proxy_regs.json",
+        "dimm_regs_pkg.vhd", 
+        "dimm_regs.html", 
+        "dimm_regs.json",
     ],
     visibility = ["PUBLIC"],
 )
@@ -20,10 +20,10 @@ vhdl_unit(
 )
 
 vhdl_unit(
-    name = "spd_proxy_top",
+    name = "dimms_subsystem_top",
     srcs = glob(["*.vhd", "regs/*.vhd", "proxy_channel/*.vhd"]),
     deps = [
-        ":spd_proxy_regs_rdl",
+        ":dimm_regs_rdl",
         ":sda_arbiter",
         "//hdl/ip/vhd/memories:mixed_width_simple_dpr",
         "//hdl/ip/vhd/common:tristate_if_pkg",
@@ -58,7 +58,7 @@ vunit_sim(
     name = "spd_proxy_tb",
     srcs = glob(["sims/spd_proxy_tb/*.vhd"]),
     deps = [
-        ":spd_proxy_top",
+        ":dimms_subsystem_top",
         ":spd_shared_sim_pkg",
         "//hdl/ip/vhd/vunit_components:basic_stream",
         "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
@@ -72,7 +72,7 @@ vunit_sim(
     name = "spd_proxy_top_tb",
     srcs = glob(["sims/*.vhd"], exclude = ["sims/*tb_pkg.vhd"]),
     deps = [
-        ":spd_proxy_top",
+        ":dimms_subsystem_top",
         ":spd_shared_sim_pkg",
         "//hdl/ip/vhd/vunit_components:basic_stream",
         "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",

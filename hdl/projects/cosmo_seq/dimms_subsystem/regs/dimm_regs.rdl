@@ -41,7 +41,7 @@ addrmap spd_proxy_regs {
 
     reg cmd {
         name = "command";
-        desc = "Allow manual control over some I/O ping for debugging purposes, a write here initiates the command";
+        desc = "Allow manual control over some I/O for debugging purposes, a write here initiates the command";
 
         field {
             desc = "READ=0b00, WRITE= 0b01, RANDOM=0b10";
@@ -106,25 +106,132 @@ addrmap spd_proxy_regs {
             desc = "Note: in auto-inc mode. reading side-effects the data by moving the raddr pointer";
         } data[31:0] =  0;
     };
-    
+     reg {
+        name = "DIMM PCAMP Readbacks";
+        desc = "Live status from the sampled pins";
+        default sw = r;
+        field {
+            desc = "DIMM L pcamp pin readback";
+        } pcamp_l[13:13];
+        field {
+            desc = "DIMM K pcamp pin readback";
+        } pcamp_k[12:12];
+        field {
+            desc = "DIMM J pcamp pin readback";
+        } pcamp_j[11:11];
+        field {
+            desc = "DIMM I pcamp pin readback";
+        } pcamp_i[10:10];
+        field {
+            desc = "DIMM H pcamp pin readback";
+        } pcamp_h[9:9];
+        field {
+            desc = "DIMM G pcamp pin readback";
+        } pcamp_g[8:8];
+
+        field {
+            desc = "DIMM F pcamp pin readback";
+        } pcamp_f[5:5];
+        field {
+            desc = "DIMM E pcamp pin readback";
+        } pcamp_e[4:4];
+        field {
+            desc = "DIMM D pcamp pin readback";
+        } pcamp_d[3:3];
+        field {
+            desc = "DIMM C pcamp pin readback";
+        } pcamp_c[2:2];
+        field {
+            desc = "DIMM B pcamp pin readback";
+        } pcamp_b[1:1];
+        field {
+            desc = "DIMM A pcamp pin readback";
+        } pcamp_a[0:0];
+    } dimm_pcamp;
+
     reg {
         name = "SPD Present";
         desc = "Indicates if the DIMM is present (via SPD ack)";
         default sw = r;
         field {
-            desc = "ghijkl (g = lsb) spd ack'd";
-        } bus1[13:8] =  0;
+            desc = "DIMM L present (spd ack'd)";
+        } bus1_l[13:13];
         field {
-            desc = "abcdef (a = lsb) spd ack'd";
-        } bus0[5:0] =  0;
+            desc = "DIMM K present (spd ack'd)";
+        } bus1_k[12:12];
+        field {
+            desc = "DIMM J present (spd ack'd)";
+        } bus1_j[11:11];
+        field {
+            desc = "DIMM I present (spd ack'd)";
+        } bus1_i[10:10];
+        field {
+            desc = "DIMM H present (spd ack'd)";
+        } bus1_h[9:9];
+        field {
+            desc = "DIMM G present (spd ack'd)";
+        } bus1_g[8:8];
+
+        field {
+            desc = "DIMM F present (spd ack'd)";
+        } bus0_f[5:5];
+        field {
+            desc = "DIMM E present (spd ack'd)";
+        } bus0_e[4:4];
+        field {
+            desc = "DIMM D present (spd ack'd)";
+        } bus0_d[3:3];
+        field {
+            desc = "DIMM C present (spd ack'd)";
+        } bus0_c[2:2];
+        field {
+            desc = "DIMM B present (spd ack'd)";
+        } bus0_b[1:1];
+        field {
+            desc = "DIMM A present (spd ack'd)";
+        } bus0_a[0:0];
     } spd_present;
     reg {
         name = "spd_cache_select";
-        desc = "Choose which DIMM SPD cache to read from. Addresses match present bit index in above register ";
+        desc = "Choose which DIMM SPD cache to read from. Addresses match present bit index in the spd_present register ";
 
-         field {
-            desc = "Set to initiate a SPD cache read. Cleared by hardware after the read is complete.";
-        } idx[7:0] =  0;
+        field {
+            desc = "DIMM L selected";
+        } bus1_l[13:13];
+        field {
+            desc = "DIMM K selected";
+        } bus1_k[12:12];
+        field {
+            desc = "DIMM J selected";
+        } bus1_j[11:11];
+        field {
+            desc = "DIMM I selected";
+        } bus1_i[10:10];
+        field {
+            desc = "DIMM H selected";
+        } bus1_h[9:9];
+        field {
+            desc = "DIMM G selected";
+        } bus1_g[8:8];
+
+        field {
+            desc = "DIMM F selected";
+        } bus0_f[5:5];
+        field {
+            desc = "DIMM E selected";
+        } bus0_e[4:4];
+        field {
+            desc = "DIMM D selected";
+        } bus0_d[3:3];
+        field {
+            desc = "DIMM C selected";
+        } bus0_c[2:2];
+        field {
+            desc = "DIMM B selected";
+        } bus0_b[1:1];
+        field {
+            desc = "DIMM A selected";
+        } bus0_a[0:0];
     } spd_select;
 
     reg {

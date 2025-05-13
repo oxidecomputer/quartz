@@ -746,7 +746,7 @@ begin
     i3c_fpga1_to_dimm_ghijkl_sda <= dimm_ghijkl_sda_if.o when dimm_ghijkl_sda_if.oe else 'Z';
     dimm_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
     
-    spd_proxy_top_abcdef_inst: entity work.spd_proxy_top
+    dimm_spd_proxy_top_inst: entity work.dimms_subsystem_top
      generic map(
         CLK_PER_NS => 8,
         I2C_MODE => FAST_PLUS
@@ -755,6 +755,18 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(SPD_PROXY_RESP_IDX),
+        dimm_a_pcamp => dimm_a_pg,
+        dimm_b_pcamp => dimm_b_pg,
+        dimm_c_pcamp => dimm_c_pg,
+        dimm_d_pcamp => dimm_d_pg,
+        dimm_e_pcamp => dimm_e_pg,
+        dimm_f_pcamp => dimm_f_pg,
+        dimm_g_pcamp => dimm_g_pg,
+        dimm_h_pcamp => dimm_h_pg,
+        dimm_i_pcamp => dimm_i_pg,
+        dimm_j_pcamp => dimm_j_pg,
+        dimm_k_pcamp => dimm_k_pg,
+        dimm_l_pcamp => dimm_l_pg,
         cpu_scl_if0 => sp5_abcdef_scl_if,
         cpu_sda_if0 => sp5_abcdef_sda_if,
         cpu_scl_if1 => sp5_ghijkl_scl_if,

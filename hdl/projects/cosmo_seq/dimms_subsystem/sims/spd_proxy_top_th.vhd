@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -140,7 +140,7 @@ begin
     dimm_sda_if1.i <= dimm_ghijkl_sda;
 
 
-    DUT: entity work.spd_proxy_top
+    DUT: entity work.dimms_subsystem_top
      generic map(
         CLK_PER_NS => CLK_PER_NS,
         I2C_MODE => SIMULATION
@@ -149,6 +149,18 @@ begin
         clk => clk,
         reset => reset,
         axi_if => axi_if,
+        dimm_a_pcamp => '0',
+        dimm_b_pcamp => '0',
+        dimm_c_pcamp => '0',
+        dimm_d_pcamp => '0',
+        dimm_e_pcamp => '0',
+        dimm_f_pcamp => '0',
+        dimm_g_pcamp => '0',
+        dimm_h_pcamp => '0',
+        dimm_i_pcamp => '0',
+        dimm_j_pcamp => '0',
+        dimm_k_pcamp => '0',
+        dimm_l_pcamp => '0',
         cpu_scl_if0 => cpu_scl_if0,
         cpu_sda_if0 => cpu_sda_if0,
         cpu_scl_if1 => cpu_scl_if1,

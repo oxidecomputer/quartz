@@ -15,7 +15,7 @@ use work.axil8x32_pkg;
 use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 use work.spd_proxy_pkg.all;
-use work.spd_proxy_regs_pkg.all;
+use work.dimm_regs_pkg.all;
 
 entity spd_regs is
     port(
@@ -23,6 +23,8 @@ entity spd_regs is
         reset : in std_logic;
         -- AXI-Lite interface
         axi_if : view axil8x32_pkg.axil_target;
+
+        dimm_pcamp : in dimm_pcamp_type;
 
         -- FPGA I2C Interface
         bus0 : view reg_side;
@@ -52,8 +54,8 @@ architecture rtl of spd_regs is
     signal spd_select : spd_select_type;
     signal spd_rd_ptr : spd_rd_ptr_type;
     signal spd_fifo_pop : std_logic;
-
-
+    signal bus0_selected : std_logic;
+    signal spd_select_vec : std_logic_vector(31 downto 0);
 
     function mk_op(cmd : cmd_type) return op_t is
     begin
@@ -67,6 +69,7 @@ architecture rtl of spd_regs is
 
 begin
 
+    spd_select_vec <= pack(spd_select);
     bus0.i2c_cmd <= ( 
         op => mk_op(cmd0),
         addr => cmd0.bus_addr,
@@ -76,7 +79,7 @@ begin
     bus0.start_prefetch <= spd_ctrl.start;
     bus0.i2c_cmd_valid <= cmd0_valid_flag;
     bus0.req <= '0';
-    bus0.selected_dimm <= 4x"0" & spd_select.idx(3 downto 0);
+    bus0.selected_dimm <= spd_select_vec(7 downto 0);
     bus0.rd_addr <= spd_rd_ptr.addr;
 
     bus1.i2c_cmd <= ( 
@@ -88,7 +91,7 @@ begin
     bus1.start_prefetch <= spd_ctrl.start;
     bus1.i2c_cmd_valid <= cmd1_valid_flag;
     bus1.req <= '0';
-    bus1.selected_dimm <= 4x"0" & spd_select.idx(7 downto 4);
+    bus1.selected_dimm <= spd_select_vec(15 downto 8);
     bus1.rd_addr <= spd_rd_ptr.addr;
     
     buffer0_if.rx_fifo_pop <= ch0_rx_dpr_pop;
@@ -160,7 +163,7 @@ begin
             cmd0_valid_flag <= '0';
             cmd1_valid_flag <= '0';
             spd_ctrl <= rec_reset;
-            spd_select <= rec_reset;
+            spd_select <= reset_0s;
             spd_rd_ptr <= rec_reset;
 
         elsif rising_edge(clk) then
@@ -204,6 +207,8 @@ begin
         end if;
     end process;
 
+    bus0_selected <= '1' when to_integer(std_logic_vector'(pack(spd_select))) < 16#FF# else '0';
+
     read_logic: process(clk, reset)
     begin
         if reset then
@@ -211,25 +216,37 @@ begin
             ch1_rx_dpr_pop <= '0';
             rdata <= (others => '0');
             spd_fifo_pop <= '0';
-            spd_present <= rec_reset;
+            spd_present <=  reset_0s;
 
         elsif rising_edge(clk) then
             ch0_rx_dpr_pop <= '0';
             ch1_rx_dpr_pop <= '0';
             spd_fifo_pop <= '0';
 
-            spd_present.bus0 <= resize(bus0.spd_present, spd_present.bus0'length);
-            spd_present.bus1 <= resize(bus1.spd_present, spd_present.bus1'length);
+            spd_present<= (
+                bus0_a => bus0.spd_present(0),
+                bus0_b => bus0.spd_present(1),
+                bus0_c => bus0.spd_present(2),
+                bus0_d => bus0.spd_present(3),
+                bus0_e => bus0.spd_present(4),
+                bus0_f => bus0.spd_present(5),
+                bus1_g => bus1.spd_present(0),
+                bus1_h => bus1.spd_present(1),
+                bus1_i => bus1.spd_present(2),
+                bus1_j => bus1.spd_present(3),
+                bus1_k => bus1.spd_present(4),
+                bus1_l => bus1.spd_present(5));
 
             if active_read then
                 case to_integer(unsigned(axi_if.read_address.addr)) is
                     when FIFO_CTRL_OFFSET => rdata <= pack(fifo_ctrl);
+                    when DIMM_PCAMP_OFFSET => rdata <= pack(dimm_pcamp);
                     when SPD_PRESENT_OFFSET => rdata <= pack(spd_present);
                     when SPD_SELECT_OFFSET => rdata <= pack(spd_select);
                     when SPD_RD_PTR_OFFSET => rdata <= pack(spd_rd_ptr);
                     when SPD_RDATA_OFFSET =>
                         spd_fifo_pop <= '1';
-                        if spd_select.idx < 8 then
+                        if bus0_selected then
                             rdata <= bus0.rd_data;
                         else
                             rdata <= bus1.rd_data;

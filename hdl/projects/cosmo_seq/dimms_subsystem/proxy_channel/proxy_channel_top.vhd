@@ -69,7 +69,7 @@ begin
     begin
         regs_if.rd_data <= (others => '0');
         for i in 0 to NUM_DIMMS_ON_BUS - 1 loop
-            if to_integer(unsigned(regs_if.selected_dimm)) = i then
+            if regs_if.selected_dimm(i) = '1' then
                 regs_if.rd_data <= cache_rdata(i);
             end if;
         end loop;
@@ -200,13 +200,4 @@ begin
         i2c_tx_st_if => i2c_tx_st_if,
         i2c_rx_st_if => i2c_rx_st_if
     );
-
-
-    -- Stuff I need:
-    -- -- know that the transaction succeeded from the controller
-    -- -- know that the transaction was aborted/interrupted by the big CPU
-    -- -- know that the transaction is in progress from the controller
-    -- -- know that the transaction wasn't ack'd
-
-
 end rtl;

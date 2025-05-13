@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -17,7 +17,7 @@ library vunit_lib;
 use work.spd_proxy_tb_pkg.all;
 use work.i2c_ctrl_vc_pkg.all;
 use work.i2c_target_vc_pkg.all;
-use work.spd_proxy_regs_pkg.all;
+use work.dimm_regs_pkg.all;
 
 
 entity spd_proxy_top_tb is
@@ -78,7 +78,8 @@ begin
                 write_bus(net, bus_handle, To_StdLogicVector(SPD_CTRL_OFFSET, bus_handle.p_address_length), 32x"1");
                 wait for 9 ms;
                 -- Pick DIMM 5 on channel 0
-                write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), 32x"5");
+                data32 := pack(spd_select_type'(bus0_f => '1', others => '0'));
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), data32);
                 read_bus(net, bus_handle, To_StdLogicVector(SPD_RDATA_OFFSET, bus_handle.p_address_length), data32);
                 check_match(data32, std_logic_vector'(X"DDCCBBAA"), "Read data mismatch");
             end if;

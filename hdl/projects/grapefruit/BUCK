@@ -73,7 +73,6 @@ vhdl_unit(
         ":gfruit_sgpio",
         ":gfruit_black_boxes",
         "//hdl/projects/cosmo_seq:reset_sync",
-        "//hdl/projects/cosmo_seq/spd_proxy:spd_proxy_top",
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
         "//hdl/ip/vhd/info:info",
         "//hdl/ip/vhd/espi:espi_top",
