@@ -14,7 +14,6 @@ use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
 use work.i2c_common_pkg.all;
-use work.axi_st8_pkg;
 use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 
@@ -252,9 +251,6 @@ architecture rtl of grapefruit_top is
     signal ruby_sda_if : tristate;
     signal dimm_scl_if : tristate;
     signal dimm_sda_if : tristate;
-    -- stubs
-    signal i2c_tx_st_if : axi_st8_pkg.axi_st_t;
-    signal i2c_rx_st_if : axi_st8_pkg.axi_st_t;
 begin
 
     espi_scm_to_hpm_alert_l <= 'Z';
