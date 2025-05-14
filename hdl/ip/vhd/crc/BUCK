@@ -1,6 +1,12 @@
 load("//tools:hdl.bzl", "vhdl_unit")
 
 vhdl_unit(
+    name = "crc_sim_pkg",
+    srcs = ["crc_sim_pkg.vhd"],
+    visibility = ['PUBLIC']
+)
+
+vhdl_unit(
     name = "crc8atm_8wide",
     srcs = ["crc8atm_8wide.vhd"],
     visibility = ['PUBLIC']
