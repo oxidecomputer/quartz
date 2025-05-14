@@ -38,7 +38,10 @@ entity sequencer_regs is
         nic_overrides : out nic_overrides_type;
         -- misc readbacks
         sp5_readbacks : in sp5_readbacks_type;
-        nic_readbacks : in nic_readbacks_type
+        nic_readbacks : in nic_readbacks_type;
+        -- Ignition mux and reconfig control
+        ignition_mux_sel : out std_logic;
+        ignition_creset : out std_logic
 
 
     );
@@ -54,6 +57,7 @@ architecture rtl of sequencer_regs is
     signal seq_raw_status_max : seq_raw_status_type;
     signal nic_api_status_max : nic_api_status_type;
     signal nic_raw_status_max : nic_raw_status_type;
+    signal ignition_control : ignition_control_type;
 
     signal amd_reset_fedges : amd_reset_fedges_type;
     signal amd_pwrok_fedges : amd_pwrok_fedges_type;
@@ -75,6 +79,9 @@ architecture rtl of sequencer_regs is
     signal smerr_assert_last : std_logic;
 
 begin
+
+    ignition_mux_sel <= ignition_control.mux_to_ignition;
+    ignition_creset <= ignition_control.ignition_creset;
 
     -- non-axi-specific logic
     seq_regs_specific: process(clk, reset)
@@ -179,6 +186,7 @@ begin
             rails_pg_max <= reset_0s;
             debug_enables <= rec_reset;
             nic_overrides <= rec_reset;
+            ignition_control <= rec_reset;
 
         elsif rising_edge(clk) then
             ifr.thermtrip <= ifr.thermtrip or (not therm_trip_last and therm_trip);
@@ -193,6 +201,7 @@ begin
                     when RAIL_PGS_MAX_HOLD_OFFSET => rails_pg_max <= reset_0s;
                     when DEBUG_ENABLES_OFFSET => debug_enables <= unpack(axi_if.write_data.data);
                     when NIC_OVERRIDES_OFFSET => nic_overrides <= unpack(axi_if.write_data.data);
+                    when IGNITION_CONTROL_OFFSET => ignition_control <= unpack(axi_if.write_data.data);
                     when others => null;
                 end case;
             end if;
@@ -228,6 +237,7 @@ begin
                     when NIC_READBACKS_OFFSET => rdata <= pack(nic_readbacks);
                     when DEBUG_ENABLES_OFFSET => rdata <= pack(debug_enables);
                     when NIC_OVERRIDES_OFFSET => rdata <= pack(nic_overrides);
+                    when IGNITION_CONTROL_OFFSET => rdata <= pack(ignition_control);
                     when others => rdata <= (others => '0');
                 end case;
             end if;

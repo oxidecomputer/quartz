@@ -52,6 +52,9 @@ entity sp5_sequencer is
         sp5_t6_power_en : in std_logic;
         sp5_t6_perst_l : in std_logic;
 
+        ignition_mux_sel : out std_logic;
+        ignition_creset : out std_logic;
+
 
     );
 end entity;
@@ -70,7 +73,6 @@ architecture rtl of sp5_sequencer is
     -- power ok means we're up and happy
     -- power idle means we're down and idle
     -- power not idle could mean we're in the middle of a sequence up or down
-    signal nic_ok : std_logic;
     signal nic_idle : std_logic;
     signal therm_trip : std_logic;
     signal early_power : early_power_t;
@@ -134,7 +136,9 @@ begin
         rails_en_rdbk => rails_en_rdbk,
         rails_pg_rdbk => rails_pg_rdbk,
         sp5_readbacks => sp5_readbacks,
-        nic_readbacks => nic_readbacks
+        nic_readbacks => nic_readbacks,
+        ignition_mux_sel => ignition_mux_sel,
+        ignition_creset => ignition_creset
     );
 
     -- control from hubris
