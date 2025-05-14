@@ -10,6 +10,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.calc_pkg.all;
+use work.transforms_pkg.all;
 
 package helper_8b10b_pkg is
 
@@ -40,7 +41,9 @@ type encode_lkup_table_t is array(0 to 255) of std_logic_vector(9 downto 0);
 -- but is useful for verification
 -- This is to be used when you're running a negative disparity
 -- in abcdeifghj
-constant RD_MINUS : encode_lkup_table_t := (
+ -- Most tables show data LSB..MSB when showing k tables
+-- so we put stuff in that way here and will reverse when needed.
+constant RD_MINUS_LSB1ST : encode_lkup_table_t := (
     10x"274", 10x"1d4", 10x"2d4", 10x"31b", 10x"354", 10x"29b", 10x"19b", 10x"38b",
     10x"394", 10x"25b", 10x"15b", 10x"34b", 10x"0db", 10x"2cb", 10x"1cb", 10x"174",
     10x"1b4", 10x"23b", 10x"13b", 10x"32b", 10x"0bb", 10x"2ab", 10x"1ab", 10x"3a4",
@@ -74,7 +77,7 @@ constant RD_MINUS : encode_lkup_table_t := (
     10x"1b1", 10x"237", 10x"137", 10x"32e", 10x"0b7", 10x"2ae", 10x"1ae", 10x"3a1",
     10x"331", 10x"26e", 10x"16e", 10x"361", 10x"0ee", 10x"2e1", 10x"1e1", 10x"2b1");
 
-constant RD_PLUS : encode_lkup_table_t := (
+constant RD_PLUS_LSB1ST : encode_lkup_table_t := (
     10x"18b", 10x"22b", 10x"12b", 10x"314", 10x"0ab", 10x"294", 10x"194", 10x"074",
     10x"06b", 10x"254", 10x"154", 10x"344", 10x"0d4", 10x"2c4", 10x"1c4", 10x"28b",
     10x"24b", 10x"234", 10x"134", 10x"324", 10x"0b4", 10x"2a4", 10x"1a4", 10x"05b",
@@ -121,6 +124,12 @@ function encode_k(
     running_disparity : std_logic
 ) return encoded_8b10b_t;
 
+function encode(
+    data_in : std_logic_vector(7 downto 0);
+    control : std_logic;
+    running_disparity : std_logic
+) return encoded_8b10b_t;
+
 end package;
 
 package body helper_8b10b_pkg is
@@ -133,9 +142,9 @@ package body helper_8b10b_pkg is
         variable encoded_val : std_logic_vector(9 downto 0);
     begin
         if running_disparity = '0' then
-            encoded_val := RD_MINUS(to_integer(data_in));
+            encoded_val := reverse(RD_MINUS_LSB1ST(to_integer(data_in)));
         else
-            encoded_val := RD_MINUS(to_integer(data_in));
+            encoded_val := reverse(RD_PLUS_LSB1ST(to_integer(data_in)));
         end if;
 
         encoded.data := encoded_val;
@@ -156,6 +165,8 @@ package body helper_8b10b_pkg is
 begin
     encoded.disparity := running_disparity;  -- default to hold
     case data_in is
+        -- Most tables show data LSB..MSB when showing k tables
+        -- so we put stuff in that way here and will reverse at the end.
         when K28_0 =>
             encoded.data := 10x"0f4" when running_disparity = '0' else 10x"30b";
         when K28_1 =>
@@ -189,7 +200,21 @@ begin
             encoded.data := (others => '1');
             assert false report "Can't encode invalid K character" severity error;
     end case;
+    encoded.data := reverse(encoded.data); -- See above want LSB on the right.
     return encoded;
+end function;
+
+function encode(
+    data_in : std_logic_vector(7 downto 0);
+    control : std_logic;
+    running_disparity : std_logic
+) return encoded_8b10b_t is
+begin
+    if control = '1' then
+        return encode_k(data_in, running_disparity);
+    else
+        return encode_data(data_in, running_disparity);
+    end if;
 end function;
 
 end package body;
