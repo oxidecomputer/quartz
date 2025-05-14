@@ -56,7 +56,7 @@ architecture rtl of decode_8b10b is
 
     signal disp6b : std_logic;
 
-    -- The 5B/6B decoding special cases where ABCDE !       : std_logic; abcde
+    -- The 5B/6B decoding special cases where ABCDE != abcde
 
     signal p22bceeqi   : std_logic;
     signal p22bncneeqi : std_logic;
