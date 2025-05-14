@@ -30,6 +30,7 @@ package crc_sim_pkg is
     -- Non-parallel, non-synth CRC8 autostar function for testbench use
     impure function crc8_autostar (
           data: queue_t;
+          final_xor_value: std_logic_vector(7 downto 0) := (others => '0');
           gen_invalid_crc: boolean := false
     ) return std_logic_vector;
 
@@ -71,6 +72,7 @@ package body crc_sim_pkg is
     -- a 1's seed value.
     impure function crc8_autostar (
         data: queue_t;
+        final_xor_value: std_logic_vector(7 downto 0) := (others => '0');
         gen_invalid_crc: boolean := false
     ) return std_logic_vector is
         -- create a copy so we don't destroy the input queue here
@@ -97,7 +99,7 @@ package body crc_sim_pkg is
         if gen_invalid_crc then
             last_q := not last_q;
         end if;
-        return last_q;
+        return last_q xor final_xor_value;
     end function;
 
 end package body;

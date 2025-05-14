@@ -1,0 +1,2 @@
+set_io --warn-no-port clk A43
+set_frequency clk 50
