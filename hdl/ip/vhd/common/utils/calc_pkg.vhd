@@ -49,9 +49,19 @@ package calc_pkg is
         byte_depth : natural
     ) return natural;
 
+    function num_bits_needed(value : natural) return positive;
+
+    function count_ones(value : std_logic_vector) return natural;
+    function count_zeros(value : std_logic_vector) return natural;
+
 end package;
 
 package body calc_pkg is
+
+    function num_bits_needed(value : natural) return positive is
+    begin
+        return log2ceil(value);
+    end function;
 
     function log2ceil (
         n : natural
@@ -112,5 +122,26 @@ package body calc_pkg is
     begin
         return log2ceil(byte_depth / (bit_width * 8));
     end;
+
+    function count_ones(value : std_logic_vector) return natural is
+        variable count : natural := 0;
+    begin
+        for i in value'range loop
+            if value(i) = '1' then
+                count := count + 1;
+            end if;
+        end loop;
+        return count;
+    end function;
+    function count_zeros(value : std_logic_vector) return natural is
+        variable count : natural := 0;
+    begin 
+        for i in value'range loop
+            if value(i) = '0' then
+                count := count + 1;
+            end if;
+        end loop;
+        return count;
+    end function;
 
 end package body;
