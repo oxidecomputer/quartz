@@ -10,11 +10,11 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 -- An 8-wide parallel CRC LFSR implementation for the
--- CRC8 ASTAR 0x2F CRC algorithm.
+-- CRC8 AUTOSTAR 0x2F CRC algorithm.
 -- The polynomial represented here is x^8+x^5+x^3+x^2+x+1 with
 -- a 1's seed value.
 
-entity crc8astar_8wide is
+entity crc8autostar_8wide is
     port (
         clk     : in    std_logic;
         reset   : in    std_logic;
@@ -25,7 +25,7 @@ entity crc8astar_8wide is
     );
 end entity;
 
-architecture rtl of crc8astar_8wide is
+architecture rtl of crc8autostar_8wide is
 
 begin
 
