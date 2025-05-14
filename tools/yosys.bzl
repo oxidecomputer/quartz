@@ -106,6 +106,8 @@ def ice40_nextpnr(ctx, yoys_providers):
     cmd.add("--json", yosys_json)
     cmd.add("--asc", asc.as_output())
     cmd.add("--log", next_pnr_log.as_output())
+    for nextpnr_arg in ctx.attrs.nextpnr_args:
+        cmd.add(nextpnr_arg)
 
     ctx.actions.run(cmd, category="next_pnr")
 
@@ -139,6 +141,10 @@ ice40_bitstream = rule(
         "family": attrs.string(doc="FPGA family"),
         "package": attrs.string(doc="Supported FPGA package"),
         "pinmap": attrs.source(doc="Pin constraints file *.pcf"),
+        "nextpnr_args": attrs.list(
+            attrs.string(doc="Nextpnr arguments"),
+            default=[],
+        ),
         "_yosys_gen": attrs.exec_dep(
                 doc="Generate a Vivado tcl for this project",
                 default="root//tools/yosys_gen:yosys_gen",
