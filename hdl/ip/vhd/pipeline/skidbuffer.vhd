@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copysource 2025 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 -- inspired by https://zipcpu.com/blog/2019/05/22/skidbuffer.html
 
@@ -13,7 +13,7 @@ use ieee.numeric_std.all;
 
 entity skidbuffer is
     generic(
-        WIDTH : integer;
+        WIDTH : integer
     );
     port (
         clk         : in  std_logic;

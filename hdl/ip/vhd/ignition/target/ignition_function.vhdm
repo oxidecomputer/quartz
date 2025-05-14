@@ -1,0 +1,66 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+--
+-- Copyright 2025 Oxide Computer Company
+
+
+-- Ignition is pretty simple.  It can can turn on the IBC
+-- or turn off the IBC in response to commands.  Any command results
+-- in a cool-down period where additional commands are NACKd.
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity ignition_function is
+    port(
+        clk     : in std_logic;
+        reset   : in std_logic;
+
+        one_khz : in std_logic;
+        ibc_enable : out std_logic;
+        in_cooldown : out std_logic;
+
+        power_on_cmd : in std_logic;
+        power_off_cmd : in std_logic;
+        restart_cmd : in std_logic;
+
+
+
+    );
+end entity;
+
+architecture rtl of ignition_function is
+    type state_t is (IBC_OFF, IBC_ON, IBC_COOLDOWN);
+    
+    type reg_t is record
+        state : state_t;
+    end record;
+    constant rec_rset : reg_t := (
+        state => IBC_OFF
+    );
+
+    signal r,  rin : reg_t;
+begin
+
+    sm:process(all)
+        variable v : reg_t;
+    begin
+        v :=  r;
+        
+
+        rin <= v;
+    end process;
+
+
+
+    reg: process(clk, reset)
+    begin
+        if reset = '1' then
+            r <= rec_rset;
+        elsif rising_edge(clk) then
+            r <= rin;
+        end if;
+    end process;
+end rtl;
