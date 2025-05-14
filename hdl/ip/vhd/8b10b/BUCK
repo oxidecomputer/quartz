@@ -1,0 +1,25 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "helper_8b10b_pkg",
+    srcs = glob(["helper_8b10b_pkg.vhd"]),
+    deps = [
+        "//hdl/ip/vhd/common:calc_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "encode_8b10b",
+    srcs = glob(["encode_8b10b.vhd"]),
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "decode_8b10b",
+    srcs = glob(["decode_8b10b.vhd"]),
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
