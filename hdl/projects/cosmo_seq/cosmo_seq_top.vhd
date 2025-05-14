@@ -410,8 +410,6 @@ begin
     -- misc things tied:
     fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
-    fpga1_to_ign_trgt_fpga_creset <= '0';  -- Disabled until we decide what to do with it
-    fpga1_to_sp_mux_ign_mux_sel <= '0';  -- Default until we decide what to do with it
     fpga1_to_sp_irq_l <= (others => '1');
     -- Enable various buffers when we're in A0:
     fpga1_espi0_cs_l_buff_oe_en_l <= '0' when sp5_seq_pins.pwr_good else 'Z';
@@ -654,7 +652,9 @@ begin
         nic_rails_pins => nic_rails,
         nic_seq_pins => nic_seq_pins,
         sp5_t6_power_en => sp5_t6_power_en,
-        sp5_t6_perst_l => sp5_t6_perst_l
+        sp5_t6_perst_l => sp5_t6_perst_l,
+        ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
+        ignition_creset => fpga1_to_ign_trgt_fpga_creset
     );
 
     -- early power related pins
