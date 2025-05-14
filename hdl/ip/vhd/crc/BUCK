@@ -5,3 +5,9 @@ vhdl_unit(
     srcs = ["crc8atm_8wide.vhd"],
     visibility = ['PUBLIC']
 )
+
+vhdl_unit(
+    name = "crc8astar_8wide",
+    srcs = ["crc8astar_8wide.vhd"],
+    visibility = ['PUBLIC']
+)
