@@ -10,6 +10,7 @@ import subprocess
 import os
 import sys
 from pathlib import Path
+from datetime import date
 
 try:
     import tomli_w
@@ -154,7 +155,7 @@ class VunitProject:
     def __init__(self, name, path):
         self.name = name
         self.path = path
-        self.year = 2024
+        self.year = date.today().year
         self.half_period = "4 ns"
         self.reset_time = "200 ns"
         self.reset_delay = "500 ns"
