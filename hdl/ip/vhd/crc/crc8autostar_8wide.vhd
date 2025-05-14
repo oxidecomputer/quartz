@@ -15,6 +15,10 @@ use ieee.numeric_std_unsigned.all;
 -- a 1's seed value.
 
 entity crc8autostar_8wide is
+    generic(
+        -- Default here doesn't change the register value (something xor'd with 0 is itself)
+        FINAL_XOR_VALUE : std_logic_vector(7 downto 0) := (others => '0')
+    );
     port (
         clk     : in    std_logic;
         reset   : in    std_logic;
@@ -26,40 +30,41 @@ entity crc8autostar_8wide is
 end entity;
 
 architecture rtl of crc8autostar_8wide is
-
+    signal crc_reg : std_logic_vector(7 downto 0);
 begin
 
-    crc_reg: process(clk, reset)
+    crc_lfsr: process(clk, reset)
     begin
         if reset then
-            crc_out <= (others => '1');
+            crc_reg <= (others => '1');
         elsif rising_edge(clk) then
             -- This logic may run on a faster clock cycle than our shifter
             -- so we allow the external logic to clock faster and use the
             -- enable and clear to control when we do the shifts.
             if clear then
-                crc_out <= (others => '1');
+                crc_reg <= (others => '1');
             elsif enable then
                 -- This equation is created by unrolling 8 shifts of the
                 -- LFSR.
-                crc_out(0) <= crc_out(0) xor crc_out(3) xor crc_out(5) xor crc_out(7) xor 
+                crc_reg(0) <= crc_reg(0) xor crc_reg(3) xor crc_reg(5) xor crc_reg(7) xor 
                               data_in(0) xor data_in(3) xor data_in(5) xor data_in(7);
-                crc_out(1) <= crc_out(0) xor crc_out(1) xor crc_out(3) xor crc_out(4) xor crc_out(5) xor crc_out(6) xor crc_out(7) xor
+                crc_reg(1) <= crc_reg(0) xor crc_reg(1) xor crc_reg(3) xor crc_reg(4) xor crc_reg(5) xor crc_reg(6) xor crc_reg(7) xor
                               data_in(0) xor data_in(1) xor data_in(3) xor data_in(4) xor data_in(5) xor data_in(6) xor data_in(7);
-                crc_out(2) <= crc_out(0) xor crc_out(1) xor crc_out(2) xor crc_out(3) xor crc_out(4) xor crc_out(6) xor
+                crc_reg(2) <= crc_reg(0) xor crc_reg(1) xor crc_reg(2) xor crc_reg(3) xor crc_reg(4) xor crc_reg(6) xor
                               data_in(0) xor data_in(1) xor data_in(2) xor data_in(3) xor data_in(4) xor data_in(6);
-                crc_out(3) <= crc_out(0) xor crc_out(1) xor crc_out(2) xor crc_out(4) xor 
+                crc_reg(3) <= crc_reg(0) xor crc_reg(1) xor crc_reg(2) xor crc_reg(4) xor 
                               data_in(0) xor data_in(1) xor data_in(2) xor data_in(4) xor data_in(5);
-                crc_out(4) <= crc_out(1) xor crc_out(2) xor crc_out(3) xor crc_out(5) xor 
+                crc_reg(4) <= crc_reg(1) xor crc_reg(2) xor crc_reg(3) xor crc_reg(5) xor 
                               data_in(1) xor data_in(2) xor data_in(3) xor data_in(5); 
-                crc_out(5) <= crc_out(0) xor crc_out(2) xor crc_out(4) xor crc_out(5) xor crc_out(6) xor crc_out(7) xor 
+                crc_reg(5) <= crc_reg(0) xor crc_reg(2) xor crc_reg(4) xor crc_reg(5) xor crc_reg(6) xor crc_reg(7) xor 
                               data_in(0) xor data_in(2) xor data_in(4) xor data_in(5) xor data_in(6) xor data_in(7);
-                crc_out(6) <= crc_out(1) xor crc_out(3) xor crc_out(5) xor crc_out(6) xor crc_out(7) xor 
+                crc_reg(6) <= crc_reg(1) xor crc_reg(3) xor crc_reg(5) xor crc_reg(6) xor crc_reg(7) xor 
                               data_in(1) xor data_in(3) xor data_in(5) xor data_in(6) xor data_in(7);
-                crc_out(7) <= crc_out(2) xor crc_out(4) xor crc_out(6) xor crc_out(7) xor 
+                crc_reg(7) <= crc_reg(2) xor crc_reg(4) xor crc_reg(6) xor crc_reg(7) xor 
                               data_in(2) xor data_in(4) xor data_in(6) xor data_in(7);
             end if;
         end if;
     end process;
+    crc_out <= crc_reg xor FINAL_XOR_VALUE;
 
 end rtl;
