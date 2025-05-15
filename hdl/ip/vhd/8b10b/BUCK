@@ -5,6 +5,7 @@ vhdl_unit(
     srcs = glob(["helper_8b10b_pkg.vhd"]),
     deps = [
         "//hdl/ip/vhd/common:calc_pkg",
+        "//hdl/ip/vhd/common:transforms_pkg",
     ],
     standard = "2008",
     visibility = ['PUBLIC'],
