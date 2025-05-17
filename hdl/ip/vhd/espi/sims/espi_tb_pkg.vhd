@@ -25,6 +25,7 @@ library osvvm;
     use osvvm.RandomPkg.all;
 
 use work.espi_protocol_pkg.all;
+use work.crc_sim_pkg.all;
 
 package espi_tb_pkg is
 
@@ -51,10 +52,6 @@ package espi_tb_pkg is
         status : std_logic_vector(15 downto 0);
         crc_ok : boolean;
     end record;
-    
-    -- This is a helper function to build the CRC byte for a given queue
-    -- Non-destructive to the input queue due to an internal copy.
-    impure function crc8(data: queue_t; gen_invalid_crc: boolean := false) return std_logic_vector;
 
     -- These functions build the command bytes into a queue and
     -- returns the queue and the number of bytes in the queue
@@ -102,42 +99,10 @@ end package;
 
 package body espi_tb_pkg is
 
-    -- The non-parallel version of the crc from the datasheet
-    -- used to check our parallel hw implementation with a "known-good"
-    -- and alternately implemented algo.
-    impure function crc8 (
-        data: queue_t;
-        gen_invalid_crc: boolean := false
-    ) return std_logic_vector is
-
-        -- create a copy so we don't destry the input queue here
-        constant  crc_queue : queue_t                  := copy(data);
-        variable d : std_logic_vector(7 downto 0)      := (others => '0');
-        variable next_q : std_logic_vector(7 downto 0) := (others => '0');
-        variable last_q : std_logic_vector(7 downto 0) := (others => '0');
-
-    begin
-        while not is_empty(crc_queue) loop
-            d := To_StdLogicVector(pop_byte(crc_queue), 8);
-            for i in 0 to 7 loop
-                next_q(0) := last_q(7) xor d(7);
-                next_q(1) := last_q(7) xor d(7) xor last_q(0);
-                next_q(2) := last_q(7) xor d(7) xor last_q(1);
-                next_q(7 downto 3) := last_q(6 downto 2);
-                last_q := next_q;
-                d := shift_left(d, 1);
-            end loop;
-        end loop;
-        if gen_invalid_crc then
-            last_q := not last_q;
-        end if;
-        return last_q;
-    end;
-
     impure function check_queue_crc (
         data: queue_t
     ) return boolean is
-        -- create a copy so we don't destry the queue here
+        -- create a copy so we don't destroy the queue here
         constant  copy_queue : queue_t                  := copy(data);
         constant crc_queue: queue_t                  := new_queue;
         variable cur_byte : std_logic_vector(7 downto 0);
@@ -147,7 +112,7 @@ package body espi_tb_pkg is
             cur_byte := To_StdLogicVector(pop_byte(copy_queue), 8);
             -- Last element in queue is the CRC
             if is_empty(copy_queue) then
-                crc_byte := crc8(crc_queue);
+                crc_byte := crc8_atm(crc_queue);
                 report "Received CRC Byte: " & to_hstring(cur_byte);
                 report "Calculated (Expected) CRC Byte: " & to_hstring(crc_byte);
                 return crc_byte = cur_byte;
@@ -172,7 +137,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(OPCODE_GET_STATUS));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -202,7 +167,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(tmp_address(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 2;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -229,7 +194,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(data(31 downto 24)));
         cmd.num_bytes := cmd.num_bytes + 4;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -261,7 +226,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(address(7 downto 0)));
         cmd.num_bytes := cmd.num_bytes + 4;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -275,7 +240,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(opcode_get_flash_c));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue, bad_crc)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -318,7 +283,7 @@ package body espi_tb_pkg is
             cmd.num_bytes := cmd.num_bytes + 1;
         end loop;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -365,7 +330,7 @@ package body espi_tb_pkg is
             cmd.num_bytes := cmd.num_bytes + 1;
         end loop;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -386,7 +351,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(opcode_get_pc));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -398,7 +363,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(opcode_get_oob));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
@@ -471,7 +436,7 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(data(31 downto 24)));
         cmd.num_bytes := cmd.num_bytes + 1;
         -- CRC (1 byte)
-        push_byte(cmd.queue, to_integer(crc8(cmd.queue)));
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue)));
         cmd.num_bytes := cmd.num_bytes + 1;
 
         return cmd;
