@@ -56,6 +56,7 @@ vunit_sim(
     srcs = glob(["sims/**/*.vhd"]),
     deps = [
         ":espi_top",
+        "//hdl/ip/vhd/crc:crc_sim_pkg",
         "//hdl/ip/vhd/vunit_components:qspi_controller_vc",
     ],
     visibility = ['PUBLIC'],
