@@ -121,7 +121,7 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
             controller.registers.tofino,
             controller.registers.tofino_debug_port,
             controller.registers.pcie,
-            IgnitionController::register_pages(controller.ignition_controllers),
+            controller.ignition_controller,
             controller.registers.fans,
             controller.registers.front_io_hsc);
 
@@ -138,9 +138,13 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
     //
 
     let limit_for_1khz = fromInteger(parameters.system_frequency_hz / 1000);
+    let limit_for_1mhz = fromInteger(parameters.system_frequency_hz / 1_000_000);
 
     Strobe#(20) tick_1khz <- mkLimitStrobe(1, limit_for_1khz, 0);
     mkFreeRunningStrobe(tick_1khz);
+
+    Strobe#(6) tick_1mhz <- mkLimitStrobe(1, limit_for_1mhz, 0);
+    mkFreeRunningStrobe(tick_1mhz);
 
     //
     // PDN
@@ -181,26 +185,17 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
 
     // Instantiate Transceivers, IO adapters and connect them to the Ignition
     // Controllers.
-    Transceivers#(n_ignition_controllers) controller_txrs <- mkTransceivers();
+    ControllerTransceiver#(4) controller_txrs <- mkControllerTransceiver4();
 
-    zipWithM(
-        mkConnection,
-        controller_txrs.txrs,
-        map(transceiver_client,
-            controller.ignition_controllers));
-
-    mkConnection(asIfc(tick_1khz), asIfc(controller_txrs.tick_1khz));
+    mkConnection(controller_txrs, controller.ignition_controller.txr);
+    //mkConnection(asIfc(tick_1khz), asIfc(controller_txrs.tick_1khz));
 
     Strobe#(3) controller_tx_strobe <- mkLimitStrobe(1, 5, 0);
     mkFreeRunningStrobe(controller_tx_strobe);
 
-    function to_serial(txr) = txr.serial;
-
-    Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <-
-        zipWithM(
-            mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe),
-            map(tx_enabled, controller.ignition_controllers),
-            map(to_serial, controller_txrs.txrs));
+    Vector#(4, SampledSerialIOTxOutputEnable#(5)) controller_io <- mapM(
+            uncurry(mkSampledSerialIOWithTxStrobeAndOutputEnable(controller_tx_strobe)),
+            controller_txrs.serial);
 
     // Make Inouts for the two adapters connecting to the external Targets,
     // allowing them to be connected to the top level.
@@ -267,16 +262,16 @@ module mkSidecarMainboardEmulator (SidecarMainboardEmulatorTop)
 
     ReadOnly#(Bit#(1)) ignition_link2_status_led <-
         mkLinkStatusLED(
-            controller.ignition_controllers[2].status.target_present,
-            controller_txrs.txrs[2].status,
-            controller_txrs.txrs[2].receiver_locked_timeout,
+            controller.ignition_controller.presence_summary[2],
+            link_status_disconnected, //controller_txrs.txrs[2].status,
+            False, //controller_txrs.txrs[2].receiver_locked_timeout,
             False);
 
     ReadOnly#(Bit#(1)) ignition_link3_status_led <-
         mkLinkStatusLED(
-            controller.ignition_controllers[3].status.target_present,
-            controller_txrs.txrs[3].status,
-            controller_txrs.txrs[3].receiver_locked_timeout,
+            controller.ignition_controller.presence_summary[3],
+            link_status_disconnected, //controller_txrs.txrs[3].status,
+            False, //controller_txrs.txrs[3].receiver_locked_timeout,
             False);
 
     Reg#(Bit#(8)) led_r <- mkConfigRegU();

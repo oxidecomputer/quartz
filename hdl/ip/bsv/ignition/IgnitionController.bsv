@@ -1,477 +1,1126 @@
 package IgnitionController;
 
 export Parameters(..);
-export ReadVolatile(..);
-export LinkEventCounterRegisters(..);
-export Registers(..);
-export Interrupts(..);
-export Status(..);
 export Controller(..);
+export ControllerId(..);
+export RegisterId(..);
+export RegisterRequest_$op(..);
+export RegisterRequest(..);
+export RegisterServer(..);
+export CounterAddress(..);
+export CounterId(..);
+export Counter(..);
+export CounterServer(..);
+export TransmitterOutputEnableMode(..);
 
 export mkController;
-export registers;
-export transceiver_client;
-export register_pages;
-export tx_enabled;
+export read_controller_register_into;
+export clear_controller_counter;
+export read_controller_counter_into;
+export transceiver_state_value;
 
-// Interrupt helpers.
-export interrupts_none;
-
+import BRAMCore::*;
+import BRAMFIFO::*;
+import BuildVector::*;
+import ClientServer::*;
 import ConfigReg::*;
 import Connectable::*;
 import DefaultValue::*;
-import DReg::*;
-import GetPut::*;
 import FIFO::*;
+import FIFOF::*;
+import GetPut::*;
+import StmtFSM::*;
 import Vector::*;
 
-import Countdown::*;
-import SchmittReg::*;
-import Strobe::*;
-
+import IgnitionControllerCounters::*;
 import IgnitionControllerRegisters::*;
-import IgnitionEventCounter::*;
+import IgnitionControllerShared::*;
 import IgnitionProtocol::*;
+import IgnitionReceiver::*;
 import IgnitionTransceiver::*;
+import IgnitionTransmitter::*;
 
 
 typedef struct {
+    Integer tick_period;
+    Integer transmitter_output_disable_timeout;
     IgnitionProtocol::Parameters protocol;
 } Parameters;
 
 instance DefaultValue#(Parameters);
     defaultValue = Parameters {
+        tick_period: 1000,
+        transmitter_output_disable_timeout: 100,
         protocol: defaultValue};
 endinstance
 
-typedef struct {
-} Interrupts deriving (Bits, Eq, FShow);
-
-interface ReadVolatile#(type t);
-    method ActionValue#(t) _read();
-endinterface
-
-interface LinkEventCounterRegisters;
-    interface Reg#(IgnitionControllerRegisters::LinkEvents) summary;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) encoding_error;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) decoding_error;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) ordered_set_invalid;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) message_version_invalid;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) message_type_invalid;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) message_checksum_invalid;
-endinterface
-
-interface Registers;
-    interface Reg#(IgnitionControllerRegisters::ControllerState) controller_state;
-    interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) controller_link_status;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetSystemType) target_system_type;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetSystemStatus) target_system_status;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetSystemFaults) target_system_faults;
-    interface ReadOnly#(IgnitionControllerRegisters::TargetRequestStatus) target_request_status;
-    interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) target_link0_status;
-    interface ReadOnly#(IgnitionControllerRegisters::LinkStatus) target_link1_status;
-    interface Reg#(IgnitionControllerRegisters::TargetRequest) target_request;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_status_received_count;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_hello_sent_count;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_request_sent_count;
-    interface ReadVolatile#(IgnitionControllerRegisters::Counter) controller_message_dropped_count;
-    interface LinkEventCounterRegisters controller_link_counters;
-    interface LinkEventCounterRegisters target_link0_counters;
-    interface LinkEventCounterRegisters target_link1_counters;
-endinterface
+typedef enum {
+    TransceiverState = 0,
+    ControllerState,
+    TargetSystemType,
+    TargetSystemStatus,
+    TargetSystemEvents,
+    TargetSystemPowerRequestStatus,
+    TargetLink0Status,
+    TargetLink1Status
+} RegisterId deriving (Bits, Eq, FShow);
 
 typedef struct {
-    Bool always_transmit;
-    Bool target_present;
-    Bool receiver_locked;
-} Status deriving (Bits);
+    ControllerId#(n) id;
+    RegisterId register;
+    union tagged {
+        void Read;
+        Bit#(8) Write;
+    } op;
+} RegisterRequest#(numeric type n) deriving (Bits, FShow);
 
-interface Controller;
-    interface TransceiverClient txr;
-    interface Registers registers;
-    interface Reg#(Interrupts) interrupts;
-    interface PulseWire tick_1khz;
-    (* always_enabled *) method Status status();
+typedef Server#(RegisterRequest#(n), Bit#(8)) RegisterServer#(numeric type n);
+
+typedef enum {
+    Disabled = 0,
+    EnabledWhenReceiverAligned = 1,
+    EnabledWhenTargetPresent = 2,
+    AlwaysEnabled = 3
+} TransmitterOutputEnableMode deriving (Bits, Eq, FShow);
+
+// An interface for a Controller with `n` "channels" which processes events
+// submitted by a receiver, answers requests from upstack software and generates
+// events for a transmitter.
+interface Controller #(numeric type n);
+    // Strobe used to drive timers and generate internal events.
+    method Action tick_1mhz();
+
+    // Transceiver interface
+    interface ControllerTransceiverClient#(n) txr;
+
+    // Software interface
+    interface RegisterServer#(n) registers;
+    interface CounterServer#(n) counters;
+    // A bit vector indicating which channels have a `Target` present.
+    method Vector#(n, Bool) presence_summary();
+
+    // Flag indicating whether or not the Controller is idle, meaning it is not
+    // processing software requests, tick events, receiver events or
+    // incrementing counters.
+    (* always_ready *) method Bool idle();
 endinterface
 
-module mkController #(Parameters parameters) (Controller);
+//
+// mkController
+//
+// This is the second iteration of the Ignition Controller and an implementation
+// of the multi-channel `Controller(..)` interface using a series of RAM
+// elements to track the state of `n` Target systems. The first iteration of the
+// Controller implemented all logic per channel, only time-multiplexing some
+// parts of the receiver, resulting in very high device utilization of the ECP5
+// FPGA running the design when synthesizing up to 36 copies. This second
+// iteration in contrast aims to do as much work in a serial and
+// time-multiplexed manner by making use of the relatively slow baudrate of the
+// link between Controller and Target. This results in far fewer copies of most
+// logic blocks resulting in much lower FPGA device utilization while expanding
+// the feature set.
+//
+// The following calculations are used to justify this design:
+//
+// Both the Controller and Target are operating at a 50 MHz design clock.
+// Messages are exchanged between the systems using an 8B10B encoded serial
+// link, operating at 10 MBit/s. Message bytes are encoded using 10 bit symbols
+// resulting in a symbol rate of 1M symbols/s/receiver, or a combined 36M
+// symbols/s for the current maximum of 36 channels.
+//
+// The receiver is pipelined such that it deserializes bits into symbols in
+// parallel and then processes all symbols in serial at a rate of one
+// symbol/clock cycle. At a 50 MHz design clock this results in a peak sustained
+// throughput of 50M symbols/s, which is well below the required 36M symbols/s
+// generated by all 36 receivers. Note that due to clock jitter between the two
+// systems a symbol period of 50 cycles is not strictly true and some symbols
+// may last 49 or 51 clock cycles. But 50 cycles makes for convenient math and
+// is expected to be true on average.
+//
+// Not all symbols however need to be processed by the Controller as it is only
+// concerned with Target data. Framing and clock recovery symbols transmitted
+// between messages are only useful to the receiver and can be dropped once
+// observed.
+//
+// The current transmitter implementation will transmit at most three Target
+// Status messages back to back after which it is required to transmit an Idle1
+// and Idle2 ordered set consisting of two symbols each for clock recovery
+// purposes. Each Status message consists of a start symbol, version and message
+// types symbols, eight data symbols, a checksum symbol and two end of message
+// symbols for a total of 12 symbols. See the `IgnitionProtocol` package and
+// `TransmitterTests` for more details.
+//
+// For each Status message received the receiver emits eight symbol events and a
+// nineth "message received" event to the Controller. For a sequence of three
+// Status messages followed by two Idle sets making up 40 transmitted symbols
+// the receiver therefor emits 27 events to the Controller. Given a symbol rate
+// of 1M symbol/s each receiver can generate 675k events/s and 36 such receivers
+// can generate at total of 24.3M events/s.
+//
+// Each event emitted by the receiver is handled in a fixed three clock cycles
+// by the Controller. Operating at 50 MHz it can thus process up to 16.66M
+// event/s. This falls short of the combined 24.3M events which can be
+// generated, but this would be a worst case scenario where every Target would
+// generate Status messages at line rate.
+//
+// In practice we expect each Target to emit less than half of that number of
+// messages and certainly not for a sustained period of time. The expectation is
+// that with some appropriately sized FIFOs between the receiver and Controller
+// it can keep up with realistic workload. Note that the Controller generates an
+// additional 1000 tick events/channel used to generate timeout events and needs
+// cycles to respond to software requests, but these are expected to consume at
+// most 1-2% of available event cycles leaving enough allocated for receiver
+// events.
+//
+// If more event processing throughput is required or if the number of channels
+// is increased a second copy of the Controller could be instantiated with each
+// handling half of the channels. This would double aggregate event processing
+// throughput. The cost of an additional Controller handling half the channels
+// and splitting the transceivers may be acceptable.
+//
+// Additional design details are explained below when logic elements are
+// declared.
+//
+module mkController #(
+            Parameters parameters,
+            Bool zero_registers)
+                (Controller#(n));
+    let status_message_timeout_reset_value =
+            fromInteger(parameters.protocol.status_interval + 1);
+
     //
-    // External pulse used to generate timed events.
+    // Event handler FIFOs
     //
-    Reg#(Bool) tick <- mkDReg(False);
-
-    Reg#(LinkStatus) link_status <- mkRegU();
-    Wire#(Message) rx <- mkWire();
-    FIFO#(Message) tx <- mkLFIFO();
-
-    // `CountingMonitors` keep track of link events occuring on the local
-    // receiver as well as the two receivers on the `Target` side.
-    CountingMonitor link_monitor <- mkCountingMonitor();
-    CountingMonitor target_link0_monitor <- mkCountingMonitor();
-    CountingMonitor target_link1_monitor <- mkCountingMonitor();
-
-    // Additional Message counters.
-    Counter n_status_received <- mkCounter();
-    Counter n_hello_sent <- mkCounter();
-    Counter n_request_sent <- mkCounter();
-    Counter n_message_dropped <- mkCounter();
-
-    // `Target` present indicator. This is implemented using a filter, requiring
-    // three Status messages to be received before the `Target` is marked
-    // present.
-    Reg#(Bool) past_target_present <- mkReg(False);
-    SchmittReg#(3, Bool) target_present <-
-        mkSchmittReg(False, EdgePatterns {
-            negative_edge: 'b100,
-            positive_edge: 'b111,
-            mask: 'b111});
-
-    // The latest `Status` `Message` received from a `Target`. This should only
-    // be considered valid if the `target_present` flag above is True.
-    Reg#(Message) status_message <- mkRegU();
-
-    // A pending `Request`, received upstream (software).
-    ConfigReg#(Maybe#(Request)) pending_request <- mkConfigReg(tagged Invalid);
-
-    // Settable override to make the Controller always transmit rather than wait
-    // for a Target to be present first.
-    ConfigReg#(Bool) always_transmit <- mkConfigReg(False);
+    // FIFOs used to receive software requests, internally generated tick events
+    // and receiver events respectively. These FIFOs have an guarded enq side
+    // and unguarded deq side. This allows the enq side to be connected to
+    // external logic with the implicit guards providing automatic backpressure
+    // while the deq side of all three FIFOs can be used in a single rule
+    // without those rules getting (implicitely) blocked by the scheduler if one
+    // of the FIFOs is empty.
+    //
+    FIFOF#(RegisterRequest#(n)) software_request <- mkGFIFOF(False, True);
+    FIFOF#(ControllerId#(n)) tick_events <- mkGFIFOF(False, True);
+    FIFOF#(ReceiverEvent#(n)) receiver_events <- mkGFIFOF(False, True);
 
     //
-    // Events
+    // Output FIFOs holding software responses and transmitter events (outgoing
+    // messages). Note that these FIFOs implicitly guard the event handler rules
+    // causing the handler to block if they are not emptied by downstream logic
+    // in a timely fashion.
     //
-    PulseWire message_accepted <- mkPulseWire();
+    FIFOF#(Bit#(8)) software_response <- mkFIFOF();
+    FIFOF#(TransmitterEvent#(n)) transmitter_events <- mkFIFOF();
 
-    PulseWire status_received <- mkPulseWire();
-    Countdown#(6) status_update_expired <- mkCountdownBy1();
-
-    Countdown#(6) hello_expired <- mkCountdownBy1();
-    Reg#(Bool) hello_requested <- mkReg(True);
+    let event_handler_idle =
+            !(software_request.notEmpty ||
+                tick_events.notEmpty ||
+                receiver_events.notEmpty);
 
     //
-    // Connect the global tick
+    // Register files holding the per-Controller state
     //
+    // Upon receiving an event the Controller is expected to select the
+    // registers in the register files according to the controller id attached
+    // to the event. The handler then waits one cycle for the RAM outputs to
+    // become valid, handles the event on the third cycle and writes back the
+    // registers while the next event is selected. This allows an event to be
+    // processed every three cycles.
+    //
+    // In order to keep the state in the receiver as minimal as possible
+    // multi-byte Status messages sent by Targets are streamed to the Controller
+    // one byte at the time as they are decoded and parsed. But the receiver
+    // does not yet know if the whole Status message is valid until it has
+    // decoded and parsed all bytes and the required checksum. In order to store
+    // these in-progress Status messages, some register files double buffer
+    // their data using an active/inactive value slot.
+    //
+    // The bytes for an incoming Status message are written to the inactive
+    // value slots, while software requests for the Status data are read from
+    // the active value slots. Once the receiver has successfully parsed the
+    // whole message it emits an event indicating so, at which point the buffer
+    // pointer stored in the `presence` register is updated. The Controller
+    // state is updated with the now active values and subsequent software
+    // requests will read the new Status data.
+    //
+    // If a complete and valid Status message is not received by the receiver
+    // the buffer pointer is never updated and the next Status message will
+    // simply overwrite the partial previous message in inactive slots.
+    //
+    RegisterFile#(n, PresenceRegister) presence <- mkBRAMRegisterFile();
+    RegisterFile#(n, TransceiverRegister) transceiver <- mkBRAMRegisterFile();
+    RegisterFile#(n, HelloTimerRegister) hello_timer <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, SystemType)
+            target_system_type <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, SystemStatus)
+            target_system_status <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, SystemFaults)
+            target_system_events <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, RequestStatus)
+            target_system_power_request_status <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, LinkStatus)
+            target_link0_status <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, LinkEvents)
+            target_link0_events <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, LinkStatus)
+            target_link1_status <- mkBRAMRegisterFile();
+    BufferedValueRegisterFile#(n, LinkEvents)
+            target_link1_events <- mkBRAMRegisterFile();
 
+    // While updating the presence flag for each Target, a read-only copy is
+    // kept in a summary vector, which can be read by software to determine
+    // which channels to query for data.
+    Vector#(n, Reg#(Bool)) presence_summary_r <- replicateM(mkConfigReg(False));
+
+    ControllerCounters#(n) event_counters <- mkControllerCounters();
+
+    // Event handler state
+    Reg#(EventHandlerState) event_handler_state <- mkReg(AwaitingEvent);
+    Reg#(EventHandlerState) event_handler_select <- mkRegU();
+    Reg#(ControllerId#(n)) controller_id <- mkRegU();
+
+    PulseWire tick <- mkPulseWire();
+    Reg#(UInt#(10)) tick_count <- mkReg(0);
+
+    //
+    // Register file init
+    //
+    // The register files may be initialized with random data upon reset. This
+    // reset sequence will reset all registers to zero and then not run again.
+    // If this module is part of a design targeting a device which clears BRAMs
+    // on PoR, `init` can be set to False during elaboration which will optimize
+    // this away.
+    //
+    Reg#(Bool) init_complete <- mkReg(!zero_registers);
+
+    if (zero_registers) begin
+        Reg#(ControllerId#(n)) i <- mkReg(0);
+
+        FSM init_seq <- mkFSMWithPred(seq
+            repeat(fromInteger(valueof(n))) action
+                // Select the registers for each Controller in sequence..
+                presence.select(i);
+                transceiver.select(i);
+                hello_timer.select(i);
+
+                target_system_type.select(i);
+                target_system_status.select(i);
+                target_system_events.select(i);
+                target_system_power_request_status.select(i);
+                target_link0_status.select(i);
+                target_link0_events.select(i);
+                target_link1_status.select(i);
+                target_link1_events.select(i);
+
+                // .. and reset the their values.
+                //
+                // A read-modify-write sequence is not needed so the select and
+                // write-back of the registers can happen in the same cycle.
+                presence <= unpack('0);
+                transceiver <= unpack('0);
+                hello_timer <= unpack('0);
+
+                target_system_type <= unpack('0);
+                target_system_status <= unpack('0);
+                target_system_events <= unpack('0);
+                target_system_power_request_status <= unpack('0);
+                target_link0_status <= unpack('0);
+                target_link0_events <= unpack('0);
+                target_link1_status <= unpack('0);
+                target_link1_events <= unpack('0);
+
+                i <= i + 1;
+            endaction
+            init_complete <= True;
+        endseq, !init_complete);
+
+        (* fire_when_enabled *)
+        rule do_init (!init_complete);
+            init_seq.start();
+        endrule
+    end
+
+    //
+    // Generate Tick events
+    //
+    // Each Controller channel requires a 1 KHz tick in order to generate
+    // timeouts and send periodic Hello messages. These ticks are generated
+    // using a single counter and the rules below, enqueueing Tick events for
+    // each channel into a FIFO when appropriate.
+    //
+    // These Tick events are handled by the event handler with relatively high
+    // priority, so in order to not starve other events from being handled by a
+    // burst of Tick events for many channels, the ticks for the different
+    // channels are generated with a phase offset by dividing the available 1000
+    // microseconds by `n` channels.
+    //
+    // Note that in order to reduce the time between ticks during simulation the
+    // total tick period which gets divided can be configured through the
+    // `Parameters` used when constructing the `Controller`.
+    //
     (* fire_when_enabled *)
-    rule do_tick (tick);
-        status_update_expired.send();
-        hello_expired.send();
+    rule do_tick (init_complete && tick);
+        let wrap = tick_count == fromInteger(parameters.tick_period - 1);
+        tick_count <= wrap ? 0 : tick_count + 1;
     endrule
 
+    let tick_phase_shift = parameters.tick_period / valueof(n);
+
+    // Per channel rule which generates a Tick event for the given channel when
+    // the counter hits the count for the determined phase offset.
+    for (Integer i = 0; i < valueof(n); i = i + 1) begin
+        (* fire_when_enabled *)
+        rule do_enq_tick_event (
+                init_complete &&
+                tick &&
+                tick_count == fromInteger(i * tick_phase_shift));
+            tick_events.enq(fromInteger(i));
+        endrule
+    end
+
+    //
+    // Event handler rules
+    //
+
+    function Action count_application_events(
+            CountableApplicationEvents events) =
+        event_counters.count_application_events(controller_id, events);
+
+    function Action count_transceiver_events(
+            CountableTransceiverEvents events) =
+        event_counters.count_transceiver_events(controller_id, events);
+
     (* fire_when_enabled *)
-    rule do_update_target_presence;
-        if (status_received)
-            target_present <= True;
-        else if (status_update_expired) begin
-            target_present <= False;
-            $display("%5t [Controller] Target Status timeout", $time);
+    rule do_start_event_handler (
+            init_complete &&
+            event_handler_state == AwaitingEvent);
+        // Get the Controller id for the next pending event. If no event is
+        // pending the `Invalid` variant will keep the event handler waiting
+        // until one arrives.
+        let maybe_controller_id = tagged Invalid;
+
+        if (software_request.notEmpty) begin
+            event_handler_select <= HandlingSoftwareRequest;
+            maybe_controller_id = tagged Valid software_request.first.id;
+        end
+        else if (tick_events.notEmpty) begin
+            event_handler_select <= HandlingTickEvent;
+            maybe_controller_id = tagged Valid tick_events.first;
+        end
+        else if (receiver_events.notEmpty) begin
+            event_handler_select <= HandlingReceiverEvent;
+            maybe_controller_id = tagged Valid receiver_events.first.id;
         end
 
-        if (status_received || status_update_expired) begin
-            status_update_expired <=
-                fromInteger(parameters.protocol.status_interval + 2);
+        // If an event is pending, request the Controller state to be read by
+        // setting the id in all register files. This will automatically cause a
+        // read of each register file on the next clock cycle.
+        if (maybe_controller_id matches tagged Valid .id) begin
+            controller_id <= id;
+
+            presence.select(id);
+            transceiver.select(id);
+            hello_timer.select(id);
+
+            target_system_type.select(id);
+            target_system_status.select(id);
+            target_system_events.select(id);
+            target_system_power_request_status.select(id);
+            target_link0_status.select(id);
+            target_link0_events.select(id);
+            target_link1_status.select(id);
+            target_link1_events.select(id);
+
+            event_handler_state <= AwaitingControllerDataValid;
+        end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_read_registers (
+            init_complete &&
+            event_handler_state == AwaitingControllerDataValid);
+        // Select the appropriate handler.
+        event_handler_state <= event_handler_select;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_software_request (
+            init_complete &&
+            software_request.notEmpty &&
+            event_handler_state == HandlingSoftwareRequest);
+        function Action respond_with(value_t value)
+                provisos (
+                    Bits#(value_t, value_t_sz),
+                    Add#(value_t_sz, a__, 8),
+                    FShow#(value_t)) =
+            software_response.enq(extend(pack(value)));
+
+        function Action respond_with_current(
+                RegisterFile#(n, Vector#(2, value_t)) file)
+                    provisos (
+                        Bits#(value_t, value_t_sz),
+                        Add#(value_t_sz, a__, 8),
+                        DefaultValue#(value_t)) =
+            software_response.enq(extend(pack(
+                    presence.present ?
+                        file[presence.current_status_message] :
+                        defaultValue)));
+
+        case (tuple2(
+                software_request.first.op,
+                software_request.first.register)) matches
+            {tagged Read, TransceiverState}:
+                respond_with(pack(transceiver)[5:0]);
+
+            {tagged Write .b, TransceiverState}: begin
+                TransceiverRegister request = unpack(extend(b));
+                TransceiverRegister transceiver_ = transceiver;
+
+                transceiver_.transmitter_output_enable_mode =
+                        request.transmitter_output_enable_mode;
+
+                case (request.transmitter_output_enable_mode)
+                    Disabled: begin
+                        transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                        transceiver_.transmitter_output_enabled = False;
+                    end
+
+                    EnabledWhenReceiverAligned:
+                        if (transceiver.receiver_status.receiver_aligned) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                            transceiver_.transmitter_output_enabled = True;
+                        end
+                        else if (transceiver.transmitter_output_enabled &&
+                                    transceiver.transmitter_output_disable_timeout_ticks_remaining == 0) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                                fromInteger(parameters.transmitter_output_disable_timeout);
+                        end
+
+                    EnabledWhenTargetPresent:
+                        if (presence.present) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                            transceiver_.transmitter_output_enabled = True;
+                        end
+                        else if (transceiver.transmitter_output_enabled &&
+                                    transceiver.transmitter_output_disable_timeout_ticks_remaining == 0) begin
+                            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                                fromInteger(parameters.transmitter_output_disable_timeout);
+                        end
+
+                    AlwaysEnabled: begin
+                        transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                        transceiver_.transmitter_output_enabled = True;
+                    end
+                endcase
+
+                $display("%5t [Controller %02d] Transmitter output enable mode ",
+                        $time,
+                        controller_id,
+                        fshow(transceiver_.transmitter_output_enable_mode));
+
+                if (transceiver.transmitter_output_enabled &&
+                        !transceiver_.transmitter_output_enabled) begin
+                    $display("%5t [Controller %02d] Transmitter output disabled",
+                            $time,
+                            controller_id);
+                end
+                else if (!transceiver.transmitter_output_enabled &&
+                        transceiver_.transmitter_output_enabled) begin
+                    $display("%5t [Controller %02d] Transmitter output enabled",
+                            $time,
+                            controller_id);
+                end
+
+                // Update the transceiver register. Any changes are applied on
+                // the next tick event. See `do_handle_tick_event`.
+                transceiver <= transceiver_;
+            end
+
+            {tagged Read, ControllerState}:
+                respond_with(presence.present);
+
+            {tagged Read, TargetSystemType}:
+                respond_with_current(target_system_type);
+
+            {tagged Read, TargetSystemStatus}:
+                respond_with_current(target_system_status);
+
+            {tagged Read, TargetSystemEvents}:
+                respond_with_current(target_system_events);
+
+            {tagged Read, TargetSystemPowerRequestStatus}:
+                respond_with_current(
+                    target_system_power_request_status);
+
+            {tagged Write .b, TargetSystemPowerRequestStatus}: begin
+                let maybe_request =
+                        case (b[5:4])
+                            1: tagged Valid SystemPowerOff;
+                            2: tagged Valid SystemPowerOn;
+                            3: tagged Valid SystemPowerReset;
+                            default: tagged Invalid;
+                        endcase;
+
+                if (presence.present &&&
+                        maybe_request matches tagged Valid .request) begin
+                    $display("%5t [Controller %02d] Requesting ",
+                            $time,
+                            controller_id, fshow(request));
+
+                    transmitter_events.enq(
+                            TransmitterEvent {
+                                id: controller_id,
+                                ev: tagged Message tagged Request request});
+
+                    count_application_events(
+                            CountableApplicationEvents {
+                                status_received: False,
+                                status_timeout: False,
+                                target_present: False,
+                                target_timeout: False,
+                                hello_sent: False,
+                                system_power_request_sent: True});
+                end
+            end
+
+            {tagged Read, TargetLink0Status}:
+                respond_with_current(target_link0_status);
+
+            {tagged Read, TargetLink1Status}:
+                respond_with_current(target_link1_status);
+        endcase
+
+        software_request.deq();
+        event_handler_state <= AwaitingEvent;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_tick_event (
+            init_complete &&
+            tick_events.notEmpty &&
+            event_handler_state == HandlingTickEvent);
+        let status_timeout = False;
+        let target_timeout = False;
+        let hello_sent = False;
+
+        // Copy the `presence` and `transceiver` registers so indiviual fields
+        // can be updated as appropriate.
+        let presence_ = presence;
+        let transceiver_ = transceiver;
+
+        // Update the presence history if a Status message timeout occures.
+        if (presence.status_message_timeout_ticks_remaining == 0) begin
+            $display("%5t [Controller %02d] Target Status timeout",
+                    $time,
+                    controller_id);
+
+            // Add a timeout to the presence history.
+            presence_.history = shiftInAt0(presence.history, False);
+
+            // Reset the timeout counter.
+            presence_.status_message_timeout_ticks_remaining =
+                    status_message_timeout_reset_value;
+
+            status_timeout = True;
+        end
+        // Count down the Status message timeout counter.
+        else begin
+            presence_.status_message_timeout_ticks_remaining =
+                presence.status_message_timeout_ticks_remaining - 1;
         end
 
-        past_target_present <= target_present;
+        // Update the filtered presence bit given the new history.
+        if (pack(presence_.history) == 'b000 && presence.present) begin
+            $display("%5t [Controller %02d] Target not present",
+                    $time,
+                    controller_id);
 
-        if (past_target_present != target_present) begin
-            let format = target_present ?
-                "%5t [Controller] Target present" :
-                "%5t [Controller] Target not present";
-            $display(format, $time);
+            target_timeout = True;
+            presence_.present = False;
         end
+
+        // Write back the presence state.
+        presence <= presence_;
+        presence_summary_r[controller_id] <= presence_.present;
+
+        // Count down until the next Hello.
+        if (hello_timer.ticks_remaining == 0) begin
+            hello_timer.ticks_remaining <=
+                    fromInteger(parameters.protocol.hello_interval);
+        end
+        else begin
+            hello_timer.ticks_remaining <= hello_timer.ticks_remaining - 1;
+        end
+
+        // Count down the transmitter disable timeout if the counter is active.
+        if (transceiver.transmitter_output_disable_timeout_ticks_remaining != 0) begin
+            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                transceiver.transmitter_output_disable_timeout_ticks_remaining - 1;
+        end
+        // Start the disable timeout counter if the Target has been declared not
+        // present.
+        else if (transceiver.transmitter_output_enable_mode ==
+                        EnabledWhenTargetPresent &&
+                    presence.present &&
+                    !presence_.present) begin
+            transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                fromInteger(parameters.transmitter_output_disable_timeout);
+        end
+
+        // Disable the transmitter output if the transmitter disable output
+        // timer expires. A count of one is used as the timeout here since this
+        // does not have to be precise and allows a value of zero to indicate
+        // the counter is not active.
+        if (transceiver.transmitter_output_enabled &&
+                transceiver.transmitter_output_disable_timeout_ticks_remaining == 1) begin
+            $display("%5t [Controller %02d] Transmitter output disabled",
+                    $time,
+                    controller_id);
+
+            transceiver_.transmitter_output_enabled = False;
+        end
+
+        // Write back the transceiver state.
+        transceiver <= transceiver_;
+
+        // Transmit an Hello message if the Hello timer expires.
+        if (hello_timer.ticks_remaining == 0) begin
+            $display("%5t [Controller %02d] Hello",
+                    $time,
+                    controller_id);
+
+            transmitter_events.enq(
+                    TransmitterEvent {
+                        id: controller_id,
+                        ev: tagged Message tagged Hello});
+
+            hello_sent = True;
+        end
+        // Transmit an OutputEnable event otherwise. These are sent every tick
+        // so that even if a state change in the output enable is requested
+        // during the same tick as the Hello message above the state will
+        // converge at most one tick later.
+        else begin
+            transmitter_events.enq(
+                    TransmitterEvent {
+                        id: controller_id,
+                        ev: tagged OutputEnabled
+                            transceiver_.transmitter_output_enabled});
+        end
+
+        // Enqueue a request to update the appropriate counters.
+        if (status_timeout || target_timeout || hello_sent) begin
+            count_application_events(
+                    CountableApplicationEvents {
+                        status_received: False,
+                        status_timeout: status_timeout,
+                        target_present: False,
+                        target_timeout: target_timeout,
+                        hello_sent: hello_sent,
+                        system_power_request_sent: False});
+        end
+
+        // Complete the tick event.
+        tick_events.deq();
+        event_handler_state <= AwaitingEvent;
     endrule
 
     (* fire_when_enabled *)
-    rule do_receive_status_message (rx matches tagged Status .*);
-        message_accepted.send();
-        status_message <= rx;
+    rule do_handle_receiver_event (
+            init_complete &&
+            receiver_events.notEmpty &&
+            event_handler_state == HandlingReceiverEvent);
+        case (receiver_events.first.ev) matches
+            tagged TargetStatusReceived: begin
+                $display("%5t [Controller %02d] Received Status",
+                        $time,
+                        controller_id);
 
-        // Update the counters tracking Target side link events.
-        target_link0_monitor.monitor(rx.Status.link0_events);
-        target_link1_monitor.monitor(rx.Status.link1_events);
+                PresenceRegister presence_ = presence;
+                Bool target_present = False;
 
-        n_status_received.send();
-        status_received.send();
+                // Make the last Status message active by flipping the
+                // Status message pointer.
+                presence_.current_status_message =
+                        presence.current_status_message + 1;
 
-        $display(
-            "%5t [Controller] Received ", $time,
-            message_status_pretty_format(rx));
+                // Reset the Status timeout counter.
+                presence_.status_message_timeout_ticks_remaining =
+                        status_message_timeout_reset_value;
+
+                // Update the presence history.
+                presence_.history = shiftInAt0(presence.history, True);
+
+                if (pack(presence_.history) == 3'b001 &&
+                        !presence.present) begin
+                    $display("%5t [Controller %02d] Target present",
+                            $time,
+                            controller_id);
+
+                    presence_.present = True;
+                    target_present = True;
+                end
+
+                // Write back the presence state.
+                presence <= presence_;
+                presence_summary_r[controller_id] <= presence_.present;
+
+                // Update the transmitter output enabled state if configured.
+                // The actual TransmitterEvent will be sent on the next tick.
+                // See the Tick handler.
+                TransceiverRegister transceiver_ = transceiver;
+
+                if (transceiver.transmitter_output_enable_mode ==
+                            EnabledWhenTargetPresent &&
+                        !presence.present &&
+                        presence_.present) begin
+                    $display("%5t [Controller %02d] Transmitter output enabled",
+                            $time,
+                            controller_id);
+
+                    transceiver_.transmitter_output_enabled = True;
+                    transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                end
+
+                transceiver <= transceiver_;
+
+                count_application_events(
+                        CountableApplicationEvents {
+                            status_received: True,
+                            status_timeout: False,
+                            target_present: target_present,
+                            target_timeout: False,
+                            hello_sent: False,
+                            system_power_request_sent: False});
+
+                // Request the Target link events to be counted.
+                let previous = presence.current_status_message;
+                let current = presence_.current_status_message;
+
+                event_counters.count_target_link0_events(
+                        controller_id,
+                        determine_transceiver_events(
+                            target_link0_status[previous],
+                            target_link0_status[current],
+                            target_link0_events[current],
+                            // Attempt to detect receiver resets by
+                            // comparing the current and previous receiver
+                            // status. This is not an accurate count since
+                            // this will only count instances where the
+                            // status changes as a result of the reset.
+                            // Subsequent resets may happen without the
+                            // status changing, which will go unnoticed
+                            // here. But for the purposes of remote
+                            // monitoring the Target this is good enough.
+                            True));
+
+                event_counters.count_target_link1_events(
+                        controller_id,
+                        determine_transceiver_events(
+                            target_link1_status[previous],
+                            target_link1_status[current],
+                            target_link1_events[current],
+                            True));
+            end
+
+            tagged StatusMessageFragment .field: begin
+                // Write the non-active value slot of a Status message field
+                // register.
+                function Action write_status_message_field(
+                        BufferedValueRegisterFile#(n, t) register,
+                        t value)
+                            provisos (Bits#(t, t_sz)) =
+                    action
+                        let both_values = register;
+
+                        // Update the non-active value slot in the register.
+                        if (presence.current_status_message == 0)
+                            both_values[1] = value;
+                        else
+                            both_values[0] = value;
+
+                        // Write back the register.
+                        register <= both_values;
+                    endaction;
+
+                case (field) matches
+                    tagged SystemType .system_type:
+                        write_status_message_field(
+                                target_system_type,
+                                system_type);
+
+                    tagged SystemStatus .system_status:
+                        write_status_message_field(
+                                target_system_status,
+                                system_status);
+
+                    tagged SystemEvents .system_events:
+                        write_status_message_field(
+                                target_system_events,
+                                system_events);
+
+                    tagged SystemPowerRequestStatus
+                            .system_power_request_status:
+                        write_status_message_field(
+                                target_system_power_request_status,
+                                system_power_request_status);
+
+                    tagged Link0Status .link0_status:
+                        write_status_message_field(
+                                target_link0_status,
+                                link0_status);
+
+                    tagged Link0Events .link0_events:
+                        write_status_message_field(
+                                target_link0_events,
+                                link0_events);
+
+                    tagged Link0Status .link1_status:
+                        write_status_message_field(
+                                target_link1_status,
+                                link1_status);
+
+                    tagged Link0Events .link1_events:
+                        write_status_message_field(
+                                target_link1_events,
+                                link1_events);
+                endcase
+            end
+
+            tagged ReceiverReset: begin
+                $display("%5t [Controller %02d] Receiver reset",
+                        $time,
+                        controller_id);
+
+                TransceiverRegister transceiver_ = transceiver;
+
+                transceiver_.receiver_status = link_status_none;
+
+                if (transceiver.transmitter_output_enable_mode ==
+                            EnabledWhenReceiverAligned &&
+                        transceiver.transmitter_output_enabled &&
+                        transceiver.transmitter_output_disable_timeout_ticks_remaining == 0) begin
+                    // A ReceiverReset means the receiver is not aligned anymore
+                    // and the disable timeout counter should be started.
+                    transceiver_.transmitter_output_disable_timeout_ticks_remaining =
+                        fromInteger(parameters.transmitter_output_disable_timeout);
+                end
+
+                // Write back the transceiver state.
+                transceiver <= transceiver_;
+
+                count_transceiver_events(
+                        countable_transceiver_events_receiver_reset);
+            end
+
+            tagged ReceiverStatusChange .current_status: begin
+                TransceiverRegister transceiver_ = transceiver;
+
+                transceiver_.receiver_status = current_status;
+
+                if (transceiver.transmitter_output_enable_mode ==
+                            EnabledWhenReceiverAligned &&
+                        !transceiver.transmitter_output_enabled &&
+                        current_status.receiver_aligned) begin
+                    $display("%5t [Controller %02d] Transmitter output enabled",
+                            $time,
+                            controller_id);
+
+                    transceiver_.transmitter_output_enabled = True;
+                    transceiver_.transmitter_output_disable_timeout_ticks_remaining = 0;
+                end
+
+                // Write back the transceiver state.
+                transceiver <= transceiver_;
+
+                count_transceiver_events(
+                        determine_transceiver_events(
+                            transceiver.receiver_status,
+                            current_status,
+                            defaultValue,
+                            // Do not attempt to infer receiver resets from the
+                            // link status as that would result in the wrong
+                            // count. The receiver may reset multiple times
+                            // without the status changing, which would result
+                            // in those events not being counted. The
+                            // `ReceiverReset` event above is the more accurate
+                            // way to update this counter.
+                            False));
+            end
+
+            tagged ReceiverEvent .events: begin
+                count_transceiver_events(
+                        determine_transceiver_events(
+                            defaultValue,
+                            defaultValue,
+                            events,
+                            False));
+            end
+        endcase
+
+        // Complete the receiver event.
+        receiver_events.deq();
+        event_handler_state <= AwaitingEvent;
     endrule
 
-    (* fire_when_enabled *)
-    rule do_request_hello (!hello_requested && hello_expired);
-        hello_requested <= True;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_handle_hello_expired (hello_requested && !isValid(pending_request));
-        tx.enq(tagged Hello);
-
-        n_hello_sent.send();
-        hello_expired <= fromInteger(parameters.protocol.hello_interval);
-        hello_requested <= False;
-
-        $display("%5t [Controller] Sent Hello", $time);
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_send_request (pending_request matches tagged Valid .request);
-        tx.enq(tagged Request request);
-
-        n_request_sent.send();
-        pending_request <= tagged Invalid;
-
-        $display("%5t [Controller] Sent Request ", $time, fshow(request));
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_drop_hello_message (rx matches tagged Hello);
-        message_accepted.send();
-        n_message_dropped.send();
-        $display("%5t [Controller] Hello dropped", $time);
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_drop_request_message (rx matches tagged Request .request);
-        message_accepted.send();
-        n_message_dropped.send();
-        $display("%5t [Controller] Request ", $time, fshow(request), " dropped");
-    endrule
-
-    let system_type =
-        TargetSystemType {
-            system_type: pack(status_message.Status.system_type.id)};
-
-    let target_system_status = target_present ?
-            pack(status_message.Status.system_status) :
-            '0;
-
-    interface TransceiverClient txr;
-        interface GetS to_txr = fifoToGetS(tx);
-
-        interface PutS from_txr;
-            method offer = rx._write;
-            method accepted = message_accepted;
-        endinterface
-
-        method Action monitor(LinkStatus status, LinkEvents events);
-            link_status <= status;
-            link_monitor.monitor(events);
-        endmethod
-
-        method tick_1khz = tick;
+    interface ControllerTransceiverClient txr;
+        interface Get tx = toGet(transmitter_events);
+        interface Put rx = toPut(receiver_events);
     endinterface
 
-    interface Registers registers;
-        interface Reg controller_state;
-            method _read = ControllerState {
-                target_present: pack(target_present),
-                always_transmit: pack(always_transmit)};
-
-            method Action _write(ControllerState state);
-                always_transmit <= unpack(state.always_transmit);
-            endmethod
-        endinterface
-
-        interface ReadOnly controller_link_status =
-            valueToReadOnly(
-                IgnitionControllerRegisters::LinkStatus {
-                    receiver_aligned: pack(link_status.receiver_aligned),
-                    receiver_locked: pack(link_status.receiver_locked),
-                    polarity_inverted: pack(link_status.polarity_inverted)});
-
-        interface ReadOnly target_system_type =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.system_type,
-                defaultValue);
-
-        interface ReadOnly target_system_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.system_status,
-                defaultValue);
-
-        interface ReadOnly target_system_faults =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.system_faults,
-                defaultValue);
-
-        interface ReadOnly target_request_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.request_status,
-                defaultValue);
-
-        interface ReadOnly target_link0_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.link0_status,
-                defaultValue);
-
-        interface ReadOnly target_link1_status =
-            castToReadOnlyIf(
-                target_present,
-                status_message.Status.link1_status,
-                defaultValue);
-
-        interface Reg target_request;
-            method TargetRequest _read();
-                let kind = isValid(pending_request) ?
-                        pack(fromMaybe(?, pending_request)) : 0;
-                return TargetRequest {
-                    kind: pack(kind),
-                    pending: pack(isValid(pending_request))};
-            endmethod
-
-            method Action _write(TargetRequest request) if (!isValid(pending_request));
-                let request_ =
-                    case (request.kind)
-                        1: tagged Valid SystemPowerOff;
-                        2: tagged Valid SystemPowerOn;
-                        3: tagged Valid SystemReset;
-                        default: tagged Invalid;
-                    endcase;
-                pending_request <= request_;
-
-                if (request_ matches tagged Valid .r)
-                    $display(
-                        "%5t [Controller] ", $time,
-                        fshow(r), " Request pending");
-                else
-                    $display("%5t [Controller] Request kind %2d ignored", $time);
-            endmethod
-        endinterface
-
-        interface ReadVolatile controller_status_received_count = readCounter(n_status_received);
-        interface ReadVolatile controller_hello_sent_count = readCounter(n_hello_sent);
-        interface ReadVolatile controller_request_sent_count = readCounter(n_request_sent);
-        interface ReadVolatile controller_message_dropped_count = readCounter(n_message_dropped);
-        interface LinkEventCounterRegisters controller_link_counters = asLinkEventCounterRegisters(link_monitor);
-        interface LinkEventCounterRegisters target_link0_counters = asLinkEventCounterRegisters(target_link0_monitor);
-        interface LinkEventCounterRegisters target_link1_counters = asLinkEventCounterRegisters(target_link1_monitor);
+    interface Server registers;
+        interface Put request = toPut(software_request);
+        interface Get response = toGet(software_response);
     endinterface
 
-    interface Reg interrupts;
-        method _read = defaultValue;
-        method Action _write(Interrupts i);
-        endmethod
-    endinterface
+    interface Server counters = event_counters.counters;
 
-    interface PulseWire tick_1khz;
-        method _read = tick;
-        method Action send();
-            tick <= True;
-        endmethod
-    endinterface
+    method presence_summary = readVReg(presence_summary_r);
 
-    method status = Status {
-        receiver_locked: link_status.receiver_locked,
-        target_present: target_present,
-        always_transmit: always_transmit};
+    method tick_1mhz = tick.send;
+
+    method idle = init_complete && event_handler_idle && event_counters.idle;
 endmodule
 
-//
-// Helpers
-//
+interface RegisterFile#(numeric type n, type t);
+    method Action select(ControllerId#(n) id);
+    method Action _write(t value);
+    method t _read();
+endinterface
 
-instance Connectable#(Transceiver, Controller);
-    module mkConnection #(Transceiver txr, Controller c) (Empty);
-        mkConnection(txr, c.txr);
-    endmodule
-endinstance
+typedef RegisterFile#(n, Vector#(2, t))
+        BufferedValueRegisterFile#(numeric type n, type t);
 
-// Interrupts
-Interrupts interrupts_none = unpack('0);
+module mkBRAMRegisterFile (RegisterFile#(n, t))
+        provisos (Bits#(t, t_sz));
+    BRAM_PORT#(ControllerId#(n), t) ram <- mkBRAMCore1(valueof(n), False);
+    Reg#(RegisterFileRequest#(n, t)) request <- mkRegU();
 
-instance DefaultValue#(Interrupts);
-    defaultValue = interrupts_none;
-endinstance
+    RWire#(ControllerId#(n)) controller_id <- mkRWire();
+    RWire#(t) new_value <- mkRWire();
 
-instance Bitwise#(Interrupts);
-    function Interrupts \& (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) & pack(i2));
-    function Interrupts \| (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) | pack(i2));
-    function Interrupts \^ (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) ^ pack(i2));
-    function Interrupts \~^ (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) ~^ pack(i2));
-    function Interrupts \^~ (Interrupts i1, Interrupts i2) =
-        unpack(pack(i1) ^~ pack(i2));
-    function Interrupts invert (Interrupts i) =
-        unpack(invert(pack(i)));
-    function Interrupts \<< (Interrupts i, t x) =
-        error("Left shift operation is not supported with type Interrupts");
-    function Interrupts \>> (Interrupts i, t x) =
-        error("Right shift operation is not supported with type Interrupts");
-    function Bit#(1) msb (Interrupts i) =
-        error("msb operation is not supported with type Interrupts");
-    function Bit#(1) lsb (Interrupts i) =
-        error("lsb operation is not supported with type Interrupts");
-endinstance
+    (* fire_when_enabled *)
+    rule do_update_state;
+        request <= RegisterFileRequest {
+                id: fromMaybe(request.id, controller_id.wget),
+                data: new_value.wget};
 
-// Helpers used to map values/internal registers onto the register interface.
-function ReadOnly#(t) valueToReadOnly(t val);
-    return (
-        interface ReadOnly
-            method _read = val;
-        endinterface);
+        // The register file contineously reads or writes the data for the set
+        // Controller id. If no new data is provided through `new_value`, the
+        // `data` field in the request automatically becomes `Invalid` causing a
+        // BRAM read instead of a write.
+        if (request.data matches tagged Valid .data)
+            ram.put(True, request.id, data);
+        else
+            ram.put(False, request.id, ?);
+    endrule
+
+    method select = controller_id.wset;
+    method _read = ram.read;
+    method _write = new_value.wset;
+endmodule
+
+typedef struct {
+    ControllerId#(n) id;
+    Maybe#(t) data;
+} RegisterFileRequest#(numeric type n, type t) deriving (Bits, Eq, FShow);
+
+typedef struct {
+    ControllerId#(n) id;
+    union tagged {
+        TransmitterOutputEnableMode SetTransmitterOutputEnableMode;
+        SystemPowerRequest SystemPowerRequest;
+    } ev;
+} SoftwareEvent#(numeric type n) deriving (Bits, Eq, FShow);
+
+typedef struct {
+    UInt#(1) current_status_message;
+    UInt#(6) status_message_timeout_ticks_remaining;
+    Bool present;
+    Vector#(3, Bool) history;
+} PresenceRegister deriving (Bits, FShow);
+
+typedef struct {
+    UInt#(8) transmitter_output_disable_timeout_ticks_remaining;
+    TransmitterOutputEnableMode transmitter_output_enable_mode;
+    Bool transmitter_output_enabled;
+    LinkStatus receiver_status;
+} TransceiverRegister deriving (Bits, FShow);
+
+typedef struct {
+    UInt#(6) ticks_remaining;
+} HelloTimerRegister deriving (Bits, FShow);
+
+typedef enum {
+    AwaitingEvent = 0,
+    AwaitingControllerDataValid,
+    HandlingSoftwareRequest,
+    HandlingTickEvent,
+    HandlingReceiverEvent
+} EventHandlerState deriving (Bits, Eq, FShow);
+
+module mkDefaultControllerUsingBRAM (Controller#(36));
+    (* hide *) Controller#(36) _c <- mkController(defaultValue, False);
+    return _c;
+endmodule
+
+function Stmt read_controller_register_into(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        RegisterId register_id,
+        Reg#(register_value_type) destination)
+            provisos (
+                Bits#(register_value_type, register_value_type_sz),
+                Add#(register_value_type_sz, a__, 8));
+    return seq
+        controller.registers.request.put(
+                RegisterRequest {
+                    op: tagged Read,
+                    id: controller_id,
+                    register: register_id});
+
+        action
+            let response <- controller.registers.response.get;
+            destination <= unpack(truncate(response));
+        endaction
+    endseq;
 endfunction
 
-function ReadOnly#(v) castToReadOnly(t val)
-        provisos (
-            Bits#(t, t_sz),
-            Bits#(v, v_sz),
-            Add#(t_sz, _, v_sz));
-    return (
-        interface ReadOnly
-            method _read = unpack(zeroExtend(pack(val)));
-        endinterface);
-endfunction
+function Stmt clear_controller_counter(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        CounterId counter_id) =
+    seq
+        controller.counters.request.put(
+                CounterAddress {
+                    controller: controller_id,
+                    counter: counter_id});
 
-function ReadOnly#(v) castToReadOnlyIf(Bool pred, t val, t alt)
-        provisos (
-            Bits#(t, t_sz),
-            Bits#(v, v_sz),
-            Add#(t_sz, _, v_sz));
-    return castToReadOnly(pred ? val : alt);
-endfunction
+        action
+            let count <- controller.counters.response.get;
+        endaction
+    endseq;
 
-function ReadVolatile#(IgnitionControllerRegisters::Counter)
-        readCounter(ActionValue#(Count) c) =
-    (interface ReadVolatile#(IgnitionControllerRegisters::Counter);
-        method ActionValue#(IgnitionControllerRegisters::Counter) _read();
-            let x <- c;
-            return unpack(pack(x));
-        endmethod
-    endinterface);
+function Stmt read_controller_counter_into(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        CounterId counter_id,
+        Reg#(UInt#(8)) counter) =
+    seq
+        controller.counters.request.put(
+                CounterAddress {
+                    controller: controller_id,
+                    counter: counter_id});
+        action
+            let count <- controller.counters.response.get;
+            counter <= count;
+        endaction
+    endseq;
 
-function LinkEventCounterRegisters
-        asLinkEventCounterRegisters(CountingMonitor monitor) =
-    (interface LinkEventCounterRegisters;
-        interface Reg summary;
-            method _read = unpack(extend(pack(monitor.counters.summary)));
-            method Action _write(IgnitionControllerRegisters::LinkEvents e) =
-                monitor.counters.clear(unpack(truncate(pack(e))));
-        endinterface
-        interface ReadVolatile encoding_error = readCounter(monitor.counters.encoding_error);
-        interface ReadVolatile decoding_error = readCounter(monitor.counters.decoding_error);
-        interface ReadVolatile ordered_set_invalid = readCounter(monitor.counters.ordered_set_invalid);
-        interface ReadVolatile message_version_invalid = readCounter(monitor.counters.message_version_invalid);
-        interface ReadVolatile message_type_invalid = readCounter(monitor.counters.message_type_invalid);
-        interface ReadVolatile message_checksum_invalid = readCounter(monitor.counters.message_checksum_invalid);
-    endinterface);
-
-function Registers registers(Controller c) = c.registers;
-
-function Vector#(n, Registers) register_pages(Vector#(n, Controller) controllers) =
-    map(registers, controllers);
-
-function TransceiverClient transceiver_client(Controller c) = c.txr;
-
-function Bool tx_enabled(Controller c) = c.status.always_transmit || c.status.target_present;
+function Bit#(8) transceiver_state_value(
+        TransmitterOutputEnableMode mode,
+        Bool transmitter_status,
+        LinkStatus receiver_status) =
+    {2'h0, pack(mode), pack(transmitter_status), pack(receiver_status)};
 
 endpackage

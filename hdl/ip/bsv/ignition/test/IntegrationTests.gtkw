@@ -5,7 +5,7 @@
 [dumpfile] "/Users/arjen/oxidecomputer/quartz/build/vcd/IntegrationTests_mkControllerTargetPresentTest.vcd"
 [dumpfile_mtime] "Fri Sep 16 23:57:30 2022"
 [dumpfile_size] 1419853
-[savefile] "/Users/arjen/oxidecomputer/quartz/hdl/ip/bsv/ignition/test/IntegrationTests.gtkw"
+[savefile] "/Users/arjen/oxidecomputer/quartz/hdl/ignition/test/IntegrationTests.gtkw"
 [timestart] 0
 [size] 3440 1387
 [pos] -1 -1

@@ -12,33 +12,55 @@ export assert_not_set;
 export assert_true;
 export assert_false;
 export assert_eq;
+export assert_eq_fmt;
+export assert_eq_display;
+export assert_eq_display_fmt;
 export assert_not_eq;
+export assert_not_eq_fmt;
+export assert_not_eq_display;
+export assert_not_eq_display_fmt;
+export assert_bits_eq;
+export assert_bits_eq_display;
+export assert_bits_not_eq;
+export assert_bits_not_eq_display;
 export assert_av_set;
 export assert_av_not_set;
 export assert_av_true;
 export assert_av_false;
 export assert_av_eq;
-export assert_av_not_eq;
-export assert_av_any;
 export assert_av_eq_display;
-export assert_av_not_eq_display;
-export assert_av_any_display;
 export assert_av_eq_display_fmt;
+export assert_av_not_eq;
+export assert_av_not_eq_display;
 export assert_av_not_eq_display_fmt;
+export assert_av_any;
+export assert_av_any_display;
 export assert_av_any_display_fmt;
+export assert_av_bits_eq;
+export assert_av_bits_eq_display;
+export assert_av_bits_not_eq;
+export assert_av_bits_not_eq_display;
+export assert_av_bits_any;
+export assert_av_bits_any_display;
 export assert_get_set;
 export assert_get_not_set;
 export assert_get_true;
 export assert_get_false;
 export assert_get_eq;
-export assert_get_not_eq;
-export assert_get_any;
 export assert_get_eq_display;
-export assert_get_not_eq_display;
-export assert_get_any_display;
 export assert_get_eq_display_fmt;
+export assert_get_not_eq;
+export assert_get_not_eq_display;
 export assert_get_not_eq_display_fmt;
+export assert_get_any;
+export assert_get_any_display;
 export assert_get_any_display_fmt;
+export assert_get_bits_eq;
+export assert_get_bits_eq_display;
+export assert_get_bits_not_eq;
+export assert_get_bits_not_eq_display;
+export assert_get_bits_any;
+export assert_get_bits_any_display;
 
 export TestResult(..);
 export Test(..);
@@ -106,11 +128,103 @@ function Action assert_not_eq(t actual, t expected, String msg)
             Eq#(t),
             FShow#(t));
     return action
+        if (actual == expected) $display("value: ", fshow(actual));
+        dynamicAssert(actual != expected, msg);
+    endaction;
+endfunction
+
+function Action assert_eq_fmt(
+            t actual,
+            t expected,
+            String msg,
+            function Fmt fmt(t v))
+        provisos (Eq#(t));
+    return action
+        if (actual != expected) begin
+            $display("expected: ", fmt(expected));
+            $display("actual: ", fmt(actual));
+        end
+        dynamicAssert(actual == expected, msg);
+    endaction;
+endfunction
+
+function Action assert_not_eq_fmt(
+            t actual,
+            t expected,
+            String msg,
+            function Fmt fmt(t v))
+        provisos (Eq#(t));
+    return action
         if (actual == expected) begin
-            $display("value: ", fshow(actual));
+            $display("expected: ", fmt(expected));
+            $display("actual: ", fmt(actual));
         end
         dynamicAssert(actual != expected, msg);
     endaction;
+endfunction
+
+function Action assert_bits_eq(t actual, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_eq(pack(actual), pack(expected), msg);
+endfunction
+
+function Action assert_bits_not_eq(t actual, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_not_eq(pack(actual), pack(expected), msg);
+endfunction
+
+function Action assert_eq_display(t actual, t expected, String msg)
+        provisos (
+            Eq#(t),
+            FShow#(t));
+    return action
+        if (actual == expected) $display(fshow(actual));
+        assert_eq(actual, expected, msg);
+    endaction;
+endfunction
+
+function Action assert_not_eq_display(t actual, t expected, String msg)
+        provisos (
+            Eq#(t),
+            FShow#(t));
+    return action
+        if (actual == expected) $display(fshow(actual));
+        assert_eq(actual, expected, msg);
+    endaction;
+endfunction
+
+function Action assert_eq_display_fmt(
+        t actual,
+        t expected,
+        String msg,
+        function Fmt fmt(t v))
+            provisos (Eq#(t));
+    return action
+        if (actual == expected) $display(fmt(actual));
+        assert_eq_fmt(actual, expected, msg, fmt);
+    endaction;
+endfunction
+
+function Action assert_not_eq_display_fmt(
+        t actual,
+        t expected,
+        String msg,
+        function Fmt fmt(t v))
+            provisos (Eq#(t));
+    return action
+        if (actual != expected) $display(fmt(actual));
+        assert_not_eq_fmt(actual, expected, msg, fmt);
+    endaction;
+endfunction
+
+function Action assert_bits_eq_display(t actual, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_eq_display(pack(actual), pack(expected), msg);
+endfunction
+
+function Action assert_bits_not_eq_display(t actual, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_not_eq_display(pack(actual), pack(expected), msg);
 endfunction
 
 //
@@ -171,6 +285,24 @@ function Action assert_av_not_eq(ActionValue#(t) av, t expected, String msg)
     endaction;
 endfunction
 
+function Action assert_av_bits_eq(ActionValue#(t) av, t expected, String msg)
+        provisos (
+            Bits#(t, t_sz));
+    return action
+        let actual <- av;
+        assert_eq(pack(actual), pack(expected), msg);
+    endaction;
+endfunction
+
+function Action assert_av_bits_not_eq(ActionValue#(t) av, t expected, String msg)
+        provisos (
+            Bits#(t, t_sz));
+    return action
+        let actual <- av;
+        assert_not_eq(pack(actual), pack(expected), msg);
+    endaction;
+endfunction
+
 //
 // `assert_av_any(..)` collects any value from the given `ActionValue`. It does
 // not assert anything about this action, but provides some syntactic sugar when
@@ -180,6 +312,10 @@ function Action assert_av_any(ActionValue#(t) av);
     return action
         let _ <- av;
     endaction;
+endfunction
+
+function Action assert_av_bits_any(ActionValue#(t) av);
+    return assert_av_any(av);
 endfunction
 
 //
@@ -214,6 +350,36 @@ function Action assert_av_not_eq_display(
     endaction;
 endfunction
 
+function Action assert_av_bits_eq_display(
+        ActionValue#(t) av,
+        t expected,
+        String msg)
+            provisos (Bits#(t, t_sz));
+    return action
+        let actual <- av;
+        let actual_ = pack(actual);
+        let expected_ = pack(expected);
+
+        if (actual_ == expected_) $display(fshow(actual_));
+        assert_eq(actual_, expected_, msg);
+    endaction;
+endfunction
+
+function Action assert_av_bits_not_eq_display(
+        ActionValue#(t) av,
+        t expected,
+        String msg)
+            provisos (Bits#(t, t_sz));
+    return action
+        let actual <- av;
+        let actual_ = pack(actual);
+        let expected_ = pack(expected);
+
+        if (actual_ != expected_) $display(fshow(actual_));
+        assert_not_eq(actual_, expected_, msg);
+    endaction;
+endfunction
+
 //
 // `assert_av_any_display(..)` collects and displays any value from the given
 // `ActionValue`. It does not assert anything about this action, but provides
@@ -226,6 +392,14 @@ function Action assert_av_any_display(ActionValue#(t) av)
     return action
         let v <- av;
         $display(fshow(v));
+    endaction;
+endfunction
+
+function Action assert_av_bits_any_display(ActionValue#(t) av)
+        provisos (Bits#(t, t_sz));
+    return action
+        let v <- av;
+        $display(fshow(pack(v)));
     endaction;
 endfunction
 
@@ -245,13 +419,7 @@ function Action assert_av_eq_display_fmt(
             provisos (Eq#(t));
     return action
         let actual <- av;
-        if (actual == expected)
-            $display(fmt(actual));
-        else begin
-            $display("expected: ", fmt(expected));
-            $display("actual: ", fmt(actual));
-        end
-        assert_true(actual == expected, msg);
+        assert_eq_display_fmt(actual, expected, msg, fmt);
     endaction;
 endfunction
 
@@ -263,12 +431,7 @@ function Action assert_av_not_eq_display_fmt(
             provisos (Eq#(t));
     return action
         let actual <- av;
-        if (actual != expected)
-            $display(fmt(actual));
-        else begin
-            $display("value: ", fmt(actual));
-        end
-        assert_true(actual != expected, msg);
+        assert_not_eq_display_fmt(actual, expected, msg, fmt);
     endaction;
 endfunction
 
@@ -335,6 +498,16 @@ function Action assert_get_not_eq(Get#(t) g, t expected, String msg)
     return assert_av_not_eq(g.get, expected, msg);
 endfunction
 
+function Action assert_get_bits_eq(Get#(t) g, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_av_bits_eq(g.get, expected, msg);
+endfunction
+
+function Action assert_get_bits_not_eq(Get#(t) g, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_av_bits_not_eq(g.get, expected, msg);
+endfunction
+
 //
 // `assert_get_any(..)` collects any value from the given `Get` interface. It
 // does not assert anything about this action, but provides some syntactic sugar
@@ -342,6 +515,10 @@ endfunction
 //
 function Action assert_get_any(Get#(t) g);
     return assert_av_any(g.get);
+endfunction
+
+function Action assert_get_bits_any(Get#(t) g);
+    return assert_av_bits_any(g.get);
 endfunction
 
 //
@@ -365,6 +542,19 @@ function Action assert_get_not_eq_display(Get#(t) g, t expected, String msg)
     return assert_av_not_eq_display(g.get, expected, msg);
 endfunction
 
+function Action assert_get_bits_eq_display(Get#(t) g, t expected, String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_av_bits_eq_display(g.get, expected, msg);
+endfunction
+
+function Action assert_get_bits_not_eq_display(
+            Get#(t) g,
+            t expected,
+            String msg)
+        provisos (Bits#(t, t_sz));
+    return assert_av_bits_not_eq_display(g.get, expected, msg);
+endfunction
+
 //
 // `assert_get_any_display(..)` collects and display any value from the given
 // `Get` interface. It does not assert anything about this action, but provides
@@ -375,6 +565,11 @@ function Action assert_get_any_display(Get#(t) g)
             Eq#(t),
             FShow#(t));
     return assert_av_any_display(g.get);
+endfunction
+
+function Action assert_get_bits_any_display(Get#(t) g)
+        provisos (Bits#(t, t_sz));
+    return assert_av_bits_any_display(g.get);
 endfunction
 
 //

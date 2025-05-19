@@ -17,10 +17,19 @@ export mkLoopback;
 
 export mkLinkStatusLED;
 
+export ControllerTransceiver(..);
+export ControllerTransceiverClient(..);
+export mkControllerTransceiver;
+export mkControllerTransceiver1;
+export mkControllerTransceiver2;
+export mkControllerTransceiver4;
+export mkControllerTransceiver36;
+
 import BuildVector::*;
 import ConfigReg::*;
 import Connectable::*;
 import FIFO::*;
+import FIFOF::*;
 import GetPut::*;
 import RevertingVirtualReg::*;
 import Vector::*;
@@ -49,6 +58,7 @@ interface Transceiver;
     method LinkStatus status();
     method LinkEvents events();
     method Bool receiver_locked_timeout();
+    method Bool receiver_reset_event();
 endinterface
 
 interface Transceivers#(numeric type n);
@@ -61,6 +71,7 @@ interface TransceiverClient;
     interface GetS#(Message) to_txr;
     interface PutS#(Message) from_txr;
     method Action monitor(LinkStatus status, LinkEvents events);
+    method Action receiver_reset_event();
     // Strobe driving the shared receiver watchdog.
     method Bool tick_1khz();
 endinterface
@@ -114,6 +125,7 @@ module mkTransceivers (Transceivers#(n));
             method events = rx.events[i] | tx[i].events;
 
             method receiver_locked_timeout = rx.locked_timeout[i];
+            method receiver_reset_event = rx.reset_event[i];
         endinterface);
     endfunction
 
@@ -228,6 +240,11 @@ instance Connectable#(Transceiver, TransceiverClient);
         rule do_monitor;
             client.monitor(txr.status, txr.events);
         endrule
+
+        (* fire_when_enabled *)
+        rule do_receiver_reset_event (txr.receiver_reset_event);
+            client.receiver_reset_event();
+        endrule
     endmodule
 endinstance
 
@@ -341,5 +358,107 @@ module mkLinkStatusLED
     method _read = _q;
 endmodule
 
+module mkTransceivers6 (Transceivers#(6));
+    (* hide *) Transceivers#(6) _txrs <- mkTransceivers();
+    return _txrs;
+endmodule
+
+module mkTransceivers8 (Transceivers#(8));
+    (* hide *) Transceivers#(8) _txrs <- mkTransceivers();
+    return _txrs;
+endmodule
+
+// typedef struct {
+//     UInt#(TLog#(n)) id;
+//     ControllerMessage ev;
+// } TransmitterEvent#(numeric type n) deriving (Bits, FShow);
+
+interface ControllerTransceiver#(numeric type n);
+    interface Vector#(n, Tuple2#(Bool, GetPut#(Bit#(1)))) serial;
+    interface Get#(ReceiverEvent#(n)) rx;
+    interface Put#(TransmitterEvent#(n)) tx;
+    method Action tick_1khz();
+endinterface
+
+interface ControllerTransceiverClient#(numeric type n);
+    interface Put#(ReceiverEvent#(n)) rx;
+    interface Get#(TransmitterEvent#(n)) tx;
+endinterface
+
+module mkControllerTransceiver #(
+            function module#(Empty) mkDeserializerEventMux(
+                    Vector#(n, FIFOF#(DeserializerEvent#(n))) sources,
+                    FIFOF#(DeserializerEvent#(n)) sink))
+                (ControllerTransceiver#(n));
+    Vector#(n, Deserializer) deserializers <- replicateM(mkDeserializer);
+    ControllerReceiver#(n) receiver <- mkControllerReceiver(mkDeserializerEventMux);
+
+    zipWithM(mkConnection, deserializers, receiver.rx);
+
+    FIFO#(TransmitterEvent#(n)) tx_ev <- mkLFIFO();
+    Vector#(n, Serializer) serializers <- replicateM(mkSerializer);
+    Vector#(n, ControllerTransmitter)
+            transmitters <- replicateM(mkControllerTransmitter);
+    Vector#(n, Reg#(Bool))
+            transmitter_output_enabled <- replicateM(mkReg(False));
+
+    zipWithM(mkConnection, transmitters, serializers);
+
+    for (Integer i = 0; i < valueOf(n); i = i + 1) begin
+        (* fire_when_enabled *)
+        rule do_mux_message_event (
+                    tx_ev.first.id == fromInteger(i) &&&
+                    tx_ev.first.ev matches tagged Message .message);
+            transmitters[i].message.put(message);
+            tx_ev.deq;
+        endrule
+
+        (* fire_when_enabled *)
+        rule do_mux_output_enabled_event (
+                    tx_ev.first.id == fromInteger(i) &&&
+                    tx_ev.first.ev matches tagged OutputEnabled .enabled);
+            transmitter_output_enabled[tx_ev.first.id] <= enabled;
+            tx_ev.deq;
+        endrule
+    end
+
+    function Tuple2#(Bool, GetPut#(Bit#(1)))
+            to_serial(Bool oe, Serializer s, Deserializer d) =
+                tuple2(oe, tuple2(s.serial, d.serial));
+
+    interface Vector serial =
+            zipWith3(
+                to_serial,
+                readVReg(transmitter_output_enabled),
+                serializers,
+                deserializers);
+    interface Get rx = receiver.events;
+    interface Put tx = toPut(tx_ev);
+    method tick_1khz = receiver.tick_1khz;
+endmodule
+
+function module#(ControllerTransceiver#(1)) mkControllerTransceiver1() =
+        mkControllerTransceiver(mkDeserializerEventMux1);
+
+function module#(ControllerTransceiver#(2)) mkControllerTransceiver2() =
+        mkControllerTransceiver(mkDeserializerEventMux2);
+
+function module#(ControllerTransceiver#(4)) mkControllerTransceiver4() =
+        mkControllerTransceiver(mkDeserializerEventMux4);
+
+function module#(ControllerTransceiver#(36)) mkControllerTransceiver36() =
+        mkControllerTransceiver(mkDeserializerEventMux36);
+
+instance Connectable#(
+        ControllerTransceiver#(n),
+        ControllerTransceiverClient#(n));
+    module mkConnection #(
+            ControllerTransceiver#(n) txr,
+            ControllerTransceiverClient#(n) client)
+                (Empty);
+        mkConnection(client.tx, txr.tx);
+        mkConnection(txr.rx, client.rx);
+    endmodule
+endinstance
 
 endpackage

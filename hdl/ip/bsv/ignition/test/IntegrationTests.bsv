@@ -1,6 +1,8 @@
 package IntegrationTests;
 
 import Assert::*;
+import ClientServer::*;
+import GetPut::*;
 import StmtFSM::*;
 
 import TestUtils::*;
@@ -23,6 +25,8 @@ IgnitionProtocol::Parameters protocol_parameters =
 IgnitionControllerAndTargetBench::Parameters parameters =
     Parameters {
         controller: IgnitionController::Parameters {
+            tick_period: 400,
+            transmitter_output_disable_timeout: 10,
             protocol: protocol_parameters},
         target: IgnitionTarget::Parameters{
             external_reset: True,
@@ -30,7 +34,13 @@ IgnitionControllerAndTargetBench::Parameters parameters =
             mirror_link0_rx_as_link1_tx: False,
             system_type: tagged Valid target_system_type,
             button_behavior: ResetButton,
-            system_power_toggle_cool_down: 2,
+            // It takes a bit of time for Status updates to be applied in the
+            // Controller. This cool down controls how quickly the Target
+            // transitions from power off to power on during a system power
+            // reset and setting this too short may not give enough time to the
+            // bench to assert on the system power state. A value of 2 or less
+            // may produce falls negatives in the tests.
+            system_power_toggle_cool_down: 3,
             system_power_fault_monitor_enable: True,
             system_power_fault_monitor_start_delay: 2,
             system_power_hotswap_controller_restart: True,
@@ -45,25 +55,33 @@ module mkControllerTargetPresentTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_state = bench.controller.registers.controller_state;
-    let target_system_status = bench.controller.registers.target_system_status;
-
     mkAutoFSM(seq
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
         par
-            await_set(controller_state.target_present);
-            await_set(target_system_status.controller0_detected);
+            await(bench.controller.presence_summary[0]);
+            await(bench.target.controller0_present);
         endpar
 
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                link_status_connected,
+                "expected receiver aligned and locked");
+
         assert_set(
-            bench.target.leds[0],
-            "expected Target status LED set");
+                bench.target.leds[0],
+                "expected Target status LED set");
         assert_set(
-            bench.target.leds[1],
-            "expected system power status LED set");
+                bench.target.leds[1],
+                "expected system power status LED set");
     endseq);
 endmodule
 
@@ -74,162 +92,237 @@ module mkTargetRoTFaultTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_state = bench.controller.registers.controller_state;
-    let target_system_status = bench.controller.registers.target_system_status;
-    let target_system_faults = bench.controller.registers.target_system_faults;
+    Reg#(SystemFaults) target_system_events <- mkReg(defaultValue);
+
+    function read_controller_0_register_into(id, d) =
+            read_controller_register_into(bench.controller, 0, id, asIfc(d));
+
+    function read_controller_0_registers_while(predicate) =
+            seq
+                while(predicate) seq
+                    read_controller_0_register_into(
+                            TargetSystemEvents,
+                            target_system_events);
+                    // Avoid a tight loop reading the registers otherwise the
+                    // Controller will not make progress due to this interface
+                    // having the highest priority.
+                    repeat(3) bench.await_tick();
+                endseq
+            endseq;
 
     mkAutoFSM(seq
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
         par
-            await_set(controller_state.target_present);
-            await_set(target_system_status.controller0_detected);
+            await(bench.controller.presence_summary[0]);
+            await(bench.target.controller0_present);
         endpar
 
-        // Assert no target system faults and set an RoT fault.
-        assert_eq(
-            target_system_faults,
-            defaultValue,
-            "expected no target system faults");
+        // Assert no Target system faults and set an RoT fault.
+        assert_controller_register_eq(
+                bench.controller, 0, TargetSystemEvents,
+                system_faults_none,
+                "expected no target system faults");
         bench.set_target_system_faults(system_faults_rot);
 
         // Assert the fault is observed by the Controller.
-        await_set(target_system_faults.rot_fault);
-        assert_set(target_system_faults.rot_fault, "expected RoT fault");
+        read_controller_0_registers_while(!target_system_events.rot);
+        assert_controller_register_eq(
+                bench.controller, 0, TargetSystemEvents,
+                system_faults_rot,
+                "expected an RoT faults");
 
         // Resolve the RoT fault.
         bench.set_target_system_faults(system_faults_none);
 
         // Assert the RoT fault cleared.
-        await_not_set(target_system_faults.rot_fault);
-        assert_eq(
-            target_system_faults,
-            defaultValue,
-            "expected no target system faults");
+        read_controller_0_registers_while(target_system_events.rot);
+        assert_controller_register_eq(
+                bench.controller, 0, TargetSystemEvents,
+                system_faults_none,
+                "expected no target system faults");
     endseq);
 endmodule
 
-module mkTargetSystemResetTest (Empty);
+module mkTargetSystemPowerResetTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
             parameters,
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_state = bench.controller.registers.controller_state;
-    let target_system_status = bench.controller.registers.target_system_status;
-    let target_request = asReg(bench.controller.registers.target_request);
-    let target_request_status = bench.controller.registers.target_request_status;
+    Reg#(IgnitionProtocol::SystemStatus) target_system_status <- mkReg(defaultValue);
+    Reg#(IgnitionProtocol::RequestStatus) target_system_power_request_status <- mkReg(defaultValue);
+
+    function read_controller_0_register_into(id, d) =
+            read_controller_register_into(bench.controller, 0, id, asIfc(d));
+
+    function read_controller_0_registers_while(predicate) =
+        seq
+            while (predicate) seq
+                read_controller_0_register_into(
+                        TargetSystemStatus,
+                        target_system_status);
+                read_controller_0_register_into(
+                        TargetSystemPowerRequestStatus,
+                        target_system_power_request_status);
+                // Avoid a tight loop reading the registers otherwise the
+                // Controller will not make progress due to this interface
+                // having the highest priority.
+                repeat(3) bench.await_tick();
+            endseq
+        endseq;
 
     mkAutoFSM(seq
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
         par
-            await_set(controller_state.target_present);
-            await_set(target_system_status.controller0_detected);
+            await(bench.controller.presence_summary[0]);
+            await_set(bench.target.controller0_present);
         endpar
 
-        // Await Target system power on to complete.
-        await(target_request_status == defaultValue);
-        assert_set(
-            target_system_status.system_power_enabled,
-            "expected Target system power enabled");
+        // Make sure all components agree Target system power is on and no
+        // system power requests are in progress.
+        par
+            await(bench.target_system_power_on);
 
-        // Request a target system reset.
-        assert_eq(target_request, defaultValue, "expected no request queued");
-        target_request <= TargetRequest {pending: 1, kind: 3};
+            read_controller_0_registers_while(
+                    !target_system_status.system_power_enabled ||
+                    target_system_power_request_status != request_status_none);
+        endpar
 
-        // Await the request to be initiated on the Target.
-        await(target_request == defaultValue);
-        await(target_request_status != defaultValue);
-        assert_set(
-            target_request_status.system_reset_in_progress,
-            "expected system reset in progress");
-        assert_set(
-            target_request_status.power_off_in_progress,
-            "expected power off in progress");
-        assert_not_set(
-            target_system_status.system_power_enabled,
-            "expected target system power off");
+        // Request a Target system power reset.
+        bench.controller.registers.request.put(
+                RegisterRequest {
+                    id: 0,
+                    register: TargetSystemPowerRequestStatus,
+                    op: tagged Write ({extend(pack(SystemPowerReset)), 4'b0})});
 
-        // Await the system to be powering on.
-        await_not_set(target_request_status.power_off_in_progress);
-        assert_set(
-            target_request_status.system_reset_in_progress,
-            "expected system reset in progress");
-        assert_set(
-            target_request_status.power_on_in_progress,
-            "expected power off in progress");
-        assert_set(
-            target_system_status.system_power_enabled,
-            "expected target system power on");
+        // Observe the request being accepted by the Target and the system
+        // powering off.
+        read_controller_0_registers_while(
+                target_system_status.system_power_enabled ||
+                target_system_power_request_status == request_status_none);
 
-        // Await the system reset request to complete.
-        await(target_request_status == defaultValue);
+        assert_true(
+                bench.target_system_power_off,
+                "expected Target system power off");
+
+        // Observe system power bening enabled and the requested completed.
+        read_controller_0_registers_while(
+                !target_system_status.system_power_enabled ||
+                target_system_power_request_status != request_status_none);
+
+        assert_true(
+                bench.target_system_power_on,
+                "expected Target system power on");
     endseq);
 endmodule
 
-module mkTargetLinkEventsTest (Empty);
+module mkTargetLinkErrorEventsTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
             parameters,
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_state = bench.controller.registers.controller_state;
-    let target_system_status = bench.controller.registers.target_system_status;
-    let target_link0_status = bench.controller.registers.target_link0_status;
-    let target_link0_events =
-            asReg(bench.controller.registers.target_link0_counters.summary);
-    let target_link1_events =
-            asReg(bench.controller.registers.target_link1_counters.summary);
+    Reg#(SystemStatus) target_system_status <- mkReg(defaultValue);
+    Reg#(LinkStatus) target_link0_status <- mkReg(defaultValue);
+
+    Reg#(UInt#(8)) link0_decoding_errors <- mkReg(0);
+    Reg#(UInt#(8)) link1_decoding_errors <- mkReg(0);
+
+    function read_controller_0_register_into(id, d) =
+            read_controller_register_into(bench.controller, 0, id, asIfc(d));
+
+    function read_controller_0_registers_while(predicate) =
+            seq
+                while(predicate) seq
+                    read_controller_0_register_into(
+                            TargetSystemStatus,
+                            target_system_status);
+                    read_controller_0_register_into(
+                            TargetLink0Status,
+                            target_link0_status);
+                    // Avoid a tight loop reading the registers otherwise the
+                    // Controller will not make progress due to this interface
+                    // having the highest priority.
+                    repeat(3) bench.await_tick();
+                endseq
+            endseq;
+
+    function clear_controller_0_counter(id) =
+            clear_controller_counter(bench.controller, 0, id);
+
+    function assert_controller_0_counter_eq(id, expected_value, msg) =
+            assert_controller_counter_eq(
+                bench.controller,
+                0, id,
+                expected_value,
+                msg);
 
     mkAutoFSM(seq
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write extend(
+                                {pack(EnabledWhenReceiverAligned), 4'h0})});
         endaction
+        // Wait for the Target to report Controller presence through a Status
+        // message.
         par
-            await_set(controller_state.target_present);
-            await_set(target_system_status.controller0_detected);
+            await(bench.controller.presence_summary[0]);
+            read_controller_0_registers_while(
+                    !target_system_status.controller0_present);
         endpar
 
-        // Reset the event summary for both target links and assert no events on
-        // link 0 afterwards.
-        action
-            target_link0_events <= unpack('1);
-            target_link1_events <= unpack('1);
-        endaction
-        assert_eq(
-            target_link0_events, unpack('0),
-            "expected no events for link 0");
+        // Clear Target link event counters.
+        clear_controller_0_counter(TargetLink0DecodingError);
+        clear_controller_0_counter(TargetLink1DecodingError);
 
-        // Disturb the channel between the Controller transmitter and Target
-        // link 0 receiver, causing link events.
+        // Disturb the channel between Controller and Target, causing link error
+        // events and a receiver reset.
         bench.controller_to_target.set_state(Disconnected);
 
-        // Wait for the receiver to reset due to the errors.
-        await_not_set(target_link0_status.receiver_aligned);
+        // Wait for the Controller to have observed the Target link 0 state
+        // change before reading the event counters. This implicitly proves the
+        // Target receiver was reset as this will clear the link status bits.
+        read_controller_0_registers_while(
+                target_link0_status != link_status_disconnected);
 
-        assert_set(
-            target_link0_events.decoding_error,
-            "expected decoding error on link 0");
-        assert_set(
-            target_link0_events.decoding_error,
-            "expected ordered_set_invalid on link 0");
-        assert_eq(
-            target_link1_events, unpack('0),
-            "expected no events for link 1");
+        assert_controller_0_counter_eq(
+                TargetLink0DecodingError, 2,
+                "link 0 decoding errors");
+
+        assert_controller_0_counter_eq(
+                TargetLink1DecodingError, 0,
+                "link 1 decoding errors");
     endseq);
 endmodule
 
 // Verify that the Controller transmitter output enable override allows the
-// Controller to start transmitting Hello messages before detecting the presence
-// of a Target.
+// Controller to start transmitting Hello messages before receiving from a
+// Target.
 module mkControllerAlwaysTransmitOverrideTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(
@@ -237,33 +330,55 @@ module mkControllerAlwaysTransmitOverrideTest (Empty);
             10 * max(protocol_parameters.hello_interval,
                     protocol_parameters.status_interval));
 
-    let controller_state = asReg(bench.controller.registers.controller_state);
-    let controller_link_status = bench.controller.registers.controller_link_status;
-
     mkAutoFSM(seq
-        // Connect only the Controller->Target direction. This will keep the
-        // Controller from transmitting because it will not detect a Target to
-        // be present.
+        // Connect only the Controller->Target direction. This would normally
+        // keep the Controller from transmitting because it will not detect a
+        // Target on its receiver.
         bench.controller_to_target.set_state(Connected);
 
-        // Set the Controller to always transmit and await for the Target to
-        // detect the controller.
-        controller_state <= unpack('h02);
+        // Set the Controller to always transmit.
+        bench.controller.registers.request.put(
+                RegisterRequest {
+                    id: 0,
+                    register: TransceiverState,
+                    op: tagged Write ({2'h0, pack(AlwaysEnabled), 4'h0})});
 
-        // Assume the Controller has started sending Hello messages. Wait for
-        // the Controller to be marked present.
-        await(bench.target.controller0_present);
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                {2'h0, pack(AlwaysEnabled), 1'b1, 3'h0},
+                "expected transmitter output enabled and receiver not aligned");
 
-        // Assert the Controller has still not heard from the Target.
-        assert_not_set(
-            controller_link_status.receiver_aligned,
-            "expected receiver not aligned");
-        assert_not_set(
-            controller_link_status.receiver_locked,
-            "expected receiver not locked");
-        assert_not_set(
-            controller_state.target_present,
-            "expected no Target present");
+        // Await for the Transmitter output enable signal to be set and the
+        // Target to mark the Controller present after receiving Hello messages.
+        await(bench.controller_transmitter_output_enabled);
+        await_set(bench.target.controller0_present);
+
+        // Assert the Controller receiver is still in a disconnected state.
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                link_status_disconnected,
+                "expected receiver not aligned");
+
+        assert_false(
+                bench.controller.presence_summary[0],
+                "expected Target not present");
+
+        // Set the Controller to wait for a Target before transmitting.
+        bench.controller.registers.request.put(
+                RegisterRequest {
+                    id: 0,
+                    register: TransceiverState,
+                    op: tagged Write
+                            ({2'h0, pack(EnabledWhenReceiverAligned), 4'h0})});
+
+        // Wait for the disable timeout and the output enable to signal to be
+        // unset.
+        await(!bench.controller_transmitter_output_enabled);
+
+        assert_controller_register_eq(
+                bench.controller, 0, TransceiverState,
+                {2'h0, pack(EnabledWhenReceiverAligned), 1'b0, 3'h0},
+                "expected transmitter output disabled and receiver not aligned");
     endseq);
 endmodule
 
@@ -277,14 +392,20 @@ module mkReceiversLockedTimeoutTest (Empty);
         mkIgnitionControllerAndTargetBench(parameters, 1000);
 
     mkAutoFSM(seq
+        clear_controller_counter(bench.controller, 0, ControllerReceiverReset);
+
         // The link between Controller and Target is not connected, causing both
         // receivers never to reach locked state.
-
         par
-            repeat(3) await(bench.controller_receiver_locked_timeout);
-            repeat(3) await(bench.target_receiver_locked_timeout[0]);
-            repeat(3) await(bench.target_receiver_locked_timeout[1]);
+            repeat(4) await(bench.target_receiver_locked_timeout[0]);
+            repeat(4) await(bench.target_receiver_locked_timeout[1]);
         endpar
+
+        assert_controller_counter_eq(
+                bench.controller,
+                0, ControllerReceiverReset,
+                3,
+                "expected Controller reset events");
     endseq);
 endmodule
 
@@ -296,41 +417,43 @@ module mkNoLockedTimeoutIfReceiversLockedTest (Empty);
     IgnitionControllerAndTargetBench bench <-
         mkIgnitionControllerAndTargetBench(parameters, 1100);
 
-    Reg#(int) controller_ticks <- mkReg(0);
-    Reg#(int) target_ticks <- mkReg(0);
+    Reg#(int) txr_watchdog_ticks <- mkReg(0);
 
     (* fire_when_enabled *)
-    rule do_count_controller_ticks (bench.controller.tick_1khz);
-        controller_ticks <= controller_ticks + 1;
-    endrule
-
-    (* fire_when_enabled *)
-    rule do_count_target_ticks (bench.target.tick_1khz);
-        target_ticks <= target_ticks + 1;
+    rule do_count_txr_watchdog_ticks;
+        bench.await_tick();
+        txr_watchdog_ticks <= txr_watchdog_ticks + 1;
     endrule
 
     continuousAssert(
         !bench.controller_receiver_locked_timeout,
         "expected no Controller receiver locked timeout");
 
-    continuousAssert(
-        !bench.target_receiver_locked_timeout[0],
-        "expected no receiver locked timeout for Target link 0");
+    (* fire_when_enabled *)
+    rule do_assert_target_receiver_locked_timeout
+            (bench.controller_transmitter_output_enabled);
+        assert_true(!bench.target_receiver_locked_timeout[0],
+                "expected no receiver locked timeout for Target link 0");
+    endrule
 
     mkAutoFSM(seq
         action
             bench.controller_to_target.set_state(Connected);
             bench.target_to_controller.set_state(Connected);
+            bench.controller.registers.request.put(
+                    RegisterRequest {
+                        id: 0,
+                        register: TransceiverState,
+                        op: tagged Write ({2'h0, pack(AlwaysEnabled), 4'h0})});
         endaction
 
         par
             // Both the Controller and Target link 0 should go for 1000 ticks
             // without a receiver timeout.
-            await(controller_ticks > 1000);
-            await(target_ticks > 1000);
+            await(txr_watchdog_ticks > 1000);
 
             // Target link 1 should time out three times during this period.
-            repeat(3) await(bench.target_receiver_locked_timeout[1]);
+            repeat(4) await(bench.target_receiver_locked_timeout[1]);
         endpar
     endseq);
 endmodule
@@ -346,5 +469,17 @@ function Action await_set(one_bit_type v)
 function Action await_not_set(one_bit_type v)
         provisos (Bits#(one_bit_type, 1)) =
     await(pack(v) == 0);
+
+function Stmt clear_controller_counter(
+        Controller#(n) controller,
+        ControllerId#(n) controller_id,
+        CounterId counter_id) =
+    seq
+        controller.counters.request.put(
+                CounterAddress {
+                    controller: controller_id,
+                    counter: counter_id});
+        assert_get_any(controller.counters.response);
+    endseq;
 
 endpackage
