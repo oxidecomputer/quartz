@@ -1,0 +1,22 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible registers in the Cosmo
+// Debug Control FPGA block.
+
+addrmap debug_regs {
+    name = "Cosmo Debug Control block";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+ 
+    reg {
+           name = "UART Debug Control";
+           field {
+               desc = "Set to 1 to send the SP5's console UART out the UART debug header. By default
+               this is muxed to the SP's console UART, setting this takes the data away from the SP and 
+               sends it out the debug header with flow control.";
+           } sp5_to_header[0:0] = 0;
+       } uart_control;
+
+};

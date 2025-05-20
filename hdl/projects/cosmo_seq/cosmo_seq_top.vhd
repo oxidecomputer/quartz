@@ -21,6 +21,7 @@ use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 
 use work.sequencer_io_pkg.all;
+use work.debug_regs_pkg.all;
 
 entity cosmo_seq_top is
     port (
@@ -323,6 +324,7 @@ architecture rtl of cosmo_seq_top is
     constant SP_I2C_RESP_IDX: integer := 4;
     constant SP5_HP_RESP_IDX : integer := 5;
     constant SPD_PROXY_RESP_IDX : integer := 6;
+    constant DBG_CTRL_RESP_IDX : integer := 7;
 
     constant config_array : axil_responder_cfg_array_t := 
         (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
@@ -331,7 +333,8 @@ architecture rtl of cosmo_seq_top is
          SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
          SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
          SP5_HP_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8),
-         SPD_PROXY_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8)
+         SPD_PROXY_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8),
+         DBG_CTRL_RESP_IDX => (base_addr => x"00000700", addr_span_bits => 8)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal responders : axil8x32_pkg.axil_array_t(config_array'range);
@@ -384,6 +387,7 @@ architecture rtl of cosmo_seq_top is
     alias fpga2_hp_irq_n_unsyncd : std_logic is fpga2_to_fpga1_io(2);
     signal fpga2_hp_irq_n : std_logic;
     alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
+    signal dbg_uart_control : uart_control_type;
 
 begin
 
@@ -530,6 +534,7 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
+        dbg_uart_control => dbg_uart_control,
         -- UART pins
         -- IPCC SP side
         ipcc_from_sp => uart1_sp_to_fpga1_dat,
@@ -554,7 +559,6 @@ begin
         ipcc_from_espi => ipcc_uart_from_espi_axi_st,
         ipcc_to_espi => ipcc_uart_to_espi_axi_st,
         -- 
-        dbg_mux_en => '1',
         dbg_pins_uart_out => fpga1_spare_v3p3_7,
         dbg_pins_uart_out_rts_l => fpga1_spare_v3p3_4,
         dbg_pins_uart_in => fpga1_spare_v3p3_5,
@@ -775,6 +779,14 @@ begin
         dimm_sda_if0 => dimm_abcdef_sda_if,
         dimm_scl_if1 => dimm_ghijkl_scl_if,
         dimm_sda_if1 => dimm_ghijkl_sda_if
+    );
+
+    debug_module_top_inst: entity work.debug_module_top
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders(DBG_CTRL_RESP_IDX),
+        dbg_uart_control => dbg_uart_control
     );
 
 

@@ -19,4 +19,5 @@ addrmap cosmo_seq_top {
     sp_i2c_regs sp_i2c @ 0x0400;
     pca9506_axi_regs fpga1_hotplug @ 0x0500;
     spd_proxy_regs spd_proxy @ 0x0600;
+    debug_regs debug_ctrl @ 0x0700;
 };
