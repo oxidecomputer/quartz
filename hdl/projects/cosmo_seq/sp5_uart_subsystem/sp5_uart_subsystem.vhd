@@ -9,12 +9,14 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.axi_st8_pkg.all;
+use work.debug_regs_pkg.all;
 
 entity sp5_uart_subsystem is
     port(
         clk : in std_logic;
         reset : in std_logic;
 
+        dbg_uart_control : in uart_control_type;
         -- sp UART pins, ok to be un-syncd
         ipcc_from_sp : in std_logic;
         ipcc_to_sp : out std_logic;
@@ -42,7 +44,6 @@ entity sp5_uart_subsystem is
         ipcc_to_espi : view axi_st_source;
 
         -- debug UART mux
-        dbg_mux_en : in std_logic;
         dbg_pins_uart_out : out std_logic;
         dbg_pins_uart_out_rts_l : in std_logic;
         dbg_pins_uart_in : in std_logic;
@@ -66,11 +67,21 @@ begin
     process(clk)
     begin
         if rising_edge(clk) then
-            dbg_pins_uart_out <= host_to_fpga when dbg_mux_en = '1' else '1';
-            dbg_pins_uart_in_rts_l <= host_to_fpga_rts_l when dbg_mux_en = '1' else '1';
-            -- outputs to host, inputs from debug header
-            host_from_fpga <= dbg_pins_uart_in when dbg_mux_en = '1' else fgpa_sp_to_host_int;
-            host_from_fpga_rts_l <= dbg_pins_uart_out_rts_l when dbg_mux_en = '1' else fpga_sp_to_host_int_rts_l;
+            if dbg_uart_control.sp5_to_header = '1' then
+            -- We want to wrap the SP5's host UART out to the debug header.
+                -- outputs to the debug header
+                dbg_pins_uart_out <= host_to_fpga;
+                dbg_pins_uart_in_rts_l <= host_to_fpga_rts_l;
+                -- outputs to host, inputs from debug header
+                host_from_fpga <= dbg_pins_uart_in;
+                host_from_fpga_rts_l <= dbg_pins_uart_out_rts_l;
+            else
+                -- Send output of the host uart to the host bits.
+                host_from_fpga <= fgpa_sp_to_host_int;
+                host_from_fpga_rts_l <= fpga_sp_to_host_int_rts_l;
+                dbg_pins_uart_out <= '1';
+                dbg_pins_uart_in_rts_l <= '1';
+            end if;
         end if;
     end process;
     

@@ -1,0 +1,24 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "debug_regs_rdl",
+    src = "debug_regs.rdl",
+    outputs = [
+        "debug_regs_pkg.vhd", 
+        "debug_regs.html", 
+        "debug_regs.json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "debug_module_top",
+    srcs = glob(["*.vhd"]),
+    deps = [
+        ":debug_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
+    ],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)
