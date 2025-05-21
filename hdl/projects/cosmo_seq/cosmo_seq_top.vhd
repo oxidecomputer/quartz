@@ -415,6 +415,7 @@ begin
     fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_sp_irq_l <= (others => '1');
+    fpga1_to_bp_buff_output_en_l <= '0'; -- This buffer has to be enabled to see any BP PCIe signals
     -- Enable various buffers when we're in A0:
     fpga1_espi0_cs_l_buff_oe_en_l <= '0' when sp5_seq_pins.pwr_good else 'Z';
     fpga1_to_sp5_apml_xltr_en <= sp5_seq_pins.pwr_good;
