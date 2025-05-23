@@ -1,0 +1,20 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "ls_serdes",
+    srcs = ["ls_serdes.vhd",],
+    deps = [
+        "//hdl/ip/vhd/common:transforms_pkg",
+        "//hdl/ip/vhd/synchronizers:meta_sync",
+        ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "aligner_10bk28_5",
+    srcs = ["aligner_10bk28_5.vhd",],
+    deps = [
+        "//hdl/ip/vhd/common:calc_pkg",
+        ],
+    visibility = ["PUBLIC"],
+)

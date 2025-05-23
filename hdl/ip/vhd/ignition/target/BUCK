@@ -1,0 +1,54 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:yosys.bzl", "ice40_bitstream")
+
+vhdl_unit(
+    name = "ignition_io",
+    srcs = ["ignition_io.vhd"],
+    deps = [
+        "//hdl/ip/vhd/ice40primitives:ice40_pkg",
+        ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "ignition_target_common",
+    srcs = glob(["*.vhd", "rx_path/*.vhd", "tx_path/*.vhd"], exclude = ["ignition_io.vhd"]),
+    deps = [
+        "//hdl/ip/vhd/crc:crc8autostar_8wide",
+         "//hdl/ip/vhd/common:time_pkg",
+        "//hdl/ip/vhd/ls_xcvr:ls_serdes",
+        "//hdl/ip/vhd/ls_xcvr:aligner_10bk28_5",
+        "//hdl/ip/vhd/8b10b:encode_8b10b",
+        "//hdl/ip/vhd/8b10b:decode_8b10b",
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+        "//hdl/ip/vhd/pipeline:skidbuffer",
+        "//hdl/ip/vhd/memories:dual_clock_simple_dpr",
+        ],
+    visibility = ["PUBLIC"],
+)
+
+
+vunit_sim(
+    name = "ignition_tgt_sim_tb",
+    srcs = glob(["sims/**/*.vhd"]),
+    deps = [
+        ":ignition_target_common",
+        "//hdl/ip/vhd/crc:crc_sim_pkg",
+        "//hdl/ip/vhd/vunit_components:basic_stream",
+        
+
+    ],
+    visibility = ['PUBLIC'],
+)
+
+# ice40_bitstream(
+#     name="size_info",
+#     top_entity_name="xcvr_top",
+#     top= ":xcvr_top",
+#     family="lp1k",
+#     package="qn84",
+#     pinmap="test.pcf",
+#     nextpnr_args = [
+#         "--pcf-allow-unconstrained",
+#     ],
+# )

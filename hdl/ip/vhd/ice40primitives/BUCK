@@ -1,0 +1,9 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "ice40_pkg",
+    srcs = ["ice40_pkg.vhd"],
+    deps = [
+        ],
+    visibility = ["PUBLIC"],
+)

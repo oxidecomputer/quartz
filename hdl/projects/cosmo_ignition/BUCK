@@ -6,6 +6,8 @@ vhdl_unit(
     name = "cosmo_ignition_top",
     srcs = glob(["*.vhd"]),
     deps = [
+        "//hdl/ip/vhd/ignition/target:ignition_target_common",
+        "//hdl/ip/vhd/ignition/target:ignition_io",
     ],
     standard = "2008",
 )

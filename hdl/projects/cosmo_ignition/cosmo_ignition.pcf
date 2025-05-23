@@ -21,15 +21,17 @@ set_io --warn-no-port ign_trgt_id[6] A2
 set_io --warn-no-port ign_trgt_id[7] A1
 set_io --warn-no-port ign_trgt_fpga_lvds_status_led_en_l L1
 set_io --warn-no-port ign_trgt_fpga_pushbutton_reset_l L5
-set_io --warn-no-port ign_trgt_fpga_design_reset_l L3
-set_io --warn-no-port lvds_rsw0_to_ign_trgt_fpga_p B1
-set_io --warn-no-port lvds_rsw0_to_ign_trgt_fpga_n B2
+set_io --warn-no-port ign_trgt_fpga_design_reset_l K6
+set_io --warn-no-port lvds_rsw0_to_ign_trgt_fpga_p B2
+#set_io --warn-no-port lvds_rsw0_to_ign_trgt_fpga_n B1
+# Note: p/n un-swapped in FPGA
 set_io --warn-no-port lvds_ign_trgt_fpga_to_rsw0_p C2
 set_io --warn-no-port lvds_ign_trgt_fpga_to_rsw0_n C1
-set_io --warn-no-port lvds_rsw1_to_ign_trgt_fpga_p G1
-set_io --warn-no-port lvds_rsw1_to_ign_trgt_fpga_n G2
-set_io --warn-no-port lvds_ign_trgt_fpga_to_rsw1_p H1
-set_io --warn-no-port lvds_ign_trgt_fpga_to_rsw1_n H2
+set_io --warn-no-port lvds_rsw1_to_ign_trgt_fpga_p G2
+#set_io --warn-no-port lvds_rsw1_to_ign_trgt_fpga_n G1
+# Note: p/n un-swapped in FPGA
+set_io --warn-no-port lvds_ign_trgt_fpga_to_rsw1_p H2
+set_io --warn-no-port lvds_ign_trgt_fpga_to_rsw1_n H1
 set_io --warn-no-port v3p3_fpga2_a2_pg J11
 set_io --warn-no-port v1p2_fpga2_a2_pg K11
 set_io --warn-no-port v2p5_fpga2_a2_pg H10

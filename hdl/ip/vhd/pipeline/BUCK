@@ -1,0 +1,7 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "skidbuffer",
+    srcs = ["skidbuffer.vhd",],
+    visibility = ["PUBLIC"],
+)
