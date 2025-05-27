@@ -54,20 +54,32 @@ architecture rtl of cosmo_ignition_top is
     signal sw1_serial_out : std_logic;
     signal hotswap_restart_l : std_logic;
     signal led_counter : unsigned(24 downto 0) := (others => '0');
+    signal reset_sync1 : std_logic;
+    signal reset_syncd : std_logic;
    
 begin
-
-     -- Blink an LED at some rate
-    led: process(clk_50mhz_ign_trgt_fpga, ign_trgt_fpga_design_reset_l)
+    rst_sync: process(clk_50mhz_ign_trgt_fpga, ign_trgt_fpga_design_reset_l)
     begin
         if ign_trgt_fpga_design_reset_l = '0' then
+            reset_sync1 <= '1';
+            reset_syncd <= '1';
+        elsif rising_edge(clk_50mhz_ign_trgt_fpga) then
+            -- flipping to active high here and providing a 2 clock sync
+            reset_sync1 <= '0';
+            reset_syncd <= reset_sync1;
+        end if;
+    end process;
+
+     -- Blink an LED at some rate
+    led: process(clk_50mhz_ign_trgt_fpga, reset_syncd)
+    begin
+        if reset_syncd = '1' then
             led_counter <= (others => '0');
         elsif rising_edge(clk_50mhz_ign_trgt_fpga) then
             led_counter <= led_counter + 1;
         end if;
     end process;
     ign_trgt_fpga_lvds_status_led_en_l <= led_counter(23);
-    --ign_trgt_fpga_debug_led <= (0=> ign_trgt_fpga_pushbutton_reset_l, others => led_counter(24));
 
 
     ignition_target_common_inst: entity work.ignition_target_common
@@ -77,7 +89,7 @@ begin
     )
      port map(
         clk => clk_50mhz_ign_trgt_fpga,
-        reset => not ign_trgt_fpga_design_reset_l, -- todo: resync this
+        reset => reset_syncd,
         sw0_serial_in => sw0_serial_in,
         sw0_serial_out => sw0_serial_out,
         sw1_serial_in => sw1_serial_in,

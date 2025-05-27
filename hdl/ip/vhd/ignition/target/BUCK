@@ -40,15 +40,3 @@ vunit_sim(
     ],
     visibility = ['PUBLIC'],
 )
-
-# ice40_bitstream(
-#     name="size_info",
-#     top_entity_name="xcvr_top",
-#     top= ":xcvr_top",
-#     family="lp1k",
-#     package="qn84",
-#     pinmap="test.pcf",
-#     nextpnr_args = [
-#         "--pcf-allow-unconstrained",
-#     ],
-# )

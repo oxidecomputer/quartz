@@ -22,9 +22,15 @@ package ignition_pkg is
         disp_err : std_logic;
     end record;
 
+    -- This block uses the 0x2F polynomial (x^8+x^5+x^3+x^2+x+1) with the parameters
+    -- specified in the AUTOSTAR_SWS_CRCLibrary specification.
+    -- See https://www.autosar.org/fileadmin/standards/R4.1.3/CP/AUTOSAR_SWS_CRCLibrary.pdf 
+    -- This means an initial value of 0xFF and a final XOR value of 0xFF also
+    constant CRC_XOR_FINAL_VALUE : std_logic_vector(7 downto 0) := (others => '1');
+
     -- Protocol details here.
-    -- Status every 25ms
-    -- hello every 50ms
+    -- Status every ~25ms
+    -- hello every ~50ms
     constant START_OF_MESSAGE : std_logic_vector(7 downto 0) := K28_0;
     constant END_OF_MESSAGE : std_logic_vector(7 downto 0) := K23_7;
     constant BONUS_END_CHAR : std_logic_vector(7 downto 0) := K29_7;

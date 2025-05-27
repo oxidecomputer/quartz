@@ -92,7 +92,8 @@ begin
 
     crc8autostar_8wide_inst: entity work.crc8autostar_8wide
     generic map(
-        FINAL_XOR_VALUE => X"FF"
+        -- see ignition_pkg.vhd for CRC parameters and reasoning
+        FINAL_XOR_VALUE => CRC_XOR_FINAL_VALUE
     )
      port map(
         clk => clk,
