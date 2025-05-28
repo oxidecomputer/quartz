@@ -34,7 +34,8 @@ QsfpModuleController::Parameters qsfp_test_params =
         i2c_frequency_hz: i2c_test_params.scl_freq_hz,
         power_good_timeout_ms: 10,
         t_init_ms: 5, // normally 2000, but sped up for simulation
-        t_clock_hold_us: i2c_test_params.max_scl_stretch_us
+        t_clock_hold_us: i2c_test_params.max_scl_stretch_us,
+        i2c_timeout_us: 15000 // normally 27, but sped up for simulation
     };
 
 // Helper function to unpack the Value from an ActionValue and do an assertion.
@@ -152,7 +153,8 @@ module mkBench (Bench);
     Reg#(Command) command_r         <- mkReg(defaultValue);
     PulseWire new_command           <- mkPulseWire();
     Reg#(UInt#(8)) bytes_done       <- mkReg(0);
-    Reg#(Bool) timeout_expected     <- mkReg(False);
+    Reg#(Bool) stretch_timeout_expected     <- mkReg(False);
+    Reg#(Bool) protocol_timeout_expected    <- mkReg(False);
 
     // TODO: This should become a RAM that I can dynamically read/write to so I
     // can read values I expect to have written without relying on bytes_done
@@ -166,24 +168,30 @@ module mkBench (Bench);
     FSM write_seq <- mkFSMWithPred(seq
         controller.i2c_command.put(command_r);
         if (controller.module_initialized()) seq
-            check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
-            check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
+            if (protocol_timeout_expected) seq
+                check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+                check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
+                check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
+            endseq else seq
+                check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+                check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
 
-            check_peripheral_event(periph, tagged ReceivedData command_r.reg_addr, "Expected model to receive reg addr that was sent");
+                check_peripheral_event(periph, tagged ReceivedData command_r.reg_addr, "Expected model to receive reg addr that was sent");
 
-            while (bytes_done < command_r.num_bytes) seq
-                check_peripheral_event(periph, tagged ReceivedData pack(bytes_done)[7:0], "Expected to receive data that was sent");
-                bytes_done  <= bytes_done + 1;
+                while (bytes_done < command_r.num_bytes) seq
+                    check_peripheral_event(periph, tagged ReceivedData pack(bytes_done)[7:0], "Expected to receive data that was sent");
+                    bytes_done  <= bytes_done + 1;
+                endseq
+
+                check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
+                bytes_done  <= 0;
+
+                // The I2CCore will ack-poll to make sure the write took. In this test bench the
+                // peripheral will ack the first try. We need to handle those events.
+                check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+                check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
+                check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
             endseq
-
-            check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
-            bytes_done  <= 0;
-
-            // The I2CCore will ack-poll to make sure the write took. In this test bench the
-            // peripheral will ack the first try. We need to handle those events.
-            check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
-            check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
-            check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
         endseq
     endseq, command_r.op == Write);
 
@@ -198,9 +206,18 @@ module mkBench (Bench);
             check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
             check_peripheral_event(periph, tagged AddressMatch, "Expected address to match");
 
-            // hacky way to handle the timeout in the testbench context
-            if (timeout_expected) seq
-                await(unpack(controller.registers.port_status.error[2:0]) == I2cSclStretchTimeout);
+            // hacky way to handle the timeouts in the testbench context
+            if (protocol_timeout_expected) seq
+                // we can't safely end a transaction until we can nack, so rx a byte to allow that
+                check_peripheral_event(periph, tagged TransmittedData pack(bytes_done)[7:0], "Expected to transmit the data which was previously written");
+                action
+                    let d <- controller.registers.i2c_data;
+                    assert_eq(d, pack(bytes_done), "Expected data in FIFO to match");
+                endaction
+                check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
+                check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
+            endseq else if (stretch_timeout_expected) seq
+                await(unpack(controller.registers.port_status.error) == I2cSclStretchTimeout);
             endseq else seq
                 while (bytes_done < command_r.num_bytes) seq
                     check_peripheral_event(periph, tagged TransmittedData pack(bytes_done)[7:0], "Expected to transmit the data which was previously written");
@@ -249,7 +266,8 @@ module mkBench (Bench);
         end else if (stretch_timeout) begin
             periph.stretch_next(True);
         end
-        timeout_expected <= stretch_timeout;
+        stretch_timeout_expected <= stretch_timeout;
+        protocol_timeout_expected <= unpack(controller.registers.port_debug.force_i2c_timeout);
     endmethod
 
     method intl = pack(controller.intl);
@@ -359,7 +377,7 @@ module mkNoModuleTest (Empty);
                 num_bytes: 1
             }, False, False);
         delay(5);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoModule,
             "NoModule error should be present when attempting to communicate with a device which is not present.");
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
@@ -388,7 +406,7 @@ module mkNoPowerTest (Empty);
                 num_bytes: 1
             }, False, False);
         delay(5);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoPower,
             "NoPower error should be present when attempting to communicate before the hot swap is stable.");
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
@@ -417,7 +435,7 @@ module mkRemovePowerEnableTest (Empty);
                 num_bytes: 1
             }, False, False);
         delay(5);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "NoPower should be present when attempting to communicate when the hot swap is stable.");
         bench.set_sw_power_en(0);
@@ -452,7 +470,7 @@ module mkPowerGoodTimeoutTest (Empty);
                 num_bytes: 1
             }, False, False);
         delay(5);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             PowerFault,
             "PowerFault error should be present when attempting to communicate after the hot swap has timed out");
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
@@ -482,7 +500,7 @@ module mkPowerGoodLostTest (Empty);
                 num_bytes: 1
             }, False, False);
         delay(5);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             PowerFault,
             "PowerFault error should be present when attempting to communicate after the hot swap has aborted");
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
@@ -513,7 +531,7 @@ module mkI2CReadTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             False,
             "Should not have observed and SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "Should not have an I2C error.");
         delay(5);
@@ -541,7 +559,7 @@ module mkI2CWriteTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             False,
             "Should not have observed and SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "Should not have an I2C error.");
         delay(5);
@@ -573,7 +591,7 @@ module mkInitializationTest (Empty);
         bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NotInitialized,
             "NotInitialized error should be present when attempting to communicate before t_init has elapsed.");
 
@@ -581,7 +599,7 @@ module mkInitializationTest (Empty);
         bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "NoError should be present when attempting to communicate after t_init has elapsed.");
 
@@ -589,7 +607,7 @@ module mkInitializationTest (Empty);
         bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NotInitialized,
             "NotInitialized error should be present when resetl is asserted.");
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
@@ -618,7 +636,7 @@ module mkUninitializationAfterRemovalTest (Empty);
         add_and_initialize_module(bench);
         bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "NoError should be present when attempting to communicate after t_init has elapsed.");
 
@@ -628,7 +646,7 @@ module mkUninitializationAfterRemovalTest (Empty);
         bench.command(read_cmd, False, False);
         await(!bench.i2c_busy());
         delay(3);
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NotInitialized,
             "NotInitialized error should be present when a module has been reseated but not initialized.");
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
@@ -736,7 +754,7 @@ module mkI2CSclStretchTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             True,
             "Should have observed SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "NoError should be present when a transaction completed successfully.");
         delay(5);
@@ -760,7 +778,7 @@ module mkI2CSclStretchTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             False,
             "Should not have observed SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "Should not have an I2C error.");
 
@@ -769,7 +787,7 @@ module mkI2CSclStretchTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             False,
             "Should not have observed SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "Should not have an I2C error.");
     endseq);
@@ -805,7 +823,7 @@ module mkI2CSclStretchTimeoutTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             True,
             "Should have observed and SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             I2cSclStretchTimeout,
             "I2cSclStretchTimeout error should be present when a module stretching SCL too long.");
         delay(5);
@@ -819,14 +837,14 @@ module mkI2CSclStretchTimeoutTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             True,
             "Should still have observed SCL stretching after module removal");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             I2cSclStretchTimeout,
             "I2cSclStretchTimeout error should be present when a module stretching SCL too long.");
         insert_and_power_module(bench);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             True,
             "Should still have observed SCL stretching after module reinsertion");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             I2cSclStretchTimeout,
             "I2cSclStretchTimeout error should be present when a module stretching SCL too long.");
 
@@ -838,7 +856,7 @@ module mkI2CSclStretchTimeoutTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             False,
             "Should not have observed SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "Should not have an I2C error.");
 
@@ -847,9 +865,99 @@ module mkI2CSclStretchTimeoutTest (Empty);
         assert_eq(unpack(bench.registers.port_status.stretching_seen),
             False,
             "Should not have observed SCL stretching.");
-        assert_eq(unpack(bench.registers.port_status.error[2:0]),
+        assert_eq(unpack(bench.registers.port_status.error),
             NoError,
             "Should not have an I2C error.");
+    endseq);
+endmodule
+
+// mkI2CReadTimeoutTest
+//
+// This test reads an entire page (128 bytes) of module memory but will timeout. The controller
+// should smoothly abort the transaction automatically.
+module mkI2CReadTimeoutTest (Empty);
+    Bench bench <- mkBench();
+
+    Command read_cmd = Command {
+        op: Read,
+        i2c_addr: i2c_test_params.peripheral_addr,
+        reg_addr: 8'h00,
+        num_bytes: 128
+    };
+
+    PortDebug dbg_reg = PortDebug {
+        force_i2c_timeout: 1
+    };
+
+    mkAutoFSM(seq
+        delay(5);
+        add_and_initialize_module(bench);
+        bench.registers.port_debug <= dbg_reg;
+        bench.command(read_cmd, False, False);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            False,
+            "Should not have observed and SCL stretching.");
+        // make sure we saw the error
+        assert_eq(unpack(bench.registers.port_status.error),
+            I2cTransactionTimeout,
+            "Should have seen a transaction timeout error.");
+        
+        // the next transaction should complete just fine since the timeout bit clears automatically
+        bench.command(read_cmd, False, False);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            False,
+            "Should not have observed and SCL stretching.");
+        assert_eq(unpack(bench.registers.port_status.error),
+            NoError,
+            "Should not have an I2C error.");
+        delay(5);
+    endseq);
+endmodule
+
+// mkI2CWriteTimeoutTest
+//
+// This test writes an entire page (128 bytes) of module memory but will timeout. The controller
+// should smoothly abort the transaction automatically.
+module mkI2CWriteTimeoutTest (Empty);
+    Bench bench <- mkBench();
+
+    Command write_cmd = Command {
+        op: Write,
+        i2c_addr: i2c_test_params.peripheral_addr,
+        reg_addr: 8'h00,
+        num_bytes: 128
+    };
+
+    PortDebug dbg_reg = PortDebug {
+        force_i2c_timeout: 1
+    };
+
+    mkAutoFSM(seq
+        delay(5);
+        add_and_initialize_module(bench);
+        bench.registers.port_debug <= dbg_reg;
+        bench.command(write_cmd, False, False);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            False,
+            "Should not have observed and SCL stretching.");
+        // make sure we saw the error
+        assert_eq(unpack(bench.registers.port_status.error),
+            I2cTransactionTimeout,
+            "Should have seen a transaction timeout error.");
+        
+        // the next transaction should complete just fine since the timeout bit clears automatically
+        bench.command(write_cmd, False, False);
+        await(!bench.i2c_busy());
+        assert_eq(unpack(bench.registers.port_status.stretching_seen),
+            False,
+            "Should not have observed and SCL stretching.");
+        assert_eq(unpack(bench.registers.port_status.error),
+            NoError,
+            "Should not have an I2C error.");
+        delay(5);
     endseq);
 endmodule
 

@@ -60,6 +60,7 @@ instance DefaultValue #(TestCommand);
 endinstance
 
 interface Bench;
+    interface PulseWire abort;
     method Action command (TestCommand cmd);
     method Bool busy();
     method Bool stretching_seen();
@@ -88,6 +89,10 @@ module mkBench (Bench);
     Reg#(UInt#(8)) ack_poll_cntr    <- mkReg(0);
     Reg#(Bool) write_done           <- mkReg(False);
 
+    // State to handled abort requests
+    PulseWire abort_                <- mkPulseWire();
+    Reg#(Bool) abort_in_progress    <- mkReg(False);
+
     // TODO: This should become a RAM that I can dynamically read/write to so I
     // can read values I expect to have written without relying on bytes_done
     (* fire_when_enabled *)
@@ -98,6 +103,12 @@ module mkBench (Bench);
     (* fire_when_enabled *)
     rule do_next_send_data_byte (dut.send_data.accepted);
         data_idx <= data_idx + 1;
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_handle_abort(abort_ && !abort_in_progress);
+        dut.abort.send();
+        abort_in_progress   <= True;
     endrule
 
     FSM write_seq <- mkFSMWithPred(seq
@@ -111,30 +122,39 @@ module mkBench (Bench);
 
         while (bytes_done < command_r.num_bytes) seq
             check_peripheral_event(periph, tagged ReceivedData pack(bytes_done)[7:0], "Expected to receive data that was sent");
-            bytes_done  <= bytes_done + 1;
+
+            // If we are aborting, exit the loop
+            if (abort_in_progress) seq
+                bytes_done  <= command_r.num_bytes;
+            endseq else seq
+                bytes_done  <= bytes_done + 1;
+            endseq
         endseq
 
         check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
         bytes_done  <= 0;
 
-        // do post-write ack polling to make sure the peripheral finished the write
-        while (!write_done) seq
-            periph.nack_response(ack_poll_cntr == 0);
-            check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
-            action
-                let e <- periph.receive.get();
-                case(e) matches
-                    tagged AddressMatch: begin
-                        write_done  <= True;
-                    end
-                    tagged AddressMismatch: begin
-                        // peripheral nack'd, indicating the write is not finsihed
-                        ack_poll_cntr <= ack_poll_cntr - 1;
-                    end
-                endcase
-            endaction
+        // if the transaction was aborted, no need to write-ack
+        if (!abort_in_progress) seq
+            // do post-write ack polling to make sure the peripheral finished the write
+            while (!write_done) seq
+                periph.nack_response(ack_poll_cntr == 0);
+                check_peripheral_event(periph, tagged ReceivedStart, "Expected model to receive START");
+                action
+                    let e <- periph.receive.get();
+                    case(e) matches
+                        tagged AddressMatch: begin
+                            write_done  <= True;
+                        end
+                        tagged AddressMismatch: begin
+                            // peripheral nack'd, indicating the write is not finsihed
+                            ack_poll_cntr <= ack_poll_cntr - 1;
+                        end
+                    endcase
+                endaction
+            endseq
+            check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
         endseq
-        check_peripheral_event(periph, tagged ReceivedStop, "Expected to receive STOP");
     endseq, command_r.op == Write && !dut.scl_stretch_timeout);
 
     FSM read_seq <- mkFSMWithPred(seq
@@ -150,7 +170,12 @@ module mkBench (Bench);
                 check_peripheral_event(periph, tagged ReceivedAck, "Expected to receive ACK to send next byte");
             endseq
 
-            bytes_done  <= bytes_done + 1;
+            // If we are aborting, exit the loop
+            if (abort_in_progress) seq
+                bytes_done  <= command_r.num_bytes;
+            endseq else seq
+                bytes_done  <= bytes_done + 1;
+            endseq
         endseq
 
         check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
@@ -171,11 +196,16 @@ module mkBench (Bench);
             check_peripheral_event(periph, tagged TransmittedData pack(bytes_done)[7:0], "Expected to transmit the data which was previously written");
             check_byte(dut, pack(bytes_done)[7:0], "Expected to read back written data");
 
-            if (bytes_done + 1 < command_r.num_bytes) seq
-                check_peripheral_event(periph, tagged ReceivedAck, "Expected to receive ACK to send next byte");
+                        // If we are aborting, exit the loop
+            if (abort_in_progress) seq
+                bytes_done  <= command_r.num_bytes;
+            endseq else seq
+                bytes_done  <= bytes_done + 1;
             endseq
 
-            bytes_done  <= bytes_done + 1;
+            if (bytes_done < command_r.num_bytes) seq
+                check_peripheral_event(periph, tagged ReceivedAck, "Expected to receive ACK to send next byte");
+            endseq
         endseq
 
         check_peripheral_event(periph, tagged ReceivedNack, "Expected to receive NACK to end the Read");
@@ -189,11 +219,16 @@ module mkBench (Bench);
         rand_read_seq.abort();
     endrule
 
+    interface abort = abort_;
+
     method busy = !write_seq.done() || !read_seq.done() || !rand_read_seq.done() || new_command;
     method stretching_seen = dut.scl_stretch_seen;
     method stretching_timeout = dut.scl_stretch_timeout;
 
-    method Action command(TestCommand c) if (write_seq.done() && read_seq.done() && rand_read_seq.done());
+    method Action command(TestCommand c) if (write_seq.done()
+                                            && read_seq.done()
+                                            && rand_read_seq.done()
+                                            && !abort_);
         command_r   <= c.cmd;
         new_command.send();
 
@@ -210,6 +245,8 @@ module mkBench (Bench);
         end else if (c.stretch_clk_invalid) begin
             periph.stretch_next(True);
         end
+
+        abort_in_progress   <= False;
     endmethod
 endmodule
 
@@ -398,6 +435,47 @@ module mkI2CCoreSclStretchTimeoutTest (Empty);
         dynamicAssert(bench.stretching_timeout, "Should have seen a SCL timeout");
         delay(200);
     endseq);
+endmodule
+
+module mkI2CCoreAbortTest (Empty);
+    Bench bench <- mkBench();
+
+    TestCommand read_cmd = TestCommand {
+        cmd: Command {
+            op: RandomRead,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'h00,
+            num_bytes: 8
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
+    };
+
+    TestCommand write_cmd = TestCommand {
+        cmd: Command {
+            op: Write,
+            i2c_addr: test_params.peripheral_addr,
+            reg_addr: 8'h5A,
+            num_bytes: 8
+        },
+        stretch_clk_valid: False,
+        stretch_clk_invalid: False
+    };
+
+    mkAutoFSM(seq
+        delay(200);
+        bench.command(read_cmd);
+        delay(15000);
+        bench.abort.send();
+        await(!bench.busy());
+
+        bench.command(write_cmd);
+        delay(10000);
+        bench.abort.send();
+        await(!bench.busy());
+        delay(200);
+    endseq);
+
 endmodule
 
 endpackage: I2CCoreTests

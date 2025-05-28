@@ -39,6 +39,7 @@ import Bidirection::*;
 import Debouncer::*;
 import CommonFunctions::*;
 import CommonInterfaces::*;
+import Countdown::*;
 import I2CBitController::*;
 import I2CCommon::*;
 import I2CCore::*;
@@ -54,6 +55,7 @@ typedef struct {
     Integer power_good_timeout_ms;
     Integer t_init_ms;
     Integer t_clock_hold_us;
+    Integer i2c_timeout_us;
 } Parameters;
 
 instance DefaultValue#(Parameters);
@@ -63,7 +65,8 @@ instance DefaultValue#(Parameters);
         i2c_frequency_hz: 100_000,
         power_good_timeout_ms: 20,
         t_init_ms: 2000, // t_init is 2 seconds per SFF-8679
-        t_clock_hold_us: 500 // t_clock_hold is 500 microseconds per SFF-8636
+        t_clock_hold_us: 500, // t_clock_hold is 500 microseconds per SFF-8636
+        i2c_timeout_us: 27000 // SFF-8636 doesn't specify, so slightly exceed 25ms to align with SMBus t_timeout,min
     };
 endinstance
 
@@ -71,6 +74,7 @@ interface Registers;
     interface ReadOnly#(PortStatus) port_status;
     interface Reg#(PortControl) port_control;
     interface ReadVolatileReg#(Bit#(8)) i2c_data;
+    interface Reg#(PortDebug) port_debug;
 endinterface
 
 interface Pins;
@@ -148,6 +152,14 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     Reg#(Bool) i2c_attempt                      <- mkDReg(False);
     Reg#(I2CCore::Command) next_i2c_command     <- mkReg(defaultValue);
     Reg#(Bool) module_initialized_r             <- mkReg(False);
+    Countdown#(15) i2c_timeout_countdown        <- mkCountdownBy1();
+    PulseWire force_i2c_timeout_set             <- mkPulseWire();
+    PulseWire force_i2c_timeout_clr             <- mkPulseWire();
+    Reg#(Bool) force_i2c_timeout_req      <- mkReg(False);
+    Reg#(Bool) force_i2c_timeout          <- mkReg(False);
+    Reg#(Bool) wtf                              <- mkReg(False);
+    Reg#(Bool) tiggle                           <- mkReg(False);
+
 
     // Internal pin signals, named with _ to avoid collisions at the interface
     Reg#(Bit#(1)) resetl_  <- mkReg(1);
@@ -199,6 +211,25 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     (* fire_when_enabled *)
     rule do_hot_swap_tick (tick_1ms_);
         hot_swap.send();
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_i2c_timeout_tick(tick_1ms_ && i2c_core.busy());
+        i2c_timeout_countdown.send();
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_force_i2c_timeout_req;
+        if (force_i2c_timeout_set) begin
+            force_i2c_timeout_req <= True;
+        end else if (force_i2c_timeout_clr) begin
+            force_i2c_timeout_req <= False;
+        end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_force_i2c_timeout;
+        force_i2c_timeout <= force_i2c_timeout_req && i2c_core.busy();
     endrule
 
     (* fire_when_enabled *)
@@ -282,7 +313,8 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     // be registered for persistence. It will also stay modprsl until the next
     // I2C transaction starts on the port.
     (* fire_when_enabled *)
-    rule do_i2c;
+    rule do_i2c(!(i2c_timeout_countdown || force_i2c_timeout));
+        tiggle <= !tiggle;
         if (i2c_attempt && modprsl_) begin
             error   <= NoModule;
         end else if (i2c_attempt &&
@@ -296,6 +328,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             new_i2c_command.send();
             error   <= NoError;
             i2c_core.send_command.put(next_i2c_command);
+            i2c_timeout_countdown   <= fromInteger(parameters.i2c_timeout_us);
         end else if (isValid(i2c_core.error)) begin
             let err = fromMaybe(?, i2c_core.error);
             if (err == AddressNack) begin
@@ -307,8 +340,16 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             // we gate this on the module being initialized as that means we've
             // actually powered the module (and therefore, the I2C pullups) and
             // released it from reset for it to stretch in the first place.
-            error <= I2cSclStretchTimeout;
+            error   <= I2cSclStretchTimeout;
         end
+    endrule
+
+    (* fire_when_enabled *)
+    rule do_i2c_timeout(i2c_timeout_countdown || force_i2c_timeout);
+        force_i2c_timeout_clr.send();
+        i2c_core.abort.send();
+        error   <= I2cTransactionTimeout;
+        wtf     <= True;
     endrule
 
     // Adding a register stage here to help out timing.
@@ -322,7 +363,7 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             rdata_fifo_empty: pack(!rdata_fifo.notEmpty()),
             wdata_fifo_empty: pack(!wdata_fifo.notEmpty()),
             busy: pack(i2c_core.busy()),
-            error: {0, pack(error)}
+            error: pack(error)
         };
     endrule
 
@@ -354,6 +395,17 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
             endmethod
 
             method _write = wdata_w._write;
+        endinterface
+
+        interface Reg port_debug;
+            method _read = PortDebug {
+                force_i2c_timeout: pack(force_i2c_timeout_req)
+            };
+            method Action _write(PortDebug v);
+                if (v.force_i2c_timeout == 1) begin
+                    force_i2c_timeout_set.send();
+                end
+            endmethod
         endinterface
     endinterface
 
@@ -396,7 +448,6 @@ module mkQsfpModuleController #(Parameters parameters) (QsfpModuleController);
     method module_initialized = module_initialized_r;
 
     method tick_1ms = tick_1ms_._write;
-
 endmodule
 
 function Pins get_pins(QsfpModuleController m) = m.pins;
