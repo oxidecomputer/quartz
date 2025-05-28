@@ -84,6 +84,7 @@ bluesim_tests('I2CCoreTests',
         'mkI2CCoreRandomReadTest',
         'mkI2CCoreSclStretchTest',
         'mkI2CCoreSclStretchTimeoutTest',
+        'mkI2CCoreAbortTest',
     ],
     deps = [
         ':I2CBitController',
