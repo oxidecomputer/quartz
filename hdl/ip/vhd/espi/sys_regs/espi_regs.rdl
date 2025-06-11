@@ -116,4 +116,12 @@ addrmap espi_regs {
             desc = "MSB is bit 31";
         } payload[31:0] =  0;
     } last_post_code;
+
+    reg {
+        name = "Post Code Counter";
+        desc = "Count of valid post codes seen. Can also be reset by espi_reset.";
+        field {
+            desc = "";
+        } count[31:0] = 0;
+    } post_code_count;
 };
