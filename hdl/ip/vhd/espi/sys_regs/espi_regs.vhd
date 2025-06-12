@@ -42,6 +42,7 @@ architecture rtl of espi_regs is
     signal active_read        : std_logic;
     signal active_write       : std_logic;
     signal last_post_code_reg : last_post_code_type;
+    signal post_code_count_reg : post_code_count_type;
 
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
@@ -77,6 +78,7 @@ begin
         if reset then
             control_reg <= rec_reset;
             last_post_code_reg <= rec_reset;
+            post_code_count_reg <= rec_reset;
         elsif rising_edge(clk) then
             control_reg.cmd_fifo_reset <= '0';  -- self clearing
             control_reg.cmd_size_fifo_reset <= '0';  -- self clearing
@@ -89,8 +91,10 @@ begin
             end if;
             if espi_reset then
                 last_post_code_reg <= rec_reset;
+                post_code_count_reg <= rec_reset;
             elsif post_code_valid then
                last_post_code_reg <= unpack(post_code);
+               post_code_count_reg <= unpack(post_code_count_reg.count + 1);
             end if;
         end if;
     end process;
