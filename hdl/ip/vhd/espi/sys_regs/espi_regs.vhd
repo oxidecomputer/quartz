@@ -122,6 +122,7 @@ begin
                         rdata <= dbg_chan.rd.data;
                         resp_fifo_ack <= '1';
                     when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
+                    when POST_CODE_COUNT_OFFSET => rdata <= pack(post_code_count_reg);
                     when others =>
                         rdata <= (others => '0');
                 end case;
