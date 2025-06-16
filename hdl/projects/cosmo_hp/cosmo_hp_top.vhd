@@ -285,6 +285,7 @@ architecture rtl of cosmo_hp_top is
     signal in_a0 : std_logic;
     alias amd_gen_int_l is fpga2_to_fpga1_io(2); -- goes to fpga1 which can do the alert generation
     signal amd_gen_int : std_logic;
+    signal spi_fpga2_to_sp_mux_dat_int : std_logic;
     
 begin
 
@@ -344,6 +345,8 @@ begin
     ---------------------------------------
     -- Hubris SPI interface
     ---------------------------------------
+    spi_fpga2_to_sp_mux_dat <= spi_fpga2_to_sp_mux_dat_int when spi_sp_mux_to_fpga2_cs_l = '0' else 'Z';
+
     spi_axi_controller_inst: entity work.spi_axi_controller
      port map(
         clk => clk_50m,
@@ -351,7 +354,7 @@ begin
         csn => spi_sp_mux_to_fpga2_cs_l,
         sclk => spi_sp_mux_to_fpga2_sck,
         copi => spi_sp_mux_to_fpga2_dat,
-        cipo => spi_fpga2_to_sp_mux_dat,
+        cipo => spi_fpga2_to_sp_mux_dat_int,
         awvalid => sp_write_address_valid,
         awready => sp_write_address_ready,
         awaddr => sp_write_address_addr,
