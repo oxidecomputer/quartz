@@ -401,8 +401,8 @@ begin
     espi_dbg: process(clk_200m, reset_200m)
     begin
         if rising_edge(clk_200m) then
-            fpga1_spare_v1p8(0) <= i3c_fpga1_to_dimm_abcdef_scl;
-            fpga1_spare_v1p8(7) <= i3c_fpga1_to_dimm_abcdef_sda;
+            fpga1_spare_v1p8(0) <= uart0_sp_to_fpga1_dat;
+            fpga1_spare_v1p8(7) <= uart0_fpga1_to_sp5_dat_buff;
             fpga1_spare_v1p8(6) <= amd_hp_irq_n_final;
             fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
             fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
@@ -536,6 +536,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         dbg_uart_control => dbg_uart_control,
+        in_a0 => a0_ok,
         -- UART pins
         -- IPCC SP side
         ipcc_from_sp => uart1_sp_to_fpga1_dat,

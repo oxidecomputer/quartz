@@ -17,6 +17,7 @@ entity sp5_uart_subsystem is
         reset : in std_logic;
 
         dbg_uart_control : in uart_control_type;
+        in_a0 : in  std_logic;
         -- sp UART pins, ok to be un-syncd
         ipcc_from_sp : in std_logic;
         ipcc_to_sp : out std_logic;
@@ -53,7 +54,7 @@ entity sp5_uart_subsystem is
 end entity;
 
 architecture rtl of sp5_uart_subsystem is
-    constant BAUD_3M_AT_125M : integer := 5;
+    constant BAUD_3M_AT_125M : integer := 41; -- 125 MHz / 3 MHz = 41.6667, so round to 41
 
     signal console_host_to_sp : axi_st_t;
     signal console_sp_to_host : axi_st_t;
@@ -89,7 +90,7 @@ begin
     -- SP UART #0  -- Expected to be console uart sp-side
     sp_uart0: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => BAUD_3M_AT_125M,
+        CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 256,
@@ -102,6 +103,7 @@ begin
         tx_pin => console_to_sp_dat,
         rts_pin => console_to_sp_rts_l,
         cts_pin => console_from_sp_rts_l,
+        allow_rx => in_a0, -- allow rx only if in_a0 is set
         axi_clk => clk,
         axi_reset => reset,
         rx_ready => console_sp_to_host.ready,
@@ -116,7 +118,7 @@ begin
     -- wrapped uart-uart no espi interaction
     host_uart0: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => BAUD_3M_AT_125M,
+        CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 256,
@@ -129,6 +131,7 @@ begin
         tx_pin => fgpa_sp_to_host_int,
         rts_pin => fpga_sp_to_host_int_rts_l,
         cts_pin => host_to_fpga_rts_l,
+        allow_rx => in_a0, -- allow rx only if in_a0 is set
         axi_clk => clk,
         axi_reset => reset,
         rx_ready => console_host_to_sp.ready,
@@ -142,7 +145,7 @@ begin
     -- IPCC UART over eSPI
     sp_uart1: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => BAUD_3M_AT_125M,
+        CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 4096,
@@ -155,6 +158,7 @@ begin
         tx_pin => ipcc_to_sp,
         rts_pin => ipcc_to_sp_rts_l,
         cts_pin => ipcc_from_sp_rts_l,
+        allow_rx => in_a0, -- allow rx only if in_a0 is set
         axi_clk => clk,
         axi_reset => reset,
         rx_ready => ipcc_to_espi.ready,

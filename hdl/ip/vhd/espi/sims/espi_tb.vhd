@@ -206,7 +206,7 @@ begin
                 check(response.crc_ok, "Send UART CMD resp CRC Check failed");
                 dbg_get_response_size(net, gen_int);
                 print("PUT resp Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int));
-                wait for 10 * payload_size * 250 ns;  -- approx uart time for payload size
+                wait for 10 * payload_size * 350 ns;  -- approx uart time for payload size
                 status_rec := unpack(response.status);
                 if status_rec.oob_avail /= '1' then
                     dbg_wait_for_alert(net);
@@ -247,7 +247,7 @@ begin
                 check(response.crc_ok, "Send UART CMD resp CRC Check failed");
                 dbg_get_response_size(net, gen_int);
                 print("Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int));
-                wait for 10 * payload_size * 250 ns;  -- approx uart time for payload size
+                wait for 10 * payload_size * 350 ns;  -- approx uart time for payload size
                 status_rec := unpack(response.status);
                 if status_rec.pc_avail /= '1' then
                     dbg_wait_for_alert(net);

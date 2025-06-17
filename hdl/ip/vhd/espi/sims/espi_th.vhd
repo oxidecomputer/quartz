@@ -121,7 +121,7 @@ begin
 
     axi_fifo_st_uart_inst: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => 4,
+        CLKS_PER_BIT => 41,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 1024,

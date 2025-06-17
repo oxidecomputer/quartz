@@ -58,7 +58,7 @@ begin
 
     dut: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => 5,
+        CLKS_PER_BIT => 41,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 16,

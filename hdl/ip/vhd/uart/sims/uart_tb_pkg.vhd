@@ -17,9 +17,9 @@ library vunit_lib;
 
 package uart_tb_pkg is
 
-    constant rx_uart_bfm : uart_slave_t := new_uart_slave(initial_baud_rate => 3125000,
+    constant rx_uart_bfm : uart_slave_t := new_uart_slave(initial_baud_rate => 3000000,
     data_length => 8);
 
-    constant tx_uart_bfm : uart_master_t := new_uart_master(initial_baud_rate => 3125000);
+    constant tx_uart_bfm : uart_master_t := new_uart_master(initial_baud_rate => 3000000);
 
 end package;

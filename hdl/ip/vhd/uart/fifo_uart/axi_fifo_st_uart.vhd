@@ -14,7 +14,7 @@ use work.calc_pkg.all;
 
 entity axi_fifo_st_uart is
   generic(
-    CLK_DIV : natural; -- This is calculated to system clock period / (16 x desired baud rate)
+    CLKS_PER_BIT : natural;
     parity: boolean;
     use_hw_handshake: boolean;
     fifo_depth: natural range 16 to 4 * 1024 * 1024;
@@ -73,7 +73,7 @@ begin
   -- Actual UART serdes block
   axi_st_uart_inst: entity work.axi_st_uart
    generic map(
-      CLK_DIV => CLK_DIV,
+      CLKS_PER_BIT => CLKS_PER_BIT,
       parity => parity
   )
    port map(
@@ -81,6 +81,7 @@ begin
       reset => reset,
       rx_pin => rx_pin,
       tx_pin => tx_pin,
+      allowed_to_sample => allow_rx,
       rx_data => pre_fifo_rx_data,
       rx_valid => pre_fifo_rx_valid,
       tx_data => tx_fifo_rdata,

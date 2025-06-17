@@ -203,7 +203,7 @@ architecture rtl of grapefruit_top is
 
     signal fmc_axi_if : axil26x32_pkg.axil_t;
 
-    constant BAUD_3M_AT_125M : integer := 5;
+    constant BAUD_3M_AT_125M : integer := 41;
 
     -- TODO: someday I'd like the rdl stuff to both generate this and the fabric maybe?
     constant config_array : axil_responder_cfg_array_t := 
@@ -430,7 +430,7 @@ begin
     -- SP UART #0  -- Expected to be console uart
     sp_uart0: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => BAUD_3M_AT_125M,
+        CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 256,
@@ -456,7 +456,7 @@ begin
     -- IPCC UART over eSPI
     sp_uart1: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => BAUD_3M_AT_125M,
+        CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 4096,
@@ -500,7 +500,7 @@ begin
     -- wrapped uart-uart no espi interaction
     host_uart0: entity work.axi_fifo_st_uart
      generic map(
-        CLK_DIV => BAUD_3M_AT_125M,
+        CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
         fifo_depth => 256,
