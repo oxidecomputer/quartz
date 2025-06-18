@@ -63,14 +63,23 @@ def main():
     project_info.add_archive(zip_file)
     
     # Do build reports
-    project_info.report_timing()
+    timing_passed = project_info.report_timing()
     project_info.report_utilization()
 
     # extract files for GH release
+    skip_gh = args.skip_gh
     # do GH release
     if args.skip_gh:
         print("Skipping GH release per command line request")
-    gh_releaser.do_gh_release(api, project_info, args.skip_gh)
+    elif not timing_passed:
+        val = 'x'
+        while val not in ['y', 'n']:
+            val = input("Timing did not pass, do GH release anyway? (y/n): ")
+            val = val.lower()
+        if val == 'n':
+            print("Skipping GH release due to timing failure")
+            skip_gh = True
+    gh_releaser.do_gh_release(api, project_info, skip_gh)
 
     # put files in hubris location
     if args.hubris is None:
