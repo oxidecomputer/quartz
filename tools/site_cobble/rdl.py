@@ -65,7 +65,6 @@ def rdl(package, name, *,
             })
 
         )
-       
 
         return (our_using, [product])
 

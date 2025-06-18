@@ -66,6 +66,11 @@ def convert_field(rdlc: RDLCompiler, obj: FieldNode) -> dict:
     json_obj = dict()
     json_obj["type"] = "field"
     json_obj["inst_name"] = obj.inst_name
+    try:
+        json_obj["desc"] = obj.desc
+    except AttributeError:
+        print(obj.inst_name)
+        json_obj["desc"] = ""
     json_obj["lsb"] = obj.lsb
     json_obj["msb"] = obj.msb
     json_obj["reset"] = obj.get_property("reset")
@@ -97,7 +102,13 @@ def convert_reg(rdlc: RDLCompiler, obj: RegNode) -> dict:
     json_obj = dict()
     json_obj["type"] = "reg"
     json_obj["inst_name"] = obj.inst_name
-    json_obj["addr_offset"] = obj.address_offset
+    try:
+        json_obj["desc"] = obj.desc
+    except AttributeError:
+        print(obj.inst_name)
+        json_obj["desc"] = ""
+
+    json_obj["addr_offset"] = hex(obj.address_offset)
     json_obj["regwidth"] = obj.get_property("regwidth")
     json_obj["min_accesswidth"] = obj.get_property("accesswidth")
 
@@ -114,7 +125,8 @@ def convert_mem(obj: MemNode) -> dict:
     json_obj = dict()
     json_obj["type"] = "mem"
     json_obj["inst_name"] = obj.inst_name
-    json_obj["addr_offset"] = obj.address_offset
+    json_obj["desc"] = obj.desc
+    json_obj["addr_offset"] = hex(obj.address_offset)
     json_obj["memwidth"] = obj.get_property("memwidth")
     json_obj["mementries"] = obj.get_property("mementries")
 
@@ -139,7 +151,7 @@ def convert_addr_map_only(
 
     json_obj["inst_name"] = obj.inst_name
     json_obj["orig_type_name"] = obj.orig_type_name
-    json_obj["addr_offset"] = obj.address_offset
+    json_obj["addr_offset"] = hex(obj.address_offset)
 
     json_obj["children"] = []
     for child in obj.children():
@@ -168,7 +180,7 @@ def convert_addrmap_or_regfile(
         raise RuntimeError
 
     json_obj["inst_name"] = obj.inst_name
-    json_obj["addr_offset"] = obj.address_offset
+    json_obj["addr_offset"] = hex(obj.address_offset)
 
     json_obj["children"] = []
     for child in obj.children():
