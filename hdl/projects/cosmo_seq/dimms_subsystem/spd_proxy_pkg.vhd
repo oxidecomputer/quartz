@@ -16,6 +16,7 @@ package spd_proxy_pkg is
         i2c_cmd : cmd_t;
         i2c_cmd_valid : std_logic;
         start_prefetch : std_logic;
+        done_prefetch : std_logic;
         req : std_logic;
         grant : std_logic;
         i2c_tx_st_if : axi_st8_pkg.axi_st_t;
@@ -29,6 +30,7 @@ package spd_proxy_pkg is
         i2c_cmd : in;
         i2c_cmd_valid : in;
         start_prefetch : in;
+        done_prefetch : out;
         req : in;
         grant : out;
         spd_present : out;

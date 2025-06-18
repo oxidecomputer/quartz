@@ -65,14 +65,23 @@ architecture rtl of proxy_channel_top is
 
 begin
 
-    reg_rd_mux: process(all)
+    regs_if.done_prefetch <= sm_done;
+
+    -- This adds a 1 clock delay to the rd-data to ease timing paths.
+    -- Hubris can't turn around back-to-back clock reads so this should
+    -- be a don't care, but provides an additional clock of prop delay
+    reg_rd_mux: process(clk, reset)
     begin
-        regs_if.rd_data <= (others => '0');
-        for i in 0 to NUM_DIMMS_ON_BUS - 1 loop
-            if regs_if.selected_dimm(i) = '1' then
-                regs_if.rd_data <= cache_rdata(i);
-            end if;
-        end loop;
+        if reset then
+            regs_if.rd_data <= (others => '0');
+        elsif rising_edge(clk) then
+            regs_if.rd_data <= (others => '0');
+            for i in 0 to NUM_DIMMS_ON_BUS - 1 loop
+                if regs_if.selected_dimm(i) = '1' then
+                    regs_if.rd_data <= cache_rdata(i);
+                end if;
+            end loop;
+        end if;
     end process;
 
     -- For-generate our cache blocks here, one for each possible DIMM

@@ -209,8 +209,8 @@ set_property -dict { PACKAGE_PIN F5 IOSTANDARD LVCMOS33 } [get_ports { smbus_v12
 set_property -dict { PACKAGE_PIN F8 IOSTANDARD LVCMOS33 } [get_ports { smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert }];
 set_property -dict { PACKAGE_PIN B7 IOSTANDARD LVCMOS33 } [get_ports { smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l }];
 set_property -dict { PACKAGE_PIN K5 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_alert_l }];
-set_property -dict { PACKAGE_PIN AA9 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_debug[1] }];
-set_property -dict { PACKAGE_PIN AB9 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_debug[2] }];
+set_property -dict { PACKAGE_PIN AA9 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_debug1 }];
+set_property -dict { PACKAGE_PIN AB9 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_debug2 }];
 set_property -dict { PACKAGE_PIN Y4 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_genint_l }];
 set_property -dict { PACKAGE_PIN L6 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_pwrgd_out }];
 set_property -dict { PACKAGE_PIN J7 IOSTANDARD LVCMOS18 } [get_ports { sp5_to_fpga1_pwrok_unbuf }];
