@@ -229,7 +229,8 @@ entity cosmo_seq_top is
         spi1_sp5_to_fpga1_cs_l : in std_logic;
         spi2_sp5_to_fpga1_cs_l : in std_logic;
         sp5_to_fpga1_alert_l : in std_logic;
-        sp5_to_fpga1_debug : out std_logic_vector(2 downto 1);
+        sp5_to_fpga1_debug1 : out std_logic;
+        sp5_to_fpga1_debug2 : in std_logic;
         sp5_to_fpga1_genint_l : out std_logic; 
         sp5_to_fpga1_smerr_l : in std_logic;
 
@@ -718,8 +719,7 @@ begin
     sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
     sp5_seq_pins.slp_s5_l <= sp5_to_fpga1_slp_s5_l;
     fpga1_to_sp5_rsmrst_l <= sp5_seq_pins.rsmrst_l;
-    sp5_to_fpga1_debug(1) <= sp5_seq_pins.is_cosmo;
-    sp5_to_fpga1_debug(2) <= 'Z';
+    sp5_to_fpga1_debug1 <= sp5_seq_pins.is_cosmo;
     fpga1_to_sp5_pwrgd <= sp5_seq_pins.pwr_good;
 
     -- Nic sequence-related pins

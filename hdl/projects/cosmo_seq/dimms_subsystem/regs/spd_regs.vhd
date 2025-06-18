@@ -53,9 +53,11 @@ architecture rtl of spd_regs is
     signal ch1_rx_dpr_pop : std_logic;
     signal spd_select : spd_select_type;
     signal spd_rd_ptr : spd_rd_ptr_type;
+    signal spd_rd_ptr_timing_reg : spd_rd_ptr_type;
     signal spd_fifo_pop : std_logic;
     signal bus0_selected : std_logic;
     signal spd_select_vec : std_logic_vector(31 downto 0);
+    signal start_flag : std_logic;
 
     function mk_op(cmd : cmd_type) return op_t is
     begin
@@ -76,7 +78,7 @@ begin
         reg => cmd0.reg_addr,
         len => cmd0.len
     );
-    bus0.start_prefetch <= spd_ctrl.start;
+    bus0.start_prefetch <= start_flag;
     bus0.i2c_cmd_valid <= cmd0_valid_flag;
     bus0.req <= '0';
     bus0.selected_dimm <= spd_select_vec(7 downto 0);
@@ -88,7 +90,7 @@ begin
         reg => cmd1.reg_addr,
         len => cmd1.len
     );
-    bus1.start_prefetch <= spd_ctrl.start;
+    bus1.start_prefetch <= start_flag;
     bus1.i2c_cmd_valid <= cmd1_valid_flag;
     bus1.req <= '0';
     bus1.selected_dimm <= spd_select_vec(15 downto 8);
@@ -151,6 +153,7 @@ begin
 
    
    write_logic: process(clk, reset)
+        variable spd_ctrl_v : spd_ctrl_type;
     begin
         if reset then
             cmd0 <= rec_reset;
@@ -162,6 +165,7 @@ begin
             ch1_fifo_wdata <= (others => '0');
             cmd0_valid_flag <= '0';
             cmd1_valid_flag <= '0';
+            start_flag <= '0';
             spd_ctrl <= rec_reset;
             spd_select <= reset_0s;
             spd_rd_ptr <= rec_reset;
@@ -169,11 +173,15 @@ begin
         elsif rising_edge(clk) then
             cmd0_valid_flag <= '0';
             cmd1_valid_flag <= '0';
-            spd_ctrl <= rec_reset;
+            start_flag <= '0';
             ch0_fifo_write_flag <= '0';
             ch1_fifo_write_flag <= '0';
             fifo_ctrl.rx_fifo_reset <= '0'; -- flags so these clear after set also
             fifo_ctrl.tx_fifo_reset <= '0'; -- flags so these clear after set also
+            
+            if bus0.done_prefetch and bus1.done_prefetch then
+                spd_ctrl <= rec_reset;
+            end if;
 
             if spd_fifo_pop then
                 spd_rd_ptr.addr <= spd_rd_ptr.addr + 1;
@@ -182,7 +190,9 @@ begin
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
                     when SPD_CTRL_OFFSET => 
-                       spd_ctrl <= unpack(axi_if.write_data.data);
+                       spd_ctrl_v := unpack(axi_if.write_data.data);
+                       spd_ctrl <= spd_ctrl_v;
+                       start_flag <= spd_ctrl_v.start;
                     when FIFO_CTRL_OFFSET => fifo_ctrl <= unpack(axi_if.write_data.data);
                     when SPD_SELECT_OFFSET => spd_select <= unpack(axi_if.write_data.data);
                     when SPD_RD_PTR_OFFSET => spd_rd_ptr <= unpack(axi_if.write_data.data);
@@ -217,11 +227,17 @@ begin
             rdata <= (others => '0');
             spd_fifo_pop <= '0';
             spd_present <=  reset_0s;
+            spd_rd_ptr_timing_reg <= rec_reset;
 
         elsif rising_edge(clk) then
             ch0_rx_dpr_pop <= '0';
             ch1_rx_dpr_pop <= '0';
             spd_fifo_pop <= '0';
+
+            -- Timing issues with the fanout of this and reading it back.
+            -- We'll buffer a copy here to read back and it nothing happens
+            -- cycle-over-cycle from hubris so the 1clk delay is just fine.
+            spd_rd_ptr_timing_reg <= spd_rd_ptr;
 
             spd_present<= (
                 bus0_a => bus0.spd_present(0),
@@ -239,11 +255,12 @@ begin
 
             if active_read then
                 case to_integer(unsigned(axi_if.read_address.addr)) is
+                    when SPD_CTRL_OFFSET => rdata <= pack(spd_ctrl);
                     when FIFO_CTRL_OFFSET => rdata <= pack(fifo_ctrl);
                     when DIMM_PCAMP_OFFSET => rdata <= pack(dimm_pcamp);
                     when SPD_PRESENT_OFFSET => rdata <= pack(spd_present);
                     when SPD_SELECT_OFFSET => rdata <= pack(spd_select);
-                    when SPD_RD_PTR_OFFSET => rdata <= pack(spd_rd_ptr);
+                    when SPD_RD_PTR_OFFSET => rdata <= pack(spd_rd_ptr_timing_reg);
                     when SPD_RDATA_OFFSET =>
                         spd_fifo_pop <= '1';
                         if bus0_selected then
@@ -265,7 +282,7 @@ begin
                     when BUS1_RX_RDATA_OFFSET => 
                         rdata <= buffer1_if.rx_rdata;
                         ch1_rx_dpr_pop <= '1';
-                    when others => rdata <= (others => '1');
+                    when others => rdata <= (others => '0');
                 end case;
             end if;
 
