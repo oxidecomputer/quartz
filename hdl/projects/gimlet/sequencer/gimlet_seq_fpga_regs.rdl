@@ -261,6 +261,7 @@ addrmap gimlet_seq_fpga {
         } A0SM[7:0];
     };
     a0_sm A0SMSTATUS;
+
     reg {
         name = "Nic SM Status";
         desc = "Nic 'live' state machine status";
@@ -279,6 +280,7 @@ addrmap gimlet_seq_fpga {
         } NicSM[7:0];
         // TODO: A1 state machine decode in here
     } NICSMSTATUS;
+
     reg {
         name = "Board Ver straps";
         desc = "3 bits of board version based on input straps";
@@ -287,6 +289,7 @@ addrmap gimlet_seq_fpga {
             desc = "0x7 or 0x0 = A. 0x1 = B, 0x2 = C, 0x3 = D, 0x4 = E";
         } ID[2:0];
     } BOARD_REV;
+
     // Readback blocks:
     // These are built as contiguous registers so that a single multi-byte read 
     // could capture all of them.
@@ -326,21 +329,17 @@ addrmap gimlet_seq_fpga {
         default sw = r;
 
         field {
-            desc = "Readback for V1P5_SP_VDD_RTC_A1 rail.
-            (SP3_TO_SEQ_RTC_V1P5_EN - a poor net name)";
+            desc = "Readback for V1P5_SP_VDD_RTC_A1 rail from U494 (SP3_TO_SEQ_RTC_V1P5_PG net)";
         } V1P5_RTC_PG[1] = 0;
 
         field {
-            desc = "Readback for V3P3_SP3_VDD_33_S5_A1 rail 
-            (SP3_TO_SEQ_V3P3_S5_PG)";
+            desc = "Readback for V3P3_SP3_VDD_33_S5_A1 rail from U483 (SP3_TO_SEQ_V3P3_S5_PG net)";
         } V3P3_S5_PG[1] = 0;
         field {
-            desc = "Readback for V1P8_SP3_VDD_18_S5_A rail 
-            (SP3_TO_SEQ_V1P8_S5_PG)";
+            desc = "Readback for V1P8_SP3_VDD_18_S5_A rail from U486 (SP3_TO_SEQ_V1P8_S5_PG net)";
         } V1P8_S5_PG[1] = 0;
         field {
-            desc = "Readback for V0P9_SP3_VDD_SOC_S5_A1 rail 
-            (SP3_TO_SEQ_V0P9_VDD_SOC_S5_PG)";
+            desc = "Readback for V0P9_SP3_VDD_SOC_S5_A1 rail from U490 (SP3_TO_SEQ_V0P9_VDD_SOC_S5_PG net)";
         } V0P9_VDD_SOC_S5_PG[1] = 0;
     } A1_READBACKS;
 
@@ -350,16 +349,16 @@ addrmap gimlet_seq_fpga {
         default sw = r;
 
         field {
-            desc = "SP3_TO_SP_SLP_S3 inversion of signal from AMD CPU, Used
+            desc = "SP3_TO_SEQ_SLP_S3_L inversion of signal from AMD CPU, Used
             at beginning of GroupB state machine";
         } SLP_S3[1] = 0;
         field {
-            desc = "SP3_TO_SP_SLP_S5 inversion of signal from AMD CPU, Used 
+            desc = "SP3_TO_SEQ_SLP_S5_L inversion of signal from AMD CPU, Used 
             at beginning of GroupB state machine";
         } SLP_S5[1] = 0;
         field {
             desc = "Asserted by AMD after PWR_GOOD is asserted by sequencer 
-            should be here in: min 15ms, max of 20.4ms(SP3_TO_SEQ_PWROK_V3P3 net)";
+            should be here in: min 15ms, max of 20.4ms (SP3_TO_SEQ_PWROK_V3P3 net)";
         } PWROK[1] = 0;
         field {
             desc = "Asserted (and inverted) from AMD's RESET_L pin. 10Ms minimum assertion time, 
@@ -373,10 +372,10 @@ addrmap gimlet_seq_fpga {
         default sw = r;
 
         field {
-            desc = "Readback from VPP_ABCD_A0 rail (PWR_CONT_DIMM_ABCD_PG0 net)";
+            desc = "Readback from VPP_ABCD_A0 rail from UP36. As indicated by PWR_CONT_DIMM_PG0 from U352.";
         } VPP_ABCD_PG[1] = 0;
         field {
-            desc = "Readback from VPP_EFGH_A0 rail (PWR_CONT_DIMM_EFGH_PG0 net)";
+            desc = "Readback from VPP_EFGH_A0 rail from UP37. As indicated by PWR_CONT_DIMM_PG1 from U352.";
         } VPP_EFGH_PG[1] = 0;
         field {
             desc = "Readback from VDD_MEM_ABCD_A0 rail (PWR_CONT1_SP3_PG1)
@@ -389,18 +388,16 @@ addrmap gimlet_seq_fpga {
             VDD_MEM_EFGH_A0";
         } VDD_MEM_EFGH_PG[1];
         field {
-            desc = "Readback for VTT_ABCD_A0 rail (VTT_ABCD_A0_TO_SEQ_PG_L) inverted";
+            desc = "Readback for VTT_AB_A0 and VTT_CD_A0 rails. This is a logical AND of VTT_AB_A0_TO_SEQ_PG (U432) and VTT_CD_A0_TO_SEQ_PG (U563)";
         } VTT_ABCD_PG[1];
         field {
-            desc = "Readback for VTT_EFGH_A0 rail (VTT_EFGH_A0_TO_SEQ_PG_L) inverted";
+            desc = "Readback for VTT_EF_A0 and VTT_GH_A0 rails. This is a logical AND of VTT_EF_A0_TO_SEQ_PG (U445) and VTT_GH_A0_TO_SEQ_PG (U564)";
         } VTT_EFGH_PG[1];
         field {
-            desc = "Readback for V1P8_SP3_VDD_18_A0 rail (SEQ_V1P8_SP3_VDD_PG_L) inverted";
+            desc = "Readback for V1P8_SP3_VDD_18_A0 rail from UP38. As indicated by SEQ_V1P8_SP3_VDD_PG from U352.";
         } V1P8_SP3_PG[1];
         field {
-            desc = "Readback from V3P3_SYS_A0 rail (PWR_CONT_DIMM_ABCD_PG1)
-            PG1 from ISL68224 U352, should be configured to represent 
-            V3P3_SYS_A0 rail status";
+            desc = "Readback from V3P3_SYS_A0 rail from U360 (V3P3_SYS_TO_SEQ_PG net)";
         } V3P3_SYS_PG[1] = 0;
     };
     Groupb_Pg GROUPB_PG;
@@ -467,22 +464,22 @@ addrmap gimlet_seq_fpga {
         name = "Power Status for NIC HP supplies";
         default sw = r;
         field {
-            desc = "Power good for V0P96_NIC_VDD_A0HP (PWR_CONT_NIC_PG0 net)";
+            desc = "Power good for V0P96_NIC_VDD_A0HP from U565 (PWR_CONT_NIC_PG0 net)";
         } NIC_V0P96_PG[1] = 0;
         field {
-            desc = "Power good for V1P1_NIC_ETH_IO_A0HP (inverted NIC_TO_SEQ_V1P1_PG_L net)";
+            desc = "Power good for V1P1_NIC_ETH_IO_A0HP from U630 (inverted NIC_TO_SEQ_V1P1_PG_L net)";
         } NIC_V1P1_PG[1] = 0;
         field {
-            desc = "Power good for V1P2_NIC_MDIO_A0HP  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+            desc = "Power good for V1P2_NIC_MDIO_A0HP from U424 (inverted NIC_TO_SEQ_V1P2_PG_L net)";
         } NIC_V1P2_PG[1] = 0;
          field {
-            desc = "Power good for V1P2_NIC_ETH  (inverted NIC_TO_SEQ_V1P2_PG_L net)";
+            desc = "Power good for V1P2_NIC_ENET_A0HP from U424 (NIC_TO_SEQ_V1P2_ENET_PG net)";
         } NIC_V1P2_ENET_PG[1] = 0;
         field {
-            desc = "Power good for V1P5_NIC_AVDD_A0HP (inverted NIC_TO_SEQ_V1P5A_PG_L net)";
+            desc = "Power good for V1P5_NIC_AVDD_A0HP from U360 (NIC_TO_SEQ_V1P5A_PG net)";
         } NIC_V1P5A_PG[1] = 0;
         field {
-            desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP (inverted NIC_TO_SEQ_V1P5D_PG_L net)";
+            desc = "Power good for V1P5_NIC_PCIE_MEM_A0HP from U360 (NIC_TO_SEQ_V1P5D_PG net)";
         } NIC_V1P5D_PG[1] = 0;
         field {
             desc = "Power good for LDO_V3P3";
