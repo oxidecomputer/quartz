@@ -775,6 +775,8 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(DBG_CTRL_RESP_IDX),
+        in_a0 => a0_ok,
+        sp5_debug2_pin => sp5_to_fpga1_debug2,
         uart_dbg_if => uart_dbg_if
     );
 

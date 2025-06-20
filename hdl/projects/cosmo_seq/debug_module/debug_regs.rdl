@@ -95,4 +95,16 @@ addrmap debug_regs {
           } usedwds[7:0] = 0;
       } sp5_ipcc_uart_to_axi_usedwds;
 
+    reg {
+        name = "SP5 DBG2 toggle counter";
+        field {
+            desc = "Saturating u32 counter that counts the number of times the SP5 DBG2 pin has toggled in this a0 power cycle. ";
+        } cnts[31:0] = 0;
+    } sp5_dbg2_toggle_counter;
+    reg {
+        name = "SP5 DBG2 toggle timer";
+        field {
+            desc = "Saturating u32 counter that counts the number 8ns clock cycles since last SP5 DBG2 pin toggle in this a0 power cycle.";
+        } cnts[31:0] = 0;
+    } sp5_dbg2_toggle_timer;
 };

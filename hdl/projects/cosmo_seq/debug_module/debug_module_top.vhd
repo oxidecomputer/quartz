@@ -22,18 +22,83 @@ entity debug_module_top is
 
         axi_if : view axil_target;
 
+        in_a0 : in std_logic;
+        sp5_debug2_pin : in std_logic;
+
         uart_dbg_if : view uart_dbg_dbg_if
 
     );
 end entity;
 
 architecture rtl of debug_module_top is
+    constant TOGGLE_MAX : std_logic_vector(31 downto 0) := (others => '1'); -- Max toggle count before we stop counting
     signal rdata : std_logic_vector(31 downto 0);
     signal active_read : std_logic;
     signal active_write : std_logic;
     signal dbg_uart_control : uart_control_type;
     signal uart_pin_status: uart_pin_status_type;
+    signal sp5_debug2_pin_syncd : std_logic;
+    signal in_a0_last : std_logic;
+    signal pin_toggle_cnts : std_logic_vector(31 downto 0);
+    signal dbg_pin_last : std_logic;
+    signal clks_since_last_toggle : std_logic_vector(31 downto 0);
+    signal pin_has_toggled_atleast_once : std_logic;
 begin
+
+    -- Some functional stuff for this block
+    -- Meta sync for input from SP5
+    meta_sync_inst: entity work.meta_sync
+     port map(
+        async_input => sp5_debug2_pin,
+        clk => clk,
+        sycnd_output => sp5_debug2_pin_syncd
+    );
+
+    sp5_dbg_proc: process(clk, reset)
+        variable a0_start : std_logic;
+        variable pin_toggled : std_logic;
+    begin
+        if reset then
+            in_a0_last <= '0';
+            dbg_pin_last <= '0';
+            pin_has_toggled_atleast_once <= '0';
+            pin_toggle_cnts <= (others => '0');
+            clks_since_last_toggle <= (others => '0');
+
+        elsif rising_edge(clk) then
+            -- last state flip flops
+            dbg_pin_last <= sp5_debug2_pin_syncd;
+            in_a0_last <= in_a0;
+            -- Detect the start of a0 for clearing registers
+            a0_start := '1' when in_a0_last = '0' and in_a0 = '1' else '0';
+            -- detect the pin toggling
+            pin_toggled := dbg_pin_last xor sp5_debug2_pin_syncd;
+
+            
+            -- deal with toggle counter
+            if a0_start then
+                pin_toggle_cnts <= (others => '0');
+                pin_has_toggled_atleast_once <= '0';
+            else
+                if in_a0 = '1' and pin_toggled = '1' and pin_toggle_cnts <= TOGGLE_MAX then
+                    pin_toggle_cnts <= pin_toggle_cnts + 1;
+                    pin_has_toggled_atleast_once <= '1';
+                end if;
+            end if;
+
+            -- deal with toggle timer
+            if a0_start then
+                clks_since_last_toggle <= (others => '0');
+            else
+                if in_a0 and pin_toggled then
+                    clks_since_last_toggle <= (others => '0');
+                elsif in_a0 = '1' and pin_has_toggled_atleast_once = '1' and clks_since_last_toggle < TOGGLE_MAX then
+                        clks_since_last_toggle <= clks_since_last_toggle + 1;
+                end if;
+            end if;
+           
+        end if;
+    end process;
 
     -- Assign the output(s):
     uart_dbg_if.sp5_console_uart_to_header <= dbg_uart_control.sp5_to_header;
@@ -98,7 +163,9 @@ begin
                     when SP5_CONSOLE_UART_TO_AXI_USEDWDS_OFFSET => rdata <= resize(uart_dbg_if.host_uart0.uart_to_axi_fifo_usedwds, 32);
                     when SP5_AXI_TO_IPCC_UART_USEDWDS_OFFSET => rdata <= resize(uart_dbg_if.sp_uart1.axi_to_uart_fifo_usedwds, 32);
                     when SP5_IPCC_UART_TO_AXI_USEDWDS_OFFSET => rdata <= resize(uart_dbg_if.sp_uart1.uart_to_axi_fifo_usedwds, 32);
-                    --when CONSOLE_UART_PIN_STATUS_OFFSET : integer := 20;
+                    when UART_PIN_STATUS_OFFSET => rdata <= pack(uart_pin_status);
+                    when SP5_DBG2_TOGGLE_COUNTER_OFFSET => rdata <= pin_toggle_cnts;
+                    when SP5_DBG2_TOGGLE_TIMER_OFFSET => rdata <= clks_since_last_toggle;
                     when others => rdata <= (others => '0');
                 end case;
             end if;
