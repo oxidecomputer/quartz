@@ -48,6 +48,7 @@ entity sp5_sequencer is
         nic_rails_pins : view nic_power_at_fpga;
         -- nic sequencing I/O
         nic_seq_pins: view nic_seq_at_fpga;
+        allow_backplane_pcie_clk : out std_logic;
 
         sp5_t6_power_en : in std_logic;
         sp5_t6_perst_l : in std_logic;
@@ -122,6 +123,7 @@ begin
         clk => clk,
         reset => reset,
         axi_if => axi_if,
+        allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         early_power_ctrl => early_power_ctrl,
         early_power_rdbks => early_power_rdbks,
         power_ctrl => power_ctrl,

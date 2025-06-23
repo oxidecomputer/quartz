@@ -389,6 +389,7 @@ architecture rtl of cosmo_seq_top is
     signal fpga2_hp_irq_n : std_logic;
     alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
     signal uart_dbg_if : uart_dbg_t;
+    signal allow_backplane_pcie_clk : std_logic;
 
 begin
 
@@ -584,6 +585,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(SP5_HP_RESP_IDX),
+        allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         sp5_i2c_sda => i2c_sp5_to_fpgax_hp_sda,
         sp5_i2c_sda_o => sp5_sda_o,
         sp5_i2c_sda_oe => sp5_sda_oe,
@@ -637,6 +639,7 @@ begin
         axi_if => responders(SEQ_RESP_IDX),
         a0_ok => a0_ok,
         a0_idle => a0_idle,
+        allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         early_power_pins => early_power,
         ddr_bulk_pins => ddr_bulk,
         group_a_pins => sp5_group_a,

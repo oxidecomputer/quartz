@@ -33,6 +33,7 @@ entity sp5_hotplug_subsystem is
         a0_ok : in std_logic;
 
         axi_if : view axil_target;
+        allow_backplane_pcie_clk : in std_logic;
 
         -- M.2 things
         --m.2a
@@ -200,7 +201,11 @@ begin
     io(3)(3) <= '1';  -- PEDET for T6
     io(3)(1) <= '1'; -- TODO: power fault l
     io(3)(2) <= '1'; -- attnsw_l
-    pcie_clk_buff_rsw_oe_l <= pcie_aux_rsw_prsnt_buff_l;  -- Is this right?
+
+    -- Pass through presence, but gate it by hubris control over whether we drive this or not.
+    -- This is so that we don't send the clock into the backplane when in a rack, we don't need
+    -- it and it's bad for EMC.
+    pcie_clk_buff_rsw_oe_l <= pcie_aux_rsw_prsnt_buff_l when allow_backplane_pcie_clk else '1';
 
 
 

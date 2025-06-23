@@ -19,6 +19,7 @@ entity sequencer_regs is
         clk : in std_logic;
         reset : in std_logic;
 
+        allow_backplane_pcie_clk : out std_logic;
         axi_if : view axil8x32_pkg.axil_target;
         -- from early block
         early_power_ctrl: out early_power_ctrl_type;
@@ -71,17 +72,19 @@ architecture rtl of sequencer_regs is
 
     signal rails_pg_max : rails_type;
    
-
     signal rdata : std_logic_vector(31 downto 0);
     signal active_read : std_logic;
     signal active_write : std_logic;
     signal therm_trip_last : std_logic;
     signal smerr_assert_last : std_logic;
 
+    signal pcie_clk_ctrl : pcie_clk_ctrl_type;
+
 begin
 
     ignition_mux_sel <= ignition_control.mux_to_ignition;
     ignition_creset <= ignition_control.ignition_creset;
+    allow_backplane_pcie_clk <= pcie_clk_ctrl.clk_en;
 
     -- non-axi-specific logic
     seq_regs_specific: process(clk, reset)
@@ -187,6 +190,7 @@ begin
             debug_enables <= rec_reset;
             nic_overrides <= rec_reset;
             ignition_control <= rec_reset;
+            pcie_clk_ctrl <= rec_reset;
 
         elsif rising_edge(clk) then
             ifr.thermtrip <= ifr.thermtrip or (not therm_trip_last and therm_trip);
@@ -202,6 +206,7 @@ begin
                     when DEBUG_ENABLES_OFFSET => debug_enables <= unpack(axi_if.write_data.data);
                     when NIC_OVERRIDES_OFFSET => nic_overrides <= unpack(axi_if.write_data.data);
                     when IGNITION_CONTROL_OFFSET => ignition_control <= unpack(axi_if.write_data.data);
+                    when PCIE_CLK_CTRL_OFFSET => pcie_clk_ctrl <= unpack(axi_if.write_data.data);
                     when others => null;
                 end case;
             end if;
@@ -238,6 +243,7 @@ begin
                     when DEBUG_ENABLES_OFFSET => rdata <= pack(debug_enables);
                     when NIC_OVERRIDES_OFFSET => rdata <= pack(nic_overrides);
                     when IGNITION_CONTROL_OFFSET => rdata <= pack(ignition_control);
+                    when PCIE_CLK_CTRL_OFFSET => rdata <= pack(pcie_clk_ctrl);
                     when others => rdata <= (others => '0');
                 end case;
             end if;
