@@ -66,10 +66,14 @@ begin
                 -- Expect to get 3 bytes back, so poll until we see that in the FIFO
                 data32 := 32x"3";
                 wait_until_read_equals(net, bus_handle, To_StdLogicVector(BUS0_RX_BYTE_COUNT_OFFSET, bus_handle.p_address_length), data32);
+                --read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RDATA_OFFSET, bus_handle.p_address_length), data32);
                 -- check the response.
                 read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RDATA_OFFSET, bus_handle.p_address_length), data32);
                 check_match(data32, std_logic_vector'(X"--CCBBAA"), "Read data mismatch");
-                null;
+                write_bus(net, bus_handle, To_StdLogicVector(FIFO_CTRL_OFFSET, bus_handle.p_address_length), X"FFFF_FFFF");
+
+                read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RADDR_OFFSET, bus_handle.p_address_length), data32);
+
             elsif run("spd_sm_prefetch") then
                 write_word(memory(I2C_DIMM1_TGT_VC), 16#80#, X"AA");
                 write_word(memory(I2C_DIMM1_TGT_VC), 16#81#, X"BB");

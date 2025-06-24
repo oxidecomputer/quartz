@@ -17,6 +17,8 @@ use work.sp5_uart_subsystem_pkg.all;
 
 entity debug_module_top is
     port (
+        clk_200m : in std_logic;
+        reset_200m : in std_logic;
         clk : in std_logic;
         reset : in std_logic;
 
@@ -25,7 +27,38 @@ entity debug_module_top is
         in_a0 : in std_logic;
         sp5_debug2_pin : in std_logic;
 
-        uart_dbg_if : view uart_dbg_dbg_if
+        uart_dbg_if : view uart_dbg_dbg_if;
+
+        -- hotplug
+        i2c_sp5_to_fpgax_hp_sda: in std_logic;
+        i2c_sp5_to_fpgax_hp_scl: in std_logic;
+        -- sp
+        i2c_sp_to_fpga1_scl: in std_logic;
+        i2c_sp_to_fpga1_sda: in std_logic;
+        -- dimms
+        i3c_sp5_to_fpga1_abcdef_scl: in std_logic;
+        i3c_sp5_to_fpga1_abcdef_sda: in std_logic;
+        i3c_sp5_to_fpga1_ghijkl_scl: in std_logic;
+        i3c_sp5_to_fpga1_ghijkl_sda: in std_logic;
+        i3c_fpga1_to_dimm_abcdef_scl: in std_logic;
+        i3c_fpga1_to_dimm_abcdef_sda: in std_logic;
+        i3c_fpga1_to_dimm_ghijkl_scl: in std_logic;
+        i3c_fpga1_to_dimm_ghijkl_sda: in std_logic;
+        -- UARTs
+        uart1_sp_to_fpga1_dat: in std_logic; -- sp ipcc
+        uart1_fpga1_to_sp_dat : in std_logic; -- sp ipcc
+        uart0_sp_to_fpga1_dat: in std_logic; -- sp console
+        uart0_fpga1_to_sp_dat : in std_logic; -- sp console
+        uart0_fpga1_to_sp5_dat : in std_logic; -- sp5 console
+        uart0_sp5_to_fpga1_dat : in std_logic; -- sp5 console
+
+        -- ESPI signals
+        espi0_sp5_to_fpga_clk: in std_logic;
+        espi0_sp5_to_fpga_cs_l: in std_logic;
+        espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
+        espi_resp_csn: in std_logic;
+
+        fpga1_spare_v1p8 : out std_logic_vector(7 downto 0); -- 8 spare pins on the debug header
 
     );
 end entity;
@@ -43,7 +76,39 @@ architecture rtl of debug_module_top is
     signal dbg_pin_last : std_logic;
     signal clks_since_last_toggle : std_logic_vector(31 downto 0);
     signal pin_has_toggled_atleast_once : std_logic;
+    signal dbg_1v8_ctrl : dbg_1v8_ctrl_type;
 begin
+
+    -- Debug header control block
+    debug_header_inst: entity work.debug_header
+     port map(
+        clk_200m => clk_200m,
+        reset_200m => reset_200m,
+        dbg_1v8_ctrl => dbg_1v8_ctrl,
+        i2c_sp5_to_fpgax_hp_sda => i2c_sp5_to_fpgax_hp_sda,
+        i2c_sp5_to_fpgax_hp_scl => i2c_sp5_to_fpgax_hp_scl,
+        i2c_sp_to_fpga1_scl => i2c_sp_to_fpga1_scl,
+        i2c_sp_to_fpga1_sda => i2c_sp_to_fpga1_sda,
+        i3c_sp5_to_fpga1_abcdef_scl => i3c_sp5_to_fpga1_abcdef_scl,
+        i3c_sp5_to_fpga1_abcdef_sda => i3c_sp5_to_fpga1_abcdef_sda,
+        i3c_sp5_to_fpga1_ghijkl_scl => i3c_sp5_to_fpga1_ghijkl_scl,
+        i3c_sp5_to_fpga1_ghijkl_sda => i3c_sp5_to_fpga1_ghijkl_sda,
+        i3c_fpga1_to_dimm_abcdef_scl => i3c_fpga1_to_dimm_abcdef_scl,
+        i3c_fpga1_to_dimm_abcdef_sda => i3c_fpga1_to_dimm_abcdef_sda,
+        i3c_fpga1_to_dimm_ghijkl_scl => i3c_fpga1_to_dimm_ghijkl_scl,
+        i3c_fpga1_to_dimm_ghijkl_sda => i3c_fpga1_to_dimm_ghijkl_sda,
+        uart1_sp_to_fpga1_dat => uart1_sp_to_fpga1_dat,
+        uart1_fpga1_to_sp_dat => uart1_fpga1_to_sp_dat,
+        uart0_sp_to_fpga1_dat => uart0_sp_to_fpga1_dat,
+        uart0_fpga1_to_sp_dat => uart0_fpga1_to_sp_dat,
+        uart0_fpga1_to_sp5_dat => uart0_fpga1_to_sp5_dat,
+        uart0_sp5_to_fpga1_dat => uart0_sp5_to_fpga1_dat,
+        espi0_sp5_to_fpga_clk => espi0_sp5_to_fpga_clk,
+        espi0_sp5_to_fpga_cs_l => espi0_sp5_to_fpga_cs_l,
+        espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
+        espi_resp_csn => espi_resp_csn,
+        fpga1_spare_v1p8 => fpga1_spare_v1p8
+    );
 
     -- Some functional stuff for this block
     -- Meta sync for input from SP5
@@ -131,6 +196,7 @@ begin
     axi_if.read_data.data <= rdata;
 
     write_logic: process(clk, reset)
+        variable dbg_convenience : dbg_convenience_type;
     begin
         if reset then
             dbg_uart_control <= rec_reset;
@@ -140,6 +206,20 @@ begin
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
                     when UART_CONTROL_OFFSET => dbg_uart_control <= unpack(axi_if.write_data.data);
+                    when DBG_1V8_CTRL_OFFSET => dbg_1v8_ctrl <= unpack(axi_if.write_data.data);
+                    when DBG_CONVENIENCE_OFFSET =>
+                        dbg_convenience := unpack(axi_if.write_data.data);
+                        if dbg_convenience.espi_dbg_x1_en then
+                            dbg_1v8_ctrl.pins7_6 <= ESPI_BUS;
+                            dbg_1v8_ctrl.pins5_4 <= ESPI_BUS;
+                            dbg_1v8_ctrl.pins3_2 <= ESPI_BUS;
+                        elsif dbg_convenience.espi_dbg_x4_en then
+                            dbg_1v8_ctrl.pins7_6 <= ESPI_BUS;
+                            dbg_1v8_ctrl.pins5_4 <= ESPI_BUS;
+                            dbg_1v8_ctrl.pins3_2 <= ESPI_BUS;
+                            dbg_1v8_ctrl.pins1_0 <= ESPI_BUS;
+                        end if;
+
                     when others => null;
                 end case;
             end if;
@@ -166,6 +246,7 @@ begin
                     when UART_PIN_STATUS_OFFSET => rdata <= pack(uart_pin_status);
                     when SP5_DBG2_TOGGLE_COUNTER_OFFSET => rdata <= pin_toggle_cnts;
                     when SP5_DBG2_TOGGLE_TIMER_OFFSET => rdata <= clks_since_last_toggle;
+                    when DBG_1V8_CTRL_OFFSET => rdata <= pack(dbg_1v8_ctrl);
                     when others => rdata <= (others => '0');
                 end case;
             end if;

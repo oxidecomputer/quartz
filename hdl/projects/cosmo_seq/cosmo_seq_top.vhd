@@ -399,20 +399,6 @@ begin
         clk => clk_125m,
         sycnd_output => fpga2_hp_irq_n
     );
-
-    espi_dbg: process(clk_200m, reset_200m)
-    begin
-        if rising_edge(clk_200m) then
-            fpga1_spare_v1p8(0) <= uart0_sp_to_fpga1_dat;
-            fpga1_spare_v1p8(7) <= uart0_fpga1_to_sp5_dat_buff;
-            fpga1_spare_v1p8(6) <= amd_hp_irq_n_final;
-            fpga1_spare_v1p8(1) <= espi0_sp5_to_fpga1_clk;
-            fpga1_spare_v1p8(2) <= espi0_sp5_to_fpga1_cs_l;
-            fpga1_spare_v1p8(3) <= espi0_sp5_to_fpga1_dat(0);
-            fpga1_spare_v1p8(4) <= espi0_sp5_to_fpga1_dat(1);
-            fpga1_spare_v1p8(5) <= espi_resp_csn;
-        end if;
-    end process;
     -- misc things tied:
     fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
@@ -775,12 +761,44 @@ begin
 
     debug_module_top_inst: entity work.debug_module_top
      port map(
+        clk_200m => clk_200m,
+        reset_200m => reset_200m,
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(DBG_CTRL_RESP_IDX),
         in_a0 => a0_ok,
         sp5_debug2_pin => sp5_to_fpga1_debug2,
-        uart_dbg_if => uart_dbg_if
+        uart_dbg_if => uart_dbg_if,
+         -- hotplug
+        i2c_sp5_to_fpgax_hp_sda => i2c_sp5_to_fpgax_hp_sda,
+        i2c_sp5_to_fpgax_hp_scl => i2c_sp5_to_fpgax_hp_scl,
+        -- sp
+        i2c_sp_to_fpga1_scl => i2c_sp_to_fpga1_scl,
+        i2c_sp_to_fpga1_sda => i2c_sp_to_fpga1_sda,
+        -- dimms
+        i3c_sp5_to_fpga1_abcdef_scl => i3c_sp5_to_fpga1_abcdef_scl,
+        i3c_sp5_to_fpga1_abcdef_sda => i3c_sp5_to_fpga1_abcdef_sda,
+        i3c_sp5_to_fpga1_ghijkl_scl => i3c_sp5_to_fpga1_ghijkl_scl,
+        i3c_sp5_to_fpga1_ghijkl_sda => i3c_sp5_to_fpga1_ghijkl_sda,
+        i3c_fpga1_to_dimm_abcdef_scl => i3c_fpga1_to_dimm_abcdef_scl,
+        i3c_fpga1_to_dimm_abcdef_sda => i3c_fpga1_to_dimm_abcdef_sda,
+        i3c_fpga1_to_dimm_ghijkl_scl => i3c_fpga1_to_dimm_ghijkl_scl,
+        i3c_fpga1_to_dimm_ghijkl_sda => i3c_fpga1_to_dimm_ghijkl_sda,
+        -- UARTs
+        uart1_sp_to_fpga1_dat =>  uart1_sp_to_fpga1_dat,
+        uart1_fpga1_to_sp_dat  =>  uart1_fpga1_to_sp_dat,
+        uart0_sp_to_fpga1_dat =>  uart0_sp_to_fpga1_dat,
+        uart0_fpga1_to_sp_dat  =>  uart0_fpga1_to_sp_dat,
+        uart0_fpga1_to_sp5_dat  =>  uart0_fpga1_to_sp5_dat_buff,
+        uart0_sp5_to_fpga1_dat  =>  uart0_sp5_to_fpga1_dat,
+
+        -- ESPI signals
+        espi0_sp5_to_fpga_clk => espi0_sp5_to_fpga1_clk,
+        espi0_sp5_to_fpga_cs_l => espi0_sp5_to_fpga1_cs_l,
+        espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
+        espi_resp_csn => espi_resp_csn,
+
+        fpga1_spare_v1p8 => fpga1_spare_v1p8
     );
 
 
