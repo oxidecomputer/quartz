@@ -21,7 +21,7 @@ use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 
 use work.sequencer_io_pkg.all;
-use work.debug_regs_pkg.all;
+use work.sp5_uart_subsystem_pkg.all;
 
 entity cosmo_seq_top is
     port (
@@ -388,7 +388,8 @@ architecture rtl of cosmo_seq_top is
     alias fpga2_hp_irq_n_unsyncd : std_logic is fpga2_to_fpga1_io(2);
     signal fpga2_hp_irq_n : std_logic;
     alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
-    signal dbg_uart_control : uart_control_type;
+    signal uart_dbg_if : uart_dbg_t;
+    signal allow_backplane_pcie_clk : std_logic;
 
 begin
 
@@ -425,19 +426,6 @@ begin
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
     i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
     i3c_fpga1_to_dimm_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
-
-    -- hdt_fpga1_to_mux_en_l <= 'Z';
-    -- hdt_fpga1_to_mux_sel <= '0';
-
-    -- hdt_conn_to_mux_testen <= '0';
-    -- hdt_fpga1_to_mux_dat <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
-    -- hdt_fpga1_to_mux_dbreq_l <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
-    -- hdt_fpga1_to_mux_tck <= sp5_group_a.v1p8_sp5_a1.enable;
-    -- hdt_fpga1_to_mux_tms <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
-    -- hdt_fpga1_to_mux_trst_l <= '1' when sp5_group_a.v1p8_sp5_a1.enable = '1' else '0';
-    -- hdt_fpga1_to_mux_xtrig5_l  <= 'Z';
-    -- hdt_fpga1_to_mux_xtrig6_l <= 'Z';
-    -- hdt_fpga1_to_mux_xtrig7_l  <= 'Z';
 
     ---------------------------------------------
     -- FMC to AXI Interface from the SP
@@ -536,7 +524,7 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        dbg_uart_control => dbg_uart_control,
+        dbg_if => uart_dbg_if,
         in_a0 => a0_ok,
         -- UART pins
         -- IPCC SP side
@@ -597,6 +585,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(SP5_HP_RESP_IDX),
+        allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         sp5_i2c_sda => i2c_sp5_to_fpgax_hp_sda,
         sp5_i2c_sda_o => sp5_sda_o,
         sp5_i2c_sda_oe => sp5_sda_oe,
@@ -650,6 +639,7 @@ begin
         axi_if => responders(SEQ_RESP_IDX),
         a0_ok => a0_ok,
         a0_idle => a0_idle,
+        allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         early_power_pins => early_power,
         ddr_bulk_pins => ddr_bulk,
         group_a_pins => sp5_group_a,
@@ -788,7 +778,9 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders(DBG_CTRL_RESP_IDX),
-        dbg_uart_control => dbg_uart_control
+        in_a0 => a0_ok,
+        sp5_debug2_pin => sp5_to_fpga1_debug2,
+        uart_dbg_if => uart_dbg_if
     );
 
 

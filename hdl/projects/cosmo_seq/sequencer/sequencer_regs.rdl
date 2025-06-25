@@ -394,6 +394,16 @@ addrmap sequencer_regs {
         } mux_to_ignition[0:0] = 0;
     } ignition_control;
     
+    reg {
+        name = "PCIe Backplane Clock Control";
+        desc = "Control over the PCIe backplane clock. Normally we use SRIS on this interface in the rack, but for
+        minibar configs we need to drive a clock. Allow Hubris to control whether this clock is driven when something
+        is attached.";
+
+        field {
+            desc = "Enable the PCIe backplane clock. (Still gated by presence)";
+        } clk_en[0:0] = 0;
+    } pcie_clk_ctrl;
 
 };
    

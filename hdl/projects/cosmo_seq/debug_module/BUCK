@@ -18,6 +18,7 @@ vhdl_unit(
     deps = [
         ":debug_regs_rdl",
         "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
+        "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
     ],
     visibility = ["PUBLIC"],
     standard = "2019",

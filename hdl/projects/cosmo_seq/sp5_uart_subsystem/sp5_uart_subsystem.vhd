@@ -10,13 +10,14 @@ use ieee.numeric_std.all;
 
 use work.axi_st8_pkg.all;
 use work.debug_regs_pkg.all;
+use work.sp5_uart_subsystem_pkg.all;
 
 entity sp5_uart_subsystem is
     port(
         clk : in std_logic;
         reset : in std_logic;
 
-        dbg_uart_control : in uart_control_type;
+        dbg_if : view  uart_dbg_ss_if;
         in_a0 : in  std_logic;
         -- sp UART pins, ok to be un-syncd
         ipcc_from_sp : in std_logic;
@@ -68,18 +69,22 @@ begin
     process(clk)
     begin
         if rising_edge(clk) then
-            if dbg_uart_control.sp5_to_header = '1' then
-            -- We want to wrap the SP5's host UART out to the debug header.
-                -- outputs to the debug header
+            if dbg_if.sp5_console_uart_to_header = '1' then
+                -- We want to wrap the SP5's host UART out to the debug header.
+                -- outputs to the debug header, bypassing FIFOs
                 dbg_pins_uart_out <= host_to_fpga;
                 dbg_pins_uart_in_rts_l <= host_to_fpga_rts_l;
                 -- outputs to host, inputs from debug header
+                -- we need the signals from the debug header to go to the SP5
+                -- bypassing the FIFOs.
                 host_from_fpga <= dbg_pins_uart_in;
                 host_from_fpga_rts_l <= dbg_pins_uart_out_rts_l;
             else
                 -- Send output of the host uart to the host bits.
                 host_from_fpga <= fgpa_sp_to_host_int;
                 host_from_fpga_rts_l <= fpga_sp_to_host_int_rts_l;
+                -- Mux being flipped this way means we're not using the debug header
+                -- so we shove these pins to '1' (idle, not accepting data).
                 dbg_pins_uart_out <= '1';
                 dbg_pins_uart_in_rts_l <= '1';
             end if;
@@ -93,8 +98,8 @@ begin
         CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
-        fifo_depth => 256,
-        full_threshold => 256
+        fifo_depth => CONSOLE_FIFO_DEPTH,
+        full_threshold => CONSOLE_FIFO_DEPTH
     )
      port map(
         clk => clk,
@@ -103,7 +108,12 @@ begin
         tx_pin => console_to_sp_dat,
         rts_pin => console_to_sp_rts_l,
         cts_pin => console_from_sp_rts_l,
+        drop_silently => dbg_if.sp5_console_uart_to_header, -- drop rx data silently if we'reusing the debug header
         allow_rx => in_a0, -- allow rx only if in_a0 is set
+        uart_to_axi_fifo_usedwds => dbg_if.sp_uart0.uart_to_axi_fifo_usedwds,
+        axi_to_uart_fifo_usedwds => dbg_if.sp_uart0.axi_to_uart_fifo_usedwds,
+        uart_rts_pin_copy => dbg_if.sp_uart0.uart_rts_pin_copy,
+        uart_cts_pin_copy => dbg_if.sp_uart0.uart_cts_pin_copy,
         axi_clk => clk,
         axi_reset => reset,
         rx_ready => console_sp_to_host.ready,
@@ -121,8 +131,8 @@ begin
         CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
-        fifo_depth => 256,
-        full_threshold => 256
+        fifo_depth => CONSOLE_FIFO_DEPTH,
+        full_threshold => CONSOLE_FIFO_DEPTH
     )
      port map(
         clk => clk,
@@ -131,7 +141,13 @@ begin
         tx_pin => fgpa_sp_to_host_int,
         rts_pin => fpga_sp_to_host_int_rts_l,
         cts_pin => host_to_fpga_rts_l,
-        allow_rx => in_a0, -- allow rx only if in_a0 is set
+        -- allow rx only if in_a0 is set, and only if we're not using the debug header
+        -- No need to fill up the FIFO if we're not using it.
+        allow_rx => in_a0 and (not dbg_if.sp5_console_uart_to_header),
+        uart_to_axi_fifo_usedwds => dbg_if.host_uart0.uart_to_axi_fifo_usedwds,
+        axi_to_uart_fifo_usedwds => dbg_if.host_uart0.axi_to_uart_fifo_usedwds,
+        uart_rts_pin_copy => dbg_if.host_uart0.uart_rts_pin_copy,
+        uart_cts_pin_copy => dbg_if.host_uart0.uart_cts_pin_copy,
         axi_clk => clk,
         axi_reset => reset,
         rx_ready => console_host_to_sp.ready,
@@ -148,8 +164,8 @@ begin
         CLKS_PER_BIT => BAUD_3M_AT_125M,
         parity => false,
         use_hw_handshake => true,
-        fifo_depth => 4096,
-        full_threshold => 4096
+        fifo_depth => IPCC_FIFO_DEPTH,
+        full_threshold => IPCC_FIFO_DEPTH
     )
      port map(
         clk => clk,
@@ -159,6 +175,10 @@ begin
         rts_pin => ipcc_to_sp_rts_l,
         cts_pin => ipcc_from_sp_rts_l,
         allow_rx => in_a0, -- allow rx only if in_a0 is set
+        uart_to_axi_fifo_usedwds => dbg_if.sp_uart1.uart_to_axi_fifo_usedwds,
+        axi_to_uart_fifo_usedwds => dbg_if.sp_uart1.axi_to_uart_fifo_usedwds,
+        uart_rts_pin_copy => dbg_if.sp_uart1.uart_rts_pin_copy,
+        uart_cts_pin_copy => dbg_if.sp_uart1.uart_cts_pin_copy,
         axi_clk => clk,
         axi_reset => reset,
         rx_ready => ipcc_to_espi.ready,

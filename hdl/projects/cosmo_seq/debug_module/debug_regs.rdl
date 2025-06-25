@@ -3,7 +3,7 @@
 // Debug Control FPGA block.
 
 addrmap debug_regs {
-    name = "Cosmo Debug Control block";
+    name = "Cosmo Debug Control/Status block";
     desc = "";
 
     default regwidth = 32;
@@ -19,4 +19,92 @@ addrmap debug_regs {
            } sp5_to_header[0:0] = 0;
        } uart_control;
 
+    reg {
+           name = "SP Console UART (AXI->UART) FIFO USEDWDS Status";
+           field {
+               desc = "Number of FIFO bytes pending transmit *to* the SP, should stay near 0 when the SP is
+               receiving bytes at a reasonable rate. This is effectively 1/2 the buffer in this flow as the
+               UART to the SP5 also has a FIFO.";
+           } usedwds[7:0] = 0;
+       } sp_axi_to_console_uart_usedwds;
+    
+    reg {
+          name = "SP Console UART (UART->AXI) FIFO USEDWDS Status";
+          field {
+              desc = "Number of FIFO bytes pending transmit *to* the SP5, should stay near 0 when the SP5 is
+              receiving bytes at a reasonable rate. This is effectively 1/2 the buffer in this flow as the
+              UART to the SP5 also has a FIFO.";
+          } usedwds[7:0] = 0;
+      } sp_console_uart_to_axi_usedwds;
+
+    reg {
+           name = "SP5 Console UART (AXI->UART) FIFO USEDWDS Status";
+           field {
+               desc = "Number of FIFO bytes pending transmit *to* the SP5, should stay near 0 when the SP5 is
+               receiving bytes at a reasonable rate. This is effectively 1/2 the buffer in this flow as the
+               UART to the SP also has a FIFO.";
+           } usedwds[7:0] = 0;
+       } sp5_axi_to_console_uart_usedwds;
+    
+    reg {
+          name = "SP5 Console UART (UART->AXI) FIFO USEDWDS Status";
+          field {
+              desc = "Number of FIFO bytes pending transmit *to* the SP, should stay near 0 when the SP is
+              receiving bytes at a reasonable rate. This is effectively 1/2 the buffer in this flow as the
+              UART to the SP also has a FIFO.";
+          } usedwds[7:0] = 0;
+      } sp5_console_uart_to_axi_usedwds;
+    
+    reg {
+        name = "Live status of the various hw handshake signals for the respective UART:";
+
+        field {
+            desc = "SP ipcc UART RTS_L (from SP pins, input to FPGA)";
+        } ipcc_sp_rts_l[9:9] = 0;
+        field {
+            desc = "SP ipcc UART CTS_L (from SP pins, input to FPGA)";
+        } ipcc_sp_cts_l[8:8] = 0;
+        field {
+            desc = "SP console UART RTS_L (from SP pins, input to FPGA)";
+        } console_sp_rts_l[5:5] = 0;
+        field {
+            desc = "SP console UART CTS_L (to SP5 pins, output from FPGA)";
+        } console_sp_cts_l[4:4] = 0;
+        field {
+            desc = "SP5 console UART RTS_L (from SP5 pins, input to FPGA)";
+        } console_sp5_rts_l[1:1] = 0;
+        field {
+            desc = "SP5 console UART CTS_L (to SP5 pins, output from FPGA)";
+        } console_sp5_cts_l[0:0] = 0;
+
+    } uart_pin_status;
+
+    reg {
+           name = "SP IPCC UART (AXI->UART) FIFO USEDWDS Status";
+           field {
+               desc = "Number of FIFO bytes pending transmit *to* the SP, should stay near 0 when the SP is
+               receiving bytes at a reasonable rate (from SP5 over eSPI).";
+           } usedwds[7:0] = 0;
+       } sp5_axi_to_ipcc_uart_usedwds;
+    
+    reg {
+          name = "SP IPCC UART (UART->AXI) FIFO USEDWDS Status";
+          field {
+              desc = "Number of FIFO bytes pending transmit *to* the SP5, should average near 0 when the SP5 is
+              receiving bytes at a reasonable rate, but is bursty over eSPI.";
+          } usedwds[7:0] = 0;
+      } sp5_ipcc_uart_to_axi_usedwds;
+
+    reg {
+        name = "SP5 DBG2 toggle counter";
+        field {
+            desc = "Saturating u32 counter that counts the number of times the SP5 DBG2 pin has toggled in this a0 power cycle. ";
+        } cnts[31:0] = 0;
+    } sp5_dbg2_toggle_counter;
+    reg {
+        name = "SP5 DBG2 toggle timer";
+        field {
+            desc = "Saturating u32 counter that counts the number 8ns clock cycles since last SP5 DBG2 pin toggle in this a0 power cycle.";
+        } cnts[31:0] = 0;
+    } sp5_dbg2_toggle_timer;
 };
