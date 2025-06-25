@@ -107,4 +107,60 @@ addrmap debug_regs {
             desc = "Saturating u32 counter that counts the number 8ns clock cycles since last SP5 DBG2 pin toggle in this a0 power cycle.";
         } cnts[31:0] = 0;
     } sp5_dbg2_toggle_timer;
+
+    reg {
+        name = "1V8 Header Debug Control";
+         
+         enum debug_mux_sel {
+            NONE = 8'h00 {desc = "No Outputs assigned here";};
+            i2c_dimm0_bus = 8'h01 {desc = "FPGA -> DIMM0 i2c bus to pins";};
+            i2c_dimm1_bus = 8'h02 {desc = "FPGA -> DIMM1 i2c bus to pins";};
+            i2c_sp5_dimm0_bus = 8'h03 {desc = "SP5 -> FPGA DIMM0 i2c bus to pins";};
+            i2c_sp5_dimm1_bus = 8'h04 {desc = "SP5 -> FPGA DIMM1 i2c bus to pins";};
+            i2c_sp5_hp_bus = 8'h05 {desc = "SP5 -> FPGA Hotplug i2c bus to pins";};
+            i2c_sp_mux_bus = 8'h06 {desc = "SP -> FPGA MUX i2c bus to pins";};
+            espi_bus = 8'h07 {desc = "SP5 -> eSPI bus to pins";};
+            sp_console_bus = 8'h08 {desc = "SP <-> FPGA console UART to pins";};
+            sp5_console_bus = 8'h09 {desc = "SP5 <-> FPGA console UART to pins";};
+            sp_ipcc_bus = 8'h0a {desc = "SP <-> FPGA IPCC UART to pins";};
+        };
+        field {
+            desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
+            For i2c buses the highest bit is the clock, the next bit is the data.
+            For UARTs the highest bit is the 'from FPGA' side the next bit is the 'to FPGA' side.
+            Espi buses have defined pins (TBD) to match standard debug setup.";
+            encode = debug_mux_sel;
+        } pins7_6[31:24] = 0;
+        field {
+            desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
+            For i2c buses the highest bit is the clock, the next bit is the data.
+            For UARTs the highest bit is the 'from FPGA' side the next bit is the 'to FPGA' side.
+            Espi buses have defined pins (TBD) to match standard debug setup.";
+            encode = debug_mux_sel;
+        } pins5_4[23:16] = 0;
+        field {
+            desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
+            For i2c buses the highest bit is the clock, the next bit is the data.
+            For UARTs the highest bit is the 'from FPGA' side the next bit is the 'to FPGA' side.
+            Espi buses have defined pins (TBD) to match standard debug setup.";
+            encode = debug_mux_sel;
+        } pins3_2[15:8] = 0;
+        field {
+            desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
+            For i2c buses the highest bit is the clock, the next bit is the data.
+            For UARTs the highest bit is the 'from FPGA' side the next bit is the 'to FPGA' side.
+            Espi buses have defined pins (TBD) to match standard debug setup.";
+            encode = debug_mux_sel;
+        } pins1_0[7:0] = 0;
+    } dbg_1v8_ctrl;
+
+    reg {
+        name = "Debug Convenience";
+        field {
+            desc = "convenience bit for setting up x4 espi debug out. This uses 1v8 debug header pins 7..0. Hw clears";
+        } espi_dbg_x4_en[1:1] = 0;
+        field {
+            desc = "convenience bit for setting up x1 espi debug out.. This uses 1v8 debug header pins 7..2. Hw clears";
+        } espi_dbg_x1_en[0:0] = 0;
+    } dbg_convenience;
 };
