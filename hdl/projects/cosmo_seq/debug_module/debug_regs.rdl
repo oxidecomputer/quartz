@@ -17,7 +17,7 @@ addrmap debug_regs {
                this is muxed to the SP's console UART, setting this takes the data away from the SP and 
                sends it out the debug header with flow control.";
            } sp5_to_header[0:0] = 0;
-       } uart_control;
+    } uart_control;
 
     reg {
            name = "SP Console UART (AXI->UART) FIFO USEDWDS Status";

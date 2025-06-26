@@ -52,7 +52,7 @@ package sp5_uart_subsystem_pkg is
         sp_uart1 : ipcc_uart_dbg_t;
     end record;
     view uart_dbg_ss_if of uart_dbg_t is
-        sp5_console_uart_to_header : out;
+        sp5_console_uart_to_header : in;
         sp_uart0 : view console_uart_ss;
         host_uart0 : view console_uart_ss;
         sp_uart1 : view ipcc_uart1_ss;
