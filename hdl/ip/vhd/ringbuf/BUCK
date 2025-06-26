@@ -1,0 +1,19 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "ringbuf",
+    srcs = ["ringbuf.vhd",],
+    deps = [
+        "//hdl/ip/vhd/common:calc_pkg",
+    ],
+    visibility = ["PUBLIC"]
+)
+
+vunit_sim(
+    name = "ringbuf_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":ringbuf",
+    ],
+    visibility = ["PUBLIC"]
+)

@@ -1,0 +1,49 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Wed Jun 25 23:33:22 2025
+[*]
+[dumpfile] "/home/aaron/Oxide/git/quartz/vunit_out/test_output/lib.ringbuf_tb.test_full_ringbuf_5424b928b3e3c2f40965b2b05dee7c52094abbeb/nvc/ringbuf_tb.fst"
+[dumpfile_mtime] "Wed Jun 25 23:28:56 2025"
+[dumpfile_size] 1019
+[savefile] "/home/aaron/Oxide/git/quartz/hdl/ip/vhd/ringbuf/sims/ringbuf_tb.gtkw"
+[timestart] 0
+[size] 3840 1894
+[pos] -101 -101
+*-24.408436 2000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] ringbuf_tb.
+[sst_width] 539
+[signals_width] 302
+[sst_expanded] 1
+[sst_vpaned_height] 571
+@28
+ringbuf_tb.ringbuf_inst.clk
+ringbuf_tb.ringbuf_inst.reset
+ringbuf_tb.ringbuf_inst.wvalid
+@22
+ringbuf_tb.ringbuf_inst.wdata[7:0]
+ringbuf_tb.ringbuf_inst.waddr[3:0]
+@28
+ringbuf_tb.ringbuf_inst.gen_cntr[2:0]
+@22
+ringbuf_tb.ringbuf_inst.raddr[3:0]
+ringbuf_tb.ringbuf_inst.rdata[10:0]
+@23
+ringbuf_tb.ringbuf_inst.ringbuf[0][10:0]
+@22
+ringbuf_tb.ringbuf_inst.ringbuf[1][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[2][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[3][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[4][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[5][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[6][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[7][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[8][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[9][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[10][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[11][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[12][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[13][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[14][10:0]
+ringbuf_tb.ringbuf_inst.ringbuf[15][10:0]
+[pattern_trace] 1
+[pattern_trace] 0
