@@ -299,7 +299,7 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                     fpga1_spare_reg(0) <= uart1_sp_to_fpga1_dat_int;
                 when T6_SEQUENCER =>
                     fpga1_spare_reg(1) <= nic_dbg_pins.ext_rst_l;
-                    fpga1_spare_reg(0) <= '0'; -- Unused in this case.
+                    fpga1_spare_reg(0) <= sp5_debug2_pin_int; -- Unused in this case.
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(1 downto 0) <= (others => '0');
