@@ -390,6 +390,7 @@ architecture rtl of cosmo_seq_top is
     alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
     signal uart_dbg_if : uart_dbg_t;
     signal allow_backplane_pcie_clk : std_logic;
+    signal nic_dbg_pins : t6_debug_if;
 
 begin
 
@@ -634,7 +635,7 @@ begin
         sp5_seq_pins => sp5_seq_pins,
         nic_rails_pins => nic_rails,
         nic_seq_pins => nic_seq_pins,
-        sp5_t6_power_en => sp5_t6_power_en,
+        nic_dbg_pins => nic_dbg_pins,
         sp5_t6_perst_l => sp5_t6_perst_l,
         ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
         ignition_creset => fpga1_to_ign_trgt_fpga_creset
@@ -791,12 +792,12 @@ begin
         uart0_fpga1_to_sp_dat  =>  uart0_fpga1_to_sp_dat,
         uart0_fpga1_to_sp5_dat  =>  uart0_fpga1_to_sp5_dat_buff,
         uart0_sp5_to_fpga1_dat  =>  uart0_sp5_to_fpga1_dat,
-
         -- ESPI signals
         espi0_sp5_to_fpga_clk => espi0_sp5_to_fpga1_clk,
         espi0_sp5_to_fpga_cs_l => espi0_sp5_to_fpga1_cs_l,
         espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
         espi_resp_csn => espi_resp_csn,
+        nic_dbg_pins => nic_dbg_pins,
 
         fpga1_spare_v1p8 => fpga1_spare_v1p8
     );

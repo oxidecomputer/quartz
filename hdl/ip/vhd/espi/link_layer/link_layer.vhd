@@ -101,7 +101,7 @@ begin
     end process;
 
 
-    -- Saleae is made decoding spi signals if they are not byte-aligned with the enable
+    -- Saleae is mad decoding spi signals if they are not byte-aligned with the enable
     -- our responses are always shifted by 2 clocks due to the TA phase so this provides
     -- a fake enable that allows us to run a 2nd decoder for the response channel
     saleae_response_cs_gen: process(clk, reset)

@@ -40,9 +40,9 @@ architecture rtl of sp_i2c_subsystem is
     type mux_sel_t is array (natural range <>) of std_logic_vector(1 downto 0);
 
     constant mux_i2c_addr:  io_i2c_addr_t(0 to 2) := (
-        b"1110_000",  -- Mux 1: M.2 A/B
-        b"1110_001",  -- Mux 2: APML / SEC
-        b"1110_010"   -- Mux 3: Fan VPD / NIC Therm
+        b"1110_000",  -- Mux 1: 0x70 M.2 A/B
+        b"1110_001",  -- Mux 2: 0x71 APML / SEC
+        b"1110_010"   -- Mux 3: 0x72 Fan VPD / NIC Therm
     );
     signal sp_tgt_scl : std_logic_vector(mux_i2c_addr'range);
     signal sp_tgt_scl_o : std_logic_vector(mux_i2c_addr'range);

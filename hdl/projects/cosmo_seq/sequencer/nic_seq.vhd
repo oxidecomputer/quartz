@@ -29,9 +29,10 @@ entity nic_seq is
         raw_state : out nic_raw_status_type;
         api_state : out nic_api_status_type;
 
+        nic_dbg_pins : view t6_debug_seq_ss;
+
         -- From SP5 hotplug
-        sp5_t6_power_en : in std_logic;
-        sp5_t6_perst_l : in std_logic;
+        sp5_t6_perst_l : in std_logic;  -- follows exactly the power_en hotplug signal. perst_l <= power_en;
 
         nic_rails: view nic_power_at_fpga;
         nic_seq_pins: view nic_seq_at_fpga;
@@ -92,6 +93,44 @@ begin
     raw_state.hw_sm <= std_logic_vector(to_unsigned(state_t'pos(nic_r.state), raw_state.hw_sm'length));
     
     nic_idle <= '1' when nic_r.state = IDLE else '0';
+
+    nic_dbg_pins.cld_rst_l <= final_nic_outs.cld_rst_l;
+    nic_dbg_pins.ext_rst_l <= nic_seq_pins.ext_rst_l;
+    nic_dbg_pins.rails_en <= nic_r.nic_power_en;
+    nic_dbg_pins.rails_pg <= '1' when is_power_good(nic_rails) else '0';
+    nic_dbg_pins.nic_mfg_mode_l <= final_nic_outs.nic_mfg_mode_l;
+    nic_dbg_pins.sp5_mfg_mode_l <= nic_seq_pins.sp5_mfg_mode_l;
+    nic_dbg_pins.perst_l <= final_nic_outs.perst_l;
+
+    api_state_proc:process(clk, reset)
+    begin
+        if reset then
+            api_state.nic_sm <= IDLE;
+
+        elsif rising_edge(clk) then
+            case nic_r.state is
+                when IDLE =>
+                    api_state.nic_sm <= IDLE;
+
+                when PWR_EN =>
+                    api_state.nic_sm <= ENABLE_POWER;
+
+                when WAIT_FOR_PGS =>
+                    api_state.nic_sm <= ENABLE_POWER;
+
+                when EARLY_CLD_RST =>
+                    api_state.nic_sm <= NIC_RESET;
+
+                when EARLY_PERST =>
+                    api_state.nic_sm <= NIC_RESET;
+
+                when DONE =>
+                    api_state.nic_sm <= DONE;
+
+            end case;
+        end if;
+
+    end process;
 
     nic_sm:process(all)
         variable v : nic_r_t;
