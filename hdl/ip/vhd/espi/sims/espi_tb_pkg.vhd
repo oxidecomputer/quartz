@@ -90,6 +90,14 @@ package espi_tb_pkg is
         constant data : in std_logic_vector(31 downto 0);
         constant bad_crc : boolean := false) return cmd_t;
 
+    impure function extract_uart_data(
+        constant response_payload : queue_t
+    ) return queue_t;
+    impure function append_byte_queues(
+        constant q1 : queue_t;
+        constant q2 : queue_t
+    ) return queue_t;
+
     procedure compare_uart_loopback(
         constant input_payload : queue_t;
         constant output_response : queue_t
@@ -367,8 +375,74 @@ package body espi_tb_pkg is
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;
     end function;
+    impure function extract_uart_data(
+        constant response_payload : queue_t
+    ) return queue_t is
+        variable uart_data : queue_t := new_queue;
+        variable output_byte : std_logic_vector(7 downto 0);
+        variable additional_hdr_bytes : natural := 3;
+        type byte_buffer_t is array (0 to 2) of integer;
+        variable last_3_bytes : byte_buffer_t := (others => 0);
+        variable buffer_count : integer := 0;
+        variable current_byte : integer;
+    begin
+        -- Dump response headers
+        -- We have always 4 bytes of header:
+        -- res code
+        output_byte := To_StdLogicVector(pop_byte(response_payload), 8); -- dump
+        -- cycle type
+        output_byte := To_StdLogicVector(pop_byte(response_payload), 8);
+        if output_byte = message_with_data then
+            additional_hdr_bytes := 5;
+        end if;
+        -- tag/length high
+        output_byte := To_StdLogicVector(pop_byte(response_payload), 8); --dump
+        -- length low
+        output_byte := To_StdLogicVector(pop_byte(response_payload), 8); --dump
 
-    procedure compare_uart_loopback(
+        if additional_hdr_bytes > 0 then
+            -- message code has 5 bytes of additional header
+            -- oob has 3 bytes of additional header
+            for i in 0 to additional_hdr_bytes - 1 loop
+                output_byte := To_StdLogicVector(pop_byte(response_payload), 8); -- dump
+            end loop;
+        end if;
+
+        -- Now we're to the data, but we have 3 trailing bytes we need to dump
+        while not is_empty(response_payload) loop
+            current_byte := pop_byte(response_payload);
+            
+            -- If we have 3 bytes in buffer, push the oldest one to uart_data
+            if buffer_count = 3 then
+                push_byte(uart_data, last_3_bytes(0));
+                -- Shift buffer left
+                last_3_bytes(0 to 1) := last_3_bytes(1 to 2);
+                last_3_bytes(2) := current_byte;
+            else
+                -- Still filling the buffer
+                last_3_bytes(buffer_count) := current_byte;
+                buffer_count := buffer_count + 1;
+            end if;
+        end loop;
+        -- The last 3 bytes remain in last_3_bytes and are not pushed to uart_data
+        return uart_data;
+    end function;
+    impure function append_byte_queues(  --destructive
+        constant q1 : queue_t;
+        constant q2 : queue_t
+    ) return queue_t is
+        variable result : queue_t := new_queue;
+    begin
+        while not is_empty(q1) loop
+            push_byte(result, pop_byte(q1));
+        end loop;
+        while not is_empty(q2) loop
+            push_byte(result, pop_byte(q2));
+        end loop;
+        return result;
+    end function;
+
+    procedure compare_uart_loopback(  -- Non-destructive
         constant input_payload : queue_t;
         constant output_response : queue_t
     ) is
@@ -376,39 +450,13 @@ package body espi_tb_pkg is
         variable output_copy : queue_t := copy(output_response);
         variable input_byte : std_logic_vector(7 downto 0);
         variable output_byte : std_logic_vector(7 downto 0);
-        variable additional_hdr_bytes : natural := 3;
     begin
-        -- Dump response headers
-        -- We have always 4 bytes of header:
-        -- res code
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- dump
-        -- cycle type
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8);
-        if output_byte = message_with_data then
-            additional_hdr_bytes := 5;
-        end if;
-        -- tag/length high
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); --dump
-        -- length low
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); --dump
-
-        if additional_hdr_bytes > 0 then
-            -- message code has 5 bytes of additional header
-            -- oob has 3 bytes of additional header
-            for i in 0 to additional_hdr_bytes - 1 loop
-                output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- dump
-            end loop;
-        end if;
-
         -- Now we're to the data
         while not is_empty(input_copy) loop
             input_byte := To_StdLogicVector(pop_byte(input_copy), 8);
             output_byte := To_StdLogicVector(pop_byte(output_copy), 8);
             check_equal(input_byte, output_byte, "UART Loopback Mismatch");
         end loop;
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- status0
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- status1
-        output_byte := To_StdLogicVector(pop_byte(output_copy), 8); -- crc
         check_true(is_empty(output_copy), "Output queue not empty");
     end procedure;
 
@@ -416,7 +464,7 @@ package body espi_tb_pkg is
         constant address: in std_logic_vector(15 downto 0);
         constant data : in std_logic_vector(31 downto 0);
         constant bad_crc : boolean := false) return cmd_t is
-            variable cmd : cmd_t := (new_queue, 0);
+        variable cmd : cmd_t := (new_queue, 0);
     begin
          -- OPCODE_GET_PC (1 byte)
          push_byte(cmd.queue, to_integer(opcode_put_iowr_short_4byte));

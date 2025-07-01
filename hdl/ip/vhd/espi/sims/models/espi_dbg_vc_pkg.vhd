@@ -206,6 +206,7 @@ package body espi_dbg_vc_pkg is
         resp.response_code := response;
         -- Status comes LSB first, so older is lower.  very last byte is crc
         resp.status := last_3_bytes(1) & last_3_bytes(2);
+        wait for 32 ns;  -- FIFO take some clock cycles to stabilize after a read
     end procedure;
 
     procedure dbg_get_response_size(

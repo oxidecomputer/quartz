@@ -45,6 +45,7 @@ entity txn_layer_top is
         vwire_avail : in std_logic;
         oob_avail : in std_logic;
         oob_free : in std_logic;
+        oob_avail_last_byte : in std_logic;
 
         -- Link-layer connections
         espi_reset : in std_logic;
@@ -151,6 +152,7 @@ begin
             clear_tx_crc   => clear_tx_crc,
             data_to_host   => data_to_host,
             live_status    => live_status,
+            oob_avail_last_byte => oob_avail_last_byte,
             response_crc   => tx_running_crc,
             flash_resp     => flash_resp,
             sp_to_host_espi => sp_to_host_espi,

@@ -31,9 +31,6 @@ entity uart_channel_top is
         host_to_sp_espi : view uart_data_sink;
         sp_to_host_espi : view uart_resp_src;
 
-        -- registers
-        msg_not_oob: in std_logic;
-
         -- Interfaces to the UART block
         to_sp_uart_data : out std_logic_vector(7 downto 0);
         to_sp_uart_valid: out std_logic;
@@ -46,6 +43,7 @@ entity uart_channel_top is
         -- eSPI Status interface
         oob_free : out std_logic;
         oob_avail : out std_logic;
+        oob_avail_last_byte : out std_logic;
         pc_free : out std_logic;
         pc_avail: out std_logic;
         np_free : out std_logic;
@@ -75,24 +73,14 @@ architecture rtl of uart_channel_top is
    signal fifo_reset : std_logic;
 
 begin
-
-    meta_sync_inst: entity work.meta_sync
-     port map(
-        async_input => msg_not_oob,
-        clk => clk,
-        sycnd_output => msg_not_oob_syncd
-    );
-
-    is_oob_msg <= not msg_not_oob_syncd;
-
     -- Not going to support any Non-posted transactions
     -- on this interface
     np_free <= '0';
     np_avail <= '0';
     pc_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    pc_avail <= '1' when is_data_msg = '1' and orphan_state = NOT_MASKED else '0';
+    pc_avail <= '0';
     oob_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    oob_avail <= '1' when is_oob_msg = '1' and orphan_state = NOT_MASKED else '0';
+    oob_avail <= '1' when  orphan_state = NOT_MASKED else '0';
 
     host_to_sp_espi.ready <= not rx_wfull;
     -- tx_rusedwds is potentially cycles behind the empty flag due to fifo latencies.
@@ -117,7 +105,9 @@ begin
         if reset then
             fifo_thresh_timer <= (others => '0');
             orphan_state <= MASKED;
+            oob_avail_last_byte <= '0';
         elsif rising_edge(clk) then
+            oob_avail_last_byte <= '1' when tx_rusedwds = 1 else '0';
             case orphan_state is
                 when MASKED =>
                     if tx_rempty = '1' then

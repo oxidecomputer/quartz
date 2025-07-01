@@ -29,6 +29,7 @@ entity response_processor is
         data_to_host   : view byte_source;
         response_done  : out   boolean;
         live_status    : in    status_t;
+        oob_avail_last_byte : in std_logic;
         response_crc   : in    std_logic_vector(7 downto 0);
         is_tx_last_byte : out   boolean;
 
@@ -163,7 +164,6 @@ begin
                 end if;
             when RESPONSE_CODE =>
                 v.cur_valid := '1';
-                v.status := live_status;
                 v.resp_idx := 0;
                 -- set opcode immediately so it's ready for the next state
                 case command_header.opcode.value is
@@ -171,7 +171,6 @@ begin
                         v.cur_data := defer_code;
                     when others =>
                         v.cur_data := accept_code;
-                        v.status := live_status;
                 end case;
                 -- determine next state based on current opcode
                 if data_to_host.ready then
@@ -286,7 +285,6 @@ begin
                         v.payload_cnt := r.payload_cnt - 1;
                     elsif r.payload_cnt = 0 then
                         v.state := STATUS;
-                        v.status := live_status;
                     end if;
                 end if;
                 null;
@@ -320,7 +318,13 @@ begin
         -- Status words
         if r.state = STATUS and r.status_idx = '0' then
             v.status := live_status;
-            v.cur_data := pack(live_status)(7 downto 0);
+            if command_header.opcode.value = opcode_get_oob and command_header.opcode.valid = '1' and
+               oob_avail_last_byte = '1' then
+                -- If we were fetching OOB and this was the last byte, we need to mask off
+                -- the OOB availability since this will have emptied the OOB channel
+                v.status.oob_avail := '0';
+            end if;
+            v.cur_data := pack(v.status)(7 downto 0);
         elsif r.state = STATUS then
             v.cur_data := pack(r.status)(15 downto 8);
         end if;

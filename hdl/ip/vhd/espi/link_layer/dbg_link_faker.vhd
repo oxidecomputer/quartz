@@ -67,22 +67,23 @@ architecture rtl of dbg_link_faker is
         cmd_rdack: std_logic;
         crc_based_abort: boolean;
         flush_write: std_logic;
+        resp_byte_counter: std_logic_vector(15 downto 0);
     end record;
 
     signal r, rin : reg_type;
-    constant reg_reset : reg_type := (idle, '1', (others => '0'), (others => '0'), '0', '0', false, '0');
+    constant reg_reset : reg_type := (idle, '1', (others => '0'), (others => '0'), '0', '0', false, '0', (others => '0'));
     constant cs_delay : integer := 6;
     constant idle_delay : integer := 10;
     signal cmd_size_fifo_empty : std_logic;
     signal cmd_size_rdata : std_logic_vector(31 downto 0);
     signal cmd_fifo_wusedwds: std_logic_vector(log2ceil(1024) downto 0);
     signal rusedwds: std_logic_vector(log2ceil(1024) downto 0);
-    signal resp_fifo_rusedwds: std_logic_vector(log2ceil(1024) downto 0);
     signal busy: std_logic;
     signal busy_axi_sync: std_logic;
     signal alert_pending : std_logic;
     signal alert_pending_axi_sync : std_logic;
     signal rem_fifo_writes : integer range 0 to 3;
+    signal resp_byte_counter : std_logic_vector(15 downto 0);
 
 begin
 
@@ -117,7 +118,7 @@ begin
    );
     dbg_chan.busy <= busy_axi_sync;
     dbg_chan.wstatus.usedwds <= resize(cmd_fifo_wusedwds, dbg_chan.wstatus.usedwds'length);
-    dbg_chan.rdstatus.usedwds <= resize(resp_fifo_rusedwds, dbg_chan.rdstatus.usedwds'length);
+    dbg_chan.rdstatus.usedwds <= resize(resp_byte_counter, dbg_chan.rdstatus.usedwds'length);
     dbg_chan.rd.data <= resp_fifo_read_data;
     cs_n <= not r.cs_asserted;
     dbg_chan.alert_pending <= alert_pending_axi_sync;
@@ -256,7 +257,6 @@ begin
                 else
                     v.state := idle;
                 end if;
-                v.state := idle;
             end if;
 
             when fifo_flush =>
@@ -296,6 +296,7 @@ begin
     begin 
     if reset then
         rem_fifo_writes <= 0;
+        resp_byte_counter <= (others => '0');
 
     elsif rising_edge(clk) then
         if r.state /= idle and (resp_fifo_write = '1' or r.flush_write = '1') then
@@ -305,13 +306,25 @@ begin
                 rem_fifo_writes <= rem_fifo_writes - 1;
             end if;
         end if;
+        -- This logic provides a byte-counter. XPM mixed with FIFOs are annoying in that in a 8 in 32 out FIFO,
+        -- you have to write 4 bytes in to increment the usedwds by 1 *and* reading from a the wide side when
+        -- a full set of wide-side data hasn't been written doesn't return valid data. So use the wr-side counter right?
+        -- that has a bit of latency through so we synthesize the "real" bytes counter here using the write to increment
+        -- by one on real bytes and the read to decrement by 4 on the write side, while flooring the wide-side reads.
+        if resp_fifo_write = '1' and resp_fifo_read_ack = '0' then 
+             resp_byte_counter <= resp_byte_counter + 1;
+        elsif resp_fifo_write = '0' and resp_fifo_read_ack = '1' and resp_byte_counter > 3 then 
+             resp_byte_counter <= resp_byte_counter - 4;
+        elsif resp_fifo_write = '0' and resp_fifo_read_ack = '1' then 
+            resp_byte_counter <= (others => '0');
+        end if;
 
     end if;
     end process;
 
     -- Response FIFO.
     -- when we're enabled, any target response data gets written into the response fifo.
-    -- software is resonsible for reading the data out of the fifo at an appropriate rate.
+    -- software is responsible for reading the data out of the fifo at an appropriate rate.
     resp_fifo_write <= gen_resp.ready and gen_resp.valid when dbg_chan.enabled else '0';
     resp_fifo: entity work.dcfifo_mixed_xpm
      generic map(
@@ -323,7 +336,7 @@ begin
      port map(
         wclk => clk,
         reset => reset,
-        write_en => resp_fifo_write or r.flush_write,
+        write_en => r.flush_write or resp_fifo_write,
         wdata => gen_resp.data,
         wfull => open,
         wusedwds => open,
@@ -331,7 +344,7 @@ begin
         rdata => resp_fifo_read_data,
         rdreq => resp_fifo_read_ack,
         rempty => resp_fifo_empty,
-        rusedwds => resp_fifo_rusedwds
+        rusedwds => open
     );
     gen_resp.ready <= byte_strobe;
 

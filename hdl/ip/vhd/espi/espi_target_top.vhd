@@ -82,7 +82,6 @@ architecture rtl of espi_target_top is
     signal sclk_syncd : std_logic;
     signal vwire_if : vwire_if_type;
     signal vwire_avail : std_logic;
-    signal msg_en : std_logic;
     signal qspi_cmd : byte_stream;
     signal qspi_resp : byte_stream;
     signal gen_cmd : byte_stream;
@@ -101,6 +100,7 @@ architecture rtl of espi_target_top is
     signal post_code_valid : std_logic;
     signal espi_reset_strobe : std_logic;
     signal espi_reset_strobe_syncd : std_logic;
+    signal oob_avail_last_byte : std_logic;
 
 begin
 
@@ -239,7 +239,6 @@ begin
        clk => clk,
        reset => reset,
        axi_if => axi_if,
-       msg_en => msg_en,
        dbg_chan => dbg_chan,
        post_code => post_code,
        post_code_valid => post_code_valid,
@@ -277,6 +276,7 @@ begin
             np_avail => np_avail,
             oob_free => oob_free,
             oob_avail => oob_avail,
+            oob_avail_last_byte => oob_avail_last_byte,
             vwire_avail => vwire_avail
         );
 
@@ -324,13 +324,13 @@ begin
        from_sp_uart_data => from_sp_uart_data,
        from_sp_uart_valid => from_sp_uart_valid,
        from_sp_uart_ready => from_sp_uart_ready,
-       msg_not_oob => msg_en,
        pc_free => pc_free,
        pc_avail => pc_avail,
        np_free => np_free,
        np_avail => np_avail,
        oob_avail => oob_avail,
-       oob_free => oob_free
+       oob_free => oob_free,
+       oob_avail_last_byte => oob_avail_last_byte
    );
 
    -- vwire channel logic

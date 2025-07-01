@@ -20,14 +20,11 @@ entity espi_regs is
         reset : in    std_logic;
         -- axi interface
         axi_if : view axil_target;
-        msg_en : out std_logic;
         post_code      : in std_logic_vector(31 downto 0);
         post_code_valid : in std_logic;
         espi_reset : in std_logic;
         -- debug interface
         dbg_chan : view dbg_regs_if
-
-
     );
 end entity;
 
@@ -49,7 +46,6 @@ begin
     fifo_status_reg.resp_used_wds <= dbg_chan.rdstatus.usedwds;
     status_reg.busy <= dbg_chan.busy;
     flags_reg.alert <= dbg_chan.alert_pending;
-    msg_en <= control_reg.msg_en;
 
     axi_if.read_data.data <= rdata;
 

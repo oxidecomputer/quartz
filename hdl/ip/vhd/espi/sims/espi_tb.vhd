@@ -47,6 +47,7 @@ begin
         variable pending_alert   : boolean;
         variable flash_cap_reg   : ch3_capabilities_type := rec_reset;
         variable my_queue        : queue_t               := new_queue;
+        variable my_second_queue : queue_t               := new_queue;
         variable status_rec      : status_t;
         variable cmd             : cmd_t;
         variable gen_int         : integer;
@@ -202,69 +203,60 @@ begin
                 dbg_send_uart_oob_no_pec_cmd(net, my_queue);
                 dbg_wait_for_done(net);
                 -- get the response from the fifo
+                dbg_get_response_size(net, gen_int);
+                check_equal(gen_int, 4, "Expected response size to be 4 bytes");
                 dbg_get_response(net, 4 , response);
                 check(response.crc_ok, "Send UART CMD resp CRC Check failed");
-                dbg_get_response_size(net, gen_int);
                 print("PUT resp Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int));
-                wait for 10 * payload_size * 350 ns;  -- approx uart time for payload size
+                --wait for 10 * payload_size * 350 ns;  -- approx uart time for payload size
                 status_rec := unpack(response.status);
                 if status_rec.oob_avail /= '1' then
                     dbg_wait_for_alert(net);
+                    wait for 1 us;
                 end if;
                 -- technically we'd get status here, and if we supported completions we'd return it here
                 -- response size is going to be 4 bytes for response_code/status/crc
                 -- + 3 standard header bytes
                 -- + 3 smbus header bytes
                 -- + payload bytes
+                -- CHECK_STATUS after alert
+                dbg_send_get_status_cmd(net);
+                dbg_wait_for_done(net);
+                dbg_get_response_size(net, gen_int);
+                check_equal(gen_int, 4, "Expected response size to be 4 bytes");
+                dbg_get_response(net, gen_int, response);
+                check(response.crc_ok, "CRC Check failed");
+                check_equal(response.status(7), '1', "Expected OOB AVAIL to be set after alert");
+                dbg_get_response_size(net, gen_int);
+                check_equal(gen_int, 0, "Expected response size to be 0 bytes");
 
+                -- GET OOB data (part 1)
                 dbg_get_uart_oob_no_pec_cmd(net);
                 dbg_wait_for_done(net);
-                wait for 10 us;
                 dbg_get_response_size(net, gen_int);
-                print("GET resp Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int * 4));
-                dbg_get_response(net, payload_size + 10 , response);
+                print("Response size: " & integer'image(gen_int));
+                dbg_get_response(net, gen_int, response);
                 check(response.crc_ok, "Response UART data resp CRC Check failed");
-                compare_uart_loopback(my_queue, response.queue);
+                my_second_queue := extract_uart_data(response.queue);
+                wait for 10 us; -- let remaining UART stuff finish
+                -- GET OOB data (part 2)
+                dbg_get_uart_oob_no_pec_cmd(net);
+                dbg_wait_for_done(net);
+                dbg_get_response_size(net, gen_int);
+                print("Response size: " & integer'image(gen_int));
+                dbg_get_response(net, gen_int, response);
+                check(response.crc_ok, "Response UART data resp CRC Check failed");
+                my_second_queue := append_byte_queues(my_second_queue, extract_uart_data(response.queue));
+
+                compare_uart_loopback(my_queue, my_second_queue);
 
             elsif run("qspi_oob_no_pec_uart") then
                 -- Send UART data which will then be looped back and rx'd
-                payload_size := 21; --rnd.RandInt(1, 61);  -- why 61 you ask? we are limiting total bytes to 64 and there could be 3 bytes of header
+                payload_size := 55; --rnd.RandInt(1, 61);  -- why 61 you ask? we are limiting total bytes to 64 and there could be 3 bytes of header
                 my_queue := build_rand_byte_queue(payload_size);
                 put_oob_no_pec(net, my_queue, response_code, status,  crc_ok);
                 wait for 1 ms;
 
-            elsif run("msg_w_data_uart") then
-                enable_debug_mode(net);
-                -- temp enable periph 0 msg responses
-                write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), std_logic_vector'(X"00000011"));
-                -- Send UART data which will then be looped back and rx'd
-                payload_size := rnd.RandInt(1, 61);  -- why 61 you ask? we are limiting total bytes to 64 and there could be 3 bytes of header
-                my_queue := build_rand_byte_queue(payload_size);
-                dbg_send_uart_msg_w_data_cmd(net, my_queue);
-                dbg_wait_for_done(net);
-                -- get the response from the fifo
-                dbg_get_response(net, 4 , response);
-                check(response.crc_ok, "Send UART CMD resp CRC Check failed");
-                dbg_get_response_size(net, gen_int);
-                print("Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int));
-                wait for 10 * payload_size * 350 ns;  -- approx uart time for payload size
-                status_rec := unpack(response.status);
-                if status_rec.pc_avail /= '1' then
-                    dbg_wait_for_alert(net);
-                end if;
-                -- technically we'd get status here, and if we supported completions we'd return it here
-                -- response size is going to be 4 bytes for response_code/status/crc
-                -- + 8 header bytes
-                -- + payload bytes
-
-                dbg_get_uart_msg_w_data_cmd(net);
-                dbg_wait_for_done(net);
-                wait for 10 us;
-                dbg_get_response_size(net, gen_int);
-                print("Payload Size: " & integer'image(payload_size) & ", Response size: " & integer'image(gen_int * 4));
-                dbg_get_response(net, payload_size + 12 , response);
-                check(response.crc_ok, "Response UART data resp CRC Check failed");
-                compare_uart_loopback(my_queue, response.queue);
             elsif run("put_iowr_short") then
                 put_iowr_short4(net, X"0080", X"EE0000A2", response_code, status,  crc_ok);
                 dbg_get_response(net, 4 , response);
