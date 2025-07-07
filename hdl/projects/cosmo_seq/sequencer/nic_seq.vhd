@@ -48,9 +48,9 @@ architecture rtl of nic_seq is
     constant TWENTY_MS : integer := 20 * ONE_MS;
     constant THIRTY_MS : integer := 30 * ONE_MS;
 
-    type state_t is ( IDLE, PWR_EN, WAIT_FOR_PGS, EARLY_CLD_RST, EARLY_PERST, DONE );
+    type state_t is ( IDLE, PWR_EN, WAIT_FOR_PGS, EARLY_CLD_RST, EARLY_PERST, EARLY_PERST_ASSERT, DONE );
 
-    type reset_state_t is (IN_RESET, CLD_RST_DELAY, CLD_RST_DEASSERTED, PERST_DEASSERTED);
+    type reset_state_t is (IN_RESET, CLD_RST_DEASSERTED, PERST_DEASSERTED);
     type rst_r_t is record
         state : reset_state_t;
         cnts  : unsigned(31 downto 0);
@@ -102,6 +102,10 @@ begin
     nic_dbg_pins.sp5_mfg_mode_l <= nic_seq_pins.sp5_mfg_mode_l;
     nic_dbg_pins.perst_l <= final_nic_outs.perst_l;
 
+    -- Gimlet has the following sequence that was empirically determined to work
+    -- We had to double-perst and we know that cld_rst_l needs to be de-asserted 10ms before perst_l
+    -- is de-asserted due to T6 internal specifics.
+    
     api_state_proc:process(clk, reset)
     begin
         if reset then
@@ -121,7 +125,7 @@ begin
                 when EARLY_CLD_RST =>
                     api_state.nic_sm <= NIC_RESET;
 
-                when EARLY_PERST =>
+                when EARLY_PERST | EARLY_PERST_ASSERT =>
                     api_state.nic_sm <= NIC_RESET;
 
                 when DONE =>
@@ -176,9 +180,21 @@ begin
                 end if;
         
             when EARLY_PERST =>
-                -- We release reset "early" 
-                v.state := DONE;
+                -- We release PERST for the "early" reset 
                 v.nic_perst_l := '1';
+                v.cnts := nic_r.cnts + 1;
+                if nic_r.cnts = TWENTY_MS then
+                     v.state := DONE;
+                     v.cnts := (others => '0');
+                end if;
+
+            when EARLY_PERST_ASSERT =>
+                -- We release PERST for the "early" reset 
+                v.nic_perst_l := '0';
+                v.cnts := nic_r.cnts + 1;
+                if nic_r.cnts = 2 then
+                     v.state := DONE;
+                end if;
 
             when DONE =>
                 -- nothing downstream to worry about just go back to idle
@@ -210,26 +226,16 @@ begin
                 v.nic_cld_rst_l := '0';
                 v.cnts := (others => '0');
                 if nic_r.state = DONE and sp5_t6_perst_l = '1' and debug_enables.force_nic_reset = '0' then
-                    v.state := CLD_RST_DELAY;
+                    v.state := CLD_RST_DEASSERTED;
                 end if;
-            when CLD_RST_DELAY =>
+
+            when CLD_RST_DEASSERTED =>
+                v.nic_cld_rst_l := '1';
                 if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
                     v.state := IN_RESET;
                 else
                     v.cnts := rst_nic_r.cnts + 1;
                     if rst_nic_r.cnts = TWENTY_MS then
-                        v.state := CLD_RST_DEASSERTED;
-                        v.cnts := (others => '0');
-                    end if;
-                end if;
-
-            when CLD_RST_DEASSERTED =>
-                if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
-                    v.state := IN_RESET;
-                else
-                    v.nic_cld_rst_l := '1';
-                    v.cnts := rst_nic_r.cnts + 1;
-                    if rst_nic_r.cnts = TEN_MS then
                         v.state := PERST_DEASSERTED;
                         v.cnts := (others => '0');
                     end if;
