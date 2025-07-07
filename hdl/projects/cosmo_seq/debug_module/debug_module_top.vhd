@@ -110,6 +110,7 @@ begin
         espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
         espi_resp_csn => espi_resp_csn,
         nic_dbg_pins => nic_dbg_pins,
+        sp5_debug2_pin => sp5_debug2_pin,
         fpga1_spare_v1p8 => fpga1_spare_v1p8
     );
 

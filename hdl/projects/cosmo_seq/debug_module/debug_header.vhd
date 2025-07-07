@@ -48,6 +48,8 @@ entity debug_header is
         espi_resp_csn: in std_logic;
         -- T6 signals
         nic_dbg_pins : view t6_debug_dbg;
+        -- sp5 toggle pins
+        sp5_debug2_pin : in std_logic;
 
         fpga1_spare_v1p8 : out std_logic_vector(7 downto 0); -- 8 spare pins on the debug header
 
@@ -81,6 +83,7 @@ architecture rtl of debug_header is
     signal dbg_1v8_ctrl_200 : dbg_1v8_ctrl_type;
     signal fpga1_spare_reg : std_logic_vector(7 downto 0);
     signal nic_dbg_pins_int : t6_debug_if;
+    signal sp5_debug2_pin_int : std_logic;
 
 
 begin
@@ -111,6 +114,7 @@ sample_reg: process(clk_200m, reset_200m)
             espi0_sp5_to_fpga1_dat_int <= espi0_sp5_to_fpga1_dat;
             espi_resp_csn_int <= espi_resp_csn;
             nic_dbg_pins_int <= nic_dbg_pins;
+            sp5_debug2_pin_int <= sp5_debug2_pin;
         end if;
     end process;
 
