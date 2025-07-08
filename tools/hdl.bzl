@@ -90,7 +90,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd.add(vunit_gen)
         cmd.add("--input", ctx.attrs.srcs[0])
         cmd.add("--output", out_codec_pkg.as_output())
-        ctx.actions.run(cmd, category="vunit_codec_gen")
+        ctx.actions.run(cmd, category="vunit_codec_gen",  local_only = True, allow_cache_upload=True)
         providers.append(GenVHDLInfo(src=out_codec_pkg))
 
     # do VUnit stuff here if this is a test bench
@@ -125,7 +125,7 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd.add("--output", out_run_py.as_output())
         if ctx.attrs.simulator:
             cmd.add("--simulator", ctx.attrs.simulator)
-        ctx.actions.run(cmd, category="vunit")
+        ctx.actions.run(cmd, category="vunit",  local_only = True, allow_cache_upload=True)
 
         # Left here as an example of how to put the vunit_out
         # folder into buck_out. This turns out to be a bit annoying
