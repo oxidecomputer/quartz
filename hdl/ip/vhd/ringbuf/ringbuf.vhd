@@ -5,20 +5,20 @@
 -- Copyright 2025 Oxide Computer Company
 
 /*
-The intent of this module is to provide a generic block that provides a ring buffer-like structure,
-similar to the [`ringbuf`](https://github.com/oxidecomputer/hubris/tree/master/lib/ringbuf) in
-Hubris.
-
-Parameters:
- - GEN_WIDTH: the number of bits for the generation field of an entry
- - DATA_WIDTH: the number of bits for the data field of an entry
- - NUM_ENTRY: the number of entries in the ringbuf
- - REG_OUTPUT: if rdata is registered at all
-
-The ringbuf stories entries which are comprised of a generation field and a data field. The
-generation field is a counter which increments every time the internal buffer address rolls over,
-while the data field is whatever is written in via the wdata port.
-*/
+ *The intent of this module is to provide a generic block that provides a ring buffer-like structure,
+ *similar to the [`ringbuf`](https://github.com/oxidecomputer/hubris/tree/master/lib/ringbuf) in
+ *Hubris.
+ *
+ *Parameters:
+ * - GEN_WIDTH: the number of bits for the generation field of an entry
+ * - DATA_WIDTH: the number of bits for the data field of an entry
+ * - NUM_ENTRY: the number of entries in the ringbuf
+ * - REG_OUTPUT: if rdata is registered at all
+ *
+ *The ringbuf stories entries which are comprised of a generation field and a data field. The
+ *generation field is a counter which increments every time the internal buffer address rolls over,
+ *while the data field is whatever is written in via the wdata port.
+ */
 
 library ieee;
 use ieee.std_logic_1164.all;
