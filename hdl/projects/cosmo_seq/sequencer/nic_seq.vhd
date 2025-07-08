@@ -43,6 +43,7 @@ entity nic_seq is
 end entity;
 
 architecture rtl of nic_seq is
+    constant NIC_PERST_CLD_RST_RACE_DELAY : integer := 2;
     constant ONE_MS : integer := 1 * CNTS_P_MS;
     constant TEN_MS : integer := 10 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
@@ -184,20 +185,27 @@ begin
                 v.nic_perst_l := '1';
                 v.cnts := nic_r.cnts + 1;
                 if nic_r.cnts = TWENTY_MS then
-                     v.state := DONE;
+                     v.state := EARLY_PERST_ASSERT;
                      v.cnts := (others => '0');
                 end if;
 
             when EARLY_PERST_ASSERT =>
-                -- We release PERST for the "early" reset 
+                -- At this point, we're done with the "early" reset and we're going to hand off control to
+                -- the reset state machine below, which interacts with the SP5 hotplug signals.
+                -- As we exit this condition and hand-over the to the other state machine the NIC
+                -- will go back into reset.
+                -- We re-assert PERST here for 2 cycles then hand-off to deal with a potential silicon
+                -- race condition in the T6 if these two signals were asserted concurrently.
                 v.nic_perst_l := '0';
                 v.cnts := nic_r.cnts + 1;
-                if nic_r.cnts = 2 then
+                if nic_r.cnts = NIC_PERST_CLD_RST_RACE_DELAY then
                      v.state := DONE;
                 end if;
 
             when DONE =>
                 -- nothing downstream to worry about just go back to idle
+                -- we've now handed off control to the next state machine which deals with the SP5
+                -- hotplug state. All of this happened *well* before the SP5 is alive and doing PCIe things.
                 if sw_enable = '0' then
                     v.state := IDLE;
                 end if;
