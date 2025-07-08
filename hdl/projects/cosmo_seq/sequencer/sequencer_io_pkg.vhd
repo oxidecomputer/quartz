@@ -87,6 +87,27 @@ package sequencer_io_pkg is
         sp5_mfg_mode_l : in;
     end view;
     alias nic_seq_at_nic is nic_seq_at_fpga'converse;
+
+    type t6_debug_if is record
+        cld_rst_l : std_logic; -- T6 cld reset (FPGA output)
+        ext_rst_l : std_logic; -- T6 external reset (FPGA input)
+        rails_en : std_logic; -- T6 power rails enable (FPGA output combined)
+        rails_pg : std_logic; -- T6 power rails power good (FPGA input combined)
+        nic_mfg_mode_l : std_logic; -- T6 NIC manufacturing mode (FPGA output)
+        sp5_mfg_mode_l : std_logic; -- T6 SP5 manufacturing mode (FPGA input)
+        perst_l : std_logic; -- T6 PCIe reset (FPGA output)
+    end record;
+    view t6_debug_seq_ss of t6_debug_if is
+        cld_rst_l : out;
+        ext_rst_l : out;
+        rails_en : out;
+        rails_pg : out;
+        nic_mfg_mode_l : out;
+        sp5_mfg_mode_l : out;
+        perst_l : out;
+    end view;
+    alias t6_debug_dbg is t6_debug_seq_ss'converse;
+
     type early_power_t is record
         fan_central_hsc_pg : std_logic;
         fan_east_hsc_pg : std_logic;

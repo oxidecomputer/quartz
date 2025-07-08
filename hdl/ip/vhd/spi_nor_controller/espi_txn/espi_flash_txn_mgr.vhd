@@ -99,10 +99,17 @@ begin
                 -- the SP5 right here one time so that we're in real flash addresses from there
                 -- on out.
                 --
-                assert signed('0' & espi_cmd_fifo_rdata(31 downto 0)) + cur_flash_addr_offset >= 0 report "Adjusted address must be positive" severity failure;
-                -- We know the SP5 is only sending positive addresses, but cur_flash_addr_offset is signed so we need to cast the espi_cmd_fifo_rdata
-                -- to unsigned also to do the math, so we add a leading zero bit, and then resize back down to 32bits.
-                v.cur_flash_addr := std_logic_vector(resize(signed('0' & espi_cmd_fifo_rdata(31 downto 0)) + cur_flash_addr_offset, 32));
+                -- carve out a hole 0x1000000-0x10cffff for the APOB blob and remap to raw 0x4000000-0x40cffff
+                if unsigned(espi_cmd_fifo_rdata) >= x"01000000" and unsigned(espi_cmd_fifo_rdata) < x"010D0000" then
+                    -- remap the APOB blob to the raw flash address space
+                    v.cur_flash_addr := X"04" & espi_cmd_fifo_rdata(23 downto 0);
+                else
+                    -- We know the SP5 is only sending positive addresses, but cur_flash_addr_offset is signed so we need to cast the espi_cmd_fifo_rdata
+                    -- to unsigned also to do the math, so we add a leading zero bit, and then resize back down to 32bits.
+                    -- normal flash address, just adjust by the offset
+                    assert unsigned(espi_cmd_fifo_rdata) < x"10000000" report "Address must be less than 256MB" severity failure; 
+                    v.cur_flash_addr := std_logic_vector(resize(signed('0' & espi_cmd_fifo_rdata) + cur_flash_addr_offset, 32));
+                end if;
                 v.state := read_cmd_len;
 
             when read_cmd_len =>

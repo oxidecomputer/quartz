@@ -14,6 +14,7 @@ use work.axil8x32_pkg.all;
 
 use work.debug_regs_pkg.all;
 use work.sp5_uart_subsystem_pkg.all;
+use work.sequencer_io_pkg.all;
 
 entity debug_module_top is
     port (
@@ -51,12 +52,13 @@ entity debug_module_top is
         uart0_fpga1_to_sp_dat : in std_logic; -- sp console
         uart0_fpga1_to_sp5_dat : in std_logic; -- sp5 console
         uart0_sp5_to_fpga1_dat : in std_logic; -- sp5 console
-
         -- ESPI signals
         espi0_sp5_to_fpga_clk: in std_logic;
         espi0_sp5_to_fpga_cs_l: in std_logic;
         espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
         espi_resp_csn: in std_logic;
+        --T6 signals
+        nic_dbg_pins : view t6_debug_dbg;
 
         fpga1_spare_v1p8 : out std_logic_vector(7 downto 0); -- 8 spare pins on the debug header
 
@@ -107,6 +109,8 @@ begin
         espi0_sp5_to_fpga_cs_l => espi0_sp5_to_fpga_cs_l,
         espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
         espi_resp_csn => espi_resp_csn,
+        nic_dbg_pins => nic_dbg_pins,
+        sp5_debug2_pin => sp5_debug2_pin,
         fpga1_spare_v1p8 => fpga1_spare_v1p8
     );
 
@@ -218,6 +222,11 @@ begin
                             dbg_1v8_ctrl.pins5_4 <= ESPI_BUS;
                             dbg_1v8_ctrl.pins3_2 <= ESPI_BUS;
                             dbg_1v8_ctrl.pins1_0 <= ESPI_BUS;
+                        elsif dbg_convenience.t6_seq_en then
+                            dbg_1v8_ctrl.pins7_6 <= T6_SEQUENCER;
+                            dbg_1v8_ctrl.pins5_4 <= T6_SEQUENCER;
+                            dbg_1v8_ctrl.pins3_2 <= T6_SEQUENCER;
+                            dbg_1v8_ctrl.pins1_0 <= T6_SEQUENCER;
                         end if;
 
                     when others => null;

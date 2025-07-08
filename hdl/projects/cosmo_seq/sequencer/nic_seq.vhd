@@ -29,9 +29,10 @@ entity nic_seq is
         raw_state : out nic_raw_status_type;
         api_state : out nic_api_status_type;
 
+        nic_dbg_pins : view t6_debug_seq_ss;
+
         -- From SP5 hotplug
-        sp5_t6_power_en : in std_logic;
-        sp5_t6_perst_l : in std_logic;
+        sp5_t6_perst_l : in std_logic;  -- follows exactly the power_en hotplug signal. perst_l <= power_en;
 
         nic_rails: view nic_power_at_fpga;
         nic_seq_pins: view nic_seq_at_fpga;
@@ -42,14 +43,15 @@ entity nic_seq is
 end entity;
 
 architecture rtl of nic_seq is
+    constant NIC_PERST_CLD_RST_RACE_DELAY : integer := 2;
     constant ONE_MS : integer := 1 * CNTS_P_MS;
     constant TEN_MS : integer := 10 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
     constant THIRTY_MS : integer := 30 * ONE_MS;
 
-    type state_t is ( IDLE, PWR_EN, WAIT_FOR_PGS, EARLY_CLD_RST, EARLY_PERST, DONE );
+    type state_t is ( IDLE, PWR_EN, WAIT_FOR_PGS, EARLY_CLD_RST, EARLY_PERST, EARLY_PERST_ASSERT, DONE );
 
-    type reset_state_t is (IN_RESET, CLD_RST_DELAY, CLD_RST_DEASSERTED, PERST_DEASSERTED);
+    type reset_state_t is (IN_RESET, CLD_RST_DEASSERTED, PERST_DEASSERTED);
     type rst_r_t is record
         state : reset_state_t;
         cnts  : unsigned(31 downto 0);
@@ -92,6 +94,48 @@ begin
     raw_state.hw_sm <= std_logic_vector(to_unsigned(state_t'pos(nic_r.state), raw_state.hw_sm'length));
     
     nic_idle <= '1' when nic_r.state = IDLE else '0';
+
+    nic_dbg_pins.cld_rst_l <= final_nic_outs.cld_rst_l;
+    nic_dbg_pins.ext_rst_l <= nic_seq_pins.ext_rst_l;
+    nic_dbg_pins.rails_en <= nic_r.nic_power_en;
+    nic_dbg_pins.rails_pg <= '1' when is_power_good(nic_rails) else '0';
+    nic_dbg_pins.nic_mfg_mode_l <= final_nic_outs.nic_mfg_mode_l;
+    nic_dbg_pins.sp5_mfg_mode_l <= nic_seq_pins.sp5_mfg_mode_l;
+    nic_dbg_pins.perst_l <= final_nic_outs.perst_l;
+
+    -- Gimlet has the following sequence that was empirically determined to work
+    -- We had to double-perst and we know that cld_rst_l needs to be de-asserted 10ms before perst_l
+    -- is de-asserted due to T6 internal specifics.
+    
+    api_state_proc:process(clk, reset)
+    begin
+        if reset then
+            api_state.nic_sm <= IDLE;
+
+        elsif rising_edge(clk) then
+            case nic_r.state is
+                when IDLE =>
+                    api_state.nic_sm <= IDLE;
+
+                when PWR_EN =>
+                    api_state.nic_sm <= ENABLE_POWER;
+
+                when WAIT_FOR_PGS =>
+                    api_state.nic_sm <= ENABLE_POWER;
+
+                when EARLY_CLD_RST =>
+                    api_state.nic_sm <= NIC_RESET;
+
+                when EARLY_PERST | EARLY_PERST_ASSERT =>
+                    api_state.nic_sm <= NIC_RESET;
+
+                when DONE =>
+                    api_state.nic_sm <= DONE;
+
+            end case;
+        end if;
+
+    end process;
 
     nic_sm:process(all)
         variable v : nic_r_t;
@@ -137,12 +181,31 @@ begin
                 end if;
         
             when EARLY_PERST =>
-                -- We release reset "early" 
-                v.state := DONE;
+                -- We release PERST for the "early" reset 
                 v.nic_perst_l := '1';
+                v.cnts := nic_r.cnts + 1;
+                if nic_r.cnts = TWENTY_MS then
+                     v.state := EARLY_PERST_ASSERT;
+                     v.cnts := (others => '0');
+                end if;
+
+            when EARLY_PERST_ASSERT =>
+                -- At this point, we're done with the "early" reset and we're going to hand off control to
+                -- the reset state machine below, which interacts with the SP5 hotplug signals.
+                -- As we exit this condition and hand-over the to the other state machine the NIC
+                -- will go back into reset.
+                -- We re-assert PERST here for 2 cycles then hand-off to deal with a potential silicon
+                -- race condition in the T6 if these two signals were asserted concurrently.
+                v.nic_perst_l := '0';
+                v.cnts := nic_r.cnts + 1;
+                if nic_r.cnts = NIC_PERST_CLD_RST_RACE_DELAY then
+                     v.state := DONE;
+                end if;
 
             when DONE =>
                 -- nothing downstream to worry about just go back to idle
+                -- we've now handed off control to the next state machine which deals with the SP5
+                -- hotplug state. All of this happened *well* before the SP5 is alive and doing PCIe things.
                 if sw_enable = '0' then
                     v.state := IDLE;
                 end if;
@@ -171,26 +234,16 @@ begin
                 v.nic_cld_rst_l := '0';
                 v.cnts := (others => '0');
                 if nic_r.state = DONE and sp5_t6_perst_l = '1' and debug_enables.force_nic_reset = '0' then
-                    v.state := CLD_RST_DELAY;
+                    v.state := CLD_RST_DEASSERTED;
                 end if;
-            when CLD_RST_DELAY =>
+
+            when CLD_RST_DEASSERTED =>
+                v.nic_cld_rst_l := '1';
                 if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
                     v.state := IN_RESET;
                 else
                     v.cnts := rst_nic_r.cnts + 1;
                     if rst_nic_r.cnts = TWENTY_MS then
-                        v.state := CLD_RST_DEASSERTED;
-                        v.cnts := (others => '0');
-                    end if;
-                end if;
-
-            when CLD_RST_DEASSERTED =>
-                if sp5_t6_perst_l = '0' or nic_r.state /= DONE or debug_enables.force_nic_reset = '1' then
-                    v.state := IN_RESET;
-                else
-                    v.nic_cld_rst_l := '1';
-                    v.cnts := rst_nic_r.cnts + 1;
-                    if rst_nic_r.cnts = TEN_MS then
                         v.state := PERST_DEASSERTED;
                         v.cnts := (others => '0');
                     end if;

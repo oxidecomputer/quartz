@@ -123,6 +123,7 @@ addrmap debug_regs {
             sp_console_bus = 8'h08 {desc = "SP <-> FPGA console UART to pins";};
             sp5_console_bus = 8'h09 {desc = "SP5 <-> FPGA console UART to pins";};
             sp_ipcc_bus = 8'h0a {desc = "SP <-> FPGA IPCC UART to pins";};
+            t6_sequencer = 8'h0b {desc = "T6 sequencer debug output to pins";};
         };
         field {
             desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
@@ -156,6 +157,9 @@ addrmap debug_regs {
 
     reg {
         name = "Debug Convenience";
+         field {
+            desc = "convenience bit for setting up T6 sequencing debug out. This uses 1v8 debug header pins 7..0. Hw clears";
+        } t6_seq_en[2:2] = 0;
         field {
             desc = "convenience bit for setting up x4 espi debug out. This uses 1v8 debug header pins 7..0. Hw clears";
         } espi_dbg_x4_en[1:1] = 0;
