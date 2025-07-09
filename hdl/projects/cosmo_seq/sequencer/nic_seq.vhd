@@ -203,6 +203,11 @@ begin
                 end if;
 
             when DONE =>
+                -- we set these high here as the reset state machine below will have taken over control and we
+                -- do not want this state machine to  play into the reset sequence again unless we lose power and
+                -- go back to IDLE.
+                v.nic_perst_l := '1';
+                v.nic_cld_rst_l := '1';
                 -- nothing downstream to worry about just go back to idle
                 -- we've now handed off control to the next state machine which deals with the SP5
                 -- hotplug state. All of this happened *well* before the SP5 is alive and doing PCIe things.
