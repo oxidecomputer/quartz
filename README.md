@@ -65,8 +65,8 @@ For information on building `BUCK` files see [here](BUCK_RULES.md)
 [Instructions](https://buck2.build/docs/about/getting_started/) are here but note that the buck2 version
 is intrinsically tied to the checkout of the submodules, and as such, our currently supported
 buck2 version is installed like this:
-`rustup install nightly-2024-10-13`
-`cargo +nightly-2024-10-13 install --git https://github.com/facebook/buck2.git --tag "2025-02-01" buck2 `
+`rustup install nightly-2025-03-29`
+`cargo +nightly-2025-03-29 install --git https://github.com/facebook/buck2.git --tag "2025-07-01" buck2 `
 See [this issue](https://github.com/facebook/buck2/issues/468) for more info
 - You'll need python3/pip installed and accessible on your path. We have python 3.10
 working in linux, and python 3.12 working in windows. Python 3.9 did not work in 
