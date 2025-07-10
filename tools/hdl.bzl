@@ -94,8 +94,8 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         providers.append(GenVHDLInfo(src=out_codec_pkg))
 
     # do VUnit stuff here if this is a test bench
-    # Note that this is not acutally generated in the buck_out/ folder
-    # After playing with this a bit, putting the vunitout folder in the
+    # Note that this is not actually generated in the buck_out/ folder
+    # After playing with this a bit, putting the vunit-out folder in the
     # buck_out/ folder can be done (see info below) but is annoying since
     # we get a new buck_out/ each time the input changes meaning we have
     # to re-compile everything. We *could* attempt to do more here in buck

@@ -25,5 +25,5 @@ action_cache_address = grpc://172.21.252.165:50051
 cas_address          = grpc://172.21.252.165:50051
 tls = false
 instance_name = main
-enabled = true
+enabled = false
 capabilities = true
