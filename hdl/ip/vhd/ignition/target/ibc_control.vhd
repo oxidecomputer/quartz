@@ -51,21 +51,24 @@ architecture rtl of ibc_control is
         has_powered_up : std_logic;
         cmd_allowed : std_logic;
         cooldown_cnts : unsigned(31 downto 0);
+        ibc_enable : std_logic;
     end record;
     constant rec_rset : reg_t := (
         state => IBC_OFF,
         has_powered_up => '0',
         cmd_allowed => '0',
-        cooldown_cnts => (others => '0')
+        cooldown_cnts => (others => '0'),
+        ibc_enable => '0'
     );
 
     signal r,  rin : reg_t;
 begin
 
+    ibc_enable <= r.ibc_enable;
     in_cooldown <= '1' when r.cmd_allowed = '0' else '0';
     restart_in_progress <= '1' when r.state = IBC_RESTART and r.cmd_allowed = '0' else '0';
     power_on_in_progress <= '1' when r.state = IBC_ON and r.cmd_allowed = '0' else '0';
-    power_off_in_progress <= '1' when r.state = IBC_OFF and r.cmd_allowed = '0' else '0';
+    power_off_in_progress <= '1' when (r.state = IBC_OFF or r.state = IBC_RESTART) and r.cmd_allowed = '0' else '0';
 
     sm:process(all)
         variable v : reg_t;
@@ -81,7 +84,7 @@ begin
 
         case r.state is
             when IBC_OFF =>
-                ibc_enable <= '0';
+                v.ibc_enable := '0';
                 -- We need to default sled power to on for the first power
                 --up, otherwise we'll rely on our commanded state
                 if r.has_powered_up = '0' then
@@ -95,16 +98,18 @@ begin
                     v.cooldown_cnts := (others => '0');
                 end if;
             when IBC_ON =>
-                ibc_enable <= '1';
+                v.ibc_enable := '1';
                 if power_off_cmd = '1' and r.cmd_allowed = '1' then
                     v.state := IBC_OFF;
                     v.cooldown_cnts := (others => '0');
                     v.cmd_allowed := '0';
                 elsif restart_cmd = '1' then
                     v.state := IBC_RESTART;
+                    v.cooldown_cnts := (others => '0');
+                    v.cmd_allowed := '0';
                 end if;
             when IBC_RESTART =>
-                ibc_enable <= '0';
+                v.ibc_enable := '0';
                 if r.cmd_allowed = '1' then
                     v.state := IBC_ON;
                     v.cooldown_cnts := (others => '0');
