@@ -66,6 +66,7 @@ architecture rtl of pca9545ish_top is
     signal resp_data : std_logic_vector(7 downto 0);
     signal resp_valid : std_logic;
     signal resp_ready : std_logic;
+    signal stop_condition : std_logic;
 
 begin
 
@@ -91,7 +92,8 @@ begin
         txn_header => txn_header,
         resp_data => resp_data,
         resp_valid => resp_valid,
-        resp_ready => resp_ready
+        resp_ready => resp_ready,
+        stop_condition => stop_condition
     );
 
     -- mux functional logic
@@ -106,6 +108,7 @@ begin
         mux_sel => mux_sel,
         allowed_to_enable => allowed_to_enable,
         mux_is_active => mux_is_active,
+        stop_condition => stop_condition,
         inst_data => inst_data,
         inst_valid => inst_valid,
         inst_ready => inst_ready,

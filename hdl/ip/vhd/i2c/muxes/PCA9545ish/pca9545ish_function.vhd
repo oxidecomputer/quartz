@@ -31,6 +31,7 @@ entity pca9545ish_function is
         mux_sel : out std_logic_vector(1 downto 0);
         mux_is_active : out std_logic;
         allowed_to_enable : in std_logic;
+        stop_condition : in std_logic;
         -- instruction interface
         inst_data : in std_logic_vector(7 downto 0);
         inst_valid : in std_logic;
@@ -73,6 +74,7 @@ architecture rtl of pca9545ish_function is
     end function;
 
     signal control_reg : control_type;
+    signal control_reg_pend : control_type;
     signal in_ack_phase_last : std_logic;
     signal is_our_transaction : std_logic;
 begin
@@ -86,6 +88,7 @@ begin
     begin
         if reset then
             control_reg <= rec_reset;
+            control_reg_pend <= rec_reset;
             mux_sel <= "11";
 
         elsif rising_edge(clk) then
@@ -95,7 +98,12 @@ begin
                     and is_valid(inst_data, allowed_to_enable) 
                     and is_valid_write(txn_header)
                     and is_our_transaction = '1' then
-                control_reg <= unpack(inst_data);
+                control_reg_pend <= unpack(inst_data);
+            end if;
+
+            if is_our_transaction and stop_condition then
+                -- if we see a stop condition, commit the pending register write
+                control_reg <= control_reg_pend;
             end if;
 
             -- register outputs to prevent any glitching since these control

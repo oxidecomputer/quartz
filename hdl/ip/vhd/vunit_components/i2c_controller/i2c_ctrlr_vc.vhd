@@ -236,6 +236,12 @@ begin
             reply_msg := new_msg;
             push(reply_msg, ack_nack = '0');  -- 0 is a positive ack
             reply(net, request_msg, reply_msg);
+        elsif msg_type = wait_until_idle_msg then
+            -- Not idle while we're shifting
+            while state /= idle loop
+                wait on state;
+            end loop;
+            handle_wait_until_idle(net, msg_type, request_msg);
         else
             unexpected_msg_type(msg_type);
         end if;
