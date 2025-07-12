@@ -45,6 +45,9 @@ entity debug_module_top is
         i3c_fpga1_to_dimm_abcdef_sda: in std_logic;
         i3c_fpga1_to_dimm_ghijkl_scl: in std_logic;
         i3c_fpga1_to_dimm_ghijkl_sda: in std_logic;
+        mux1_sel : in std_logic_vector(1 downto 0); -- mux1 sel pins debug output to pins
+        mux2_sel : in std_logic_vector(1 downto 0); -- mux2 sel pins debug output to pins
+        mux3_sel : in std_logic_vector(1 downto 0); -- mux3 sel pins debug output to pins
         -- UARTs
         uart1_sp_to_fpga1_dat: in std_logic; -- sp ipcc
         uart1_fpga1_to_sp_dat : in std_logic; -- sp ipcc
@@ -108,6 +111,9 @@ begin
         espi0_sp5_to_fpga_clk => espi0_sp5_to_fpga_clk,
         espi0_sp5_to_fpga_cs_l => espi0_sp5_to_fpga_cs_l,
         espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
+        mux1_sel_pins => mux1_sel,
+        mux2_sel_pins => mux2_sel,
+        mux3_sel_pins => mux3_sel,
         espi_resp_csn => espi_resp_csn,
         nic_dbg_pins => nic_dbg_pins,
         sp5_debug2_pin => sp5_debug2_pin,

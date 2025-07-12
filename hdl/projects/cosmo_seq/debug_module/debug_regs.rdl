@@ -124,6 +124,9 @@ addrmap debug_regs {
             sp5_console_bus = 8'h09 {desc = "SP5 <-> FPGA console UART to pins";};
             sp_ipcc_bus = 8'h0a {desc = "SP <-> FPGA IPCC UART to pins";};
             t6_sequencer = 8'h0b {desc = "T6 sequencer debug output to pins";};
+            mux1_sel = 8'h0c {desc = "Mux1 sel pins debug output to pins";};
+            mux2_sel = 8'h0d {desc = "Mux2 sel pins debug output to pins";};
+            mux3_sel = 8'h0e {desc = "Mux3 sel pins debug output to pins";};
         };
         field {
             desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
