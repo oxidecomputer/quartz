@@ -198,6 +198,14 @@ addrmap sequencer_regs {
         } counts[7:0] = 0;
     } amd_pwrok_fedges;
 
+     reg  {
+        default sw=rw;
+        default onwrite=wclr;
+        field {
+            desc = "Falling edge counter of AMD's PowerGDOUT output while in A0/A0HP. Saturates at 255.  Cleared by any write or starting a new power up";
+        } counts[7:0] = 0;
+    } amd_pwgdout_fedges;
+
    // input/output readbacks on all the enables powers for A1/A0/NIC
    // We build these up with the earliest supplies being the lowest order 
    // bits so that max-hold can be done and will make sense to see the most supplies that sequenced up.
@@ -301,6 +309,10 @@ addrmap sequencer_regs {
         field {
             desc = "pwr_btn_l live status, (From FPGA to SP5)";
         } pwr_good[1];
+         field {
+            desc = "pwrgd_out live status, (From SP5 to FPGA)";
+        } pwrgd_out[1];
+        
     } sp5_readbacks;
 
     reg {

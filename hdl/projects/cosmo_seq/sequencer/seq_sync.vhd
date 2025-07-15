@@ -189,6 +189,12 @@ begin
        clk => clk,
        sycnd_output => sp5_seq.slp_s5_l
     );
+    pwrgd_out_sync: entity work.meta_sync
+    port map(
+       async_input => sp5_seq_pins.pwrgd_out,
+       clk => clk,
+       sycnd_output => sp5_seq.pwrgd_out
+    );
 
     -- nic rails sync stuff
     nic_rails_pins.nic_hsc_12v.enable <= nic_rails.nic_hsc_12v.enable;
