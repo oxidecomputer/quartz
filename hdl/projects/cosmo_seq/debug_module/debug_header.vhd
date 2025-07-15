@@ -46,6 +46,10 @@ entity debug_header is
         espi0_sp5_to_fpga_cs_l: in std_logic;
         espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
         espi_resp_csn: in std_logic;
+        -- Mux select signals
+        mux1_sel_pins : in std_logic_vector(1 downto 0); -- mux1 sel pins debug output to pins   
+        mux2_sel_pins : in std_logic_vector(1 downto 0); -- mux2 sel pins debug output to pins
+        mux3_sel_pins : in std_logic_vector(1 downto 0); -- mux3 sel pins debug output to pins
         -- T6 signals
         nic_dbg_pins : view t6_debug_dbg;
         -- sp5 toggle pins
@@ -84,7 +88,9 @@ architecture rtl of debug_header is
     signal fpga1_spare_reg : std_logic_vector(7 downto 0);
     signal nic_dbg_pins_int : t6_debug_if;
     signal sp5_debug2_pin_int : std_logic;
-
+    signal mux1_sel_int : std_logic_vector(1 downto 0);
+    signal mux2_sel_int : std_logic_vector(1 downto 0);
+    signal mux3_sel_int : std_logic_vector(1 downto 0);
 
 begin
 sample_reg: process(clk_200m, reset_200m)
@@ -115,6 +121,9 @@ sample_reg: process(clk_200m, reset_200m)
             espi_resp_csn_int <= espi_resp_csn;
             nic_dbg_pins_int <= nic_dbg_pins;
             sp5_debug2_pin_int <= sp5_debug2_pin;
+            mux1_sel_int <= mux1_sel_pins;
+            mux2_sel_int <= mux2_sel_pins;
+            mux3_sel_int <= mux3_sel_pins;
         end if;
     end process;
 
@@ -181,6 +190,18 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                     -- T6 debug pins
                     fpga1_spare_reg(7) <= nic_dbg_pins_int.rails_en;
                     fpga1_spare_reg(6) <= nic_dbg_pins_int.rails_pg;
+                when MUX1_SEL =>
+                    -- Mux1 select pins
+                    fpga1_spare_reg(7) <= mux1_sel_int(1);
+                    fpga1_spare_reg(6) <= mux1_sel_int(0);
+                when MUX2_SEL =>
+                    -- Mux2 select pins
+                    fpga1_spare_reg(7) <= mux2_sel_int(1);
+                    fpga1_spare_reg(6) <= mux2_sel_int(0);
+                when MUX3_SEL =>
+                    -- Mux3 select pins
+                    fpga1_spare_reg(7) <= mux3_sel_int(1);
+                    fpga1_spare_reg(6) <= mux3_sel_int(0);
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(7 downto 6) <= (others => '0');
@@ -221,6 +242,18 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                     -- T6 debug pins
                     fpga1_spare_reg(5) <= nic_dbg_pins.cld_rst_l;
                     fpga1_spare_reg(4) <=  nic_dbg_pins.perst_l;
+                when MUX1_SEL =>
+                    -- Mux1 select pins
+                    fpga1_spare_reg(5) <= mux1_sel_int(1);
+                    fpga1_spare_reg(4) <= mux1_sel_int(0);
+                when MUX2_SEL =>
+                    -- Mux2 select pins
+                    fpga1_spare_reg(5) <= mux2_sel_int(1);
+                    fpga1_spare_reg(4) <= mux2_sel_int(0);
+                when MUX3_SEL =>
+                    -- Mux3 select pins
+                    fpga1_spare_reg(5) <= mux3_sel_int(1);
+                    fpga1_spare_reg(4) <= mux3_sel_int(0);
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(5 downto 4) <= (others => '0');
@@ -260,6 +293,15 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when T6_SEQUENCER =>
                     fpga1_spare_reg(3) <= nic_dbg_pins.sp5_mfg_mode_l;
                     fpga1_spare_reg(2) <= nic_dbg_pins.nic_mfg_mode_l;
+                when MUX1_SEL =>
+                    fpga1_spare_reg(3) <= mux1_sel_int(1);
+                    fpga1_spare_reg(2) <= mux1_sel_int(0);
+                when MUX2_SEL =>
+                    fpga1_spare_reg(3) <= mux2_sel_int(1);
+                    fpga1_spare_reg(2) <= mux2_sel_int(0);
+                when MUX3_SEL =>
+                    fpga1_spare_reg(3) <= mux3_sel_int(1);
+                    fpga1_spare_reg(2) <= mux3_sel_int(0);
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(3 downto 2) <= (others => '0');
@@ -300,6 +342,15 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when T6_SEQUENCER =>
                     fpga1_spare_reg(1) <= nic_dbg_pins.ext_rst_l;
                     fpga1_spare_reg(0) <= sp5_debug2_pin_int; -- Unused in this case.
+                when MUX1_SEL =>
+                    fpga1_spare_reg(1) <= mux1_sel_int(1);
+                    fpga1_spare_reg(0) <= mux1_sel_int(0);
+                when MUX2_SEL =>
+                    fpga1_spare_reg(1) <= mux2_sel_int(1);
+                    fpga1_spare_reg(0) <= mux2_sel_int(0);
+                when MUX3_SEL =>
+                    fpga1_spare_reg(1) <= mux3_sel_int(1);
+                    fpga1_spare_reg(0) <= mux3_sel_int(0);
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(1 downto 0) <= (others => '0');

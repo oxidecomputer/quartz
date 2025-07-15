@@ -77,6 +77,7 @@ architecture rtl of pca9545ish_function is
     signal control_reg_pend : control_type;
     signal in_ack_phase_last : std_logic;
     signal is_our_transaction : std_logic;
+    signal pending  : std_logic;
 begin
 
     inst_ready <= '1';  -- never block writes
@@ -90,20 +91,31 @@ begin
             control_reg <= rec_reset;
             control_reg_pend <= rec_reset;
             mux_sel <= "11";
+            pending <= '0';
 
         elsif rising_edge(clk) then
             if mux_reset then
                 control_reg <= rec_reset;
+                control_reg_pend <= rec_reset;
+                pending <= '0';
             elsif inst_valid = '1' and inst_ready = '1' 
                     and is_valid(inst_data, allowed_to_enable) 
                     and is_valid_write(txn_header)
                     and is_our_transaction = '1' then
                 control_reg_pend <= unpack(inst_data);
+                pending <= '1';
             end if;
 
-            if is_our_transaction and stop_condition then
-                -- if we see a stop condition, commit the pending register write
-                control_reg <= control_reg_pend;
+            -- we can't gate this on is_our_transaction because at real hardware bus
+            -- speeds, we might have cleared it after the ack before/during the stop condition.
+            if stop_condition then
+                if pending then
+                    -- if we see a stop condition, commit the pending register write
+                    -- this is only set if the transaction was for us above.
+                    control_reg <= control_reg_pend;
+                end if;
+                -- clear on any stop condition
+                pending <= '0';
             end if;
 
             -- register outputs to prevent any glitching since these control

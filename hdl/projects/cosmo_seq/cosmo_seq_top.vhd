@@ -798,6 +798,10 @@ begin
         espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
         espi_resp_csn => espi_resp_csn,
         nic_dbg_pins => nic_dbg_pins,
+        -- MUX
+        mux1_sel => fpga1_to_i2c_mux1_sel,
+        mux2_sel => fpga1_to_i2c_mux2_sel,
+        mux3_sel => fpga1_to_i2c_mux3_sel,
 
         fpga1_spare_v1p8 => fpga1_spare_v1p8
     );
