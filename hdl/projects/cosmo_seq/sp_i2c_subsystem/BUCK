@@ -18,7 +18,7 @@ vhdl_unit(
     deps = [
         ":sp_i2c_regs_rdl",
         "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
-        "//hdl/ip/vhd/i2c/muxes/PCA9545ish:pca9545ish_top",
+        "//hdl/ip/vhd/i2c/muxes/oximux16:oximux16_top",
         "//hdl/ip/vhd/i2c/target:i2c_phy_consolidator",
     ],
     standard = "2019",

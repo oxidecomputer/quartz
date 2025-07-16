@@ -32,7 +32,7 @@ vhdl_unit(
         ":hp_subsystem_top",
         "//hdl/ip/vhd/synchronizers:async_reset_bridge",
         "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
-        "//hdl/ip/vhd/i2c/muxes/PCA9545ish:pca9545ish_top",
+        "//hdl/ip/vhd/i2c/muxes/oximux16:oximux16_top",
         "//hdl/ip/vhd/i2c/target:i2c_phy_consolidator",
         "//hdl/ip/vhd/spi/axi_controller:spi_axi_controller",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect_2k8",
