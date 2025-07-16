@@ -230,10 +230,16 @@ begin
                         v.got_ack := '1';
                     end if;
                 end if;
-                if scl_fedge then
+                if scl_fedge and r.got_ack then
                     v.tx_reg := (others => '0');
                     v.state := TX_DATA;
                     v.tx_ready := '1';
+                    v.cntr := (others => '0');
+                elsif scl_fedge and r.got_nack then
+                    v.tx_reg := (others => '0');
+                    v.state := IDLE;
+                    v.cntr := (others => '0');
+
                 end if;
         end case;
 

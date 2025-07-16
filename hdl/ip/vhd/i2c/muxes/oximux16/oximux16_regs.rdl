@@ -1,0 +1,67 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of emulated i2c mux registers
+
+addrmap oximux16_regs {
+    name = "oximux16 registers";
+    desc = "Registers accessible on the i2c bus for controlling the oximux16 i2c mux";
+
+    default regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Control Register 0";
+        desc = "";
+        field {
+            desc = "mux2 chB: 0 = disable, 1 = enable";
+        } mux2_chB[7:7] =  0;
+        field {
+            desc = "mux2 chA: 0 = disable, 1 = enable";
+        } mux2_chA[6:6] =  0;
+        field {
+            desc = "mux1 chC: 0 = disable, 1 = enable";
+        } mux1_chC[5:5] =  0;
+        field {
+            desc = "mux1 chB: 0 = disable, 1 = enable";
+        } mux1_chB[4:4] =  0;
+        field {
+            desc = "mux1 chA: 0 = disable, 1 = enable";
+        } mux1_chA[3:3] =  0;
+        field {
+            desc = "mux0 chC: 0 = disable, 1 = enable";
+        } mux0_chC[2:2] =  0;
+        field {
+            desc = "mux0 chB: 0 = disable, 1 = enable";
+        } mux0_chB[1:1] =  0;
+        field {
+            desc = "mux0 chA: 0 = disable, 1 = enable";
+        } mux0_chA[0:0] =  0;
+    } control0;
+
+     reg {
+        name = "Control Register 1";
+        desc = "";
+        field {
+            desc = "mux4 chC: 0 = disable, 1 = enable";
+        } mux4_chC[6:6] =  0;
+        field {
+            desc = "mux4 chB: 0 = disable, 1 = enable";
+        } mux4_chB[5:5] =  0;
+        field {
+            desc = "mux4 chA: 0 = disable, 1 = enable";
+        } mux4_chA[4:4] =  0;
+        field {
+            desc = "mux3 chC: 0 = disable, 1 = enable";
+        } mux3_chC[3:3] =  0;
+        field {
+            desc = "mux3 chB: 0 = disable, 1 = enable";
+        } mux3_chB[2:2] =  0;
+        field {
+            desc = "mux3 chA: 0 = disable, 1 = enable";
+        } mux3_chA[1:1] =  0;
+        field {
+            desc = "mux2 chC: 0 = disable, 1 = enable";
+        } mux2_chC[0:0] =  0;
+    } control1;
+
+};

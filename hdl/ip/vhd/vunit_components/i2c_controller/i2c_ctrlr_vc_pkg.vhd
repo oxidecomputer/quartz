@@ -78,6 +78,13 @@ package i2c_ctrl_vc_pkg is
         constant ack_queue    : queue_t;
         constant user_actor   : in actor_t := null_actor
     );
+    procedure blocking_i2c_write_txn (
+        signal net            : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant tx_data      : queue_t;
+        constant ack_queue : queue_t;
+        constant user_actor        : in actor_t := null_actor
+    );
 
     -- send a read-style transaction to the i2c bus
     -- controller to the target for target addr, target acks
@@ -91,11 +98,31 @@ package i2c_ctrl_vc_pkg is
         constant user_actor : in actor_t := null_actor
     );
 
+    procedure blocking_i2c_read_txn (
+        signal net : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant bytes_to_read : integer;
+        constant rx_data  : queue_t;
+        variable tgt_ackd : out boolean;
+        constant user_actor : in actor_t := null_actor
+    );
+
     -- send a mixed transaction to the i2c bus
     -- a mixed transaction has some number of writes
     -- followed by a restart with read
     -- and the some number of reads
     procedure i2c_mixed_txn (
+        signal net : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant tx_data      : queue_t;
+        constant bytes_to_read : integer;
+        constant rx_data      : queue_t;
+        constant ack_queue    : queue_t;
+        constant ack_last_read : boolean := false;
+        constant user_actor : in actor_t := null_actor
+    );
+
+     procedure blocking_i2c_mixed_txn (
         signal net : inout network_t;
         constant target_addr  : std_logic_vector(6 downto 0);
         constant tx_data      : queue_t;
@@ -237,6 +264,25 @@ package body i2c_ctrl_vc_pkg is
         send(net, actor, request_msg);
 
     end procedure;
+    -- blocking version of i2c_write_txn
+    procedure blocking_i2c_write_txn (
+        signal net            : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant tx_data      : queue_t;
+        constant ack_queue : queue_t;
+        constant user_actor        : in actor_t := null_actor
+        
+    ) is
+         variable actor : actor_t;
+    begin
+        if user_actor = null_actor then
+            actor := find("i2c_ctrl_vc");
+        else
+            actor := user_actor;
+        end if;
+        i2c_write_txn(net, target_addr, tx_data, ack_queue, actor);
+        wait_until_idle(net, actor);
+    end;
 
     -- a read transaction that issues the i2c address as a read
     -- and attempts to read the specified number of bytes. Each
@@ -283,14 +329,37 @@ package body i2c_ctrl_vc_pkg is
             receive_reply(net, request_msg, reply_msg);
             -- store data into rx queue
             push_byte(rx_data, pop(reply_msg));
-            -- Ack data
-            request_msg := new_msg(i2c_send_ack);
+            -- Ack data, except for the last
+            if i = bytes_to_read-1 then
+                request_msg := new_msg(i2c_send_nack);
+            else
+                request_msg := new_msg(i2c_send_ack);
+            end if;
             send(net, actor, request_msg);
         end loop;
         -- send stop
         request_msg := new_msg(i2c_send_stop);
         send(net, actor, request_msg);
     end procedure;
+
+    procedure blocking_i2c_read_txn (
+        signal net : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant bytes_to_read : integer;
+        constant rx_data  : queue_t;
+        variable tgt_ackd : out boolean;
+        constant user_actor : in actor_t := null_actor
+    ) is
+        variable actor : actor_t;
+    begin
+        if user_actor = null_actor then
+            actor := find("i2c_ctrl_vc");
+        else
+            actor := user_actor;
+        end if;
+        i2c_read_txn(net, target_addr, bytes_to_read, rx_data, tgt_ackd, actor);
+        wait_until_idle(net, actor);
+    end;
 
     procedure i2c_mixed_txn (
         signal net : inout network_t;
@@ -380,5 +449,25 @@ package body i2c_ctrl_vc_pkg is
         send(net, actor, request_msg);
     end procedure;
 
+    procedure blocking_i2c_mixed_txn (
+        signal net : inout network_t;
+        constant target_addr  : std_logic_vector(6 downto 0);
+        constant tx_data      : queue_t;
+        constant bytes_to_read : integer;
+        constant rx_data      : queue_t;
+        constant ack_queue    : queue_t;
+        constant ack_last_read : boolean := false;
+        constant user_actor : in actor_t := null_actor
+    ) is
+        variable actor : actor_t;
+    begin
+        if user_actor = null_actor then
+            actor := find("i2c_ctrl_vc");
+        else
+            actor := user_actor;
+        end if;
+        i2c_mixed_txn(net, target_addr, tx_data, bytes_to_read, rx_data, ack_queue, ack_last_read, actor);
+        wait_until_idle(net, actor);
+    end;
 
 end package body;
