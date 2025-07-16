@@ -60,8 +60,6 @@ begin
     i2c_bus_sda <= i2c_bus_sda_o when i2c_bus_sda_oe = '1' else 'H';
 
     -- "11" is de-selected
-    allowed_to_enable(0) <= '1' when mux1_sel = "11" else '0';
-    allowed_to_enable(1) <= '1' when mux0_sel = "11" else '0';
 
     DUT0: entity work.oximux16_top
      generic map(
@@ -72,7 +70,7 @@ begin
         clk => clk,
         reset => reset,
         mux_reset => mux_reset,
-        allowed_to_enable => allowed_to_enable(0),
+        allowed_to_enable => '1',
         scl => i2c_bus_scl,
         scl_o => i2c_bus_scl_o,
         scl_oe => i2c_bus_scl_oe,

@@ -127,16 +127,12 @@ begin
                 if inst_valid = '1' and inst_ready = '1' 
                     and is_our_transaction = '1' then
                     -- toggle the address pointer
-                        if wr_addr = '0' then
-                            wr_addr <= '1';
-                        end if;
+                        wr_addr <= not wr_addr;
                 end if;
                 if resp_valid = '1' and resp_ready = '1' 
                     and is_our_transaction = '1' then
                         -- toggle the address pointer
-                        if rd_addr = '0' then
-                            rd_addr <= '1';
-                        end if;
+                        rd_addr <= not rd_addr;
                 end if;
             end if;
 
@@ -161,12 +157,11 @@ begin
                 control0_reg_pend <= rec_reset;
                 control1_reg <= rec_reset;
                 control1_reg_pend <= rec_reset;
-            elsif start_condition = '1' then
             elsif inst_valid = '1' and inst_ready = '1' 
                     and is_valid_write(txn_header)
                     and is_our_transaction = '1' then
                 
-                if wr_addr <= '0' then
+                if wr_addr = '0' then
                     -- write to control0 register
                     -- we accept anything here but will check on the next write
                     control0_reg_pend <= unpack(inst_data);
@@ -192,25 +187,25 @@ begin
             -- CHB enabled results from sel = 00
             -- CHC enabled results from sel = 01
             -- CHA enabled results from sel = 10
-            mux_sel(0) <=   "10" when control0_reg.b0 = '1' else -- MUX0 A
-                            "00" when control0_reg.b1 = '1' else -- MUX0 B
-                            "01" when control0_reg.b2 = '1' else -- MUX0 C
+            mux_sel(0) <=   "10" when control0_reg.mux0_chA = '1' else -- MUX0 A
+                            "00" when control0_reg.mux0_chB = '1' else -- MUX0 B
+                            "01" when control0_reg.mux0_chC = '1' else -- MUX0 C
                             "11";
-            mux_sel(1) <=   "10" when control0_reg.b3 = '1' else -- MUX1 A
-                            "00" when control0_reg.b4 = '1' else -- MUX1 B
-                            "01" when control0_reg.b5 = '1' else -- MUX1 C
+            mux_sel(1) <=   "10" when control0_reg.mux1_chA = '1' else -- MUX1 A
+                            "00" when control0_reg.mux1_chB = '1' else -- MUX1 B
+                            "01" when control0_reg.mux1_chC = '1' else -- MUX1 C
                             "11";
-            mux_sel(2) <=   "10" when control0_reg.b6 = '1' else -- MUX2 A
-                            "00" when control0_reg.b7 = '1' else -- MUX2 B
-                            "01" when control1_reg.b8 = '1' else -- MUX2 C
+            mux_sel(2) <=   "10" when control0_reg.mux2_chA = '1' else -- MUX2 A
+                            "00" when control0_reg.mux2_chB = '1' else -- MUX2 B
+                            "01" when control1_reg.mux2_chC = '1' else -- MUX2 C
                             "11";
-            mux_sel(3) <=   "10" when control1_reg.b9 = '1' else -- MUX3 A
-                            "00" when control1_reg.b10 = '1' else -- MUX3 B
-                            "01" when control1_reg.b11 = '1' else -- MUX3 C
+            mux_sel(3) <=   "10" when control1_reg.mux3_chA = '1' else -- MUX3 A
+                            "00" when control1_reg.mux3_chB = '1' else -- MUX3 B
+                            "01" when control1_reg.mux3_chC = '1' else -- MUX3 C
                             "11";
-            mux_sel(4) <=   "10" when control1_reg.b12 = '1' else -- MUX4 A
-                            "00" when control1_reg.b13 = '1' else -- MUX4 B
-                            "01" when control1_reg.b14 = '1' else -- MUX4 C
+            mux_sel(4) <=   "10" when control1_reg.mux4_chA = '1' else -- MUX4 A
+                            "00" when control1_reg.mux4_chB = '1' else -- MUX4 B
+                            "01" when control1_reg.mux4_chC = '1' else -- MUX4 C
                             "11";
             -- we don't support channel 15 since it doesn't map out to TMUX131s nicely
         end if;

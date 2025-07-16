@@ -13,58 +13,55 @@ addrmap oximux16_regs {
         name = "Control Register 0";
         desc = "";
         field {
-            desc = "Channel 7: 0 = disable, 1 = enable";
-        } B7[7:7] =  0;
+            desc = "mux2 chB: 0 = disable, 1 = enable";
+        } mux2_chB[7:7] =  0;
         field {
-            desc = "Channel 6: 0 = disable, 1 = enable";
-        } B6[6:6] =  0;
+            desc = "mux2 chA: 0 = disable, 1 = enable";
+        } mux2_chA[6:6] =  0;
         field {
-            desc = "Channel 5: 0 = disable, 1 = enable";
-        } B5[5:5] =  0;
+            desc = "mux1 chC: 0 = disable, 1 = enable";
+        } mux1_chC[5:5] =  0;
         field {
-            desc = "Channel 4: 0 = disable, 1 = enable";
-        } B4[4:4] =  0;
+            desc = "mux1 chB: 0 = disable, 1 = enable";
+        } mux1_chB[4:4] =  0;
         field {
-            desc = "Channel 3: 0 = disable, 1 = enable";
-        } B3[3:3] =  0;
+            desc = "mux1 chA: 0 = disable, 1 = enable";
+        } mux1_chA[3:3] =  0;
         field {
-            desc = "Channel 2: 0 = disable, 1 = enable";
-        } B2[2:2] =  0;
+            desc = "mux0 chC: 0 = disable, 1 = enable";
+        } mux0_chC[2:2] =  0;
         field {
-            desc = "Channel 1: 0 = disable, 1 = enable";
-        } B1[1:1] =  0;
+            desc = "mux0 chB: 0 = disable, 1 = enable";
+        } mux0_chB[1:1] =  0;
         field {
-            desc = "Channel 0: 0 = disable, 1 = enable";
-        } B0[0:0] =  0;
+            desc = "mux0 chA: 0 = disable, 1 = enable";
+        } mux0_chA[0:0] =  0;
     } control0;
 
      reg {
         name = "Control Register 1";
         desc = "";
         field {
-            desc = "Channel 15: 0 = disable, 1 = enable";
-        } B15[7:7] =  0;
+            desc = "mux4 chC: 0 = disable, 1 = enable";
+        } mux4_chC[6:6] =  0;
         field {
-            desc = "Channel 14: 0 = disable, 1 = enable";
-        } B14[6:6] =  0;
+            desc = "mux4 chB: 0 = disable, 1 = enable";
+        } mux4_chB[5:5] =  0;
         field {
-            desc = "Channel 13: 0 = disable, 1 = enable";
-        } B13[5:5] =  0;
+            desc = "mux4 chA: 0 = disable, 1 = enable";
+        } mux4_chA[4:4] =  0;
         field {
-            desc = "Channel 12: 0 = disable, 1 = enable";
-        } B12[4:4] =  0;
+            desc = "mux3 chC: 0 = disable, 1 = enable";
+        } mux3_chC[3:3] =  0;
         field {
-            desc = "Channel 11: 0 = disable, 1 = enable";
-        } B11[3:3] =  0;
+            desc = "mux3 chB: 0 = disable, 1 = enable";
+        } mux3_chB[2:2] =  0;
         field {
-            desc = "Channel 10: 0 = disable, 1 = enable";
-        } B10[2:2] =  0;
+            desc = "mux3 chA: 0 = disable, 1 = enable";
+        } mux3_chA[1:1] =  0;
         field {
-            desc = "Channel 9: 0 = disable, 1 = enable";
-        } B9[1:1] =  0;
-        field {
-            desc = "Channel 8: 0 = disable, 1 = enable";
-        } B8[0:0] =  0;
+            desc = "mux2 chC: 0 = disable, 1 = enable";
+        } mux2_chC[0:0] =  0;
     } control1;
 
 };

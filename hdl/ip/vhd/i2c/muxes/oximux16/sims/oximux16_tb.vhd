@@ -167,7 +167,7 @@ begin
                 check_equal(mux4_sel, not_selected, "Mux not disconnected at start");
                 
                 -- bit15 is reserved so we don't use it
-                for i in 0 to 2 loop
+                for i in 0 to 14 loop
                     reg_data := (others => '0');
                     reg_data(i) := '1';  -- set the i'th bit
                     expected_reg_data := reg_data;
@@ -175,7 +175,7 @@ begin
                     push_byte(tx_queue, to_integer(reg_data(7 downto 0)));
                     push_byte(tx_queue, to_integer(reg_data(15 downto 8)));
                     blocking_i2c_write_txn (net, mux0_addr, tx_queue, ack_queue);
-                    check_true(contains_all_acks(ack_queue), "Either no acks or some Nacks were found");
+                    check_true(contains_all_acks(ack_queue), "Either no acks or some Nacks were found loop: " & integer'image(i));
                 -- Verify mux ch0 is selected
                     if i = 0 then
                         check_equal(mux0_sel, chA_selected, "CHA Mux 0 not selected after write");
