@@ -125,6 +125,7 @@ begin
     begin
         if reset then
             ta_edge_vec <= (0 => '1', others => '0');
+            in_command_phase <= false;
         elsif rising_edge(clk) then
             sclk_any_edge := sclk /= sclk_last;
             if in_turnaround_phase and sclk_any_edge then
@@ -132,6 +133,9 @@ begin
             elsif cs_n = '1' then
                 ta_edge_vec <= (0 => '1', others => '0');
             end if;
+            -- registered for timing. this is only used on rx path and doesn't need to be strictly clock-over-clock accurate as it's sampled on
+            -- the sclk edge.
+            in_command_phase <= true when cs_n = '0' and (size_info.valid = '0' or (size_info.valid = '1' and completed_byte_cnt < (size_info.size))) else false;
            
         end if;
     end process;
@@ -141,7 +145,6 @@ begin
     -- There is no crc checking here, so if we never see a valid size in the parser we just don't
     -- run anything in the response phase.
     completed_byte_cnt <= shift_right(sclk_cnts, get_sclk_to_bytes_shift_amt_by_mode(txn_qspi_mode));
-    in_command_phase <= true when cs_n = '0' and (size_info.valid = '0' or (size_info.valid = '1' and completed_byte_cnt < (size_info.size))) else false;
     -- note this starts 1/2 a cycle early so that we shift out on the last TA edge per spec
     in_turnaround_phase <= true when size_info.valid = '1' and (completed_byte_cnt = size_info.size and (not in_response_phase)) else false;
     in_response_phase <= true when ta_edge_vec(ta_edge_vec'left) else false;

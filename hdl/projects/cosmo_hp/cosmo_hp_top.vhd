@@ -519,59 +519,37 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
     -------------------------------------
     -- SP I2C STUFF
     -------------------------------------
-    -- i2c breakout phy consolidator for sp i2c muxes
-    sp_i2c_phy_consolidator_inst: entity work.i2c_phy_consolidator
+    -- Mux 4: chA (bit0) CEM A, chB (bit1) CEM B, chC (bit2) CEM C
+    -- Mux 5: chA (bit3) CEM D, chB (bit4) CEM E, chC (bit5) CEM F
+    -- Mux 6: chA (bit6) MCIO1, chB (bit7) MCIO2, chC (bit8) CEM G
+    -- Mux 7: chA (bit9) CEM H, chB (bit10) CEM I, chC (bit11) CEM J
+    -- Mux 8: chA (bit12) Front Bus, chB (bit13) N/C, chC (bit14) N/C
+    oximux16_top_inst: entity work.oximux16_top
      generic map(
-        TARGET_NUM => 5
+        i2c_addr => b"1110_000"  -- 0x70
     )
      port map(
         clk => clk_50m,
         reset => reset_50m,
+        mux_reset => '0',
+        allowed_to_enable => '1',
+        mux_is_active => open,
         scl => smbus_sp_to_fpga2_smclk,
         scl_o => sp_scl_o,
         scl_oe => sp_scl_oe,
         sda => smbus_sp_to_fpga2_smdat,
         sda_o => sp_sda_o,
         sda_oe => sp_sda_oe,
-        tgt_scl => sp_tgt_scl,
-        tgt_scl_o => sp_tgt_scl_o,
-        tgt_scl_oe => sp_tgt_scl_oe,
-        tgt_sda => sp_tgt_sda,
-        tgt_sda_o => sp_tgt_sda_o,
-        tgt_sda_oe => sp_tgt_sda_oe
+        mux0_sel => fpga2_to_i2c_mux4_sel,
+        mux1_sel => fpga2_to_i2c_mux5_sel,
+        mux2_sel => fpga2_to_i2c_mux6_sel,
+        mux3_sel => fpga2_to_i2c_mux7_sel,
+        mux4_sel => fpga2_to_i2c_mux8_sel
     );
 
     -- tri-state muxes, top level
     smbus_sp_to_fpga2_smclk <= sp_scl_o when sp_scl_oe = '1' else 'Z';
     smbus_sp_to_fpga2_smdat <= sp_sda_o when sp_sda_oe = '1' else 'Z';
-
-    -- 5 muxes here
-    mux_gen: for i in mux_i2c_addr'range generate
-        pca9545ish_top_inst: entity work.pca9545ish_top
-         generic map(
-            i2c_addr => mux_i2c_addr(i)
-        )
-         port map(
-            clk => clk_50m,
-            reset => reset_50m,
-            mux_reset => '0',
-            allowed_to_enable => '1', -- TODO: fix this up later with exclusive logic
-            scl => sp_tgt_scl(i),
-            scl_o => sp_tgt_scl_o(i),
-            scl_oe => sp_tgt_scl_oe(i),
-            sda => sp_tgt_sda(i),
-            sda_o => sp_tgt_sda_o(i),
-            sda_oe => sp_tgt_sda_oe(i),
-            mux_sel => mux_sel(i)
-        );
-    end generate;
-
-    -- assign out the mux selects from the vector to the pins
-    fpga2_to_i2c_mux4_sel <= mux_sel(0);
-    fpga2_to_i2c_mux5_sel <= mux_sel(1);
-    fpga2_to_i2c_mux6_sel <= mux_sel(2);
-    fpga2_to_i2c_mux7_sel <= mux_sel(3);
-    fpga2_to_i2c_mux8_sel <= mux_sel(4);
 
     -------------------------------------
     -- Hotplug CEM stuff

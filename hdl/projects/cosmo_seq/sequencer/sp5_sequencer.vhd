@@ -206,6 +206,7 @@ begin
     sp5_readbacks.reset_l <= sp5_seq.reset_l;
     sp5_readbacks.thermtrip_l <= sp5_seq.thermtrip_l;
     sp5_readbacks.smerr_l <= sp5_seq.smerr_l;
+    sp5_readbacks.pwrgd_out <= sp5_seq.pwrgd_out;
     -- NIC sequencing readbacks
     nic_readbacks.nic_pcie_clk_buff_oe_l <= nic_seq.nic_pcie_clk_buff_oe_l;
     nic_readbacks.flash_wp_l <= nic_seq.flash_wp_l;

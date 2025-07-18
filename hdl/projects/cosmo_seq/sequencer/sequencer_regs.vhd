@@ -62,10 +62,13 @@ architecture rtl of sequencer_regs is
 
     signal amd_reset_fedges : amd_reset_fedges_type;
     signal amd_pwrok_fedges : amd_pwrok_fedges_type;
+    signal amd_pwrgd_out_fedges : amd_pwgdout_fedges_type;
     signal amd_reset_l_last : std_logic;
     signal amd_reset_l_fedge : std_logic;
     signal amd_pwrok_last : std_logic;
     signal amd_pwrok_fedge : std_logic;
+    signal amd_pwrgd_out_last : std_logic;
+    signal amd_pwrgd_out_fedge : std_logic;
 
     signal a0_en_redge : std_logic;
     signal a0_en_last : std_logic;
@@ -101,6 +104,7 @@ begin
             nic_raw_status_max <= (hw_sm => (others => '0'));
             amd_reset_fedges <= (counts => (others => '0'));
             amd_pwrok_fedges <= (counts => (others => '0'));
+            amd_pwrgd_out_fedges <= (counts => (others => '0'));
             
         elsif rising_edge(clk) then
             therm_trip_last <= therm_trip;
@@ -108,6 +112,7 @@ begin
             a0_en_last <= power_ctrl.a0_en;
             amd_reset_l_last <= sp5_readbacks.reset_l;
             amd_pwrok_last <= sp5_readbacks.pwr_ok;
+            amd_pwrgd_out_last <= sp5_readbacks.pwrgd_out;
 
             -- Max hold for seq API status.  Clear on rising edge of enable
             if a0_en_redge then
@@ -149,11 +154,18 @@ begin
               amd_pwrok_fedges.counts <= amd_pwrok_fedges.counts + 1;
             end if;
 
+            if a0_en_redge then
+              amd_pwrgd_out_fedges <= (counts => (others => '0'));
+            elsif amd_pwrgd_out_fedge = '1' and amd_pwrgd_out_fedges.counts < 255 then
+              amd_pwrgd_out_fedges.counts <= amd_pwrgd_out_fedges.counts + 1;
+            end if;
+
         end if;
     end process;
     a0_en_redge <= power_ctrl.a0_en and (not a0_en_last);
     amd_reset_l_fedge <= not sp5_readbacks.reset_l and amd_reset_l_last;
     amd_pwrok_fedge <= not sp5_readbacks.pwr_ok and amd_pwrok_last;
+    amd_pwrgd_out_fedge <= not sp5_readbacks.pwrgd_out and amd_pwrgd_out_last;
 
     axil_target_txn_inst: entity work.axil_target_txn
      port map(
@@ -235,6 +247,7 @@ begin
                     when NIC_RAW_STATUS_OFFSET => rdata <= pack(nic_raw_status);
                     when AMD_RESET_FEDGES_OFFSET => rdata <= pack(amd_reset_fedges);
                     when AMD_PWROK_FEDGES_OFFSET => rdata <= pack(amd_pwrok_fedges);
+                    when AMD_PWGDOUT_FEDGES_OFFSET => rdata <= pack(amd_pwrgd_out_fedges);
                     when RAIL_ENABLES_OFFSET => rdata <= pack(rails_en_rdbk);
                     when RAIL_PGS_OFFSET => rdata <= pack(rails_pg_rdbk);
                     when RAIL_PGS_MAX_HOLD_OFFSET => rdata <= pack(rails_pg_max);
