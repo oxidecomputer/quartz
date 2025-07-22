@@ -134,7 +134,7 @@ begin
                 end if;
             when SND_IDLE1 | SND_IDLE2 =>
                 if serdes_10b_datain_ready = '1' then
-                    if v.send_pend then  -- want current combo send
+                    if r.send_pend then
                         v.state := SND_SOP;
                         v.send_pend := '0';
                     else -- nothing to send go back to sending IDLEs.

@@ -126,15 +126,11 @@ begin
         v.strobe := '0';
         v.timer_exp := '0';
 
-        if r.counter = RESEND_CNTS then
+        if r.counter >= RESEND_CNTS then
             v.counter := (others => '0');
             v.timer_exp := '1';
         else
             v.counter := r.counter + 1;
-        end if;
-
-        if r.timer_exp = '1' then
-            v.strobe := '1';
         end if;
 
         v.reset_in_progress_last := reset_in_progress;
