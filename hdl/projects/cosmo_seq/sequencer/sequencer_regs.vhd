@@ -30,6 +30,7 @@ entity sequencer_regs is
         seq_raw_status : in seq_raw_status_type;
         therm_trip : in std_logic;
         smerr_assert : in std_logic;
+        a0_faulted : in std_logic;
         -- from nic block
         nic_api_status : in nic_api_status_type;
         nic_raw_status : in nic_raw_status_type;
@@ -207,10 +208,16 @@ begin
         elsif rising_edge(clk) then
             ifr.thermtrip <= ifr.thermtrip or (not therm_trip_last and therm_trip);
             ifr.smerr_assert <= ifr.smerr_assert or (not smerr_assert_last and smerr_assert);
+            ifr.amd_rstn_fedge <= ifr.amd_rstn_fedge or amd_reset_l_fedge;
+            ifr.amd_pwrok_fedge <= ifr.amd_pwrok_fedge or amd_pwrok_fedge;
+            ifr.a0mapo <= ifr.a0mapo or a0_faulted;
+            -- TODO: not implemented yet
+            ifr.nicmapo <= '0';
+            ifr.fanfault <= '0';
 
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
-                    when IFR_OFFSET => ifr <= ifr and (not axi_if.write_data.data);
+                    when IFR_OFFSET => ifr <= unpack(axi_if.write_data.data);
                     when IER_OFFSET => ier <= unpack(axi_if.write_data.data);
                     when EARLY_POWER_CTRL_OFFSET => early_power_ctrl <= unpack(axi_if.write_data.data);
                     when POWER_CTRL_OFFSET => power_ctrl <= unpack(axi_if.write_data.data);
