@@ -19,6 +19,7 @@ entity sequencer_regs is
         clk : in std_logic;
         reset : in std_logic;
 
+        irq_l_out : out std_logic;
         allow_backplane_pcie_clk : out std_logic;
         axi_if : view axil8x32_pkg.axil_target;
         -- from early block
@@ -52,6 +53,7 @@ end entity;
 architecture rtl of sequencer_regs is
     signal ifr : irq_type;
     signal ier : irq_type;
+    signal commbined_irq : irq_type;
 
     signal status : status_type;
 
@@ -90,6 +92,8 @@ begin
     ignition_creset <= ignition_control.ignition_creset;
     allow_backplane_pcie_clk <= pcie_clk_ctrl.clk_en;
 
+    commbined_irq <= ifr and ier;
+
     -- non-axi-specific logic
     seq_regs_specific: process(clk, reset)
     begin
@@ -106,8 +110,12 @@ begin
             amd_reset_fedges <= (counts => (others => '0'));
             amd_pwrok_fedges <= (counts => (others => '0'));
             amd_pwrgd_out_fedges <= (counts => (others => '0'));
+            irq_l_out <= '1';
             
         elsif rising_edge(clk) then
+            irq_l_out <= '0' when unsigned'(pack(commbined_irq)) /= 0 else '1';
+
+
             therm_trip_last <= therm_trip;
             smerr_assert_last <= smerr_assert;
             a0_en_last <= power_ctrl.a0_en;
