@@ -53,7 +53,7 @@ begin
                 crc_reg(2) <= crc_reg(0) xor crc_reg(1) xor crc_reg(2) xor crc_reg(3) xor crc_reg(4) xor crc_reg(6) xor
                               data_in(0) xor data_in(1) xor data_in(2) xor data_in(3) xor data_in(4) xor data_in(6);
                 crc_reg(3) <= crc_reg(0) xor crc_reg(1) xor crc_reg(2) xor crc_reg(4) xor 
-                              data_in(0) xor data_in(1) xor data_in(2) xor data_in(4) xor data_in(5);
+                              data_in(0) xor data_in(1) xor data_in(2) xor data_in(4);
                 crc_reg(4) <= crc_reg(1) xor crc_reg(2) xor crc_reg(3) xor crc_reg(5) xor 
                               data_in(1) xor data_in(2) xor data_in(3) xor data_in(5); 
                 crc_reg(5) <= crc_reg(0) xor crc_reg(2) xor crc_reg(4) xor crc_reg(5) xor crc_reg(6) xor crc_reg(7) xor 
