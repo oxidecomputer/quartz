@@ -102,7 +102,7 @@ begin
         sp_fault_l => sp_fault_l,
         rot_fault_l => rot_fault_l,
         push_btn_l => '1',
-        ignition_id => COMPUTE_SLED,
+        ignition_id => ign_trgt_id,
         dbg => ign_trgt_fpga_spare_v3p3(4 downto 2)
     );
 

@@ -17,15 +17,8 @@ entity ignition_target_common is
         NUM_LEDS : positive := 4;
         NUM_BITS_IGNITION_ID : positive := 6;
         -- Protocol specification says 25ms resend time.  Legacy ignition controller gives a window
-        -- of 25+2ms with no other margin on this. While debugging this, I would discover cases where
-        -- the controller would send a target off command, and the target would turn off and continue
-        -- transmitting at the 25ms rate, but the controller would get unhappy and permanently loose
-        -- presence of the target. From the scope shots and manual 8b10b decode I did, this appears
-        -- to be some kind of controller bug as I can't find any issues with this implementation.
-        -- Changing the resend timer down a bit resolves this issue. My working theory is that there
-        -- is some case where back-to-back status updates occur and the controller doesn't properly handle
-        -- them if they align with a timeout window.
-        RESEND_CNTS : unsigned(20 downto 0) := calc_ms(22, 20, 21);
+        -- of 25+2ms with no other margin on this.
+        RESEND_CNTS : unsigned(20 downto 0) := calc_ms(25, 20, 21);
         COOLDOWN_CNTS : unsigned(26 downto 0) := calc_ms(2000, 20, 27)
     );
     port(

@@ -52,7 +52,6 @@ end entity;
 architecture rtl of ignition_status is
     type state_t is (IDLE, SENDING);
     type small_cnts_t is array(0 to 1) of unsigned(2 downto 0);
-    
 
     type reg_t is record
         state : state_t;
@@ -124,17 +123,11 @@ begin
         v := r;
 
         v.strobe := '0';
-        v.timer_exp := '0';
 
         if r.counter = RESEND_CNTS then
-            v.counter := (others => '0');
             v.timer_exp := '1';
         else
             v.counter := r.counter + 1;
-        end if;
-
-        if r.timer_exp = '1' then
-            v.strobe := '1';
         end if;
 
         v.reset_in_progress_last := reset_in_progress;
@@ -177,6 +170,7 @@ begin
                     v.link1_events := r.link1_events_pend;
                     v.link0_events_pend := (others => '0');
                     v.link1_events_pend := (others => '0');
+                    v.timer_exp := '0';
                     v.counter := (others => '0'); -- reset counter
                 end if;
 
