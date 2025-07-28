@@ -13,61 +13,114 @@ set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125
 # FMC Interface
 # #######################
 
+# SP output a continuous clock here.
+# The FMC interface is clocked at 66.67MHz, which is a 15ns period.
 # FPGA's input delays have to be low enough that they don't run into the uncertainty region due to any possible skew.
-# skew_bre is the shortests trace delay vs the clock, and skew_are is the longest trace delay vs the clock.
-# On grapefruit, clock trace is 61.195mm.  shortest trace is FMC_SP_TO_FPGA_BL1_L at 60.504mm, longest is FMC_SP_TO_FPGA_BL0_L at 65.116mm
-# 6.8ns per m so 61.195-60.504 = 0.691mm * 6.8ns/m = 0.0047ns skew_bre
-# 65.116-61.195 = 3.921mm * 6.8ns/m = 0.0266ns skew_are
+# skew_bre is the shortest trace delay vs the clock, and skew_are is the longest trace delay vs the clock.
+# On cosmo, clock trace is 60.787 rev1, 53.026mm rev2 .  
+# shortest trace rev1 is FMC_SP_TO_FPGA1_A22 at 58.956, rev2 is FMC_SP_TO_FPGA1_DA14 at 52.54
+# longest trace rev1 (ignoring BL) is FMC_SP_TO_FPGA1_DA5 at 61.565, rev2 is FMC_SP_TO_FPGA1_A20 at 54.473
 
-# Also note that the SP changes outputs only on the *falling* edge of the fmc clock, which means there's a phase-shift
+# Max clock delay to FPGA: 60.787mm * 6.8ns/m = 0.4134 ns (rev1 longest)
+set max_clock_delay 0.4134
+# Min clock delay to FPGA: 53.026mm * 6.8ns/m = 0.3602 ns (rev2 shortest)
+set min_clock_delay 0.3602
+# Max data delay between SP and FPGA: 61.565mm * 6.8ns/m = 0.4186 ns (rev1 longest)
+set max_data_delay 0.4186
+# Min data delay between SP and FPGA: 52.54mm * 6.8ns/m = 0.3573 ns (rev2 shortest)
+set min_data_delay 0.3573
+# Max wait delay between SP and FPGA: 60.787*6.8ns/m = 0.4134 ns (rev1 longest)
+set max_wait_delay 0.4134
+# Min wait delay between SP and FPGA: 53.467*6.8ns/m = 0.3635 ns (rev1 longest)
+set min_wait_delay 0.3635
 
-# in delay max = tco_ext to max delay ext to fpga
-# in delay min = minTco_ext to min delay ext to fpga
-# chipsel example: 
-# Since data comes out on the falling edge, but we didn't shift the clock,
-# we need to add an additional 1/2 period to the TCO_exts so
-# max= 7.5ns (1/2 period) + 1ns (maxreal tco) + 0.0266ns max skew
-# min= 7.5ns (1/2 period) + 0ns (min real tco) + 0.0047 min skew
-set_input_delay -clock fmc_virt_clk -max 8.527 [get_ports fmc_sp_to_fpga1_cs_l]
-set_input_delay -clock fmc_virt_clk -min 7.505 [get_ports fmc_sp_to_fpga1_cs_l]
-set_input_delay -clock fmc_virt_clk -max 8.527 [get_ports fmc_sp_to_fpga1_we_l]
-set_input_delay -clock fmc_virt_clk -min 7.505 [get_ports fmc_sp_to_fpga1_we_l]
-set_input_delay -clock fmc_virt_clk -max 8.527 [get_ports fmc_sp_to_fpga1_oe_l]
-set_input_delay -clock fmc_virt_clk -min 7.505 [get_ports fmc_sp_to_fpga1_oe_l]
-set_input_delay -clock fmc_virt_clk -max 8.527 [get_ports fmc_sp_to_fpga1_adv_l]
-set_input_delay -clock fmc_virt_clk -min 7.505 [get_ports fmc_sp_to_fpga1_adv_l]
-set_input_delay -clock fmc_virt_clk -max 8.527 [get_ports fmc_sp_to_fpga1_bl_l]
-set_input_delay -clock fmc_virt_clk -min 7.005 [get_ports fmc_sp_to_fpga1_bl_l]
-# Address has diff relationship
-# max= 7.5ns (1/2 period) + 2.5ns (maxreal tco) + 0.0266ns max skew
-# min= 7.5ns (1/2 period) + 0ns (min real tco) + 0.0047ns max skew
-set_input_delay -clock fmc_virt_clk -max 10.027 [get_ports fmc_sp_to_fpga1_a[*]]
-set_input_delay -clock fmc_virt_clk -min 7.505 [get_ports fmc_sp_to_fpga1_a[*]]
-# Data in has diff relationship
-# max= 7.5ns (1/2 period) + 3ns (maxreal tco) + 0.0266ns max skew
-# min= 7.5ns (1/2 period) + 0ns (min real tco) + 0.0047ns max skew
-set_input_delay -clock fmc_virt_clk -max 10.527 [get_ports fmc_sp_to_fpga1_da[*]]
-set_input_delay -clock fmc_virt_clk -min 7.505 [get_ports fmc_sp_to_fpga1_da[*]]
+# #################
+# Input constraints.
+# Effectively longest data delay, fastest clock arrival at FPGA.
+# input_max = clk_ext_delay_max + extTco_max + board_delay_max - fpga_clk_delay_min
+# Effectively shortest data delay, slowest clock arrival at FPGA.
+# input_min = clk_ext_delay_min + extTco_min + board_delay_min - fpga_clk_delay_max
 
-# out delay max = ext setup + max delay fpga to external
-# out delay min = ext hold + min delay fpga to external
+# For the inputs data valid before rising edge can be calculated based on the SP's datasheet timings and trace delays.
+# td(CLKL-NExL) clock to out is max 1ns
+# td(CLKH_NExH) is min 
+# td(CLKL-AV) 2.5ns
+# td(CLKH-AIV) 8ns?
+# td(CLKL-NOEL) 1.5ns
+# td(CLKH-NOEH) 7.5ns
+# td(CLKL-ADV) 3 ns
+# td(CLKL-ADIV) 0 ns
+# tsu(ADV-CLKH) 3 ns
+# th(CLKH-ADV) 0
+# tsu(NWAIT-CLKH) 3 ns (worst read timing)
+# th(CLKH-NWAIT) 2 ns (worst write timing)
 
-# max = 3ns (SP's needed setup time) + return delay (60.797mm)
-# max = 3ns (SP's needed setup time) + 0.414 ns
-# min = 1 ns (SP's needed hold time) + 0.414 ns
-set_output_delay -clock fmc_virt_clk -max 3.414 [get_ports fmc_sp_to_fpga1_wait_l]
-set_output_delay -clock fmc_virt_clk -min 1.414 [get_ports fmc_sp_to_fpga1_wait_l]
+# Source sync so external_clk_delay is 0.
+# Setup time is 1ns, and we include the 1/2 period due to SP  shifting the data out on the falling edge.
+set max_nl expr [expr {7.5 + 1 + $max_data_delay - $min_clock_delay}]
+# latest clock, earliest data. We assume a hold time of 0 for the SP.
+# min external: fastest data, slowest clock
+set min_nl expr [expr {0 + $min_data_delay - $max_clock_delay}]\
 
-# max = 3ns (SP's needed setup time) + clock delay to FPGA (61.195mm) + return delay (63.985mm)
-# max = 3ns (SP's needed setup time) + 0.851 ns
-# min = 0 ns (SP's needed hold time) + 0.851 ns
-set_output_delay -clock fmc_virt_clk -max 3.851 [get_ports fmc_sp_to_fpga1_da[*]]
-set_output_delay -clock fmc_virt_clk -min 0.830 [get_ports fmc_sp_to_fpga1_da[*]]
+# Apply to all of these pins with similar or better timing relationships.
+set_input_delay -clock fmc_virt_clk -max $max_nl [get_ports fmc_sp_to_fpga1_cs_l]
+set_input_delay -clock fmc_virt_clk -min $min_nl [get_ports fmc_sp_to_fpga1_cs_l]
+set_input_delay -clock fmc_virt_clk -max $max_nl [get_ports fmc_sp_to_fpga1_we_l]
+set_input_delay -clock fmc_virt_clk -min $min_nl [get_ports fmc_sp_to_fpga1_we_l]
+set_input_delay -clock fmc_virt_clk -max $max_nl [get_ports fmc_sp_to_fpga1_oe_l]
+set_input_delay -clock fmc_virt_clk -min $min_nl [get_ports fmc_sp_to_fpga1_oe_l]
+set_input_delay -clock fmc_virt_clk -max $max_nl [get_ports fmc_sp_to_fpga1_adv_l]
+set_input_delay -clock fmc_virt_clk -min $min_nl [get_ports fmc_sp_to_fpga1_adv_l]
+set_input_delay -clock fmc_virt_clk -max $max_nl [get_ports fmc_sp_to_fpga1_bl_l]
+set_input_delay -clock fmc_virt_clk -min $min_nl [get_ports fmc_sp_to_fpga1_bl_l]
 
+# Address has diff relationship 2.5ns (max tco)
+set max_a expr  [expr {7.5 + 2.5 + $max_data_delay - $min_clock_delay}]
+# Still 0 hold on these pins.
+set min_a expr [expr {0 + $min_data_delay - $max_clock_delay}]
+set_input_delay -clock fmc_virt_clk -max $max_a [get_ports fmc_sp_to_fpga1_a[*]]
+set_input_delay -clock fmc_virt_clk -min $min_a [get_ports fmc_sp_to_fpga1_a[*]]
+
+# Data in has diff relationship 3ns (max tco)
+set max_ad expr [expr {7.5 + 3 + $max_data_delay - $min_clock_delay}]
+# Still 0 hold on these pins.
+set min_ad expr [expr {0 + $min_data_delay - $max_clock_delay}]
+set_input_delay -clock fmc_virt_clk -max $max_ad [get_ports fmc_sp_to_fpga1_da[*]]
+set_input_delay -clock fmc_virt_clk -min $min_ad [get_ports fmc_sp_to_fpga1_da[*]]
+
+#### END Of inputs
+
+# #################
+# Output constraints.
+# Effectively need to meet setup time with longest FPGA data delay and fastest clock arrival at other device.
+# output_max = fpga_clk_delay_max + board_delay_max + extTsu - ext_clk_delay_min
+# Effectively need to meet hold time with shortest FPGA data delay and slowest clock arrival at other device.
+# input_min = fpga_clk_delay_min + board_delay_min - extTh - ext_clk_delay_max
+
+# Ext setup time is 3ns
+# SP rising edge samples so 0 clock delay at external device.
+set max_wait expr [expr {3 + $max_wait_delay + $max_clock_delay - 0}]
+# Ext hold time is 2ns, still 0 clock delay at external device.
+set min_wait expr [expr {$min_clock_delay + $min_wait_delay - 2 - 0}]
+set_output_delay -clock fmc_virt_clk -max 3.8267 [get_ports fmc_sp_to_fpga1_wait_l]
+set_output_delay -clock fmc_virt_clk -min -1.173 [get_ports fmc_sp_to_fpga1_wait_l]
+
+# Ext setup time is 3ns
+# Ext hold time is 0ns
+set max_da expr [expr {3 + $max_data_delay + $max_clock_delay - 0}]
+set min_da expr [expr {$min_data_delay - 0 + $min_clock_delay - 0}]
+set_output_delay -clock fmc_virt_clk -max $max_da [get_ports fmc_sp_to_fpga1_da[*]]
+set_output_delay -clock fmc_virt_clk -min $min_da[get_ports fmc_sp_to_fpga1_da[*]]
+
+
+# assuming wait_l works, we have multiple cycles to get the data out. This is likely needed due to the tri-state stuff here
+# and it has trouble meeting timing without the additional cycles. The fpga design compensates for this with wait_l.
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -setup 2
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -hold 1
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -setup 2
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -hold 1
+
+# End FMC
 
 set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v3p3*}]
 set_false_path -from [get_nets *] -to [get_ports {fpga1_spare_v1p8[*]}]
