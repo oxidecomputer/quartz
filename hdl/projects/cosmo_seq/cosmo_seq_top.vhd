@@ -214,8 +214,8 @@ entity cosmo_seq_top is
         hdt_conn_to_mux_testen : in std_logic;
         hdt_fpga1_to_mux_dat : in std_logic;
         hdt_fpga1_to_mux_dbreq_l : in std_logic;
-        hdt_fpga1_to_mux_en_l : in std_logic;
-        hdt_fpga1_to_mux_sel : in std_logic;
+        hdt_fpga1_to_mux_en_l : out std_logic;
+        hdt_fpga1_to_mux_sel : out std_logic;
         hdt_fpga1_to_mux_tck : in std_logic;
         hdt_fpga1_to_mux_tms : in std_logic;
         hdt_fpga1_to_mux_trst_l : in std_logic;
@@ -413,6 +413,11 @@ begin
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
     i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
     i3c_fpga1_to_dimm_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
+
+    -- Enable HDT header
+    -- Default is Pulled down, tied to FPGA so we set this to '1' to enable the debug header.
+    hdt_fpga1_to_mux_en_l <= '0'; -- enable the mux
+    hdt_fpga1_to_mux_sel <= '1'; --select the mux
 
     ---------------------------------------------
     -- FMC to AXI Interface from the SP
