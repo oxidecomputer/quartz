@@ -85,6 +85,24 @@ begin
             -- write_word(rmemory, base_address(buf), expected_data);
             -- fmc_read32(net, address, data);
             -- check_equal(data, expected_data, "Read data did not match exptected");
+             elsif run("basic_fmc_unaligned_read_test") then
+                buf := allocate(rmemory, 4 * 2, alignment => 32);
+                -- Use the simulation interface to set the data we're going to read back
+                expected_data := X"DEADBEEF";
+                write_word(rmemory, base_address(buf), expected_data);
+                -- TB will fault if DUT tries to write to this memory
+                set_permissions(rmemory, base_address(buf), read_only);
+                -- Read back written word via sim interface and check it matches
+                data := read_word(rmemory, base_address(buf), 4);
+                check_equal(data, expected_data, "Sim I/F Read data did not match exptected");
+                -- Now do the FMC transaction, and check that returned data matches
+                fmc_read32(net, address + 1, data);
+                check_equal(data, expected_data, "Read data did not match exptected");
+            -- -- Do a second transaction
+            -- expected_data := X"ADEADBAD";
+            -- write_word(rmemory, base_address(buf), expected_data);
+            -- fmc_read32(net, address, data);
+            -- check_equal(data, expected_data, "Read data did not match exptected");
             elsif run("basic_fmc_read_after_write") then
                 data := X"DEADBEEF";
                 -- Set up the buffer used by the AXI write target

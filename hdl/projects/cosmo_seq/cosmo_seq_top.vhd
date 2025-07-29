@@ -219,8 +219,8 @@ entity cosmo_seq_top is
         hdt_conn_to_mux_testen : in std_logic;
         hdt_fpga1_to_mux_dat : in std_logic;
         hdt_fpga1_to_mux_dbreq_l : in std_logic;
-        hdt_fpga1_to_mux_en_l : in std_logic;
-        hdt_fpga1_to_mux_sel : in std_logic;
+        hdt_fpga1_to_mux_en_l : out std_logic;
+        hdt_fpga1_to_mux_sel : out std_logic;
         hdt_fpga1_to_mux_tck : in std_logic;
         hdt_fpga1_to_mux_tms : in std_logic;
         hdt_fpga1_to_mux_trst_l : in std_logic;
@@ -445,6 +445,11 @@ begin
     -- don't have this problem so we can immediately enable them regardless of the SP5 power state which
     -- is the desired system behavior.
     i3c_fpga1_to_dimm_oe_l <= '0' when  (not is_rev1) or sp5_seq_pins.pwr_good else '1';
+
+    -- Enable HDT header
+    -- Default is Pulled down, tied to FPGA so we set this to '1' to enable the debug header.
+    hdt_fpga1_to_mux_en_l <= '0'; -- enable the mux
+    hdt_fpga1_to_mux_sel <= '1'; --select the mux
 
     ---------------------------------------------
     -- FMC to AXI Interface from the SP
