@@ -130,7 +130,15 @@ begin
                     api_state.nic_sm <= NIC_RESET;
 
                 when DONE =>
-                    api_state.nic_sm <= DONE;
+                    -- PRE-reset is done but we want to expose the final reset state to
+                    -- the API so that it can see that the NIC is up and running after the
+                    -- SP5 hotplug stuff happens and it is enabled vs immediately after power on
+                    -- while still in reset.
+                    if rst_nic_r.state = PERST_DEASSERTED then
+                        api_state.nic_sm <= DONE;
+                    else
+                        api_state.nic_sm <= NIC_RESET;
+                    end if;
 
             end case;
         end if;
