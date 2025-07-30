@@ -2,17 +2,17 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.numeric_std_unsigned.all;
 
 package axilite_if_2k19_pkg is
    generic (
-      addr_width : integer
+      addr_width: integer;
+      data_width: integer;
    );
 
    -- Write address channel
@@ -32,8 +32,8 @@ package axilite_if_2k19_pkg is
    type axil_write_data_t is record
       valid : std_logic;
       ready : std_logic;
-      data : std_logic_vector(31 downto 0);
-      strb : std_logic_vector(3 downto 0);
+      data : std_logic_vector(data_width - 1 downto 0);
+      strb : std_logic_vector((data_width / 8) - 1 downto 0);
    end record;
 
    view wdat_controller of axil_write_data_t is
@@ -73,7 +73,7 @@ package axilite_if_2k19_pkg is
    type axil_read_data_t is record
       valid : std_logic;
       ready : std_logic;
-      data : std_logic_vector(31 downto 0);
+      data : std_logic_vector(data_width - 1 downto 0);
       resp : std_logic_vector(1 downto 0);
    end record;
 
@@ -106,6 +106,18 @@ package axilite_if_2k19_pkg is
 end package;
 
 -- Some common sizes expected to be used
-package axil8x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 8);
-package axil24x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 24);
-package axil26x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 26);
+package axil8x32_pkg is new work.axilite_if_2k19_pkg
+   generic map(
+      addr_width => 8,
+      data_width => 32
+   );
+package axil24x32_pkg is new work.axilite_if_2k19_pkg
+   generic map(
+      addr_width => 24,
+      data_width => 32
+   );
+package axil26x32_pkg is new work.axilite_if_2k19_pkg
+   generic map(
+      addr_width => 26,
+      data_width => 32
+   );
