@@ -74,7 +74,7 @@ def yosys_vhdl_synth(ctx):
     cmd.add("--output", yosys_py.as_output())
    
 
-    ctx.actions.run(cmd, category="yosys_synth_gen")
+    ctx.actions.run(cmd, category="yosys_synth_gen",  local_only = True, allow_cache_upload=True)
 
     yosys_synth_log = ctx.actions.declare_output("synth.log")
     yosys_ghdl_warns = ctx.actions.declare_output("ghdl_stderr.log")
@@ -86,7 +86,7 @@ def yosys_vhdl_synth(ctx):
     yosys_synth_cmd.add("--ghdl_stderr", yosys_ghdl_warns.as_output())
 
 
-    ctx.actions.run(yosys_synth_cmd, category="yosys_run")
+    ctx.actions.run(yosys_synth_cmd, category="yosys_run",  local_only = True,allow_cache_upload=True)
     providers.append(DefaultInfo(default_output=yosys_json))
 
     return providers
@@ -109,7 +109,7 @@ def ice40_nextpnr(ctx, yoys_providers):
     for nextpnr_arg in ctx.attrs.nextpnr_args:
         cmd.add(nextpnr_arg)
 
-    ctx.actions.run(cmd, category="next_pnr")
+    ctx.actions.run(cmd, category="next_pnr",  local_only = True,allow_cache_upload=True)
 
     providers.append(DefaultInfo(default_output=asc))
     return providers
@@ -129,7 +129,7 @@ def icepack(ctx, next_pnr_providers):
     cmd.add(asc)
     cmd.add( bit.as_output())
 
-    ctx.actions.run(cmd, category="icepak")
+    ctx.actions.run(cmd, category="icepak",  local_only = True, allow_cache_upload=True)
     providers.append(DefaultInfo(default_output=bit))
     return providers
 
