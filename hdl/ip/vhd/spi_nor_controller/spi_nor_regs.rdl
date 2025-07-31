@@ -127,4 +127,20 @@ addrmap spi_nor_regs {
             desc = "*Signed* Address added (ie subtracted for negative) to raw eSPI transactions to generate physical flash address";
         } offset[31:0] =  0;
     } SP5FlashOffset;
+
+    reg {
+        name = "APOB Flash offset address";
+        desc = "Allows hubris to configure the start of the flash range which is remapped to the bonus flash region";
+        field {
+            desc = "Start address of the APOB flash region";
+        } offset[31:0] =  0;
+    } ApobFlashAddr;
+
+    reg {
+        name = "APOB Flash length";
+        desc = "Allows hubris to configure the length of the flash range which is remapped to the bonus flash region";
+        field {
+            desc = "Length of the APOB flash region";
+        } offset[31:0] =  0;
+    } ApobFlashLen;
 };
