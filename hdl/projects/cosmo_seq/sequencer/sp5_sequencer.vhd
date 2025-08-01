@@ -143,7 +143,8 @@ begin
         sp5_readbacks => sp5_readbacks,
         nic_readbacks => nic_readbacks,
         ignition_mux_sel => ignition_mux_sel,
-        ignition_creset => ignition_creset
+        ignition_creset => ignition_creset,
+        irq_l_out => irq_l_out
     );
 
     -- control from hubris
