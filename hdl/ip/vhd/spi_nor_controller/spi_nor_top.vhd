@@ -76,6 +76,8 @@ architecture rtl of spi_nor_top is
     signal espi_fifo_write : std_logic;
     signal reg_fifo_write : std_logic;
     signal sp5_flash_offset : sp5flashoffset_type;
+    signal apob_flash_addr : apobflashaddr_type;
+    signal apob_flash_len : apobflashlen_type;
     signal espi_cmd : spi_nor_cmd_t;
     signal hubris_cmd: spi_nor_cmd_t;
     signal spi_cmd_if : spi_nor_cmd_t;
@@ -249,6 +251,8 @@ begin
             addr               => addr_reg,
             instr              => instr_reg,
             sp5_flash_offset   => sp5_flash_offset,
+            apob_flash_addr    => apob_flash_addr,
+            apob_flash_len     => apob_flash_len,
             dummy_cycles       => dummy_cycles_reg,
             data_bytes         => data_bytes_reg,
             go_strobe          => go_strobe,
@@ -267,6 +271,8 @@ begin
          spi_hw_busy => spisr_reg.busy,
          espi_reads_allowed => spicr_reg.sp5_owns_flash,
          cur_flash_addr_offset => signed(sp5_flash_offset.offset),
+         cur_apob_flash_addr => apob_flash_addr.offset,
+         cur_apob_flash_len => apob_flash_len.offset,
          espi_cmd_fifo_rdata => espi_cmd_fifo_rdata,
          espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
          espi_cmd_fifo_rempty => espi_cmd_fifo_rempty,

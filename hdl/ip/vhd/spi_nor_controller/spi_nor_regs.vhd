@@ -27,6 +27,8 @@ entity spi_nor_regs is
         instr            : out   instr_type;
         go_strobe        : out   std_logic;
         sp5_flash_offset : out   sp5flashoffset_type;
+        apob_flash_addr  : out   apobflashaddr_type;
+        apob_flash_len   : out   apobflashlen_type;
 
         -- TX FIFO Interface
         tx_fifo_write_data : out   std_logic_vector(31 downto 0);
@@ -79,6 +81,8 @@ begin
         instr <= rec_reset;
         addr <= rec_reset;
         sp5_flash_offset <= rec_reset;
+        apob_flash_addr <= rec_reset;
+        apob_flash_len <= rec_reset;
         go_strobe <= '0';
     elsif rising_edge(clk) then
         go_strobe <= '0';  -- self clearing
@@ -94,6 +98,8 @@ begin
                 when DATABYTES_OFFSET => data_bytes <= unpack(axi_if.write_data.data);
                 when ADDR_OFFSET => addr <= unpack(axi_if.write_data.data);
                 when SP5FLASHOFFSET_OFFSET => sp5_flash_offset <= unpack(axi_if.write_data.data);
+                when APOBFLASHADDR_OFFSET => apob_flash_addr <= unpack(axi_if.write_data.data);
+                when APOBFLASHLEN_OFFSET => apob_flash_len <= unpack(axi_if.write_data.data);
                 when others => null;
             end case;
         end if;
@@ -127,6 +133,8 @@ begin
                     rdata <= rx_fifo_read_data;
                     rx_fifo_ack <= '1';
                 when SP5FLASHOFFSET_OFFSET => rdata <= pack(sp5_flash_offset);
+                when APOBFLASHADDR_OFFSET => rdata <= pack(apob_flash_addr);
+                when APOBFLASHLEN_OFFSET => rdata <= pack(apob_flash_len);
                 when others => rdata <= (others => '0');
             end case;
         end if;
