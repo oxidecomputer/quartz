@@ -65,6 +65,46 @@ package sequencer_io_pkg is
     end view;
     alias sp5_seq_at_sp5 is sp5_seq_at_fpga'converse;
 
+    type seq_power_alert_pins_t is record
+        smbus_fan_central_hsc_to_fpga1_alert_l : std_logic;
+        smbus_fan_east_hsc_to_fpga1_alert_l : std_logic;
+        smbus_fan_west_hsc_to_fpga1_alert_l : std_logic;
+        smbus_ibc_to_fpga1_alert_l : std_logic;
+        smbus_m2_hsc_to_fpga1_alert_l : std_logic;
+        smbus_nic_hsc_to_fpga1_alert_l : std_logic;
+        smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert : std_logic;
+        smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert : std_logic;
+        smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l : std_logic;
+        main_hsc_to_fpga1_alert_l : std_logic;
+        vr_v1p8_sys_to_fpga1_alert_l : std_logic;
+        vr_v3p3_sys_to_fpga1_alert_l : std_logic;
+        vr_v5p0_sys_to_fpga1_alert_l : std_logic;
+        pwr_cont1_to_fpga1_alert_l : std_logic;
+        v0p96_nic_to_fpga1_alert_l : std_logic;
+        pwr_cont2_to_fpga1_alert_l : std_logic;
+        pwr_cont3_to_fpga1_alert_l : std_logic;
+    end record;
+    view power_alert_at_fpga of seq_power_alert_pins_t is
+        smbus_fan_central_hsc_to_fpga1_alert_l : in;
+        smbus_fan_east_hsc_to_fpga1_alert_l : in;
+        smbus_fan_west_hsc_to_fpga1_alert_l : in;
+        smbus_ibc_to_fpga1_alert_l : in;
+        smbus_m2_hsc_to_fpga1_alert_l : in;
+        smbus_nic_hsc_to_fpga1_alert_l : in;
+        smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert : in;
+        smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert : in;
+        smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l : in;
+        main_hsc_to_fpga1_alert_l : in;
+        vr_v1p8_sys_to_fpga1_alert_l : in;
+        vr_v3p3_sys_to_fpga1_alert_l : in;
+        vr_v5p0_sys_to_fpga1_alert_l : in;
+        pwr_cont1_to_fpga1_alert_l : in;
+        v0p96_nic_to_fpga1_alert_l : in;
+        pwr_cont2_to_fpga1_alert_l : in;
+        pwr_cont3_to_fpga1_alert_l : in;
+    end view;
+    alias power_alert_at_reg is power_alert_at_fpga'converse;
+
     -- Nic sequencing-related control/feedback pins
     type nic_seq_pins_t is record
         cld_rst_l : std_logic;

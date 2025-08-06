@@ -39,6 +39,25 @@ architecture th of sp5_seq_sim_th is
         fan_east_hsc_disable => 'Z',
         fan_west_hsc_disable => 'Z'
         );
+    signal reg_alert_l_pins : seq_power_alert_pins_t := (
+        smbus_fan_central_hsc_to_fpga1_alert_l => '1',
+        smbus_fan_east_hsc_to_fpga1_alert_l => '1',
+        smbus_fan_west_hsc_to_fpga1_alert_l => '1',
+        smbus_ibc_to_fpga1_alert_l => '1',
+        smbus_m2_hsc_to_fpga1_alert_l => '1',
+        smbus_nic_hsc_to_fpga1_alert_l => '1',
+        smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert => '1',
+        smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert => '1',
+        smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l => '1',
+        main_hsc_to_fpga1_alert_l => '1',
+        vr_v1p8_sys_to_fpga1_alert_l => '1',
+        vr_v3p3_sys_to_fpga1_alert_l => '1',
+        vr_v5p0_sys_to_fpga1_alert_l => '1',
+        pwr_cont1_to_fpga1_alert_l => '1',
+        v0p96_nic_to_fpga1_alert_l => '1',
+        pwr_cont2_to_fpga1_alert_l => '1',
+        pwr_cont3_to_fpga1_alert_l => '1'
+    );
     signal ddr_bulk_pins : ddr_bulk_power_t;
     signal nic_rails_pins : nic_power_t;
     signal a0_ok : std_logic;
@@ -73,7 +92,9 @@ begin
        nic_rails_pins => nic_rails_pins,
        nic_seq_pins => nic_seq_pins,
        nic_dbg_pins => nic_dbg_pins,
-       sp5_t6_perst_l => sp5_t6_perst_l
+       sp5_t6_perst_l => sp5_t6_perst_l,
+      irq_l_out => open,
+      reg_alert_l_pins => reg_alert_l_pins
    );
 
    axi_lite_master_inst: entity vunit_lib.axi_lite_master

@@ -51,6 +51,8 @@ entity sp5_sequencer is
         nic_seq_pins: view nic_seq_at_fpga;
         allow_backplane_pcie_clk : out std_logic;
         nic_dbg_pins : view t6_debug_seq_ss;
+        -- regulator alerts
+        reg_alert_l_pins : view power_alert_at_fpga;
 
         sp5_t6_perst_l : in std_logic;
 
@@ -93,6 +95,7 @@ architecture rtl of sp5_sequencer is
     signal debug_enables : debug_enables_type;
     signal smerr_assert : std_logic;
     signal a0_faulted : std_logic;
+    signal reg_alert_l : seq_power_alert_pins_t;
     
 
 
@@ -117,7 +120,9 @@ begin
         group_c => group_c,
         sp5_seq => sp5_seq,
         nic_rails => nic_rails,
-        nic_seq => nic_seq
+        nic_seq => nic_seq,
+        reg_alert_l_pins => reg_alert_l_pins,
+        reg_alert_l => reg_alert_l
     );
 
     regs: entity work.sequencer_regs
@@ -144,7 +149,8 @@ begin
         nic_readbacks => nic_readbacks,
         ignition_mux_sel => ignition_mux_sel,
         ignition_creset => ignition_creset,
-        irq_l_out => irq_l_out
+        irq_l_out => irq_l_out,
+        reg_alert_l => reg_alert_l
     );
 
     -- control from hubris

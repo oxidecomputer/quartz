@@ -12,27 +12,82 @@ addrmap sequencer_regs {
  
     // IRQ for faults
     reg irq {
-           field {
-               desc = "Fan Fault";
-           } fanfault[1];
-           field {
-               desc = "Thermtrip- Thermal trip indicated from SP5 (sticky since fpga reset or last clear)";
-           } thermtrip[1];
-           field {
-               desc = "SMERR_L asserted low while CPU was powered up";
-           } smerr_assert[1];
-           field {
-               desc = "A1A0 MAPO- A fault in the A1-A0 domain(s) caused a MAPO (sticky since fpga reset or last clear)";
-           } a0mapo[1];
-           field {
-               desc = "Nic MAPO- A fault in the A0 domain caused a MAPO (sticky since fpga reset or last clear)";
-           } nicmapo[1];
-           field {
-               desc = "AMD PWROK falling edge while in >=A0 (sticky since fpga reset or last clear)";
-           } amd_pwrok_fedge[1];
-           field {
-               desc = "AMD RESET falling edge while in >=A0 (sticky since fpga reset or last clear)";
-           } amd_rstn_fedge[1];
+        field {
+            desc = "Fan Fault";
+        } fanfault[1];
+        field {
+            desc = "Thermtrip- Thermal trip indicated from SP5 (sticky since fpga reset or last clear)";
+        } thermtrip[1];
+        field {
+            desc = "SMERR_L asserted low while CPU was powered up";
+        } smerr_assert[1];
+        field {
+            desc = "A1A0 MAPO- A fault in the A1-A0 domain(s) caused a MAPO (sticky since fpga reset or last clear)";
+        } a0mapo[1];
+        field {
+            desc = "Nic MAPO- A fault in the A0 domain caused a MAPO (sticky since fpga reset or last clear)";
+        } nicmapo[1];
+        field {
+            desc = "AMD PWROK falling edge while in >=A0 (sticky since fpga reset or last clear)";
+        } amd_pwrok_fedge[1];
+        field {
+            desc = "AMD RESET falling edge while in >=A0 (sticky since fpga reset or last clear)";
+        } amd_rstn_fedge[1];
+        
+        field {
+            desc = "Live. Set '1' when smbus_fan_central_hsc_to_fpga1_alert_l is active (low on board)";
+        } fan_central_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_fan_east_hsc_to_fpga1_alert_l is active (low on board)";
+        } fan_east_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_fan_west_hsc_to_fpga1_alert_l is active (low on board)";
+        } fan_west_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_ibc_to_fpga1_alert_l is active (low on board)";
+        } ibc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_m2_hsc_to_fpga1_alert_l is active (low on board)";
+        } m2_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_nic_hsc_to_fpga1_alert_l is active (low on board)";
+        } nic_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert_l is active (low on board)";
+        } v12_ddr5_abcdef_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert_l is active (low on board)";
+        } v12_ddr5_ghijkl_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l is active (low on board)";
+        } v12_mcio_a0hp_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when main_hsc_to_fpga1_alert_l is active (low on board)";
+        } main_hsc_alert[1];
+        field {
+            desc = "Live. Set '1' when vr_v1p8_sys_to_fpga1_alert_l is active (low on board)";
+        } vr_v1p8_sys_to_fpga1_alert[1];
+        field {
+            desc = "Live. Set '1' when vr_v3p3_sys_to_fpga1_alert_l is active (low on board)";
+        } vr_v3p3_sys_to_fpga1_alert[1];
+        field {
+            desc = "Live. Set '1' when vr_v5p0_sys_to_fpga1_alert_l is active (low on board)";
+        } vr_v5p0_sys_to_fpga1_alert[1];
+        field {
+            desc = "Live. Set '1' when v0p96_nic_to_fpga1_alert_l is active (low on board)";
+        } v0p96_nic_to_fpga1_alert[1];
+         field {
+            desc = "Live. Set '1' when pwr_cont1_to_fpga1_alert_l is active (low on board).
+This regulator controls VDDCR_CPU0_EN and VDDCR_SOC rails.";
+        } pwr_cont1_to_fpga1_alert[1];
+        field {
+            desc = "Live. Set '1' when pwr_cont2_to_fpga1_alert_l is active (low on board)
+This regulator controls VDDCR_CPU1_EN and VDDIO_SP5 rails.";
+        } pwr_cont2_to_fpga1_alert[1];
+        field {
+            desc = "Live. Set '1' when pwr_cont3_to_fpga1_alert_l is active (low on board).
+This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
+        } pwr_cont3_to_fpga1_alert[1];
        };
     // Set up interrupt registers using a common irq_type
     irq IFR;
