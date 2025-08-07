@@ -391,6 +391,7 @@ architecture rtl of cosmo_seq_top is
     signal uart_dbg_if : uart_dbg_t;
     signal allow_backplane_pcie_clk : std_logic;
     signal nic_dbg_pins : t6_debug_if;
+    signal reg_alert_l_pins : seq_power_alert_pins_t;
 
 begin
 
@@ -639,7 +640,8 @@ begin
         nic_dbg_pins => nic_dbg_pins,
         sp5_t6_perst_l => sp5_t6_perst_l,
         ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
-        ignition_creset => fpga1_to_ign_trgt_fpga_creset
+        ignition_creset => fpga1_to_ign_trgt_fpga_creset,
+        reg_alert_l_pins => reg_alert_l_pins
     );
 
     -- early power related pins
@@ -729,7 +731,26 @@ begin
     dimm_ghijkl_scl_if.i <= i3c_fpga1_to_dimm_ghijkl_scl;
     i3c_fpga1_to_dimm_ghijkl_sda <= dimm_ghijkl_sda_if.o when dimm_ghijkl_sda_if.oe else 'Z';
     dimm_ghijkl_sda_if.i <= i3c_fpga1_to_dimm_ghijkl_sda;
+
     
+    reg_alert_l_pins.smbus_fan_central_hsc_to_fpga1_alert_l <= smbus_fan_central_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.smbus_fan_east_hsc_to_fpga1_alert_l <= smbus_fan_east_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.smbus_fan_west_hsc_to_fpga1_alert_l <= smbus_fan_west_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.smbus_ibc_to_fpga1_alert_l <= smbus_ibc_to_fpga1_alert_l;
+    reg_alert_l_pins.smbus_m2_hsc_to_fpga1_alert_l <= smbus_m2_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.smbus_nic_hsc_to_fpga1_alert_l <= smbus_nic_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert <= smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert;
+    reg_alert_l_pins.smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert <= smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert;
+    reg_alert_l_pins.smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l <= smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.main_hsc_to_fpga1_alert_l <= main_hsc_to_fpga1_alert_l;
+    reg_alert_l_pins.vr_v1p8_sys_to_fpga1_alert_l <= vr_v1p8_sys_to_fpga1_alert_l;
+    reg_alert_l_pins.vr_v3p3_sys_to_fpga1_alert_l <= vr_v3p3_sys_to_fpga1_alert_l;
+    reg_alert_l_pins.vr_v5p0_sys_to_fpga1_alert_l <= vr_v5p0_sys_to_fpga1_alert_l;
+    reg_alert_l_pins.pwr_cont1_to_fpga1_alert_l <= pwr_cont1_to_fpga1_alert_l;
+    reg_alert_l_pins.v0p96_nic_to_fpga1_alert_l <= v0p96_nic_to_fpga1_alert_l;
+    reg_alert_l_pins.pwr_cont2_to_fpga1_alert_l <= pwr_cont2_to_fpga1_alert_l;
+    reg_alert_l_pins.pwr_cont3_to_fpga1_alert_l <= pwr_cont3_to_fpga1_alert_l;
+
     dimm_spd_proxy_top_inst: entity work.dimms_subsystem_top
      generic map(
         CLK_PER_NS => 8,

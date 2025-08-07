@@ -24,6 +24,7 @@ entity seq_sync is
         sp5_seq_pins : view sp5_seq_at_fpga;
         nic_rails_pins : view nic_power_at_fpga;
         nic_seq_pins: view nic_seq_at_fpga;
+        reg_alert_l_pins : view power_alert_at_fpga;
         -- internal, synchronized interfaces
         early_power : view early_power_on_board;
         ddr_bulk: view ddr_bulk_at_reg;
@@ -32,7 +33,8 @@ entity seq_sync is
         group_c : view group_c_power_at_reg;
         sp5_seq : view sp5_seq_at_sp5;
         nic_rails : view nic_power_at_reg;
-        nic_seq: view nic_seq_at_nic
+        nic_seq: view nic_seq_at_nic;
+        reg_alert_l : view power_alert_at_reg;
     );
     end entity;
 
@@ -271,4 +273,113 @@ begin
        sycnd_output => nic_seq.sp5_mfg_mode_l
     );
 
+    -- Alert sync stuff
+       
+
+    smbus_fan_central_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_fan_central_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_fan_central_hsc_to_fpga1_alert_l
+    );
+    smbus_fan_east_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_fan_east_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_fan_east_hsc_to_fpga1_alert_l
+    );
+    smbus_fan_west_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_fan_west_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_fan_west_hsc_to_fpga1_alert_l
+    );
+   smbus_ibc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_ibc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_ibc_to_fpga1_alert_l
+    );
+   smbus_m2_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_m2_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_m2_hsc_to_fpga1_alert_l
+    );
+   smbus_nic_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_nic_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_nic_hsc_to_fpga1_alert_l
+    );
+    smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert
+    );
+
+    smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert
+    );
+    smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l
+    );
+   main_hsc_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.main_hsc_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.main_hsc_to_fpga1_alert_l
+    );
+   vr_v1p8_sys_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.vr_v1p8_sys_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.vr_v1p8_sys_to_fpga1_alert_l
+    );
+   vr_v3p3_sys_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.vr_v3p3_sys_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.vr_v3p3_sys_to_fpga1_alert_l
+    );
+    vr_v5p0_sys_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.vr_v5p0_sys_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.vr_v5p0_sys_to_fpga1_alert_l
+    );
+
+   pwr_cont1_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.pwr_cont1_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.pwr_cont1_to_fpga1_alert_l
+    );
+   v0p96_nic_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.v0p96_nic_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.v0p96_nic_to_fpga1_alert_l
+    );
+   pwr_cont2_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.pwr_cont2_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.pwr_cont2_to_fpga1_alert_l
+    );
+   pwr_cont3_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.pwr_cont3_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.pwr_cont3_to_fpga1_alert_l
+    );
+
+    
 end rtl;

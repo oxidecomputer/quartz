@@ -12,6 +12,7 @@ use ieee.numeric_std_unsigned.all;
 use work.axil_common_pkg.all;
 use work.axil8x32_pkg;
 
+use work.sequencer_io_pkg.all;
 use work.sequencer_regs_pkg.all;
 
 entity sequencer_regs is
@@ -44,7 +45,9 @@ entity sequencer_regs is
         nic_readbacks : in nic_readbacks_type;
         -- Ignition mux and reconfig control
         ignition_mux_sel : out std_logic;
-        ignition_creset : out std_logic
+        ignition_creset : out std_logic;
+        -- regulator alerts
+        reg_alert_l : in seq_power_alert_pins_t
 
 
     );
@@ -237,6 +240,25 @@ begin
                     when others => null;
                 end case;
             end if;
+            -- These  are done after the write action since they are "live" and not sticky
+            -- so we don't allow writing to actually clear them so these will take precedence.
+            ifr.pwr_cont3_to_fpga1_alert <= not reg_alert_l.pwr_cont3_to_fpga1_alert_l;
+            ifr.pwr_cont2_to_fpga1_alert <= not reg_alert_l.pwr_cont2_to_fpga1_alert_l;
+            ifr.pwr_cont1_to_fpga1_alert <= not reg_alert_l.pwr_cont1_to_fpga1_alert_l;
+            ifr.v0p96_nic_to_fpga1_alert <= not reg_alert_l.v0p96_nic_to_fpga1_alert_l;
+            ifr.vr_v5p0_sys_to_fpga1_alert <= not reg_alert_l.vr_v5p0_sys_to_fpga1_alert_l;
+            ifr.vr_v3p3_sys_to_fpga1_alert <= not reg_alert_l.vr_v3p3_sys_to_fpga1_alert_l;
+            ifr.vr_v1p8_sys_to_fpga1_alert <= not reg_alert_l.vr_v1p8_sys_to_fpga1_alert_l;
+            ifr.main_hsc_alert <= not reg_alert_l.main_hsc_to_fpga1_alert_l;
+            ifr.v12_mcio_a0hp_hsc_alert <= not reg_alert_l.smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l;
+            ifr.v12_ddr5_ghijkl_hsc_alert <= not reg_alert_l.smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert;
+            ifr.v12_ddr5_abcdef_hsc_alert <= not reg_alert_l.smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert;
+            ifr.nic_hsc_alert <= not reg_alert_l.smbus_nic_hsc_to_fpga1_alert_l;
+            ifr.m2_hsc_alert <= not reg_alert_l.smbus_m2_hsc_to_fpga1_alert_l;
+            ifr.ibc_alert <= not reg_alert_l.smbus_ibc_to_fpga1_alert_l;
+            ifr.fan_west_hsc_alert <= not reg_alert_l.smbus_fan_west_hsc_to_fpga1_alert_l;
+            ifr.fan_east_hsc_alert <= not reg_alert_l.smbus_fan_east_hsc_to_fpga1_alert_l;
+            ifr.fan_central_hsc_alert <= not reg_alert_l.smbus_fan_central_hsc_to_fpga1_alert_l;
 
         end if;
     end process;
