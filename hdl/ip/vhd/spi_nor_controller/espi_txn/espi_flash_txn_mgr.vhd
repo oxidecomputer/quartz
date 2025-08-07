@@ -53,10 +53,11 @@ architecture rtl of espi_flash_txn_mgr is
         txn_bytes : natural range 0 to 255;
         rem_bytes: natural range 0 to 4096;
         cur_flash_addr : std_logic_vector(31 downto 0);
+        apob_end_addr : std_logic_vector(31 downto 0);
         next_flash_addr: std_logic_vector(31 downto 0);
         len: std_logic_vector(31 downto 0);
     end record;
-    constant reg_reset : reg_t := (idle, '0', 0, 0, 0, 0, (others => '0'), (others => '0'), (others => '0'));
+    constant reg_reset : reg_t := (idle, '0', 0, 0, 0, 0, (others => '0'), (others => '0'), (others => '0'), (others => '0'));
 
     signal r, rin: reg_t;
 
@@ -94,25 +95,30 @@ begin
             when idle =>
                 if espi_cmd_fifo_rempty = '0' and espi_reads_allowed = '1' then
                     v.state := read_cmd_addr;
+                    -- This is moved a cycle early so we can register it because we're doing a bunch of math later, and this was a hot timing path.
+                    -- This is a show-ahead fifo so it's no problem, data is valid here.
+
+                    -- We know the SP5 is only sending positive addresses, but cur_flash_addr_offset is signed so we need to cast the espi_cmd_fifo_rdata
+                    -- to unsigned also to do the math, so we add a leading zero bit, and then resize back down to 32bits.
+                    -- normal flash address, just adjust by the offset
+                    assert unsigned(espi_cmd_fifo_rdata) < x"10000000" report "Address must be less than 256MB" severity failure;
+                    v.cur_flash_addr := std_logic_vector(resize(signed('0' & espi_cmd_fifo_rdata) + cur_flash_addr_offset, 32));
+
+                    -- pre-calculate the end address of the APOB region so we can check against it later (again for timing)
+                    v.apob_end_addr := std_logic_vector((unsigned(cur_apob_flash_addr) + unsigned(cur_apob_flash_len)));
                 end if;
             when read_cmd_addr =>
                 -- The SP5 only knows about one flash location, hubris controls which
                 -- flash location we're actually talking to so we adjust the commands from
                 -- the SP5 right here one time so that we're in real flash addresses from there
                 -- on out.
-                --
-                -- We know the SP5 is only sending positive addresses, but cur_flash_addr_offset is signed so we need to cast the espi_cmd_fifo_rdata
-                -- to unsigned also to do the math, so we add a leading zero bit, and then resize back down to 32bits.
-                -- normal flash address, just adjust by the offset
-                assert unsigned(espi_cmd_fifo_rdata) < x"10000000" report "Address must be less than 256MB" severity failure;
-                v.cur_flash_addr := std_logic_vector(resize(signed('0' & espi_cmd_fifo_rdata) + cur_flash_addr_offset, 32));
-                -- Now check if the adjusted address (v.cur_flash_addr) lands in the APOB region
-                if unsigned(v.cur_flash_addr) >= unsigned(cur_apob_flash_addr) and
-                   unsigned(v.cur_flash_addr) < (unsigned(cur_apob_flash_addr) + unsigned(cur_apob_flash_len)) then
+                -- Now check if the adjusted address (r.cur_flash_addr, latched last cycle) lands in the APOB region 
+                if unsigned(r.cur_flash_addr) >= unsigned(cur_apob_flash_addr) and
+                   unsigned(r.cur_flash_addr) <  unsigned(r.apob_end_addr)then
                     -- Remap to raw address space starting at 0x4000000; the bonus flash region
                     v.cur_flash_addr := std_logic_vector(
                         to_unsigned(16#4000000#, 32) +
-                        unsigned(v.cur_flash_addr) -
+                        unsigned(r.cur_flash_addr) -
                         unsigned(cur_apob_flash_addr)
                     );
                 end if;
