@@ -34,6 +34,7 @@ class Project:
         pre_synth_tcl_files: list,
         post_synth_tcl_files: list,
         sources: List[Source],
+        ip: list,
         synth_args: List[str],
         debug_probes: str,
         report_file: str,
@@ -48,6 +49,7 @@ class Project:
         self.post_synth_tcl_files = [Path(x) for x in post_synth_tcl_files]
         self.debug_probes = debug_probes
         self.sources = sources
+        self.ip = ip
         self.synth_args = synth_args
         self.report_file = report_file
         self.max_threads = max_threads
@@ -56,13 +58,13 @@ class Project:
     @classmethod
     def from_dict(cls, inputs):
         srcs = inputs.get("sources", [])
-        sources = []
+        filtered_sources = []
         for file in srcs:
             # Drop any non-synth files here
             if not file.get("is_synth"):
                 print("Dropping non-synth file {}".format(file))
                 continue
-            sources.append(Source(Path(file.get("artifact")), file.get("library"), file.get("standard")))
+            filtered_sources.append(Source(Path(file.get("artifact")), file.get("library"), file.get("standard")))
         
         return cls(
             flow=inputs.get("flow"),
@@ -72,7 +74,8 @@ class Project:
             pre_synth_tcl_files=inputs.get("pre_synth_tcl_files", []),
             post_synth_tcl_files=inputs.get("post_synth_tcl_files", []),
             debug_probes=inputs.get("debug_probes", ""),
-            sources=sources,
+            sources=filtered_sources,
+            ip=[Path(x) for x in inputs.get("ip", [])],
             synth_args=inputs.get("synth_args"),
             report_file=inputs.get("report_file"),
             max_threads=inputs.get("max_threads"),
