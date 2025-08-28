@@ -162,6 +162,8 @@ entity cosmo_seq_top is
         pwr_cont1_to_fpga1_vddio_sp5_pg : in std_logic;
         pwr_fpga1_to_v1p5_sp5_rtc_a2_en : out std_logic;
         pwr_v1p5_sp5_rtc_a2_to_fpga1_pg : in std_logic;
+        v1p1_i3c_a2_pg : in std_logic; -- only rev2+
+        v1p4_nic_a0hp_pg : in std_logic; -- only rev2+
         sp5_to_fpga1_pwrgd_out : in std_logic; -- spare readback from SP5
         sp5_to_fpga1_pwrok_unbuf : in std_logic;
         sp5_to_fpga1_slp_s3_l : in std_logic;
@@ -253,6 +255,9 @@ entity cosmo_seq_top is
         -- I2C SP mux stuff
         i2c_sp_to_fpga1_scl : inout std_logic;
         i2c_sp_to_fpga1_sda : inout std_logic;
+        --I2C SP5 SEC stuff (rev2+ only)
+        i2c_sp5_sec_v3p3_scl : inout std_logic;
+        i2c_sp5_sec_v3p3_sda : inout std_logic;
 
         fpga1_to_i2c_mux1_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux2_sel : out std_logic_vector(1 downto 0);
@@ -401,6 +406,10 @@ begin
         clk => clk_125m,
         sycnd_output => fpga2_hp_irq_n
     );
+
+    -- SP5 SEC (not available on rev1 cosmo, not yet implemented for rev2!)
+    i2c_sp5_sec_v3p3_scl <= 'Z';
+    i2c_sp5_sec_v3p3_sda <= 'Z';
     -- misc things tied:
     fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.

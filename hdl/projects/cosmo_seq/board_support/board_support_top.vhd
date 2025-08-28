@@ -29,6 +29,8 @@ entity board_support is
         hubris_compat_ver : in std_logic_vector(2 downto 0);
         -- AXI interface for the "info" block
         info_axi_if : view axil_target;
+        is_rev1 : out std_logic;  -- tied high if rev1 board
+        is_rev2 : out std_logic  -- tied high if rev2 board
     );
 end entity;
 
@@ -40,6 +42,17 @@ architecture rtl of board_support is
     signal led_counter : unsigned(27 downto 0);
 
 begin
+
+    -- Tie off the board revision outputs
+    -- skipping meta sync here b/c stuff is strapped on board.
+    -- Providing registers here since there could be some fan-out.
+    rev_indicators: process(clk_125m)
+    begin
+        if rising_edge(clk_125m) then
+            is_rev1 <= '1' when unsigned(hubris_compat_ver) = 0 else '0';  -- rev1 board
+            is_rev2 <= '1' when unsigned(hubris_compat_ver) = 1 else '0';  -- rev2 board
+        end if;
+    end process;
 
     -- We have a reset pin coming in from the SP.  Synchronize it first
     -- using the "raw" board clock, pre-PLL. We'll use this as the 
