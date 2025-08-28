@@ -281,3 +281,12 @@ set_property -dict { PACKAGE_PIN V12 IOSTANDARD LVCMOS33 } [get_ports { vddio_sp
 set_property -dict { PACKAGE_PIN C8 IOSTANDARD LVCMOS33 } [get_ports { vr_v1p8_sys_to_fpga1_alert_l }];
 set_property -dict { PACKAGE_PIN A6 IOSTANDARD LVCMOS33 } [get_ports { vr_v3p3_sys_to_fpga1_alert_l }];
 set_property -dict { PACKAGE_PIN B8 IOSTANDARD LVCMOS33 } [get_ports { vr_v5p0_sys_to_fpga1_alert_l }];
+# New pins for cosmo rev2 only
+set_property -dict { PACKAGE_PIN AA15 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp5_sec_v3p3_scl }];
+set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp5_sec_v3p3_sda }];
+set_property -dict { PACKAGE_PIN W8 IOSTANDARD LVCMOS18 } [get_ports { v1p1_i3c_a2_pg }];
+set_property -dict { PACKAGE_PIN R19 IOSTANDARD LVCMOS33 } [get_ports { v1p4_nic_a0hp_pg }];
+set_property -dict { PACKAGE_PIN E22 IOSTANDARD LVCMOS33 } [get_ports { uart_fpga1_to_debug_dat }];
+set_property -dict { PACKAGE_PIN D22 IOSTANDARD LVCMOS33 } [get_ports { uart_debug_to_fpga1_dat }];
+set_property -dict { PACKAGE_PIN F21 IOSTANDARD LVCMOS33 } [get_ports { uart_fpga1_to_debug_rts_l }];
+set_property -dict { PACKAGE_PIN F22 IOSTANDARD LVCMOS33 } [get_ports { uart_debug_to_fpga1_rts_l }];
