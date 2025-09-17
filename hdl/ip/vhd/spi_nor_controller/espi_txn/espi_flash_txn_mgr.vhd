@@ -21,6 +21,7 @@ entity espi_flash_txn_mgr is
         cur_flash_addr_offset: in signed(31 downto 0);
         cur_apob_flash_addr: in std_logic_vector(31 downto 0);
         cur_apob_flash_len: in std_logic_vector(31 downto 0);
+        cur_apob_flash_offset: in std_logic_vector(31 downto 0);
         -- espi cmd fifo interface
         espi_cmd_fifo_rdata: in std_logic_vector(31 downto 0);
         espi_cmd_fifo_rdack: out std_logic;
@@ -117,7 +118,7 @@ begin
                    unsigned(r.cur_flash_addr) <  unsigned(r.apob_end_addr)then
                     -- Remap to raw address space starting at 0x4000000; the bonus flash region
                     v.cur_flash_addr := std_logic_vector(
-                        to_unsigned(16#4000000#, 32) +
+                        unsigned(cur_apob_flash_offset) +
                         unsigned(r.cur_flash_addr) -
                         unsigned(cur_apob_flash_addr)
                     );
