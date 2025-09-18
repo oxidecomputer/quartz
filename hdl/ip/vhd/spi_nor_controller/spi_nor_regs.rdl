@@ -146,7 +146,7 @@ addrmap spi_nor_regs {
 
     reg {
         name = "APOB Flash offset address";
-        desc = "Allows the SP to configure the offset for which slot to access in the APOB flash region";
+        desc = "Allows the SP to configure the selected APOB region via its absolute address in flash";
         field {
             desc = "Offset of the APOB flash slot";
         } offset[31:0] = 0;
