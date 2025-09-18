@@ -116,7 +116,8 @@ begin
                 -- Now check if the adjusted address (r.cur_flash_addr, latched last cycle) lands in the APOB region 
                 if unsigned(r.cur_flash_addr) >= unsigned(cur_apob_flash_addr) and
                    unsigned(r.cur_flash_addr) <  unsigned(r.apob_end_addr)then
-                    -- Remap to raw address space starting at 0x4000000; the bonus flash region
+                    -- Remap to raw address space starting at the APOB flash offset value, an
+                    -- absolute offset into flash
                     v.cur_flash_addr := std_logic_vector(
                         unsigned(cur_apob_flash_offset) +
                         unsigned(r.cur_flash_addr) -
