@@ -281,8 +281,13 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Wire#(Bit#(1)) pwr_cont2_sp3_cfp <- mkDWire(0);
     Reg#(Bit#(1)) pwr_cont2_sp3_nvrhot <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkDWire(1);
-    Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(1); // repurposed as a GPIO toggle
     Wire#(Bit#(1)) sp3_to_sp_nic_pwren_l <- mkDWire(1);
+    // This is an active low signal and generally we have those pulled-up on the
+    // PCBA and thus want their wire/register reset value to be 1. However, the
+    // FSR request line's pull-up is in the A0 domain and thus will be low when
+    // the FPGA comes out of reset. Thus, we make the reset values low to avoid
+    // a spurious count on our GPIO toggle counter.
+    Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(0);
 
     // Edge registers
     Reg#(Bit#(1)) sp3_to_seq_pwrok_last <- mkReg(0);
@@ -291,7 +296,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     PulseWire amd_reset_fedge <- mkPulseWire();
 
     // Registers for GPIO toggle detection and counting
-    Reg#(Bit#(1)) gpio_last <- mkReg(1);
+    Reg#(Bit#(1)) gpio_last <- mkReg(0);
     PulseWire gpio_toggled <- mkPulseWire();
     Reg#(UInt#(32)) gpio_cntr_max <- mkReg('hffffffff);
     Reg#(UInt#(32)) gpio_edge_count <- mkReg(0);
@@ -362,8 +367,9 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     endrule
 
     //
-    // Do GPIO toggle counters. One will count every time the GPIO changes value.
-    // The other will count the number of FPGA clock cycles between each toggle.
+    // Do GPIO toggle counters. One will count every time the GPIO changes value
+    // and roll over. The other will count the number of FPGA clock cycles between
+    // each toggle and saturate.
     //
     (* fire_when_enabled *)
     rule do_gpio_toggle_counters;
