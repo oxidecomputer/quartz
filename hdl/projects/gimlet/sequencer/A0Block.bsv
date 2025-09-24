@@ -43,6 +43,14 @@ import PowerRail::*;
         method Bool amd_pwrok_fedge;
         // method A0OutStatus output_readbacks();
         // method A0Readbacks input_readbacks();
+        method GpioEdgeCnt3 gpio_edge_cnt3;
+        method GpioEdgeCnt2 gpio_edge_cnt2;
+        method GpioEdgeCnt1 gpio_edge_cnt1;
+        method GpioEdgeCnt0 gpio_edge_cnt0;
+        method GpioCycleCnt3 gpio_cycle_cnt3;
+        method GpioCycleCnt2 gpio_cycle_cnt2;
+        method GpioCycleCnt1 gpio_cycle_cnt1;
+        method GpioCycleCnt0 gpio_cycle_cnt0;
     endinterface
 
     interface A0RegsReverse;
@@ -71,6 +79,14 @@ import PowerRail::*;
         method Action amd_pwrok_fedge(Bool value);
         // method Action output_readbacks (A0OutStatus value);
         // method Action input_readbacks (A0Readbacks value);
+        method Action gpio_edge_cnt3(GpioEdgeCnt3 value);
+        method Action gpio_edge_cnt2(GpioEdgeCnt2 value);
+        method Action gpio_edge_cnt1(GpioEdgeCnt1 value);
+        method Action gpio_edge_cnt0(GpioEdgeCnt0 value);
+        method Action gpio_cycle_cnt3(GpioCycleCnt3 value);
+        method Action gpio_cycle_cnt2(GpioCycleCnt2 value);
+        method Action gpio_cycle_cnt1(GpioCycleCnt1 value);
+        method Action gpio_cycle_cnt0(GpioCycleCnt0 value);
     endinterface
 
     // Allow our output pin source to connect to our output pin sink
@@ -243,7 +259,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     PowerRail vtt_ef <- mkPowerRail(ten_ms, False);
     PowerRail vtt_gh <- mkPowerRail(ten_ms, False);
     // Group C:
-    
+
     // Pin references
     Wire#(Bit#(1)) sp3_to_seq_pwrgd_out <- mkDWire(0);
     Wire#(Bit#(1)) sp3_to_seq_slp_s3_l <- mkDWire(0);
@@ -257,7 +273,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     Wire#(Bit#(1)) pwr_cont2_sp3_cfp <- mkDWire(0);
     Reg#(Bit#(1)) pwr_cont2_sp3_nvrhot <- mkDWire(1);
     Wire#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkDWire(1);
-    Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(1);
+    Wire#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkDWire(1); // repurposed as a GPIO toggle
     Wire#(Bit#(1)) sp3_to_sp_nic_pwren_l <- mkDWire(1);
 
     // Edge registers
@@ -266,6 +282,12 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     PulseWire amd_pwrok_fedge <- mkPulseWire();
     PulseWire amd_reset_fedge <- mkPulseWire();
 
+    // Registers for GPIO toggle detection and counting
+    Reg#(Bit#(1)) gpio_last <- mkReg(1);
+    PulseWire gpio_toggled <- mkPulseWire();
+    Reg#(UInt#(32)) gpio_edge_count <- mkReg(0);
+    Reg#(UInt#(32)) gpio_cycle_count <- mkReg(0);
+
     // Output registers
     Reg#(Bit#(1)) seq_to_sp3_sys_rst_l <- mkReg(1);  // In practice we don't use this
     Reg#(Bit#(1)) seq_to_sp3_pwr_btn_l <- mkReg(1);
@@ -273,7 +295,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
 
     Vector#(4, PowerRail) b1_rails =
         vec(vpp_abcd, vpp_efgh, v3p3_sys, v1p8_vdd_18);
-    
+
     Vector#(6, PowerRail) b2_rails =
         vec(vdd_mem_abcd, vdd_mem_efgh, vtt_ab, vtt_cd,
             vtt_ef, vtt_gh);
@@ -319,6 +341,31 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         ticks_count <= satMinus(Sat_Zero, ticks_count, 1);
     endrule
 
+    //
+    // Handle GPIO toggle detection
+    //
+    (* fire_when_enabled *)
+    rule do_gpio_toggle_detect;
+        gpio_last <= sp3_to_seq_fsr_req_l;
+        if (gpio_last != sp3_to_seq_fsr_req_l) begin
+            gpio_toggled.send();
+        end
+    endrule
+
+    //
+    // Do GPIO toggle counters. One will count every time the GPIO changes value.
+    // The other will count the number of FPGA clock cycles between each toggle.
+    //
+    (* fire_when_enabled *)
+    rule do_gpio_toggle_counters;
+        if (gpio_toggled) begin
+            gpio_edge_count <= gpio_edge_count + 1;
+            gpio_cycle_count <= 0;
+        end else begin
+            gpio_cycle_count <= gpio_cycle_count + 1;
+        end
+    endrule
+
     (* fire_when_enabled *)
     rule do_pgs;
         b1_pg <= foldr(bool_and, True, map(PowerRail::good, b1_rails));
@@ -349,8 +396,6 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
             flt_b_pgs <= b_pgs;
             flt_c_pgs <= c_pgs;
         end
-      
-      
     endrule
 
     (* fire_when_enabled *)
@@ -686,6 +731,14 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         method thermtrip = thermal_trip._read;
         method amd_pwrok_fedge = amd_pwrok_fedge._read;
         method amd_reset_fedge = amd_reset_fedge._read;
+        method GpioEdgeCnt3 gpio_edge_cnt3 = unpack(pack(gpio_edge_count)[31:24]);
+        method GpioEdgeCnt2 gpio_edge_cnt2 = unpack(pack(gpio_edge_count)[23:16]);
+        method GpioEdgeCnt1 gpio_edge_cnt1 = unpack(pack(gpio_edge_count)[15:8]);
+        method GpioEdgeCnt0 gpio_edge_cnt0 = unpack(pack(gpio_edge_count)[7:0]);
+        method GpioCycleCnt3 gpio_cycle_cnt3 = unpack(pack(gpio_cycle_count)[31:24]);
+        method GpioCycleCnt2 gpio_cycle_cnt2 = unpack(pack(gpio_cycle_count)[23:16]);
+        method GpioCycleCnt1 gpio_cycle_cnt1 = unpack(pack(gpio_cycle_count)[15:8]);
+        method GpioCycleCnt0 gpio_cycle_cnt0 = unpack(pack(gpio_cycle_count)[7:0]);
     endinterface
 
 endmodule
@@ -715,7 +768,9 @@ interface Bench;
     method Action downstream_idle();
     method Action make_upstream_ok();
     method Action make_upstream_not_ok();
-
+    method Action fsr_req_toggle();
+    method UInt#(32) gpio_edge_count();
+    method UInt#(32) gpio_cycle_count();
 endinterface
 
 module mkBench(Bench);
@@ -808,6 +863,21 @@ module mkBench(Bench);
     method Action sp3_thermtrip();
         sp3.thermtrip(True);
     endmethod
+    method Action fsr_req_toggle();
+        sp3.fsr_req_toggle();
+    endmethod
+    method UInt#(32) gpio_edge_count();
+        return unpack({pack(dut.reg_if.gpio_edge_cnt3),
+                pack(dut.reg_if.gpio_edge_cnt2),
+                pack(dut.reg_if.gpio_edge_cnt1),
+                pack(dut.reg_if.gpio_edge_cnt0)});
+    endmethod
+    method UInt#(32) gpio_cycle_count();
+        return unpack({pack(dut.reg_if.gpio_cycle_cnt3),
+                pack(dut.reg_if.gpio_cycle_cnt2),
+                pack(dut.reg_if.gpio_cycle_cnt1),
+                pack(dut.reg_if.gpio_cycle_cnt0)});
+    endmethod
 endmodule
 
 interface SP3Model;
@@ -816,6 +886,7 @@ interface SP3Model;
     method Action disabled(Bool value);
     method Action pwrok_override(Bool value);
     method Action rst_override(Bool value);
+    method Action fsr_req_toggle();
 endinterface
 
 typedef enum {
@@ -960,6 +1031,9 @@ module mkSP3Model(SP3Model);
         end else begin
             sp3_to_seq_reset_v3p3_l <= 1;
         end
+    endmethod
+    method Action fsr_req_toggle ();
+        sp3_to_seq_fsr_req_l <= ~sp3_to_seq_fsr_req_l;
     endmethod
 endmodule
 
@@ -1185,6 +1259,24 @@ module mkA0ThermtripTest(Empty);
             $display("Waiting Done");
         endaction
         await(bench.dut_state == DONE);
+    endseq);
+endmodule
+
+module mkFsrReqGpioToggleTest(Empty);
+    Bench bench <- mkBench();
+
+    mkAutoFSM(seq
+        action
+            assert_eq(bench.gpio_edge_count(), 0, "Edge count should be 0 after reset");
+            assert_eq(bench.gpio_cycle_count(), 1, "Cycle count should be 1 (a cycle has elapsed)");
+        endaction
+        assert_eq(bench.gpio_cycle_count(), 2, "Cycle count should be 2");
+        bench.fsr_req_toggle();
+        delay(1);
+        action
+            assert_eq(bench.gpio_edge_count(), 1, "Edge count should now be 1");
+            assert_eq(bench.gpio_cycle_count(), 0, "Cycle count should be 0 after the toggle");
+        endaction
     endseq);
 endmodule
 

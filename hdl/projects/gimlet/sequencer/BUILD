@@ -116,7 +116,8 @@ bluesim_tests('A0Tests',
         'mkA0MAPOTest',
         'mkA0ThermtripTest',
         'mkA0DebugBrokenTest',
-        'mkA0PowerErrorsTest'
+        'mkA0PowerErrorsTest',
+        'mkFsrReqGpioToggleTest',
     ],
     deps = [
         ':A0Block'

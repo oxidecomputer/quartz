@@ -126,6 +126,14 @@ module mkGimletRegs(GimletRegIF);
     Wire#(NicOutput2Type) nic2_out_status <- mkDWire(unpack(0));
     Wire#(NicOutput1Type) nic1_out_status <- mkDWire(unpack(0));
     Wire#(NicCtrl) nic_ctrl_next <- mkDWire(defaultValue);
+    Wire#(GpioEdgeCnt3) gpio_edge_cnt3 <- mkDWire(defaultValue);
+    Wire#(GpioEdgeCnt2) gpio_edge_cnt2 <- mkDWire(defaultValue);
+    Wire#(GpioEdgeCnt1) gpio_edge_cnt1 <- mkDWire(defaultValue);
+    Wire#(GpioEdgeCnt0) gpio_edge_cnt0 <- mkDWire(defaultValue);
+    Wire#(GpioCycleCnt3) gpio_cycle_cnt3 <- mkDWire(defaultValue);
+    Wire#(GpioCycleCnt2) gpio_cycle_cnt2 <- mkDWire(defaultValue);
+    Wire#(GpioCycleCnt1) gpio_cycle_cnt1 <- mkDWire(defaultValue);
+    Wire#(GpioCycleCnt0) gpio_cycle_cnt0 <- mkDWire(defaultValue);
 
     IRQBlock#(IrqType) irq_block <- mkIRQBlock();
 
@@ -230,6 +238,14 @@ module mkGimletRegs(GimletRegIF);
             fromInteger(fltGroupbPgOffset) : readdata <= tagged Valid (pack(flt_a0_groupB_pg));
             fromInteger(fltGroupcPgOffset) : readdata <= tagged Valid (pack(flt_a0_groupC_pg));
             fromInteger(miscCtrlOffset) : readdata <= tagged Valid (pack(misc_ctrl));
+            fromInteger(gpioEdgeCnt3Offset) : readdata <= tagged Valid (pack(gpio_edge_cnt3));
+            fromInteger(gpioEdgeCnt2Offset) : readdata <= tagged Valid (pack(gpio_edge_cnt2));
+            fromInteger(gpioEdgeCnt1Offset) : readdata <= tagged Valid (pack(gpio_edge_cnt1));
+            fromInteger(gpioEdgeCnt0Offset) : readdata <= tagged Valid (pack(gpio_edge_cnt0));
+            fromInteger(gpioCycleCnt3Offset) : readdata <= tagged Valid (pack(gpio_cycle_cnt3));
+            fromInteger(gpioCycleCnt2Offset) : readdata <= tagged Valid (pack(gpio_cycle_cnt2));
+            fromInteger(gpioCycleCnt1Offset) : readdata <= tagged Valid (pack(gpio_cycle_cnt1));
+            fromInteger(gpioCycleCnt0Offset) : readdata <= tagged Valid (pack(gpio_cycle_cnt0));
             default : readdata <= tagged Valid ('hff);
         endcase
     endrule
@@ -354,6 +370,14 @@ module mkGimletRegs(GimletRegIF);
                 amd_pwrokn_fedge.send();
             end
         endmethod
+        method gpio_edge_cnt3 = gpio_edge_cnt3._write;
+        method gpio_edge_cnt2 = gpio_edge_cnt2._write;
+        method gpio_edge_cnt1 = gpio_edge_cnt1._write;
+        method gpio_edge_cnt0 = gpio_edge_cnt0._write;
+        method gpio_cycle_cnt3 = gpio_cycle_cnt3._write;
+        method gpio_cycle_cnt2 = gpio_cycle_cnt2._write;
+        method gpio_cycle_cnt1 = gpio_cycle_cnt1._write;
+        method gpio_cycle_cnt0 = gpio_cycle_cnt0._write;
     endinterface
     interface NicRegsReverse nic_block;
         method Bool en;
