@@ -113,6 +113,14 @@ import PowerRail::*;
             mkConnection(source.thermtrip, sink.thermtrip);
             mkConnection(source.amd_reset_fedge, sink.amd_reset_fedge);
             mkConnection(source.amd_pwrok_fedge, sink.amd_pwrok_fedge);
+            mkConnection(source.gpio_edge_cnt3, sink.gpio_edge_cnt3);
+            mkConnection(source.gpio_edge_cnt2, sink.gpio_edge_cnt2);
+            mkConnection(source.gpio_edge_cnt1, sink.gpio_edge_cnt1);
+            mkConnection(source.gpio_edge_cnt0, sink.gpio_edge_cnt0);
+            mkConnection(source.gpio_cycle_cnt3, sink.gpio_cycle_cnt3);
+            mkConnection(source.gpio_cycle_cnt2, sink.gpio_cycle_cnt2);
+            mkConnection(source.gpio_cycle_cnt1, sink.gpio_cycle_cnt1);
+            mkConnection(source.gpio_cycle_cnt0, sink.gpio_cycle_cnt0);
         endmodule
     endinstance
 
