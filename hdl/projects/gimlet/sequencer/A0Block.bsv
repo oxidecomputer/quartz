@@ -293,6 +293,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
     // Registers for GPIO toggle detection and counting
     Reg#(Bit#(1)) gpio_last <- mkReg(1);
     PulseWire gpio_toggled <- mkPulseWire();
+    Reg#(UInt#(32)) gpio_cntr_max <- mkReg('hffffffff);
     Reg#(UInt#(32)) gpio_edge_count <- mkReg(0);
     Reg#(UInt#(32)) gpio_cycle_count <- mkReg(0);
 
@@ -369,7 +370,7 @@ module mkA0BlockSeq#(Integer one_ms_counts)(A0BlockTop);
         if (gpio_toggled) begin
             gpio_edge_count <= gpio_edge_count + 1;
             gpio_cycle_count <= 0;
-        end else begin
+        end else if (gpio_cycle_count < gpio_cntr_max) begin
             gpio_cycle_count <= gpio_cycle_count + 1;
         end
     endrule
