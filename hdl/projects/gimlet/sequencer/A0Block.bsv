@@ -925,7 +925,7 @@ module mkSP3Model(SP3Model);
     Reg#(Bit#(1)) sp3_to_seq_pwrok_v3p3 <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_reset_v3p3_l <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_seq_thermtrip_l <- mkReg(1);
-    Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(1);
+    Reg#(Bit#(1)) sp3_to_seq_fsr_req_l <- mkReg(0);
     Reg#(Bit#(1)) sp3_to_sp_nic_pwren_l <- mkReg(1);
     
     // To SP3
