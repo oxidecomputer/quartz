@@ -66,10 +66,41 @@ vhdl_unit(
     standard = "2019",
 )
 
+vhdl_unit(
+    name = "cosmo_sdle_top",
+    srcs = ["cosmo_sdle_top.vhd"],
+    deps = [
+        ":cosmo_seq_top_rdl",
+        ":board_support",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkg",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
+        "//hdl/projects/cosmo_seq/sp5_espi_flash_subsystem:sp5_espi_flash_subsystem",
+        "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
+        "//hdl/projects/cosmo_seq/sequencer:sequencer",
+        "//hdl/projects/cosmo_seq/sp_i2c_subsystem:sp_i2c_subsystem",
+        "//hdl/projects/cosmo_seq/sp5_hotplug_subsystem:sp5_hotplug_subsystem",
+        "//hdl/projects/cosmo_seq/dimms_subsystem:dimms_subsystem_top",
+        "//hdl/projects/cosmo_seq/debug_module:debug_module_top",
+    ],
+    standard = "2019",
+)
+
 vivado_bitstream(
     name="cosmo_seq",
     top_entity_name="cosmo_seq_top",
     top= ":cosmo_seq_top",
+    part= "xc7s100fgga484-1",
+    constraints=glob(["*.xdc"]),
+    pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
+    #post_synth_tcl_files=glob(["*ila.tcl"]),
+)
+
+vivado_bitstream(
+    name="cosmo_sdle",
+    top_entity_name="cosmo_sdle_top",
+    top= ":cosmo_sdle_top",
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
