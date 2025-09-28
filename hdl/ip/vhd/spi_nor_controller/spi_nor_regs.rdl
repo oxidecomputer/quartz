@@ -122,25 +122,33 @@ addrmap spi_nor_regs {
 
     reg {
         name = "SP5 Flash offset address";
-        desc = "Allows hubris to control which flash page is accessed by the eSPI block";
+        desc = "Allows the SP to control which flash page is accessed by the eSPI block";
         field {
             desc = "*Signed* Address added (ie subtracted for negative) to raw eSPI transactions to generate physical flash address";
         } offset[31:0] =  0;
     } SP5FlashOffset;
 
     reg {
-        name = "APOB Flash offset address";
-        desc = "Allows hubris to configure the start of the flash range which is remapped to the bonus flash region";
+        name = "APOB Flash location address";
+        desc = "Allows the SP to configure the start of the flash range which is remapped to APOB flash region";
         field {
             desc = "Start address of the APOB flash region";
-        } offset[31:0] =  0;
+        } offset[31:0] = 0;
     } ApobFlashAddr;
 
     reg {
         name = "APOB Flash length";
-        desc = "Allows hubris to configure the length of the flash range which is remapped to the bonus flash region";
+        desc = "Allows the SP to configure the length of the flash range which is remapped to APOB flash region";
         field {
             desc = "Length of the APOB flash region";
-        } offset[31:0] =  0;
+        } offset[31:0] = 0;
     } ApobFlashLen;
+
+    reg {
+        name = "APOB Flash offset address";
+        desc = "Allows the SP to configure the selected APOB region via its absolute address in flash";
+        field {
+            desc = "Offset of the APOB flash slot";
+        } offset[31:0] = 0;
+    } ApobFlashOffset;
 };
