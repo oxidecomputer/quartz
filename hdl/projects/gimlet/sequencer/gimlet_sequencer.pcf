@@ -1,15 +1,15 @@
 set_io --warn-no-port seq_to_nic_v1p1_en A1
 set_io --warn-no-port nic_to_seq_v1p1_pg A2
 set_io --warn-no-port seq_to_nic_v1p2_enet_en A5
-set_io --warn-no-port seq_rev_id0 A10
-set_io --warn-no-port seq_rev_id1 A11
+set_io --warn-no-port -pullup yes seq_rev_id0 A10
+set_io --warn-no-port -pullup yes seq_rev_id1 A11
 set_io --warn-no-port pwr_cont_nic_pg1 A15
 set_io --warn-no-port pwr_cont_nic_pg0 A16
 set_io --warn-no-port seq_to_nic_v1p5a_en B1
 set_io --warn-no-port seq_to_nic_ldo_v3p3_en B2
 set_io --warn-no-port seq_to_nic_v1p2_en B3
 set_io --warn-no-port testpoint1 B4
-set_io --warn-no-port seq_rev_id2 B10
+set_io --warn-no-port -pullup yes seq_rev_id2 B10
 set_io --warn-no-port seq_to_nic_cld_rst_l B14
 set_io --warn-no-port pwr_cont_nic_en0 B15
 set_io --warn-no-port nic_to_seq_v1p5d_pg C1
