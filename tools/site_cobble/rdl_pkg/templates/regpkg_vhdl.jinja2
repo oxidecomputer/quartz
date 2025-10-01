@@ -370,4 +370,15 @@ package body {{module_name}} is
     {% endif %}
 
   {% endfor %}
+  -----------
+  -- Memories
+  -----------
+  {% for register in registers %}
+    {% if not register.repeated_type and isinstance(register, Memory) %}
+  -- Memory {{register.type_name}} definitions
+  constant {{register.type_name|upper}}_NUM_ENTRIES: integer := {{register.node.get_property('mementries')}};
+  constant {{register.type_name|upper}}_BIT_WIDTH: integer := {{register.node.get_property('memwidth')}};
+    {% endif %}
+  {% endfor %}
+
 end {{module_name}};
