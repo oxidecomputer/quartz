@@ -198,7 +198,7 @@ addrmap minibar_controller {
         } VBUS_SLED_RESTART[4:4] = 0;
 
         field {
-            desc = "fpga_to_vbus_sled_hsc_en pin control";
+            desc = "fpga_to_vbus_sled_hsc_en pin software control";
         } VBUS_SLED_EN[0:0] = 0;
     } POWER_CTRL;
 
@@ -231,7 +231,7 @@ addrmap minibar_controller {
         } FAULT_PIN[0:0] = 0;
     };
 
-    power_rail_state vbus_sled;
+    power_rail_state VBUS_SLED;
 
     reg {
         name = "Control for the VSC7448 and VSC8504 reset lines.";
@@ -260,8 +260,8 @@ addrmap minibar_controller {
         } V3P3_PCIE_EN[0:0] = 1;
     } PCIE_POWER_CTRL;
 
-    power_rail_state v12_pcie;
-    power_rail_state v3p3_pcie;
+    power_rail_state V12_PCIE;
+    power_rail_state V3P3_PCIE;
 
     reg {
         name = "Control for the PI6CB33201 PCIe Reference Clock Buffer";
