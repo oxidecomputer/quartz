@@ -124,4 +124,11 @@ addrmap espi_regs {
             desc = "";
         } count[31:0] = 0;
     } post_code_count;
+
+    mem post_code_buffer_mem {
+        mementries = 4096;
+        memwidth = 32;
+    };
+
+    external post_code_buffer_mem post_code_buffer @0x0100;
 };

@@ -13,7 +13,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
-use work.axil8x32_pkg;
+use work.axil16x32_pkg;
 use work.axi_st8_pkg;
 use work.i2c_common_pkg.all;
 use work.axi_st8_pkg;
@@ -328,17 +328,17 @@ architecture rtl of cosmo_seq_top is
     constant DBG_CTRL_RESP_IDX : integer := 7;
 
     constant config_array : axil_responder_cfg_array_t := 
-        (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
-         SPINOR_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
-         ESPI_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
-         SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
-         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
-         SP5_HP_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8),
-         SPD_PROXY_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8),
-         DBG_CTRL_RESP_IDX => (base_addr => x"00000700", addr_span_bits => 8)
+        (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 16), 
+         SPINOR_RESP_IDX => (base_addr => x"00010000", addr_span_bits => 16),
+         ESPI_RESP_IDX => (base_addr => x"00020000", addr_span_bits => 16),
+         SEQ_RESP_IDX => (base_addr => x"00030000", addr_span_bits => 16),
+         SP_I2C_RESP_IDX => (base_addr => x"00040000", addr_span_bits => 16),
+         SP5_HP_RESP_IDX => (base_addr => x"00050000", addr_span_bits => 16),
+         SPD_PROXY_RESP_IDX => (base_addr => x"00060000", addr_span_bits => 16),
+         DBG_CTRL_RESP_IDX => (base_addr => x"00070000", addr_span_bits => 16)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
-    signal responders : axil8x32_pkg.axil_array_t(config_array'range);
+    signal responders : axil16x32_pkg.axil_array_t(config_array'range);
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
     signal fmc_data_out_enable: std_logic;
 

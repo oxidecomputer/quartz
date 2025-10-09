@@ -12,7 +12,8 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.espi_regs_pkg.all;
 use work.qspi_link_layer_pkg.all;
-use work.axil8x32_pkg.all;
+use work.axil16x32_pkg.all;
+use work.calc_pkg.log2ceil;
 
 entity espi_regs is
     port (
@@ -44,6 +45,12 @@ architecture rtl of espi_regs is
     signal last_post_code_reg : last_post_code_type;
     signal post_code_count_reg : post_code_count_type;
 
+    constant BUFFER_ENTRIES : integer := 4096;
+    constant BUFFER_ADDR_WIDTH : integer := log2ceil(BUFFER_ENTRIES);
+    type pc_buffer_t is array (0 to BUFFER_ENTRIES - 1) of std_logic_vector(31 downto 0);
+    signal pc_buf : pc_buffer_t := (others => (others => '0'));
+    signal pc_buf_waddr : unsigned(BUFFER_ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal pc_buf_raddr : unsigned(BUFFER_ADDR_WIDTH - 1 downto 0) := (others => '0');
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
     fifo_status_reg.resp_used_wds <= dbg_chan.rdstatus.usedwds;
@@ -79,6 +86,8 @@ begin
             control_reg <= rec_reset;
             last_post_code_reg <= rec_reset;
             post_code_count_reg <= rec_reset;
+            pc_buf <= (others => (others => '0'));
+            pc_buf_waddr <= (others => '0');
         elsif rising_edge(clk) then
             control_reg.cmd_fifo_reset <= '0';  -- self clearing
             control_reg.cmd_size_fifo_reset <= '0';  -- self clearing
@@ -95,6 +104,8 @@ begin
             elsif post_code_valid then
                last_post_code_reg <= unpack(post_code);
                post_code_count_reg <= unpack(post_code_count_reg.count + 1);
+               pc_buf(to_integer(pc_buf_waddr)) <= post_code;
+               pc_buf_waddr <= pc_buf_waddr + 1;
             end if;
         end if;
     end process;
@@ -106,6 +117,7 @@ begin
 
     dbg_chan.rd.rdack <= '1' when axi_if.read_data.ready = '1' and axi_if.read_data.valid = '1' and resp_fifo_ack = '1' else '0';
 
+    pc_buf_raddr <= unsigned(axi_if.read_address.addr) - POST_CODE_BUFFER_OFFSET;
     read_logic: process(clk, reset)
     begin
         if reset then
@@ -123,6 +135,7 @@ begin
                         resp_fifo_ack <= '1';
                     when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
                     when POST_CODE_COUNT_OFFSET => rdata <= pack(post_code_count_reg);
+                    when POST_CODE_BUFFER_MEM_RANGE => rdata <= pc_buf(to_integer(pc_buf_raddr));
                     when others =>
                         rdata <= (others => '0');
                 end case;
