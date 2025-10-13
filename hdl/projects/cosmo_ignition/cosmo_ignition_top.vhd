@@ -106,7 +106,7 @@ begin
         dbg => ign_trgt_fpga_spare_v3p3(4 downto 2)
     );
 
-    main_hsc_restart <= not hotswap_restart_l;
+    main_hsc_restart <= '1';
     
     ignition_io_inst: entity work.ignition_io
      port map(
