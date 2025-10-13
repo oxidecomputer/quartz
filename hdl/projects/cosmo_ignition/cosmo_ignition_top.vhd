@@ -81,30 +81,31 @@ begin
     end process;
     ign_trgt_fpga_lvds_status_led_en_l <= led_counter(23);
 
+    ibc_en <= '1';
 
-    ignition_target_common_inst: entity work.ignition_target_common
-     generic map(
-        NUM_LEDS => 4,
-        NUM_BITS_IGNITION_ID => 8
-    )
-     port map(
-        clk => clk_50mhz_ign_trgt_fpga,
-        reset => reset_syncd,
-        sw0_serial_in => sw0_serial_in,
-        sw0_serial_out => sw0_serial_out,
-        sw1_serial_in => sw1_serial_in,
-        sw1_serial_out => sw1_serial_out,
-        ignit_to_ibc_pwren => ibc_en,
-        hotswap_restart_l => hotswap_restart_l,
-        ignit_led_l => ign_trgt_fpga_debug_led,
-        a3_pwr_fault_l => '1',
-        a2_pg => '1',
-        sp_fault_l => sp_fault_l,
-        rot_fault_l => rot_fault_l,
-        push_btn_l => '1',
-        ignition_id => ign_trgt_id,
-        dbg => ign_trgt_fpga_spare_v3p3(4 downto 2)
-    );
+    -- ignition_target_common_inst: entity work.ignition_target_common
+    --  generic map(
+    --     NUM_LEDS => 4,
+    --     NUM_BITS_IGNITION_ID => 8
+    -- )
+    --  port map(
+    --     clk => clk_50mhz_ign_trgt_fpga,
+    --     reset => reset_syncd,
+    --     sw0_serial_in => sw0_serial_in,
+    --     sw0_serial_out => sw0_serial_out,
+    --     sw1_serial_in => sw1_serial_in,
+    --     sw1_serial_out => sw1_serial_out,
+    --     ignit_to_ibc_pwren => ibc_en,
+    --     hotswap_restart_l => hotswap_restart_l,
+    --     ignit_led_l => ign_trgt_fpga_debug_led,
+    --     a3_pwr_fault_l => '1',
+    --     a2_pg => '1',
+    --     sp_fault_l => sp_fault_l,
+    --     rot_fault_l => rot_fault_l,
+    --     push_btn_l => '1',
+    --     ignition_id => ign_trgt_id,
+    --     dbg => ign_trgt_fpga_spare_v3p3(4 downto 2)
+    -- );
 
     main_hsc_restart <= not hotswap_restart_l;
     
