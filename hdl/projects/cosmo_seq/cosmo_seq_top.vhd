@@ -432,8 +432,9 @@ begin
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
+    
     i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
-    i3c_fpga1_to_dimm_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
+    i3c_fpga1_to_dimm_oe_l <= '0' when  (not is_rev1) or sp5_seq_pins.pwr_good else '1';
 
     ---------------------------------------------
     -- FMC to AXI Interface from the SP
