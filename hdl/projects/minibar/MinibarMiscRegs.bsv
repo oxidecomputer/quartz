@@ -70,8 +70,15 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
     Reg#(PowerCtrl) power_control           <- mkReg(defaultValue);
     Reg#(SwitchResetCtrl) switch_reset_ctrl <- mkReg(defaultValue);
 
-    // Apply a 100ms debouncer to the button presses
-    Debouncer#(100, 100, Bit#(1)) power_button  <- mkDebouncer(0);
+    // The intention behind the power button is for it to provide a normal PC-like behavior. When
+    // power is disabled, a short press can turn power on. We define this as 100ms just to get some
+    // debouncing applied. When power is enabled, a user must intentionally press and hold the
+    // button for a longer period (2000ms) to get the system to disable power.
+    Wire#(Bit#(1)) power_button_raw                     <- mkDWire(0);
+    Debouncer#(100, 100, Bit#(1)) power_button_short    <- mkDebouncer(0);
+    Debouncer#(2000, 2000, Bit#(1)) power_button_long   <- mkDebouncer(0);
+    mkConnection(power_button_short._write, power_button_raw._read);
+    mkConnection(power_button_long._write, power_button_raw._read);
 
     // VBUS rail under FPGA control
     PowerRail#(10) vbus_rail <- mkPowerRailDisableOnAbort(pg_timeout_ms);
@@ -82,16 +89,19 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
     (* fire_when_enabled *)
     rule do_tick (tick);
         vbus_rail.send();
-        power_button.send();
+        power_button_short.send();
+        power_button_long.send();
     endrule
 
     (* fire_when_enabled *)
     rule do_power_control;
-        let toggle_power    = power_button.rising_edge();
         let sw_enable       = new_sw_vbus_en && power_control.vbus_sled_en == 1;
         let sw_disable      = new_sw_vbus_en && power_control.vbus_sled_en == 0;
-        let disable_power   = sw_disable || vbus_rail.timed_out() || vbus_rail.aborted() || (toggle_power && vbus_en_r);
-        let enable_power    = !vbus_en_r && (sw_enable || toggle_power);
+        let disable_power   = sw_disable ||
+                                vbus_rail.timed_out() ||
+                                vbus_rail.aborted() ||
+                                (power_button_long.rising_edge() && vbus_en_r);
+        let enable_power    = !vbus_en_r && (sw_enable || power_button_short.rising_edge());
 
         if (enable_power) begin
             vbus_rail.set_enable(True);
@@ -115,7 +125,7 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
     interface Pins pins;
         method vbus_sys_fault = vbus_sys_fault_r._write;
         method hcv_code = hcv_code_r._write;
-        method power_button = power_button._write;
+        method power_button = power_button_raw._write;
         method pcie_con_present = pcie_con_present._write;
         method rsw0_con_present = rsw0_con_present._write;
         method rsw1_con_present = rsw1_con_present._write;
