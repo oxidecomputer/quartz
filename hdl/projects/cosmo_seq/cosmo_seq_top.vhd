@@ -14,7 +14,10 @@ use ieee.numeric_std_unsigned.all;
 use work.axil_common_pkg.all;
 use work.axil26x32_pkg;
 use work.axil8x32_pkg;
+use work.axil32x32_pkg;
+use work.axil15x32_pkg;
 use work.axi_st8_pkg;
+use work.axilite_if_2k19_helper_pkg.all;
 use work.i2c_common_pkg.all;
 use work.axi_st8_pkg;
 use work.time_pkg.all;
@@ -331,25 +334,27 @@ architecture rtl of cosmo_seq_top is
     alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
     constant INFO_RESP_IDX : integer := 0;
     constant SPINOR_RESP_IDX: integer := 1;
-    constant ESPI_RESP_IDX: integer := 2;
-    constant SEQ_RESP_IDX: integer := 3;
-    constant SP_I2C_RESP_IDX: integer := 4;
-    constant SP5_HP_RESP_IDX : integer := 5;
-    constant SPD_PROXY_RESP_IDX : integer := 6;
-    constant DBG_CTRL_RESP_IDX : integer := 7;
+    constant SEQ_RESP_IDX: integer := 2;
+    constant SP_I2C_RESP_IDX: integer := 3;
+    constant SP5_HP_RESP_IDX : integer := 4;
+    constant SPD_PROXY_RESP_IDX : integer := 5;
+    constant DBG_CTRL_RESP_IDX : integer := 6;
+     constant ESPI_RESP_IDX: integer := 7;
 
     constant config_array : axil_responder_cfg_array_t := 
         (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
          SPINOR_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
-         ESPI_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
-         SEQ_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
-         SP_I2C_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
-         SP5_HP_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8),
-         SPD_PROXY_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8),
-         DBG_CTRL_RESP_IDX => (base_addr => x"00000700", addr_span_bits => 8)
+         SEQ_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
+         SP_I2C_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
+         SP5_HP_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
+         SPD_PROXY_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8),
+         DBG_CTRL_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8),
+         ESPI_RESP_IDX => (base_addr => x"00008000", addr_span_bits => 15)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
-    signal responders : axil8x32_pkg.axil_array_t(config_array'range);
+    signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
+    signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);
+    signal responders_15b : axil15x32_pkg.axil_array_t(config_array'range);
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
     signal fmc_data_out_enable: std_logic;
 
@@ -476,12 +481,13 @@ begin
        clk => clk_125m,
        reset => reset_125m,
        initiator => fmc_axi_if,
-       responders => responders
+       responders => fabric_responders
    );
 
     -- Block that generates our clocks, resets and
     -- deals with core board-level functionality
     -- includes the common "info" block on the axi bus
+    resize_axil(fabric_responders(INFO_RESP_IDX), responders_8b(INFO_RESP_IDX));
     board_support_inst: entity work.board_support
      port map(
         board_50mhz_clk => clk_50mhz_fpga1_1,
@@ -494,7 +500,7 @@ begin
         reset_fmc => reset_fmc,
         fpga1_status_led => fpga1_status_led,
         hubris_compat_ver => seq_rev_id,
-        info_axi_if => responders(INFO_RESP_IDX),
+        info_axi_if => responders_8b(INFO_RESP_IDX),
         is_rev1 => is_rev1  -- tied high if rev1 board
     );
 
@@ -502,13 +508,15 @@ begin
     -- espi and spi-nor blocks manage their own synchronization.
     -- only a tiny portion of the espi design runs at 200MHz
     -- all the system interfaces run at 125MHz for common clocking
+    resize_axil(fabric_responders(ESPI_RESP_IDX), responders_15b(ESPI_RESP_IDX));
+    resize_axil(fabric_responders(SPINOR_RESP_IDX), responders_8b(SPINOR_RESP_IDX));
     espi_spinor_ss: entity work.sp5_espi_flash_subsystem
      port map(
         clk_125m => clk_125m,
         reset_125m => reset_125m,
         clk_200m => clk_200m,
         reset_200m => reset_200m,
-        espi_axi_if => responders(ESPI_RESP_IDX),
+        espi_axi_if => responders_15b(ESPI_RESP_IDX),
         espi_csn => espi0_sp5_to_fpga1_cs_l,
         espi_clk => espi0_sp5_to_fpga1_clk,
         espi_dat => espi0_sp5_to_fpga1_dat,
@@ -517,7 +525,7 @@ begin
         response_csn => espi_resp_csn,  -- debugging with saleae if you have access
         ipcc_uart_from_espi => ipcc_uart_from_espi_axi_st,
         ipcc_uart_to_espi => ipcc_uart_to_espi_axi_st,
-        spinor_axi_if => responders(SPINOR_RESP_IDX),
+        spinor_axi_if => responders_8b(SPINOR_RESP_IDX),
         spi_nor_csn => spi_fpga1_to_flash_cs_l,
         spi_nor_clk => spi_fpga1_to_flash_clk,
         spi_nor_dat => spi_fpga1_to_flash_dat,
@@ -601,12 +609,13 @@ begin
 
     -- SP I2C muxes
     -- i2c is the only input, sycn'd inside the mux block(s)
+    resize_axil(fabric_responders(SP_I2C_RESP_IDX), responders_8b(SP_I2C_RESP_IDX));
     sp_i2c_subsystem_inst: entity work.sp_i2c_subsystem
      port map(
         clk => clk_125m,
         reset => reset_125m,
         in_a0 => a0_ok,
-        axi_if => responders(SP_I2C_RESP_IDX),
+        axi_if => responders_8b(SP_I2C_RESP_IDX),
         sp_scl => i2c_sp_to_fpga1_scl,
         sp_scl_o => sp_scl_o,
         sp_scl_oe => sp_scl_oe,
@@ -623,11 +632,12 @@ begin
 
     -- SP5 I2c hotplug expanders
     -- Inputs synchronized inside the block
+    resize_axil(fabric_responders(SP5_HP_RESP_IDX), responders_8b(SP5_HP_RESP_IDX));
     sp5_hotplug_subsystem_inst: entity work.sp5_hotplug_subsystem
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(SP5_HP_RESP_IDX),
+        axi_if => responders_8b(SP5_HP_RESP_IDX),
         allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         sp5_i2c_sda => i2c_sp5_to_fpgax_hp_sda,
         sp5_i2c_sda_o => sp5_sda_o,
@@ -672,6 +682,7 @@ begin
 
     --Block that deals with sequencing the SP5 and nic etc
     -- inputs synchronized inside the block
+    resize_axil(fabric_responders(SEQ_RESP_IDX), responders_8b(SEQ_RESP_IDX));
     seq: entity work.sp5_sequencer
      generic map(
         CNTS_P_MS => calc_ms(desired_ms => 1, clk_period_ns => 8)
@@ -679,7 +690,7 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(SEQ_RESP_IDX),
+        axi_if => responders_8b(SEQ_RESP_IDX),
         a0_ok => a0_ok,
         a0_idle => a0_idle,
         irq_l_out => fpga1_to_sp_irq_l(1),
@@ -806,6 +817,7 @@ begin
     reg_alert_l_pins.pwr_cont2_to_fpga1_alert_l <= pwr_cont2_to_fpga1_alert_l;
     reg_alert_l_pins.pwr_cont3_to_fpga1_alert_l <= pwr_cont3_to_fpga1_alert_l;
 
+    resize_axil(fabric_responders(SPD_PROXY_RESP_IDX), responders_8b(SPD_PROXY_RESP_IDX));
     dimm_spd_proxy_top_inst: entity work.dimms_subsystem_top
      generic map(
         CLK_PER_NS => 8,
@@ -814,7 +826,7 @@ begin
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(SPD_PROXY_RESP_IDX),
+        axi_if => responders_8b(SPD_PROXY_RESP_IDX),
         dimm_a_pcamp => dimm_a_pg,
         dimm_b_pcamp => dimm_b_pg,
         dimm_c_pcamp => dimm_c_pg,
@@ -837,13 +849,14 @@ begin
         dimm_sda_if1 => dimm_ghijkl_sda_if
     );
 
+    resize_axil(fabric_responders(DBG_CTRL_RESP_IDX), responders_8b(DBG_CTRL_RESP_IDX));
     debug_module_top_inst: entity work.debug_module_top
      port map(
         clk_200m => clk_200m,
         reset_200m => reset_200m,
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(DBG_CTRL_RESP_IDX),
+        axi_if => responders_8b(DBG_CTRL_RESP_IDX),
         in_a0 => a0_ok,
         sp5_debug2_pin => sp5_to_fpga1_debug2,
         uart_dbg_if => uart_dbg_if,

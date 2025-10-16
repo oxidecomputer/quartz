@@ -36,6 +36,7 @@ vunit_sim(
     deps = [
         ":spi_nor_top",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        "//hdl/ip/vhd/axi_blocks:axil8_resizer",
         ],
     visibility = ["PUBLIC"],
 )

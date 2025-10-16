@@ -12,7 +12,8 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.espi_regs_pkg.all;
 use work.qspi_link_layer_pkg.all;
-use work.axil8x32_pkg.all;
+use work.axil15x32_pkg.all;
+use work.calc_pkg.log2ceil;
 
 entity espi_regs is
     port (
@@ -43,6 +44,11 @@ architecture rtl of espi_regs is
     signal active_write       : std_logic;
     signal last_post_code_reg : last_post_code_type;
     signal post_code_count_reg : post_code_count_type;
+    constant BUFFER_ENTRIES : integer := 4096;
+    constant BUFFER_ADDR_WIDTH : integer := log2ceil(BUFFER_ENTRIES);
+    signal pc_buf_waddr : std_logic_vector(BUFFER_ADDR_WIDTH - 1 downto 0);
+    signal pc_buf_raddr : std_logic_vector(BUFFER_ADDR_WIDTH - 1 downto 0);
+    signal post_code_buffer_rdata : std_logic_vector(31 downto 0);
 
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
@@ -79,6 +85,7 @@ begin
             control_reg <= rec_reset;
             last_post_code_reg <= rec_reset;
             post_code_count_reg <= rec_reset;
+            pc_buf_waddr <= (others => '0');
         elsif rising_edge(clk) then
             control_reg.cmd_fifo_reset <= '0';  -- self clearing
             control_reg.cmd_size_fifo_reset <= '0';  -- self clearing
@@ -92,12 +99,33 @@ begin
             if espi_reset then
                 last_post_code_reg <= rec_reset;
                 post_code_count_reg <= rec_reset;
+                pc_buf_waddr <= (others => '0');
             elsif post_code_valid then
                last_post_code_reg <= unpack(post_code);
                post_code_count_reg <= unpack(post_code_count_reg.count + 1);
+               pc_buf_waddr <= pc_buf_waddr + 1;
             end if;
         end if;
     end process;
+
+    post_code_buffer: entity work.dual_clock_simple_dpr
+     generic map(
+        data_width => 32,
+        num_words => BUFFER_ENTRIES,
+        reg_output => false
+    )
+     port map(
+        wclk => clk,
+        waddr => pc_buf_waddr,
+        wdata => post_code,
+        wren => post_code_valid,
+        rclk => clk,
+        raddr => pc_buf_raddr,
+        rdata => post_code_buffer_rdata
+    );
+
+    -- Axi here are byte_addresses and we need to convert to word addresses for the dpr.
+    pc_buf_raddr <= shift_right(resize(axi_if.read_address.addr - POST_CODE_BUFFER_OFFSET, pc_buf_raddr'length), 2);
 
     dbg_chan.wr.data <= axi_if.write_data.data;
     dbg_chan.wr.write <= '1' when axi_if.write_address.ready = '1' and to_integer(axi_if.write_address.addr) = CMD_FIFO_WDATA_OFFSET else '0';
@@ -110,6 +138,7 @@ begin
     begin
         if reset then
             rdata <= (others => '0');
+            resp_fifo_ack <= '0';
         elsif rising_edge(clk) then
             resp_fifo_ack <= '0';
             if active_read then
@@ -123,6 +152,8 @@ begin
                         resp_fifo_ack <= '1';
                     when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
                     when POST_CODE_COUNT_OFFSET => rdata <= pack(post_code_count_reg);
+                    when POST_CODE_BUFFER_OFFSET to POST_CODE_BUFFER_OFFSET + BUFFER_ENTRIES - 1 =>
+                        rdata <= post_code_buffer_rdata;
                     when others =>
                         rdata <= (others => '0');
                 end case;

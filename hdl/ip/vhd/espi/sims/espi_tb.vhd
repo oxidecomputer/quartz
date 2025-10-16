@@ -232,6 +232,68 @@ begin
                 my_queue := build_rand_byte_queue(payload_size);
                 put_oob_no_pec(net, my_queue, response_code, status,  crc_ok);
                 wait for 1 ms;
+            
+            elsif run("basic_post_code_check") then
+                enable_debug_mode(net);
+                -- generate 1 post code, check that it shows up in the register and post code buffer
+                exp_data_32 := x"000001de";
+                dbg_send_post_code(net, exp_data_32);
+                dbg_wait_for_done(net);
+                -- verify counts are correct.
+                wait for 1 us;
+                -- Check *last* post code register
+                read_bus(net, bus_handle, To_StdLogicVector(LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Single post code register readback failed");
+                -- Check post code buffer entry 0
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Post code buffer readback failed");
+                -- Check post code count register
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000001"), "Post code count register readback failed");
+
+                -- TODO: issue an espi reset and verify post code count resets
+
+
+            elsif run("advanced_post_code_check") then
+                -- generate multiple post codes, check that they show up in the register and post code buffer
+                -- verify counts are correct.
+
+                enable_debug_mode(net);
+                -- generate 1 post code, check that it shows up in the register and post code buffer
+                exp_data_32 := x"000001de";
+                dbg_send_post_code(net, exp_data_32);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                -- Check *last* post code register
+                read_bus(net, bus_handle, To_StdLogicVector(LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Single post code register readback failed");
+                -- Check post code buffer entry 0
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Post code buffer readback failed");
+                -- Check post code count register
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000001"), "Post code count register readback failed");
+
+                exp_data_32 := x"000101de";
+                dbg_send_post_code(net, exp_data_32);
+                dbg_wait_for_done(net);
+                -- verify counts are correct.
+                wait for 1 us;
+
+                -- Check *last* post code register
+                read_bus(net, bus_handle, To_StdLogicVector(LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Single post code register readback failed");
+                -- Check post code buffer entry 0
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"000001de"), "Post code buffer 0 readback failed");
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET + 4, bus_handle.p_address_length), data_32);
+                check_equal(data_32, exp_data_32, "Post code buffer 1 readback failed");
+                -- Check post code count register
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000002"), "Post code count register readback failed");
+
+                -- TODO: issue an espi reset and verify post code count resets
+
 
             elsif run("msg_w_data_uart") then
                 enable_debug_mode(net);

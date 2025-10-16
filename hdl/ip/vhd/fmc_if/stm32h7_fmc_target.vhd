@@ -85,8 +85,10 @@ architecture rtl of stm32h7_fmc_target is
     signal fmc_state : fmc_state_type;
     attribute mark_debug of fmc_state : signal is "TRUE";
     signal axi_state : axi_state_type;
+    attribute mark_debug of axi_state       : signal is "TRUE";
     signal txn       : txn_type;
     attribute mark_debug of txn       : signal is "TRUE";
+   
 
     signal axi_fifo_rd_path_rdata  : std_logic_vector(31 downto 0);
     signal axi_fifo_rd_path_rd_ack : std_logic;
@@ -102,6 +104,7 @@ architecture rtl of stm32h7_fmc_target is
     signal axi_fifo_txn_path_wfull  : std_logic;
 
     signal axi_addr               : unsigned(31 downto 0);
+    attribute mark_debug of axi_addr : signal is "TRUE";
     signal axi_fifo_wr_path_wdata : std_logic_vector(31 downto 0);
     signal axi_fifo_wr_path_write : std_logic;
     signal txn_stored             : boolean;

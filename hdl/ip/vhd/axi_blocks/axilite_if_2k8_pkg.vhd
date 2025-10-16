@@ -13,6 +13,7 @@ use ieee.numeric_std_unsigned.all;
 package axilite_if_2k8_pkg is
 
     type tgt_addr8_t is array (natural range <>) of std_logic_vector(7 downto 0);
+    type tgt_addr32_t is array (natural range <>) of std_logic_vector(31 downto 0);
     type tgt_dat32_t is array (natural range <>) of std_logic_vector(31 downto 0);
     type tgt_strb_t is array (natural range <>) of std_logic_vector(3 downto 0);
     type tgt_resp_t is array (natural range <>) of std_logic_vector(1 downto 0);
