@@ -9,6 +9,11 @@ job_name = "cosmo-ignition-image"
 builder = "buck2"
 toolchain = "yosys"
 
+[cosmo-ignition-r1-only]
+job_name = "cosmo-ignition-r1-only-image"
+builder = "buck2"
+toolchain = "yosys"
+
 [cosmo-seq]
 job_name = "cosmo-seq-image"
 hubris_path = "drv/spartan7-loader/cosmo-seq"
