@@ -36,6 +36,9 @@ entity debug_module_top is
         -- sp
         i2c_sp_to_fpga1_scl: in std_logic;
         i2c_sp_to_fpga1_sda: in std_logic;
+        -- sp5 sec i2c
+        i2c_sp5_sec_to_fpga1_scl : in std_logic;
+        i2c_sp5_sec_to_fpga1_sda : in std_logic;
         -- dimms
         i3c_sp5_to_fpga1_abcdef_scl: in std_logic;
         i3c_sp5_to_fpga1_abcdef_sda: in std_logic;
@@ -94,6 +97,8 @@ begin
         i2c_sp5_to_fpgax_hp_scl => i2c_sp5_to_fpgax_hp_scl,
         i2c_sp_to_fpga1_scl => i2c_sp_to_fpga1_scl,
         i2c_sp_to_fpga1_sda => i2c_sp_to_fpga1_sda,
+        i2c_sp5_sec_to_fpga1_scl => i2c_sp5_sec_to_fpga1_scl,
+        i2c_sp5_sec_to_fpga1_sda => i2c_sp5_sec_to_fpga1_sda,
         i3c_sp5_to_fpga1_abcdef_scl => i3c_sp5_to_fpga1_abcdef_scl,
         i3c_sp5_to_fpga1_abcdef_sda => i3c_sp5_to_fpga1_abcdef_sda,
         i3c_sp5_to_fpga1_ghijkl_scl => i3c_sp5_to_fpga1_ghijkl_scl,

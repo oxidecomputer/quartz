@@ -848,6 +848,9 @@ begin
         -- sp
         i2c_sp_to_fpga1_scl => i2c_sp_to_fpga1_scl,
         i2c_sp_to_fpga1_sda => i2c_sp_to_fpga1_sda,
+        -- sp5 i2c
+        i2c_sp5_sec_to_fpga1_scl => i2c_sp5_sec_v3p3_scl,
+        i2c_sp5_sec_to_fpga1_sda => i2c_sp5_sec_v3p3_sda,
         -- dimms
         i3c_sp5_to_fpga1_abcdef_scl => i3c_sp5_to_fpga1_abcdef_scl,
         i3c_sp5_to_fpga1_abcdef_sda => i3c_sp5_to_fpga1_abcdef_sda,
