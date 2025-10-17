@@ -162,6 +162,8 @@ entity cosmo_seq_top is
         pwr_cont1_to_fpga1_vddio_sp5_pg : in std_logic;
         pwr_fpga1_to_v1p5_sp5_rtc_a2_en : out std_logic;
         pwr_v1p5_sp5_rtc_a2_to_fpga1_pg : in std_logic;
+        v1p1_i3c_a2_pg : in std_logic; -- only rev2+
+        v1p4_nic_a0hp_pg : in std_logic; -- only rev2+
         sp5_to_fpga1_pwrgd_out : in std_logic; -- spare readback from SP5
         sp5_to_fpga1_pwrok_unbuf : in std_logic;
         sp5_to_fpga1_slp_s3_l : in std_logic;
@@ -253,6 +255,9 @@ entity cosmo_seq_top is
         -- I2C SP mux stuff
         i2c_sp_to_fpga1_scl : inout std_logic;
         i2c_sp_to_fpga1_sda : inout std_logic;
+        --I2C SP5 SEC stuff (rev2+ only)
+        i2c_sp5_sec_v3p3_scl : inout std_logic;
+        i2c_sp5_sec_v3p3_sda : inout std_logic;
 
         fpga1_to_i2c_mux1_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux2_sel : out std_logic_vector(1 downto 0);
@@ -301,6 +306,12 @@ entity cosmo_seq_top is
         uart_local_sp_to_fpga1_dat : in std_logic;
         uart_local_sp_to_fpga1_rts_l : in std_logic;
         
+        -- Dedicated UART connector rev2+
+        uart_fpga1_to_debug_dat : out std_logic;
+        uart_debug_to_fpga1_dat : in std_logic;
+        uart_fpga1_to_debug_rts_l : out std_logic;
+        uart_debug_to_fpga1_rts_l : in std_logic;
+
         -- What to do with this stuff?, some maybe removed?
         v1p2_fpga2_a2_pg : in std_logic;
         v2p5_fpga2_a2_pg : in std_logic;
@@ -392,6 +403,11 @@ architecture rtl of cosmo_seq_top is
     signal allow_backplane_pcie_clk : std_logic;
     signal nic_dbg_pins : t6_debug_if;
     signal reg_alert_l_pins : seq_power_alert_pins_t;
+    signal is_rev1 : std_logic;
+    signal dbg_pins_uart_out : std_logic;
+    signal dbg_pins_uart_out_rts_l : std_logic;
+    signal dbg_pins_uart_in : std_logic;
+    signal dbg_pins_uart_in_rts_l : std_logic;
 
 begin
 
@@ -401,6 +417,10 @@ begin
         clk => clk_125m,
         sycnd_output => fpga2_hp_irq_n
     );
+
+    -- SP5 SEC (not available on rev1 cosmo, not yet implemented for rev2!)
+    i2c_sp5_sec_v3p3_scl <= 'Z';
+    i2c_sp5_sec_v3p3_sda <= 'Z';
     -- misc things tied:
     fpga1_to_fpga2_io <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
@@ -412,8 +432,14 @@ begin
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
     fpga1_uart1_buff_oe_en_l <= '0' when a0_ok else '1'; -- not used but why not enable anyway?
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
+    
     i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
-    i3c_fpga1_to_dimm_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
+    -- Rev1 cosmo board had a hw bug where one side of the i2c buffers was driven in an A1/A0 domain,
+    -- preventing access to the DDR SPD EEPROMs until the system was fully powered on. We gate rev1
+    -- board by the power-good (in A0) signal to prevent hanging the bus in that case, but rev2+ boards
+    -- don't have this problem so we can immediately enable them regardless of the SP5 power state which
+    -- is the desired system behavior.
+    i3c_fpga1_to_dimm_oe_l <= '0' when  (not is_rev1) or sp5_seq_pins.pwr_good else '1';
 
     ---------------------------------------------
     -- FMC to AXI Interface from the SP
@@ -468,7 +494,8 @@ begin
         reset_fmc => reset_fmc,
         fpga1_status_led => fpga1_status_led,
         hubris_compat_ver => seq_rev_id,
-        info_axi_if => responders(INFO_RESP_IDX)
+        info_axi_if => responders(INFO_RESP_IDX),
+        is_rev1 => is_rev1  -- tied high if rev1 board
     );
 
     -- espi and flash interface block
@@ -538,11 +565,39 @@ begin
         ipcc_from_espi => ipcc_uart_from_espi_axi_st,
         ipcc_to_espi => ipcc_uart_to_espi_axi_st,
         -- 
-        dbg_pins_uart_out => fpga1_spare_v3p3_7,
-        dbg_pins_uart_out_rts_l => fpga1_spare_v3p3_4,
-        dbg_pins_uart_in => fpga1_spare_v3p3_5,
-        dbg_pins_uart_in_rts_l => fpga1_spare_v3p3_6
+        dbg_pins_uart_out => dbg_pins_uart_out,
+        dbg_pins_uart_out_rts_l => dbg_pins_uart_out_rts_l,
+        dbg_pins_uart_in => dbg_pins_uart_in,
+        dbg_pins_uart_in_rts_l => dbg_pins_uart_in_rts_l
     );
+
+    -- Cosmo UART debug mux.
+    -- Comso rev2+ has a dedicated UART port on the board, use that for rev2+
+    process(all)
+    begin
+        if is_rev1 then
+            -- Use spare dbg pins for UART
+            fpga1_spare_v3p3_6 <= dbg_pins_uart_in_rts_l;
+            fpga1_spare_v3p3_7 <= dbg_pins_uart_out;
+            dbg_pins_uart_in <= fpga1_spare_v3p3_5;
+            dbg_pins_uart_out_rts_l <= fpga1_spare_v3p3_4;
+            -- Un-used and unaccessible in rev1
+            uart_fpga1_to_debug_dat <= 'Z';
+            uart_fpga1_to_debug_rts_l <= 'Z';
+        else
+            -- Give a tri-state driver here to prevent latches
+            fpga1_spare_v3p3_6 <= 'Z';
+            fpga1_spare_v3p3_7 <= 'Z';
+            -- Dedicated UART connector rev2+
+            uart_fpga1_to_debug_dat <= dbg_pins_uart_out;
+            dbg_pins_uart_in <= uart_debug_to_fpga1_dat;
+            uart_fpga1_to_debug_rts_l <= dbg_pins_uart_in_rts_l;
+            dbg_pins_uart_out_rts_l <= uart_debug_to_fpga1_rts_l;
+
+        end if;
+
+    end process;
+
 
     -- SP I2C muxes
     -- i2c is the only input, sycn'd inside the mux block(s)
@@ -798,6 +853,9 @@ begin
         -- sp
         i2c_sp_to_fpga1_scl => i2c_sp_to_fpga1_scl,
         i2c_sp_to_fpga1_sda => i2c_sp_to_fpga1_sda,
+        -- sp5 i2c
+        i2c_sp5_sec_to_fpga1_scl => i2c_sp5_sec_v3p3_scl,
+        i2c_sp5_sec_to_fpga1_sda => i2c_sp5_sec_v3p3_sda,
         -- dimms
         i3c_sp5_to_fpga1_abcdef_scl => i3c_sp5_to_fpga1_abcdef_scl,
         i3c_sp5_to_fpga1_abcdef_sda => i3c_sp5_to_fpga1_abcdef_sda,

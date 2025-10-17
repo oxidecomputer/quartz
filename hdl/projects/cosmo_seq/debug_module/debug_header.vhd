@@ -25,6 +25,9 @@ entity debug_header is
         -- sp
         i2c_sp_to_fpga1_scl: in std_logic;
         i2c_sp_to_fpga1_sda: in std_logic;
+        -- sp5 sec i2c
+        i2c_sp5_sec_to_fpga1_scl : in std_logic;
+        i2c_sp5_sec_to_fpga1_sda : in std_logic;
         -- dimms
         i3c_sp5_to_fpga1_abcdef_scl: in std_logic;
         i3c_sp5_to_fpga1_abcdef_sda: in std_logic;
@@ -74,6 +77,8 @@ architecture rtl of debug_header is
     signal i3c_fpga1_to_dimm_abcdef_sda_int: std_logic;
     signal i3c_fpga1_to_dimm_ghijkl_scl_int: std_logic;
     signal i3c_fpga1_to_dimm_ghijkl_sda_int: std_logic;
+    signal i2c_sp5_sec_to_fpga1_scl_int :std_logic;
+    signal i2c_sp5_sec_to_fpga1_sda_int : std_logic;
     signal uart1_sp_to_fpga1_dat_int : std_logic;
     signal uart1_fpga1_to_sp_dat_int : std_logic;
     signal uart0_sp_to_fpga1_dat_int : std_logic;
@@ -101,6 +106,8 @@ sample_reg: process(clk_200m, reset_200m)
             i2c_sp_to_fpga1_scl_int <= i2c_sp_to_fpga1_scl;
             i2c_sp5_to_fpgax_hp_sda_int <= i2c_sp5_to_fpgax_hp_sda;
             i2c_sp5_to_fpgax_hp_scl_int <= i2c_sp5_to_fpgax_hp_scl;
+            i2c_sp5_sec_to_fpga1_scl_int <= i2c_sp5_sec_to_fpga1_scl;
+            i2c_sp5_sec_to_fpga1_sda_int <= i2c_sp5_sec_to_fpga1_sda;
             i3c_sp5_to_fpga1_abcdef_scl_int <= i3c_sp5_to_fpga1_abcdef_scl; 
             i3c_sp5_to_fpga1_abcdef_sda_int <= i3c_sp5_to_fpga1_abcdef_sda; 
             i3c_sp5_to_fpga1_ghijkl_scl_int <= i3c_sp5_to_fpga1_ghijkl_scl; 
@@ -202,6 +209,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                     -- Mux3 select pins
                     fpga1_spare_reg(7) <= mux3_sel_int(1);
                     fpga1_spare_reg(6) <= mux3_sel_int(0);
+                when I2C_SP5_SEC_BUS =>
+                    fpga1_spare_reg(7) <= i2c_sp5_sec_to_fpga1_scl_int;
+                    fpga1_spare_reg(6) <= i2c_sp5_sec_to_fpga1_sda_int;
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(7 downto 6) <= (others => '0');
@@ -254,6 +264,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                     -- Mux3 select pins
                     fpga1_spare_reg(5) <= mux3_sel_int(1);
                     fpga1_spare_reg(4) <= mux3_sel_int(0);
+                 when I2C_SP5_SEC_BUS =>
+                    fpga1_spare_reg(5) <= i2c_sp5_sec_to_fpga1_scl_int;
+                    fpga1_spare_reg(4) <= i2c_sp5_sec_to_fpga1_sda_int;
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(5 downto 4) <= (others => '0');
@@ -302,6 +315,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when MUX3_SEL =>
                     fpga1_spare_reg(3) <= mux3_sel_int(1);
                     fpga1_spare_reg(2) <= mux3_sel_int(0);
+                when I2C_SP5_SEC_BUS =>
+                    fpga1_spare_reg(3) <= i2c_sp5_sec_to_fpga1_scl_int;
+                    fpga1_spare_reg(2) <= i2c_sp5_sec_to_fpga1_sda_int;
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(3 downto 2) <= (others => '0');
@@ -351,6 +367,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when MUX3_SEL =>
                     fpga1_spare_reg(1) <= mux3_sel_int(1);
                     fpga1_spare_reg(0) <= mux3_sel_int(0);
+                 when I2C_SP5_SEC_BUS =>
+                    fpga1_spare_reg(1) <= i2c_sp5_sec_to_fpga1_scl_int;
+                    fpga1_spare_reg(0) <= i2c_sp5_sec_to_fpga1_sda_int;
                 when others =>
                     -- Default case, do nothing
                     fpga1_spare_reg(1 downto 0) <= (others => '0');

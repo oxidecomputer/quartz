@@ -127,6 +127,7 @@ addrmap debug_regs {
             mux1_sel = 8'h0c {desc = "Mux1 sel pins debug output to pins";};
             mux2_sel = 8'h0d {desc = "Mux2 sel pins debug output to pins";};
             mux3_sel = 8'h0e {desc = "Mux3 sel pins debug output to pins";};
+            i2c_sp5_sec_bus = 8'h0f {desc = "SP5 -> FPGA sec i2c bus to pins";};
         };
         field {
             desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
