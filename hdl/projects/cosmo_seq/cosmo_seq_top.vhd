@@ -434,6 +434,11 @@ begin
     uart1_fpga1_to_sp5_dat_buff <= '1';  -- Make this idle generally, buffer protects from cross-drive
     
     i3c_sp5_to_fpga1_oe_l <= '0' when  sp5_seq_pins.pwr_good else '1';
+    -- Rev1 cosmo board had a hw bug where one side of the i2c buffers was driven in an A1/A0 domain,
+    -- preventing access to the DDR SPD EEPROMs until the system was fully powered on. We gate rev1
+    -- board by the power-good (in A0) signal to prevent hanging the bus in that case, but rev2+ boards
+    -- don't have this problem so we can immediately enable them regardless of the SP5 power state which
+    -- is the desired system behavior.
     i3c_fpga1_to_dimm_oe_l <= '0' when  (not is_rev1) or sp5_seq_pins.pwr_good else '1';
 
     ---------------------------------------------
@@ -560,10 +565,10 @@ begin
         ipcc_from_espi => ipcc_uart_from_espi_axi_st,
         ipcc_to_espi => ipcc_uart_to_espi_axi_st,
         -- 
-        dbg_pins_uart_out => dbg_pins_uart_out, -- fpga1_spare_v3p3_7,
-        dbg_pins_uart_out_rts_l => dbg_pins_uart_out_rts_l, -- fpga1_spare_v3p3_4,
-        dbg_pins_uart_in => dbg_pins_uart_in, -- fpga1_spare_v3p3_5,
-        dbg_pins_uart_in_rts_l => dbg_pins_uart_in_rts_l -- fpga1_spare_v3p3_6
+        dbg_pins_uart_out => dbg_pins_uart_out,
+        dbg_pins_uart_out_rts_l => dbg_pins_uart_out_rts_l,
+        dbg_pins_uart_in => dbg_pins_uart_in,
+        dbg_pins_uart_in_rts_l => dbg_pins_uart_in_rts_l
     );
 
     -- Cosmo UART debug mux.
