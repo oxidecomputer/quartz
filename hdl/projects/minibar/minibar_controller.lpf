@@ -9,6 +9,7 @@ IOBUF PORT "pcie_examax_to_fpga_sled_present_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
 // Bank 1
 LOCATE COMP "fpga_to_pcie_sled_i2c_buffer_en" SITE "E13";
 IOBUF PORT "fpga_to_pcie_sled_i2c_buffer_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: fpga_to_pcie_cem_i2c_buffer_en, rev2: removed
 LOCATE COMP "fpga_to_pcie_cem_i2c_buffer_en" SITE "E14";
 IOBUF PORT "fpga_to_pcie_cem_i2c_buffer_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_vsc7448_reset_l" SITE "A14";
@@ -29,10 +30,20 @@ LOCATE COMP "smbus_pcie_aux_sled_to_fpga_scl" SITE "A23";
 IOBUF PORT "smbus_pcie_aux_sled_to_fpga_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 
 // Bank 2
-LOCATE COMP "fpga_ign_lvds_link0_led_en_l" SITE "C25";
-IOBUF PORT "fpga_ign_lvds_link0_led_en_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_ign_lvds_link1_led_en_l" SITE "C26";
-IOBUF PORT "fpga_ign_lvds_link1_led_en_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: fpga_ign_lvds_link0_led_en_l, rev2: fpga_config_status_led_en_l
+LOCATE COMP "led_at_c25_l" SITE "C25";
+IOBUF PORT "led_at_c25_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: fpga_ign_lvds_link1_led_en_l, rev2: fpga_pcie_status_en_l
+LOCATE COMP "led_at_c26_l" SITE "C26";
+IOBUF PORT "led_at_c26_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: N/A, rev2: fpga_ign_lvds_link0_led_en_l
+LOCATE COMP "led_at_c23_l" SITE "C23";
+IOBUF PORT "led_at_c23_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: N/A, rev2: fpga_ign_lvds_link1_led_en_l
+LOCATE COMP "led_at_c24_l" SITE "C24";
+IOBUF PORT "led_at_c24_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+
+// rev1: fpga_status_led_en_l, rev2: removed
 LOCATE COMP "fpga_status_led_en_l" SITE "B26";
 IOBUF PORT "fpga_status_led_en_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
 
@@ -49,9 +60,11 @@ LOCATE COMP "v3p3_pcie_pg" SITE "L26";
 IOBUF PORT "v3p3_pcie_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "v12_pcie_pg" SITE "N26";
 IOBUF PORT "v12_pcie_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: present but unused, rev2: removed
 LOCATE COMP "smbus_pcie_aux_fpga_to_cem_scl" SITE "P25";
 IOBUF PORT "smbus_pcie_aux_fpga_to_cem_scl" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "smbus_pcie_aux_fpga_to_cem_sda" SITE "T25";
+// rev1: present but unused, rev2: removed
 IOBUF PORT "smbus_pcie_aux_fpga_to_cem_sda" PULLMODE=NONE OPENDRAIN=ON IO_TYPE=LVCMOS33;
 LOCATE COMP "pcie_aux_cem_to_fpga_prsnt_l" SITE "U25";
 IOBUF PORT "pcie_aux_cem_to_fpga_prsnt_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
@@ -69,14 +82,16 @@ IOBUF PORT "fpga_to_pcie_aux_refclk_buffer_bw_sel" PULLMODE=NONE IO_TYPE=LVCMOS3
 // Bank 6
 LOCATE COMP "vbus_sys_hsc_to_fpga_fault_l" SITE "H3";
 IOBUF PORT "VBUS_SYS_HSC_TO_FPGA_FAULT_L" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_vbus_sys_hsc_restart_l" SITE "J3";
-IOBUF PORT "fpga_to_vbus_sys_hsc_restart_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: active low, rev2: active high
+LOCATE COMP "fpga_to_vbus_sys_hsc_restart" SITE "J3";
+IOBUF PORT "fpga_to_vbus_sys_hsc_restart" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_vbus_sled_hsc_en" SITE "H2";
 IOBUF PORT "fpga_to_vbus_sled_hsc_en" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "vbus_sled_hsc_to_fpga_fault_l" SITE "H1";
 IOBUF PORT "vbus_sled_hsc_to_fpga_fault_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
-LOCATE COMP "fpga_to_vbus_sled_hsc_restart_l" SITE "K2";
-IOBUF PORT "fpga_to_vbus_sled_hsc_restart_l" PULLMODE=NONE IO_TYPE=LVCMOS33;
+// rev1: active low, rev2: active high
+LOCATE COMP "fpga_to_vbus_sled_hsc_restart" SITE "K2";
+IOBUF PORT "fpga_to_vbus_sled_hsc_restart" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "vbus_sled_pg" SITE "J1";
 IOBUF PORT "vbus_sled_pg" PULLMODE=NONE IO_TYPE=LVCMOS33;
 LOCATE COMP "fpga_to_debug_spare_io[6]" SITE "L2";
