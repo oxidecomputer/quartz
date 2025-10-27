@@ -9,7 +9,7 @@ import tomli
 from fpga_releaser.archive_parser import get_relevant_files_from_buck_zip
 from fpga_releaser import config_toml
 
-def filter_wtih_exclusions(path, exclusions):
+def filter_with_exclusions(path, exclusions):
         for e in exclusions:
             if e in path:
                 return False
@@ -23,12 +23,13 @@ class FPGAImage:
         self.toolchain = toolchain
         self.builder = builder
         self.archive = None
-        self.filenames = []
+        self.filenames = None
         self._timestamp = datetime.datetime.now()
         self.gh_release_name = ""
         self.gh_release_url = ""
         self.gh_build_sha = ""
         self.local = False
+        self.applicable_hcvs = None
 
     @classmethod
     def from_dict(cls, fpga_name, data: dict):
@@ -49,7 +50,7 @@ class FPGAImage:
             exclusions = []
         else:
             exclusions = set(exclusions)
-        filtered_filenames = [x for x in self.filenames if filter_wtih_exclusions(x, exclusions)]
+        filtered_filenames = [x for x in self.filenames if filter_with_exclusions(x, exclusions)]
         return filtered_filenames
     
     def materialize_relevant_files(self, export_path, exclusions=None):

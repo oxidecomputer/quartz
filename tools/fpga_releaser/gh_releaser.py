@@ -11,7 +11,8 @@ def do_gh_release(api: GhApi, info, skip_mods=False):
     body = f"FPGA release for {info.name} made on {info.timestamp} UTC"
     # TODO: should we add something about timing failure here?
     # TODO: info about this being a locally generated file?
-    tag_name = name
+    applicable_hcvs = '_' + ''.join(info.applicable_hcvs) if info.applicable_hcvs else ''
+    tag_name = name + applicable_hcvs
     if info.gh_build_sha == "":
         # Built locally? Or not from a GH release
         sha = api.git.get_ref("heads/main")["object"].get("sha")

@@ -15,6 +15,9 @@ use work.ignition_pkg.all;
 
 
 entity cosmo_ignition_top is
+    generic (
+        IS_HCV_A : boolean := false
+    );
     port (
         clk_50mhz_ign_trgt_fpga : in std_logic;
         ign_trgt_fpga_design_reset_l : in std_logic;
@@ -106,7 +109,11 @@ begin
         dbg => ign_trgt_fpga_spare_v3p3(4 downto 2)
     );
 
-    main_hsc_restart <= not hotswap_restart_l;
+    hsc_gen: if IS_HCV_A generate
+        main_hsc_restart <= not hotswap_restart_l;
+    else generate
+        main_hsc_restart <= hotswap_restart_l;
+    end generate;
     
     ignition_io_inst: entity work.ignition_io
      port map(

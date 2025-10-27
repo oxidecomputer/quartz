@@ -59,21 +59,21 @@ architecture rtl of oximux16_function is
         reg0_pend : control0_type;
         data : std_logic_vector(7 downto 0);
         enable_allowed : std_logic) return boolean is
-        variable unrolled_reg : std_logic_vector(15 downto 0);
-        variable cnt_ones : integer range 0 to 16 := 0;
+            variable full_reg : unsigned(15 downto 0);
     begin
         -- allow only writes of 0 even when we're not allowed to enable
         if enable_allowed = '0' and (data /= 0 or std_logic_vector'(pack(reg0_pend)) /= 0) then
             return false;
         end if;
-        unrolled_reg := data & std_logic_vector'(pack(reg0_pend));
-        for i in 0 to 15 loop
-           if unrolled_reg(i) = '1' then
-               cnt_ones := cnt_ones + 1;
-           end if;
-        end loop;
-         
-        if cnt_ones > 1 then
+
+        -- Get the full 16 bit potential value
+        full_reg := unsigned(data) & unsigned'(pack(reg0_pend));
+        -- Now check for 1-hotness.
+        -- Do this by doing x & (x - 1) == 0. Why does this work?
+        -- binary arith fun: x-1 flips all bits and doing a bitwise AND
+        -- will remove the lsb that was set.
+        
+        if (full_reg and (full_reg - 1)) /= 0 then
             return false; -- we only allow 1-hot writes to the control registers
         end if;    
         if data(7) = '1' then

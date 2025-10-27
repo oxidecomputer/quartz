@@ -4,12 +4,30 @@ load("//tools:yosys.bzl", "ice40_bitstream")
 
 vhdl_unit(
     name = "cosmo_ignition_top",
-    srcs = glob(["*.vhd"]),
+    srcs = glob(["*.vhd"], exclude=["cosmo_ignition_r1_top.vhd"]),
     deps = [
         "//hdl/ip/vhd/ignition/target:ignition_target_common",
         "//hdl/ip/vhd/ignition/target:ignition_io",
     ],
     standard = "2008",
+)
+
+vhdl_unit(
+    name = "cosmo_ignition_a_top",
+    srcs = glob(["cosmo_ignition_a_top.vhd"]),
+    deps = [
+        ":cosmo_ignition_top",
+    ],
+    standard = "2008",
+)
+
+ice40_bitstream(
+    name="cosmo_ignition_a",
+    top_entity_name="cosmo_ignition_a_top",
+    top= ":cosmo_ignition_a_top",
+    family="hx8k",
+    package="bg121",
+    pinmap="cosmo_ignition.pcf"
 )
 
 ice40_bitstream(
