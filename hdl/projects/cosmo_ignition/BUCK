@@ -13,8 +13,8 @@ vhdl_unit(
 )
 
 vhdl_unit(
-    name = "cosmo_ignition_r1_top",
-    srcs = glob(["cosmo_ignition_r1_top.vhd"]),
+    name = "cosmo_ignition_a_top",
+    srcs = glob(["cosmo_ignition_a_top.vhd"]),
     deps = [
         ":cosmo_ignition_top",
     ],
@@ -22,9 +22,9 @@ vhdl_unit(
 )
 
 ice40_bitstream(
-    name="cosmo_ignition_r1_only",
-    top_entity_name="cosmo_ignition_r1_top",
-    top= ":cosmo_ignition_r1_top",
+    name="cosmo_ignition_a",
+    top_entity_name="cosmo_ignition_a_top",
+    top= ":cosmo_ignition_a_top",
     family="hx8k",
     package="bg121",
     pinmap="cosmo_ignition.pcf"

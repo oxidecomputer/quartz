@@ -11,7 +11,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity cosmo_ignition_r1_top is
+entity cosmo_ignition_a_top is
     port (
         clk_50mhz_ign_trgt_fpga : in std_logic;
         ign_trgt_fpga_design_reset_l : in std_logic;
@@ -44,13 +44,13 @@ entity cosmo_ignition_r1_top is
     );
 end entity;
 
-architecture rtl of cosmo_ignition_r1_top is
+architecture rtl of cosmo_ignition_a_top is
 
 begin
 
     cosmo_ignition_top_inst: entity work.cosmo_ignition_top
      generic map(
-        IS_REV1 => true
+        IS_HCV_A => true
     )
      port map(
         clk_50mhz_ign_trgt_fpga => clk_50mhz_ign_trgt_fpga,

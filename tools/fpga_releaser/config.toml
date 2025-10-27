@@ -8,9 +8,10 @@ toolchain = "yosys"
 job_name = "cosmo-ignition-image"
 builder = "buck2"
 toolchain = "yosys"
+applicable_hcvs = ["b"]
 
-[cosmo-ignition-r1-only]
-job_name = "cosmo-ignition-r1-only-image"
+[cosmo-ignition-a]
+job_name = "cosmo-ignition-a"
 builder = "buck2"
 toolchain = "yosys"
 

@@ -14,6 +14,7 @@ jobs:
       cosmo_hp: ${{ steps.filter.outputs.cosmo_hp }}
       cosmo_seq: ${{ steps.filter.outputs.cosmo_seq }}
       cosmo_ignition: ${{ steps.filter.outputs.cosmo_ignition }}
+      cosmo_ignition_a: ${{ steps.filter.outputs.cosmo_ignition_a }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,7 +114,7 @@ jobs:
             path: "./buck-out/v2/gen/root/**/*"
         - name: Cleanup
           run: bash .github/cleanup.sh
-  cosmo_ignition_r1_only:
+  cosmo_ignition_a:
     needs: changes
     if: ${{ needs.changes.outputs.buck2 == 'true' ||  needs.changes.outputs.cosmo_ignition == 'true' }}
     runs-on: self-hosted
@@ -128,10 +129,10 @@ jobs:
         - name: buck path
           run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
         - name: Build cosmo_ignition bitstream
-          run: buck2 build //hdl/projects/cosmo_ignition:cosmo_ignition_r1_only --show-output
+          run: buck2 build //hdl/projects/cosmo_ignition:cosmo_ignition_a --show-output
         - uses: actions/upload-artifact@v4
           with:
-            name: cosmo-ignition-r1-only-image
+            name: cosmo-ignition-a-image
             path: "./buck-out/v2/gen/root/**/*"
         - name: Cleanup
           run: bash .github/cleanup.sh
