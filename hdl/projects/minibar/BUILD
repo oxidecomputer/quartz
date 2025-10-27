@@ -109,7 +109,7 @@ yosys_design('minibar_top',
         '//vnd/bluespec:Verilog.v',
     ])
 
-nextpnr_ecp5_bitstream('minibar_controller_hcv_a',
+nextpnr_ecp5_bitstream('minibar_controller',
     env = 'minibar',
     design = ':minibar_top#minibar_top.json',
     deps = [

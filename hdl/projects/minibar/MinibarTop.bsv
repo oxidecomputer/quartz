@@ -40,16 +40,11 @@ interface MinibarTop;
     method Bit#(1) fpga_to_sled_pcie_attached_l;
     method Bit#(1) pcie_aux_fpga_to_sled_pwrflt_l;
     method Bit#(1) pcie_aux_fpga_to_sled_prsnt_l;
-    // interface Inout#(Bit#(1)) smbus_pcie_aux_sled_to_fpga_scl;
-    // interface Inout#(Bit#(1)) smbus_pcie_aux_sled_to_fpga_sda;
-    
 
     // CEM PCIe
     (* prefix = "" *) method Action pcie_aux_cem_to_fpga_prsnt_l(Bit#(1) pcie_aux_cem_to_fpga_prsnt_l);
     method Bit#(1) fpga_to_pcie_cem_i2c_buffer_en;
     method Bit#(1) pcie_aux_fpga_to_cem_perst_l;
-    // interface Inout#(Bit#(1)) smbus_pcie_aux_fpga_to_cem_scl;
-    // interface Inout#(Bit#(1)) smbus_pcie_aux_fpga_to_cem_sda;
 
     // PCIe refclk
     method Bit#(1) fpga_to_pcie_aux_refclk_buffer_oe0_l;
@@ -75,9 +70,9 @@ interface MinibarTop;
     method Bool fpga_to_vbus_sled_hsc_en;
     (* prefix = "" *) method Action vbus_sled_pg(Bool vbus_sled_pg);
     (* prefix = "" *) method Action vbus_sys_hsc_to_fpga_fault_l(Bit#(1) vbus_sys_hsc_to_fpga_fault_l);
-    method Bit#(1) fpga_to_vbus_sys_hsc_restart_l;
+    method Bit#(1) fpga_to_vbus_sys_hsc_restart;
     (* prefix = "" *) method Action vbus_sled_hsc_to_fpga_fault_l(Bool vbus_sled_hsc_to_fpga_fault_l);
-    method Bit#(1) fpga_to_vbus_sled_hsc_restart_l;
+    method Bit#(1) fpga_to_vbus_sled_hsc_restart;
 
     // Debug
     method Bit#(8) fpga_to_debug_spare_io;
@@ -97,12 +92,16 @@ interface MinibarTop;
     method Bit#(1) spi_fpga_sdo_to_sp_sdi_r();
 
     // Ignition
-    method Bit#(1) fpga_ign_lvds_link0_led_en_l;
     (* prefix = "" *) method Action lvds_sled_to_fpga_link0_dc_p(Bit#(1) lvds_sled_to_fpga_link0_dc_p);
     interface Inout#(Bit#(1)) lvds_fpga_to_sled_link0_dc_p;
-    method Bit#(1) fpga_ign_lvds_link1_led_en_l;
     (* prefix = "" *) method Action lvds_sled_to_fpga_link1_dc_p(Bit#(1) lvds_sled_to_fpga_link1_dc_p);
     interface Inout#(Bit#(1)) lvds_fpga_to_sled_link1_dc_p;
+
+    // Pin Compatibility
+    method Bit#(1) led_at_c23_l;
+    method Bit#(1) led_at_c24_l;
+    method Bit#(1) led_at_c25_l;
+    method Bit#(1) led_at_c26_l;
 
 endinterface
 
@@ -210,8 +209,46 @@ module mkMinibarTop(MinibarTop);
     ReadOnly#(Bit#(1)) vsc8504_reset    <- mkOutputSyncFor(controller.misc.vsc8504_reset);
 
     //
+    // Pin Compatibility Layer
+    //
+    Wire#(Bit#(1)) c23_led_l <- mkBypassWire();
+    Wire#(Bit#(1)) c24_led_l <- mkBypassWire();
+    Wire#(Bit#(1)) c25_led_l <- mkBypassWire();
+    Wire#(Bit#(1)) c26_led_l <- mkBypassWire();
+    Wire#(Bit#(1)) sys_hsc_restart <- mkBypassWire();
+    Wire#(Bit#(1)) sled_hsc_restart <- mkBypassWire();
+
+    (* fire_when_enabled *)
+    rule do_compat;
+        if (hcv == 0) begin
+            c25_led_l <= ~ignition_leds[0];
+            c26_led_l <= ~ignition_leds[1];
+            sys_hsc_restart <= ~vbus_sys_restart;
+            sled_hsc_restart <= ~vbus_sled_restart;
+            // unused
+            c23_led_l <= 1;
+            c24_led_l <= 1;
+        end else begin
+            c23_led_l <= ~ignition_leds[0];
+            c24_led_l <= ~ignition_leds[1];
+            c25_led_l <= blinky;
+            c26_led_l <= 1;
+            sys_hsc_restart <= vbus_sys_restart;
+            sled_hsc_restart <= vbus_sled_restart;
+        end
+    endrule
+
+    //
     // Physical pin connections
     //
+
+    // Compatibility
+    method led_at_c23_l = c23_led_l;
+    method led_at_c24_l = c24_led_l;
+    method led_at_c25_l = c25_led_l;
+    method led_at_c26_l = c26_led_l;
+    method fpga_to_vbus_sled_hsc_restart = sled_hsc_restart;
+    method fpga_to_vbus_sys_hsc_restart = sys_hsc_restart;
 
     method Bit#(1) fpga_status_led_en_l = blinky;
 
@@ -222,10 +259,8 @@ module mkMinibarTop(MinibarTop);
     method spi_fpga_sdo_to_sp_sdi_r = sdo;
 
     // Ignition
-    method fpga_ign_lvds_link0_led_en_l = ~ignition_leds[0];
     method lvds_sled_to_fpga_link0_dc_p = ignition_io[0].rx;
     method lvds_fpga_to_sled_link0_dc_p = ignition_io[0].tx;
-    method fpga_ign_lvds_link1_led_en_l = ~ignition_leds[1];
     method lvds_sled_to_fpga_link1_dc_p = ignition_io[1].rx;
     method lvds_fpga_to_sled_link1_dc_p = ignition_io[1].tx;
 
@@ -233,7 +268,6 @@ module mkMinibarTop(MinibarTop);
     method fpga_to_vbus_sled_hsc_en = vbus_sled_en;
     method vbus_sled_pg = sync(vbus_sled_pg_);
     method vbus_sled_hsc_to_fpga_fault_l = sync_inverted(vbus_sled_fault);
-    method fpga_to_vbus_sled_hsc_restart_l = ~vbus_sled_restart;
     // PCIe power rails
     method fpga_to_v12_pcie_efuse_en = v12_en;
     method v12_pcie_pg = sync(v12_pg);
@@ -244,7 +278,6 @@ module mkMinibarTop(MinibarTop);
     // Given if any of the subsequent SYS rails are not up, the SP/FPGA will not be up, we don't
     // bother running the PG pin back to the FPGA.
     method vbus_sys_hsc_to_fpga_fault_l = sync_inverted(vbus_sys_fault);
-    method fpga_to_vbus_sys_hsc_restart_l = ~vbus_sys_restart;
 
     // The power button and LED are part of the Minibar chassis.
     method power_button_to_fpga = sync(power_button);

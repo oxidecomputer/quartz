@@ -306,7 +306,7 @@ addrmap minibar_controller {
 
         field {
             desc = "control of fpga_to_pcie_sled_i2c_buffer_en";
-        } SLED_I2C_EN[0:0] = 1;
+        } SLED_I2C_EN[0:0] = 0;
     } PCIE_CTRL;
 
     reg {
