@@ -1,0 +1,52 @@
+from ubuntu:24.04
+
+ARG USERNAME=ubuntu
+ARG UID=1000
+ARG GID=$UID
+ARG HOME=/home
+
+ARG INSTALL_PREFIX=/usr/local
+
+# Create a non-root user, owning /home
+# Add sudo support, just in case.
+RUN chown $UID:$GID $HOME && \
+    mkdir -p /etc/sudoers.d && \
+    echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME && \
+    chmod 0440 /etc/sudoers.d/$USERNAME
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get -y install \
+        curl \
+        git \
+        libllvm18 \
+        libtcl8.6 \
+        libdw1t64 \
+        locales \
+        pkg-config \
+        python3-pip \
+        sudo \
+        wget \
+        zstd \
+        && \
+    rm -rf /var/lib/apt/lists/* && \
+    locale-gen "en_US.UTF-8"
+
+# Install NVC
+ADD https://github.com/nickg/nvc/releases/download/r1.18.1/nvc_1.18.1-1_amd64_ubuntu-24.04.deb /tmp/nvc.deb
+RUN apt install /tmp/nvc.deb && rm /tmp/nvc.deb
+
+# Install python dependencies from the repo requirements.txt
+COPY tools/requirements.txt /tmp/requirements.txt
+RUN pip3 install --break-system-packages -r /tmp/requirements.txt && \
+    rm /tmp/requirements.txt
+
+# Install Buck
+ADD https://github.com/facebook/buck2/releases/download/2025-07-01/buck2-x86_64-unknown-linux-musl.zst /tmp/buck2.zst
+RUN zstd -d /tmp/buck2.zst -o /usr/local/bin/buck2 && \
+    chmod +rx /usr/local/bin/buck2 && \
+    rm /tmp/buck2.zst
+
+
+WORKDIR $HOME
