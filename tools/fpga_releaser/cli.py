@@ -114,6 +114,7 @@ def get_latest_artifact_info(api, fpga_name: str, branch: str = "main") -> dict:
     """
     artifacts = api.actions.list_artifacts_for_repo(name=fpga_name)
     artifacts = obj2dict(artifacts)
+    
     artifacts = list(filter(lambda x: x["workflow_run"]["head_branch"] == branch, artifacts["artifacts"]))
     if len(artifacts) == 0:
         print(f"No artifacts found for {fpga_name} on {branch}")

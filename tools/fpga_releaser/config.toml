@@ -11,12 +11,7 @@ toolchain = "yosys"
 applicable_hcvs = ["b"]
 
 [cosmo-ignition-a]
-job_name = "cosmo-ignition-a"
-builder = "buck2"
-toolchain = "yosys"
-
-[cosmo-ignition-r1-only]
-job_name = "cosmo-ignition-r1-only-image"
+job_name = "cosmo-ignition-a-image"
 builder = "buck2"
 toolchain = "yosys"
 
