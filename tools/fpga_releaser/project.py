@@ -16,7 +16,7 @@ def filter_with_exclusions(path, exclusions):
         return True
 
 class FPGAImage:
-    def __init__(self, name, job_name, hubris_path, toolchain, builder):
+    def __init__(self, name, job_name, hubris_path, toolchain, builder, applicable_hcvs):
         self.name = name
         self.job_name = job_name
         self.hubris_path = hubris_path
@@ -29,7 +29,7 @@ class FPGAImage:
         self.gh_release_url = ""
         self.gh_build_sha = ""
         self.local = False
-        self.applicable_hcvs = None
+        self.applicable_hcvs = applicable_hcvs
 
     @classmethod
     def from_dict(cls, fpga_name, data: dict):
@@ -39,6 +39,7 @@ class FPGAImage:
             hubris_path=data[fpga_name].get("hubris_path"),
             toolchain=data[fpga_name].get("toolchain"),
             builder=data[fpga_name].get("builder"),
+            applicable_hcvs=data[fpga_name].get("applicable_hcvs")
         )
     
     @property
