@@ -31,16 +31,6 @@ ice40_bitstream(
 )
 
 ice40_bitstream(
-    name="cosmo_ignition_r1_only",
-    top_entity_name="cosmo_ignition_r1_top",
-    top= ":cosmo_ignition_r1_top",
-    family="hx8k",
-    package="bg121",
-    pinmap="cosmo_ignition.pcf"
-)
-
->>>>>>> Conflict 1 of 1 ends
-ice40_bitstream(
     name="cosmo_ignition",
     top_entity_name="cosmo_ignition_top",
     top= ":cosmo_ignition_top",
