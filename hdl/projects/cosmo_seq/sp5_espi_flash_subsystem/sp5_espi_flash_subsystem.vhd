@@ -8,7 +8,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-use work.axil8x32_pkg.all;
+use work.axil8x32_pkg;
+use work.axil15x32_pkg;
 use work.axi_st8_pkg.all;
 
 
@@ -20,7 +21,7 @@ entity sp5_espi_flash_subsystem is
         reset_200m : in std_logic;
 
         -- espi
-        espi_axi_if : view axil_target;
+        espi_axi_if : view axil15x32_pkg.axil_target;
         espi_csn : in std_logic;
         espi_clk : in std_logic;
         espi_dat : in std_logic_vector(3 downto 0);
@@ -30,7 +31,7 @@ entity sp5_espi_flash_subsystem is
         ipcc_uart_from_espi : view axi_st_source;
         ipcc_uart_to_espi : view axi_st_sink;
         -- spi nor
-        spinor_axi_if : view axil_target;
+        spinor_axi_if : view axil8x32_pkg.axil_target;
         spi_nor_csn : out std_logic;
         spi_nor_clk : out std_logic;
         spi_nor_dat : in std_logic_vector(3 downto 0);

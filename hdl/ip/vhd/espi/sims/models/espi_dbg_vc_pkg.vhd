@@ -85,6 +85,17 @@ package espi_dbg_vc_pkg is
         signal net : inout network_t
     );
 
+     procedure dbg_send_iowr_short(
+        signal net : inout network_t;
+        addr : std_logic_vector(15 downto 0);
+        data : std_logic_vector(31 downto 0)
+    );
+
+     procedure dbg_send_post_code(
+        signal net : inout network_t;
+        data : std_logic_vector(31 downto 0)
+    );
+
 end package;
 
 package body espi_dbg_vc_pkg is
@@ -306,6 +317,26 @@ package body espi_dbg_vc_pkg is
             flags_reg := unpack(readdata);
             exit when flags_reg.alert = '1';
         end loop;
+    end procedure;
+
+    procedure dbg_send_iowr_short(
+        signal net : inout network_t;
+        addr : std_logic_vector(15 downto 0);
+        data : std_logic_vector(31 downto 0)
+    ) is
+         variable cmd : cmd_t := build_iowr_short(addr, data);
+    begin
+        dbg_send_cmd(net, cmd);
+    end procedure;
+
+     procedure dbg_send_post_code(
+        signal net : inout network_t;
+        data : std_logic_vector(31 downto 0)
+    ) is
+         constant addr: std_logic_vector(15 downto 0) := X"8000";
+         variable cmd : cmd_t := build_iowr_short(addr, data);
+    begin
+        dbg_send_cmd(net, cmd);
     end procedure;
 
 

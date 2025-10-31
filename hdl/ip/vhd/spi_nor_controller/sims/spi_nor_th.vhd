@@ -15,7 +15,9 @@ library vunit_lib;
 use work.spi_nor_tb_pkg.all;
 use work.axil_common_pkg.all;
 use work.axil8x32_pkg;
+use work.axil32x32_pkg;
 use work.axil26x32_pkg;
+use work.axilite_if_2k19_helper_pkg.all;
 
 entity spi_nor_th is
 end entity;
@@ -34,7 +36,8 @@ architecture th of spi_nor_th is
     (
         0 => (base_addr => x"00000100", addr_span_bits => 8)
     );
-    signal   responders   : axil8x32_pkg.axil_array_t(0 downto 0);
+    signal  responders   : axil32x32_pkg.axil_array_t(0 downto 0);
+    signal  responders_8b : axil8x32_pkg.axil_array_t(0 downto 0);
 
 begin
 
@@ -77,11 +80,12 @@ begin
             responders => responders
         );
 
+        resiser: entity work.axil8_resizer port map(fabric => responders(0), responder =>responders_8b(0));
     spi_nor_top_inst: entity work.spi_nor_top
         port map (
             clk                  => clk,
             reset                => reset,
-            axi_if               => responders(0),
+            axi_if               => responders_8b(0),
             cs_n                 => cs_n,
             sclk                 => sclk,
             io                   => io,

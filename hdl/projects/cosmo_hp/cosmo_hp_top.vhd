@@ -246,7 +246,7 @@ architecture rtl of cosmo_hp_top is
 
     signal responders_write_address_valid : std_logic_vector(config_array'range);
     signal responders_write_address_ready : std_logic_vector(config_array'range);
-    signal responders_write_address_addr : tgt_addr8_t(config_array'range);
+    signal responders_write_address_addr : tgt_addr32_t(config_array'range);
     signal responders_write_data_valid : std_logic_vector(config_array'range);
     signal responders_write_data_ready : std_logic_vector(config_array'range);
     signal responders_write_data_data : tgt_dat32_t(config_array'range);
@@ -255,7 +255,7 @@ architecture rtl of cosmo_hp_top is
     signal responders_write_response_resp : tgt_resp_t(config_array'range);
     signal responders_write_response_valid : std_logic_vector(config_array'range);
     signal responders_read_address_valid : std_logic_vector(config_array'range);
-    signal responders_read_address_addr : tgt_addr8_t(config_array'range);
+    signal responders_read_address_addr : tgt_addr32_t(config_array'range);
     signal responders_read_address_ready : std_logic_vector(config_array'range);
     signal responders_read_data_ready : std_logic_vector(config_array'range);
     signal responders_read_data_resp : tgt_resp_t(config_array'range);
@@ -429,7 +429,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         hubris_compat_pins => "000",
         awvalid => responders_write_address_valid(0),
         awready => responders_write_address_ready(0),
-        awaddr => responders_write_address_addr(0),
+        awaddr => responders_write_address_addr(0)(7 downto 0),
         wvalid => responders_write_data_valid(0),
         wready => responders_write_data_ready(0),
         wdata => responders_write_data_data(0),
@@ -439,7 +439,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         bresp => responders_write_response_resp(0),
         arvalid => responders_read_address_valid(0),
         arready => responders_read_address_ready(0),
-        araddr => responders_read_address_addr(0),
+        araddr => responders_read_address_addr(0)(7 downto 0),
         rvalid => responders_read_data_valid(0),
         rready => responders_read_data_ready(0),
         rdata => responders_read_data_data(0),
@@ -496,7 +496,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
             int_n => pca_int_n(i),
             awvalid => responders_write_address_valid(i+1),
             awready => responders_write_address_ready(i+1),
-            awaddr => responders_write_address_addr(i+1),
+            awaddr => responders_write_address_addr(i+1)(7 downto 0),
             wvalid => responders_write_data_valid(i+1),
             wready => responders_write_data_ready(i+1),
             wdata => responders_write_data_data(i+1),
@@ -506,7 +506,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
             bresp => responders_write_response_resp(i+1),
             arvalid => responders_read_address_valid(i+1),
             arready => responders_read_address_ready(i+1),
-            araddr => responders_read_address_addr(i+1),
+            araddr => responders_read_address_addr(i+1)(7 downto 0),
             rvalid => responders_read_data_valid(i+1),
             rready => responders_read_data_ready(i+1),
             rdata => responders_read_data_data(i+1),

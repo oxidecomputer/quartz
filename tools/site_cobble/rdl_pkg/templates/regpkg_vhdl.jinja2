@@ -140,6 +140,17 @@ package {{module_name}} is
   function "not" (right : {{reg_type_name}}) return {{reg_type_name}};
     {% endif %}
   {% endfor %}
+  -----------
+  -- Memories
+  -----------
+  {% for register in registers %}
+    {% if not register.repeated_type and isinstance(register, Memory) %}
+  -- Memory {{register.type_name}} definitions
+  constant {{register.type_name|upper}}_NUM_ENTRIES : integer := {{register.node.get_property('mementries')}};
+  constant {{register.type_name|upper}}_BIT_WIDTH : integer := {{register.node.get_property('memwidth')}};
+  subtype {{register.type_name|upper}}_RANGE is integer range {{register.name|upper}}_OFFSET to {{register.name|upper}}_OFFSET + {{register.type_name|upper}}_NUM_ENTRIES - 1;
+    {% endif %}
+  {% endfor %}
 end {{module_name}};
 
 package body {{module_name}} is

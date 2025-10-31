@@ -18,7 +18,7 @@ use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
 use work.link_layer_pkg.all;
 
-use work.axil8x32_pkg.all;
+use work.axil15x32_pkg.all;
 
 entity espi_target_top is
     port (

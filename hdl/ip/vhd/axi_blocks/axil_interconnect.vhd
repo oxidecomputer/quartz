@@ -12,7 +12,7 @@ use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
 use work.axilite_if_2k8_pkg.all;
-use work.axil8x32_pkg;
+use work.axil32x32_pkg;
 use work.axil26x32_pkg;
 
 -- This is a somewhat naive implementation of an parameterized AXI-lite interconnect.
@@ -32,7 +32,7 @@ entity axil_interconnect is
         initiator : view axil26x32_pkg.axil_target;
 
         -- Initiator I/Fs to the responder blocks, which is a *controller* interface
-        responders : view (axil8x32_pkg.axil_controller) of axil8x32_pkg.axil_array_t(config_array'range)
+        responders : view (axil32x32_pkg.axil_controller) of axil32x32_pkg.axil_array_t(config_array'range)
 
     );
 end entity;
@@ -40,14 +40,14 @@ end entity;
 architecture rtl of axil_interconnect is
     signal responders_write_address_valid : std_logic_vector(config_array'range);
     signal responders_write_address_ready : std_logic_vector(config_array'range);
-    signal responders_write_address_addr : tgt_addr8_t(config_array'range);
+    signal responders_write_address_addr : tgt_addr32_t(config_array'range);
     signal responders_write_data_valid : std_logic_vector(config_array'range);
     signal responders_write_data_ready : std_logic_vector(config_array'range);
     signal responders_write_data_data: tgt_dat32_t(config_array'range);
     signal responders_write_data_strb: tgt_strb_t(config_array'range);
     signal responders_write_response_ready : std_logic_vector(config_array'range);
     signal responders_read_address_valid : std_logic_vector(config_array'range);
-    signal responders_read_address_addr : tgt_addr8_t(config_array'range);
+    signal responders_read_address_addr : tgt_addr32_t(config_array'range);
     signal responders_read_data_ready : std_logic_vector(config_array'range);
     signal responders_write_response_resp : tgt_resp_t(config_array'range);
     signal responders_write_response_valid : std_logic_vector(config_array'range);

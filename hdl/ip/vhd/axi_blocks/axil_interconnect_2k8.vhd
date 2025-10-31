@@ -55,7 +55,7 @@ entity axil_interconnect_2k8 is
         --responders : view (axil8x32_pkg.axil_controller) of axil8x32_pkg.axil_array_t(config_array'range)
         responders_write_address_valid : out std_logic_vector(config_array'range);
         responders_write_address_ready : in std_logic_vector(config_array'range);
-        responders_write_address_addr : out tgt_addr8_t(config_array'range);
+        responders_write_address_addr : out tgt_addr32_t(config_array'range);
         
         responders_write_data_valid : out std_logic_vector(config_array'range);
         responders_write_data_ready : in std_logic_vector(config_array'range);
@@ -67,7 +67,7 @@ entity axil_interconnect_2k8 is
         responders_write_response_valid : in std_logic_vector(config_array'range);
 
         responders_read_address_valid : out std_logic_vector(config_array'range);
-        responders_read_address_addr : out tgt_addr8_t(config_array'range);
+        responders_read_address_addr : out tgt_addr32_t(config_array'range);
         responders_read_address_ready : in std_logic_vector(config_array'range);
 
         responders_read_data_ready : out std_logic_vector(config_array'range);
@@ -84,6 +84,7 @@ architecture rtl of axil_interconnect_2k8 is
     -- We implement a catch-all responder that will respond with an error if no other responder does
     -- so this signal is one larger than the number of responders
     signal responder_sel : integer range 0 to config_array'length := default_idx;
+    signal responder_addr_width : integer  range 0 to 32 := 8;
     signal write_done : std_logic;
     signal read_done : std_logic;
     signal in_txn : boolean;
@@ -103,6 +104,7 @@ begin
     begin
         if reset = '1' then
             responder_sel <= default_idx;
+            responder_addr_width <= 8;
             in_txn <= false;
         elsif rising_edge(clk) then
             if initiator_write_address_valid = '1' then
@@ -110,6 +112,7 @@ begin
                     if (initiator_write_address_addr >= config_array(i).base_addr) and
                        (initiator_write_address_addr < config_array(i).base_addr + 2**config_array(i).addr_span_bits) then
                         responder_sel <= i;
+                        responder_addr_width <= config_array(i).addr_span_bits;
                     end if;
                 end loop;
                 in_txn <= true;
@@ -118,45 +121,59 @@ begin
                     if (initiator_read_address_addr >= config_array(i).base_addr) and
                        (initiator_read_address_addr < config_array(i).base_addr + 2**config_array(i).addr_span_bits) then
                         responder_sel <= i;
+                        responder_addr_width <= config_array(i).addr_span_bits;
                     end if;
                 end loop;
                 in_txn <= true;
             elsif write_done or read_done then
                 responder_sel <= default_idx;
                 in_txn <= false;
+                responder_addr_width <= 8;
             end if;
         end if;
     end process;
 
     mux: process(all)
+        variable masked_addr : std_logic_vector(31 downto 0);
     begin
         -- default no transaction state for all responders
+        responders_write_address_addr <= (others => (others => '0'));
+        responders_read_address_addr <= (others => (others => '0'));
+        masked_addr := resize(initiator_write_address_addr, 32);
+            for i in 31 downto 0 loop
+                if i >= responder_addr_width or i >= initiator_write_address_addr'length then
+                    masked_addr(i) := '0';
+                else
+                    masked_addr(i) := initiator_write_address_addr(i);
+                end if;
+            end loop;
         for i in 0 to config_array'length - 1 loop
             responders_write_address_valid(i) <= '0';
-            responders_write_address_addr(i) <= initiator_write_address_addr(responders_write_address_addr(i)'length - 1 downto 0);
             responders_write_data_valid(i) <= '0';
             responders_write_data_data(i) <= initiator_write_data_data;
             responders_write_data_strb(i) <= initiator_write_data_strb;
+            responders_write_address_addr(i) <= masked_addr;
             responders_write_response_ready(i) <= '0';
 
             responders_read_address_valid(i) <= '0';
-            responders_read_address_addr(i) <= initiator_read_address_addr(responders_read_address_addr(i)'length - 1 downto 0);
+            
+            responders_read_address_addr(i)<= masked_addr;
             responders_read_data_ready(i) <= '0';
 
         end loop;
 
         -- deal with in-txn muxing
         if in_txn and responder_sel < default_idx then
+
             -- responder mux
+            -- we already assigned addresses to the responder addresss above, no need to overwrite here
             responders_write_address_valid(responder_sel) <= initiator_write_address_valid;
-            responders_write_address_addr(responder_sel) <= initiator_write_address_addr(responders_write_address_addr(responder_sel)'length - 1 downto 0);
             responders_write_data_valid(responder_sel) <= initiator_write_data_valid;
             responders_write_data_data(responder_sel) <= initiator_write_data_data;
             responders_write_data_strb(responder_sel) <= initiator_write_data_strb;
             responders_write_response_ready(responder_sel) <= initiator_write_response_ready;
 
             responders_read_address_valid(responder_sel) <= initiator_read_address_valid;
-            responders_read_address_addr(responder_sel) <= initiator_read_address_addr(responders_read_address_addr(responder_sel)'length - 1 downto 0);
             responders_read_data_ready(responder_sel) <= initiator_read_data_ready;
             -- initiator mux
             initiator_write_address_ready <= responders_write_address_ready(responder_sel);

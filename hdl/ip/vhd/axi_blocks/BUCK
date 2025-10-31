@@ -47,10 +47,39 @@ vhdl_unit(
 )
 
 vhdl_unit(
+    name = "axil8_resizer",
+    srcs = glob(["axil8_resizer.vhd"]),
+     # This stuff isn't *strictly* a dependency, but this provides
+    # a convenient way for downstream blocks to pull in one
+    # dep and get all the things they need for implementing an
+    # AXI-Lite interface.
+    deps = [
+        ":axilite_if_2k19",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "axilite_if_2k19_helper_pkg",
+    srcs = glob(["axilite_if_2k19_helper_pkg.vhd"]),
+     # This stuff isn't *strictly* a dependency, but this provides
+    # a convenient way for downstream blocks to pull in one
+    # dep and get all the things they need for implementing an
+    # AXI-Lite interface.
+    deps = [
+        ":axilite_if_2k19",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
     name = "axil_interconnect",
     srcs = glob(["axil_interconnect.vhd"]),
     deps = [
         ":axilite_if_2k19",
+        ":axilite_if_2k19_helper_pkg",
         ":axil_interconnect_2k8",
     ],
     standard = "2019",

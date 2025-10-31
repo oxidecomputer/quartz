@@ -11,7 +11,10 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.axil_common_pkg.all;
+use work.axilite_if_2k19_helper_pkg.all;
 use work.axil26x32_pkg;
+use work.axil32x32_pkg;
+use work.axil15x32_pkg;
 use work.axil8x32_pkg;
 use work.i2c_common_pkg.all;
 use work.time_pkg.all;
@@ -210,9 +213,11 @@ architecture rtl of grapefruit_top is
      (0 => (base_addr => x"00000000", addr_span_bits => 8),
       1 => (base_addr => x"00000100", addr_span_bits => 8),
       2 => (base_addr => x"00000200", addr_span_bits => 8),
-      3 => (base_addr => x"00000300", addr_span_bits => 8)
+      3 => (base_addr => x"00008000", addr_span_bits => 15)
       );
-    signal responders : axil8x32_pkg.axil_array_t(config_array'range);
+    signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
+    signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);
+     signal responders_15b : axil15x32_pkg.axil_array_t(config_array'range);
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
     signal espi_cmd_fifo_rdack : std_logic;
     signal espi_cmd_fifo_rempty : std_logic;
@@ -319,12 +324,12 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         initiator => fmc_axi_if,
-        responders => responders
+        responders => fabric_responders
     );
 
     -- tristate control for the FMC data bus
     fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
-
+    resize_axil(fabric_responders(0), responders_8b(0));
     info_regs: entity work.info
      generic map(
         hubris_compat_num_bits => 3
@@ -333,14 +338,15 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         hubris_compat_pins => (others => '0'),
-        axi_if => responders(0)
+        axi_if => responders_8b(0)
     );
 
+    resize_axil(fabric_responders(1), responders_8b(1));
     spi_nor_top_inst: entity work.spi_nor_top
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(1),
+        axi_if => responders_8b(1),
         cs_n => spi_fpga_to_flash_cs_l,
         sclk => spi_fpga_to_flash_clk,
         io => spi_fpga_to_flash_dat,
@@ -400,13 +406,14 @@ begin
     -- Only the link layer runs at 200MHz, the remaining
     -- logic runs at 125MHz so all the interfaces are synchronous
     -- to 125MHz
+    resize_axil(fabric_responders(3), responders_8b(3));
     espi_target_top_inst: entity work.espi_target_top
      port map(
         clk_200m => clk_200m,
         reset_200m => reset_200m,
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(2),
+        axi_if => responders_15b(3),
         cs_n => espi_hpm_to_scm_cs_l,
         sclk => espi_hpm_to_scm_clk,
         io => espi_hpm_to_scm_dat,
@@ -560,11 +567,12 @@ begin
         sycnd_output => hpm_to_scm_stby_rdy_syncd
     );
 
+    resize_axil(fabric_responders(2), responders_8b(2));
     gfruit_sgpio_inst: entity work.gfruit_sgpio
      port map(
         clk => clk_125m,
         reset => reset_125m,
-        axi_if => responders(3),
+        axi_if => responders_8b(2),
         sclk => sgpio_scm_to_hpm_clk,
         sgpio0_do => sgpio_scm_to_hpm_dat(0),
         sgpio0_di => sgpio_hpm_to_scm_dat(0),

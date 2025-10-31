@@ -3,6 +3,6 @@ addrmap top_level_map {
     // Instantiate 2 to test nesting
     gfruit_regs base @ 0x0;
     spi_nor_regs spi_nor @ 0x0100;
-    espi_regs espi @ 0x0200;
-    gfruit_sgpio_regs sgpio @ 0x0300;
+    gfruit_sgpio_regs sgpio @ 0x0200;
+    espi_regs espi @ 0x8000;
 };

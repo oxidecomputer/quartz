@@ -14,7 +14,7 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.qspi_vc_pkg.all;
-use work.axil8x32_pkg;
+use work.axil15x32_pkg;
 use work.espi_tb_pkg.all;
 
 entity espi_th is
@@ -39,7 +39,7 @@ architecture th of espi_th is
     signal flash_rfifo_data   : std_logic_vector(7 downto 0);
     signal flash_rfifo_rdack  : std_logic;
     signal flash_rfifo_rempty : std_logic;
-    signal axi_if      : axil8x32_pkg.axil_t;
+    signal axi_if      : axil15x32_pkg.axil_t;
     signal uart_data_line : std_logic;
     signal uart_handshake : std_logic;
     signal from_sp_uart_ready : std_logic;
