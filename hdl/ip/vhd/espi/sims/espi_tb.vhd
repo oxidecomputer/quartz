@@ -251,7 +251,11 @@ begin
                 read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000001"), "Post code count register readback failed");
 
-                -- TODO: issue an espi reset and verify post code count resets
+                -- issue an espi reset and verify post code count resets
+                dbg_espi_reset(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000000"), "Post code count register did not reset after espi reset");
 
 
             elsif run("advanced_post_code_check") then
@@ -292,8 +296,11 @@ begin
                 read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000002"), "Post code count register readback failed");
 
-                -- TODO: issue an espi reset and verify post code count resets
-
+                -- issue an espi reset and verify post code count resets
+                dbg_espi_reset(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000000"), "Post code count register did not reset after espi reset");
 
             elsif run("msg_w_data_uart") then
                 enable_debug_mode(net);

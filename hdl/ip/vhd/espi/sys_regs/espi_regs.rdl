@@ -31,6 +31,9 @@ addrmap espi_regs {
         name = "Control Register";
         desc = "";
         field {
+            desc = "Issue an espi reset via the debug logic. Cleared by hardware after reset.";
+        } espi_reset[5:5] =  0;
+        field {
             desc = "Respond back on periph 0 channel vs oob";
         } msg_en[4:4] =  0;
         field {

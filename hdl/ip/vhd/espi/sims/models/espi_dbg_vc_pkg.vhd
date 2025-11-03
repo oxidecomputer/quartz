@@ -38,6 +38,9 @@ package espi_dbg_vc_pkg is
     procedure all_fifo_reset(
         signal net : inout network_t
     );
+    procedure dbg_espi_reset(
+        signal net : inout network_t;
+    );
     procedure dbg_send_cmd(
         signal net : inout network_t;
         cmd : cmd_t
@@ -146,6 +149,15 @@ package body espi_dbg_vc_pkg is
         control_reg.cmd_fifo_reset := '1';
         control_reg.cmd_size_fifo_reset := '1';
         control_reg.resp_fifo_reset := '1';
+        write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), pack(control_reg));
+    end procedure;
+
+    procedure dbg_espi_reset(
+        signal net : inout network_t;
+    ) is
+         variable control_reg : control_type := rec_reset;
+    begin
+        control_reg.espi_reset := '1';
         write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), pack(control_reg));
     end procedure;
 

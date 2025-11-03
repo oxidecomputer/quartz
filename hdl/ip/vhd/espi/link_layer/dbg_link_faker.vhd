@@ -5,7 +5,7 @@
 -- Copyright 2024 Oxide Computer Company
 
 -- This block allows an SP-interface to issue eSPI commands to the transaction
--- layer and recieve responses. It is used for debugging and testing purposes
+-- layer and receive responses. It is used for debugging and testing purposes
 -- and is muxed in after the physical layer at the cross domain fifos.
 
 library ieee;
@@ -37,9 +37,8 @@ entity dbg_link_faker is
         -- "Streaming" data to serialize and transmit
         gen_cmd     : view byte_source;
 
-        dbg_chan : view dbg_periph_if
-
-        
+        dbg_chan : view dbg_periph_if;
+        dbg_espi_reset : out std_logic        
     );
 end entity;
 
@@ -91,9 +90,11 @@ begin
         if reset = '1' then
             busy <= '0';
             alert_pending <= '0';
+            dbg_espi_reset <= '0';
         elsif rising_edge(clk) then
             busy <= '1' when r.state /= idle else '0';
             alert_pending <= '1' when alert_needed else '0';
+            dbg_espi_reset <= dbg_chan.espi_reset;
         end if;
     end process;
 

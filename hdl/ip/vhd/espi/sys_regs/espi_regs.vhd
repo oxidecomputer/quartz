@@ -90,6 +90,7 @@ begin
             control_reg.cmd_fifo_reset <= '0';  -- self clearing
             control_reg.cmd_size_fifo_reset <= '0';  -- self clearing
             control_reg.resp_fifo_reset <= '0';  -- self clearing
+            control_reg.espi_reset <= '0';  -- self clearing
             if  axi_if.write_address.ready then
                 case to_integer(axi_if.write_address.addr) is
                     when CONTROL_OFFSET => control_reg <= unpack(axi_if.write_data.data);
@@ -133,6 +134,7 @@ begin
     dbg_chan.size.write <= '1' when axi_if.write_address.ready = '1' and to_integer(axi_if.write_address.addr) = CMD_SIZE_FIFO_WDATA_OFFSET else '0';
 
     dbg_chan.rd.rdack <= '1' when axi_if.read_data.ready = '1' and axi_if.read_data.valid = '1' and resp_fifo_ack = '1' else '0';
+    dbg_chan.espi_reset <= control_reg.espi_reset;
 
     read_logic: process(clk, reset)
     begin
@@ -152,7 +154,7 @@ begin
                         resp_fifo_ack <= '1';
                     when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
                     when POST_CODE_COUNT_OFFSET => rdata <= pack(post_code_count_reg);
-                    when POST_CODE_BUFFER_OFFSET to POST_CODE_BUFFER_OFFSET + BUFFER_ENTRIES - 1 =>
+                    when POST_CODE_BUFFER_MEM_RANGE =>
                         rdata <= post_code_buffer_rdata;
                     when others =>
                         rdata <= (others => '0');
