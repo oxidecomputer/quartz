@@ -38,6 +38,9 @@ package espi_dbg_vc_pkg is
     procedure all_fifo_reset(
         signal net : inout network_t
     );
+    procedure dbg_espi_reset(
+        signal net : inout network_t;
+    );
     procedure dbg_send_cmd(
         signal net : inout network_t;
         cmd : cmd_t
@@ -83,6 +86,17 @@ package espi_dbg_vc_pkg is
     );
     procedure dbg_wait_for_alert(
         signal net : inout network_t
+    );
+
+     procedure dbg_send_iowr_short(
+        signal net : inout network_t;
+        addr : std_logic_vector(15 downto 0);
+        data : std_logic_vector(31 downto 0)
+    );
+
+     procedure dbg_send_post_code(
+        signal net : inout network_t;
+        data : std_logic_vector(31 downto 0)
     );
 
 end package;
@@ -135,6 +149,15 @@ package body espi_dbg_vc_pkg is
         control_reg.cmd_fifo_reset := '1';
         control_reg.cmd_size_fifo_reset := '1';
         control_reg.resp_fifo_reset := '1';
+        write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), pack(control_reg));
+    end procedure;
+
+    procedure dbg_espi_reset(
+        signal net : inout network_t;
+    ) is
+         variable control_reg : control_type := rec_reset;
+    begin
+        control_reg.espi_reset := '1';
         write_bus(net, bus_handle, To_StdLogicVector(CONTROL_OFFSET, bus_handle.p_address_length), pack(control_reg));
     end procedure;
 
@@ -306,6 +329,26 @@ package body espi_dbg_vc_pkg is
             flags_reg := unpack(readdata);
             exit when flags_reg.alert = '1';
         end loop;
+    end procedure;
+
+    procedure dbg_send_iowr_short(
+        signal net : inout network_t;
+        addr : std_logic_vector(15 downto 0);
+        data : std_logic_vector(31 downto 0)
+    ) is
+         variable cmd : cmd_t := build_iowr_short(addr, data);
+    begin
+        dbg_send_cmd(net, cmd);
+    end procedure;
+
+     procedure dbg_send_post_code(
+        signal net : inout network_t;
+        data : std_logic_vector(31 downto 0)
+    ) is
+         constant addr: std_logic_vector(15 downto 0) := X"8000";
+         variable cmd : cmd_t := build_iowr_short(addr, data);
+    begin
+        dbg_send_cmd(net, cmd);
     end procedure;
 
 

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
+-- Copyright 2025 Oxide Computer Company
 
 
 library ieee;
@@ -107,5 +107,8 @@ end package;
 
 -- Some common sizes expected to be used
 package axil8x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 8);
+package axil15x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 15);
 package axil24x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 24);
 package axil26x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 26);
+package axil32x32_pkg is new work.axilite_if_2k19_pkg generic map(addr_width => 32);
+

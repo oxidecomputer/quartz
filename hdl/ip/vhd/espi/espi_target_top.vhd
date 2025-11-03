@@ -18,7 +18,7 @@ use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
 use work.link_layer_pkg.all;
 
-use work.axil8x32_pkg.all;
+use work.axil15x32_pkg.all;
 
 entity espi_target_top is
     port (
@@ -101,6 +101,8 @@ architecture rtl of espi_target_top is
     signal post_code_valid : std_logic;
     signal espi_reset_strobe : std_logic;
     signal espi_reset_strobe_syncd : std_logic;
+    signal espi_link_layer : std_logic;
+    signal dbg_espi_reset : std_logic;
 
 begin
 
@@ -173,7 +175,7 @@ begin
         wait_states => wait_states_fast,
         qspi_mode => encode(qspi_mode_vec_fast),
         alert_needed => alert_needed_fast,
-        espi_reset => espi_reset_strobe
+        espi_reset => espi_link_layer
     );
 
     -- debug_link_layer
@@ -187,8 +189,12 @@ begin
         alert_needed => alert_needed,
         gen_resp => gen_resp,
         gen_cmd => gen_cmd,
-        dbg_chan => dbg_chan
+        dbg_chan => dbg_chan,
+        dbg_espi_reset => dbg_espi_reset
     );
+
+    -- combine our "real" espi reset with the debug one
+    espi_reset_strobe <= espi_link_layer or dbg_espi_reset;
 
     alert_needed_slow <= '1' when alert_needed else '0';
     alert_sync: entity work.meta_sync

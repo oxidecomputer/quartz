@@ -33,7 +33,7 @@ package espi_tb_pkg is
 
     -- AXI-Lite bus handle for the axi master in the testbench
     constant bus_handle : bus_master_t := new_bus(data_length => 32,
-    address_length => 8);
+    address_length => 15);
 
     -- Represent a "command" as a queue of bytes and a size
     -- annoyingly VUnit's queue method does not have a proper way

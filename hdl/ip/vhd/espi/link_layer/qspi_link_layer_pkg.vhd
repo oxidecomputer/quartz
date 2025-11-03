@@ -70,6 +70,7 @@ package qspi_link_layer_pkg is
         enabled: std_logic;
         alert_pending: std_logic;
         busy: std_logic;
+        espi_reset : std_logic;
     end record;
 
     view dbg_regs_if of dbg_chan_t is  -- the mode view of the record
@@ -81,6 +82,7 @@ package qspi_link_layer_pkg is
         enabled: out;
         alert_pending : in;
         busy: in;
+        espi_reset: out;
     end view;
     alias dbg_periph_if is dbg_regs_if'converse;
 
