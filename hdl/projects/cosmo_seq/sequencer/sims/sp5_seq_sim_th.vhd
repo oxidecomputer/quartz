@@ -123,18 +123,27 @@ begin
        );
    -- rails here
    grpa_pwr_v1p5_rtc: entity work.rail_model
+    generic map(
+       actor_name => "grpa_pwr_v1p5_rtc"
+    )
     port map(
        clk => clk,
        reset => reset,
        rail => group_a_pins.pwr_v1p5_rtc
    );
    grpa_v3p3_sp5_a1: entity work.rail_model
+   generic map(
+      actor_name => "grpa_v3p3_sp5_a1"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_a_pins.v3p3_sp5_a1
    );
    grpa_v1p8_sp5_a1: entity work.rail_model
+   generic map(
+      actor_name => "grpa_v1p8_sp5_a1"
+   )
    port map(
       clk => clk,
       reset => reset,
@@ -142,48 +151,72 @@ begin
    );
    
    grpb_v1p1_sp5: entity work.rail_model
+   generic map(
+      actor_name => "grpb_v1p1_sp5"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_b_pins.v1p1_sp5
    );
    grpc_vddio_sp5_a0: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddio_sp5_a0"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddio_sp5_a0
    );
    grpc_vddcr_cpu1: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddcr_cpu1"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddcr_cpu1
    );
    grpc_vddcr_cpu0: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddcr_cpu0"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddcr_cpu0
    );
    grpc_vddcr_soc: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddcr_soc"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddcr_soc
    );
    rail_nic_hsc_12v: entity work.rail_model
+   generic map(
+      actor_name => "rail_nic_hsc_12v"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => nic_rails_pins.nic_hsc_12v
    );
    rail_ddr_abcdef_hsc: entity work.rail_model
+   generic map(
+      actor_name => "rail_ddr_abcdef_hsc"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => ddr_bulk_pins.abcdef_hsc
    );
    rail_ddr_ghijkl_hsc: entity work.rail_model
+   generic map(
+      actor_name => "rail_ddr_ghijkl_hsc"
+   )
    port map(
       clk => clk,
       reset => reset,

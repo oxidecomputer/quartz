@@ -80,6 +80,13 @@ Generate vhdl_ls.toml for VHDL language server:
 buck2 run //tools/multitool:multitool -- lsp-toml
 ```
 
+**Note:** After making changes to VHDL code or SystemRDL files, run this command to:
+- Refresh the language server configuration
+- Regenerate RDL packages (creates updated `*_regs_pkg.vhd` files from `.rdl` sources)
+- Update LSP understanding of dependencies and types
+
+This resolves LSP errors about missing packages or unresolved references after adding new files or modifying RDL definitions.
+
 ### Release Tool
 For FPGA releases:
 ```bash
@@ -94,6 +101,331 @@ buck2 run //tools/fpga_releaser:cli -- --fpga <fpga-name> --hubris <hubris-path>
 - `tools/requirements.txt` - Python dependencies
 
 ## Testing
-- VUnit is used for VHDL testbenches
+
+### VUnit Testing Framework
+
+VUnit is used for VHDL testbenches with a standardized structure:
+- `*_tb.vhd` - Testbench file containing test cases
+- `*_th.vhd` - Test harness instantiating the DUT and verification components
 - BSV uses built-in Bluesim for simulation
-- Testbenches follow naming convention: `*_tb.vhd` (testbench), `*_th.vhd` (test harness)
+
+#### Testbench Structure
+
+A typical VUnit testbench follows this pattern:
+
+```vhdl
+library vunit_lib;
+    context vunit_lib.com_context;
+    context vunit_lib.vunit_context;
+    context vunit_lib.vc_context;
+
+entity my_tb is
+    generic (
+        runner_cfg : string
+    );
+end entity;
+
+architecture tb of my_tb is
+begin
+    th: entity work.my_th;
+
+    bench: process
+        alias reset is << signal th.reset : std_logic >>;
+        -- Declare variables and constants here
+        variable read_data : std_logic_vector(31 downto 0);
+    begin
+        test_runner_setup(runner, runner_cfg);
+        wait until reset = '0';
+        wait for 500 ns;  -- Let resets propagate
+
+        while test_suite loop
+            if run("test_case_1") then
+                -- Test case 1 implementation
+            elsif run("test_case_2") then
+                -- Test case 2 implementation
+            end if;
+        end loop;
+
+        wait for 2 us;
+        test_runner_cleanup(runner);
+        wait;
+    end process;
+
+    test_runner_watchdog(runner, 10 ms);
+end tb;
+```
+
+#### Running Specific Test Cases
+
+```bash
+# Run all tests in a testbench
+buck2 run //path/to:testbench_name
+
+# Run a specific test case
+buck2 run //path/to:testbench_name -- --test-case="test_case_name"
+```
+
+### VUnit Message Passing
+
+VUnit provides a message passing system for communication between testbenches and verification components (VCs). This is useful for controlling simulation models and injecting faults.
+
+#### Creating a Message Package
+
+Message packages define message types and helper procedures:
+
+```vhdl
+library vunit_lib;
+    context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
+
+package my_model_msg_pkg is
+    -- Define message types
+    constant enable_msg  : msg_type_t := new_msg_type("enable");
+    constant disable_msg : msg_type_t := new_msg_type("disable");
+
+    -- Helper procedures for testbenches
+    procedure enable_feature (
+        signal net     : inout network_t;
+        constant actor : actor_t
+    );
+
+    procedure disable_feature (
+        signal net     : inout network_t;
+        constant actor : actor_t
+    );
+end package;
+
+package body my_model_msg_pkg is
+    procedure enable_feature (
+        signal net     : inout network_t;
+        constant actor : actor_t
+    ) is
+        variable request_msg : msg_t := new_msg(enable_msg);
+    begin
+        send(net, actor, request_msg);
+    end;
+
+    procedure disable_feature (
+        signal net     : inout network_t;
+        constant actor : actor_t
+    ) is
+        variable request_msg : msg_t := new_msg(disable_msg);
+    begin
+        send(net, actor, request_msg);
+    end;
+end package body;
+```
+
+#### Implementing Message Handler in Models
+
+Models receive and process messages in a dedicated process:
+
+```vhdl
+library vunit_lib;
+    context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
+
+use work.my_model_msg_pkg.all;
+
+entity my_model is
+    generic (
+        actor_name : string := "my_model"
+    );
+    port (
+        clk   : in std_logic;
+        -- other ports
+    );
+end entity;
+
+architecture model of my_model is
+    signal feature_enabled : boolean := true;
+begin
+    -- Message handler process
+    msg_handler : process
+        variable self        : actor_t;
+        variable msg_type    : msg_type_t;
+        variable request_msg : msg_t;
+    begin
+        self := new_actor(actor_name);
+        loop
+            receive(net, self, request_msg);
+            msg_type := message_type(request_msg);
+            if msg_type = enable_msg then
+                info("Feature enabled");
+                feature_enabled <= true;
+            elsif msg_type = disable_msg then
+                info("Feature disabled");
+                feature_enabled <= false;
+            else
+                unexpected_msg_type(msg_type);
+            end if;
+        end loop;
+        wait;
+    end process;
+
+    -- Model behavior uses feature_enabled signal
+end model;
+```
+
+#### Using Messages in Testbenches
+
+```vhdl
+-- In test harness, instantiate model with unique actor name
+my_model_inst: entity work.my_model
+    generic map(
+        actor_name => "my_model_inst"
+    )
+    port map(
+        clk => clk,
+        -- other ports
+    );
+
+-- In testbench, find actor and send messages
+bench: process
+    constant model_actor : actor_t := find("my_model_inst");
+begin
+    test_runner_setup(runner, runner_cfg);
+    -- ...
+
+    while test_suite loop
+        if run("fault_injection_test") then
+            -- Disable feature to inject fault
+            disable_feature(net, model_actor);
+            wait for 100 us;
+
+            -- Re-enable feature
+            enable_feature(net, model_actor);
+        end if;
+    end loop;
+
+    test_runner_cleanup(runner);
+    wait;
+end process;
+```
+
+### SystemRDL Register Access in Testbenches
+
+SystemRDL files generate VHDL packages with register offsets, field masks, and type definitions. Use these in testbenches for register access.
+
+#### Reading RDL-Generated Constants
+
+RDL files generate packages like `<module>_regs_pkg.vhd` with:
+- Register offsets: `<REG_NAME>_OFFSET`
+- Field masks: `<REG_NAME>_<FIELD_NAME>_MASK`
+- Enumeration types for state machines and fields
+- Record types for structured register access
+
+Example usage:
+
+```vhdl
+use work.sequencer_regs_pkg.all;
+
+bench: process
+    variable read_data : std_logic_vector(31 downto 0);
+begin
+    -- Write to a register
+    write_bus(net, bus_handle,
+              To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+              POWER_CTRL_A0_EN_MASK);
+
+    -- Read from a register
+    read_bus(net, bus_handle,
+             To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length),
+             read_data);
+
+    -- Check specific bits using masks
+    check_equal((read_data and IFR_A0MAPO_MASK) /= x"00000000",
+                true,
+                "Expected A0MAPO bit to be set");
+
+    -- Check state machine values (encoded as hex)
+    -- State values are documented in the RDL file
+    check_equal(unsigned(read_data(7 downto 0)),
+                to_unsigned(16#09#, 8),
+                "Expected DONE state (0x09)");
+end process;
+```
+
+#### Common Patterns
+
+**Testing State Machines:**
+```vhdl
+-- Read state register
+read_bus(net, bus_handle,
+         To_StdLogicVector(SEQ_API_STATUS_OFFSET, bus_handle.p_address_length),
+         read_data);
+
+-- Check for IDLE state (0x00)
+check_equal(unsigned(read_data(7 downto 0)), to_unsigned(16#00#, 8),
+            "Expected IDLE state");
+```
+
+**Testing Interrupt Flags:**
+```vhdl
+-- Read interrupt flag register
+read_bus(net, bus_handle,
+         To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length),
+         read_data);
+
+-- Check if specific interrupt flag is set
+check_equal((read_data and IFR_A0MAPO_MASK) /= x"00000000",
+            true,
+            "Expected MAPO interrupt flag");
+```
+
+**Fault Injection Pattern:**
+```vhdl
+elsif run("fault_injection_test") then
+    -- 1. Run normal sequence
+    write_bus(net, bus_handle,
+              To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+              POWER_CTRL_A0_EN_MASK);
+    wait for 1 ms;
+
+    -- 2. Verify normal state
+    read_bus(net, bus_handle,
+             To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length),
+             read_data);
+    check_equal(unsigned(read_data(7 downto 0)), to_unsigned(16#09#, 8),
+                "Expected DONE state");
+
+    -- 3. Inject fault using message passing
+    disable_power_good(net, rail_actor);
+    wait for 100 us;
+
+    -- 4. Verify fault detection
+    read_bus(net, bus_handle,
+             To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length),
+             read_data);
+    check_equal((read_data and IFR_FAULT_MASK) /= x"00000000",
+                true,
+                "Expected fault flag");
+
+    -- 5. Verify fault handling (e.g., return to IDLE)
+    read_bus(net, bus_handle,
+             To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length),
+             read_data);
+    check_equal(unsigned(read_data(7 downto 0)), to_unsigned(16#00#, 8),
+                "Expected IDLE state after fault");
+
+    -- 6. Clean up
+    enable_power_good(net, rail_actor);
+end if;
+```
+
+### VUnit Verification Components (VCs)
+
+Existing VUnit VCs are located in `hdl/ip/vhd/vunit_components/`:
+- `sim_gpio` - GPIO stimulus and monitoring
+- `i2c_controller_vc` - I2C master verification component
+- `i2c_target_vc` - I2C slave verification component
+- `spi_controller` - SPI master/slave verification components
+- `qspi_controller_vc` - QSPI verification component
+- `basic_stream` - Simple streaming interface
+
+When creating new VCs or simulation models:
+1. Create a message package (`*_msg_pkg.vhd`) for the interface
+2. Implement the model with message handler process
+3. Add `actor_name` generic for identification
+4. Provide helper procedures for common operations
+5. Document message types and usage patterns
