@@ -751,7 +751,9 @@ begin
     nic_rails.v1p2_nic_enet_a0hp.pg <= v1p2_nic_enet_a0hp_pg;
     nic_rails.v3p3_nic_a0hp.pg <= v3p3_nic_a0hp_pg;
     nic_rails.v1p1_nic_a0hp.pg <= v1p1_nic_enet_a0hp_pg;
-    -- TODO rev-1 cosmo missing readback on v1p4_nic_a0hp -- cascade enabled in hw from V5P0_NIC_A0HP
+    -- Rev1 (HCV A) boards don't have v1p4_nic_a0hp readback, so mirror the enable
+    -- Rev2+ (HCV B and later) boards have actual pin readback
+    nic_rails.v1p4_nic_a0hp.pg <= nic_rails.nic_hsc_12v.enable when is_rev1 else v1p4_nic_a0hp_pg;
     nic_rails.v0p96_nic_vdd_a0hp.pg <= v0p96_nic_vdd_a0hp_pg;
     nic_rails.nic_hsc_12v.pg <= v12p0_nic_a0hp_pg;
     nic_rails.nic_hsc_5v.pg <= v5p0_nic_a0hp_pg;

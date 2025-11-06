@@ -319,6 +319,9 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "NIC v1p1_nic_a0hp (discrete pg, enable cascade from nic 5V)";
         } v1p1_nic_a0hp[1];
         field {
+            desc = "NIC v1p4_nic_a0hp (discrete pg, enable cascade from nic 5V). Note: mirrors enable on HCV A boards, actual pin readback on HCV B and newer boards";
+        } v1p4_nic_a0hp[1];
+        field {
             desc = "NIC v0p96_nic_vdd_a0hp (discrete pg, enable cascade from nic 5V)";
         } v0p96_nic_vdd_a0hp[1];
     };

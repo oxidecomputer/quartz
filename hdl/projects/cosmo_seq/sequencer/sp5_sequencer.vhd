@@ -171,6 +171,7 @@ begin
     -- NIC rails all cascade enabled from 12V rail
     rails_en_rdbk.v0p96_nic_vdd_a0hp <= nic_rails.nic_hsc_12v.enable;
     rails_en_rdbk.v1p1_nic_a0hp <= nic_rails.nic_hsc_12v.enable;
+    rails_en_rdbk.v1p4_nic_a0hp <= nic_rails.nic_hsc_12v.enable;
     rails_en_rdbk.v3p3_nic_a0hp <= nic_rails.nic_hsc_12v.enable;
     rails_en_rdbk.v1p2_nic_enet_a0hp <= nic_rails.nic_hsc_12v.enable;
     rails_en_rdbk.v1p2_nic_pcie_a0hp <= nic_rails.nic_hsc_12v.enable;
@@ -190,6 +191,7 @@ begin
     -- PG readbacks
     rails_pg_rdbk.v0p96_nic_vdd_a0hp <= nic_rails.v0p96_nic_vdd_a0hp.pg;
     rails_pg_rdbk.v1p1_nic_a0hp <= nic_rails.v1p1_nic_a0hp.pg;
+    rails_pg_rdbk.v1p4_nic_a0hp <= nic_rails.v1p4_nic_a0hp.pg;
     rails_pg_rdbk.v3p3_nic_a0hp <= nic_rails.v3p3_nic_a0hp.pg;
     rails_pg_rdbk.v1p2_nic_enet_a0hp <= nic_rails.v1p2_nic_enet_a0hp.pg;
     rails_pg_rdbk.v1p2_nic_pcie_a0hp <= nic_rails.v1p2_nic_pcie_a0hp.pg;
