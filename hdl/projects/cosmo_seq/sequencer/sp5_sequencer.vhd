@@ -95,6 +95,7 @@ architecture rtl of sp5_sequencer is
     signal debug_enables : debug_enables_type;
     signal smerr_assert : std_logic;
     signal a0_faulted : std_logic;
+    signal nic_faulted : std_logic;
     signal reg_alert_l : seq_power_alert_pins_t;
     
 
@@ -143,6 +144,7 @@ begin
         debug_enables => debug_enables,
         nic_overrides => nic_overrides,
         a0_faulted => a0_faulted,
+        nic_faulted => nic_faulted,
         rails_en_rdbk => rails_en_rdbk,
         rails_pg_rdbk => rails_pg_rdbk,
         sp5_readbacks => sp5_readbacks,
@@ -266,6 +268,7 @@ begin
         clk => clk,
         reset => reset,
         nic_idle => nic_idle,
+        nic_faulted => nic_faulted,
         sw_enable => power_ctrl.a0_en,
         raw_state => nic_raw_status,
         api_state => nic_api_status,

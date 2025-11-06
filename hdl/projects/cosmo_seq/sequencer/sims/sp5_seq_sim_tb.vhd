@@ -17,6 +17,7 @@ library vunit_lib;
 use work.sp5_seq_sim_pkg.all;
 use work.sequencer_regs_pkg.all;
 use work.rail_model_msg_pkg.all;
+use work.nic_model_msg_pkg.all;
 
 
 entity sp5_seq_sim_tb is
@@ -37,6 +38,7 @@ begin
         variable read_data       : std_logic_vector(31 downto 0);
         variable seq_state       : seq_api_status_a0_sm;
         constant grpa_v3p3_actor : actor_t := find("grpa_v3p3_sp5_a1");
+        constant nic_actor       : actor_t := find("nic_model");
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -51,7 +53,7 @@ begin
                 write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);
 
                 -- Poll for sequence to complete (wait for DONE state)
-                poll_for_state(net, DONE);
+                poll_for_seq_state(net, DONE);
 
                 -- Verify we're in DONE state
                 read_bus(net, bus_handle, To_StdLogicVector(SEQ_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
@@ -74,6 +76,24 @@ begin
                 test_mapo_fault_injection(net, find("grpc_vddcr_cpu1"), "VDDCR_CPU1");
             elsif run("mapo_fault_vddcr_soc") then
                 test_mapo_fault_injection(net, find("grpc_vddcr_soc"), "VDDCR_SOC");
+            elsif run("nic_mapo_fault_v1p5_nic_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P5_NIC_A0HP);
+            elsif run("nic_mapo_fault_v1p2_nic_pcie_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P2_NIC_PCIE_A0HP);
+            elsif run("nic_mapo_fault_v1p2_nic_enet_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P2_NIC_ENET_A0HP);
+            elsif run("nic_mapo_fault_v3p3_nic_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V3P3_NIC_A0HP);
+            elsif run("nic_mapo_fault_v1p1_nic_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P1_NIC_A0HP);
+            elsif run("nic_mapo_fault_v1p4_nic_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P4_NIC_A0HP);
+            elsif run("nic_mapo_fault_v0p96_nic_vdd_a0hp") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V0P96_NIC_VDD_A0HP);
+            elsif run("nic_mapo_fault_nic_hsc_12v") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_NIC_HSC_12V);
+            elsif run("nic_mapo_fault_nic_hsc_5v") then
+                test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_NIC_HSC_5V);
             end if;
         end loop;
 

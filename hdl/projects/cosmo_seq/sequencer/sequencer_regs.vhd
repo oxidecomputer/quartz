@@ -36,6 +36,7 @@ entity sequencer_regs is
         -- from nic block
         nic_api_status : in nic_api_status_type;
         nic_raw_status : in nic_raw_status_type;
+        nic_faulted : in std_logic;
         rails_en_rdbk : in rails_type;
         rails_pg_rdbk : in rails_type;
         debug_enables : out debug_enables_type;
@@ -106,6 +107,7 @@ begin
             a0_en_last <= '0';
             amd_reset_l_last <= '0';
             amd_pwrok_last <= '0';
+            amd_pwrgd_out_last <= '0';
             seq_api_status_max <= (a0_sm => IDLE);
             seq_raw_status_max <= (hw_sm => (others => '0'));
             nic_api_status_max <= (nic_sm => IDLE);
@@ -222,8 +224,8 @@ begin
             ifr.amd_rstn_fedge <= ifr.amd_rstn_fedge or amd_reset_l_fedge;
             ifr.amd_pwrok_fedge <= ifr.amd_pwrok_fedge or amd_pwrok_fedge;
             ifr.a0mapo <= ifr.a0mapo or a0_faulted;
+            ifr.nicmapo <= ifr.nicmapo or nic_faulted;
             -- TODO: not implemented yet
-            ifr.nicmapo <= '0';
             ifr.fanfault <= '0';
 
             if active_write then
