@@ -255,7 +255,7 @@ begin
        sycnd_output => nic_sync_5v_hsc_pg_l
     );
    
-    -- HSC's a re actually pg_l signals, so invert them here
+    -- HSC's are actually pg_l signals, so invert them here
     nic_rails.nic_hsc_5v.pg <= not nic_sync_5v_hsc_pg_l;
     nic_rails.nic_hsc_12v.pg  <= not nic_sync_12v_hsc_pg_l;
     -- nic sync-related stuff
