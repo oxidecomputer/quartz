@@ -67,6 +67,7 @@ architecture rtl of spd_sm is
         cmd_valid : std_logic;
         arb_req : std_logic;
         pend : std_logic;
+        busy_seen : std_logic;
         present : std_logic_vector(NUM_DIMMS_ON_BUS - 1 downto 0);
 
     end record;
@@ -79,6 +80,7 @@ architecture rtl of spd_sm is
         cmd_valid => '0',
         arb_req => '0',
         pend => '0',
+        busy_seen => '0',
         present => (others => '0')
     );
 
@@ -117,9 +119,11 @@ begin
     -- Read whole SPD
     -- Count NACKs per dimm for error reporting
     -- Move to next device, repeat
-    i2c_req_success <= '1' when i2c_ctrlr_status.code_valid = '1' and i2c_ctrlr_status.code = SUCCESS else '0';
-    i2c_no_device <= '1' when i2c_ctrlr_status.code_valid = '1' and i2c_ctrlr_status.code = NACK_BUS_ADDR else '0';
-    i2c_aborted <= '1' when i2c_ctrlr_status.code_valid = '1' and i2c_ctrlr_status.code = ABORTED else '0';
+    -- We gate these on busy_seen because the lower-level i2c controller latches these status codes when finished and we
+    -- were accidentally moving forward before issuing our intended command in some cases, especially after engine restart.
+    i2c_req_success <= '1' when i2c_ctrlr_status.code_valid = '1' and i2c_ctrlr_status.code = SUCCESS and r.busy_seen = '1' else '0';
+    i2c_no_device <= '1' when i2c_ctrlr_status.code_valid = '1' and i2c_ctrlr_status.code = NACK_BUS_ADDR and r.busy_seen = '1' else '0';
+    i2c_aborted <= '1' when i2c_ctrlr_status.code_valid = '1' and i2c_ctrlr_status.code = ABORTED and r.busy_seen = '1' else '0';
     sm: process(all)
         variable v : reg_t;
     begin
@@ -128,6 +132,8 @@ begin
         case r.state is
             when IDLE =>
                 -- start at the first dimm
+                v.cmd_valid := '0';
+                v.pend := '0';
                 v.hub_page_idx := (others => '0');
                 v.spd_addr := (others => '0');
                 v.dimm_idx := 0;
@@ -143,12 +149,14 @@ begin
                 v.arb_req := '1';
                 if arb_grant = '1' then
                     v.state := SET_PAGE;  -- Doubles as check for present
+                    v.busy_seen := '0';
                 end if;
 
             when SET_PAGE =>
                 if r.cmd_valid and i2c_ctrlr_status.busy then
                     v.cmd_valid := '0';
                     v.pend := '0';
+                    v.busy_seen := '1';
                 elsif r.cmd_valid = '0' and i2c_ctrlr_status.busy = '0' then
                     v.cmd_valid := '1';
                     v.pend := '1';
@@ -168,6 +176,7 @@ begin
                         v.dimm_idx := v.dimm_idx + 1;
                         v.i2c_addr := SPD_BASE_ADDR or To_StdLogicVector(v.dimm_idx, 7);
                         v.state := SET_PAGE;
+                         v.busy_seen := '0';
                         v.hub_page_idx := (others => '0');
                     else
                         -- We are done with all dimms, move to done
@@ -181,6 +190,7 @@ begin
                  if r.cmd_valid and i2c_ctrlr_status.busy then
                     v.cmd_valid := '0';
                     v.pend := '0';
+                    v.busy_seen := '1';
                 elsif r.cmd_valid = '0' and i2c_ctrlr_status.busy = '0' then
                     v.cmd_valid := '1';
                     v.pend := '1';
@@ -201,6 +211,7 @@ begin
                         v.dimm_idx := v.dimm_idx + 1;
                         v.i2c_addr := SPD_BASE_ADDR or To_StdLogicVector(v.dimm_idx, 7);
                         v.state := SET_PAGE;
+                        v.busy_seen := '0';
                         v.hub_page_idx := (others => '0');
                     elsif r.dimm_idx = MAX_DIMM_NUM and r.hub_page_idx = PAGE_MAX then
                         -- We are done with all dimms, move to done
@@ -209,6 +220,7 @@ begin
                         -- Move to next page
                         v.hub_page_idx := v.hub_page_idx + 1;
                         v.state := SET_PAGE;
+                        v.busy_seen := '0';
                     end if;
                 elsif i2c_no_device = '1'  and r.pend = '0' then
                     -- NACK, move to next dimm. This shouldn't really happen
@@ -216,6 +228,7 @@ begin
                     v.dimm_idx := v.dimm_idx + 1;
                     v.i2c_addr := SPD_BASE_ADDR or To_StdLogicVector(v.dimm_idx, 7);
                     v.state := SET_PAGE;
+                    v.busy_seen := '0';
                     v.hub_page_idx := (others => '0');
                  elsif i2c_aborted = '1' and v.pend = '0' then
                     v.cmd_valid := '1';  -- Do we need to delay?
@@ -224,12 +237,15 @@ begin
               
             when DONE =>
                 v.arb_req := '0';
+                v.cmd_valid := '0';
+                v.pend := '0';
                 if fetch_spd_info then
                     v.state := REQUEST_GRANT;
                     v.hub_page_idx := (others => '0');
                     v.spd_addr := (others => '0');
                     v.dimm_idx := 0;
-                    v.i2c_addr := SPD_BASE_ADDR or To_StdLogicVector(r.dimm_idx, 7);
+                    v.i2c_addr := SPD_BASE_ADDR;
+                    v.present := (others => '0');
                 end if;
 
         end case;

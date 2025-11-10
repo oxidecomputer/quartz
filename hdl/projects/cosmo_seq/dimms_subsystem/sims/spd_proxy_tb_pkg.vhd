@@ -26,8 +26,18 @@ package spd_proxy_tb_pkg is
 
     -- Verification Components
     constant I2C_CTRL_VC        : i2c_ctrl_vc_t     := new_i2c_ctrl_vc("cpu_i2c_vc");
-    constant I2C_DIMM1_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1_i2c_vc");
-    constant I2C_DIMM2_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2_i2c_vc", b"1010000");
+    constant I2C_DIMM1A_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1a_i2c_vc", b"1010000");
+    constant I2C_DIMM1B_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1b_i2c_vc", b"1010001");
+    constant I2C_DIMM1C_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1c_i2c_vc", b"1010010");
+    constant I2C_DIMM1D_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1d_i2c_vc", b"1010011");
+    constant I2C_DIMM1E_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1e_i2c_vc", b"1010100");
+    constant I2C_DIMM1F_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1f_i2c_vc", b"1010101");
+    constant I2C_DIMM2G_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2g_i2c_vc", b"1010000");
+    constant I2C_DIMM2H_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2h_i2c_vc", b"1010001");
+    constant I2C_DIMM2I_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2i_i2c_vc", b"1010010");
+    constant I2C_DIMM2J_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2j_i2c_vc", b"1010011");
+    constant I2C_DIMM2K_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2k_i2c_vc", b"1010100");
+    constant I2C_DIMM2L_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm2l_i2c_vc", b"1010101");
     constant I2C_CMD_VC         : i2c_cmd_vc_t      := new_i2c_cmd_vc;
     constant TX_DATA_SOURCE_VC  : basic_source_t    := new_basic_source(8);
     constant RX_DATA_SINK_VC    : basic_sink_t      := new_basic_sink(8);
@@ -40,7 +50,7 @@ package spd_proxy_tb_pkg is
         signal net  : inout network_t;
         constant command : cmd_t;
         constant tx_data : queue_t;
-        constant i2c_target : i2c_target_vc_t := I2C_DIMM1_TGT_VC
+        constant i2c_target : i2c_target_vc_t := I2C_DIMM1F_TGT_VC
     );
 
 end package;
@@ -51,7 +61,7 @@ package body spd_proxy_tb_pkg is
         signal net  : inout network_t;
         constant command : cmd_t;
         constant tx_data : queue_t;
-        constant i2c_target : i2c_target_vc_t := I2C_DIMM1_TGT_VC
+        constant i2c_target : i2c_target_vc_t := I2C_DIMM1F_TGT_VC
     ) is
         variable ack    : boolean := FALSE;
     begin

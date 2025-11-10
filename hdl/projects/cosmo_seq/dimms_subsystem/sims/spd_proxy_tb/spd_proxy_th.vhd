@@ -62,7 +62,7 @@ begin
     -- simulated DIMM I2C target
     i2c_target_vc_inst: entity work.i2c_target_vc
         generic map(
-            I2C_TARGET_VC => I2C_DIMM1_TGT_VC
+            I2C_TARGET_VC => I2C_DIMM1F_TGT_VC
         )
         port map(
             scl => dimm_scl,
