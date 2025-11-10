@@ -227,7 +227,7 @@ package sequencer_io_pkg is
     alias group_c_power_at_reg is group_c_power_at_fpga'converse;
 
     -- effectively one enable fires all of this due to the
-    -- hardware design.n
+    -- hardware design.
     type nic_power_t is record
         v1p5_nic_a0hp : cascade_power_rail_t;  -- cascade enabled in hw from V5P0_NIC_A0HP
         v1p2_nic_pcie_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V5P0_NIC_A0HP
