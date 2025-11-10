@@ -8,26 +8,57 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library vunit_lib;
+    context vunit_lib.vunit_context;
+    context vunit_lib.com_context;
+
 use work.sequencer_io_pkg.all;
+use work.rail_model_msg_pkg.all;
 
 entity rail_model is
+    generic (
+        actor_name : string := "rail_model"
+    );
     port (
-        clk : in std_logic;
-        reset : in std_logic;
+        clk   : in    std_logic;
+        reset : in    std_logic;
 
-        rail : view power_rail_at_reg;
+        rail : view power_rail_at_reg
     );
 end entity;
 
 architecture model of rail_model is
 
+    signal pg_disabled : boolean := false;
+
 begin
 
-     -- TODO: we'd like to have some kind of commanded fault injection
-    -- and maybe the ability to even fail the sequencing, or adjust the delays.
+    -- Message handling process for VUnit communication
+    msg_handler : process
+        variable self        : actor_t;
+        variable msg_type    : msg_type_t;
+        variable request_msg : msg_t;
+    begin
+        self := new_actor(actor_name);
+        loop
+            receive(net, self, request_msg);
+            msg_type := message_type(request_msg);
+            if msg_type = disable_pg_msg then
+                info("Power-good reporting disabled");
+                pg_disabled <= true;
+            elsif msg_type = enable_pg_msg then
+                info("Power-good reporting enabled");
+                pg_disabled <= false;
+            else
+                unexpected_msg_type(msg_type);
+            end if;
+        end loop;
+        wait;
+    end process;
 
-    -- for now, though we implement the most basic of models where the rails
-    -- turn on when requested after some delay
+    -- Power rail model
+    -- When pg_disabled is true, pg is forced low
+    -- Otherwise, pg follows enable (with potential for future delay modeling)
+    rail.pg <= '0' when pg_disabled else rail.enable;
 
-    rail.pg <= rail.enable;
 end model;

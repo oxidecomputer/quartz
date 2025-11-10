@@ -226,28 +226,29 @@ package sequencer_io_pkg is
     end view;
     alias group_c_power_at_reg is group_c_power_at_fpga'converse;
 
-    -- effectively one enable fires all of this due to the 
-    -- hardware design.n
+    -- effectively one enable fires all of this due to the
+    -- hardware design.
     type nic_power_t is record
         v1p5_nic_a0hp : cascade_power_rail_t;  -- cascade enabled in hw from V5P0_NIC_A0HP
         v1p2_nic_pcie_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V5P0_NIC_A0HP
         v1p2_nic_enet_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V5P0_NIC_A0HP
         v3p3_nic_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V5P0_NIC_A0HP
         v1p1_nic_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V5P0_NIC_A0HP
-        -- TODO missing readback on v1p4_nic_a0hp -- cascade enabled in hw from V5P0_NIC_A0HP
+        v1p4_nic_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V5P0_NIC_A0HP (rev2+ only)
         v0p96_nic_vdd_a0hp : cascade_power_rail_t; -- cascade enabled in hw from V12P0_NIC_A0HP
         nic_hsc_12v : power_rail_t;  -- two rails are bonded together for enable
         nic_hsc_5v : cascade_power_rail_t;  -- but have separate readbacks
     end record;
     function is_power_good(power_group: nic_power_t) return boolean;
     view nic_power_at_fpga of nic_power_t is
-        v1p5_nic_a0hp : view cascade_power_rail_at_fpga;  
+        v1p5_nic_a0hp : view cascade_power_rail_at_fpga;
         v1p2_nic_pcie_a0hp : view cascade_power_rail_at_fpga;
         v1p2_nic_enet_a0hp : view cascade_power_rail_at_fpga;
         v3p3_nic_a0hp : view cascade_power_rail_at_fpga;
         v1p1_nic_a0hp : view cascade_power_rail_at_fpga;
+        v1p4_nic_a0hp : view cascade_power_rail_at_fpga;
         v0p96_nic_vdd_a0hp : view cascade_power_rail_at_fpga;
-        nic_hsc_12v : view power_rail_at_fpga; 
+        nic_hsc_12v : view power_rail_at_fpga;
         nic_hsc_5v : view cascade_power_rail_at_fpga;
     end view;
     alias nic_power_at_reg is nic_power_at_fpga'converse;
@@ -292,6 +293,7 @@ package body sequencer_io_pkg is
             power_group.v1p2_nic_enet_a0hp.pg and
             power_group.v3p3_nic_a0hp.pg and
             power_group.v1p1_nic_a0hp.pg and
+            power_group.v1p4_nic_a0hp.pg and
             power_group.v0p96_nic_vdd_a0hp.pg and
             power_group.nic_hsc_12v.pg and
             power_group.nic_hsc_5v.pg

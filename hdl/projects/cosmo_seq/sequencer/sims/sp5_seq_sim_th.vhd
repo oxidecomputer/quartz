@@ -26,7 +26,17 @@ architecture th of sp5_seq_sim_th is
     signal reset : std_logic := '1';
 
     signal sp5_seq_pins : sp5_seq_pins_t;
-    signal nic_seq_pins : nic_seq_pins_t;
+    signal nic_seq_pins : nic_seq_pins_t := (
+        cld_rst_l => 'Z',
+        perst_l => 'Z',
+        eeprom_wp_l => 'Z',
+        eeprom_wp_buffer_oe_l => 'Z',
+        flash_wp_l => 'Z',
+        nic_mfg_mode_l => 'Z',
+        ext_rst_l => '1',
+        nic_pcie_clk_buff_oe_l => 'Z',
+        sp5_mfg_mode_l => '0'
+        );
     signal group_a_pins : group_a_power_t;
     signal group_b_pins : group_b_power_t;
     signal group_c_pins : group_c_power_t;
@@ -123,18 +133,27 @@ begin
        );
    -- rails here
    grpa_pwr_v1p5_rtc: entity work.rail_model
+    generic map(
+       actor_name => "grpa_pwr_v1p5_rtc"
+    )
     port map(
        clk => clk,
        reset => reset,
        rail => group_a_pins.pwr_v1p5_rtc
    );
    grpa_v3p3_sp5_a1: entity work.rail_model
+   generic map(
+      actor_name => "grpa_v3p3_sp5_a1"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_a_pins.v3p3_sp5_a1
    );
    grpa_v1p8_sp5_a1: entity work.rail_model
+   generic map(
+      actor_name => "grpa_v1p8_sp5_a1"
+   )
    port map(
       clk => clk,
       reset => reset,
@@ -142,103 +161,69 @@ begin
    );
    
    grpb_v1p1_sp5: entity work.rail_model
+   generic map(
+      actor_name => "grpb_v1p1_sp5"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_b_pins.v1p1_sp5
    );
    grpc_vddio_sp5_a0: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddio_sp5_a0"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddio_sp5_a0
    );
    grpc_vddcr_cpu1: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddcr_cpu1"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddcr_cpu1
    );
    grpc_vddcr_cpu0: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddcr_cpu0"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddcr_cpu0
    );
    grpc_vddcr_soc: entity work.rail_model
+   generic map(
+      actor_name => "grpc_vddcr_soc"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => group_c_pins.vddcr_soc
    );
-   rail_nic_hsc_12v: entity work.rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      rail => nic_rails_pins.nic_hsc_12v
-   );
    rail_ddr_abcdef_hsc: entity work.rail_model
+   generic map(
+      actor_name => "rail_ddr_abcdef_hsc"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => ddr_bulk_pins.abcdef_hsc
    );
    rail_ddr_ghijkl_hsc: entity work.rail_model
+   generic map(
+      actor_name => "rail_ddr_ghijkl_hsc"
+   )
    port map(
       clk => clk,
       reset => reset,
       rail => ddr_bulk_pins.ghijkl_hsc
    );
-   rail_nic_hsc_5v: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.nic_hsc_5v
-   );
-   rail_v1p5_nic_a0hp: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.v1p5_nic_a0hp
-   );
-   
-   rail_v1p2_nic_pcie_a0hp: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.v1p2_nic_pcie_a0hp
-   );
-   rail_v1p2_nic_enet_a0hp: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.v1p2_nic_enet_a0hp
-   );
-   rail_v3p3_nic_a0hp: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.v3p3_nic_a0hp
-   );
-   rail_v1p1_nic_a0hp: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.v1p1_nic_a0hp
-   );
-   rail_v0p96_nic_vdd_a0hp: entity work.cascade_rail_model
-   port map(
-      clk => clk,
-      reset => reset,
-      upstream_pg => nic_rails_pins.nic_hsc_12v.pg,
-      rail => nic_rails_pins.v0p96_nic_vdd_a0hp
-   );
+
    sp5_model_inst: entity work.sp5_model
     port map(
        clk => clk,
@@ -246,6 +231,9 @@ begin
        sp5_pins => sp5_seq_pins
    );
    nic_model_inst: entity work.nic_model
+    generic map(
+       actor_name => "nic_model"
+    )
     port map(
        clk => clk,
        reset => reset,

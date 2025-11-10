@@ -230,6 +230,12 @@ begin
        clk => clk,
        sycnd_output => nic_rails.v1p1_nic_a0hp.pg
     );
+    v1p4_nic_a0hp: entity work.meta_sync
+    port map(
+       async_input => nic_rails_pins.v1p4_nic_a0hp.pg,
+       clk => clk,
+       sycnd_output => nic_rails.v1p4_nic_a0hp.pg
+    );
     v0p96_nic_vdd_a0hp: entity work.meta_sync
     port map(
        async_input => nic_rails_pins.v0p96_nic_vdd_a0hp.pg,
@@ -248,8 +254,8 @@ begin
        clk => clk,
        sycnd_output => nic_sync_5v_hsc_pg_l
     );
-    -- TODO: maybe clean up the PG_Ls here
-
+   
+    -- HSC's are actually pg_l signals, so invert them here
     nic_rails.nic_hsc_5v.pg <= not nic_sync_5v_hsc_pg_l;
     nic_rails.nic_hsc_12v.pg  <= not nic_sync_12v_hsc_pg_l;
     -- nic sync-related stuff

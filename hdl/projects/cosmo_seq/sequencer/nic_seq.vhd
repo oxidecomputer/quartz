@@ -23,6 +23,7 @@ entity nic_seq is
         sw_enable : in std_logic;
         upstream_ok : in std_logic;
         nic_idle : out std_logic;
+        nic_faulted : out std_logic;
         debug_enables : in debug_enables_type;
         nic_overrides_reg : in nic_overrides_type;
 
@@ -68,20 +69,28 @@ architecture rtl of nic_seq is
 
     type nic_r_t is record
         state : state_t;
+        enable_last : std_logic;
+        enable_pend : std_logic;
         cnts  : unsigned(31 downto 0);
         nic_power_en : std_logic;
         nic_perst_l : std_logic;
         nic_cld_rst_l : std_logic;
         nic_clk_en_l : std_logic;
+        nic_expected : std_logic;
+        faulted : std_logic;
     end record;
 
     constant nic_r_reset : nic_r_t := (
         state => IDLE,
+        enable_last => '0',
+        enable_pend => '0',
         cnts => (others => '0'),
         nic_power_en => '0',
         nic_perst_l => '0',
         nic_cld_rst_l => '0',
-        nic_clk_en_l => '1'
+        nic_clk_en_l => '1',
+        nic_expected => '0',
+        faulted => '0'
     );
     signal nic_r, nic_rin : nic_r_t;
 
@@ -147,19 +156,32 @@ begin
 
     nic_sm:process(all)
         variable v : nic_r_t;
+        variable nic_faulted_var : std_logic;
     begin
 
         v := nic_r;
 
+        -- Fault monitoring: if we expect NIC rails to be up and they're not, that's a fault
+        nic_faulted_var := '1' when nic_r.nic_expected = '1' and (not is_power_good(nic_rails)) else '0';
+         v.enable_last := sw_enable;
+        if sw_enable and not nic_r.enable_last then
+            -- To re-enable, we require software to generate a rising_edge
+            -- here, by clearing the enable and then setting it again
+            v.enable_pend := '1';
+            -- we'll use this to clear the faulted flags
+            v.faulted := '0';
+        end if;
         case nic_r.state is
             when IDLE =>
                 v.nic_power_en := '0';
                 v.nic_perst_l := '0';
                 v.nic_cld_rst_l := '0';
                 v.nic_clk_en_l := '1';
+                v.nic_expected := '0';
                 v.cnts := (others => '0');
-                if sw_enable and upstream_ok then
+                if nic_r.enable_pend and upstream_ok then
                     v.state := PWR_EN;
+                    v.enable_pend := '0';
                 end if;
 
             when PWR_EN =>
@@ -177,6 +199,8 @@ begin
                 if nic_r.cnts = THIRTY_MS + TWENTY_MS then
                     v.state := EARLY_CLD_RST;
                     v.cnts := (others => '0');
+                    -- Enable fault monitoring on NIC rails - they should remain up
+                    v.nic_expected := '1';
                 end if;
 
             when EARLY_CLD_RST =>
@@ -225,7 +249,17 @@ begin
 
         end case;
 
-        -- TODO: deal with faults
+        -- MAPO fault handling - monitored in all non-IDLE states
+        if nic_r.state /= IDLE then
+            if nic_faulted_var = '1' or upstream_ok = '0' then
+                v.faulted := '1';
+                -- In fault case, immediately transition to IDLE
+                -- regardless of current state
+                v.state := IDLE;
+                -- Clear expected flag to avoid additional fault triggers
+                v.nic_expected := '0';
+            end if;
+        end if;
 
         nic_rin <= v;
     end process;
@@ -334,5 +368,6 @@ begin
     nic_seq_pins.cld_rst_l <= final_nic_outs.cld_rst_l;
 
     nic_rails.nic_hsc_12v.enable <= nic_r.nic_power_en;
+    nic_faulted <= nic_r.faulted;
 
 end rtl;
