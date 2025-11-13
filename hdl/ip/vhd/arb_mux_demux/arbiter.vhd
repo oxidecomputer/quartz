@@ -52,6 +52,7 @@ architecture rtl of arbiter is
     signal   grants_mask          : unsigned(requests'range);
     signal   req_vec_f_edge       : unsigned(requests'range);
     signal   req_f_edge           : std_logic;
+    signal   grant_active         : std_logic;
 
 begin
 
@@ -89,6 +90,7 @@ begin
     the_arbiter: process(clk)
     begin
         if reset then
+            grant_active <= '0';
             grants_int    <= zeros;
             grants_last   <= (others => '0');
             requests_last <= (others => '0');
@@ -99,17 +101,23 @@ begin
             -- which is masked by the allowable requests in round-robbin mode, and then
             -- bitwise AND that with it's two's complement
             -- to get 1 bit active as our active grant.
-            grants_int <= requests_masked and requests_masked_twos;
+            -- we can only update this when there is no current grant active
+            if grant_active = '0' and (or requests_int /= '0') then
+                grants_int <= requests_masked and requests_masked_twos;
+                grant_active <= '1';
+            end if;
             if req_f_edge then
                 -- Note: we expect requesters of this to hold request high until they both have the grant,
                 -- and are finished with their current transaction. This means that falling edges of
                 -- requests cause arbitration updates and we save the current grant for use in round-robin
                 -- arbitration next time.
                 grants_last <= grants_int;
+                grant_active <= '0';
             end if;
         end if;
     end process;
 
-    grants <= std_logic_vector(grants_int);
+    grants <= std_logic_vector(grants_int) when grant_active = '1' else
+             (grants'high downto grants'low => '0');
 
 end rtl;
