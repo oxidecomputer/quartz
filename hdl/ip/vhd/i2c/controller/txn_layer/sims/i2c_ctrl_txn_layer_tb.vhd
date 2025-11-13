@@ -51,21 +51,33 @@ begin
         variable command    : cmd_t;
         variable ack        : boolean := false;
 
-        variable data       : std_logic_vector(7 downto 0);
-        variable exp_addr   : std_logic_vector(7 downto 0);
-        variable exp_data   : std_logic_vector(7 downto 0);
-        variable byte_len   : natural;
+        variable data           : std_logic_vector(7 downto 0);
+        variable exp_addr       : std_logic_vector(7 downto 0);
+        variable exp_data       : std_logic_vector(7 downto 0);
+        variable byte_len       : natural;
+        variable rx_byte_count  : integer;
 
         variable rnd            : RandomPType;
 
-        procedure generate_abort is
+        procedure generate_abort (
+            variable rx_byte_count : inout integer
+        ) is
+            variable msg : msg_t;
         begin
             -- DUT is operating in Fast Mode+, so the fscl period is 1000ns. Send the abort at
             -- some point during the byte transfer. Begin halfway through the first bit period
             -- (500 ns) to avoid a potential ACK conflict
             wait for rnd.RandInt(550, 6000) * 1 ns;
             push_abort(net, I2C_CMD_VC);
-            expect_stop(net, I2C_TARGET_VC);
+            -- We may or may not see additional messages depending on when we abort
+            -- given that abort timing depends on the phase of the command
+            -- Receive messages until we get a stop message
+            loop
+                receive(net, I2C_TARGET_VC.p_actor, msg);
+                exit when message_type(msg) = got_stop;
+            end loop;
+            -- Pop the rx_byte_count from the stop message
+            rx_byte_count := pop(msg);
         end procedure;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -194,16 +206,19 @@ begin
                 -- receive and drop the START event
                 expect_message(net, I2C_TARGET_VC, got_start);
                 -- abort first start byte
-                generate_abort;
+                generate_abort(rx_byte_count);
+                check_equal(rx_byte_count, 1, "Expected 1 bytes received after aborting after START (the address byte)");
 
                 -- Abort write byte
+                log("Aborting write byte");
                 push_i2c_cmd(net, I2C_CMD_VC, command);
                 -- receive and drop the START event
                 expect_message(net, I2C_TARGET_VC, got_start);
                 -- receive and drop the START byte
                 expect_message(net, I2C_TARGET_VC, address_matched);
                 -- abort during write byte
-                generate_abort;
+                generate_abort(rx_byte_count);
+                check_equal(rx_byte_count, 1, "Expected 1 bytes received after aborting Address Write (the address byte)");
 
                 -- Abort repeated start byte
                 push_i2c_cmd(net, I2C_CMD_VC, command);
@@ -214,7 +229,8 @@ begin
                 -- receive and drop the START event
                 expect_message(net, I2C_TARGET_VC, got_start);
                 -- abort during repeated start byte
-                generate_abort;
+                generate_abort(rx_byte_count);
+                check_equal(rx_byte_count, 3, "Expected 3 bytes received after aborting Address Read after restart (the 1st address byte, 2nd address byte and 1st read data)");
 
                 -- Abort repeated start byte
                 push_i2c_cmd(net, I2C_CMD_VC, command);
@@ -227,7 +243,8 @@ begin
                 -- receive and drop the START byte
                 expect_message(net, I2C_TARGET_VC, address_matched);
                 -- abort during read byte
-                generate_abort;
+                generate_abort(rx_byte_count);
+                check_equal(rx_byte_count, 3, "Expected 3 bytes received after aborting Address Read after restart (the 1st address byte, 2nd address byte and 1st read data)");
             end if;
         end loop;
 

@@ -59,9 +59,10 @@ architecture model of i2c_target_vc is
     signal scl_oe   : std_logic := '0';
     signal sda_oe   : std_logic := '0';
 
-    signal reg_addr     : unsigned(7 downto 0)  := (others => '0');
-    signal addr_set     : boolean               := FALSE;
-    signal addr_incr    : boolean               := FALSE;
+    signal reg_addr         : unsigned(7 downto 0)  := (others => '0');
+    signal addr_set         : boolean               := FALSE;
+    signal addr_incr        : boolean               := FALSE;
+    signal rx_byte_counter  : integer               := 0;
 begin
 
     scl  <= '0' when scl_oe else 'Z';
@@ -88,10 +89,12 @@ begin
         variable is_read            : boolean               := FALSE;
         variable reg_addr_v         : unsigned(7 downto 0)  := (others => '0');
         variable stop_during_write  : boolean               := FALSE;
+        variable rx_byte_counter_v  : integer               := 0;
     begin
         case state is
 
             when IDLE =>
+                rx_byte_counter_v := 0;
                 wait until start_condition;
                 state <= START;
 
@@ -106,6 +109,7 @@ begin
                 if stop_condition then
                     state   <= GET_STOP;
                 else
+                      rx_byte_counter_v   := rx_byte_counter_v + 1;
                     if rx_data(7 downto 1) = address(I2C_TARGET_VC) then
                         state       <= SEND_ACK;
                         is_read     := rx_data(0) = '1';
@@ -127,6 +131,7 @@ begin
                     state               <= GET_STOP;
                     stop_during_write   := TRUE;
                 else
+                    rx_byte_counter_v   := rx_byte_counter_v + 1;
                     state   <= SEND_ACK;
 
                     if addr_incr then
@@ -180,6 +185,7 @@ begin
 
             when GET_STOP =>
                 event_msg           := new_msg(got_stop);
+                push(event_msg, rx_byte_counter_v);
                 send(net, I2C_TARGET_VC.p_actor, event_msg);
                 state               <= IDLE;
                 addr_set            <= FALSE;
@@ -188,7 +194,8 @@ begin
 
         end case;
 
-        reg_addr    <= reg_addr_v;
+        reg_addr        <= reg_addr_v;
+        rx_byte_counter <= rx_byte_counter_v;
         wait for 0 ns; -- force a delta cycle so that everything updates
 
     end process;
@@ -250,16 +257,16 @@ begin
         else
             if state = SEND_BYTE then
                 report "test: " & integer'image(tx_bit_count_v);
-                if tx_bit_count_v = 0 or tx_bit_count_v = 9 then
+                if tx_bit_count_v = 1 or tx_bit_count_v = 9 then
                     txd := read_word(I2C_TARGET_VC.p_buffer.p_memory_ref, natural(to_integer(reg_addr)), 1);
                     report "Got " & integer'image(to_integer(unsigned(txd))) &" from register " & integer'image(to_integer(reg_addr));
-                    tx_bit_count_v := 0;
+                    tx_bit_count_v := 1;
                 else
                     txd := tx_data(tx_data'high-1 downto tx_data'low) & '1';
                 end if;
             end if;
             if tx_bit_count_v = 9 then
-                tx_bit_count_v := 0;
+                tx_bit_count_v := 1;
             else 
                 tx_bit_count_v := tx_bit_count_v + 1;
             end if;

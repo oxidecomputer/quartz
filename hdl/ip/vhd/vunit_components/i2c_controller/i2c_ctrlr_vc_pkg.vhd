@@ -224,6 +224,7 @@ package body i2c_ctrl_vc_pkg is
         variable actor : actor_t;
         variable tgt_addr_rw : std_logic_vector(7 downto 0);
     begin
+        info("Starting I2C write transaction to address " & to_hstring(target_addr));
         flush(ack_queue);  -- clear ack queue, since this is an "output" from this block
         if user_actor = null_actor then
             actor := find("i2c_ctrl_vc");
@@ -262,6 +263,7 @@ package body i2c_ctrl_vc_pkg is
         -- send stop
         request_msg := new_msg(i2c_send_stop);
         send(net, actor, request_msg);
+        info("Finished I2C write transaction to address " & to_hstring(target_addr));
 
     end procedure;
     -- blocking version of i2c_write_txn

@@ -25,7 +25,8 @@ package spd_proxy_tb_pkg is
     constant CLK_PER_NS : positive := 8;
 
     -- Verification Components
-    constant I2C_CTRL_VC        : i2c_ctrl_vc_t     := new_i2c_ctrl_vc("cpu_i2c_vc");
+    constant I2C_CTRL_VC0        : i2c_ctrl_vc_t     := new_i2c_ctrl_vc("cpu_i2c_vc0");
+    constant I2C_CTRL_VC1        : i2c_ctrl_vc_t     := new_i2c_ctrl_vc("cpu_i2c_vc1");
     constant I2C_DIMM1A_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1a_i2c_vc", b"1010000");
     constant I2C_DIMM1B_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1b_i2c_vc", b"1010001");
     constant I2C_DIMM1C_TGT_VC         : i2c_target_vc_t   := new_i2c_target_vc("dimm1c_i2c_vc", b"1010010");

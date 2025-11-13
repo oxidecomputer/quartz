@@ -40,8 +40,6 @@ architecture rtl of spd_regs is
     signal cmd1 : cmd_type;
     signal spd_present : spd_present_type;
     signal fifo_ctrl : fifo_ctrl_type;
-    signal cmd0_valid_flag : std_logic;
-    signal cmd1_valid_flag : std_logic;
     signal ch0_fifo_write_flag : std_logic;
     signal ch1_fifo_write_flag : std_logic;
     signal ch0_fifo_wdata : std_logic_vector(31 downto 0);
@@ -59,6 +57,10 @@ architecture rtl of spd_regs is
     signal spd_select_vec : std_logic_vector(31 downto 0);
     signal start_flag : std_logic;
     signal prefetch_done_last : std_logic;
+    signal cmd0_start_flag : std_logic;
+    signal cmd1_start_flag : std_logic;
+    signal cmd0_valid_flag : std_logic;
+    signal cmd1_valid_flag : std_logic;
 
     function mk_op(cmd : cmd_type) return op_t is
     begin
@@ -80,10 +82,9 @@ begin
         len => cmd0.len
     );
     bus0.start_prefetch <= start_flag;
-    bus0.i2c_cmd_valid <= cmd0_valid_flag;
-    bus0.req <= '0';
     bus0.selected_dimm <= spd_select_vec(7 downto 0);
     bus0.rd_addr <= spd_rd_ptr.addr;
+    bus0.i2c_cmd_valid <= cmd0_valid_flag;
 
     bus1.i2c_cmd <= ( 
         op => mk_op(cmd1),
@@ -92,10 +93,9 @@ begin
         len => cmd1.len
     );
     bus1.start_prefetch <= start_flag;
-    bus1.i2c_cmd_valid <= cmd1_valid_flag;
-    bus1.req <= '0';
     bus1.selected_dimm <= spd_select_vec(15 downto 8);
     bus1.rd_addr <= spd_rd_ptr.addr;
+    bus1.i2c_cmd_valid <= cmd1_valid_flag;
     
     buffer0_if.rx_fifo_pop <= ch0_rx_dpr_pop;
     buffer0_if.rx_fifo_reset <= fifo_ctrl.rx_fifo_reset;
@@ -112,6 +112,17 @@ begin
        regs_if => buffer0_if,
        i2c_rx_st_if => bus0.i2c_rx_st_if,
        i2c_tx_st_if => bus0.i2c_tx_st_if
+    );
+    txn_sm_ch0: entity work.txn_sm
+    port map(
+       clk => clk,
+       reset => reset,
+       start_flag => cmd0_start_flag,
+       request => bus0.req,
+       grant => bus0.grant,
+       cmd_valid => cmd0_valid_flag,
+       done => bus0.i2c_done,
+       aborted => bus0.i2c_aborted
     );
 
     buffer1_if.rx_fifo_pop <= ch1_rx_dpr_pop;
@@ -130,6 +141,17 @@ begin
        i2c_rx_st_if => bus1.i2c_rx_st_if,
        i2c_tx_st_if => bus1.i2c_tx_st_if
    );
+    txn_sm_ch1: entity work.txn_sm
+    port map(
+       clk => clk,
+       reset => reset,
+       start_flag => cmd1_start_flag,
+       request => bus1.req,
+       grant => bus1.grant,
+       cmd_valid => cmd1_valid_flag,
+       done => bus1.i2c_done,
+       aborted => bus1.i2c_aborted
+    );
 
     axil_target_txn_inst: entity work.axil_target_txn
     port map(
@@ -166,8 +188,8 @@ begin
             ch1_fifo_write_flag <= '0';
             ch0_fifo_wdata <= (others => '0');
             ch1_fifo_wdata <= (others => '0');
-            cmd0_valid_flag <= '0';
-            cmd1_valid_flag <= '0';
+            cmd0_start_flag <= '0';
+            cmd1_start_flag <= '0';
             start_flag <= '0';
             spd_ctrl <= rec_reset;
             spd_select <= reset_0s;
@@ -178,8 +200,8 @@ begin
             prefetch_done  := bus0.done_prefetch and bus1.done_prefetch;
             prefetch_done_redge := prefetch_done and not prefetch_done_last;
             prefetch_done_last <= prefetch_done;
-            cmd0_valid_flag <= '0';
-            cmd1_valid_flag <= '0';
+            cmd0_start_flag <= '0';
+            cmd1_start_flag <= '0';
             start_flag <= '0';
             ch0_fifo_write_flag <= '0';
             ch1_fifo_write_flag <= '0';
@@ -206,14 +228,14 @@ begin
 
                     when BUS0_CMD_OFFSET => 
                         cmd0 <= unpack(axi_if.write_data.data);
-                        cmd0_valid_flag <= '1';
+                        cmd0_start_flag <= '1';
                     when BUS0_TX_WDATA_OFFSET => 
                         ch0_fifo_wdata <= axi_if.write_data.data;
                         ch0_fifo_write_flag <= '1';
 
                     when BUS1_CMD_OFFSET => 
                         cmd1 <= unpack(axi_if.write_data.data);
-                        cmd1_valid_flag <= '1';
+                        cmd1_start_flag <= '1';
                     when BUS1_TX_WDATA_OFFSET => 
                         ch1_fifo_wdata <= axi_if.write_data.data;
                         ch1_fifo_write_flag <= '1';
