@@ -832,6 +832,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders_8b(SPD_PROXY_RESP_IDX),
+        in_a0 => a0_ok,
         dimm_a_pcamp => dimm_a_pg,
         dimm_b_pcamp => dimm_b_pg,
         dimm_c_pcamp => dimm_c_pg,
