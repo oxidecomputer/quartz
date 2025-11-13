@@ -147,6 +147,9 @@ begin
                 cpu_busy    <= '0';
             end if;
 
+            -- The intent here is that we'll use the START from the controller unless it takes
+            -- too long to finish an aborted transaction and we've missed the START window from the
+            -- CPU. We also have to think about the abort case where the bus isn't IDLE yet?
             -- The FPGA still owns the bus and the START hold time as elapsed. This means before
             -- the mux is swapped we need to simulate a START condition .
             if i2c_ctrlr_idle = '0' and cpu_scl_fedge = '1' then

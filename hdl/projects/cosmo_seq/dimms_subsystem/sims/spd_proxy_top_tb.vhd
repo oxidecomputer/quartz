@@ -65,7 +65,7 @@ begin
                 -- Wait for the response
                 -- Expect to get 3 bytes back, so poll until we see that in the FIFO
                 data32 := 32x"3";
-                wait_until_read_equals(net, bus_handle, To_StdLogicVector(BUS0_RX_BYTE_COUNT_OFFSET, bus_handle.p_address_length), data32);
+                wait_until_read_equals(net, bus_handle, To_StdLogicVector(BUS0_RX_BYTE_COUNT_OFFSET, bus_handle.p_address_length), data32, 2 ms);
                 --read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RDATA_OFFSET, bus_handle.p_address_length), data32);
                 -- check the response.
                 read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RDATA_OFFSET, bus_handle.p_address_length), data32);

@@ -25,6 +25,8 @@ package spd_proxy_pkg is
         rd_addr : std_logic_vector(7 downto 0);
         rd_data : std_logic_vector(31 downto 0);
         selected_dimm: std_logic_vector(7 downto 0);
+        i2c_done : std_logic;
+        i2c_aborted : std_logic;
     end record;
     view channel_side of proxy_chan_reg_t is
         i2c_cmd : in;
@@ -37,6 +39,8 @@ package spd_proxy_pkg is
         rd_addr : in;
         rd_data :out;
         selected_dimm: in;
+        i2c_done  : out;
+        i2c_aborted : out;
         i2c_tx_st_if : view axi_st8_pkg.axi_st_sink;
         i2c_rx_st_if : view axi_st8_pkg.axi_st_source;
     end view;

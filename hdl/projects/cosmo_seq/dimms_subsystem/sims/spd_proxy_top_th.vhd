@@ -80,7 +80,7 @@ begin
     cpu_abcdef_vc: entity work.i2c_controller_vc
     generic map(
         I2C_CTRL_VC => I2C_CTRL_VC,
-        MODE        => SIMULATION
+        MODE        => STANDARD
     )
     port map(
         scl => cpu_abcdef_scl,
@@ -152,7 +152,7 @@ begin
     cpu_ghijkl_vc: entity work.i2c_controller_vc
     generic map(
         I2C_CTRL_VC => I2C_CTRL_VC,
-        MODE        => SIMULATION
+        MODE        => STANDARD
     )
     port map(
         scl => cpu_ghijkl_scl,
@@ -222,7 +222,7 @@ begin
     DUT: entity work.dimms_subsystem_top
      generic map(
         CLK_PER_NS => CLK_PER_NS,
-        I2C_MODE => SIMULATION
+        I2C_MODE => FAST_PLUS
     )
      port map(
         clk => clk,

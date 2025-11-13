@@ -74,6 +74,27 @@ begin
             );
             issue_i2c_cmd(net, command, fpga_tx_q);
         end procedure;
+        procedure rd_controller is
+        begin
+            -- arbitrary for the test
+            exp_addr    := X"31";
+            byte_len    := 3;
+            -- for i in 0 to byte_len - 1 loop
+            --     push_byte(fpga_tx_q, rnd.RandInt(0, 255));
+            -- end loop;
+            --push_byte(fpga_tx_q, to_integer(X"B4"));
+            --push_byte(fpga_tx_q, to_integer(X"B9"));
+            --fpga_exp_q := copy(fpga_tx_q);
+
+            -- write some data in
+            command := (
+                op      => RANDOM_READ,
+                addr    => address(I2C_DIMM1F_TGT_VC),
+                reg     => std_logic_vector(exp_addr), 
+                len     => to_std_logic_vector(byte_len, command.len'length)
+            );
+            issue_i2c_cmd(net, command, fpga_tx_q);
+        end procedure;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -106,14 +127,14 @@ begin
              
             elsif run("cpu_transaction_regression") then
                 -- Get the FPGA controller started on a transaction
-                init_controller;
+                rd_controller;
 
                 -- At some point into the transaction, have the CPU start its own
-                wait for rnd.RandInt(500, 4000) * 1 ns;
+                wait for 39 us - 200 ns;
 
                 push_byte(cpu_tx_q, to_integer(rnd.RandSlv(0, 255, 8)));
                 i2c_write_txn(net, address(I2C_DIMM1F_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC.p_actor);
-
+                wait for 1 ms;
             elsif run("cpu_with_simulated_start") then
                 -- Get the FPGA controller started on a transaction
                 init_controller;

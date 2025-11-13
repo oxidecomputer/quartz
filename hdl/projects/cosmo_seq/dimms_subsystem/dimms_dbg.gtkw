@@ -1,0 +1,208 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Fri Nov 14 15:48:53 2025
+[*]
+[dumpfile] "/home/nhuffman/oxide/quartz/vunit_out/test_output/lib.spd_proxy_tb.cpu_transaction_regression_deef4852e3ff86a1add308c055bf88bc090a4e5b/nvc/spd_proxy_tb.fst"
+[dumpfile_mtime] "Fri Nov 14 15:48:22 2025"
+[dumpfile_size] 7534
+[savefile] "/home/nhuffman/oxide/quartz/hdl/projects/cosmo_seq/dimms_subsystem/dimms_dbg.gtkw"
+[timestart] 3470000000
+[size] 864 653
+[pos] -16 -13
+*-32.676315 39428000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] spd_proxy_tb.
+[treeopen] spd_proxy_tb.th.
+[treeopen] spd_proxy_tb.th.spd_proxy_top_inst.
+[treeopen] spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.
+[sst_width] 260
+[signals_width] 534
+[sst_expanded] 1
+[sst_vpaned_height] 256
+@28
+spd_proxy_tb.th.dimm_proxy_scl_if.i
+spd_proxy_tb.th.dimm_proxy_scl_if.o
+spd_proxy_tb.th.dimm_proxy_scl_if.oe
+spd_proxy_tb.th.dimm_proxy_sda_if.i
+spd_proxy_tb.th.dimm_proxy_sda_if.o
+spd_proxy_tb.th.dimm_proxy_sda_if.oe
+spd_proxy_tb.th.cpu_proxy_scl_if.i
+spd_proxy_tb.th.cpu_proxy_scl_if.o
+spd_proxy_tb.th.cpu_proxy_scl_if.oe
+spd_proxy_tb.th.cpu_proxy_sda_if.i
+spd_proxy_tb.th.cpu_proxy_sda_if.o
+spd_proxy_tb.th.cpu_proxy_sda_if.oe
+spd_proxy_tb.th.spd_proxy_top_inst.cpu_start_detected
+spd_proxy_tb.th.spd_proxy_top_inst.cpu_stop_detected
+spd_proxy_tb.th.spd_proxy_top_inst.need_start
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.bytes_done[7:0]
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.cmd.addr[6:0]
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.cmd.len[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.cmd.op
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.cmd.reg[7:0]
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.cnts[15:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.do_ack
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.do_start
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.do_stop
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.in_random_read
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.next_valid
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.state
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.status.busy
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.status.code
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.status.code_valid
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.tx_byte[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.tx_byte_valid
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.txd[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.sm_reg.txd_valid
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.clk
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.clk
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.filtered_scl
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.filtered_sda
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.last_scl
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.last_sda
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.raw_scl
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.raw_sda
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.reset
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_fedge
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_meta.async_input
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_meta.clk
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_meta.sr[0]
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_meta.sycnd_output
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_pipe[6:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_redge
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.scl_syncd
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_fedge
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_meta.async_input
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_meta.clk
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_meta.sr[0]
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_meta.sycnd_output
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_pipe[6:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_redge
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.i2c_glitch_filter_inst.sda_syncd
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.ready
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.reset
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.rx_data[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.rx_data_valid
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_fedge
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_if.i
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_if.o
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_if.oe
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_o
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_o_last
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_redge
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_strobe.clk
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_strobe.enable
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_strobe.reset
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_strobe.strobe
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_strobe.strobe_counter
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.scl_toggle
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_if.i
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_if.o
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_if.oe
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_in_syncd
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_transition.clk
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_transition.enable
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_transition.reset
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_transition.strobe
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sda_transition.strobe_counter
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_count_done
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.clear
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.clk
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.count[7:0]
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.counter[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.decr
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.done
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.load
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_countdown.reset
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.ack_sending
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.bits_shifted
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.count_clr
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.count_decr
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.count_load
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.counter[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.ready
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.rx_ack
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.rx_ack_valid
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.rx_data[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.rx_data_valid
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.scl_active
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.scl_start
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.sda_hold
+@29
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.sda_o
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.sda_oe
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.sr_scl_fedge_seen
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_ack
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.state
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.stop_requested
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.transition_sda_cntr_en
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg.tx_data[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.ack_sending
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.bits_shifted
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.count_clr
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.count_decr
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.count_load
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.counter[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.ready
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.rx_ack
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.rx_ack_valid
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.rx_data[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.rx_data_valid
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.scl_active
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.scl_start
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.sda_hold
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.sda_o
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.sda_oe
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.sr_scl_fedge_seen
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.state
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.stop_requested
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.transition_sda_cntr_en
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.sm_reg_next.tx_data[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.transition_sda
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_ackd
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_ackd_valid
+@22
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_data[7:0]
+@28
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_data_valid
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_start
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.tx_stop
+spd_proxy_tb.th.spd_proxy_top_inst.i2c_ctrl_txn_layer_inst.i2c_ctrl_link_layer_inst.txn_next_valid
+[pattern_trace] 1
+[pattern_trace] 0
