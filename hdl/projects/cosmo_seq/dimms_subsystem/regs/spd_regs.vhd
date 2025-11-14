@@ -58,6 +58,7 @@ architecture rtl of spd_regs is
     signal bus0_selected : std_logic;
     signal spd_select_vec : std_logic_vector(31 downto 0);
     signal start_flag : std_logic;
+    signal prefetch_done_last : std_logic;
 
     function mk_op(cmd : cmd_type) return op_t is
     begin
@@ -154,6 +155,8 @@ begin
    
    write_logic: process(clk, reset)
         variable spd_ctrl_v : spd_ctrl_type;
+        variable prefetch_done : std_logic;
+        variable prefetch_done_redge : std_logic;
     begin
         if reset then
             cmd0 <= rec_reset;
@@ -169,8 +172,12 @@ begin
             spd_ctrl <= rec_reset;
             spd_select <= reset_0s;
             spd_rd_ptr <= rec_reset;
+            prefetch_done_last <= '0';
 
         elsif rising_edge(clk) then
+            prefetch_done  := bus0.done_prefetch and bus1.done_prefetch;
+            prefetch_done_redge := prefetch_done and not prefetch_done_last;
+            prefetch_done_last <= prefetch_done;
             cmd0_valid_flag <= '0';
             cmd1_valid_flag <= '0';
             start_flag <= '0';
@@ -179,7 +186,7 @@ begin
             fifo_ctrl.rx_fifo_reset <= '0'; -- flags so these clear after set also
             fifo_ctrl.tx_fifo_reset <= '0'; -- flags so these clear after set also
             
-            if bus0.done_prefetch and bus1.done_prefetch then
+            if prefetch_done_redge then
                 spd_ctrl <= rec_reset;
             end if;
 

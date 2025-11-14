@@ -4,7 +4,7 @@
 --
 -- Copyright 2025 Oxide Computer Company
 --
--- This block monitors two I2C SDA signals, `a` and `b`, with the intention thatt hey are
+-- This block monitors two I2C SDA signals, `a` and `b`, with the intention that hey are
 -- essentially connected but proxied by the FPGA. It assumes the inactive state for the bus is high,
 -- and then monitors for `a` or `b` to pull the line low. It will then grant whichever side pulled
 -- the line low the bus until that side releases it, at which point after HYSTERESIS_CYCLES both
