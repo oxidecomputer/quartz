@@ -50,14 +50,14 @@ begin
                 -- We want to use the new SPD interface via axi to issue
                 -- a simple read to the DIMM as a starting point.
                 -- Set up the buffer in the DIMM with a response
-                write_word(memory(I2C_DIMM1_TGT_VC), 0, X"AA");
-                write_word(memory(I2C_DIMM1_TGT_VC), 1, X"BB");
-                write_word(memory(I2C_DIMM1_TGT_VC), 2, X"CC");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 0, X"AA");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 1, X"BB");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 2, X"CC");
                 -- Set up i2c command and issue it
                 -- 3 byte read from spd and addr 0
                 cmd :=(
                     op => "00", -- READ
-                    bus_addr => address(I2C_DIMM1_TGT_VC),
+                    bus_addr => address(I2C_DIMM1F_TGT_VC),
                     reg_addr => X"00",
                     len => X"03"
                 );
@@ -75,13 +75,36 @@ begin
                 read_bus(net, bus_handle, To_StdLogicVector(BUS0_RX_RADDR_OFFSET, bus_handle.p_address_length), data32);
 
             elsif run("spd_sm_prefetch") then
-                write_word(memory(I2C_DIMM1_TGT_VC), 16#80#, X"AA");
-                write_word(memory(I2C_DIMM1_TGT_VC), 16#81#, X"BB");
-                write_word(memory(I2C_DIMM1_TGT_VC), 16#82#, X"CC");
-                write_word(memory(I2C_DIMM1_TGT_VC), 16#83#, X"DD");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#80#, X"AA");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#81#, X"BB");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#82#, X"CC");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#83#, X"DD");
                 write_bus(net, bus_handle, To_StdLogicVector(SPD_CTRL_OFFSET, bus_handle.p_address_length), 32x"1");
-                wait for 9 ms;
+                wait for 60 ms;
                 -- Pick DIMM 5 on channel 0
+                data32 := pack(spd_select_type'(bus0_f => '1', others => '0'));
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), data32);
+                read_bus(net, bus_handle, To_StdLogicVector(SPD_RDATA_OFFSET, bus_handle.p_address_length), data32);
+                check_match(data32, std_logic_vector'(X"DDCCBBAA"), "Read data mismatch");
+
+            elsif run("spd_sm_prefetch_again") then
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#80#, X"AA");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#81#, X"BB");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#82#, X"CC");
+                write_word(memory(I2C_DIMM1F_TGT_VC), 16#83#, X"DD");
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_CTRL_OFFSET, bus_handle.p_address_length), 32x"1");
+                wait for 60 ms;
+                -- Pick DIMM 5 on channel 0
+                data32 := pack(spd_select_type'(bus0_f => '1', others => '0'));
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), data32);
+                read_bus(net, bus_handle, To_StdLogicVector(SPD_RDATA_OFFSET, bus_handle.p_address_length), data32);
+                check_match(data32, std_logic_vector'(X"DDCCBBAA"), "Read data mismatch");
+
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_CTRL_OFFSET, bus_handle.p_address_length), 32x"1");
+                wait for 60 ms;
+                -- Pick DIMM 5 on channel 0
+                -- reset the read pointer
+                write_bus(net, bus_handle, To_StdLogicVector(SPD_RD_PTR_OFFSET, bus_handle.p_address_length), X"00000000");
                 data32 := pack(spd_select_type'(bus0_f => '1', others => '0'));
                 write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), data32);
                 read_bus(net, bus_handle, To_StdLogicVector(SPD_RDATA_OFFSET, bus_handle.p_address_length), data32);
@@ -95,6 +118,6 @@ begin
     end process;
 
     -- Example total test timeout dog
-    test_runner_watchdog(runner, 10 ms);
+    test_runner_watchdog(runner, 200 ms);
 
 end tb;

@@ -94,9 +94,49 @@ begin
     cpu_sda_if0.i <= cpu_abcdef_sda;
 
      -- simulated DIMM I2C target
-    dimm_abcdef_vc: entity work.i2c_target_vc
+    dimm_a_vc: entity work.i2c_target_vc
     generic map(
-        I2C_TARGET_VC => I2C_DIMM1_TGT_VC
+        I2C_TARGET_VC => I2C_DIMM1A_TGT_VC
+    )
+    port map(
+        scl => dimm_abcdef_scl,
+        sda => dimm_abcdef_sda
+    );
+    dimm_b_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM1B_TGT_VC
+    )
+    port map(
+        scl => dimm_abcdef_scl,
+        sda => dimm_abcdef_sda
+    );
+    dimm_c_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM1C_TGT_VC
+    )
+    port map(
+        scl => dimm_abcdef_scl,
+        sda => dimm_abcdef_sda
+    );
+    dimm_d_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM1D_TGT_VC
+    )
+    port map(
+        scl => dimm_abcdef_scl,
+        sda => dimm_abcdef_sda
+    );
+    dimm_e_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM1E_TGT_VC
+    )
+    port map(
+        scl => dimm_abcdef_scl,
+        sda => dimm_abcdef_sda
+    );
+    dimm_f_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM1F_TGT_VC
     )
     port map(
         scl => dimm_abcdef_scl,
@@ -124,15 +164,54 @@ begin
     cpu_ghijkl_sda <= cpu_sda_if1.o when cpu_sda_if1.oe else 'H';
     cpu_sda_if1.i <= cpu_ghijkl_sda;
 
-    dimm_ghijkl_vc: entity work.i2c_target_vc
+    dimm_g_vc: entity work.i2c_target_vc
     generic map(
-        I2C_TARGET_VC => I2C_DIMM2_TGT_VC
+        I2C_TARGET_VC => I2C_DIMM2G_TGT_VC
     )
     port map(
         scl => dimm_ghijkl_scl,
         sda => dimm_ghijkl_sda
     );
-
+    dimm_h_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM2H_TGT_VC
+    )
+    port map(
+        scl => dimm_ghijkl_scl,
+        sda => dimm_ghijkl_sda
+    );
+    dimm_i_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM2I_TGT_VC
+    )
+    port map(
+        scl => dimm_ghijkl_scl,
+        sda => dimm_ghijkl_sda
+    );
+    dimm_j_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM2J_TGT_VC
+    )
+    port map(
+        scl => dimm_ghijkl_scl,
+        sda => dimm_ghijkl_sda
+    );
+    dimm_k_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM2K_TGT_VC
+    )
+    port map(
+        scl => dimm_ghijkl_scl,
+        sda => dimm_ghijkl_sda
+    );
+    dimm_l_vc: entity work.i2c_target_vc
+    generic map(
+        I2C_TARGET_VC => I2C_DIMM2L_TGT_VC
+    )
+    port map(
+        scl => dimm_ghijkl_scl,
+        sda => dimm_ghijkl_sda
+    );
     dimm_ghijkl_scl <= dimm_scl_if1.o when dimm_scl_if1.oe else 'H';
     dimm_scl_if1.i <= dimm_ghijkl_scl;
     
