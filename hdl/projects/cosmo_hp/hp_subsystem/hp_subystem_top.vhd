@@ -20,6 +20,29 @@ entity hp_subsystem_top is
         clk : in std_logic;
         reset : in std_logic;
 
+        --   AXI interface
+        awvalid : in std_logic;
+        awready : out std_logic;
+        awaddr : in std_logic_vector(7 downto 0) ;
+        -- write data channel
+        wvalid : in std_logic;
+        wready : out std_logic;
+        wdata : in std_logic_vector(31 downto 0);
+        wstrb : in std_logic_vector(3 downto 0); -- un-used
+        -- write response channel
+        bvalid : out std_logic;
+        bready : in std_logic;
+        bresp : out std_logic_vector(1 downto 0);
+        -- read address channel
+        arvalid : in std_logic;
+        arready : out std_logic;
+        araddr : in std_logic_vector(7 downto 0);
+        -- read data channel
+        rvalid : out std_logic;
+        rready : in std_logic;
+        rdata : out std_logic_vector(31 downto 0);
+        rresp : out std_logic_vector(1 downto 0);
+
         -- CEM A
         cema_to_fpga2_alert_l : in std_logic;
         cema_to_fpga2_ifdet_l : in std_logic;
@@ -130,6 +153,8 @@ entity hp_subsystem_top is
         fpga2_to_cemj_perst_l : out std_logic;
         fpga2_to_cemj_pwren : out std_logic;
         fpga2_to_clk_buff_cemj_oe_l : out std_logic;
+        -- UFL clock buffer control
+        fpga2_to_clk_buff_ufl_oe_l : out std_logic;
         -- to/from I/O expander
         io : out multiple_pca9506_pin_t(0 to 1);
         io_o : in multiple_pca9506_pin_t(0 to 1);
@@ -152,6 +177,16 @@ architecture rtl of hp_subsystem_top is
     signal pwm_cntr : unsigned(7 downto 0); -- Counter for the PWM
     signal cem_led_pwm : std_logic := '0'; -- PWM output for the CEM LED
     signal dc_timer: unsigned(31 downto 0) := (others => '0'); -- Timer for the duty cycle
+    signal clk_buff_cema_force_oe_l : std_logic;
+    signal clk_buff_cemb_force_oe_l : std_logic;
+    signal clk_buff_cemc_force_oe_l : std_logic;
+    signal clk_buff_cemd_force_oe_l : std_logic;
+    signal clk_buff_ceme_force_oe_l : std_logic;
+    signal clk_buff_cemf_force_oe_l : std_logic;
+    signal clk_buff_cemg_force_oe_l : std_logic;
+    signal clk_buff_cemh_force_oe_l : std_logic;
+    signal clk_buff_cemi_force_oe_l : std_logic;
+    signal clk_buff_cemj_force_oe_l : std_logic;
 
     
 
@@ -226,6 +261,7 @@ begin
     from_cem_pre_sync(9).prsnt_l <= cemj_to_fpga2_prsnt_l;
     from_cem_pre_sync(9).pwrflt_l <= cemj_to_fpga2_pwrflt_l;
     from_cem_pre_sync(9).sharkfin_present <= cemj_to_fpga2_sharkfin_present;
+
 
     -- Deal with I/O expander here
     pca_gen: for i in io'range generate -- outer 0 to 1 loop for each pca device
@@ -317,56 +353,90 @@ begin
             to_sp5 => to_sp5(i)-- send I/O out to i/o expander
         );
     end generate;
+    
+    hp_debug_regs_inst: entity work.hp_debug_regs
+     port map(
+        clk => clk,
+        reset => reset,
+        awvalid => awvalid,
+        awready => awready,
+        awaddr => awaddr,
+        wvalid => wvalid,
+        wready => wready,
+        wdata => wdata,
+        wstrb => wstrb,
+        bvalid => bvalid,
+        bready => bready,
+        bresp => bresp,
+        arvalid => arvalid,
+        arready => arready,
+        araddr => araddr,
+        rvalid => rvalid,
+        rready => rready,
+        rdata => rdata,
+        rresp => rresp,
+        clk_buff_cema_force_oe_l => clk_buff_cema_force_oe_l,
+        clk_buff_cemb_force_oe_l => clk_buff_cemb_force_oe_l,
+        clk_buff_cemc_force_oe_l => clk_buff_cemc_force_oe_l,
+        clk_buff_cemd_force_oe_l => clk_buff_cemd_force_oe_l,
+        clk_buff_ceme_force_oe_l => clk_buff_ceme_force_oe_l,
+        clk_buff_cemf_force_oe_l => clk_buff_cemf_force_oe_l,
+        clk_buff_cemg_force_oe_l => clk_buff_cemg_force_oe_l,
+        clk_buff_cemh_force_oe_l => clk_buff_cemh_force_oe_l,
+        clk_buff_cemi_force_oe_l => clk_buff_cemi_force_oe_l,
+        clk_buff_cemj_force_oe_l => clk_buff_cemj_force_oe_l,
+        clk_buff_ufl_force_oe_l => fpga2_to_clk_buff_ufl_oe_l
+    );
 
     -- CEMA outputs
     fpga2_to_cema_attnled <= to_cem(0).attnled;
     fpga2_to_cema_perst_l <= cem_perst_l(0);
     fpga2_to_cema_pwren <= to_cem(0).pwren;
-    fpga2_to_clk_buff_cema_oe_l <=cem_clk_en_l(0);
+    fpga2_to_clk_buff_cema_oe_l <=cem_clk_en_l(0) and clk_buff_cema_force_oe_l;
     -- CEMB outputs
     fpga2_to_cemb_attnled <= to_cem(1).attnled;
     fpga2_to_cemb_perst_l <= cem_perst_l(1);
     fpga2_to_cemb_pwren <= to_cem(1).pwren;
-    fpga2_to_clk_buff_cemb_oe_l <=cem_clk_en_l(1);
+    fpga2_to_clk_buff_cemb_oe_l <=cem_clk_en_l(1) and clk_buff_cemb_force_oe_l;
     -- CEMC outputs
     fpga2_to_cemc_attnled <= to_cem(2).attnled;
     fpga2_to_cemc_perst_l <= cem_perst_l(2);
     fpga2_to_cemc_pwren <= to_cem(2).pwren;
-    fpga2_to_clk_buff_cemc_oe_l <=cem_clk_en_l(2);
+    fpga2_to_clk_buff_cemc_oe_l <=cem_clk_en_l(2) and clk_buff_cemc_force_oe_l;
     -- CEMD outputs
     fpga2_to_cemd_attnled <= to_cem(3).attnled;
     fpga2_to_cemd_perst_l <= cem_perst_l(3);
     fpga2_to_cemd_pwren <= to_cem(3).pwren;
-    fpga2_to_clk_buff_cemd_oe_l <=cem_clk_en_l(3);
+    fpga2_to_clk_buff_cemd_oe_l <=cem_clk_en_l(3) and clk_buff_cemd_force_oe_l;
     -- CEME outputs
     fpga2_to_ceme_attnled <= to_cem(4).attnled;
     fpga2_to_ceme_perst_l <= cem_perst_l(4);
     fpga2_to_ceme_pwren <= to_cem(4).pwren;
-    fpga2_to_clk_buff_ceme_oe_l <=cem_clk_en_l(4);
+    fpga2_to_clk_buff_ceme_oe_l <=cem_clk_en_l(4) and clk_buff_ceme_force_oe_l;
     -- CEMF outputs
     fpga2_to_cemf_attnled <= to_cem(5).attnled;
     fpga2_to_cemf_perst_l <= cem_perst_l(5);
     fpga2_to_cemf_pwren <= to_cem(5).pwren;
-    fpga2_to_clk_buff_cemf_oe_l <=cem_clk_en_l(5);
+    fpga2_to_clk_buff_cemf_oe_l <=cem_clk_en_l(5) and clk_buff_cemf_force_oe_l;
     -- CEMG outputs
     fpga2_to_cemg_attnled <= to_cem(6).attnled;
     fpga2_to_cemg_perst_l <= cem_perst_l(6);
     fpga2_to_cemg_pwren <= to_cem(6).pwren;
-    fpga2_to_clk_buff_cemg_oe_l <=cem_clk_en_l(6);
+    fpga2_to_clk_buff_cemg_oe_l <=cem_clk_en_l(6) and clk_buff_cemg_force_oe_l;
     -- CEMH outputs
     fpga2_to_cemh_attnled <= to_cem(7).attnled;
     fpga2_to_cemh_perst_l <= cem_perst_l(7);
     fpga2_to_cemh_pwren <= to_cem(7).pwren;
-    fpga2_to_clk_buff_cemh_oe_l <=cem_clk_en_l(7);
+    fpga2_to_clk_buff_cemh_oe_l <=cem_clk_en_l(7) and clk_buff_cemh_force_oe_l;
     -- CEMI outputs
     fpga2_to_cemi_attnled <= to_cem(8).attnled;
     fpga2_to_cemi_perst_l <= cem_perst_l(8);
     fpga2_to_cemi_pwren <= to_cem(8).pwren;
-    fpga2_to_clk_buff_cemi_oe_l <=cem_clk_en_l(8);
+    fpga2_to_clk_buff_cemi_oe_l <=cem_clk_en_l(8) and clk_buff_cemi_force_oe_l;
     -- CEMJ outputs
     fpga2_to_cemj_attnled <= to_cem(9).attnled;
     fpga2_to_cemj_perst_l <= cem_perst_l(9);
     fpga2_to_cemj_pwren <= to_cem(9).pwren;
-    fpga2_to_clk_buff_cemj_oe_l <=cem_clk_en_l(9);
+    fpga2_to_clk_buff_cemj_oe_l <=cem_clk_en_l(9) and clk_buff_cemj_force_oe_l;
 
 end rtl;

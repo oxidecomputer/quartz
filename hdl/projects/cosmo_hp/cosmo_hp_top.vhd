@@ -223,7 +223,8 @@ architecture rtl of cosmo_hp_top is
     constant config_array : axil_responder_cfg_array_t := 
     (0 => (base_addr => x"00000000", addr_span_bits => 8),
      1 => (base_addr => x"00000100", addr_span_bits => 8),
-     2 => (base_addr => x"00000200", addr_span_bits => 8)
+     2 => (base_addr => x"00000200", addr_span_bits => 8),
+     3 => (base_addr => x"00000300", addr_span_bits => 8)
      );
 
     signal sp_write_address_addr : std_logic_vector(15 downto 0);
@@ -286,6 +287,7 @@ architecture rtl of cosmo_hp_top is
     alias amd_gen_int_l is fpga2_to_fpga1_io(2); -- goes to fpga1 which can do the alert generation
     signal amd_gen_int : std_logic;
     signal spi_fpga2_to_sp_mux_dat_int : std_logic;
+    signal fpga2_to_clk_buff_ufl_oe_l_int : std_logic;
     
 begin
 
@@ -340,7 +342,7 @@ begin
     fpga2_to_v12_mcio_a0hp_hsc_en <= '0';
     fpga2_to_clk_buff_mcio_oe_l <= 'Z';
     -- pin the ufl clock buffer off
-    fpga2_to_clk_buff_ufl_oe_l <= 'Z';
+    fpga2_to_clk_buff_ufl_oe_l <= '0' when fpga2_to_clk_buff_ufl_oe_l_int = '0' else 'Z';
 
     ---------------------------------------
     -- Hubris SPI interface
@@ -580,6 +582,28 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
      port map(
         clk => clk_50m,
         reset => reset_50m,
+         --   AXI interface
+        awvalid => responders_write_address_valid(3),
+        awready => responders_write_address_ready(3),
+        awaddr => responders_write_address_addr(3)(7 downto 0),
+        -- write data channel
+        wvalid => responders_write_data_valid(3),
+        wready => responders_write_data_ready(3),
+        wdata => responders_write_data_data(3),
+        wstrb => responders_write_data_strb(3),
+        -- write response channel
+        bvalid => responders_write_response_valid(3),
+        bready => responders_write_response_ready(3),
+        bresp => responders_write_response_resp(3),
+        -- read address channel
+        arvalid => responders_read_address_valid(3),
+        arready => responders_read_address_ready(3),
+        araddr => responders_read_address_addr(3)(7 downto 0),
+        -- read data channel
+        rvalid => responders_read_data_valid(3),
+        rready => responders_read_data_ready(3),
+        rdata => responders_read_data_data(3),
+        rresp => responders_read_data_resp(3),
         cema_to_fpga2_alert_l => cema_to_fpga2_alert_l,
         cema_to_fpga2_ifdet_l => cema_to_fpga2_ifdet_l,
         cema_to_fpga2_pg_l => cema_to_fpga2_pg_l,
@@ -680,6 +704,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         fpga2_to_cemj_perst_l => fpga2_to_cemj_perst_l_int,
         fpga2_to_cemj_pwren => fpga2_to_cemj_pwren,
         fpga2_to_clk_buff_cemj_oe_l => fpga2_to_clk_buff_cemj_oe_l_int,
+        fpga2_to_clk_buff_ufl_oe_l => fpga2_to_clk_buff_ufl_oe_l_int,
         io => pca_io,
         io_o => pca_io_o,
         io_oe => pca_io_oe

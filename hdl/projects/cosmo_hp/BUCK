@@ -15,10 +15,21 @@ rdl_file(
     ]
 )
 
+rdl_file(
+    name = "hp_debug_regs_rdl",
+    src = "hp_subsystem/hp_debug_regs.rdl",
+    outputs = [
+        "hp_debug_regs.html", 
+        "hp_debug_regs.json",
+        "hp_debug_regs_pkg.vhd"
+    ]
+)
+
 vhdl_unit(
     name = "hp_subsystem_top",
     srcs = glob(["hp_subsystem/*.vhd"]),
     deps = [
+        ":hp_debug_regs_rdl",
         "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_top",
     ],
     standard = "2008",
