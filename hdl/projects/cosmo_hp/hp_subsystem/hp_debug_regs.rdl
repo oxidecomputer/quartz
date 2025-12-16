@@ -1,0 +1,60 @@
+// Copyright 2025 Oxide Computer Company
+// This is SystemRDL description of the sw-accessible common board-info registers
+
+addrmap hp_debug_regs {
+    name = "Hotplug Debug Registers";
+    desc = "Registers accessible on the Axi bus (via SP SPI) providing hotplug debug functionality";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+ reg {
+        name = "clk_en_force";
+        desc = "";
+
+        field {
+            default sw = r;
+            desc = "Set to 1 to force on the UFL clock buffer";
+        } ufl_clk_buf_force_on[10:10] =  0;
+        field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cema_clk_buf_force_on[9:9] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemb_clk_buf_force_on[8:8] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemc_clk_buf_force_on[7:7] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemd_clk_buf_force_on[6:6] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } ceme_clk_buf_force_on[5:5] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemf_clk_buf_force_on[4:4] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemg_clk_buf_force_on[3:3] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemh_clk_buf_force_on[2:2] =  0;
+         field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemi_clk_buf_force_on[1:1] =  0;
+        field {
+            default sw = r;
+            desc = "Set to 1 to force on the CEM(n) clock buffer";
+        } cemj_clk_buf_force_on[0:0] =  0;
+    } clk_buf_force;
+};
