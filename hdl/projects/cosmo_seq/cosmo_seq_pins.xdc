@@ -255,13 +255,13 @@ set_property -dict { PACKAGE_PIN G4 IOSTANDARD LVCMOS33 } [get_ports { v12_ddr5_
 set_property -dict { PACKAGE_PIN G3 IOSTANDARD LVCMOS33 } [get_ports { v12_ddr5_ghijkl_a0_pg }];
 set_property -dict { PACKAGE_PIN T19 IOSTANDARD LVCMOS33 } [get_ports { v12p0_nic_a0hp_pg }];
 set_property -dict { PACKAGE_PIN G6 IOSTANDARD LVCMOS33 } [get_ports { v12p0_nic_a0hp_to_fpga1_fault_l }];
-set_property -dict { PACKAGE_PIN U18 IOSTANDARD LVCMOS33 } [get_ports { v1p1_nic_enet_a0hp_pg }];
+set_property -dict { PACKAGE_PIN U18 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_u18 }];
 set_property -dict { PACKAGE_PIN AB16 IOSTANDARD LVCMOS33 } [get_ports { v1p1_sp5_en }];
 set_property -dict { PACKAGE_PIN T15 IOSTANDARD LVCMOS33 } [get_ports { v1p1_sp5_pg }];
 set_property -dict { PACKAGE_PIN Y20 IOSTANDARD LVCMOS33 } [get_ports { v1p2_fpga2_a2_pg }];
-set_property -dict { PACKAGE_PIN R16 IOSTANDARD LVCMOS33 } [get_ports { v1p2_nic_enet_a0hp_pg }];
-set_property -dict { PACKAGE_PIN P16 IOSTANDARD LVCMOS33 } [get_ports { v1p2_nic_pcie_a0hp_pg }];
-set_property -dict { PACKAGE_PIN R18 IOSTANDARD LVCMOS33 } [get_ports { v1p5_nic_a0hp_pg }];
+set_property -dict { PACKAGE_PIN R16 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_r16 }];
+set_property -dict { PACKAGE_PIN P16 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_p16 }];
+set_property -dict { PACKAGE_PIN R18 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_r18 }];
 set_property -dict { PACKAGE_PIN AB17 IOSTANDARD LVCMOS33 } [get_ports { v1p8_sp5_en }];
 set_property -dict { PACKAGE_PIN T14 IOSTANDARD LVCMOS33 } [get_ports { v1p8_sp5_pg }];
 set_property -dict { PACKAGE_PIN AA20 IOSTANDARD LVCMOS33 } [get_ports { v2p5_fpga2_a2_pg }];
