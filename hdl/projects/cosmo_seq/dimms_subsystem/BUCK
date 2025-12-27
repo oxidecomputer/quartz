@@ -55,20 +55,6 @@ vunit_sim(
 )
 
 vunit_sim(
-    name = "spd_proxy_tb",
-    srcs = glob(["sims/spd_proxy_tb/*.vhd"]),
-    deps = [
-        ":dimms_subsystem_top",
-        ":spd_shared_sim_pkg",
-        "//hdl/ip/vhd/vunit_components:basic_stream",
-        "//hdl/ip/vhd/vunit_components:i2c_cmd_vc",
-        "//hdl/ip/vhd/vunit_components:i2c_target_vc",
-        "//hdl/ip/vhd/vunit_components:i2c_controller_vc"
-    ],
-    visibility = ['PUBLIC'],
-)
-
-vunit_sim(
     name = "spd_proxy_top_tb",
     srcs = glob(["sims/*.vhd"], exclude = ["sims/*tb_pkg.vhd"]),
     deps = [
