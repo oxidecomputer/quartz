@@ -414,6 +414,7 @@ architecture rtl of cosmo_seq_top is
     signal dbg_pins_uart_out_rts_l : std_logic;
     signal dbg_pins_uart_in : std_logic;
     signal dbg_pins_uart_in_rts_l : std_logic;
+    signal uart_headder_fall_back_to_debug_pins : std_logic;
 
 begin
 
@@ -584,7 +585,7 @@ begin
     -- Comso rev2+ has a dedicated UART port on the board, use that for rev2+
     process(all)
     begin
-        if is_rev1 then
+        if is_rev1 or uart_headder_fall_back_to_debug_pins then
             -- Use spare dbg pins for UART
             fpga1_spare_v3p3_6 <= dbg_pins_uart_in_rts_l;
             fpga1_spare_v3p3_7 <= dbg_pins_uart_out;
@@ -862,7 +863,10 @@ begin
         reset => reset_125m,
         axi_if => responders_8b(DBG_CTRL_RESP_IDX),
         in_a0 => a0_ok,
+        fpga2_hp_irq_n => fpga2_hp_irq_n,
+        hp_int_n => hp_int_n,
         sp5_debug2_pin => sp5_to_fpga1_debug2,
+        uart_headder_fall_back_to_debug_pins => uart_headder_fall_back_to_debug_pins,
         uart_dbg_if => uart_dbg_if,
          -- hotplug
         i2c_sp5_to_fpgax_hp_sda => i2c_sp5_to_fpgax_hp_sda,

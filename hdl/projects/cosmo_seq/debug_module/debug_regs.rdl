@@ -13,6 +13,10 @@ addrmap debug_regs {
     reg {
            name = "UART Debug Control";
            field {
+                desc = "Set to 1 on rev2+ to use the debug UART header pins instead of the dedicated UART interface pins.
+                This allows the use of the rev1 debug header for UART on rev2+ boards.";
+           } use_debug_header[1:1] = 0;
+           field {
                desc = "Set to 1 to send the SP5's console UART out the UART debug header. By default
                this is muxed to the SP's console UART, setting this takes the data away from the SP and 
                sends it out the debug header with flow control.";
