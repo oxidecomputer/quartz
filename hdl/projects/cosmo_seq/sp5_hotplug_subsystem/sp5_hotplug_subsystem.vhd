@@ -185,7 +185,6 @@ begin
     t6_perst_l <= t6_power_en;
 
     -- Backplane connected switch
-    -- TODO: this stuff is likely not totally correct
     pcie_aux_power_en <= not io_o(3)(4) when io_oe(3)(4) else '0';
     pcie_perst_oneshot: entity work.perst_oneshot
      generic map(
