@@ -32,6 +32,9 @@ entity debug_module_top is
         fpga2_hp_irq_n : in std_logic;
         hp_int_n : in std_logic;
 
+        fpga2_hp_irq_n : in std_logic;
+        hp_int_n : in std_logic;
+
         uart_dbg_if : view uart_dbg_dbg_if;
 
         -- hotplug
