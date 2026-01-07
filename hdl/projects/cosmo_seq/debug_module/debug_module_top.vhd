@@ -28,6 +28,9 @@ entity debug_module_top is
         in_a0 : in std_logic;
         sp5_debug2_pin : in std_logic;
 
+        fpga2_hp_irq_n : in std_logic;
+        hp_int_n : in std_logic;
+
         uart_dbg_if : view uart_dbg_dbg_if;
 
         -- hotplug
@@ -267,6 +270,7 @@ begin
                     when SP5_DBG2_TOGGLE_COUNTER_OFFSET => rdata <= pin_toggle_cnts;
                     when SP5_DBG2_TOGGLE_TIMER_OFFSET => rdata <= clks_since_last_toggle;
                     when DBG_1V8_CTRL_OFFSET => rdata <= pack(dbg_1v8_ctrl);
+                    when HP_INT_L_OFFSET => rdata <= (31 downto 2 => '0') & fpga2_hp_irq_n & hp_int_n; 
                     when others => rdata <= (others => '0');
                 end case;
             end if;
