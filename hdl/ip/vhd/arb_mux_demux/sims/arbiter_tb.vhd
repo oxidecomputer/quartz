@@ -74,6 +74,30 @@ begin
                 check(grants = 3x"1", "Expected only one grant, lsb");
             elsif run("prio_arbiter_test") then
                 msg_target := find("pri_arb_ctrl");
+
+                -- put 1 bits active, show only one bit granted, the lsb
+                requests := 3x"2";
+                set_arb(net, msg_target, requests);
+                wait for 20 ns;
+                get_grant(net, msg_target, grants);
+                check(grants = 3x"2", "Expected only one grant, not lsb");
+                -- without de-asserting that request put in the priority one also
+                requests := 3x"3";
+                set_arb(net, msg_target, requests);
+                wait for 20 ns;
+                get_grant(net, msg_target, grants);
+                check(grants = 3x"2", "Expected only one grant, not lsb");
+                -- clear that granted request, should move up to the next
+                requests := 3x"1";
+                set_arb(net, msg_target, requests);
+                wait for 20 ns;
+                get_grant(net, msg_target, grants);
+                check(grants = 3x"1", "Expected only one grant, lsb");
+
+                requests := 3x"0";
+                set_arb(net, msg_target, requests);
+                wait for 20 ns;
+
                 -- put 3 bits active, show only one bit granted, the lsb
                 requests := 3x"7";
                 set_arb(net, msg_target, requests);

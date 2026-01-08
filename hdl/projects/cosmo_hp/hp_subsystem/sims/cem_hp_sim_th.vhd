@@ -84,6 +84,27 @@ begin
      port map(
         clk => clk,
         reset => reset,
+        awvalid => '0',
+        awready => open,
+        awaddr => (others => '0'),
+        -- write data channel
+        wvalid => '0',
+        wready => open,
+        wdata => (others => '0'),
+        wstrb => (others => '0'),
+        -- write response channel
+        bvalid => open,
+        bready => '0',
+        bresp => open,
+        -- read address channel
+        arvalid => '0',
+        arready => open,
+        araddr => (others => '0'),
+        -- read data channel
+        rvalid => open,
+        rready => '0',
+        rdata => open,
+        rresp => open,
         cema_to_fpga2_alert_l => cema_to_fpga2_alert_l,
         cema_to_fpga2_ifdet_l => cema_to_fpga2_ifdet_l,
         cema_to_fpga2_pg_l => cema_to_fpga2_pg_l,
