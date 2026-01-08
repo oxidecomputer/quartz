@@ -140,7 +140,7 @@ set_io --warn-no-port i2c_sp5_to_fpga2_sda L7
 set_io --warn-no-port i2c_sp5_to_fpga2_xltr_en N2
 set_io --warn-no-port smbus_sp_to_fpga2_smclk T7
 set_io --warn-no-port smbus_sp_to_fpga2_smdat T8
-set_io --warn-no-port sp5_to_fpga_genint_3v3_l K5
+set_io --warn-no-port -pullup yes sp5_to_fpga_genint_3v3_l K5
 set_io --warn-no-port sp_to_fpga2_system_reset_l N6
 set_io --warn-no-port spi_fpga2_to_sp_mux_dat P12
 set_io --warn-no-port spi_sp_mux_to_fpga2_cs_l R12
