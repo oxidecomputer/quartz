@@ -74,7 +74,15 @@ vu.add_verification_components()
 vu.set_sim_option("disable_ieee_warnings", True)
 {% if simulator == "nvc" %}
 # Dump arrays of records, may have a perf penalty
-vu.set_sim_option("nvc.sim_flags", ["--dump-arrays"])
+nvc_sim_flags = ["--dump-arrays"]
+{% if rust_cosim %}
+# Load Rust cosimulation library
+nvc_sim_flags.append("--load")
+nvc_sim_flags.append("{{rust_cosim}}")
+# Set GPI_USERS environment variable for Rust cosimulation
+os.environ["GPI_USERS"] = "{{rust_cosim}}"
+{% endif %}
+vu.set_sim_option("nvc.sim_flags", nvc_sim_flags)
 vu.set_sim_option("nvc.global_flags", ["--ignore-time"])
 {% endif %}
 # Run vunit function

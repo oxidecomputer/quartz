@@ -125,6 +125,8 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd.add("--output", out_run_py.as_output())
         if ctx.attrs.simulator:
             cmd.add("--simulator", ctx.attrs.simulator)
+        if ctx.attrs.rust_cosim:
+            cmd.add("--rust-cosim", ctx.attrs.rust_cosim)
         ctx.actions.run(cmd, category="vunit")
 
         # Left here as an example of how to put the vunit_out
@@ -224,6 +226,11 @@ vhdl_unit = rule(
         "simulator": attrs.string(
             doc="nvc or ghdl",
             default="nvc",
+        ),
+        "rust_cosim": attrs.option(
+            attrs.string(),
+            doc="Path to Rust cosim library (sets both GPI_USERS env var and NVC --load flag)",
+            default=None,
         ),
         "_toolchain": attrs.toolchain_dep(
             doc="Use system python toolchain for running VUnit",
