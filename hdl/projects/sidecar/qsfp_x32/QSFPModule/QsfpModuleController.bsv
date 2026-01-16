@@ -21,6 +21,7 @@ export get_registers;
 export get_i2c_data;
 export get_status;
 export get_control;
+export get_debug;
 
 // BSV
 import BRAM::*;
@@ -458,5 +459,7 @@ function ReadOnly#(PortStatus) get_status(QsfpModuleController m) =
     m.registers.port_status;
 function Reg#(PortControl) get_control(QsfpModuleController m) =
     m.registers.port_control;
+function Reg#(PortDebug) get_debug(QsfpModuleController m) =
+    m.registers.port_debug;
 
 endpackage: QsfpModuleController

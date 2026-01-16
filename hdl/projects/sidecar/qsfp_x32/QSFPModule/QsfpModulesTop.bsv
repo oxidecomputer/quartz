@@ -71,6 +71,7 @@ interface Registers;
     interface ReadOnly#(ModIntl0) mod_intl0;
     interface ReadOnly#(ModIntl1) mod_intl1;
     interface Vector#(16, ReadVolatileReg#(Bit#(8))) mod_i2c_data;
+    interface Vector#(16, Reg#(PortDebug)) mod_debugs;
 endinterface
 
 interface QsfpModulesTop;
@@ -238,6 +239,8 @@ module mkQsfpModulesTop #(Parameters parameters) (QsfpModulesTop);
             valueToReadOnly(unpack(pack(map(readReg, pg_lost_bits_r))[15:8]));
         interface mod_i2c_data =
             map(QsfpModuleController::get_i2c_data, qsfp_ports);
+        interface mod_debugs =
+            map(QsfpModuleController::get_debug, qsfp_ports);
     endinterface
 
     interface module_pins = map(QsfpModuleController::get_pins, qsfp_ports);
