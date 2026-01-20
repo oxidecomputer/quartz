@@ -136,7 +136,7 @@ module mkI2CBitController #(
     ConfigReg#(Bool) scl_active <- mkConfigReg(False);
     Reg#(ShiftBits) shift_bits  <- mkReg(shift_bits_reset);
     Reg#(Bool) read_finished    <- mkReg(False);
-    Wire#(Bool) abort_requested <- mkWire();
+    Wire#(Bool) abort_requested <- mkDWire(False);
     Reg#(Bool) ack_sending      <- mkReg(False);
     PulseWire begin_transaction <- mkPulseWire();
 
