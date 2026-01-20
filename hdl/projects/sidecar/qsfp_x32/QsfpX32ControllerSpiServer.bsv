@@ -152,6 +152,22 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
                 fromInteger(qsfpPort13I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[13]);
                 fromInteger(qsfpPort14I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[14]);
                 fromInteger(qsfpPort15I2cDataOffset): read_volatile(qsfp_top.mod_i2c_data[15]);
+                fromInteger(qsfpPort0DebugOffset): read(qsfp_top.mod_debugs[0]);
+                fromInteger(qsfpPort1DebugOffset): read(qsfp_top.mod_debugs[1]);
+                fromInteger(qsfpPort2DebugOffset): read(qsfp_top.mod_debugs[2]);
+                fromInteger(qsfpPort3DebugOffset): read(qsfp_top.mod_debugs[3]);
+                fromInteger(qsfpPort4DebugOffset): read(qsfp_top.mod_debugs[4]);
+                fromInteger(qsfpPort5DebugOffset): read(qsfp_top.mod_debugs[5]);
+                fromInteger(qsfpPort6DebugOffset): read(qsfp_top.mod_debugs[6]);
+                fromInteger(qsfpPort7DebugOffset): read(qsfp_top.mod_debugs[7]);
+                fromInteger(qsfpPort8DebugOffset): read(qsfp_top.mod_debugs[8]);
+                fromInteger(qsfpPort9DebugOffset): read(qsfp_top.mod_debugs[9]);
+                fromInteger(qsfpPort10DebugOffset): read(qsfp_top.mod_debugs[10]);
+                fromInteger(qsfpPort11DebugOffset): read(qsfp_top.mod_debugs[11]);
+                fromInteger(qsfpPort12DebugOffset): read(qsfp_top.mod_debugs[12]);
+                fromInteger(qsfpPort13DebugOffset): read(qsfp_top.mod_debugs[13]);
+                fromInteger(qsfpPort14DebugOffset): read(qsfp_top.mod_debugs[14]);
+                fromInteger(qsfpPort15DebugOffset): read(qsfp_top.mod_debugs[15]);
 
                 default: read(8'hff);
             endcase;
@@ -277,6 +293,38 @@ module mkSpiServer #(VSC8562::Registers vsc8562,
                 write(spi_request.op, qsfp_top.mod_i2c_data[14]._write, spi_request.wdata);
             fromInteger(qsfpPort15I2cDataOffset):
                 write(spi_request.op, qsfp_top.mod_i2c_data[15]._write, spi_request.wdata);
+            fromInteger(qsfpPort0DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[0], spi_request.wdata);
+            fromInteger(qsfpPort1DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[1], spi_request.wdata);
+            fromInteger(qsfpPort2DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[2], spi_request.wdata);
+            fromInteger(qsfpPort3DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[3], spi_request.wdata);
+            fromInteger(qsfpPort4DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[4], spi_request.wdata);
+            fromInteger(qsfpPort5DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[5], spi_request.wdata);
+            fromInteger(qsfpPort6DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[6], spi_request.wdata);
+            fromInteger(qsfpPort7DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[7], spi_request.wdata);
+            fromInteger(qsfpPort8DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[8], spi_request.wdata);
+            fromInteger(qsfpPort9DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[9], spi_request.wdata);
+            fromInteger(qsfpPort10DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[10], spi_request.wdata);
+            fromInteger(qsfpPort11DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[11], spi_request.wdata);
+            fromInteger(qsfpPort12DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[12], spi_request.wdata);
+            fromInteger(qsfpPort13DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[13], spi_request.wdata);
+            fromInteger(qsfpPort14DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[14], spi_request.wdata);
+            fromInteger(qsfpPort15DebugOffset):
+                update(spi_request.op, qsfp_top.mod_debugs[15], spi_request.wdata);
         endcase
     endrule 
 

@@ -132,6 +132,7 @@ addrmap qsfp_modules_top {
             I2cAddressNack = 4'h5 {desc = "Module nack'd the address";};
             I2cByteNack = 4'h6 {desc = "Module nack'd a byte";};
             I2cSclStretchTimeout = 4'h7 {desc = "Module stretched SCL longer than T_clock_hold";};
+            I2cTransactionTimeout = 4'h8 {desc = "The transaction did not complete in time and was aborted";};
         };
 
         field {
@@ -515,4 +516,33 @@ addrmap qsfp_modules_top {
         default sw = r;
         field {} DATA[7:0];
     } PORT15_I2C_DATA;
+
+    //
+    // Debug Registers
+    //
+
+    reg port_debug {
+        desc = "Registers primarily for use in testing";
+
+        field {
+            desc = "Setting this bit will force an I2C timeout on the current transaction. If one is not in progress, the next one will be aborted. This bit clears itself after a timeout happens.";
+        } FORCE_I2C_TIMEOUT[0:0] = 0;
+    };
+
+    port_debug PORT0_DEBUG;
+    port_debug PORT1_DEBUG;
+    port_debug PORT2_DEBUG;
+    port_debug PORT3_DEBUG;
+    port_debug PORT4_DEBUG;
+    port_debug PORT5_DEBUG;
+    port_debug PORT6_DEBUG;
+    port_debug PORT7_DEBUG;
+    port_debug PORT8_DEBUG;
+    port_debug PORT9_DEBUG;
+    port_debug PORT10_DEBUG;
+    port_debug PORT11_DEBUG;
+    port_debug PORT12_DEBUG;
+    port_debug PORT13_DEBUG;
+    port_debug PORT14_DEBUG;
+    port_debug PORT15_DEBUG;
 };

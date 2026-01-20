@@ -54,6 +54,8 @@ interface I2CBitController;
     // clock stretching information sent sideband from the state machine events
     method Bool scl_stretch_seen();
     method Bool scl_stretch_timeout();
+
+    method Action abort(Bool abort);
 endinterface
 
 //
@@ -134,6 +136,7 @@ module mkI2CBitController #(
     ConfigReg#(Bool) scl_active <- mkConfigReg(False);
     Reg#(ShiftBits) shift_bits  <- mkReg(shift_bits_reset);
     Reg#(Bool) read_finished    <- mkReg(False);
+    Wire#(Bool) abort_requested <- mkDWire(False);
     Reg#(Bool) ack_sending      <- mkReg(False);
     PulseWire begin_transaction <- mkPulseWire();
 
@@ -352,7 +355,7 @@ module mkI2CBitController #(
 
             {TransmitAck, .*}: begin
                 if (sda_transition_strobe && !ack_sending) begin
-                    sda_out_en  <= ~pack(read_finished);
+                    sda_out_en  <= ~pack(read_finished || abort_requested);
                     ack_sending <= True;
                 end
 
@@ -425,6 +428,8 @@ module mkI2CBitController #(
 
     method scl_stretch_seen     = scl_stretch_seen_r;
     method scl_stretch_timeout  = scl_stretch_timeout_r;
+
+    method abort = abort_requested._write;
 endmodule
 
 endpackage: I2CBitController

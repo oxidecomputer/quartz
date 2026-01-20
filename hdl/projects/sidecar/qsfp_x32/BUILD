@@ -56,6 +56,7 @@ bluespec_library('QsfpModuleController',
         '//hdl/ip/bsv:PowerRail',
         '//hdl/ip/bsv/I2C:I2CCore',
         '//hdl/ip/bsv:Bidirection',
+        '//hdl/ip/bsv:Countdown',
         '//hdl/ip/bsv:Debouncer',
     ])
 
@@ -168,6 +169,8 @@ bluesim_tests('QsfpModuleControllerTests',
         'mkUninitializationAfterRemovalTest',
         'mkI2CSclStretchTimeoutTest',
         'mkI2CSclStretchTest',
+        'mkI2CReadTimeoutTest',
+        'mkI2CWriteTimeoutTest',
     ],
     deps = [
         '//hdl/ip/bsv:Strobe',
