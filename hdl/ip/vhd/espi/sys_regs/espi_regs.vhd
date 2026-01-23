@@ -26,7 +26,9 @@ entity espi_regs is
         post_code_valid : in std_logic;
         espi_reset : in std_logic;
         -- debug interface
-        dbg_chan : view dbg_regs_if
+        dbg_chan : view dbg_regs_if;
+        to_host_tx_fifo_usedwds : in std_logic_vector(12 downto 0);
+        ipcc_to_host_byte_cntr : in std_logic_vector(31 downto 0);
 
 
     );
@@ -154,6 +156,10 @@ begin
                         resp_fifo_ack <= '1';
                     when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
                     when POST_CODE_COUNT_OFFSET => rdata <= pack(post_code_count_reg);
+                    when IPCC_TO_HOST_USEDWDS_OFFSET =>
+                        rdata <= resize(to_host_tx_fifo_usedwds, rdata'length);
+                    when IPCC_TO_HOST_BYTE_CNTR_OFFSET =>
+                        rdata <= ipcc_to_host_byte_cntr;
                     when POST_CODE_BUFFER_MEM_RANGE =>
                         rdata <= post_code_buffer_rdata;
                     when others =>

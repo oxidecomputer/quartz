@@ -62,6 +62,7 @@ architecture rtl of sp5_uart_subsystem is
 
     signal fgpa_sp_to_host_int : std_logic;
     signal fpga_sp_to_host_int_rts_l : std_logic;
+    signal ipcc_reset : std_logic;
 
 begin
 
@@ -158,6 +159,20 @@ begin
         tx_ready => console_sp_to_host.ready
     );
 
+    process(clk, reset)
+    begin
+        if reset = '1' then
+            ipcc_reset <= '1';
+
+        elsif rising_edge(clk) then
+            if in_a0 = '0' then
+                ipcc_reset <= '1';
+            else
+                ipcc_reset <= '0';
+            end if;
+        end if;
+    end process;
+
     -- IPCC UART over eSPI
     sp_uart1: entity work.axi_fifo_st_uart
      generic map(
@@ -169,7 +184,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => ipcc_reset,
         rx_pin => ipcc_from_sp,
         tx_pin => ipcc_to_sp,
         rts_pin => ipcc_to_sp_rts_l,
@@ -180,7 +195,7 @@ begin
         uart_rts_pin_copy => dbg_if.sp_uart1.uart_rts_pin_copy,
         uart_cts_pin_copy => dbg_if.sp_uart1.uart_cts_pin_copy,
         axi_clk => clk,
-        axi_reset => reset,
+        axi_reset => ipcc_reset,
         rx_ready => ipcc_to_espi.ready,
         rx_data => ipcc_to_espi.data,
         rx_valid => ipcc_to_espi.valid,

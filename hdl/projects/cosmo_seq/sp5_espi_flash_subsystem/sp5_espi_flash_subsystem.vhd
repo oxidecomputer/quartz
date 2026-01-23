@@ -55,19 +55,28 @@ architecture rtl of sp5_espi_flash_subsystem is
     signal flash_rfifo_rempty : std_logic;
     signal flash_fifo_clear : std_logic;
     signal fifo_reset : std_logic;
+    signal rst_cnts : integer range 0 to 5 := 5;
 
 
 begin
 
-        -- I don't love this pattern but we're going to combine the system reset with the 
+    -- I don't love this pattern but we're going to combine the system reset with the 
     -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
     -- of every boot.
     rst_combine:process(clk_125m, reset_125m)
      begin
-        if reset_200m = '1' then
+        if reset_125m = '1' then
            fifo_reset <= '1';
+           rst_cnts <= 5;
         elsif rising_edge(clk_125m) then
-           fifo_reset <= flash_fifo_clear;
+            if flash_fifo_clear = '1' then
+               rst_cnts <= 5;
+               fifo_reset <= '1';
+            elsif rst_cnts > 0 then
+                rst_cnts <= rst_cnts - 1;
+            else
+                fifo_reset <= '0';
+            end if;
         end if;
     end process;
     

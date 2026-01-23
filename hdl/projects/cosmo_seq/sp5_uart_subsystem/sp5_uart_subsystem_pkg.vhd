@@ -13,7 +13,7 @@ use work.calc_pkg.all;
 package sp5_uart_subsystem_pkg is
 
     constant CONSOLE_FIFO_DEPTH : integer := 256; -- FIFO depth for UARTs
-    constant IPCC_FIFO_DEPTH : integer := 4096; -- FIFO depth for IPCC UART
+    constant IPCC_FIFO_DEPTH : integer := 16; -- FIFO depth for IPCC UART
 
     -- To the debug interface
     type console_uart_dbg_t is record

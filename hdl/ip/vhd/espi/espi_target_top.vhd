@@ -99,10 +99,13 @@ architecture rtl of espi_target_top is
     signal wait_states_slow: std_logic_vector(3 downto 0);
     signal post_code : std_logic_vector(31 downto 0);
     signal post_code_valid : std_logic;
-    signal espi_reset_strobe : std_logic;
+    signal espi_reset_strobe_125m : std_logic;
     signal espi_reset_strobe_syncd : std_logic;
     signal espi_link_layer : std_logic;
     signal dbg_espi_reset : std_logic;
+    signal to_host_tx_fifo_usedwds : std_logic_vector(12 downto 0);
+    signal ipcc_to_host_byte_cntr : std_logic_vector(31 downto 0);
+    signal oob_enabled : std_logic;
 
 begin
 
@@ -193,8 +196,6 @@ begin
         dbg_espi_reset => dbg_espi_reset
     );
 
-    -- combine our "real" espi reset with the debug one
-    espi_reset_strobe <= espi_link_layer or dbg_espi_reset;
 
     alert_needed_slow <= '1' when alert_needed else '0';
     alert_sync: entity work.meta_sync
@@ -211,11 +212,15 @@ begin
     port map(
        clk_launch => clk_200m,
        reset_launch => reset_200m,
-       pulse_in_launch => espi_reset_strobe,
+       pulse_in_launch => espi_link_layer,
        clk_latch => clk,
        reset_latch => reset,
-       pulse_out_latch => espi_reset_strobe_syncd
+       pulse_out_latch => espi_reset_strobe_125m
    );
+
+   -- combine our "real" espi reset with the debug one
+   -- we do this *after* we've crossed clock domains so this is all in the 125Mhz domain.
+    espi_reset_strobe_syncd <= espi_reset_strobe_125m or dbg_espi_reset;
 
 
    link_to_txn_bridge_inst: entity work.link_to_txn_bridge
@@ -224,7 +229,7 @@ begin
        reset_200m => reset_200m,
        clk => clk,
        reset => reset,
-       espi_reset_fast => espi_reset_strobe,
+       espi_reset_fast => espi_link_layer,
        espi_reset_slow => espi_reset_strobe_syncd,
        txn_gen_enabled => dbg_chan.enabled,
        qspi_cmd => qspi_cmd,
@@ -249,7 +254,9 @@ begin
        dbg_chan => dbg_chan,
        post_code => post_code,
        post_code_valid => post_code_valid,
-       espi_reset => espi_reset_strobe_syncd
+       espi_reset => espi_reset_strobe_syncd,
+       to_host_tx_fifo_usedwds => to_host_tx_fifo_usedwds,
+       ipcc_to_host_byte_cntr => ipcc_to_host_byte_cntr
    );
 
     -- txn layer blocks
@@ -295,7 +302,8 @@ begin
             regs_if        => regs_if,
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
-            flash_channel_enable => flash_channel_enable
+            flash_channel_enable => flash_channel_enable,
+            oob_enabled    => oob_enabled
         );
 
     -- flash access channel logic
@@ -322,6 +330,7 @@ begin
        clk => clk,
        reset => reset,
        espi_reset => espi_reset_strobe_syncd,
+       enabled => oob_enabled,
        host_to_sp_espi => host_to_sp_espi,
        sp_to_host_espi => sp_to_host_espi,
        to_sp_uart_data => to_sp_uart_data,
@@ -336,7 +345,9 @@ begin
        np_free => np_free,
        np_avail => np_avail,
        oob_avail => oob_avail,
-       oob_free => oob_free
+       oob_free => oob_free,
+       to_host_tx_fifo_usedwds => to_host_tx_fifo_usedwds,
+       ipcc_to_host_byte_cntr => ipcc_to_host_byte_cntr
    );
 
    -- vwire channel logic
