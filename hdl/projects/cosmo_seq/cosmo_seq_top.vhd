@@ -265,6 +265,7 @@ entity cosmo_seq_top is
         fpga1_to_i2c_mux1_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux2_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux3_sel : out std_logic_vector(1 downto 0);
+        fpga1_to_m2_xltr_en : out std_logic;
         fpga1_to_m2a_hsc_en : out std_logic;
         fpga1_to_m2a_perst_l : out std_logic;
         fpga1_to_m2b_hsc_en : out std_logic;
@@ -624,7 +625,8 @@ begin
         sp_sda_oe => sp_sda_oe,
         i2c_mux1_sel => fpga1_to_i2c_mux1_sel,
         i2c_mux2_sel => fpga1_to_i2c_mux2_sel,
-        i2c_mux3_sel => fpga1_to_i2c_mux3_sel
+        i2c_mux3_sel => fpga1_to_i2c_mux3_sel,
+        i2c_mux1_en => fpga1_to_m2_xltr_en
     );
     --Tristates for spi-nor flash pins and espi
     i2c_sp_to_fpga1_scl <= sp_scl_o when sp_scl_oe = '1' else 'Z';
