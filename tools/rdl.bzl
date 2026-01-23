@@ -84,6 +84,8 @@ def _rdl_file_impl(ctx):
         ctx.actions.run(
             rdl_out_gen,
             category="rdl",
+            local_only = True,
+            allow_cache_upload=True,
         )
 
         # Build TSets for the generated VHDL files as a list of VHDLFileInfo

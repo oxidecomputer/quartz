@@ -1,6 +1,6 @@
 load("//tools:hdl.bzl", "vhdl_unit", "black_box")
 load("//tools:rdl.bzl", "rdl_file")
-load("//tools:vivado.bzl", "vivado_bitstream")
+load("//tools:vivado.bzl", "vivado_bitstream", "vivado_ip")
 
 rdl_file(
     name = "cosmo_seq_top_rdl",
@@ -44,6 +44,13 @@ vhdl_unit(
     standard = "2019",
 )
 
+vivado_ip(
+    name = "cosmo_pll_ip",
+    tcl = "xilinx_ip_gen/cosmo_pll_ip_gen.tcl",
+    module_name = "cosmo_pll",
+    part = "xc7s100fgga484-1",
+)
+
 
 vhdl_unit(
     name = "cosmo_seq_top",
@@ -71,7 +78,10 @@ vivado_bitstream(
     top_entity_name="cosmo_seq_top",
     top= ":cosmo_seq_top",
     part= "xc7s100fgga484-1",
+    ip=[":cosmo_pll_ip"],
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
     post_synth_tcl_files=glob(["*ila.tcl"]),
+    pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
+    #post_synth_tcl_files=glob(["*ila.tcl"]),
 )

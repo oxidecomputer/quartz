@@ -1,0 +1,32 @@
+# Vivado.
+#
+# Expects 5 arguments: 
+# [0]: ip module name
+# [1]: expected xci name  # We have to pass these in even though we can't specify them to vivado for buck2 as these are "outputs"
+# [2]: expected checkpoint name
+# [3]: user's tcl file to run
+# [4]: target part (if blank use default)
+
+# Get tclargs here
+set name [lindex $argv 0]
+set part [lindex $argv 4]
+# Need to go up 2 levels due to how vivado generates stuff
+set dir [file dirname [file dirname [lindex $argv 1]]]
+set user_tcl [lindex $argv 3]
+
+# Vivado won't generate into the same folder, it continues appending _<number> to the end of the folder name so we blow away the folder
+# here.
+file delete -force [file dirname [lindex $argv 1]]
+
+# This is needed to generate IP
+if {${part} eq "" } {
+    create_project -in_memory 
+} else {
+    create_project -in_memory -part $part
+}
+
+# Clear out argv and change them to what our user's want
+# Expects users expect only 2 arguments, the module name and the output directory: 
+set argv [list $name $dir]
+# Run the IP generation TCL
+source $user_tcl
