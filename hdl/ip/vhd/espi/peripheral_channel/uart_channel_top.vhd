@@ -30,13 +30,12 @@ entity uart_channel_top is
 
         espi_reset : in std_logic;
         enabled : in std_logic;
+        stuff_fifo : in std_logic;
+        stuff_wds : in std_logic_vector(15 downto 0);
         
         -- eSPI Transaction interface
         host_to_sp_espi : view uart_data_sink;
         sp_to_host_espi : view uart_resp_src;
-
-        -- registers
-        msg_not_oob: in std_logic;
 
         -- Interfaces to the UART block
         to_sp_uart_data : out std_logic_vector(7 downto 0);
@@ -71,9 +70,6 @@ architecture rtl of uart_channel_top is
    signal fifo_thresh_timer : std_logic_vector(32 downto 0);
    constant delay_time : std_logic_vector(fifo_thresh_timer'range) := calc_ms(1, 5, fifo_thresh_timer'length);
    signal fifo_read_by_espi : std_logic;
-   signal msg_not_oob_syncd : std_logic;
-   alias is_data_msg : std_logic is msg_not_oob_syncd;
-   signal is_oob_msg : std_logic;
    constant hold_thresh: natural := 32;
    type orphan_state_t is (MASKED, NOT_MASKED);
    signal orphan_state: orphan_state_t;
@@ -81,28 +77,22 @@ architecture rtl of uart_channel_top is
    signal rx_fifo_bleed : std_logic;
    signal tx_fifo_bleed : std_logic;
    signal bleeding : std_logic;
+   signal enabled_last : std_logic;
+   signal stuff_write : std_logic;
+   signal stuff_cntr : std_logic_vector(15 downto 0);
 
 begin
 
     to_host_tx_fifo_usedwds <= tx_rusedwds;
-
-    meta_sync_inst: entity work.meta_sync
-     port map(
-        async_input => msg_not_oob,
-        clk => clk,
-        sycnd_output => msg_not_oob_syncd
-    );
-
-    is_oob_msg <= not msg_not_oob_syncd;
 
     -- Not going to support any Non-posted transactions
     -- on this interface
     np_free <= '0';
     np_avail <= '0';
     pc_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    pc_avail <= '1' when is_data_msg = '1' and orphan_state = NOT_MASKED else '0';
+    pc_avail <= '0';
     oob_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    oob_avail <= '1' when is_oob_msg = '1' and orphan_state = NOT_MASKED else '0';
+    oob_avail <= '1' when orphan_state = NOT_MASKED else '0';
 
     host_to_sp_espi.ready <= not rx_wfull;
     -- tx_rusedwds is potentially cycles behind the empty flag due to fifo latencies.
@@ -163,10 +153,32 @@ begin
         elsif rising_edge(clk) then
             if espi_reset then
                 ipcc_to_host_byte_cntr <= (others => '0');
-            elsif from_sp_uart_valid = '1' and from_sp_uart_ready = '1' and ipcc_to_host_byte_cntr < MAX_CNTS then
+            elsif ((from_sp_uart_valid = '1' and from_sp_uart_ready = '1') or stuff_write = '1') and ipcc_to_host_byte_cntr < MAX_CNTS then
                 ipcc_to_host_byte_cntr <= ipcc_to_host_byte_cntr + 1;
             end if;
 
+        end if;
+    end process;
+
+    dummy_stuffer: process(clk, reset)
+        variable enabled_redge: std_logic;
+    begin
+        if reset then
+            enabled_last <= '1';
+            stuff_cntr <= (others => '0');
+            stuff_write <= '0';
+        elsif rising_edge(clk) then
+            enabled_last <= enabled;
+            enabled_redge := enabled and not enabled_last;   
+            if stuff_fifo = '1' and enabled_redge = '1' then
+                stuff_cntr <= stuff_wds;
+            end if;
+            if stuff_cntr > 0 then
+                stuff_write <= '1';
+                stuff_cntr <= stuff_cntr - 1;
+            else
+                stuff_write <= '0';
+            end if;
         end if;
     end process;
 
@@ -226,7 +238,7 @@ begin
      port map(
         wclk => clk,
         reset => reset,
-        write_en => from_sp_uart_valid and from_sp_uart_ready,
+        write_en => (from_sp_uart_valid and from_sp_uart_ready) or stuff_write,
         wdata => from_sp_uart_data,
         wfull => tx_wfull,
         wusedwds => open,

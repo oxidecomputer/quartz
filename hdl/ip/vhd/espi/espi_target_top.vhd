@@ -82,7 +82,6 @@ architecture rtl of espi_target_top is
     signal sclk_syncd : std_logic;
     signal vwire_if : vwire_if_type;
     signal vwire_avail : std_logic;
-    signal msg_en : std_logic;
     signal qspi_cmd : byte_stream;
     signal qspi_resp : byte_stream;
     signal gen_cmd : byte_stream;
@@ -106,6 +105,8 @@ architecture rtl of espi_target_top is
     signal to_host_tx_fifo_usedwds : std_logic_vector(12 downto 0);
     signal ipcc_to_host_byte_cntr : std_logic_vector(31 downto 0);
     signal oob_enabled : std_logic;
+    signal stuff_fifo :  std_logic;
+    signal stuff_wds : std_logic_vector(15 downto 0);
 
 begin
 
@@ -250,7 +251,8 @@ begin
        clk => clk,
        reset => reset,
        axi_if => axi_if,
-       msg_en => msg_en,
+       stuff_fifo => stuff_fifo,
+       stuff_wds => stuff_wds,
        dbg_chan => dbg_chan,
        post_code => post_code,
        post_code_valid => post_code_valid,
@@ -331,6 +333,8 @@ begin
        reset => reset,
        espi_reset => espi_reset_strobe_syncd,
        enabled => oob_enabled,
+       stuff_fifo => stuff_fifo,
+       stuff_wds => stuff_wds,
        host_to_sp_espi => host_to_sp_espi,
        sp_to_host_espi => sp_to_host_espi,
        to_sp_uart_data => to_sp_uart_data,
@@ -339,7 +343,6 @@ begin
        from_sp_uart_data => from_sp_uart_data,
        from_sp_uart_valid => from_sp_uart_valid,
        from_sp_uart_ready => from_sp_uart_ready,
-       msg_not_oob => msg_en,
        pc_free => pc_free,
        pc_avail => pc_avail,
        np_free => np_free,
