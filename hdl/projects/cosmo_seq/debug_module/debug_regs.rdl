@@ -13,6 +13,10 @@ addrmap debug_regs {
     reg {
            name = "UART Debug Control";
            field {
+                desc = "Set to 1 on rev2+ to use the debug UART header pins instead of the dedicated UART interface pins.
+                This allows the use of the rev1 debug header for UART on rev2+ boards.";
+           } use_debug_header[1:1] = 0;
+           field {
                desc = "Set to 1 to send the SP5's console UART out the UART debug header. By default
                this is muxed to the SP's console UART, setting this takes the data away from the SP and 
                sends it out the debug header with flow control.";
@@ -171,4 +175,13 @@ addrmap debug_regs {
             desc = "convenience bit for setting up x1 espi debug out.. This uses 1v8 debug header pins 7..2. Hw clears";
         } espi_dbg_x1_en[0:0] = 0;
     } dbg_convenience;
+    reg {
+        name = "FPGA to HP IRQ Status";
+        field {
+            desc = "Live status of the FPGA2 to Hotplug IRQ signal (active low)";
+        } fpga2_to_hp_irq_n[1:1] = 0;
+        field {
+            desc = "Live status of the FPGA1 to Hotplug IRQ signal (active low)";
+        } hp_int_n[0:0] = 0;
+    } hp_int_l;
 };

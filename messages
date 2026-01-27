@@ -1,0 +1,1121 @@
+Dec 31 23:59:57 BRM44220001 genunix: [ID 107833 kern.notice] ^MOxide Helios Version helios-2.0.23430 64-bit
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: lgpg
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: tsc
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: msr
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: mtrr
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: pge
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: de
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: cmov
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: mmx
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: mca
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: pae
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: cv8
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: pat
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sse
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sse2
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: htt
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: asysc
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: nx
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sse3
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: cx16
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: cmp
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: tscp
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: mwait
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sse4a
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: cpuid
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: ssse3
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sse4_1
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sse4_2
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: 1gpg
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: clfsh
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: 64
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: aes
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: pclmulqdq
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: xsave
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: avx
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: svm
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: topoext
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: f16c
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: rdrand
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: x2apic
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: avx2
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: bmi1
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: bmi2
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: fma
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: smep
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: smap
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: adx
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: xsaveopt
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: xsavec
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: xsaves
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: sha
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: umip
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: pku
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: pcid
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: invpcid
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: ibrs
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: ibpb
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: stibp
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: ssbd
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: stibp_all
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: fsgsbase
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: clflushopt
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: clwb
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: monitorx
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: clzero
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: amd_pcec
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: ppin
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: vaes
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: vpclmulqdq
+Dec 31 23:59:57 BRM44220001 unix: [ID 223955 kern.info] x86_feature: lfence_serializing
+Dec 31 23:59:57 BRM44220001 unix: [ID 168242 kern.info] mem = 1061141504K (0xfcfef00000)
+Dec 31 23:59:57 BRM44220001 unix: [ID 442479 kern.info] TSC calibrated using PIT; freq is 1996 MHz
+Dec 31 23:59:57 BRM44220001 unix: [ID 194402 kern.info] IO die 0: Sent PP Table to SMU
+Dec 31 23:59:57 BRM44220001 unix: [ID 283121 kern.info] IO die 0: Enabled HSMP interrupts
+Dec 31 23:59:57 BRM44220001 unix: [ID 615056 kern.info] Socket 0 LISM 0x0->0xf
+Dec 31 23:59:57 BRM44220001 unix: [ID 100474 kern.info] Socket 0 LISM: Finished writing PCIe straps
+Dec 31 23:59:57 BRM44220001 unix: [ID 615056 kern.info] Socket 0 LISM 0xf->0x5
+Dec 31 23:59:57 BRM44220001 unix: [ID 615056 kern.info] Socket 0 LISM 0x5->0x8
+Dec 31 23:59:57 BRM44220001 unix: [ID 231756 kern.info] Socket 0 LISM: PERST 1, 1
+Dec 31 23:59:57 BRM44220001 unix: [ID 615056 kern.info] Socket 0 LISM 0x8->0xd
+Dec 31 23:59:57 BRM44220001 unix: [ID 369626 kern.info] Socket 0 LISM: done
+Dec 31 23:59:57 BRM44220001 unix: [ID 799100 kern.info] DXIO LISM execution completed successfully
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/01/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/01/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/01/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/4]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/4]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/03/4]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/07/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/07/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/07/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[00/08/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/01/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/03/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/03/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/03/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/07/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/07/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/07/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[40/08/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/01/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/01/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/01/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/07/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/07/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/07/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[80/08/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/4]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/4]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/01/4]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/03/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/03/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/03/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/07/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/07/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/07/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/1]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/1]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/1]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/2]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/2]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/2]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/3]: DISABLE  I/O range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/3]: DISABLE  MEM range
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 948575 kern.info] NOTICE: ppb[c0/08/3]: DISABLE PMEM range
+Dec 31 23:59:57 BRM44220001 genunix: [ID 897550 kern.info] Using default device instance data
+Dec 31 23:59:57 BRM44220001 unix: [ID 733864 kern.notice] 
+Dec 31 23:59:57 BRM44220001 ------> Sending IPCC command 0xe (KEYLOOKUP), attempt 1/10
+Dec 31 23:59:57 BRM44220001 unix: [ID 958012 kern.notice] Additional data length: 0x3
+Dec 31 23:59:57 BRM44220001 unix: [ID 729164 kern.notice] Received empty frame
+Dec 31 23:59:57 BRM44220001 unix: [ID 958012 kern.notice] Additional data length: 0x1
+Dec 31 23:59:57 BRM44220001 unix: [ID 972737 kern.info] Skipping psm: xpv_psm
+Dec 31 23:59:57 BRM44220001 unix: [ID 972737 kern.info] Skipping psm: pcplusmp
+Dec 31 23:59:57 BRM44220001 rootnex: [ID 466748 kern.info] root nexus = Oxide,Gimlet
+Dec 31 23:59:57 BRM44220001 iommulib: [ID 321598 kern.info] NOTICE: iommulib_nexus_register: rootnex-1: Succesfully registered NEXUS Oxide,Gimlet nexops=fffffffffc4b9a20
+Dec 31 23:59:57 BRM44220001 rootnex: [ID 349649 kern.info] pseudo0 at root
+Dec 31 23:59:57 BRM44220001 genunix: [ID 936769 kern.info] pseudo0 is /pseudo
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/07/1]: PROGRAM  I/O range 0x1000 ~ 0x1fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/07/1]: PROGRAM  MEM range 0xe0000000 ~ 0xe1ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/07/1]: PROGRAM PMEM range 0xc03f00000000 ~ 0xc03f1fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/1]: PROGRAM  I/O range 0x2000 ~ 0x2fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/1]: PROGRAM  MEM range 0xe2000000 ~ 0xe3ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/1]: PROGRAM PMEM range 0xc04020000000 ~ 0xc0403fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/2]: PROGRAM  I/O range 0x3000 ~ 0x3fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/2]: PROGRAM  MEM range 0xe4000000 ~ 0xe5ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/2]: PROGRAM PMEM range 0xc04140000000 ~ 0xc0415fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/3]: PROGRAM  I/O range 0x4000 ~ 0x4fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/3]: PROGRAM  MEM range 0xe6000000 ~ 0xe7ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/08/3]: PROGRAM PMEM range 0xc04260000000 ~ 0xc0427fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/01/3]: PROGRAM  MEM range 0xe8000000 ~ 0xe9ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/01/3]: PROGRAM PMEM range 0xc04380000000 ~ 0xc0439fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/03/2]: PROGRAM  MEM range 0xea000000 ~ 0xebffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/03/2]: PROGRAM PMEM range 0xc044a0000000 ~ 0xc044bfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/03/3]: PROGRAM  MEM range 0xec000000 ~ 0xedffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/03/3]: PROGRAM PMEM range 0xc045c0000000 ~ 0xc045dfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/03/4]: PROGRAM  MEM range 0xee000000 ~ 0xefffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[00/03/4]: PROGRAM PMEM range 0xc046e0000000 ~ 0xc046ffffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/07/1]: PROGRAM  I/O range 0xd000 ~ 0xdfff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/07/1]: PROGRAM  MEM range 0xc0000000 ~ 0xc1ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/07/1]: PROGRAM PMEM range 0x807fe0000000 ~ 0x807fffffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/1]: PROGRAM  I/O range 0xe000 ~ 0xefff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/1]: PROGRAM  MEM range 0xc2000000 ~ 0xc3ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/1]: PROGRAM PMEM range 0x808100000000 ~ 0x80811fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/2]: PROGRAM  I/O range 0xf000 ~ 0xffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/2]: PROGRAM  MEM range 0xc4000000 ~ 0xc5ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/2]: PROGRAM PMEM range 0x808220000000 ~ 0x80823fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/3]: PROGRAM  I/O range 0x10000 ~ 0x10fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/3]: PROGRAM  MEM range 0xc6000000 ~ 0xc7ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/08/3]: PROGRAM PMEM range 0x808340000000 ~ 0x80835fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/01/1]: PROGRAM  MEM range 0xc8000000 ~ 0xc9ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/01/1]: PROGRAM PMEM range 0x808460000000 ~ 0x80847fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/01/2]: PROGRAM  MEM range 0xca000000 ~ 0xcbffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/01/2]: PROGRAM PMEM range 0x808580000000 ~ 0x80859fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/01/3]: PROGRAM  MEM range 0xcc000000 ~ 0xcdffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/01/3]: PROGRAM PMEM range 0x8086a0000000 ~ 0x8086bfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/03/3]: PROGRAM  MEM range 0xce000000 ~ 0xcfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[40/03/3]: PROGRAM PMEM range 0x8087c0000000 ~ 0x8087dfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/07/1]: PROGRAM  I/O range 0x9000 ~ 0x9fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/07/1]: PROGRAM  MEM range 0xa0000000 ~ 0xa1ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/07/1]: PROGRAM PMEM range 0x40c0c0000000 ~ 0x40c0dfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/1]: PROGRAM  I/O range 0xa000 ~ 0xafff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/1]: PROGRAM  MEM range 0xa2000000 ~ 0xa3ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/1]: PROGRAM PMEM range 0x40c1e0000000 ~ 0x40c1ffffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/2]: PROGRAM  I/O range 0xb000 ~ 0xbfff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/2]: PROGRAM  MEM range 0xa4000000 ~ 0xa5ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/2]: PROGRAM PMEM range 0x40c300000000 ~ 0x40c31fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/3]: PROGRAM  I/O range 0xc000 ~ 0xcfff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/3]: PROGRAM  MEM range 0xa6000000 ~ 0xa7ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/08/3]: PROGRAM PMEM range 0x40c420000000 ~ 0x40c43fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/01/1]: PROGRAM  MEM range 0xa8000000 ~ 0xa9ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[80/01/1]: PROGRAM PMEM range 0x40c540000000 ~ 0x40c55fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/07/1]: PROGRAM  I/O range 0x5000 ~ 0x5fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/07/1]: PROGRAM  MEM range 0x80000000 ~ 0x81ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/07/1]: PROGRAM PMEM range 0x101a0000000 ~ 0x101bfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/1]: PROGRAM  I/O range 0x6000 ~ 0x6fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/1]: PROGRAM  MEM range 0x82000000 ~ 0x83ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/1]: PROGRAM PMEM range 0x102c0000000 ~ 0x102dfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/2]: PROGRAM  I/O range 0x7000 ~ 0x7fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/2]: PROGRAM  MEM range 0x84000000 ~ 0x85ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/2]: PROGRAM PMEM range 0x103e0000000 ~ 0x103ffffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/3]: PROGRAM  I/O range 0x8000 ~ 0x8fff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/3]: PROGRAM  MEM range 0x86000000 ~ 0x87ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/08/3]: PROGRAM PMEM range 0x10500000000 ~ 0x1051fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/1]: PROGRAM  MEM range 0x88000000 ~ 0x89ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/1]: PROGRAM PMEM range 0x10620000000 ~ 0x1063fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/2]: PROGRAM  MEM range 0x8a000000 ~ 0x8bffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/2]: PROGRAM PMEM range 0x10740000000 ~ 0x1075fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/3]: PROGRAM  MEM range 0x8c000000 ~ 0x8dffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/3]: PROGRAM PMEM range 0x10860000000 ~ 0x1087fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/4]: PROGRAM  MEM range 0x8e000000 ~ 0x8fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/01/4]: PROGRAM PMEM range 0x10980000000 ~ 0x1099fffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/03/2]: PROGRAM  MEM range 0x90000000 ~ 0x91ffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 525517 kern.info] NOTICE: ppb[c0/03/2]: PROGRAM PMEM range 0x10aa0000000 ~ 0x10abfffffff
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[00/14/6]: BAR0 MEM64 REPROG 0xf0000000 ~ 0x100
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[03/00/0]: BAR5 MEM REPROG 0xe4000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[04/00/0]: BAR5 MEM REPROG 0xe6000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[05/00/0]: BAR0 MEM64 REPROG 0xe8000000 ~ 0x4000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[06/00/0]: BAR0 MEM64 REPROG 0xea000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[06/00/0]: BAR4 PMEM64 REPROG 0xc044a0000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[07/00/0]: BAR0 MEM64 REPROG 0xec000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[07/00/0]: BAR4 PMEM64 REPROG 0xc045c0000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[08/00/0]: BAR0 MEM64 REPROG 0xee000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[08/00/0]: BAR4 PMEM64 REPROG 0xc046e0000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[43/00/0]: BAR5 MEM REPROG 0xc4000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[44/00/0]: BAR5 MEM REPROG 0xc6000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[45/00/0]: BAR0 MEM64 REPROG 0xc8000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[45/00/0]: BAR4 PMEM64 REPROG 0x808460000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[46/00/0]: BAR0 MEM64 REPROG 0xca000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[46/00/0]: BAR4 PMEM64 REPROG 0x808580000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[47/00/0]: BAR0 MEM64 REPROG 0xcc000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[47/00/0]: BAR4 PMEM64 REPROG 0x8086a0000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[48/00/0]: BAR0 MEM64 REPROG 0xce000000 ~ 0x4000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[83/00/0]: BAR5 MEM REPROG 0xa4000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[84/00/0]: BAR5 MEM REPROG 0xa6000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/7]: BAR0 MEM64 REPROG 0xa8000000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/7]: BAR2 MEM64 REPROG 0xa8100000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/7]: BAR4 MEM64 REPROG 0xa8080000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/6]: BAR0 MEM64 REPROG 0xa8200000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/6]: BAR2 MEM64 REPROG 0xa8300000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/6]: BAR4 MEM64 REPROG 0xa8082000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/5]: BAR0 MEM64 REPROG 0xa8280000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/5]: BAR2 MEM64 REPROG 0xa8400000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/5]: BAR4 MEM64 REPROG 0xa8084000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/4]: BAR0 MEM64 REPROG 0xa8500000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/4]: BAR2 MEM64 REPROG 0xa8600000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/4]: BAR4 MEM64 REPROG 0xa8086000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/3]: BAR0 MEM64 REPROG 0xa8580000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/3]: BAR2 MEM64 REPROG 0xa8700000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/3]: BAR4 MEM64 REPROG 0xa8088000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/2]: BAR0 MEM64 REPROG 0xa8800000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/2]: BAR2 MEM64 REPROG 0xa8900000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/2]: BAR4 MEM64 REPROG 0xa808a000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/1]: BAR0 MEM64 REPROG 0xa8880000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/1]: BAR2 MEM64 REPROG 0xa8a00000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/1]: BAR4 MEM64 REPROG 0xa808c000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/0]: BAR0 MEM64 REPROG 0xa8b00000 ~ 0x80000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/0]: BAR2 MEM64 REPROG 0xa8c00000 ~ 0x100000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[85/00/0]: BAR4 MEM64 REPROG 0xa808e000 ~ 0x2000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c3/00/0]: BAR5 MEM REPROG 0x84000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c4/00/0]: BAR5 MEM REPROG 0x86000000 ~ 0x800
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c5/00/0]: BAR0 MEM64 REPROG 0x88000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c5/00/0]: BAR4 PMEM64 REPROG 0x10620000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c6/00/0]: BAR0 MEM64 REPROG 0x8a000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c6/00/0]: BAR4 PMEM64 REPROG 0x10740000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c7/00/0]: BAR0 MEM64 REPROG 0x8c000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c7/00/0]: BAR4 PMEM64 REPROG 0x10860000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c8/00/0]: BAR0 MEM64 REPROG 0x8e000000 ~ 0x8000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c8/00/0]: BAR4 PMEM64 REPROG 0x10980000000 ~ 0x1000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c9/00/0]: BAR0 PMEM64 REPROG 0x10aa0000000 ~ 0x8000000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c9/00/0]: BAR2 PMEM64 REPROG 0x10aa8000000 ~ 0x4000
+Dec 31 23:59:57 BRM44220001 pci_autoconfig: [ID 402346 kern.info] NOTICE: pci[c9/00/0]: BAR4 PMEM64 REPROG 0x10aa8004000 ~ 0x4000
+Dec 31 23:59:58 BRM44220001 boot_image: [ID 993019 kern.notice] NOTICE: Starting Oxide boot
+Dec 31 23:59:58 BRM44220001 boot_image: [ID 961538 kern.notice] NOTICE:     Phase 1 wants: d49ce6707f4159fb8c39e17463a4fb3df3a29ed3d9c87a32213a86dcd2585da5
+Dec 31 23:59:58 BRM44220001 rootnex: [ID 349649 kern.info] ramdisk0 at root
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] ramdisk0 is /ramdisk
+Dec 31 23:59:58 BRM44220001 rootnex: [ID 349649 kern.info] fch0 at root: space 0 offset 0 and space 1 offset c00
+Dec 31 23:59:58 BRM44220001 rootnex: [ID 349649 kern.info] npe0 at root: space 0 offset 0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] npe0 is /pci@0,0
+Dec 31 23:59:58 BRM44220001 rootnex: [ID 349649 kern.info] npe1 at root: space 38 offset 0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] npe1 is /pci@38,0
+Dec 31 23:59:58 BRM44220001 rootnex: [ID 349649 kern.info] npe2 at root: space 70 offset 0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] npe2 is /pci@70,0
+Dec 31 23:59:58 BRM44220001 rootnex: [ID 349649 kern.info] npe3 at root: space ab offset 0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] npe3 is /pci@ab,0
+Dec 31 23:59:58 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@0, dwu0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] dwu0 is /huashan@0,0/dwu@0
+Dec 31 23:59:58 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@1, dwu1
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] dwu1 is /huashan@0,0/dwu@1
+Dec 31 23:59:58 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@2, dwu2
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] dwu2 is /huashan@0,0/dwu@2
+Dec 31 23:59:58 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@3, dwu3
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] dwu3 is /huashan@0,0/dwu@3
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: pseudo1
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pseudo1 is /pseudo/zconsnex@1
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: dld0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] dld0 is /pseudo/dld@0
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: lofi0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] lofi0 is /pseudo/lofi@0
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: devinfo0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] devinfo0 is /pseudo/devinfo@0
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ramdisk1024
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] ramdisk1024 is /pseudo/ramdisk@1024
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ucode0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] ucode0 is /pseudo/ucode@0
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,1, pcieb8
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb8 is /pci@38,0/pci1de,fff9@1,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,1, pcieb16
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb16 is /pci@70,0/pci1de,fff9@1,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,1, pcieb21
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb21 is /pci@ab,0/pci1de,fff9@1,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,3, pcieb0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb0 is /pci@0,0/pci1de,fff9@1,3
+Dec 31 23:59:58 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: zfs0
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] zfs0 is /pseudo/zfs@0
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@7,1, pcieb17
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb17 is /pci@70,0/pci1022,1484@7,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,1, pcieb18
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb18 is /pci@70,0/pci1022,1484@8,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,2, pcieb19
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb19 is /pci@70,0/pci1022,1484@8,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,2, pcieb22
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb22 is /pci@ab,0/pci1de,fff9@1,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,3, pcieb20
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb20 is /pci@70,0/pci1022,1484@8,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@3,2, pcieb1
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb1 is /pci@0,0/pci1de,fff9@3,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,2, pcieb9
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb9 is /pci@38,0/pci1de,fff9@1,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,3, pcieb23
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb23 is /pci@ab,0/pci1de,fff9@1,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@3,3, pcieb2
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb2 is /pci@0,0/pci1de,fff9@3,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,3, pcieb10
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb10 is /pci@38,0/pci1de,fff9@1,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@3,3, pcieb11
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb11 is /pci@38,0/pci1de,fff9@3,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@7,1, pcieb12
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb12 is /pci@38,0/pci1022,1484@7,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,1, pcieb13
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb13 is /pci@38,0/pci1022,1484@8,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,2, pcieb14
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb14 is /pci@38,0/pci1022,1484@8,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,3, pcieb15
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb15 is /pci@38,0/pci1022,1484@8,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@1,4, pcieb24
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb24 is /pci@ab,0/pci1de,fff9@1,4
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@3,4, pcieb3
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb3 is /pci@0,0/pci1de,fff9@3,4
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@7,1, pcieb4
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb4 is /pci@0,0/pci1022,1484@7,1
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme4: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme5: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme6: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme7: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,1, pcieb5
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb5 is /pci@0,0/pci1022,1484@8,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,2, pcieb6
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb6 is /pci@0,0/pci1022,1484@8,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,3, pcieb7
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb7 is /pci@0,0/pci1022,1484@8,3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@3,2, pcieb25
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb25 is /pci@ab,0/pci1de,fff9@3,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@7,1, pcieb26
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb26 is /pci@ab,0/pci1022,1484@7,1
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme0: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme1: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme2: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme3: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,1, pcieb27
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb27 is /pci@ab,0/pci1022,1484@8,1
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,2, pcieb28
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb28 is /pci@ab,0/pci1022,1484@8,2
+Dec 31 23:59:58 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1022,1484@8,3, pcieb29
+Dec 31 23:59:58 BRM44220001 genunix: [ID 936769 kern.info] pcieb29 is /pci@ab,0/pci1022,1484@8,3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme8: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme9: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme10: NVMe spec version 1.3
+Dec 31 23:59:58 BRM44220001 nvme: [ID 259564 kern.info] nvme11: NVMe spec version 1.3
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev0: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E59,0, blkdev0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev0 is /pci@ab,0/pci1de,fff9@1,1/pci1b96,0@0/blkdev@w0014EE81000D2E59,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@ab,0/pci1de,fff9@1,1/pci1b96,0@0/blkdev@w0014EE81000D2E59,0 (blkdev0) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev1: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev2: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2EF9,0, blkdev1
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev1 is /pci@ab,0/pci1de,fff9@1,4/pci1b96,0@0/blkdev@w0014EE81000D2EF9,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@ab,0/pci1de,fff9@1,4/pci1b96,0@0/blkdev@w0014EE81000D2EF9,0 (blkdev1) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000BC393,0, blkdev2
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev2 is /pci@38,0/pci1de,fff9@1,1/pci1b96,0@0/blkdev@w0014EE81000BC393,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@38,0/pci1de,fff9@1,1/pci1b96,0@0/blkdev@w0014EE81000BC393,0 (blkdev2) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev3: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev4: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E79,0, blkdev3
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev3 is /pci@38,0/pci1de,fff9@1,3/pci1b96,0@0/blkdev@w0014EE81000D2E79,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@38,0/pci1de,fff9@1,3/pci1b96,0@0/blkdev@w0014EE81000D2E79,0 (blkdev3) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E77,0, blkdev4
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev4 is /pci@0,0/pci1de,fff9@3,3/pci1b96,0@0/blkdev@w0014EE81000D2E77,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@0,0/pci1de,fff9@3,3/pci1b96,0@0/blkdev@w0014EE81000D2E77,0 (blkdev4) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev5: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E57,0, blkdev5
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev5 is /pci@0,0/pci1de,fff9@3,2/pci1b96,0@0/blkdev@w0014EE81000D2E57,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@0,0/pci1de,fff9@3,2/pci1b96,0@0/blkdev@w0014EE81000D2E57,0 (blkdev5) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev6: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E65,0, blkdev6
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev6 is /pci@38,0/pci1de,fff9@1,2/pci1b96,0@0/blkdev@w0014EE81000D2E65,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@38,0/pci1de,fff9@1,2/pci1b96,0@0/blkdev@w0014EE81000D2E65,0 (blkdev6) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev7: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2EA3,0, blkdev7
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev7 is /pci@0,0/pci1de,fff9@3,4/pci1b96,0@0/blkdev@w0014EE81000D2EA3,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@0,0/pci1de,fff9@3,4/pci1b96,0@0/blkdev@w0014EE81000D2EA3,0 (blkdev7) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev8: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D306A,0, blkdev8
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev8 is /pci@ab,0/pci1de,fff9@1,3/pci1b96,0@0/blkdev@w0014EE81000D306A,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@ab,0/pci1de,fff9@1,3/pci1b96,0@0/blkdev@w0014EE81000D306A,0 (blkdev8) online
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev9: dynamic LUN expansion
+Jan  1 00:00:01 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E5C,0, blkdev9
+Jan  1 00:00:01 BRM44220001 genunix: [ID 936769 kern.info] blkdev9 is /pci@ab,0/pci1de,fff9@1,2/pci1b96,0@0/blkdev@w0014EE81000D2E5C,0
+Jan  1 00:00:01 BRM44220001 genunix: [ID 408114 kern.info] /pci@ab,0/pci1de,fff9@1,2/pci1b96,0@0/blkdev@w0014EE81000D2E5C,0 (blkdev9) online
+Jan  1 00:00:02 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev10: dynamic LUN expansion
+Jan  1 00:00:02 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w00A0750132752F12,0, blkdev10
+Jan  1 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] blkdev10 is /pci@0,0/pci1de,fff9@1,3/pci1344,3100@0/blkdev@w00A0750132752F12,0
+Jan  1 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pci@0,0/pci1de,fff9@1,3/pci1344,3100@0/blkdev@w00A0750132752F12,0 (blkdev10) online
+Jan  1 00:00:02 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev11: dynamic LUN expansion
+Jan  1 00:00:02 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w00A0750132748127,0, blkdev11
+Jan  1 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] blkdev11 is /pci@38,0/pci1de,fff9@3,3/pci1344,3100@0/blkdev@w00A0750132748127,0
+Jan  1 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pci@38,0/pci1de,fff9@3,3/pci1344,3100@0/blkdev@w00A0750132748127,0 (blkdev11) online
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 477060 kern.notice] NOTICE: TRYING: boot disk (slot 18, slice 0)
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 642147 kern.notice] NOTICE: found M.2 device (slot 18, slice 0), @ /pci@38,0/pci1de,fff9@3,3/pci1344,3100@0/blkdev@w00A0750132748127,0:a
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 961538 kern.notice] NOTICE:     in image: d49ce6707f4159fb8c39e17463a4fb3df3a29ed3d9c87a32213a86dcd2585da5
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 637169 kern.notice] NOTICE: attempting boot from image name 'rt-jclulow-20250613-1535'
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 915896 kern.notice] NOTICE: SEEKING: dump device (slot 18, slice 4)
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 340136 kern.notice] NOTICE: found dump device (slot 18, slice 4), @ /pci@38,0/pci1de,fff9@3,3/pci1344,3100@0/blkdev@w00A0750132748127,0:e
+Jan  1 00:00:02 BRM44220001 genunix: [ID 454863 kern.info] dump on /devices/pci@38,0/pci1de,fff9@3,3/pci1344,3100@0/blkdev@w00A0750132748127,0:e size 1048576 MB
+Jan  1 00:00:02 BRM44220001 boot_image: [ID 431123 kern.notice] NOTICE: successfully configured dump device
+Jan  1 00:00:02 BRM44220001 genunix: [ID 636498 kern.warning] WARNING: cannot load platform pm driver ppm
+Dec 28 00:00:00 BRM44220001 genunix: [ID 308332 kern.info] root on rpool/ROOT/ramdisk fstype zfs
+Dec 28 00:00:00 BRM44220001 genunix: [ID 408114 kern.info] /cpus (cpunex0) online
+Dec 28 00:00:00 BRM44220001 strplumb: [ID 892208 kern.notice] strplumb: failed to initialize drv/ip
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu0: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu0: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 551322 kern.info] KPTI enabled (PCID in use, INVPCID in use)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu1: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu1: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu1 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu2: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu2: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu2: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu2 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu3: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu3: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu3 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu4: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu4: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu4: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu4 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu5: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu5: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu5 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu6: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu6: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu6: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu6 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu7: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu7: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu7 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu8: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu8: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu8: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu8 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu9: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu9: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu9 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu10: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu10: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu10: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu10 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu11: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu11: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu11 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu12: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu12: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu12: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu12 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu13: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu13: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu13 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu14: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu14: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu14: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu14 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu15: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu15: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu15 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu16: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu16: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu16: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu16 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu17: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu17: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu17 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu18: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu18: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu18: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu18 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu19: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu19: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu19 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu20: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu20: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu20: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu20 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu21: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu21: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu21 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu22: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu22: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu22: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu22 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu23: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu23: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu23 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu24: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu24: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu24: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu24 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu25: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu25: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu25 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu26: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu26: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu26: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu26 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu27: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu27: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu27 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu28: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu28: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu28: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu28 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu29: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu29: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu29 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu30: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu30: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu30: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu30 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu31: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu31: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu31 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu32: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu32: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu32: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu32 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu33: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu33: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu33 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu34: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu34: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu34: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu34 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu35: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu35: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu35 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu36: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu36: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu36: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu36 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu37: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu37: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu37 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu38: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu38: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu38: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu38 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu39: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu39: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu39 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu40: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu40: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu40: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu40 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu41: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu41: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu41 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu42: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu42: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu42: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu42 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu43: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu43: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu43 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu44: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu44: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu44: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu44 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu45: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu45: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu45 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu46: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu46: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu46: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu46 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu47: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu47: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu47 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu48: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu48: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu48: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu48 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu49: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu49: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu49 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu50: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu50: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu50: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu50 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu51: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu51: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu51 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu52: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu52: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu52: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu52 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu53: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu53: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu53 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu54: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu54: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu54: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu54 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu55: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu55: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu55 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu56: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu56: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu56: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu56 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu57: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu57: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu57 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu58: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu58: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu58: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu58 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu59: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu59: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu59 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu60: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu60: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu60: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu60 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu61: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu61: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu61 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu62: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu62: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu62: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu62 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu63: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu63: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu63 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu64: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu64: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu64: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu64 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu65: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu65: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu65 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu66: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu66: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu66: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu66 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu67: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu67: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu67 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu68: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu68: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu68: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu68 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu69: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu69: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu69 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu70: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu70: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu70: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu70 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu71: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu71: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu71 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu72: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu72: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu72: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu72 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu73: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu73: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu73 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu74: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu74: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu74: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu74 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu75: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu75: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu75 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu76: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu76: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu76: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu76 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu77: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu77: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu77 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu78: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu78: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu78: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu78 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu79: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu79: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu79 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu80: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu80: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu80: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu80 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu81: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu81: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu81 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 518058 kern.info] cpu82: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu82: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu82: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu82 initialization complete - online
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu83: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:00 BRM44220001 unix: [ID 950921 kern.info] cpu83: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:00 BRM44220001 unix: [ID 557947 kern.info] cpu83 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu84: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu84: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu84: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu84 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu85: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu85: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu85 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu86: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu86: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu86: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu86 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu87: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu87: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu87 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu88: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu88: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu88: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu88 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu89: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu89: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu89 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu90: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu90: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu90: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu90 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu91: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu91: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu91 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu92: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu92: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu92: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu92 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu93: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu93: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu93 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu94: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu94: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu94: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu94 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu95: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu95: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu95 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu96: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu96: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu96: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu96 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu97: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu97: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu97 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu98: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu98: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu98: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu98 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu99: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu99: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu99 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu100: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu100: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu100: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu100 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu101: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu101: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu101 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu102: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu102: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu102: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu102 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu103: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu103: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu103 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu104: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu104: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu104: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu104 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu105: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu105: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu105 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu106: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu106: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu106: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu106 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu107: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu107: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu107 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu108: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu108: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu108: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu108 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu109: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu109: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu109 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu110: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu110: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu110: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu110 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu111: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu111: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu111 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu112: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu112: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu112: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu112 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu113: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu113: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu113 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu114: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu114: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu114: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu114 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu115: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu115: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu115 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu116: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu116: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu116: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu116 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu117: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu117: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu117 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu118: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu118: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu118: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu118 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu119: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu119: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu119 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu120: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu120: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu120: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu120 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu121: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu121: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu121 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu122: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu122: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu122: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu122 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu123: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu123: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu123 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu124: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu124: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu124: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu124 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu125: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu125: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu125 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 518058 kern.info] cpu126: microcode has been updated from version 0x0 to 0xa0011d5
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu126: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu126: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu126 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu127: x86 (chipid 0x0 AuthenticAMD A00F11 family 25 model 1 step 1 clock 2000 MHz)
+Dec 28 00:00:01 BRM44220001 unix: [ID 950921 kern.info] cpu127: AMD EPYC 7713P 64-Core Processor
+Dec 28 00:00:01 BRM44220001 unix: [ID 557947 kern.info] cpu127 initialization complete - online
+Dec 28 00:00:01 BRM44220001 unix: [ID 118163 kern.info] NOTICE: SMT enabled
+Dec 28 00:00:02 BRM44220001 genunix: [ID 241855 kern.info] This illumos instance has UUID 8fb8bd24-a555-438d-a2b9-5e1537d47e0d
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: viona0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] viona0 is /pseudo/viona@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: vmm0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] vmm0 is /pseudo/vmm@0
+Dec 28 00:00:02 BRM44220001 rootnex: [ID 349649 kern.info] scsi_vhci0 at root
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] scsi_vhci0 is /scsi_vhci
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: llc10
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] llc10 is /pseudo/llc1@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: dcpc0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] dcpc0 is /pseudo/dcpc@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: dtrace0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] dtrace0 is /pseudo/dtrace@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: eventfd0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] eventfd0 is /pseudo/eventfd@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: fasttrap0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] fasttrap0 is /pseudo/fasttrap@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: fbt0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] fbt0 is /pseudo/fbt@0
+Dec 28 00:00:02 BRM44220001 pcieb: [ID 586369 kern.info] PCIE-device: pci1d1c,100@0, tofino1
+Dec 28 00:00:02 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1d1c,100@0, tofino1
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] tofino1 is /pci@ab,0/pci1de,fff9@3,2/pci1d1c,100@0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pseudo/amdzen@0/smntemp@1 (smntemp-1) online
+Dec 28 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pseudo/amdzen@0/usmn@2 (usmn-1) online
+Dec 28 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pseudo/amdzen@0/zen_udf@3 (zen_udf-1) online
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: fssnap0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] fssnap0 is /pseudo/fssnap@0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pseudo/amdzen@0/zen_umc@4 (zen_umc-1) online
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ipcc0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] ipcc0 is /pseudo/ipcc@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: lockstat0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] lockstat0 is /pseudo/lockstat@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: nsmb0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] nsmb0 is /pseudo/nsmb@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: pool0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] pool0 is /pseudo/pool@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: profile0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] profile0 is /pseudo/profile@0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 408114 kern.info] /pseudo/amdzen@0/uhsmp@5 (uhsmp-1) online
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: sdt0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] sdt0 is /pseudo/sdt@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: signalfd0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] signalfd0 is /pseudo/signalfd@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: systrace0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] systrace0 is /pseudo/systrace@0
+Dec 28 00:00:02 BRM44220001 mac: [ID 469746 kern.info] NOTICE: tfpkt0 registered
+Dec 28 00:00:02 BRM44220001 tfpkt: [ID 913958 kern.info] NOTICE: tfpkt0: tbus monitor started
+Dec 28 00:00:02 BRM44220001 tfpkt: [ID 968355 kern.warning] WARNING: tfpkt0: tofino asic not ready
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: timerfd0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] timerfd0 is /pseudo/timerfd@0
+Dec 28 00:00:02 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ktest0
+Dec 28 00:00:02 BRM44220001 genunix: [ID 936769 kern.info] ktest0 is /pseudo/ktest@0
+Dec 28 00:00:03 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: xde0
+Dec 28 00:00:03 BRM44220001 genunix: [ID 936769 kern.info] xde0 is /pseudo/xde@0
+Dec 28 00:00:06 BRM44220001 savecore: [ID 570001 auth.error] reboot after panic: pcieb-25: PCI(-X) Express Fatal Error. (0x43)
+Dec 28 00:00:06 BRM44220001 savecore: [ID 350290 auth.error] Panic crashdump pending on dump device but dumpadm -n in effect; run savecore(8) manually to extract. Image UUID 7e95baa2-12a7-474c-ab28-1dc8a34ad716(fault-management initiated).
+Dec 28 00:00:12 BRM44220001 tfpkt: [ID 157875 kern.warning] WARNING: tfpkt0: tofino driver offline
+Dec 28 00:00:19 BRM44220001 genunix: [ID 390243 kern.info] Creating /etc/devices/devid_cache
+Dec 28 00:00:19 BRM44220001 genunix: [ID 390243 kern.info] Creating /etc/devices/pci_unitaddr_persistent
+Dec 28 00:00:19 BRM44220001 genunix: [ID 390243 kern.info] Creating /etc/devices/devname_cache
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: devinfo0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] devinfo0 is /pseudo/devinfo@0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 408114 kern.info] /pseudo/zconsnex@1/zcons@0 (zcons0) online
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev2: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev1: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev8: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev9: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev3: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev0: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev4: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev10: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2EF9,0, blkdev1
+Dec 28 00:00:19 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@1, dwu1
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev1 is /pci@ab,0/pci1de,fff9@1,4/pci1b96,0@0/blkdev@w0014EE81000D2EF9,0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] dwu1 is /huashan@0,0/dwu@1
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D306A,0, blkdev8
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev8 is /pci@ab,0/pci1de,fff9@1,3/pci1b96,0@0/blkdev@w0014EE81000D306A,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000BC393,0, blkdev2
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev2 is /pci@38,0/pci1de,fff9@1,1/pci1b96,0@0/blkdev@w0014EE81000BC393,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev6: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@2, dwu2
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] dwu2 is /huashan@0,0/dwu@2
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w00A0750132752F12,0, blkdev10
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev10 is /pci@0,0/pci1de,fff9@1,3/pci1344,3100@0/blkdev@w00A0750132752F12,0
+Dec 28 00:00:19 BRM44220001 fch: [ID 102463 kern.notice] FCH peripheral: dwu@3, dwu3
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev5: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E79,0, blkdev3
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] dwu3 is /huashan@0,0/dwu@3
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E59,0, blkdev0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 643073 kern.info] NOTICE: blkdev7: dynamic LUN expansion
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev3 is /pci@38,0/pci1de,fff9@1,3/pci1b96,0@0/blkdev@w0014EE81000D2E79,0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev0 is /pci@ab,0/pci1de,fff9@1,1/pci1b96,0@0/blkdev@w0014EE81000D2E59,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E5C,0, blkdev9
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev9 is /pci@ab,0/pci1de,fff9@1,2/pci1b96,0@0/blkdev@w0014EE81000D2E5C,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E77,0, blkdev4
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev4 is /pci@0,0/pci1de,fff9@3,3/pci1b96,0@0/blkdev@w0014EE81000D2E77,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E65,0, blkdev6
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev6 is /pci@38,0/pci1de,fff9@1,2/pci1b96,0@0/blkdev@w0014EE81000D2E65,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2E57,0, blkdev5
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev5 is /pci@0,0/pci1de,fff9@3,2/pci1b96,0@0/blkdev@w0014EE81000D2E57,0
+Dec 28 00:00:19 BRM44220001 blkdev: [ID 348765 kern.info] Block device: blkdev@w0014EE81000D2EA3,0, blkdev7
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] blkdev7 is /pci@0,0/pci1de,fff9@3,4/pci1b96,0@0/blkdev@w0014EE81000D2EA3,0
+Dec 28 00:00:19 BRM44220001 pcieb: [ID 586369 kern.info] PCIE-device: pci1d1c,100@0, tofino1
+Dec 28 00:00:19 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1d1c,100@0, tofino1
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] tofino1 is /pci@ab,0/pci1de,fff9@3,2/pci1d1c,100@0
+Dec 28 00:00:19 BRM44220001 tfpkt: [ID 968355 kern.warning] WARNING: tfpkt0: tofino asic not ready
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: lofi0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] lofi0 is /pseudo/lofi@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ucode0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] ucode0 is /pseudo/ucode@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: llc10
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] llc10 is /pseudo/llc1@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: dcpc0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] dcpc0 is /pseudo/dcpc@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: eventfd0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] eventfd0 is /pseudo/eventfd@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: fbt0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] fbt0 is /pseudo/fbt@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: fssnap0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] fssnap0 is /pseudo/fssnap@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ipcc0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] ipcc0 is /pseudo/ipcc@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: lockstat0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] lockstat0 is /pseudo/lockstat@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: nsmb0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] nsmb0 is /pseudo/nsmb@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: profile0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] profile0 is /pseudo/profile@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: sdt0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] sdt0 is /pseudo/sdt@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: signalfd0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] signalfd0 is /pseudo/signalfd@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: systrace0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] systrace0 is /pseudo/systrace@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: timerfd0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] timerfd0 is /pseudo/timerfd@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: viona0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] viona0 is /pseudo/viona@0
+Dec 28 00:00:19 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: ktest0
+Dec 28 00:00:19 BRM44220001 genunix: [ID 936769 kern.info] ktest0 is /pseudo/ktest@0
+Dec 28 00:00:20 BRM44220001 pseudo: [ID 129642 kern.info] pseudo-device: xde0
+Dec 28 00:00:20 BRM44220001 genunix: [ID 936769 kern.info] xde0 is /pseudo/xde@0
+Dec 28 00:00:21 BRM44220001 fmd: [ID 377184 daemon.error] SUNW-MSG-ID: SUNOS-8000-J0, TYPE: Fault, VER: 1, SEVERITY: Major
+Dec 28 00:00:21 BRM44220001 EVENT-TIME: Sun Dec 28 00:00:21 UTC 1986
+Dec 28 00:00:21 BRM44220001 PLATFORM: oxide, CSN: -, HOSTNAME: BRM44220001
+Dec 28 00:00:21 BRM44220001 SOURCE: eft, REV: 1.16
+Dec 28 00:00:21 BRM44220001 EVENT-ID: a716e281-f3a9-4034-9bc5-bf41ba5d7a3b
+Dec 28 00:00:21 BRM44220001 DESC: The diagnosis engine encountered telemetry from the listed devices for which it was unable to perform a diagnosis - 
+Dec 28 00:00:21 BRM44220001   Refer to http://illumos.org/msg/SUNOS-8000-J0 for more information.  Refer to http://illumos.org/msg/SUNOS-8000-J0 for more information.
+Dec 28 00:00:21 BRM44220001 AUTO-RESPONSE: Error reports have been logged for examination by your illumos distribution team.
+Dec 28 00:00:21 BRM44220001 IMPACT: Automated diagnosis and response for these events will not occur.
+Dec 28 00:00:21 BRM44220001 REC-ACTION: Ensure that the latest illumos Kernel and Predictive Self-Healing (PSH) updates are installed.
+Dec 28 00:00:21 BRM44220001 fmd: [ID 377184 daemon.error] SUNW-MSG-ID: SUNOS-8000-J0, TYPE: Fault, VER: 1, SEVERITY: Major
+Dec 28 00:00:21 BRM44220001 EVENT-TIME: Sun Dec 28 00:00:21 UTC 1986
+Dec 28 00:00:21 BRM44220001 PLATFORM: oxide, CSN: -, HOSTNAME: BRM44220001
+Dec 28 00:00:21 BRM44220001 SOURCE: eft, REV: 1.16
+Dec 28 00:00:21 BRM44220001 EVENT-ID: bcfcdce1-c831-4347-99da-a320dcf6b649
+Dec 28 00:00:21 BRM44220001 DESC: The diagnosis engine encountered telemetry from the listed devices for which it was unable to perform a diagnosis - 
+Dec 28 00:00:21 BRM44220001   Refer to http://illumos.org/msg/SUNOS-8000-J0 for more information.  Refer to http://illumos.org/msg/SUNOS-8000-J0 for more information.
+Dec 28 00:00:21 BRM44220001 AUTO-RESPONSE: Error reports have been logged for examination by your illumos distribution team.
+Dec 28 00:00:21 BRM44220001 IMPACT: Automated diagnosis and response for these events will not occur.
+Dec 28 00:00:21 BRM44220001 REC-ACTION: Ensure that the latest illumos Kernel and Predictive Self-Healing (PSH) updates are installed.
+Dec 28 00:00:21 BRM44220001 fmd: [ID 377184 daemon.error] SUNW-MSG-ID: SUNOS-8000-J0, TYPE: Fault, VER: 1, SEVERITY: Major
+Dec 28 00:00:21 BRM44220001 EVENT-TIME: Sun Dec 28 00:00:21 UTC 1986
+Dec 28 00:00:21 BRM44220001 PLATFORM: oxide, CSN: -, HOSTNAME: BRM44220001
+Dec 28 00:00:21 BRM44220001 SOURCE: eft, REV: 1.16
+Dec 28 00:00:21 BRM44220001 EVENT-ID: 89671858-59ca-47be-8030-48a929fe2b8e
+Dec 28 00:00:21 BRM44220001 DESC: The diagnosis engine encountered telemetry from the listed devices for which it was unable to perform a diagnosis - 
+Dec 28 00:00:21 BRM44220001   Refer to http://illumos.org/msg/SUNOS-8000-J0 for more information.  Refer to http://illumos.org/msg/SUNOS-8000-J0 for more information.
+Dec 28 00:00:21 BRM44220001 AUTO-RESPONSE: Error reports have been logged for examination by your illumos distribution team.
+Dec 28 00:00:21 BRM44220001 IMPACT: Automated diagnosis and response for these events will not occur.
+Dec 28 00:00:21 BRM44220001 REC-ACTION: Ensure that the latest illumos Kernel and Predictive Self-Healing (PSH) updates are installed.
+Dec 28 00:00:47 BRM44220001 genunix: [ID 408114 kern.info] /pci@70,0/pci1de,fff9@1,1/pci1425,0@0 (t6mfg1) offline
+Dec 28 00:00:48 BRM44220001 genunix: [ID 646827 kern.warning] WARNING: (pcieb16): failed to attach driver for a device (pci1de,fff9-1) under the Connection pcie16
+Dec 28 00:00:48 BRM44220001 last message repeated 3 times
+Dec 28 00:00:50 BRM44220001 pcieb: [ID 586369 kern.info] PCIE-device: pci1de,fff9@0,4, t4nex0
+Dec 28 00:00:50 BRM44220001 npe: [ID 236367 kern.info] PCI Express-device: pci1de,fff9@0,4, t4nex0
+Dec 28 00:00:50 BRM44220001 genunix: [ID 936769 kern.info] t4nex0 is /pci@70,0/pci1de,fff9@1,1/pci1de,fff9@0,4
+Dec 28 00:00:50 BRM44220001 genunix: [ID 408114 kern.info] /pci@70,0/pci1de,fff9@1,1/pci1de,fff9@0,4 (t4nex0) online
+Dec 28 00:00:50 BRM44220001 mac: [ID 469746 kern.info] NOTICE: cxgbe0 registered
+Dec 28 00:00:50 BRM44220001 genunix: [ID 936769 kern.info] cxgbe0 is /pci@70,0/pci1de,fff9@1,1/pci1de,fff9@0,4/cxgbe@0
+Dec 28 00:00:50 BRM44220001 genunix: [ID 408114 kern.info] /pci@70,0/pci1de,fff9@1,1/pci1de,fff9@0,4/cxgbe@0 (cxgbe0) online
+Dec 28 00:00:50 BRM44220001 mac: [ID 469746 kern.info] NOTICE: cxgbe1 registered
+Dec 28 00:00:50 BRM44220001 genunix: [ID 936769 kern.info] cxgbe1 is /pci@70,0/pci1de,fff9@1,1/pci1de,fff9@0,4/cxgbe@1
+Dec 28 00:00:50 BRM44220001 genunix: [ID 408114 kern.info] /pci@70,0/pci1de,fff9@1,1/pci1de,fff9@0,4/cxgbe@1 (cxgbe1) online
+Dec 28 00:00:50 BRM44220001 genunix: [ID 646827 kern.warning] WARNING: (pcieb16): failed to attach driver for a device (pci1de,fff9-1) under the Connection pcie16
+Dec 28 00:00:50 BRM44220001 last message repeated 1 time
+Dec 28 00:00:51 BRM44220001 mac: [ID 435574 kern.info] NOTICE: cxgbe1 link up, 100000 Mbps, full duplex

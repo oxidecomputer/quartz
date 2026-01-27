@@ -68,6 +68,8 @@ architecture rtl of i2c_ctrl_txn_layer is
     type sm_reg_t is record
         state           : state_t;
         cmd             : cmd_t;
+        abortable       : std_logic;
+        pend_abort      : std_logic;
         in_random_read  : boolean;
         cnts            : std_logic_vector(15 downto 0);
         bytes_done      : std_logic_vector(7 downto 0);
@@ -85,6 +87,8 @@ architecture rtl of i2c_ctrl_txn_layer is
     constant SM_REG_RESET : sm_reg_t := (
         state => IDLE,
         cmd => CMD_RESET,
+        abortable => '0',
+        pend_abort => '0',
         in_random_read => false,
         cnts => (others => '0'),
         bytes_done => (others => '0'),
@@ -106,6 +110,8 @@ architecture rtl of i2c_ctrl_txn_layer is
     signal ll_ackd_valid    : std_logic;
     signal ll_rx_data       : std_logic_vector(7 downto 0);
     signal ll_rx_data_valid : std_logic;
+    signal link_layer_abortable : std_logic;
+    signal abortable       : std_logic;
 begin
 
     txn_status <= sm_reg.status;
@@ -121,6 +127,7 @@ begin
         reset           => reset,
         scl_if          => scl_if,
         sda_if          => sda_if,
+        abortable       => link_layer_abortable,
         tx_start        => sm_reg.do_start,
         tx_ack          => sm_reg.do_ack,
         tx_stop         => sm_reg.do_stop,
@@ -134,6 +141,7 @@ begin
         rx_data_valid   => ll_rx_data_valid
     );
 
+    abortable <= sm_reg.abortable and link_layer_abortable;
     reg_sm_next: process(all)
         variable v          : sm_reg_t;
         variable is_read    : std_logic;
@@ -149,6 +157,8 @@ begin
 
             -- watch for a new command to arrive then kick off a START
             when IDLE =>
+                v.abortable       := '0';
+                v.pend_abort      := '0';
                 if cmd_valid = '1' and ll_ready = '1' and abort = '0' then
                     v.state     := START;
                     v.cmd       := cmd;
@@ -195,6 +205,7 @@ begin
             -- read as many bytes as requested and ack them
             -- nacking and transitioning to STOP when done
             when READ =>
+                v.abortable := '1';
                 v.next_valid    := ll_ready;
 
                 if sm_reg.cmd.len = sm_reg.bytes_done and ll_ready = '1' then
@@ -207,6 +218,7 @@ begin
 
             -- transmit the next byte
             when WRITE =>
+                v.abortable := '1';
                 if tx_st_if.valid then
                     v.next_valid    := '1';
                     v.state         := WAIT_WRITE_ACK;
@@ -214,6 +226,7 @@ begin
 
             -- take action based off of the operation type and the ACK
             when WAIT_WRITE_ACK =>
+                v.abortable := '1';
                 if ll_ackd_valid then
                     v.next_valid    := '1';
                     if ll_ackd then
@@ -236,9 +249,12 @@ begin
 
             -- initiate a STOP and clear state
             when STOP =>
+                v.abortable         := '0';
                 v.state             := WAIT_STOP;
                 v.bytes_done        := (others => '0');
                 v.in_random_read    := false;
+                v.pend_abort        := '0';
+                v.abortable         := '0';
 
             -- once STOP has finished move back to IDLE
             when WAIT_STOP =>
@@ -248,12 +264,26 @@ begin
                 end if;
         end case;
 
-        -- if a transaction is in progress and abort is asserted we should immediately STOP
-        if abort = '1' and sm_reg.state /= IDLE and sm_reg.state /= STOP
-                and sm_reg.state /= WAIT_STOP then
+        -- if a transaction is in progress and abort is asserted we should STOP ASAP
+        -- but there are challenges: if the target is in the middle of sending data, we
+        -- may not be able to issue a STOP since it may be driving the bus LOW, so we
+        -- will need to wait until we can issue the STOP. We're going to start with the
+        -- conservative approach of waiting until the end of a FRAME to issue the STOP.
+        -- In the WRITE case, we can always stop after the current byte is done, but in
+        -- the READ case, if we have ACK'd the current byte we need to wait for the next byte
+        -- to arrive before we can issue the STOP, as the ACK implies we want more data and
+        -- that the target has the bus. We don't know the state of the link-layer so we use
+        -- the abortable signal from the link layer to either transition to abort, or to
+        -- pend the abort until we can.
+        if sm_reg.pend_abort = '1' and sm_reg.state /= IDLE and sm_reg.state /= STOP
+                and sm_reg.state /= WAIT_ADDR_ACK and sm_reg.state /= WAIT_STOP and abortable = '1' then
             v.state         := STOP;
+            v.do_ack        := '0';  -- NACK any in-flight read
             v.next_valid    := '1';
             v.status.code   := ABORTED;
+        elsif  abort = '1' and sm_reg.state /= IDLE then
+            -- store abort request
+            v.pend_abort   := '1';
         end if;
 
         -- next state logic
@@ -274,6 +304,7 @@ begin
 
         sm_reg_next <= v;
     end process;
+
 
     reg_sm: process(clk, reset)
     begin

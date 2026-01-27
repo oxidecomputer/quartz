@@ -28,6 +28,8 @@ entity dimms_subsystem_top is
         -- AXI-Lite interface
         axi_if : view axil8x32_pkg.axil_target;
 
+        in_a0 : in std_logic;
+
         -- DIMM PCAMP pins
         dimm_a_pcamp : in std_logic;
         dimm_b_pcamp : in std_logic;
@@ -113,6 +115,7 @@ begin
         clk => clk,
         reset => reset,
         regs_if => bus0,
+        in_a0 => in_a0,
         cpu_scl_if => cpu_scl_if0,
         cpu_sda_if => cpu_sda_if0,
         dimm_scl_if => dimm_scl_if0,
@@ -129,6 +132,7 @@ begin
         clk => clk,
         reset => reset,
         regs_if => bus1,
+        in_a0 => in_a0,
         cpu_scl_if => cpu_scl_if1,
         cpu_sda_if => cpu_sda_if1,
         dimm_scl_if => dimm_scl_if1,

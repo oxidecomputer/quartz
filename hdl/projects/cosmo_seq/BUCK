@@ -73,5 +73,5 @@ vivado_bitstream(
     part= "xc7s100fgga484-1",
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
-    post_synth_tcl_files=glob(["*ila.tcl"]),
+    #post_synth_tcl_files=glob(["*ila.tcl"]),
 )
