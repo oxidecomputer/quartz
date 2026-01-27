@@ -29,7 +29,7 @@ entity sp_i2c_subsystem is
         i2c_mux1_sel : out std_logic_vector(1 downto 0);
         i2c_mux2_sel : out std_logic_vector(1 downto 0);
         i2c_mux3_sel : out std_logic_vector(1 downto 0);
-
+        i2c_mux1_en : out std_logic;
     );
 end sp_i2c_subsystem;
 
@@ -97,15 +97,22 @@ begin
     -- The mux will still ACK, and effectively block other mux channels in this
     -- group, so this should be software transparent. TBD if we need an additional
     -- delay as the bus comes up?
+    -- 
+    -- This logic retains the masking for versions of the board without the
+    -- translator control. Outputing to the control pin is safe on older versions
+    -- as the pin is unused.
     process(clk, reset)
     begin
         if reset = '1' then
             i2c_mux1_sel <= deselected;
+            i2c_mux1_en <= '0';
         elsif rising_edge(clk) then
             if in_a0 then
                 i2c_mux1_sel <= mux_sel1_int;
+                i2c_mux1_en <= '1';
             else
                 i2c_mux1_sel <= deselected;
+                i2c_mux1_en <= '0';
             end if;
         end if;
     end process;

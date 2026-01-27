@@ -284,6 +284,7 @@ set_property -dict { PACKAGE_PIN B8 IOSTANDARD LVCMOS33 } [get_ports { vr_v5p0_s
 # New pins for cosmo rev2 only
 set_property -dict { PACKAGE_PIN AA15 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp5_sec_v3p3_scl }];
 set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp5_sec_v3p3_sda }];
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_m2_xltr_en }];
 set_property -dict { PACKAGE_PIN W8 IOSTANDARD LVCMOS18 } [get_ports { v1p1_i3c_a2_pg }];
 set_property -dict { PACKAGE_PIN R19 IOSTANDARD LVCMOS33 } [get_ports { v1p4_nic_a0hp_pg }];
 set_property -dict { PACKAGE_PIN E22 IOSTANDARD LVCMOS33 } [get_ports { uart_fpga1_to_debug_dat }];
