@@ -15,6 +15,7 @@ parser.add_argument(
 )
 parser.add_argument("--output", dest="output", help="Explicit output list")
 parser.add_argument("--simulator", dest="simulator", default="", help="specify simulator name (ghdl or nvc)")
+parser.add_argument("--rust-cosim", dest="rust_cosim", default="", help="Path to Rust cosim library")
 
 args = parser.parse_args()
 
@@ -72,6 +73,7 @@ def main():
         simulator=args.simulator,
         vhdl_standard=inputs.get("vhdl_std"),
         codec_packages=[],
+        rust_cosim=args.rust_cosim,
         # vunit_out=args.vunit_out,
     )
     with open(args.output, mode="w", encoding="utf-8") as message:
