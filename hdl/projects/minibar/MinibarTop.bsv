@@ -187,15 +187,15 @@ module mkMinibarTop(MinibarTop);
     ReadOnly#(Bool) v3p3_en    <- mkOutputSyncFor(controller.pcie.v3p3_pcie.en);
     InputReg#(Bool, 2) v3p3_pg <- mkInputSyncFor(controller.pcie.v3p3_pcie.pg);
     // Sled to FPGA
-    InputReg#(Bit#(1), 2) sled_perst    <- mkInputSyncFor(controller.pcie.sled_perst);
-    ReadOnly#(Bit#(1)) sled_prsnt       <- mkOutputSyncFor(controller.pcie.sled_prsnt);
+    InputReg#(Bit#(1), 2) sled_perst_l  <- mkInputSyncFor(controller.pcie.sled_perst_l);
+    ReadOnly#(Bit#(1)) sled_prsnt_l     <- mkOutputSyncFor(controller.pcie.sled_prsnt_l);
     ReadOnly#(Bit#(1)) sled_attached    <- mkOutputSyncFor(controller.pcie.sled_attached);
     ReadOnly#(Bit#(1)) sled_pwrflt      <- mkOutputSyncFor(controller.pcie.sled_pwrflt);
     ReadOnly#(Bit#(1)) sled_i2c_en      <- mkOutputSyncFor(controller.pcie.sled_i2c_buffer_en);
     // FPGA to CEM
-    ReadOnly#(Bit#(1)) cem_perst    <- mkOutputSyncFor(controller.pcie.cem_perst);
-    InputReg#(Bit#(1), 2) cem_prsnt <- mkInputSyncFor(controller.pcie.cem_prsnt);
-    ReadOnly#(Bit#(1)) cem_i2c_en   <- mkOutputSyncFor(controller.pcie.cem_i2c_buffer_en);
+    ReadOnly#(Bit#(1)) cem_perst_l      <- mkOutputSyncFor(controller.pcie.cem_perst_l);
+    InputReg#(Bit#(1), 2) cem_prsnt_l   <- mkInputSyncFor(controller.pcie.cem_prsnt_l);
+    ReadOnly#(Bit#(1)) cem_i2c_en       <- mkOutputSyncFor(controller.pcie.cem_i2c_buffer_en);
     // Refclk
     ReadOnly#(Bit#(1)) pcie_refclk_oe0      <- mkOutputSyncFor(controller.pcie.refclk_buffer_oe0);
     ReadOnly#(Bit#(1)) pcie_refclk_oe1      <- mkOutputSyncFor(controller.pcie.refclk_buffer_oe1);
@@ -293,15 +293,15 @@ module mkMinibarTop(MinibarTop);
 
     // PCIe
     // Sled to FPGA
-    method pcie_aux_sled_to_fpga_perst_l = sync_inverted(sled_perst);
+    method pcie_aux_sled_to_fpga_perst_l = sync(sled_perst_l);
     method fpga_to_pcie_sled_i2c_buffer_en = sled_i2c_en;
     method fpga_to_sled_pcie_attached_l = ~sled_attached;
     method pcie_aux_fpga_to_sled_pwrflt_l = ~sled_pwrflt;
-    method pcie_aux_fpga_to_sled_prsnt_l = ~sled_prsnt;
+    method pcie_aux_fpga_to_sled_prsnt_l = sled_prsnt_l;
     // FPGA to CEM
-    method pcie_aux_cem_to_fpga_prsnt_l = sync_inverted(cem_prsnt);
+    method pcie_aux_cem_to_fpga_prsnt_l = sync(cem_prsnt_l);
     method fpga_to_pcie_cem_i2c_buffer_en = ~cem_i2c_en;
-    method pcie_aux_fpga_to_cem_perst_l = ~cem_perst;
+    method pcie_aux_fpga_to_cem_perst_l = cem_perst_l;
     // Refclk
     method fpga_to_pcie_aux_refclk_buffer_oe0_l = ~pcie_refclk_oe0;
     method fpga_to_pcie_aux_refclk_buffer_oe1_l = ~pcie_refclk_oe1;

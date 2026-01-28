@@ -37,6 +37,8 @@ bluespec_library('MinibarPcie',
     deps = [
         ':MinibarRegsPkg',
         '//hdl/ip/bsv:CommonFunctions',
+        '//hdl/ip/bsv:Countdown',
+        '//hdl/ip/bsv:Debouncer',
         '//hdl/ip/bsv:PowerRail',
     ])
 

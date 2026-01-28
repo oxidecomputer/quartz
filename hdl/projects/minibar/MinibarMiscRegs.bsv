@@ -53,18 +53,20 @@ interface MinibarMiscRegs;
     method Action ignition_target0_present(Bool val);
     method Action ignition_target1_present(Bool val);
     interface PulseWire tick_1ms;
+    method Bool pcie_connector_present;
 endinterface
 
 module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
-    Reg#(Bool) tick <- mkDReg(False);
     // Registers to wrap up and expose
     Reg#(Bit#(1)) vbus_sys_fault_r  <- mkReg(0);
     Reg#(Bit#(3)) hcv_code_r        <- mkReg(0);
     Reg#(Bool) ignt_tgt0_present    <- mkReg(False);
     Reg#(Bool) ignt_tgt1_present    <- mkReg(False);
-    Reg#(Bit#(1)) pcie_con_present  <- mkReg(0);
-    Reg#(Bit#(1)) rsw0_con_present  <- mkReg(0);
-    Reg#(Bit#(1)) rsw1_con_present  <- mkReg(0);
+
+    // Lightly debounce these presence signals since we use them to drive logic in the PCIe block
+    Debouncer#(25, 25, Bit#(1)) pcie_con_present  <- mkDebouncer(0);
+    Debouncer#(25, 25, Bit#(1)) rsw0_con_present  <- mkDebouncer(0);
+    Debouncer#(25, 25, Bit#(1)) rsw1_con_present  <- mkDebouncer(0);
 
     // Software controllable registers
     Reg#(PowerCtrl) power_control           <- mkReg(defaultValue);
@@ -85,13 +87,6 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
     // Register the enable state to work around some inellegance in the PowerRail module
     Reg#(Bool) vbus_en_r        <- mkReg(False);
     Reg#(Bool) new_sw_vbus_en   <- mkDReg(False);
-
-    (* fire_when_enabled *)
-    rule do_tick (tick);
-        vbus_rail.send();
-        power_button_short.send();
-        power_button_long.send();
-    endrule
 
     (* fire_when_enabled *)
     rule do_power_control;
@@ -116,9 +111,13 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
     method ignition_target1_present = ignt_tgt1_present._write;
 
     interface PulseWire tick_1ms;
-        method _read = tick;
         method Action send();
-            tick <= True;
+            vbus_rail.send();
+            power_button_short.send();
+            power_button_long.send();
+            pcie_con_present.send();
+            rsw0_con_present.send();
+            rsw1_con_present.send();
         endmethod
     endinterface
 
@@ -173,6 +172,8 @@ module mkMinibarMiscRegs #(Integer pg_timeout_ms) (MinibarMiscRegs);
                 target0_present: pack(ignt_tgt0_present)
             });
     endinterface
+
+    method pcie_connector_present = unpack(pcie_con_present);
 
 endmodule
 
