@@ -28,6 +28,7 @@ entity espi_spec_regs is
 
         qspi_mode            : out   qspi_mode_t;
         wait_states          : out   std_logic_vector(3 downto 0);
+        oob_enabled          : out   std_logic;
         flash_channel_enable : out   boolean
     );
 end entity;
@@ -51,6 +52,7 @@ begin
     regs_if.enforce_crcs <= gen_capabilities.crc_en = '1';
 
     flash_channel_enable <= ch3_capabilities.flash_channel_enable = '1';
+    oob_enabled <= ch2_capabilities.chan_en;
     -- Write-side of the spec-defined registers
     write_reg: process(clk, reset)
     begin
@@ -91,6 +93,7 @@ begin
                 ch1_capabilities.chan_rdy <= ch1_capabilities.chan_en;
             end if;
 
+            -- CH2 is OOB which we use for IPCC
             if regs_if.addr = CH2_CAPABILITIES_OFFSET and regs_if.write = '1' then
                 ch2_capabilities <= unpack(regs_if.wdata);
                 -- clean up RO fields by keeping current val

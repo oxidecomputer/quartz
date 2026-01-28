@@ -20,19 +20,22 @@ use work.calc_pkg.all;
 use work.time_pkg.all;
 
 entity uart_channel_top is
+    generic(
+        fifo_depth : natural := 4096;
+    );
     port(
         -- Clock and reset
         clk : in std_logic;
         reset : in std_logic;
 
         espi_reset : in std_logic;
+        enabled : in std_logic;
+        stuff_fifo : in std_logic;
+        stuff_wds : in std_logic_vector(15 downto 0);
         
         -- eSPI Transaction interface
         host_to_sp_espi : view uart_data_sink;
         sp_to_host_espi : view uart_resp_src;
-
-        -- registers
-        msg_not_oob: in std_logic;
 
         -- Interfaces to the UART block
         to_sp_uart_data : out std_logic_vector(7 downto 0);
@@ -50,12 +53,13 @@ entity uart_channel_top is
         pc_avail: out std_logic;
         np_free : out std_logic;
         np_avail: out std_logic;
+        to_host_tx_fifo_usedwds : out std_logic_vector(log2ceil(fifo_depth) downto 0);
+        ipcc_to_host_byte_cntr : out std_logic_vector(31 downto 0);
     );
 
 end entity;
 
 architecture rtl of uart_channel_top is 
-   constant fifo_depth : natural := 4096;
    constant max_msg_size : natural := 64;
    signal rx_wusedwds : std_logic_vector(log2ceil(fifo_depth) downto 0);
    signal tx_rusedwds : std_logic_vector(log2ceil(fifo_depth) downto 0);
@@ -66,33 +70,29 @@ architecture rtl of uart_channel_top is
    signal fifo_thresh_timer : std_logic_vector(32 downto 0);
    constant delay_time : std_logic_vector(fifo_thresh_timer'range) := calc_ms(1, 5, fifo_thresh_timer'length);
    signal fifo_read_by_espi : std_logic;
-   signal msg_not_oob_syncd : std_logic;
-   alias is_data_msg : std_logic is msg_not_oob_syncd;
-   signal is_oob_msg : std_logic;
    constant hold_thresh: natural := 32;
    type orphan_state_t is (MASKED, NOT_MASKED);
    signal orphan_state: orphan_state_t;
-   signal fifo_reset : std_logic;
+   constant MAX_CNTS : std_logic_vector(31 downto 0) := (others => '1');
+   signal rx_fifo_bleed : std_logic;
+   signal tx_fifo_bleed : std_logic;
+   signal bleeding : std_logic;
+   signal enabled_last : std_logic;
+   signal stuff_write : std_logic;
+   signal stuff_cntr : std_logic_vector(15 downto 0);
 
 begin
 
-    meta_sync_inst: entity work.meta_sync
-     port map(
-        async_input => msg_not_oob,
-        clk => clk,
-        sycnd_output => msg_not_oob_syncd
-    );
-
-    is_oob_msg <= not msg_not_oob_syncd;
+    to_host_tx_fifo_usedwds <= tx_rusedwds;
 
     -- Not going to support any Non-posted transactions
     -- on this interface
     np_free <= '0';
     np_avail <= '0';
     pc_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    pc_avail <= '1' when is_data_msg = '1' and orphan_state = NOT_MASKED else '0';
+    pc_avail <= '0';
     oob_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
-    oob_avail <= '1' when is_oob_msg = '1' and orphan_state = NOT_MASKED else '0';
+    oob_avail <= '1' when orphan_state = NOT_MASKED else '0';
 
     host_to_sp_espi.ready <= not rx_wfull;
     -- tx_rusedwds is potentially cycles behind the empty flag due to fifo latencies.
@@ -146,20 +146,68 @@ begin
         end if;
     end process;
 
-    -- I don't love this pattern but we're going to combine the system reset with the 
-    -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
-    -- of every boot.
-    rst_combine:process(clk, reset)
-     begin
+    dbg_rx_bytes_cntr: process(clk, reset)
+    begin
         if reset = '1' then
-           fifo_reset <= '1';
+            ipcc_to_host_byte_cntr <= (others => '0');
         elsif rising_edge(clk) then
-           fifo_reset <= espi_reset;
+            if espi_reset then
+                ipcc_to_host_byte_cntr <= (others => '0');
+            elsif ((from_sp_uart_valid = '1' and from_sp_uart_ready = '1') or stuff_write = '1') and ipcc_to_host_byte_cntr < MAX_CNTS then
+                ipcc_to_host_byte_cntr <= ipcc_to_host_byte_cntr + 1;
+            end if;
+
         end if;
     end process;
 
-    -- Accept UART data any time we have space
-    from_sp_uart_ready <= not tx_wfull;
+    dummy_stuffer: process(clk, reset)
+        variable enabled_redge: std_logic;
+    begin
+        if reset then
+            enabled_last <= '1';
+            stuff_cntr <= (others => '0');
+            stuff_write <= '0';
+        elsif rising_edge(clk) then
+            enabled_last <= enabled;
+            enabled_redge := enabled and not enabled_last;   
+            if stuff_fifo = '1' and enabled_redge = '1' then
+                stuff_cntr <= stuff_wds;
+            end if;
+            if stuff_cntr > 0 then
+                stuff_write <= '1';
+                stuff_cntr <= stuff_cntr - 1;
+            else
+                stuff_write <= '0';
+            end if;
+        end if;
+    end process;
+
+    -- Accept UART data any time we have space and are enabled
+    from_sp_uart_ready <= not tx_wfull and enabled;
+
+    -- XPM FIFOs have annoying reset limitations. Rather than fight this, here's a simple state machine
+    -- that will bleed them empty on an espi reset. This takes cycles depending on how full the FIFOs are,
+    -- but we don't expect UART data to begin until we're booted so we have plenty of time.
+    fifo_drain_sm: process(clk, reset)
+    begin
+        if reset = '1' then
+            rx_fifo_bleed <= '0';
+            tx_fifo_bleed <= '0';
+            bleeding <= '0';
+        elsif rising_edge(clk) then
+            if espi_reset then
+                rx_fifo_bleed <= '1';
+                tx_fifo_bleed <= '1';
+                bleeding <= '1';
+            elsif bleeding then
+                rx_fifo_bleed <= not rx_rempty;
+                tx_fifo_bleed <= not tx_rempty;
+                if rx_rempty = '1' and tx_rempty = '1' then
+                    bleeding <= '0';
+                end if;
+            end if;
+        end if;
+    end process;
 
     from_host_rx_fifo: entity work.dcfifo_xpm
      generic map(
@@ -169,14 +217,14 @@ begin
     )
      port map(
         wclk => clk,
-        reset => fifo_reset,
+        reset => reset,
         write_en => host_to_sp_espi.ready and host_to_sp_espi.valid,
         wdata => host_to_sp_espi.data,
         wfull => rx_wfull,
         wusedwds => rx_wusedwds,
         rclk => clk,
         rdata => to_sp_uart_data,
-        rdreq => to_sp_uart_valid and to_sp_uart_ready,
+        rdreq => (to_sp_uart_valid and to_sp_uart_ready) or rx_fifo_bleed,
         rempty => rx_rempty,
         rusedwds => open
     );
@@ -189,14 +237,14 @@ begin
     )
      port map(
         wclk => clk,
-        reset => fifo_reset,
-        write_en => from_sp_uart_valid and from_sp_uart_ready,
+        reset => reset,
+        write_en => (from_sp_uart_valid and from_sp_uart_ready) or stuff_write,
         wdata => from_sp_uart_data,
         wfull => tx_wfull,
         wusedwds => open,
         rclk => clk,
         rdata => sp_to_host_espi.st.data,
-        rdreq => sp_to_host_espi.st.valid and sp_to_host_espi.st.ready,
+        rdreq => fifo_read_by_espi or tx_fifo_bleed,
         rempty => tx_rempty,
         rusedwds => tx_rusedwds
     );

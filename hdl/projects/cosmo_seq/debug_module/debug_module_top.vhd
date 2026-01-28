@@ -27,6 +27,10 @@ entity debug_module_top is
 
         in_a0 : in std_logic;
         sp5_debug2_pin : in std_logic;
+        uart_headder_fall_back_to_debug_pins : out std_logic;
+
+        fpga2_hp_irq_n : in std_logic;
+        hp_int_n : in std_logic;
 
         uart_dbg_if : view uart_dbg_dbg_if;
 
@@ -189,6 +193,8 @@ begin
     uart_pin_status.console_sp5_rts_l <= uart_dbg_if.host_uart0.uart_rts_pin_copy; -- (from SP5 pins, input to FPGA)
     uart_pin_status.console_sp5_cts_l <= uart_dbg_if.host_uart0.uart_cts_pin_copy; -- (to SP5 pins, output from FPGA)
 
+    uart_headder_fall_back_to_debug_pins <= dbg_uart_control.use_debug_header;
+
      axil_target_txn_inst: entity work.axil_target_txn
      port map(
         clk => clk,
@@ -267,6 +273,7 @@ begin
                     when SP5_DBG2_TOGGLE_COUNTER_OFFSET => rdata <= pin_toggle_cnts;
                     when SP5_DBG2_TOGGLE_TIMER_OFFSET => rdata <= clks_since_last_toggle;
                     when DBG_1V8_CTRL_OFFSET => rdata <= pack(dbg_1v8_ctrl);
+                    when HP_INT_L_OFFSET => rdata <= (31 downto 2 => '0') & fpga2_hp_irq_n & hp_int_n; 
                     when others => rdata <= (others => '0');
                 end case;
             end if;

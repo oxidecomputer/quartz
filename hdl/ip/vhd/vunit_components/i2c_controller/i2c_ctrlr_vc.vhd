@@ -219,7 +219,10 @@ begin
             byte := pop(request_msg);
             shift_out_byte(To_StdLogicVector(byte, 8));
         elsif msg_type = i2c_send_start then -- blocking
+            wait for 0 ns;
             gen_start;
+            wait for 0 ns;
+            wait for 0 ns;
         elsif msg_type = i2c_send_stop then -- blocking
             gen_stop;
         elsif msg_type = i2c_get_byte then -- blocking

@@ -34,9 +34,6 @@ addrmap espi_regs {
             desc = "Issue an espi reset via the debug logic. Cleared by hardware after reset.";
         } espi_reset[5:5] =  0;
         field {
-            desc = "Respond back on periph 0 channel vs oob";
-        } msg_en[4:4] =  0;
-        field {
             desc = "Set to one to reset the command FIFO. Cleared by hardware after reset.";
         } cmd_fifo_reset[3:3] =  0;
          field {
@@ -127,6 +124,38 @@ addrmap espi_regs {
             desc = "";
         } count[31:0] = 0;
     } post_code_count;
+
+    reg {
+        name = "IPCC_TO_HOST_USEDWDS";
+        desc = "Count of usedwds in the IPCC to host TX FIFO";
+        field {
+            desc = "";
+        } count[31:0] = 0;
+    } ipcc_to_host_usedwds;
+
+    reg {
+        name = "IPCC_TO_HOST_BYTE_CNTR";
+        desc = "Count of total bytes sent to host via IPCC UART channel since reset";
+        field {
+            desc = "";
+        } count[31:0] = 0;
+    } ipcc_to_host_byte_cntr;
+
+    reg {
+        name = "IPCC DUMMY FILL EN";
+        desc = "Enable this to do a 1 time FIFO fill with dummy count (next register) bytes into the ipcc FIFO when oob channel is enabled";
+        field {
+            desc = "";
+        } en[0:0] = 0;
+    } ipcc_dummy_fill_en;
+
+    reg {
+        name = "IPCC DUMMY FILL COUNT";
+        desc = "Count of dummy bytes to be filled into IPCC FIFO when dummy fill is enabled. 1 time fill on enable after espi reset.";
+        field {
+            desc = "";
+        } count[31:0] = 0;
+    } ipcc_dummy_fill_count;
 
      mem post_code_buffer_mem {
         mementries = 4096;

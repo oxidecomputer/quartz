@@ -39,6 +39,7 @@ entity i2c_ctrl_link_layer is
 
         txn_next_valid  : in std_logic; -- qualify transition to next action 
         ready           : out std_logic; -- ready for next action
+        abortable      : out std_logic; -- can abort current transaction
 
         -- I2C framing
         tx_start        : in std_logic; -- send a start
@@ -100,6 +101,7 @@ architecture rtl of i2c_ctrl_link_layer is
         -- state
         state           : state_t;
         bits_shifted    : natural range 0 to 9;
+        abortable       : std_logic;
 
         -- control
         ready                   : std_logic;
@@ -128,6 +130,7 @@ architecture rtl of i2c_ctrl_link_layer is
     constant SM_REG_RESET   : sm_reg_t := (
         state => IDLE,
         bits_shifted => 0,
+        abortable => '1',
         ready => '0',
         scl_start => '0',
         scl_active => '0',
@@ -162,6 +165,8 @@ architecture rtl of i2c_ctrl_link_layer is
     signal transition_sda   : std_logic;
     signal sda_in_syncd     : std_logic;
 begin
+
+    abortable   <= sm_reg.abortable;
 
     --
     -- SCL Control
@@ -282,6 +287,9 @@ begin
         -- to transition to a STOP during a normal transition point for I2C which is not necessarily
         -- any cycle of the FPGA clk. At slower operating modes this does not matter much, but at
         -- FAST_MODE_PLUS (1MHz) it starts to matter more.
+        -- We can early stop during any write-phase so long as we've not gotten to the target ACK yet.
+        -- We can early stop during a read-phase only if the controller still owns the bus.
+        -- After we've ACK'd the target during a read phase, the target owns the bus until we  NACK it.
         if sm_reg.stop_requested = '0' then
             v.stop_requested := '1' when tx_stop = '1' and txn_next_valid = '1' else '0';
         end if;
@@ -293,6 +301,7 @@ begin
 
             -- Ready and awaiting the next transaction
             when IDLE =>
+                v.abortable   := '1';
                 v.sda_o     := '1';
                 v.sda_oe    := '1';
 
@@ -305,8 +314,9 @@ begin
                 end if;
 
             when WAIT_REPEAT_START =>
-                if not sm_reg.sr_scl_fedge_seen then
-                    v.sr_scl_fedge_seen := scl_fedge;
+                if scl_o = '0' then
+                    v.sda_o         := '1';
+                    v.sda_oe        := '1';
                 elsif scl_redge then
                     v.state             := START_SETUP;
                     v.scl_active        := '0';
@@ -318,7 +328,6 @@ begin
                 v.sda_o         := '1';
                 v.sda_oe        := '1';
                 v.count_decr    := '1';
-
                 if counter_done then
                     v.state         := START_HOLD;
                     v.counter       := START_SETUP_HOLD_TICKS;
@@ -330,12 +339,17 @@ begin
                 v.sda_oe        := '1';
                 v.count_decr    := '1';
                 if counter_done then
-                    v.state         := HANDLE_NEXT;
+                    if v.stop_requested then
+                        v.state := STOP_SDA;
+                    else
+                        v.state         := HANDLE_NEXT;
+                    end if;
                     v.scl_start     := '1'; -- drop SCL to finish START condition
                     v.scl_active    := '1'; -- begin free running counter for SCL transitions
                 end if;
 
             when HANDLE_NEXT =>
+                v.abortable   := '1';  -- This flag may be 0 coming out of an ACK_TX.
                 v.rx_ack_valid  := '0';
                 if v.stop_requested then
                     v.state := STOP_SDA;
@@ -393,6 +407,8 @@ begin
 
                 if sm_reg.bits_shifted = 8 and scl_fedge = '1' then
                     v.state         := ACK_TX;
+                    v.sda_o := '1';  --Default to NACK, we'll override in ACK_TX if needed.
+                    v.abortable      := '0'; -- If we ACK the target, it still owns the bus so we can't abort
                     v.rx_data_valid := '1';
                     v.bits_shifted  := 0;
                 elsif scl_redge then

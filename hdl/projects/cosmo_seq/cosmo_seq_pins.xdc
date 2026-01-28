@@ -255,13 +255,13 @@ set_property -dict { PACKAGE_PIN G4 IOSTANDARD LVCMOS33 } [get_ports { v12_ddr5_
 set_property -dict { PACKAGE_PIN G3 IOSTANDARD LVCMOS33 } [get_ports { v12_ddr5_ghijkl_a0_pg }];
 set_property -dict { PACKAGE_PIN T19 IOSTANDARD LVCMOS33 } [get_ports { v12p0_nic_a0hp_pg }];
 set_property -dict { PACKAGE_PIN G6 IOSTANDARD LVCMOS33 } [get_ports { v12p0_nic_a0hp_to_fpga1_fault_l }];
-set_property -dict { PACKAGE_PIN U18 IOSTANDARD LVCMOS33 } [get_ports { v1p1_nic_enet_a0hp_pg }];
+set_property -dict { PACKAGE_PIN U18 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_u18 }];
 set_property -dict { PACKAGE_PIN AB16 IOSTANDARD LVCMOS33 } [get_ports { v1p1_sp5_en }];
 set_property -dict { PACKAGE_PIN T15 IOSTANDARD LVCMOS33 } [get_ports { v1p1_sp5_pg }];
 set_property -dict { PACKAGE_PIN Y20 IOSTANDARD LVCMOS33 } [get_ports { v1p2_fpga2_a2_pg }];
-set_property -dict { PACKAGE_PIN R16 IOSTANDARD LVCMOS33 } [get_ports { v1p2_nic_enet_a0hp_pg }];
-set_property -dict { PACKAGE_PIN P16 IOSTANDARD LVCMOS33 } [get_ports { v1p2_nic_pcie_a0hp_pg }];
-set_property -dict { PACKAGE_PIN R18 IOSTANDARD LVCMOS33 } [get_ports { v1p5_nic_a0hp_pg }];
+set_property -dict { PACKAGE_PIN R16 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_r16 }];
+set_property -dict { PACKAGE_PIN P16 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_p16 }];
+set_property -dict { PACKAGE_PIN R18 IOSTANDARD LVCMOS33 } [get_ports { nic_pg_r18 }];
 set_property -dict { PACKAGE_PIN AB17 IOSTANDARD LVCMOS33 } [get_ports { v1p8_sp5_en }];
 set_property -dict { PACKAGE_PIN T14 IOSTANDARD LVCMOS33 } [get_ports { v1p8_sp5_pg }];
 set_property -dict { PACKAGE_PIN AA20 IOSTANDARD LVCMOS33 } [get_ports { v2p5_fpga2_a2_pg }];
@@ -284,6 +284,7 @@ set_property -dict { PACKAGE_PIN B8 IOSTANDARD LVCMOS33 } [get_ports { vr_v5p0_s
 # New pins for cosmo rev2 only
 set_property -dict { PACKAGE_PIN AA15 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp5_sec_v3p3_scl }];
 set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp5_sec_v3p3_sda }];
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_m2_xltr_en }];
 set_property -dict { PACKAGE_PIN W8 IOSTANDARD LVCMOS18 } [get_ports { v1p1_i3c_a2_pg }];
 set_property -dict { PACKAGE_PIN R19 IOSTANDARD LVCMOS33 } [get_ports { v1p4_nic_a0hp_pg }];
 set_property -dict { PACKAGE_PIN E22 IOSTANDARD LVCMOS33 } [get_ports { uart_fpga1_to_debug_dat }];

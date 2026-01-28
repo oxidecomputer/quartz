@@ -146,11 +146,11 @@ entity cosmo_seq_top is
         v12p0_nic_a0hp_to_fpga1_fault_l : in std_logic;
         v5p0_nic_a0hp_to_fpga1_fault_l : in std_logic;
         fpga1_to_pcie_clk_buff_nic_oe_l : out std_logic;
-        v1p1_nic_enet_a0hp_pg : in std_logic;
         v12p0_nic_a0hp_pg : in std_logic;
-        v1p2_nic_enet_a0hp_pg : in std_logic;
-        v1p2_nic_pcie_a0hp_pg : in std_logic;
-        v1p5_nic_a0hp_pg : in std_logic;
+        nic_pg_p16: in std_logic;
+        nic_pg_r18: in std_logic;
+        nic_pg_r16: in std_logic;
+        nic_pg_u18: in std_logic;
         sp5_to_nic_mfg_mode_l : in std_logic;
 
         -- SP5/DDR sequencing
@@ -265,6 +265,7 @@ entity cosmo_seq_top is
         fpga1_to_i2c_mux1_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux2_sel : out std_logic_vector(1 downto 0);
         fpga1_to_i2c_mux3_sel : out std_logic_vector(1 downto 0);
+        fpga1_to_m2_xltr_en : out std_logic;
         fpga1_to_m2a_hsc_en : out std_logic;
         fpga1_to_m2a_perst_l : out std_logic;
         fpga1_to_m2b_hsc_en : out std_logic;
@@ -331,6 +332,10 @@ architecture rtl of cosmo_seq_top is
     signal clk_200m : std_logic;
     signal reset_200m : std_logic;
     signal reset_fmc : std_logic;
+    signal v1p5_nic_a0hp_pg : std_logic;
+    signal v1p2_nic_pcie_a0hp_pg : std_logic;
+    signal v1p2_nic_enet_a0hp_pg : std_logic;
+    signal v1p1_nic_enet_a0hp_pg : std_logic;
     alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
     constant INFO_RESP_IDX : integer := 0;
     constant SPINOR_RESP_IDX: integer := 1;
@@ -413,6 +418,7 @@ architecture rtl of cosmo_seq_top is
     signal dbg_pins_uart_out_rts_l : std_logic;
     signal dbg_pins_uart_in : std_logic;
     signal dbg_pins_uart_in_rts_l : std_logic;
+    signal uart_headder_fall_back_to_debug_pins : std_logic;
 
 begin
 
@@ -579,11 +585,15 @@ begin
         dbg_pins_uart_in_rts_l => dbg_pins_uart_in_rts_l
     );
 
-    -- Cosmo UART debug mux.
+    -- Cosmo Version muxing.
     -- Comso rev2+ has a dedicated UART port on the board, use that for rev2+
+    -- Cosmo rev2 uses pin R18 as V1P1_NIC_ENET_A0HP_PG, rev1 was V1P5_NIC_A0HP_PG
+    -- Cosmo rev2 uses pin R16 as V1P2_NIC_PCIE_A0HP_PG, rev1 was V1P2_NIC_ENET_A0HP_PG
+    -- Cosmo rev2 uses pin P16 as V1P2_NIC_ENET_A0HP_PG, rev1 was V1P2_NIC_PCIE_A0HP_PG
+    -- Cosmo rev2 uses pin U18 as V1P5_NIC_A0HP_PG, rev1 was V1P1_NIC_ENET_A0HP_PG
     process(all)
     begin
-        if is_rev1 then
+        if is_rev1 or uart_headder_fall_back_to_debug_pins then
             -- Use spare dbg pins for UART
             fpga1_spare_v3p3_6 <= dbg_pins_uart_in_rts_l;
             fpga1_spare_v3p3_7 <= dbg_pins_uart_out;
@@ -592,6 +602,12 @@ begin
             -- Un-used and unaccessible in rev1
             uart_fpga1_to_debug_dat <= 'Z';
             uart_fpga1_to_debug_rts_l <= 'Z';
+
+            -- rev1 ethernet pg mappings
+            v1p5_nic_a0hp_pg <= nic_pg_r18;
+            v1p2_nic_pcie_a0hp_pg <= nic_pg_p16;
+            v1p2_nic_enet_a0hp_pg <= nic_pg_r16;
+            v1p1_nic_enet_a0hp_pg <= nic_pg_u18;
         else
             -- Give a tri-state driver here to prevent latches
             fpga1_spare_v3p3_6 <= 'Z';
@@ -601,6 +617,12 @@ begin
             dbg_pins_uart_in <= uart_debug_to_fpga1_dat;
             uart_fpga1_to_debug_rts_l <= dbg_pins_uart_in_rts_l;
             dbg_pins_uart_out_rts_l <= uart_debug_to_fpga1_rts_l;
+
+             -- rev1 ethernet pg mappings
+            v1p5_nic_a0hp_pg <= nic_pg_u18;
+            v1p2_nic_pcie_a0hp_pg <= nic_pg_r16;
+            v1p2_nic_enet_a0hp_pg <= nic_pg_p16;
+            v1p1_nic_enet_a0hp_pg <= nic_pg_r18;
 
         end if;
 
@@ -624,7 +646,8 @@ begin
         sp_sda_oe => sp_sda_oe,
         i2c_mux1_sel => fpga1_to_i2c_mux1_sel,
         i2c_mux2_sel => fpga1_to_i2c_mux2_sel,
-        i2c_mux3_sel => fpga1_to_i2c_mux3_sel
+        i2c_mux3_sel => fpga1_to_i2c_mux3_sel,
+        i2c_mux1_en => fpga1_to_m2_xltr_en
     );
     --Tristates for spi-nor flash pins and espi
     i2c_sp_to_fpga1_scl <= sp_scl_o when sp_scl_oe = '1' else 'Z';
@@ -829,6 +852,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders_8b(SPD_PROXY_RESP_IDX),
+        in_a0 => a0_ok,
         dimm_a_pcamp => dimm_a_pg,
         dimm_b_pcamp => dimm_b_pg,
         dimm_c_pcamp => dimm_c_pg,
@@ -860,7 +884,10 @@ begin
         reset => reset_125m,
         axi_if => responders_8b(DBG_CTRL_RESP_IDX),
         in_a0 => a0_ok,
+        fpga2_hp_irq_n => fpga2_hp_irq_n,
+        hp_int_n => hp_int_n,
         sp5_debug2_pin => sp5_to_fpga1_debug2,
+        uart_headder_fall_back_to_debug_pins => uart_headder_fall_back_to_debug_pins,
         uart_dbg_if => uart_dbg_if,
          -- hotplug
         i2c_sp5_to_fpgax_hp_sda => i2c_sp5_to_fpgax_hp_sda,
