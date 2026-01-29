@@ -1,0 +1,49 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Encoding8b10bReference",
+    srcs = ["Encoding8b10bReference.bsv"],
+    deps = ["//hdl/ip/bsv:Encoding8b10b"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "Encoding8b10bTests",
+    suite = "Encoding8b10bTests.bsv",
+    modules = [
+        "mkEncodeTest",
+        "mkEncodeDecodeTest",
+    ],
+    deps = [
+        ":Encoding8b10bReference",
+        "//hdl/ip/bsv:Encoding8b10b",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "BitSamplingTests",
+    suite = "BitSamplingTests.bsv",
+    modules = [
+        "mkBitSampling2Test",
+        "mkBitSampling3Test",
+        "mkBitSampling4Test",
+        "mkBitSampling5Test",
+        "mkBitSampling8Test",
+        "mkBitSampling16Test",
+        "mkBitSampling3JitterTest",
+        "mkBitSampling4JitterTest",
+        "mkBitSampling5JitterTest",
+        "mkBitSampling8JitterTest",
+        "mkBitSampling16JitterTest",
+        "mkAsyncBitSamplingTest",
+    ],
+    deps = [
+        "//hdl/ip/bsv:BitSampling",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)

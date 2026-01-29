@@ -1,0 +1,66 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "ECP5",
+    srcs = ["ECP5.bsv"],
+    deps = ["//hdl/ip/bsv:PLL"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "ICE40",
+    srcs = ["ICE40.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "UART",
+    srcs = ["UART.bsv"],
+    deps = [
+        "//hdl/ip/bsv:BitSampling",
+        "//hdl/ip/bsv:SerialIO",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "UARTTests",
+    suite = "UART.bsv",
+    modules = [
+        "mkSerializerTest",
+        "mkDeserializerTest",
+        "mkDeserializerStopMissingTest",
+        "mkDeserializerOverflowTest",
+        "mkSerializerDeserializerTest",
+    ],
+    deps = [":UART"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SPI",
+    srcs = ["SPI.bsv"],
+    deps = [
+        "//hdl/ip/bsv:RegCommon",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "SPITests",
+    suite = "SPI.bsv",
+    modules = [
+        "mkSpiDecodeTest",
+        "mkSpiPhyTest",
+    ],
+    deps = [":SPI"],
+)

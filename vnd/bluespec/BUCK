@@ -1,0 +1,21 @@
+# Bluespec Verilog primitives
+
+# Concatenate Bluespec Verilog library files into single Verilog.v
+# BSC library is installed at /opt/bsc-2022.01-ubuntu-20.04/lib/Verilog/
+# Exclude files with issues for synthesis:
+#   - Non-standard port syntax (InoutConnect, MakeReset*, ProbeHook, SyncFIFOLevel*, SyncRegister)
+#   - Testbench template (main.v)
+#   - Files with $readmemh that require initialization files (BRAM*Load.v, RegFileLoad.v)
+genrule(
+    name = "Verilog",
+    visibility = ["PUBLIC"],
+    out = "Verilog.v",
+    cmd = "find /opt/bsc-2022.01-ubuntu-20.04/lib/Verilog/ -name '*.v' ! -name 'InoutConnect.v' ! -name 'MakeResetA.v' ! -name 'MakeReset.v' ! -name 'ProbeHook.v' ! -name 'SyncFIFOLevel0.v' ! -name 'SyncFIFOLevel.v' ! -name 'SyncRegister.v' ! -name 'main.v' ! -name 'BRAM1BELoad.v' ! -name 'BRAM1Load.v' ! -name 'BRAM2BELoad.v' ! -name 'BRAM2Load.v' ! -name 'RegFileLoad.v' -exec cat {} \\; > $OUT",
+)
+
+# Export basicinout.pl for Verilog filtering
+export_file(
+    name = "basicinout.pl",
+    visibility = ["PUBLIC"],
+    src = "basicinout.pl",
+)

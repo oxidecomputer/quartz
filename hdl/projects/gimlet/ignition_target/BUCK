@@ -1,0 +1,80 @@
+load("//tools:bsv.bzl", "bsv_verilog", "bsv_yosys_design", "bsv_nextpnr_ice40_bitstream")
+
+# Ignition Target for Gimlet (Rev B, C, D compatible)
+
+# Verilog generation for all Rev B modules
+bsv_verilog(
+    name = "IgnitionTargetGimlet",
+    top = "IgnitionTargetGimlet.bsv",
+    modules = [
+        "mkGimletRevBTargetWithResetButton",
+        "mkGimletRevBTargetWithPowerButton",
+        "mkGimletRevBTarget",
+    ],
+    deps = [
+        "//hdl/ip/bsv/ignition:Target",
+        "//hdl/ip/bsv/ignition:TargetWrapper",
+    ],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+    bsc_flags = [
+        "-opt-undetermined-vals",
+        "-unspecified-to", "X",
+    ],
+)
+
+# Rev B targets - Reset Button variant
+bsv_yosys_design(
+    name = "ignition_target_rev_b_reset_button_top",
+    top_module = "mkGimletRevBTargetWithResetButton",
+    verilog_dep = ":IgnitionTargetGimlet",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ice40",
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "ignition_target_gimlet_rev_b_c_d_reset_button",
+    visibility = ["PUBLIC"],
+    yosys_design = ":ignition_target_rev_b_reset_button_top",
+    family = "lp1k",
+    package = "qn84",
+    pinmap = "//hdl/ip/bsv/ignition:ignition_target.pcf",
+    nextpnr_args = ["--freq", "50"],
+)
+
+# Rev B targets - Power Button variant
+bsv_yosys_design(
+    name = "ignition_target_rev_b_power_button_top",
+    top_module = "mkGimletRevBTargetWithPowerButton",
+    verilog_dep = ":IgnitionTargetGimlet",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ice40",
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "ignition_target_gimlet_rev_b_c_d_power_button",
+    visibility = ["PUBLIC"],
+    yosys_design = ":ignition_target_rev_b_power_button_top",
+    family = "lp1k",
+    package = "qn84",
+    pinmap = "//hdl/ip/bsv/ignition:ignition_target.pcf",
+    nextpnr_args = ["--freq", "50"],
+)
+
+# Rev B targets - Standard variant
+bsv_yosys_design(
+    name = "ignition_target_rev_b_top",
+    top_module = "mkGimletRevBTarget",
+    verilog_dep = ":IgnitionTargetGimlet",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ice40",
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "ignition_target_gimlet_rev_b_c_d",
+    visibility = ["PUBLIC"],
+    yosys_design = ":ignition_target_rev_b_top",
+    family = "lp1k",
+    package = "qn84",
+    pinmap = "//hdl/ip/bsv/ignition:ignition_target.pcf",
+    nextpnr_args = ["--freq", "50"],
+)

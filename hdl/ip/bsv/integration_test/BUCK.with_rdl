@@ -1,0 +1,85 @@
+load("//tools:bsv.bzl", "bsv_library", "bsv_verilog", "bsv_sim", "bsv_bluesim_binary")
+load("//tools:rdl.bzl", "rdl_file")
+
+# ========================================
+# Integration Test Suite
+# ========================================
+# This BUCK file demonstrates the complete BSV build pipeline:
+# 1. RDL → BSV code generation
+# 2. BSV compilation to .bo files
+# 3. Verilog generation for synthesis
+# 4. Bluesim compilation for testing
+# 5. Bluesim binary linking and execution
+
+# Step 1: Generate BSV register package from RDL
+rdl_file(
+    name = "counter_regs_rdl",
+    src = "counter_regs.rdl",
+    outputs = [
+        "counter_regs_pkg.bsv",
+        "counter_regs.html",
+        "counter_regs.json",
+    ],
+)
+
+# Step 2: Compile counter module that uses RDL-generated registers
+# This tests: RDL → BSV integration
+bsv_library(
+    name = "Counter",
+    srcs = ["Counter.bsv"],
+    deps = [":counter_regs_rdl"],
+)
+
+# Step 3: Generate Verilog for synthesis
+# This tests: BSV → Verilog generation pipeline
+bsv_verilog(
+    name = "counter_verilog",
+    top = "Counter.bsv",
+    modules = ["mkCounter"],
+    deps = [":Counter"],
+    bsc_flags = [
+        "-opt-undetermined-vals",
+        "-unspecified-to",
+        "X",
+    ],
+)
+
+# Step 4: Generate Bluesim bytecode for simulation
+# This tests: BSV → Bluesim pipeline
+bsv_sim(
+    name = "counter_sim",
+    top = "Counter.bsv",
+    modules = ["mkCounterTest"],
+    deps = [":Counter"],
+)
+
+# Step 5: Link Bluesim executable
+# This tests: Bluesim linking pipeline
+bsv_bluesim_binary(
+    name = "counter_test",
+    top = ":counter_sim",
+    entry_point = "mkCounterTest",
+    deps = [":Counter"],
+)
+
+# ========================================
+# Additional test: Dependency chain
+# ========================================
+# Test that dependencies flow correctly through the build graph
+
+# Helper library (no RDL dependency)
+bsv_library(
+    name = "CounterHelpers",
+    srcs = ["CounterHelpers.bsv"],
+    deps = [],
+)
+
+# Library depending on both Counter and CounterHelpers
+bsv_library(
+    name = "CounterWithHelpers",
+    srcs = ["CounterWithHelpers.bsv"],
+    deps = [
+        ":Counter",
+        ":CounterHelpers",
+    ],
+)

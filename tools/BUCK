@@ -1,0 +1,11 @@
+python_binary(
+    name = "bsv_compile_wrapper",
+    main = "bsv_compile_wrapper.py",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "gen_git_version_bsv_buck2",
+    src = "gen_git_version_bsv_buck2.py",
+    visibility = ["PUBLIC"],
+)

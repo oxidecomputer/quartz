@@ -11,7 +11,8 @@ Quartz is a collection of soft-logic designs and hardware abstraction libraries 
 Quartz uses two build systems in parallel:
 
 ### Buck2 (Primary/Modern)
-- Used for VHDL and RDL flows with VUnit simulations
+- Used for VHDL, BSV, and RDL flows
+- Supports VUnit simulations for VHDL and Bluesim for BSV
 - Supports Xilinx FPGA toolchain integration
 - Supports Lattice FPGAs via Yosys and GDHL VHDL plugin
 
@@ -34,22 +35,51 @@ Quartz uses two build systems in parallel:
 buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do eval "$line" ; done
 ```
 
+### BSV with Buck2
+
+BSV (Bluespec SystemVerilog) projects can now use Buck2 for builds:
+
+```bash
+# Build BSV library
+buck2 build //hdl/ip/bsv:MyModule
+
+# Run Bluesim test
+buck2 run //hdl/ip/bsv:MyTests_mkTestName
+
+# Generate Verilog for synthesis
+buck2 build //hdl/ip/bsv:my_verilog
+```
+
+**Documentation:**
+- [BSV_BUCK2_GUIDE.md](BSV_BUCK2_GUIDE.md) - Complete Buck2 BSV build system reference
+- [docs/BSV_QUICK_START.md](docs/BSV_QUICK_START.md) - Tutorial for new BSV projects
+- [docs/BSV_MIGRATION_EXAMPLES.md](docs/BSV_MIGRATION_EXAMPLES.md) - Migration from cobble BUILD to BUCK
+
+**Key BSV Build Rules:**
+- `bsv_library()` - Compile BSV sources to .bo object files
+- `bsv_verilog()` - Generate synthesizable Verilog from BSV modules
+- `bsv_bluesim_tests()` - Create Bluesim test executables
+- `rdl_file()` - Generate BSV register packages from SystemRDL
+
 ### Cobble (Legacy)
-- Used for BSV designs and RDL generation targeting yosys toolchain
+- Legacy build system for BSV designs
+- Still supported for backward compatibility
 - Requires BUILD.vars configuration (copy BUILD.vars.example and adapt paths)
 - See COBALT_README.md for detailed instructions
+- **Recommended**: Migrate BSV projects to Buck2 for better performance
 
 ## Architecture
 
 ### Directory Structure
 - `hdl/ip/` - Reusable IP blocks
-  - `bsv/` - Bluespec SystemVerilog IP (BUILD-based)
+  - `bsv/` - Bluespec SystemVerilog IP (BUCK-based, legacy BUILD files for cobble)
   - `vhd/` - VHDL IP modules (BUCK-based)
 - `hdl/projects/` - Complete FPGA designs for specific hardware
   - Each project contains top-level designs, constraints, and project-specific modules
 - `tools/` - Build system utilities and custom tools
 - `prelude/` - Buck2 build rules and configurations
 - `vnd/` - Vendor/third-party dependencies
+- `docs/` - Additional documentation including BSV guides
 
 ### VHDL Module Organization
 Each VHDL module should have its own `vhdl_unit` rule in BUCK files. Package files that are reused across modules should be in separate rules. Dependencies are specified via the `deps` attribute.
@@ -96,6 +126,9 @@ buck2 run //tools/fpga_releaser:cli -- --fpga <fpga-name> --hubris <hubris-path>
 ## Important Files
 - `BUILD.vars` - Machine-specific tool paths (copy from BUILD.vars.example)
 - `BUCK_RULES.md` - Detailed BUCK rule documentation
+- `BSV_BUCK2_GUIDE.md` - Complete BSV Buck2 build system reference
+- `docs/BSV_QUICK_START.md` - BSV Buck2 tutorial
+- `docs/BSV_MIGRATION_EXAMPLES.md` - BSV migration from cobble to Buck2
 - `RDL_EXAMPLES.md` - SystemRDL usage examples
 - `vsg_config.json` - VHDL formatting rules
 - `tools/requirements.txt` - Python dependencies

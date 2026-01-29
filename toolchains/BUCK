@@ -5,8 +5,9 @@ load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
 
 load("vivado_toolchain.bzl", "vivado_toolchain")
 load("vsg_toolchain.bzl", "vsg_toolchain")
+load("bsv_toolchain.bzl", "bsv_toolchain")
 
-load("yosys_toolchain.bzl", "icepack_toolchain", "nextpnr_ice40_toolchain")
+load("yosys_toolchain.bzl", "icepack_toolchain", "nextpnr_ice40_toolchain", "nextpnr_ecp5_toolchain", "ecppack_toolchain", "yosys_toolchain")
 
 system_genrule_toolchain(
     name = "genrule",
@@ -38,6 +39,16 @@ vsg_toolchain(
     visibility = ["PUBLIC"],
 )
 
+bsv_toolchain(
+    name = "bsv",
+    visibility = ["PUBLIC"],
+)
+
+yosys_toolchain(
+    name = "yosys",
+    visibility = ["PUBLIC"],
+)
+
 icepack_toolchain(
     name = "icepack",
     visibility = ["PUBLIC"],
@@ -45,6 +56,16 @@ icepack_toolchain(
 
 nextpnr_ice40_toolchain(
     name = "nextpnr-ice40",
+    visibility = ["PUBLIC"],
+)
+
+nextpnr_ecp5_toolchain(
+    name = "nextpnr-ecp5",
+    visibility = ["PUBLIC"],
+)
+
+ecppack_toolchain(
+    name = "ecppack",
     visibility = ["PUBLIC"],
 )
 

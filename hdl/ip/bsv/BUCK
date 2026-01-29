@@ -1,0 +1,229 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+
+# Make all targets public by default
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "CommonFunctions",
+    srcs = ["CommonFunctions.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "CommonInterfaces",
+    srcs = ["CommonInterfaces.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "FanModule",
+    srcs = ["FanModule.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SettableCRC",
+    srcs = ["SettableCRC.bsv"],
+)
+
+# Generate git version BSV file
+genrule(
+    name = "git_version_bsv",
+    visibility = ["PUBLIC"],
+    out = "git_version.bsv",
+    bash = "OUT_DIR=`dirname $OUT` && python3 $(location //tools:gen_git_version_bsv_buck2) $OUT_DIR",
+    cmd_exe = "echo Not supported on Windows",
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "GitVersion",
+    srcs = [":git_version_bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "RegCommon",
+    srcs = ["RegCommon.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Bidirection",
+    srcs = ["Bidirection.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "BitSampling",
+    srcs = ["BitSampling.bsv"],
+    deps = [":Strobe"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Countdown",
+    srcs = ["Countdown.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Debouncer",
+    srcs = ["Debouncer.bsv"],
+    deps = [":TestUtils"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Encoding8b10b",
+    srcs = [
+        "Encoding8b10b.bsv",  # Compile first - other modules depend on this
+        "Deserializer8b10b.bsv",
+        "Serializer8b10b.bsv",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "InitialReset",
+    srcs = ["InitialReset.bsv"],
+    deps = [":TestUtils"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "IOSync",
+    srcs = ["IOSync.bsv"],
+    deps = [
+        ":Bidirection",
+        ":WriteOnlyTriState",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "PLL",
+    srcs = ["PLL.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SchmittReg",
+    srcs = ["SchmittReg.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SerialIO",
+    srcs = ["SerialIO.bsv"],
+    deps = [
+        ":BitSampling",
+        ":IOSync",
+        ":Strobe",
+        ":WriteOnlyTriState",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Strobe",
+    srcs = ["Strobe.bsv"],
+)
+
+# NOTE: SyncBits.bsv does not exist - removed from converted BUCK file
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "TestUtils",
+    srcs = ["TestUtils.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "WriteOnceReg",
+    srcs = ["WriteOnceReg.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "WriteOnlyTriState",
+    srcs = ["WriteOnlyTriState.bsv"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "CountdownTest",
+    suite = "Countdown.bsv",
+    modules = ["mkCountdownTest"],
+    deps = [":Countdown"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "DebouncerTest",
+    suite = "Debouncer.bsv",
+    modules = [
+        "mkDebouncerTest",
+        "mkDebounceFastAssertTest",
+        "mkDebounceFastDeassertTest",
+    ],
+    deps = [
+        ":Debouncer",
+        ":TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "InitialResetTests",
+    suite = "InitialReset.bsv",
+    modules = ["mkInitialResetTest"],
+    deps = [":InitialReset"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "SchmittRegTests",
+    suite = "SchmittReg.bsv",
+    modules = [
+        "mkSlowEdgeSchmittRegTest",
+        "mkFastPositiveEdgeSchmittRegTest",
+        "mkLongBounceSchmittRegTest",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "StrobeTests",
+    suite = "Strobe.bsv",
+    modules = [
+        "mkPowerTwoStrobeTest",
+        "mkPowerTwoStrobeAsCountDownTest",
+        "mkFractionalStrobeTest",
+        "mkLimitStrobeStrobeTest",
+    ],
+)
+
+# WARNING: The following cobble rules were skipped:
+# - bsv_fpga_version
