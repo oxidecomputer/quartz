@@ -3,70 +3,185 @@ run-name: ${{ github.actor }} running HDL simulations
 on:
   [push]
 jobs:
-  changes:
+  detect-changes:
     runs-on: self-hosted
-    permissions:
-      pull-requests: read
     outputs:
-      cobble: ${{ steps.filter.outputs.cobble }}
-      buck2: ${{ steps.filter.outputs.buck2 }}
-      grapefruit: ${{ steps.filter.outputs.grapefruit }}
-      cosmo_hp: ${{ steps.filter.outputs.cosmo_hp }}
-      cosmo_seq: ${{ steps.filter.outputs.cosmo_seq }}
-      cosmo_ignition: ${{ steps.filter.outputs.cosmo_ignition }}
+      vunit_tests: ${{ steps.parse.outputs.vunit_tests }}
+      bsv_tests: ${{ steps.parse.outputs.bsv_tests }}
+      has_changes: ${{ steps.parse.outputs.has_changes }}
+      # Legacy outputs for cobble job
+      cobble: ${{ steps.parse.outputs.cobble }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: .github/filters.yml
-          
+          fetch-depth: 0  # Need full history
+
+      - name: Setup environment
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+
+      - name: Get changed files and base commit
+        id: changed-files
+        run: |
+          # Determine base commit
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_COMMIT="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_COMMIT="HEAD~1"
+          fi
+
+          # Generate list of changed files
+          git diff --name-only "$BASE_COMMIT" HEAD > /tmp/changes.txt
+
+          echo "Changed files ($(wc -l < /tmp/changes.txt)):"
+          head -20 /tmp/changes.txt
+
+          echo "base_commit=$BASE_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Generate base snapshot
+        run: |
+          git checkout ${{ steps.changed-files.outputs.base_commit }}
+          buck2 targets //... > /tmp/base.jsonl
+          echo "Base snapshot: $(wc -l < /tmp/base.jsonl) targets"
+          git checkout ${{ github.sha }}
+
+      - name: Generate diff snapshot
+        run: |
+          buck2 targets //... > /tmp/diff.jsonl
+          echo "Diff snapshot: $(wc -l < /tmp/diff.jsonl) targets"
+
+      - name: Run buck2-change-detector
+        id: btd
+        continue-on-error: true
+        run: |
+          # Note: Requires supertd to be installed
+          # Install with: cargo install --git https://github.com/facebookincubator/buck2-change-detector.git supertd
+          if command -v supertd &> /dev/null; then
+            supertd btd \
+              --changes /tmp/changes.txt \
+              --base /tmp/base.jsonl \
+              --diff /tmp/diff.jsonl \
+              --format json > /tmp/btd_output.json
+
+            echo "BTD completed with $(jq '.targets | length' /tmp/btd_output.json || echo 'N/A') affected targets"
+          else
+            echo "::warning::supertd not installed, using buck2 targets for now"
+            # Fallback: use buck2 targets to get all targets (run everything)
+            echo '{"targets": []}' > /tmp/btd_output.json
+          fi
+
+      - name: Parse affected targets
+        id: parse
+        run: |
+          mkdir -p /tmp/btd_results
+
+          # Run parser script
+          python3 .github/scripts/parse-affected-targets.py \
+            /tmp/btd_output.json \
+            /tmp/btd_results || {
+            echo "::warning::Parser failed, creating empty matrices"
+            # Create empty matrices on failure
+            for matrix in vunit_matrix bsv_test_matrix ice40_matrix ecp5_matrix vivado_matrix; do
+              echo '{"target": []}' > /tmp/btd_results/$matrix.json
+            done
+            echo '{"total_affected": 0, "vunit_tests": 0, "bsv_tests": 0, "ice40_bitstreams": 0, "ecp5_bitstreams": 0, "vivado_bitstreams": 0}' > /tmp/btd_results/summary.json
+          }
+
+          # Load matrix JSONs and set outputs
+          echo "vunit_tests=$(cat /tmp/btd_results/vunit_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "bsv_tests=$(cat /tmp/btd_results/bsv_test_matrix.json)" >> "$GITHUB_OUTPUT"
+
+          # Set has_changes flag
+          TOTAL=$(jq '.total_affected' /tmp/btd_results/summary.json)
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Legacy cobble flag: always true during migration
+          echo "cobble=true" >> "$GITHUB_OUTPUT"
+
+          # Display summary
+          cat /tmp/btd_results/summary.json
+
   vunit-sim:
-    needs: changes
-    # This is starting to get a bit ugly here
-    if: ${{ needs.changes.outputs.buck2 == 'true' || needs.changes.outputs.grapefruit == 'true' || needs.changes.outputs.cosmo_hp == 'true' || needs.changes.outputs.cosmo_seq == 'true' || needs.changes.outputs.cosmo_ignition == 'true'}}
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.vunit_tests).target[0] != null }}
     runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.vunit_tests) }}
     steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: buck path
-          run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
-        - name: Run VUnit tests
-          run: set -o pipefail; buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen | while IFS= read -r line; do echo "$line"; eval "$line" ; done
-        - name: Cleanup
-          run: bash .github/cleanup.sh
-  
+      - run: echo "Running VUnit test ${{ matrix.target }} on branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Update pip reqs
+        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+
+      - name: buck path
+        run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Run VUnit test
+        run: buck2 run ${{ matrix.target }} -- --clean -x ${{ matrix.target }}.xml
+
+      - name: Cleanup
+        run: bash .github/cleanup.sh
+
+  bsv-sim-buck2:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.bsv_tests).target[0] != null }}
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.bsv_tests) }}
+    steps:
+      - run: echo "Running BSV test ${{ matrix.target }} on branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Update pip reqs
+        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+
+      - name: Run BSV test
+        run: buck2 run ${{ matrix.target }}
+
+      - name: Cleanup
+        run: bash .github/cleanup.sh
+
+  # Legacy cobble BSV tests (keep during migration)
   bsv-sim:
-    needs: changes
-    if: ${{ needs.changes.outputs.cobble == 'true' }}
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.cobble == 'true' }}
     runs-on: self-hosted
     steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-            fetch-depth: 0
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: Env setup
-          run: cp BUILD.vars.gha BUILD.vars && echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
-        - name: Restore build-dir
-          run: if [ -d /tmp/cobble_build_bkup ]; then cp -R /tmp/cobble_build_bkup ./build; else mkdir ./build; fi
-        - name: cobble init
-          run: ../vnd/cobble/cobble init .. --reinit
-          working-directory: ./build
-        - name: Run BSIM tests
-          run: ./cobble bluesim_test "//.*Test.*"
-          working-directory: ./build
-        - name: backup build-dir
-          run: cp -R ./build /tmp/cobble_build_bkup
-        - name: Cleanup
-          run: bash .github/cleanup.sh
+      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          fetch-depth: 0
+      - name: Update pip reqs
+        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+      - name: Env setup
+        run: cp BUILD.vars.gha BUILD.vars && echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+      - name: Restore build-dir
+        run: if [ -d /tmp/cobble_build_bkup ]; then cp -R /tmp/cobble_build_bkup ./build; else mkdir ./build; fi
+      - name: cobble init
+        run: ../vnd/cobble/cobble init .. --reinit
+        working-directory: ./build
+      - name: Run BSIM tests
+        run: ./cobble bluesim_test "//.*Test.*"
+        working-directory: ./build
+      - name: backup build-dir
+        run: cp -R ./build /tmp/cobble_build_bkup
+      - name: Cleanup
+        run: bash .github/cleanup.sh

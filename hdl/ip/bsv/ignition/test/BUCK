@@ -282,8 +282,6 @@ bsv_bluesim_tests(
         "//hdl/ip/bsv/ignition:Transceiver",
         "//hdl/ip/bsv:TestUtils",
     ],
-    local = {
-    },
 )
 
 # bsv_bluesim_tests

@@ -231,6 +231,7 @@ bsv_verilog(
 
 load("//tools:bsv.bzl", "bsv_yosys_design", "bsv_nextpnr_ice40_bitstream")
 
+
 # Synthesize BSV Verilog with Yosys
 bsv_yosys_design(
     name = "gimlet_sequencer_yosys",
