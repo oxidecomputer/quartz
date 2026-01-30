@@ -61,16 +61,22 @@ jobs:
           # Note: Requires supertd to be installed
           # Install with: cargo install --git https://github.com/facebookincubator/buck2-change-detector.git supertd
           if command -v supertd &> /dev/null; then
-            supertd btd \
+            if supertd btd \
               --changes /tmp/changes.txt \
               --base /tmp/base.jsonl \
               --diff /tmp/diff.jsonl \
-              --format json > /tmp/btd_output.json
-
-            echo "BTD completed with $(jq '.targets | length' /tmp/btd_output.json || echo 'N/A') affected targets"
+              --format json > /tmp/btd_output.json 2>&1; then
+              echo "BTD completed successfully"
+              # Count targets without jq dependency
+              TARGETS=$(python3 -c "import json; print(len(json.load(open('/tmp/btd_output.json')).get('targets', [])))" 2>/dev/null || echo "unknown")
+              echo "Found $TARGETS affected targets"
+            else
+              echo "::warning::BTD failed, will run all targets"
+              echo '{"targets": []}' > /tmp/btd_output.json
+            fi
           else
-            echo "::warning::supertd not installed, using buck2 targets for now"
-            # Fallback: use buck2 targets to get all targets (run everything)
+            echo "::warning::supertd not installed, will run all targets"
+            # Fallback: empty targets means run everything
             echo '{"targets": []}' > /tmp/btd_output.json
           fi
 
@@ -97,15 +103,12 @@ jobs:
           echo "vivado_bitstreams=$(cat /tmp/btd_results/vivado_matrix.json)" >> "$GITHUB_OUTPUT"
 
           # Set has_changes flag
-          TOTAL=$(jq '.total_affected' /tmp/btd_results/summary.json)
+          TOTAL=$(python3 -c "import json; print(json.load(open('/tmp/btd_results/summary.json'))['total_affected'])" 2>/dev/null || echo "0")
           if [ "$TOTAL" -gt 0 ]; then
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
-
-          # Legacy cobble flag: always true during migration
-          echo "cobble=true" >> "$GITHUB_OUTPUT"
 
           # Display summary
           cat /tmp/btd_results/summary.json
@@ -209,38 +212,5 @@ jobs:
           name: ${{ matrix.target }}-image
           path: "./buck-out/v2/gen/root/**/*"
 
-      - name: Cleanup
-        run: bash .github/cleanup.sh
-
-  # Legacy cobble BSV builds (keep during migration)
-  bsv-streams:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.cobble == 'true' }}
-    runs-on: self-hosted
-    steps:
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-          fetch-depth: 0
-      - name: Update pip reqs
-        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-      - name: Env setup
-        run: cp BUILD.vars.gha BUILD.vars && echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
-      - name: Restore build-dir
-        run: if [ -d /tmp/cobble_build_bkup ]; then cp -R /tmp/cobble_build_bkup ./build; else mkdir ./build; fi
-      - name: cobble init
-        run: ../vnd/cobble/cobble init .. --reinit
-        working-directory: ./build
-      - name: Build FPGAs
-        run: ./cobble build -v "//.*#bitstream"
-        working-directory: ./build
-      - name: backup build-dir
-        run: cp -R ./build /tmp/cobble_build_bkup
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bsv-images
-          path: "./build/latest/**/*"
       - name: Cleanup
         run: bash .github/cleanup.sh
