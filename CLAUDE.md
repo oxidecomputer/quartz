@@ -48,7 +48,13 @@ buck2 run //hdl/ip/bsv:MyTests_mkTestName
 
 # Generate Verilog for synthesis
 buck2 build //hdl/ip/bsv:my_verilog
+
+# Optional: Set custom Bluespec library directory
+export BSV_LIB_DIR=/path/to/bluespec/lib
 ```
+
+**Environment Variables:**
+- `BSV_LIB_DIR` - Custom Bluespec library directory (defaults to `/usr/local/lib/bluespec`)
 
 **Documentation:**
 - [BSV_BUCK2_GUIDE.md](BSV_BUCK2_GUIDE.md) - Complete Buck2 BSV build system reference

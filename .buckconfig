@@ -18,3 +18,13 @@ ignore = .git
 
 [build]
 execution_platforms = prelude//platforms:default
+
+[buck2]
+# Limit local disk cache to 10GB to prevent unbounded growth on CI runners
+# Buck2 will automatically evict least-recently-used entries when limit is reached
+disk_cache_dir_max_size = 10737418240
+
+[bsv]
+# BSV library directory - reads from BSV_LIB_DIR environment variable
+# Falls back to /opt/bsc-2022.01/lib if not set (GitHub Actions standard path)
+libdir = ${env.BSV_LIB_DIR:/opt/bsc-2022.01/lib}

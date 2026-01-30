@@ -2,21 +2,28 @@ name: simulation
 run-name: ${{ github.actor }} running HDL simulations
 on:
   [push]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   detect-changes:
     runs-on: self-hosted
     outputs:
       vunit_tests: ${{ steps.parse.outputs.vunit_tests }}
       bsv_tests: ${{ steps.parse.outputs.bsv_tests }}
+      has_vunit_tests: ${{ steps.parse.outputs.has_vunit_tests }}
+      has_bsv_tests: ${{ steps.parse.outputs.has_bsv_tests }}
       has_changes: ${{ steps.parse.outputs.has_changes }}
-      # Legacy outputs for cobble job
-      cobble: ${{ steps.parse.outputs.cobble }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: 'true'
           fetch-depth: 0  # Need full history
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Setup environment
         run: |
@@ -33,24 +40,34 @@ jobs:
             BASE_COMMIT="HEAD~1"
           fi
 
-          # Generate list of changed files
-          git diff --name-only "$BASE_COMMIT" HEAD > /tmp/changes.txt
+          # Generate list of changed files in BTD format: "M path/to/file"
+          # BTD expects Mercurial-like format with status code (M/A/D) and space separator
+          # Filter out .github/ (CI-only changes don't affect build targets)
+          # but keep other dotfiles like .buckconfig which are build inputs
+          git diff --name-status "$BASE_COMMIT" HEAD | sed 's/\t/ /' | grep -v ' \.github/' > /tmp/changes.txt || touch /tmp/changes.txt
 
           echo "Changed files ($(wc -l < /tmp/changes.txt)):"
-          head -20 /tmp/changes.txt
+          cat /tmp/changes.txt
+          echo "--- End of changes.txt ---"
+
+          # Debug: Show hex dump of first line to check for hidden characters
+          if [ -s /tmp/changes.txt ]; then
+            echo "Hex dump of first line:"
+            head -1 /tmp/changes.txt | od -c
+          fi
 
           echo "base_commit=$BASE_COMMIT" >> "$GITHUB_OUTPUT"
 
       - name: Generate base snapshot
         run: |
           git checkout ${{ steps.changed-files.outputs.base_commit }}
-          buck2 targets //... > /tmp/base.jsonl
+          supertd targets //... 2>/dev/null > /tmp/base.jsonl
           echo "Base snapshot: $(wc -l < /tmp/base.jsonl) targets"
           git checkout ${{ github.sha }}
 
       - name: Generate diff snapshot
         run: |
-          buck2 targets //... > /tmp/diff.jsonl
+          supertd targets //... 2>/dev/null > /tmp/diff.jsonl
           echo "Diff snapshot: $(wc -l < /tmp/diff.jsonl) targets"
 
       - name: Run buck2-change-detector
@@ -59,22 +76,39 @@ jobs:
         run: |
           # Note: Requires supertd to be installed
           # Install with: cargo install --git https://github.com/facebookincubator/buck2-change-detector.git supertd
+          echo "Checking for supertd installation..."
+          which supertd || echo "supertd not found in PATH"
+          command -v supertd && supertd --version || echo "supertd command failed"
+
           if command -v supertd &> /dev/null; then
-            if supertd btd \
+            echo "Running BTD analysis..."
+            echo "Command: supertd btd --json --changes /tmp/changes.txt --base /tmp/base.jsonl --diff /tmp/diff.jsonl root//..."
+
+            # Run BTD with --json flag and root//... universe pattern
+            if supertd btd --json \
               --changes /tmp/changes.txt \
               --base /tmp/base.jsonl \
               --diff /tmp/diff.jsonl \
-              --format json > /tmp/btd_output.json 2>&1; then
+              root//... > /tmp/btd_output.json 2> /tmp/btd_stderr.txt; then
               echo "BTD completed successfully"
-              # Count targets without jq dependency
-              TARGETS=$(python3 -c "import json; print(len(json.load(open('/tmp/btd_output.json')).get('targets', [])))" 2>/dev/null || echo "unknown")
+              # Count targets (BTD outputs an array of target objects)
+              TARGETS=$(python3 -c "import json; data = json.load(open('/tmp/btd_output.json')); print(len(data))" 2>/dev/null || echo "unknown")
               echo "Found $TARGETS affected targets"
+              echo "BTD output preview:"
+              head -20 /tmp/btd_output.json || true
             else
+              EXIT_CODE=$?
+              echo "::error::BTD command failed with exit code $EXIT_CODE"
+              echo "BTD stdout:"
+              cat /tmp/btd_output.json || echo "No output file generated"
+              echo "BTD stderr:"
+              cat /tmp/btd_stderr.txt || echo "No stderr file generated"
               echo "::warning::BTD failed, will run all targets"
               echo '{"targets": []}' > /tmp/btd_output.json
             fi
           else
             echo "::warning::supertd not installed, will run all targets"
+            echo "PATH: $PATH"
             # Fallback: empty targets means run everything
             echo '{"targets": []}' > /tmp/btd_output.json
           fi
@@ -96,9 +130,25 @@ jobs:
             echo '{"total_affected": 0, "vunit_tests": 0, "bsv_tests": 0, "ice40_bitstreams": 0, "ecp5_bitstreams": 0, "vivado_bitstreams": 0}' > /tmp/btd_results/summary.json
           }
 
-          # Load matrix JSONs and set outputs
-          echo "vunit_tests=$(cat /tmp/btd_results/vunit_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "bsv_tests=$(cat /tmp/btd_results/bsv_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          # Load target lists (simple JSON arrays for sims)
+          echo "vunit_tests=$(cat /tmp/btd_results/vunit_tests.json)" >> "$GITHUB_OUTPUT"
+          echo "bsv_tests=$(cat /tmp/btd_results/bsv_tests.json)" >> "$GITHUB_OUTPUT"
+
+          # Set has_* flags based on array length
+          VUNIT_COUNT=$(python3 -c "import json; print(len(json.load(open('/tmp/btd_results/vunit_tests.json'))))" 2>/dev/null || echo "0")
+          BSV_COUNT=$(python3 -c "import json; print(len(json.load(open('/tmp/btd_results/bsv_tests.json'))))" 2>/dev/null || echo "0")
+
+          if [ "$VUNIT_COUNT" -gt 0 ]; then
+            echo "has_vunit_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_vunit_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$BSV_COUNT" -gt 0 ]; then
+            echo "has_bsv_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_bsv_tests=false" >> "$GITHUB_OUTPUT"
+          fi
 
           # Set has_changes flag
           TOTAL=$(python3 -c "import json; print(json.load(open('/tmp/btd_results/summary.json'))['total_affected'])" 2>/dev/null || echo "0")
@@ -113,49 +163,135 @@ jobs:
 
   vunit-sim:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.vunit_tests).target[0] != null }}
+    if: ${{ needs.detect-changes.outputs.has_vunit_tests == 'true' }}
     runs-on: self-hosted
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.detect-changes.outputs.vunit_tests) }}
     steps:
-      - run: echo "Running VUnit test ${{ matrix.target }} on branch ${{ github.ref }}"
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
           submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Update pip reqs
         run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
 
-      - name: buck path
-        run: echo "~/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Setup PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - name: Run VUnit test
-        run: buck2 run ${{ matrix.target }} -- --clean -x ${{ matrix.target }}.xml
+      - name: Run VUnit tests
+        run: |
+          TARGETS='${{ needs.detect-changes.outputs.vunit_tests }}'
+          echo "Running $(python3 -c "import json; print(len(json.loads('$TARGETS')))") VUnit tests"
+
+          FAILED=0
+          for target in $(python3 -c "import json; print('\n'.join(json.loads('$TARGETS')))"); do
+            echo "::group::Running $target"
+            TEST_NAME=$(echo "$target" | sed 's|.*:||')
+            if ! buck2 run "$target" -- --clean -x "${TEST_NAME}.xml"; then
+              echo "::error::Test $target failed"
+              FAILED=1
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            exit 1
+          fi
 
       - name: Cleanup
         run: bash .github/cleanup.sh
 
   bsv-sim-buck2:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.bsv_tests).target[0] != null }}
+    if: ${{ needs.detect-changes.outputs.has_bsv_tests == 'true' }}
     runs-on: self-hosted
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.detect-changes.outputs.bsv_tests) }}
     steps:
-      - run: echo "Running BSV test ${{ matrix.target }} on branch ${{ github.ref }}"
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
           submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Update pip reqs
         run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
 
-      - name: Run BSV test
-        run: buck2 run ${{ matrix.target }}
+      - name: Setup PATH
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+
+      - name: Run BSV tests
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          TARGETS='${{ needs.detect-changes.outputs.bsv_tests }}'
+          echo "Running $(echo "$TARGETS" | jq length) BSV tests"
+
+          FAILED=0
+          for target in $(echo "$TARGETS" | jq -r '.[]'); do
+            echo "::group::Running $target"
+            if ! buck2 run "$target"; then
+              echo "::error::Test $target failed"
+              FAILED=1
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            exit 1
+          fi
 
       - name: Cleanup
         run: bash .github/cleanup.sh
+
+  # Summary job that consolidates all simulation results for required status checks
+  simulation-summary:
+    name: Simulation Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, vunit-sim, bsv-sim-buck2]
+    if: always()
+    steps:
+      - name: Check simulation results
+        run: |
+          echo "Checking results of all simulation jobs..."
+
+          # Check if we had changes to process
+          if [ "${{ needs.detect-changes.outputs.has_changes }}" != "true" ]; then
+            echo "✓ No changes detected - skipping simulations"
+            exit 0
+          fi
+
+          # Check each matrix job result
+          VUNIT_RESULT="${{ needs.vunit-sim.result }}"
+          BSV_RESULT="${{ needs.bsv-sim-buck2.result }}"
+
+          echo "VUnit simulations: $VUNIT_RESULT"
+          echo "BSV simulations: $BSV_RESULT"
+
+          # Job results can be: success, failure, cancelled, or skipped
+          # We pass if all jobs are success or skipped (skipped means no targets in matrix)
+          FAILED=0
+
+          if [ "$VUNIT_RESULT" = "failure" ] || [ "$VUNIT_RESULT" = "cancelled" ]; then
+            echo "✗ VUnit simulations failed"
+            FAILED=1
+          fi
+
+          if [ "$BSV_RESULT" = "failure" ] || [ "$BSV_RESULT" = "cancelled" ]; then
+            echo "✗ BSV simulations failed"
+            FAILED=1
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ Simulations failed"
+            exit 1
+          fi
+
+          echo "✅ All simulations passed or were skipped"
+          exit 0

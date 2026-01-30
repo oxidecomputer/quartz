@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-# Copyright 2024 Oxide Computer Company
+# Copyright 2026 Oxide Computer Company
 
 # BSV (Bluespec SystemVerilog) build rules
 
@@ -97,13 +97,24 @@ def _bsv_library_impl(ctx: AnalysisContext) -> list[Provider]:
             module_name = src.basename.removesuffix(".bsv").removesuffix(".bs")
             bo_file = bo_artifacts[idx]
 
+            # Call as_output() only once and reuse the bound output
+            bo_output = bo_file.as_output()
+
             bsc_cmd = cmd_args(wrapper, hidden = hidden_deps + bo_artifacts[:idx])  # Include previous .bo files for intra-library deps
             bsc_cmd.add(bsc)
-            bsc_cmd.add(bo_file.as_output())  # Specific output file (wrapper creates parent dir)
+            bsc_cmd.add(bo_output)  # Specific output file (wrapper creates parent dir)
             bsc_cmd.add(ctx.attrs.bsc_flags)
             bsc_cmd.add("-p")
-            bsc_cmd.add(bo_search_cmd)
-            bsc_cmd.add("-bdir", bo_file.as_output())  # Wrapper will use parent directory
+            # For files after the first, add the current library's bo directory to search path
+            # so they can find previously compiled .bo files from the same library
+            if idx > 0:
+                # Get parent directory of current .bo file (same for all files in this library)
+                current_lib_bo_dir = cmd_args(bo_output, parent = 1)
+                # Append to search path
+                bsc_cmd.add(cmd_args(bo_search_cmd, current_lib_bo_dir, delimiter = ":"))
+            else:
+                bsc_cmd.add(bo_search_cmd)
+            bsc_cmd.add("-bdir", bo_output)  # Wrapper will use parent directory
             bsc_cmd.add(src)
 
             ctx.actions.run(

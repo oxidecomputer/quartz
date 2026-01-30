@@ -63,6 +63,10 @@ which bsc
 
 # Python packages for RDL
 pip install -r tools/requirements.txt
+
+# Optional: Set custom Bluespec library directory
+# export BSV_LIB_DIR=/path/to/bluespec/lib
+# (See "Toolchain Configuration" in Advanced Topics for details)
 ```
 
 ### Your First Build
@@ -700,6 +704,51 @@ bsv_library(
     ],
 )
 ```
+
+### Toolchain Configuration
+
+#### BSV Library Directory
+
+The BSV toolchain can be configured to use a custom Bluespec library directory via the `BSV_LIB_DIR` environment variable:
+
+```bash
+# Set custom Bluespec library path
+export BSV_LIB_DIR=/path/to/custom/bluespec/lib
+
+# Build with custom library path
+buck2 build //hdl/ip/bsv:YourModule
+```
+
+**Configuration Details:**
+
+- **Environment Variable**: `BSV_LIB_DIR`
+- **Default Value**: `/usr/local/lib/bluespec` (if not set)
+- **Config Location**: `.buckconfig` section `[bsv]`
+- **Toolchain File**: `toolchains/bsv_toolchain.bzl`
+
+The toolchain reads this value through Buck2's configuration system:
+
+```ini
+# .buckconfig
+[bsv]
+libdir = ${env.BSV_LIB_DIR:/usr/local/lib/bluespec}
+```
+
+**Override in BUCK files** (if needed):
+
+```starlark
+# toolchains/BUCK
+bsv_toolchain(
+    name = "bsv",
+    libdir = "/custom/bluespec/path",
+    visibility = ["PUBLIC"],
+)
+```
+
+This is useful when:
+- Using non-standard Bluespec installations
+- Testing with different Bluespec versions
+- Working in environments with custom toolchain paths
 
 ### Parallel Builds
 

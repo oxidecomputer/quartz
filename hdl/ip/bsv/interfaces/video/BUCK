@@ -1,17 +1,27 @@
 load("//tools:bsv.bzl", "bsv_bluesim_tests")
 load("//tools:bsv.bzl", "bsv_library")
 
-# bsv_library
+# TMDS encoder library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "tmds",
+    srcs = ["TMDS.bsv"],
+    deps = ["//hdl/ip/bsv:TestUtils"],
+)
+
+# Video interface library
 bsv_library(
     visibility = ["PUBLIC"],
     name = "video",
     srcs = [
-        "TestPatternGenerator.bsv",
         "Timing.bsv",
+        "TestPatternGenerator.bsv",
         "Transmitter.bsv",
-        "TMDS.bsv",
     ],
-    deps = ["//hdl/ip/bsv:TestUtils"],
+    deps = [
+        ":tmds",
+        "//hdl/ip/bsv:TestUtils",
+    ],
 )
 
 # bsv_bluesim_tests
@@ -38,5 +48,5 @@ bsv_bluesim_tests(
     name = "TMDSTests",
     suite = "TMDS.bsv",
     modules = ["mkEncoderTest"],
-    deps = [":video"],
+    deps = [":tmds"],
 )

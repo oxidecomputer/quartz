@@ -2,6 +2,9 @@ name: fpga-build
 run-name: ${{ github.actor }} Building FPGA bitstreams
 on:
   [push]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   detect-changes:
     runs-on: self-hosted
@@ -18,10 +21,16 @@ jobs:
         with:
           submodules: 'true'
           fetch-depth: 0  # Need full history
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Setup environment
         run: |
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+          echo "/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
           python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
 
       - name: Get changed files and base commit
@@ -34,24 +43,34 @@ jobs:
             BASE_COMMIT="HEAD~1"
           fi
 
-          # Generate list of changed files
-          git diff --name-only "$BASE_COMMIT" HEAD > /tmp/changes.txt
+          # Generate list of changed files in BTD format: "M path/to/file"
+          # BTD expects Mercurial-like format with status code (M/A/D) and space separator
+          # Filter out .github/ (CI-only changes don't affect build targets)
+          # but keep other dotfiles like .buckconfig which are build inputs
+          git diff --name-status "$BASE_COMMIT" HEAD | sed 's/\t/ /' | grep -v ' \.github/' > /tmp/changes.txt || touch /tmp/changes.txt
 
           echo "Changed files ($(wc -l < /tmp/changes.txt)):"
-          head -20 /tmp/changes.txt
+          cat /tmp/changes.txt
+          echo "--- End of changes.txt ---"
+
+          # Debug: Show hex dump of first line to check for hidden characters
+          if [ -s /tmp/changes.txt ]; then
+            echo "Hex dump of first line:"
+            head -1 /tmp/changes.txt | od -c
+          fi
 
           echo "base_commit=$BASE_COMMIT" >> "$GITHUB_OUTPUT"
 
       - name: Generate base snapshot
         run: |
           git checkout ${{ steps.changed-files.outputs.base_commit }}
-          buck2 targets //... > /tmp/base.jsonl
+          supertd targets //... 2>/dev/null > /tmp/base.jsonl
           echo "Base snapshot: $(wc -l < /tmp/base.jsonl) targets"
           git checkout ${{ github.sha }}
 
       - name: Generate diff snapshot
         run: |
-          buck2 targets //... > /tmp/diff.jsonl
+          supertd targets //... 2>/dev/null > /tmp/diff.jsonl
           echo "Diff snapshot: $(wc -l < /tmp/diff.jsonl) targets"
 
       - name: Run buck2-change-detector
@@ -60,22 +79,39 @@ jobs:
         run: |
           # Note: Requires supertd to be installed
           # Install with: cargo install --git https://github.com/facebookincubator/buck2-change-detector.git supertd
+          echo "Checking for supertd installation..."
+          which supertd || echo "supertd not found in PATH"
+          command -v supertd && supertd --version || echo "supertd command failed"
+
           if command -v supertd &> /dev/null; then
-            if supertd btd \
+            echo "Running BTD analysis..."
+            echo "Command: supertd btd --json --changes /tmp/changes.txt --base /tmp/base.jsonl --diff /tmp/diff.jsonl root//..."
+
+            # Run BTD with --json flag and root//... universe pattern
+            if supertd btd --json \
               --changes /tmp/changes.txt \
               --base /tmp/base.jsonl \
               --diff /tmp/diff.jsonl \
-              --format json > /tmp/btd_output.json 2>&1; then
+              root//... > /tmp/btd_output.json 2> /tmp/btd_stderr.txt; then
               echo "BTD completed successfully"
-              # Count targets without jq dependency
-              TARGETS=$(python3 -c "import json; print(len(json.load(open('/tmp/btd_output.json')).get('targets', [])))" 2>/dev/null || echo "unknown")
+              # Count targets (BTD outputs an array of target objects)
+              TARGETS=$(python3 -c "import json; data = json.load(open('/tmp/btd_output.json')); print(len(data))" 2>/dev/null || echo "unknown")
               echo "Found $TARGETS affected targets"
+              echo "BTD output preview:"
+              head -20 /tmp/btd_output.json || true
             else
+              EXIT_CODE=$?
+              echo "::error::BTD command failed with exit code $EXIT_CODE"
+              echo "BTD stdout:"
+              cat /tmp/btd_output.json || echo "No output file generated"
+              echo "BTD stderr:"
+              cat /tmp/btd_stderr.txt || echo "No stderr file generated"
               echo "::warning::BTD failed, will run all targets"
               echo '{"targets": []}' > /tmp/btd_output.json
             fi
           else
             echo "::warning::supertd not installed, will run all targets"
+            echo "PATH: $PATH"
             # Fallback: empty targets means run everything
             echo '{"targets": []}' > /tmp/btd_output.json
           fi
@@ -127,27 +163,45 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Update pip reqs
         run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
 
       - name: Setup PATH
-        run: echo "$HOME/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
 
       - name: Build bitstream
-        run: buck2 build ${{ matrix.target }} --show-output
+        id: build
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          OUTPUT=$(buck2 build ${{ matrix.target }} --show-output | awk '{print $2}')
+          OUTPUT_DIR=$(dirname "$OUTPUT")
+          echo "Build output: $OUTPUT"
+          echo "Output directory: $OUTPUT_DIR"
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+          TARGET_NAME=$(echo "${{ matrix.target }}" | sed 's|.*:||')
+          echo "artifact_name=${TARGET_NAME}-image" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}-image
-          path: "./buck-out/v2/gen/root/**/*"
+          name: ${{ steps.build.outputs.artifact_name }}
+          path: ${{ steps.build.outputs.output_dir }}
+          overwrite: true
 
       - name: Cleanup
         run: bash .github/cleanup.sh
 
-  # BSV bitstream builds (iCE40 and ECP5)
-  bsv-ice40-bitstreams:
+  # iCE40 bitstream builds (BSV and VHDL via Yosys)
+  ice40-bitstreams:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.ice40_bitstreams).target[0] != null }}
     runs-on: self-hosted
@@ -160,6 +214,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Update pip reqs
         run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
@@ -167,21 +225,34 @@ jobs:
       - name: Setup PATH
         run: |
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
           echo "/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
 
       - name: Build bitstream
-        run: buck2 build ${{ matrix.target }} --show-output
+        id: build
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          OUTPUT=$(buck2 build ${{ matrix.target }} --show-output | awk '{print $2}')
+          OUTPUT_DIR=$(dirname "$OUTPUT")
+          echo "Build output: $OUTPUT"
+          echo "Output directory: $OUTPUT_DIR"
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+          TARGET_NAME=$(echo "${{ matrix.target }}" | sed 's|.*:||')
+          echo "artifact_name=${TARGET_NAME}-image" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}-image
-          path: "./buck-out/v2/gen/root/**/*"
+          name: ${{ steps.build.outputs.artifact_name }}
+          path: ${{ steps.build.outputs.output_dir }}
+          overwrite: true
 
       - name: Cleanup
         run: bash .github/cleanup.sh
 
-  bsv-ecp5-bitstreams:
+  # ECP5 bitstream builds (BSV and VHDL via Yosys)
+  ecp5-bitstreams:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.ecp5_bitstreams).target[0] != null }}
     runs-on: self-hosted
@@ -194,6 +265,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
       - name: Update pip reqs
         run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
@@ -201,16 +276,81 @@ jobs:
       - name: Setup PATH
         run: |
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
           echo "/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
 
       - name: Build bitstream
-        run: buck2 build ${{ matrix.target }} --show-output
+        id: build
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          OUTPUT=$(buck2 build ${{ matrix.target }} --show-output | awk '{print $2}')
+          OUTPUT_DIR=$(dirname "$OUTPUT")
+          echo "Build output: $OUTPUT"
+          echo "Output directory: $OUTPUT_DIR"
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+          TARGET_NAME=$(echo "${{ matrix.target }}" | sed 's|.*:||')
+          echo "artifact_name=${TARGET_NAME}-image" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}-image
-          path: "./buck-out/v2/gen/root/**/*"
+          name: ${{ steps.build.outputs.artifact_name }}
+          path: ${{ steps.build.outputs.output_dir }}
+          overwrite: true
 
       - name: Cleanup
         run: bash .github/cleanup.sh
+
+  # Summary job that consolidates all FPGA build results for required status checks
+  fpga-build-summary:
+    name: FPGA Build Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, vivado-bitstreams, ice40-bitstreams, ecp5-bitstreams]
+    if: always()
+    steps:
+      - name: Check build results
+        run: |
+          echo "Checking results of all FPGA build jobs..."
+
+          # Check if we had changes to process
+          if [ "${{ needs.detect-changes.outputs.has_changes }}" != "true" ]; then
+            echo "✓ No changes detected - skipping builds"
+            exit 0
+          fi
+
+          # Check each matrix job result
+          VIVADO_RESULT="${{ needs.vivado-bitstreams.result }}"
+          ICE40_RESULT="${{ needs.ice40-bitstreams.result }}"
+          ECP5_RESULT="${{ needs.ecp5-bitstreams.result }}"
+
+          echo "Vivado bitstreams: $VIVADO_RESULT"
+          echo "iCE40 bitstreams: $ICE40_RESULT"
+          echo "ECP5 bitstreams: $ECP5_RESULT"
+
+          # Job results can be: success, failure, cancelled, or skipped
+          # We pass if all jobs are success or skipped (skipped means no targets in matrix)
+          FAILED=0
+
+          if [ "$VIVADO_RESULT" = "failure" ] || [ "$VIVADO_RESULT" = "cancelled" ]; then
+            echo "✗ Vivado bitstream builds failed"
+            FAILED=1
+          fi
+
+          if [ "$ICE40_RESULT" = "failure" ] || [ "$ICE40_RESULT" = "cancelled" ]; then
+            echo "✗ iCE40 bitstream builds failed"
+            FAILED=1
+          fi
+
+          if [ "$ECP5_RESULT" = "failure" ] || [ "$ECP5_RESULT" = "cancelled" ]; then
+            echo "✗ ECP5 bitstream builds failed"
+            FAILED=1
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ FPGA build failed"
+            exit 1
+          fi
+
+          echo "✅ All FPGA builds passed or were skipped"
+          exit 0

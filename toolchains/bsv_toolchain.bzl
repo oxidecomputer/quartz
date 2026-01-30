@@ -2,9 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-# Copyright 2024 Oxide Computer Company
+# Copyright 202 Oxide Computer Company
 
 # BSV (Bluespec SystemVerilog) toolchain definition
+
+# Read BSV library directory from configuration
+# This allows using BSV_LIB_DIR environment variable via .buckconfig
+# Default is /opt/bsc-2022.01/lib (GitHub Actions standard path)
+_BSV_LIBDIR = read_root_config("bsv", "libdir", "/opt/bsc-2022.01/lib")
 
 def _bsv_toolchain_impl(ctx):
     """BSV toolchain provider implementation"""
@@ -29,8 +34,8 @@ bsv_toolchain = rule(
             doc = "Path to bsc compiler executable",
         ),
         "libdir": attrs.string(
-            default = "/usr/local/lib/bluespec",
-            doc = "Path to Bluespec standard library",
+            default = _BSV_LIBDIR,
+            doc = "Path to Bluespec standard library (reads from BSV_LIB_DIR env var via .buckconfig)",
         ),
     },
     is_toolchain_rule = True,
