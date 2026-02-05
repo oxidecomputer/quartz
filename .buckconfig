@@ -24,6 +24,9 @@ execution_platforms = prelude//platforms:default
 # Buck2 will automatically evict least-recently-used entries when limit is reached
 disk_cache_dir_max_size = 10737418240
 
+[cache]
+mode = sqlite
+
 [bsv]
 # BSV library directory - reads from BSV_LIB_DIR environment variable
 # Falls back to /opt/bsc-2022.01/lib if not set (GitHub Actions standard path)

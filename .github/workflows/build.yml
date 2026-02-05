@@ -36,12 +36,8 @@ jobs:
       - name: Get changed files and base commit
         id: changed-files
         run: |
-          # Determine base commit
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE_COMMIT="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE_COMMIT="HEAD~1"
-          fi
+          # Always compare against origin/main to detect all changes in the branch
+          BASE_COMMIT="origin/main"
 
           # Generate list of changed files in BTD format: "M path/to/file"
           # BTD expects Mercurial-like format with status code (M/A/D) and space separator

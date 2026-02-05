@@ -33,12 +33,8 @@ jobs:
       - name: Get changed files and base commit
         id: changed-files
         run: |
-          # Determine base commit
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE_COMMIT="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE_COMMIT="HEAD~1"
-          fi
+          # Always compare against origin/main to detect all changes in the branch
+          BASE_COMMIT="origin/main"
 
           # Generate list of changed files in BTD format: "M path/to/file"
           # BTD expects Mercurial-like format with status code (M/A/D) and space separator
@@ -231,10 +227,16 @@ jobs:
           BSV_LIB_DIR: /opt/bsc-2022.01/lib
         run: |
           TARGETS='${{ needs.detect-changes.outputs.bsv_tests }}'
-          echo "Running $(echo "$TARGETS" | jq length) BSV tests"
+          # Convert JSON array to space-separated list for buck2
+          TARGET_LIST=$(python3 -c "import json; print(' '.join(json.loads('$TARGETS')))")
+          echo "Building $(echo $TARGET_LIST | wc -w) BSV tests in parallel"
 
+          # Build all tests in parallel first
+          buck2 build --preemptible=ondifferentstate $TARGET_LIST
+
+          # Run each test (buck2 run sets up BSV environment)
           FAILED=0
-          for target in $(echo "$TARGETS" | jq -r '.[]'); do
+          for target in $TARGET_LIST; do
             echo "::group::Running $target"
             if ! buck2 run "$target"; then
               echo "::error::Test $target failed"
