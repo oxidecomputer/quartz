@@ -196,11 +196,12 @@ def generate_matrix_json(targets: List[str]) -> str:
 
 def main():
     if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} <btd_output.json> <output_dir>", file=sys.stderr)
+        print(f"Usage: {sys.argv[0]} <btd_output.json> <output_dir> [--fallback]", file=sys.stderr)
         sys.exit(1)
 
     btd_json = sys.argv[1]
     output_dir = Path(sys.argv[2])
+    fallback = '--fallback' in sys.argv
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Get all targets from BXL/cquery
@@ -211,10 +212,15 @@ def main():
     print("Parsing BTD output...", file=sys.stderr)
     affected_targets = parse_btd_output(btd_json)
 
-    # If BTD returned no targets (fallback case), run everything
-    if len(affected_targets) == 0:
-        print("No affected targets from BTD (fallback mode) - running all targets", file=sys.stderr)
+    # Only fall back to running everything when BTD itself failed
+    # (indicated by --fallback); zero targets from a successful BTD
+    # run means nothing was affected.
+    if fallback:
+        print("BTD failed (--fallback) - running all targets", file=sys.stderr)
         affected_by_category = all_targets
+        affected_targets = set()
+        for targets in all_targets.values():
+            affected_targets.update(targets)
     else:
         # Filter to affected only
         affected_by_category = filter_affected(all_targets, affected_targets)
