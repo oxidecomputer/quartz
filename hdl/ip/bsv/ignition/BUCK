@@ -1,0 +1,170 @@
+load("//tools:bsv.bzl", "bsv_library")
+load("//tools:bsv.bzl", "bsv_verilog")
+load("//tools:rdl.bzl", "rdl_file")
+
+# Export PCF constraint files
+export_file(
+    name = "ignition_target.pcf",
+    visibility = ["PUBLIC"],
+    src = "ignition_target.pcf",
+)
+
+export_file(
+    name = "ignition_target_debug.pcf",
+    visibility = ["PUBLIC"],
+    src = "ignition_target_debug.pcf",
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Protocol",
+    srcs = [
+        "IgnitionProtocol.bsv",
+        "IgnitionProtocolDeparser.bsv",
+        "IgnitionProtocolParser.bsv",
+    ],
+    deps = [
+        "//hdl/ip/bsv:SettableCRC",
+        "//hdl/ip/bsv:Encoding8b10b",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Transceiver",
+    srcs = [
+        "IgnitionReceiver.bsv",
+        "IgnitionTransmitter.bsv",  # Compile before Transceiver - it depends on this
+        "IgnitionTransceiver.bsv",
+    ],
+    deps = [
+        ":Protocol",
+        "//hdl/ip/bsv:SerialIO",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Target",
+    srcs = ["IgnitionTarget.bsv"],
+    deps = [
+        ":Transceiver",
+        "//hdl/projects/ignitionlet:Board",
+        "//hdl/ip/bsv:Countdown",
+        "//hdl/ip/bsv:SchmittReg",
+        "//hdl/ip/bsv:Strobe",
+    ],
+    bsc_flags = ["-Xc++", "-Wno-dangling-else", "-Xc++", "-Wno-bool-operation"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "TargetWrapper",
+    srcs = [
+        "IgnitionTargetTop.bsv",
+        "IgnitionTargetWrapper.bsv",
+    ],
+    deps = [
+        ":Target",
+        "//hdl/ip/bsv:BitSampling",
+        "//hdl/ip/bsv:InitialReset",
+        "//hdl/ip/bsv:IOSync",
+        "//hdl/ip/bsv:SchmittReg",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv/interfaces:ICE40",
+    ],
+)
+
+# bsv_library - IgnitionEventCounter (separate to establish dependency)
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "EventCounter",
+    srcs = ["IgnitionEventCounter.bsv"],
+    deps = [
+        ":ControllerRegisters",
+        ":Protocol",
+        "//hdl/ip/bsv:RegCommon",
+    ],
+)
+
+# bsv_library - IgnitionController
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Controller",
+    srcs = ["IgnitionController.bsv"],
+    deps = [
+        ":ControllerRegisters",
+        ":EventCounter",
+        ":Protocol",
+        ":Transceiver",
+        "//hdl/ip/bsv:Countdown",
+        "//hdl/ip/bsv:SchmittReg",
+        "//hdl/ip/bsv:Strobe",
+    ],
+    bsc_flags = ["-Xc++", "-Wno-dangling-else", "-Xc++", "-Wno-bool-operation"],
+)
+
+# rdl_file
+rdl_file(
+    visibility = ["PUBLIC"],
+    name = "ignition_controller_rdl",
+    outputs = [
+        "IgnitionControllerRegisters.bsv",
+        "ignition_controller.html",
+        "ignition_controller.json",
+    ],
+    src = "ignition_controller.rdl",
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "ControllerRegisters",
+    srcs = [":ignition_controller_rdl[bsv]"],
+    deps = [
+        "//hdl/ip/bsv:RegCommon",
+    ],
+)
+
+# bsv_verilog
+bsv_verilog(
+    name = "mkParser",
+    top = "IgnitionProtocolParser.bsv",
+    modules = ["mkParser"],
+    deps = [":Protocol"],
+    bsc_flags = [
+        "-opt-undetermined-vals",
+        "-unspecified-to",
+        "X",
+    ],
+)
+
+# bsv_verilog
+bsv_verilog(
+    name = "mkTransceiver",
+    top = "IgnitionTransceiver.bsv",
+    modules = ["mkTransceiver"],
+    deps = [":Transceiver"],
+    bsc_flags = [
+        "-opt-undetermined-vals",
+        "-unspecified-to",
+        "X",
+    ],
+)
+
+# bsv_verilog
+bsv_verilog(
+    name = "mkTargetTransceiver",
+    top = "IgnitionTransceiver.bsv",
+    modules = ["mkTargetTransceiver"],
+    deps = [":Transceiver"],
+    bsc_flags = [
+        "-opt-undetermined-vals",
+        "-unspecified-to",
+        "X",
+    ],
+)

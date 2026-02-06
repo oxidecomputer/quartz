@@ -1,0 +1,22 @@
+load("//tools:rdl.bzl", "rdl_file")
+load("//tools:bsv.bzl", "bsv_library")
+
+# RDL type definitions for power rail state
+# This is used as a dependency by other RDL files (e.g., sidecar_mainboard_controller.rdl)
+rdl_file(
+    name = "power_rail_rdl",
+    visibility = ["PUBLIC"],
+    src = "power_rail.rdl",
+    outputs = [],  # This is a reusable type definition, not a standalone addrmap
+)
+
+# BSV power rail library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "PowerRail",
+    srcs = ["PowerRail.bsv"],
+    deps = [
+        "//hdl/ip/bsv:Countdown",
+        "//hdl/ip/bsv:Strobe",
+    ],
+)

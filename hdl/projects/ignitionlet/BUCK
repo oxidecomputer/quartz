@@ -1,0 +1,14 @@
+load("//tools:bsv.bzl", "bsv_library")
+
+# Ignitionlet board definitions
+
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Board",
+    srcs = ["Board.bsv"],
+    deps = [
+        "//hdl/ip/bsv:InitialReset",
+        "//hdl/ip/bsv:TestUtils",
+        "//hdl/ip/bsv/interfaces:ICE40",
+    ],
+)

@@ -18,6 +18,7 @@ RDLTSet = transitive_set(args_projections={"args": rdl_project_as_args})
 RDLFileInfo = provider(fields={"set": provider_field(RDLTSet)})
 RDLHtmlMaps = provider(fields=["files"])
 RDLJsonMaps = provider(fields=["files"])
+RDLBSVPkgs = provider(fields=["files"])
 
 
 VHDLFileInfo = record(

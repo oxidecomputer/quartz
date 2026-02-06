@@ -1,0 +1,49 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+load("//tools:bsv.bzl", "bsv_verilog")
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Blinky",
+    srcs = ["Blinky.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "LoopbackUART",
+    srcs = ["LoopbackUART.bsv"],
+    deps = ["//hdl/ip/bsv/interfaces:UART"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "LoopbackUARTTests",
+    suite = "LoopbackUART.bsv",
+    modules = ["mkLoopbackUARTTest"],
+    deps = [":LoopbackUART"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "TestPatternVideoSource",
+    srcs = ["TestPatternVideoSource.bsv"],
+    deps = ["//hdl/ip/bsv/interfaces/video:video"],
+)
+
+# bsv_verilog
+bsv_verilog(
+    name = "TestPatternVideoSource_verilog",
+    top = "TestPatternVideoSource.bsv",
+    modules = [
+        "mk100pTestPatternVideoSource",
+        "mk480pTestPatternVideoSource",
+    ],
+    deps = [":TestPatternVideoSource"],
+)
+
+# WARNING: The following cobble rules were skipped:
+# - c_binary
+# - yosys_design

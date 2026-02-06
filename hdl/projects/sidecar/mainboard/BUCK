@@ -1,0 +1,202 @@
+load("//tools:bsv.bzl", "bsv_library", "bsv_verilog", "bsv_yosys_design", "bsv_nextpnr_ecp5_bitstream")
+load("//tools:rdl.bzl", "rdl_file")
+
+# SystemRDL register definitions
+rdl_file(
+    name = "sidecar_mainboard_controller_rdl",
+    visibility = ["PUBLIC"],
+    src = "sidecar_mainboard_controller.rdl",
+    deps = [
+        "//hdl/ip/bsv/power_rail:power_rail_rdl",
+    ],
+    outputs = [
+        "SidecarMainboardControllerReg.bsv",
+        "sidecar_mainboard_controller.html",
+        "sidecar_mainboard_controller.json",
+    ],
+)
+
+# BSV register library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SidecarMainboardControllerReg",
+    srcs = [
+        ":sidecar_mainboard_controller_rdl[bsv]",
+    ],
+    deps = [
+        "//hdl/ip/bsv:RegCommon",
+    ],
+)
+
+# TofinoDebugPort library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "TofinoDebugPort",
+    srcs = [
+        "TofinoDebugPort.bsv",
+    ],
+    deps = [
+        ":SidecarMainboardControllerReg",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv/I2C:I2CCore",
+    ],
+)
+
+# Tofino2Sequencer library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Tofino2Sequencer",
+    srcs = [
+        "Tofino2Sequencer.bsv",
+    ],
+    deps = [
+        ":SidecarMainboardControllerReg",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+    ],
+)
+
+# PCIeEndpointController library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "PCIeEndpointController",
+    srcs = [
+        "PCIeEndpointController.bsv",
+    ],
+    deps = [
+        ":SidecarMainboardControllerReg",
+        ":Tofino2Sequencer",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv:Debouncer",
+    ],
+)
+
+# SidecarMainboardMiscSequencers library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SidecarMainboardMiscSequencers",
+    srcs = ["SidecarMainboardMiscSequencers.bsv"],
+    deps = [
+        ":SidecarMainboardControllerReg",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        "//hdl/ip/bsv:Debouncer",
+    ],
+)
+
+# SidecarMainboardController library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SidecarMainboardController",
+    srcs = ["SidecarMainboardController.bsv"],
+    deps = [
+        ":PCIeEndpointController",
+        ":SidecarMainboardControllerReg",
+        ":SidecarMainboardMiscSequencers",
+        ":Tofino2Sequencer",
+        ":TofinoDebugPort",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        "//hdl/ip/bsv/ignition:Controller",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv/ignition:Transceiver",
+        "//hdl/ip/bsv:SerialIO",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv/interfaces:SPI",
+    ],
+    bsc_flags = [
+        "+RTS", "-K0", "-RTS",
+    ],
+)
+
+# SidecarMainboardControllerSpiServer library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SidecarMainboardControllerSpiServer",
+    srcs = ["SidecarMainboardControllerSpiServer.bsv"],
+    deps = [
+        ":PCIeEndpointController",
+        ":SidecarMainboardController",
+        ":SidecarMainboardControllerReg",
+        ":SidecarMainboardMiscSequencers",
+        ":Tofino2Sequencer",
+        ":TofinoDebugPort",
+        "//hdl/ip/bsv/ignition:Controller",
+        "//hdl/ip/bsv/ignition:ControllerRegisters",
+        "//hdl/ip/bsv:GitVersion",
+        "//hdl/ip/bsv:RegCommon",
+        "//hdl/ip/bsv:WriteOnceReg",
+    ],
+)
+
+# SidecarMainboardControllerTop library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "SidecarMainboardControllerTop",
+    srcs = [
+        "SidecarMainboardControllerTop.bsv",
+    ],
+    deps = [
+        ":SidecarMainboardControllerSpiServer",
+        "//hdl/ip/bsv:IOSync",
+        "//hdl/ip/bsv:SerialIO",
+    ],
+)
+
+# Verilog generation for both top modules
+bsv_verilog(
+    name = "mkSidecarMainboardControllerTop",
+    top = "SidecarMainboardControllerTop.bsv",
+    modules = [
+        "mkSidecarMainboardControllerTop",
+        "mkSidecarMainboardControllerTopRevB",
+    ],
+    deps = [
+        ":SidecarMainboardControllerTop",
+    ],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+    bsc_flags = [
+        "+RTS", "-K0", "-RTS",
+        "-opt-undetermined-vals",
+        "-unspecified-to", "X",
+        "-steps-warn-interval", "1000000",
+        "-steps-max-intervals", "3",
+    ],
+)
+
+# Rev C/D synthesis
+bsv_yosys_design(
+    name = "sidecar_mainboard_controller_top",
+    top_module = "mkSidecarMainboardControllerTop",
+    verilog_dep = ":mkSidecarMainboardControllerTop",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ecp5",
+)
+
+# Rev C/D bitstream
+bsv_nextpnr_ecp5_bitstream(
+    name = "sidecar_mainboard_controller_rev_cd",
+    visibility = ["PUBLIC"],
+    yosys_design = ":sidecar_mainboard_controller_top",
+    family = "45k",
+    package = "CABGA554",
+    pinmap = "sidecar_mainboard_controller.lpf",
+    nextpnr_args = ["--speed", "6", "--freq", "50"],
+)
+
+# Rev B synthesis
+bsv_yosys_design(
+    name = "sidecar_mainboard_controller_top_rev_b",
+    top_module = "mkSidecarMainboardControllerTopRevB",
+    verilog_dep = ":mkSidecarMainboardControllerTop",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ecp5",
+)
+
+# Rev B bitstream
+bsv_nextpnr_ecp5_bitstream(
+    name = "sidecar_mainboard_controller_rev_b",
+    visibility = ["PUBLIC"],
+    yosys_design = ":sidecar_mainboard_controller_top_rev_b",
+    family = "45k",
+    package = "CABGA554",
+    pinmap = "sidecar_mainboard_controller_rev_b.lpf",
+    nextpnr_args = ["--speed", "6", "--freq", "50"],
+)

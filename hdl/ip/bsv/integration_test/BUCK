@@ -1,0 +1,56 @@
+load("//tools:bsv.bzl", "bsv_library", "bsv_verilog", "bsv_sim", "bsv_bluesim_binary")
+load("//tools:rdl.bzl", "rdl_file")
+
+# ========================================
+# Integration Test Suite (Simplified)
+# ========================================
+# Tests the complete BSV build pipeline components
+
+# Test 1: RDL generation (works independently)
+rdl_file(
+    name = "counter_regs_rdl",
+    src = "counter_regs.rdl",
+    outputs = [
+        "counter_regsRegs.bsv",
+        "counter_regs.html",
+        "counter_regs.json",
+    ],
+)
+
+# Test 2: Simple BSV library compilation
+bsv_library(
+    name = "CounterHelpers",
+    srcs = ["CounterHelpers.bsv"],
+    deps = [],
+)
+
+# Test 3: BSV library with dependencies
+bsv_library(
+    name = "SimpleCounter",
+    srcs = ["SimpleCounter.bsv"],
+    deps = [":CounterHelpers"],
+)
+
+# Test 4: Verilog generation
+bsv_verilog(
+    name = "simple_counter_verilog",
+    top = "SimpleCounter.bsv",
+    modules = ["mkSimpleCounter"],
+    deps = [":SimpleCounter"],
+)
+
+# Test 5: Bluesim compilation
+bsv_sim(
+    name = "simple_counter_sim",
+    top = "SimpleCounter.bsv",
+    modules = ["mkSimpleCounterTest"],
+    deps = [":SimpleCounter"],
+)
+
+# Test 6: Bluesim binary linking and execution
+bsv_bluesim_binary(
+    name = "simple_counter_test",
+    top = ":simple_counter_sim",
+    entry_point = "mkSimpleCounterTest",
+    deps = [":SimpleCounter"],
+)

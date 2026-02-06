@@ -2,169 +2,351 @@ name: fpga-build
 run-name: ${{ github.actor }} Building FPGA bitstreams
 on:
   [push]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  changes:
+  detect-changes:
     runs-on: self-hosted
-    permissions:
-      pull-requests: read
     outputs:
-      cobble: ${{ steps.filter.outputs.cobble }}
-      buck2: ${{ steps.filter.outputs.buck2 }}
-      grapefruit: ${{ steps.filter.outputs.grapefruit }}
-      cosmo_hp: ${{ steps.filter.outputs.cosmo_hp }}
-      cosmo_seq: ${{ steps.filter.outputs.cosmo_seq }}
-      cosmo_ignition: ${{ steps.filter.outputs.cosmo_ignition }}
-      cosmo_ignition_a: ${{ steps.filter.outputs.cosmo_ignition_a }}
+      ice40_bitstreams: ${{ steps.parse.outputs.ice40_bitstreams }}
+      ecp5_bitstreams: ${{ steps.parse.outputs.ecp5_bitstreams }}
+      vivado_bitstreams: ${{ steps.parse.outputs.vivado_bitstreams }}
+      has_changes: ${{ steps.parse.outputs.has_changes }}
+      # Legacy outputs for cobble job
+      cobble: ${{ steps.parse.outputs.cobble }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
-      - uses: dorny/paths-filter@v3
-        id: filter
+          fetch-depth: 0  # Need full history
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
+
+      - name: Setup environment
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+          echo "/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
+          python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+
+      - name: Get changed files and base commit
+        id: changed-files
+        run: |
+          # Always compare against origin/main to detect all changes in the branch
+          BASE_COMMIT="origin/main"
+
+          # Generate list of changed files in BTD format: "M path/to/file"
+          # BTD expects Mercurial-like format with status code (M/A/D) and space separator
+          # Filter out .github/ (CI-only changes don't affect build targets)
+          # but keep other dotfiles like .buckconfig which are build inputs
+          git diff --name-status "$BASE_COMMIT" HEAD | sed 's/\t/ /' | grep -v ' \.github/' > /tmp/changes.txt || touch /tmp/changes.txt
+
+          echo "Changed files ($(wc -l < /tmp/changes.txt)):"
+          cat /tmp/changes.txt
+          echo "--- End of changes.txt ---"
+
+          # Debug: Show hex dump of first line to check for hidden characters
+          if [ -s /tmp/changes.txt ]; then
+            echo "Hex dump of first line:"
+            head -1 /tmp/changes.txt | od -c
+          fi
+
+          echo "base_commit=$BASE_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Generate base snapshot
+        run: |
+          git checkout ${{ steps.changed-files.outputs.base_commit }}
+          supertd targets //... 2>/dev/null > /tmp/base.jsonl
+          echo "Base snapshot: $(wc -l < /tmp/base.jsonl) targets"
+          git checkout ${{ github.sha }}
+
+      - name: Generate diff snapshot
+        run: |
+          supertd targets //... 2>/dev/null > /tmp/diff.jsonl
+          echo "Diff snapshot: $(wc -l < /tmp/diff.jsonl) targets"
+
+      - name: Run buck2-change-detector
+        id: btd
+        continue-on-error: true
+        run: |
+          # Note: Requires supertd to be installed
+          # Install with: cargo install --git https://github.com/facebookincubator/buck2-change-detector.git supertd
+          echo "Checking for supertd installation..."
+          which supertd || echo "supertd not found in PATH"
+          command -v supertd && supertd --version || echo "supertd command failed"
+
+          if command -v supertd &> /dev/null; then
+            echo "Running BTD analysis..."
+            echo "Command: supertd btd --json --changes /tmp/changes.txt --base /tmp/base.jsonl --diff /tmp/diff.jsonl root//..."
+
+            # Run BTD with --json flag and root//... universe pattern
+            if supertd btd --json \
+              --changes /tmp/changes.txt \
+              --base /tmp/base.jsonl \
+              --diff /tmp/diff.jsonl \
+              root//... > /tmp/btd_output.json 2> /tmp/btd_stderr.txt; then
+              echo "BTD completed successfully"
+              # Count targets (BTD outputs an array of target objects)
+              TARGETS=$(python3 -c "import json; data = json.load(open('/tmp/btd_output.json')); print(len(data))" 2>/dev/null || echo "unknown")
+              echo "Found $TARGETS affected targets"
+              echo "BTD output preview:"
+              head -20 /tmp/btd_output.json || true
+            else
+              EXIT_CODE=$?
+              echo "::error::BTD command failed with exit code $EXIT_CODE"
+              echo "BTD stdout:"
+              cat /tmp/btd_output.json || echo "No output file generated"
+              echo "BTD stderr:"
+              cat /tmp/btd_stderr.txt || echo "No stderr file generated"
+              echo "::warning::BTD failed, will run all targets"
+              echo '{"targets": []}' > /tmp/btd_output.json
+            fi
+          else
+            echo "::warning::supertd not installed, will run all targets"
+            echo "PATH: $PATH"
+            # Fallback: empty targets means run everything
+            echo '{"targets": []}' > /tmp/btd_output.json
+          fi
+
+      - name: Parse affected targets
+        id: parse
+        run: |
+          mkdir -p /tmp/btd_results
+
+          # Run parser script
+          python3 .github/scripts/parse-affected-targets.py \
+            /tmp/btd_output.json \
+            /tmp/btd_results || {
+            echo "::warning::Parser failed, creating empty matrices"
+            # Create empty matrices on failure
+            for matrix in vunit_matrix bsv_test_matrix ice40_matrix ecp5_matrix vivado_matrix; do
+              echo '{"target": []}' > /tmp/btd_results/$matrix.json
+            done
+            echo '{"total_affected": 0, "vunit_tests": 0, "bsv_tests": 0, "ice40_bitstreams": 0, "ecp5_bitstreams": 0, "vivado_bitstreams": 0}' > /tmp/btd_results/summary.json
+          }
+
+          # Load matrix JSONs and set outputs
+          echo "ice40_bitstreams=$(cat /tmp/btd_results/ice40_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ecp5_bitstreams=$(cat /tmp/btd_results/ecp5_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "vivado_bitstreams=$(cat /tmp/btd_results/vivado_matrix.json)" >> "$GITHUB_OUTPUT"
+
+          # Set has_changes flag
+          TOTAL=$(python3 -c "import json; print(json.load(open('/tmp/btd_results/summary.json'))['total_affected'])" 2>/dev/null || echo "0")
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Display summary
+          cat /tmp/btd_results/summary.json
+
+  # VHDL bitstream builds (existing projects using Vivado)
+  vivado-bitstreams:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.vivado_bitstreams).target[0] != null }}
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.vivado_bitstreams) }}
+    steps:
+      - run: echo "Building Vivado bitstream ${{ matrix.target }} on branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v4
         with:
-          filters: .github/filters.yml
+          submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
 
-  grapefruit:
-    needs: changes
-    if: ${{ needs.changes.outputs.buck2 == 'true' || needs.changes.outputs.grapefruit == 'true' }}
-    runs-on: self-hosted
-    steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: buck path
-          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
-        - name: Build grapefruit bitstream
-          run: buck2 build //hdl/projects/grapefruit:grapefruit --show-output
-        - uses: actions/upload-artifact@v4
-          with:
-            name: gfruit-image
-            path: "./buck-out/v2/gen/root/**/*"
-        - name: Cleanup
-          run: bash .github/cleanup.sh
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
 
-  cosmo_seq:
-    needs: changes
-    if: ${{ needs.changes.outputs.buck2 == 'true'  || needs.changes.outputs.cosmo_seq == 'true' }}
-    runs-on: self-hosted
-    steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: buck path
-          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
-        - name: Build cosmo_seq bitstream
-          run: buck2 build //hdl/projects/cosmo_seq:cosmo_seq --show-output
-        - uses: actions/upload-artifact@v4
-          with:
-            name: cosmo-seq-image
-            path: "./buck-out/v2/gen/root/**/*"
-        - name: Cleanup
-          run: bash .github/cleanup.sh
+      - name: Update pip reqs
+        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
 
-  cosmo_hp:
-    needs: changes
-    if: ${{ needs.changes.outputs.buck2 == 'true' ||  needs.changes.outputs.cosmo_hp == 'true' }}
-    runs-on: self-hosted
-    steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: buck path
-          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
-        - name: Build cosmo_hp bitstream
-          run: buck2 build //hdl/projects/cosmo_hp:cosmo_hp --show-output
-        - uses: actions/upload-artifact@v4
-          with:
-            name: cosmo-hp-image
-            path: "./buck-out/v2/gen/root/**/*"
-        - name: Cleanup
-          run: bash .github/cleanup.sh
-  cosmo_ignition:
-    needs: changes
-    if: ${{ needs.changes.outputs.buck2 == 'true' ||  needs.changes.outputs.cosmo_ignition == 'true' }}
-    runs-on: self-hosted
-    steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: buck path
-          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
-        - name: Build cosmo_ignition bitstream
-          run: buck2 build //hdl/projects/cosmo_ignition:cosmo_ignition --show-output
-        - uses: actions/upload-artifact@v4
-          with:
-            name: cosmo-ignition-image
-            path: "./buck-out/v2/gen/root/**/*"
-        - name: Cleanup
-          run: bash .github/cleanup.sh
-  cosmo_ignition_a:
-    needs: changes
-    if: ${{ needs.changes.outputs.buck2 == 'true' ||  needs.changes.outputs.cosmo_ignition == 'true' }}
-    runs-on: self-hosted
-    steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: buck path
-          run: echo "~/.cargo/bin:/opt/Xilinx/Vivado/2024.1/bin:/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
-        - name: Build cosmo_ignition bitstream
-          run: buck2 build //hdl/projects/cosmo_ignition:cosmo_ignition_a --show-output
-        - uses: actions/upload-artifact@v4
-          with:
-            name: cosmo-ignition-a-image
-            path: "./buck-out/v2/gen/root/**/*"
-        - name: Cleanup
-          run: bash .github/cleanup.sh
+      - name: Setup PATH
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/Xilinx/Vivado/2024.1/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
 
-  bsv-streams:
-    needs: changes
-    if: ${{ needs.changes.outputs.cobble == 'true' }}
+      - name: Build bitstream
+        id: build
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          OUTPUT=$(buck2 build ${{ matrix.target }} --show-output | awk '{print $2}')
+          OUTPUT_DIR=$(dirname "$OUTPUT")
+          echo "Build output: $OUTPUT"
+          echo "Output directory: $OUTPUT_DIR"
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+          TARGET_NAME=$(echo "${{ matrix.target }}" | sed 's|.*:||')
+          echo "artifact_name=${TARGET_NAME}-image" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build.outputs.artifact_name }}
+          path: ${{ steps.build.outputs.output_dir }}
+          overwrite: true
+
+      - name: Cleanup
+        run: bash .github/cleanup.sh
+
+  # iCE40 bitstream builds (BSV and VHDL via Yosys)
+  ice40-bitstreams:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.ice40_bitstreams).target[0] != null }}
     runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.ice40_bitstreams) }}
     steps:
-        - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v4
-          with:
-            submodules: 'true'
-            fetch-depth: 0
-        - name: Update pip reqs
-          run : python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
-        - name: Env setup
-          run: cp BUILD.vars.gha BUILD.vars && echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
-        - name: Restore build-dir
-          run: if [ -d /tmp/cobble_build_bkup ]; then cp -R /tmp/cobble_build_bkup ./build; else mkdir ./build; fi
-        - name: cobble init
-          run: ../vnd/cobble/cobble init .. --reinit
-          working-directory: ./build
-        - name: Build FPGAs
-          run: ./cobble build -v "//.*#bitstream"
-          working-directory: ./build
-        - name: backup build-dir
-          run: cp -R ./build /tmp/cobble_build_bkup
-        - uses: actions/upload-artifact@v4
-          with:
-            name: bsv-images
-            path: "./build/latest/**/*"
-        - name: Cleanup
-          run: bash .github/cleanup.sh
+      - run: echo "Building iCE40 bitstream ${{ matrix.target }} on branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
+
+      - name: Update pip reqs
+        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+
+      - name: Setup PATH
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+          echo "/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
+
+      - name: Build bitstream
+        id: build
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          OUTPUT=$(buck2 build ${{ matrix.target }} --show-output | awk '{print $2}')
+          OUTPUT_DIR=$(dirname "$OUTPUT")
+          echo "Build output: $OUTPUT"
+          echo "Output directory: $OUTPUT_DIR"
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+          TARGET_NAME=$(echo "${{ matrix.target }}" | sed 's|.*:||')
+          echo "artifact_name=${TARGET_NAME}-image" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build.outputs.artifact_name }}
+          path: ${{ steps.build.outputs.output_dir }}
+          overwrite: true
+
+      - name: Cleanup
+        run: bash .github/cleanup.sh
+
+  # ECP5 bitstream builds (BSV and VHDL via Yosys)
+  ecp5-bitstreams:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.has_changes == 'true' && fromJson(needs.detect-changes.outputs.ecp5_bitstreams).target[0] != null }}
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.ecp5_bitstreams) }}
+    steps:
+      - run: echo "Building ECP5 bitstream ${{ matrix.target }} on branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          clean: false  # Preserve buck-out/ for caching
+
+      - name: Clean stale files (preserve buck-out/)
+        run: git clean -ffdx --exclude=buck-out --exclude=vunit_out
+
+      - name: Update pip reqs
+        run: python3 -m pip install --upgrade -r tools/requirements.txt --break-system-packages
+
+      - name: Setup PATH
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/bsc-2022.01/bin" >> "$GITHUB_PATH"
+          echo "/opt/oss-cad-suite-20250211/bin" >> "$GITHUB_PATH"
+
+      - name: Build bitstream
+        id: build
+        env:
+          BSV_LIB_DIR: /opt/bsc-2022.01/lib
+        run: |
+          OUTPUT=$(buck2 build ${{ matrix.target }} --show-output | awk '{print $2}')
+          OUTPUT_DIR=$(dirname "$OUTPUT")
+          echo "Build output: $OUTPUT"
+          echo "Output directory: $OUTPUT_DIR"
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+          TARGET_NAME=$(echo "${{ matrix.target }}" | sed 's|.*:||')
+          echo "artifact_name=${TARGET_NAME}-image" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build.outputs.artifact_name }}
+          path: ${{ steps.build.outputs.output_dir }}
+          overwrite: true
+
+      - name: Cleanup
+        run: bash .github/cleanup.sh
+
+  # Summary job that consolidates all FPGA build results for required status checks
+  fpga-build-summary:
+    name: FPGA Build Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, vivado-bitstreams, ice40-bitstreams, ecp5-bitstreams]
+    if: always()
+    steps:
+      - name: Check build results
+        run: |
+          echo "Checking results of all FPGA build jobs..."
+
+          # Check if we had changes to process
+          if [ "${{ needs.detect-changes.outputs.has_changes }}" != "true" ]; then
+            echo "✓ No changes detected - skipping builds"
+            exit 0
+          fi
+
+          # Check each matrix job result
+          VIVADO_RESULT="${{ needs.vivado-bitstreams.result }}"
+          ICE40_RESULT="${{ needs.ice40-bitstreams.result }}"
+          ECP5_RESULT="${{ needs.ecp5-bitstreams.result }}"
+
+          echo "Vivado bitstreams: $VIVADO_RESULT"
+          echo "iCE40 bitstreams: $ICE40_RESULT"
+          echo "ECP5 bitstreams: $ECP5_RESULT"
+
+          # Job results can be: success, failure, cancelled, or skipped
+          # We pass if all jobs are success or skipped (skipped means no targets in matrix)
+          FAILED=0
+
+          if [ "$VIVADO_RESULT" = "failure" ] || [ "$VIVADO_RESULT" = "cancelled" ]; then
+            echo "✗ Vivado bitstream builds failed"
+            FAILED=1
+          fi
+
+          if [ "$ICE40_RESULT" = "failure" ] || [ "$ICE40_RESULT" = "cancelled" ]; then
+            echo "✗ iCE40 bitstream builds failed"
+            FAILED=1
+          fi
+
+          if [ "$ECP5_RESULT" = "failure" ] || [ "$ECP5_RESULT" = "cancelled" ]; then
+            echo "✗ ECP5 bitstream builds failed"
+            FAILED=1
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ FPGA build failed"
+            exit 1
+          fi
+
+          echo "✅ All FPGA builds passed or were skipped"
+          exit 0

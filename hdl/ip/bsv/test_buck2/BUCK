@@ -1,0 +1,47 @@
+load("//tools:bsv.bzl", "bsv_library", "bsv_verilog", "bsv_sim", "bsv_bluesim_binary")
+load("//tools:rdl.bzl", "rdl_file")
+
+# Test compilation of Countdown module
+bsv_library(
+    name = "Countdown",
+    srcs = ["Countdown.bsv"],
+    deps = [],
+)
+
+# Test Verilog generation
+bsv_verilog(
+    name = "countdown_verilog",
+    top = "Countdown.bsv",
+    modules = ["mkCountdownTest"],  # Use non-polymorphic module
+    deps = [":Countdown"],
+)
+
+# Test Bluesim generation
+bsv_sim(
+    name = "countdown_sim",
+    top = "Countdown.bsv",
+    modules = ["mkCountdownTest"],
+    deps = [":Countdown"],
+)
+
+# Test Bluesim binary linking
+bsv_bluesim_binary(
+    name = "countdown_test",
+    top = ":countdown_sim",
+    entry_point = "mkCountdownTest",
+    deps = [":Countdown"],
+)
+
+# Test RDL to BSV generation
+rdl_file(
+    name = "test_regs_rdl",
+    src = "test_regs.rdl",
+    outputs = ["test_regsRegs.bsv"],
+)
+
+# Test using RDL-generated BSV package
+bsv_library(
+    name = "TestRegsUser",
+    srcs = ["TestRegsUser.bsv"],
+    deps = [":test_regs_rdl"],
+)

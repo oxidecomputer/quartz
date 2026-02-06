@@ -1,0 +1,271 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+load("//tools:bsv.bzl", "bsv_verilog")
+load("//tools:rdl.bzl", "rdl_file")
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "IrqBlock",
+    srcs = ["IrqBlock.bsv"],
+)
+
+# rdl_file
+# Note: BSV outputs can use CamelCase to match BSV import conventions
+rdl_file(
+    visibility = ["PUBLIC"],
+    name = "gimlet_seq_fpga_regs_rdl",
+    outputs = [
+        "GimletSeqFpgaRegs.bsv",
+        "gimlet_seq_fpga_regs.html",
+        "gimlet_seq_fpga_regs.json",
+    ],
+    src = "gimlet_seq_fpga_regs.rdl",
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "GimletSeqFpgaRegs",
+    srcs = [":gimlet_seq_fpga_regs_rdl[bsv]"],
+    deps = [
+        "//hdl/ip/bsv:RegCommon",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "GimletRegs",
+    srcs = ["GimletRegs.bsv"],
+    deps = [
+        "//hdl/ip/bsv:GitVersion",
+        ":IrqBlock",
+        "//hdl/ip/bsv:RegCommon",
+        ":GimletSeqFpgaRegs",
+        ":NicBlock",
+        ":A1Block",
+        ":A0Block",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Regs",
+    srcs = ["Regs.bsv"],
+    deps = ["//hdl/ip/bsv:RegCommon"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "PowerRail",
+    srcs = ["PowerRail.bsv"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "NicBlock",
+    srcs = ["NicBlock.bsv"],
+    deps = [
+        ":GimletSeqFpgaRegs",
+        ":PowerRail",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "NICTests",
+    suite = "NicBlock.bsv",
+    modules = ["mkPowerUpNicTest"],
+    deps = [":NicBlock"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "A1Block",
+    srcs = ["A1Block.bsv"],
+    deps = [
+        ":GimletSeqFpgaRegs",
+        ":PowerRail",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "A1Tests",
+    suite = "A1Block.bsv",
+    modules = [
+        "mkA1PowerUpTest",
+        "mkA1PowerDownTest",
+        "mkA1MAPOTest",
+    ],
+    deps = [":A1Block"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "A0Block",
+    srcs = ["A0Block.bsv"],
+    deps = [
+        ":GimletSeqFpgaRegs",
+        ":PowerRail",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "A0Tests",
+    suite = "A0Block.bsv",
+    modules = [
+        "mkA0PowerUpTest",
+        "mkA0FakeSP3Test",
+        "mkA0MAPOTest",
+        "mkA0ThermtripTest",
+        "mkA0DebugBrokenTest",
+        "mkA0PowerErrorsTest",
+        "mkFsrReqGpioToggleTest",
+    ],
+    deps = [":A0Block"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "TopTests",
+    suite = "GimletSeqTop.bsv",
+    modules = [
+        "mkGimletTopTest",
+        "mkGimletThermtripTopTest",
+        "mkGimletAMDResetTripTest",
+        "mkGimletAMDPWROKTripTest",
+    ],
+    deps = [":GimletSeqTop"],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "GimletSeqTop",
+    srcs = ["GimletSeqTop.bsv"],
+    deps = [
+        "//hdl/ip/bsv/interfaces:SPI",
+        "//hdl/ip/bsv:TestUtils",
+        ":NicBlock",
+        ":GimletRegs",
+        ":GimletSeqFpgaRegs",
+        ":PowerRail",
+        ":A1Block",
+        ":A0Block",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "GimletTopIOSync",
+    srcs = ["GimletTopIOSync.bsv"],
+    deps = [
+        "//hdl/ip/bsv/interfaces:ICE40",
+        ":GimletSeqTop",
+    ],
+    bsc_flags = [
+        "-verilog-filter",
+        "$(location //vnd/bluespec:basicinout.pl)",
+    ],
+)
+
+# bsv_verilog
+bsv_verilog(
+    visibility = ["PUBLIC"],
+    name = "seq_verilog",
+    top = "GimletTopIOSync.bsv",
+    modules = ["mkGimletSeqTop"],
+    deps = [":GimletTopIOSync"],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+    bsc_flags = [
+        "-suppress-warnings",
+        "G0046",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "AllEnable",
+    srcs = ["AllEnable.bsv"],
+    deps = [
+        "//hdl/ip/bsv/interfaces:SPI",
+        "//hdl/ip/bsv/interfaces:ICE40",
+        ":GimletRegs",
+    ],
+    bsc_flags = [
+        "-verilog-filter",
+        "$(location //vnd/bluespec:basicinout.pl)",
+    ],
+)
+
+# bsv_verilog
+bsv_verilog(
+    visibility = ["PUBLIC"],
+    name = "pwr_seq_verilog",
+    top = "AllEnable.bsv",
+    modules = ["mkGimletPowerSeqTop"],
+    deps = [":AllEnable"],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+    bsc_flags = [
+        "-suppress-warnings",
+        "G0046",
+    ],
+)
+
+# ==============================================================================
+# FPGA Bitstream Generation
+# ==============================================================================
+
+load("//tools:bsv.bzl", "bsv_yosys_design", "bsv_nextpnr_ice40_bitstream")
+
+# Synthesize BSV Verilog with Yosys
+bsv_yosys_design(
+    name = "gimlet_sequencer_yosys",
+    visibility = ["PUBLIC"],
+    top_module = "mkGimletSeqTop",
+    verilog_dep = ":seq_verilog",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+)
+
+# Place & route and generate bitstream
+bsv_nextpnr_ice40_bitstream(
+    name = "gimlet_sequencer",
+    visibility = ["PUBLIC"],
+    yosys_design = ":gimlet_sequencer_yosys",
+    family = "hx8k",
+    package = "ct256",
+    pinmap = "gimlet_sequencer.pcf",
+    nextpnr_args = [],
+)
+
+# Alternative power sequencer design
+bsv_yosys_design(
+    name = "gimlet_sdle_yosys",
+    visibility = ["PUBLIC"],
+    top_module = "mkGimletPowerSeqTop",
+    verilog_dep = ":pwr_seq_verilog",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "gimlet_sdle_only",
+    visibility = ["PUBLIC"],
+    yosys_design = ":gimlet_sdle_yosys",
+    family = "hx8k",
+    package = "ct256",
+    pinmap = "gimlet_sequencer.pcf",  # Same pinmap as gimlet_sequencer
+    nextpnr_args = [],
+)

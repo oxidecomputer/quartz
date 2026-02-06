@@ -14,15 +14,16 @@ load(
     "PythonToolchainInfo",
 )
 load(
-    ":hdl_common.bzl", 
-    "GenVHDLInfo", 
-    "RDLFileInfo", 
-    "RDLTSet", 
+    ":hdl_common.bzl",
+    "GenVHDLInfo",
+    "RDLFileInfo",
+    "RDLTSet",
     "HDLFileInfo",
-    "HDLFileInfoTSet", 
+    "HDLFileInfoTSet",
     "VHDLFileInfo",
     "RDLHtmlMaps",
     "RDLJsonMaps",
+    "RDLBSVPkgs",
 )
 
 
@@ -58,20 +59,27 @@ def _rdl_file_impl(ctx):
         # Let's do some sanity checking on the naming of the outputs. Again, we're being particular
         # about this because humans can specify but we want machines to be able to consume some of these
         # In general, our convention is <src_base_name>.<file_extension> but we want "_pkg" to be appended
-        # in the vhdl case.
+        # in the VHDL case. BSV allows flexible naming to support CamelCase package names.
         for out in ctx.attrs.outputs:
-            # Right now we allow .vhd, .json, and .html in buck
+            # Allow .vhd, .bsv, .json, and .html outputs in buck
             if out.endswith(".vhd"):
                 expected_name = src_base_name + "_pkg.vhd"
+                if out != expected_name:
+                    fail("VHDL output {} does not match expected filename {}. Check for typos and follow our naming convention".format(out, expected_name))
+            elif out.endswith(".bsv"):
+                # BSV files are flexible - allow any name ending in .bsv
+                # This supports CamelCase package names (e.g., GimletSeqFpgaRegs.bsv from gimlet_seq_fpga_regs.rdl)
+                pass
             elif out.endswith(".json"):
                 expected_name = src_base_name + ".json"
+                if out != expected_name:
+                    fail("JSON output {} does not match expected filename {}".format(out, expected_name))
             elif out.endswith(".html"):
                 expected_name = src_base_name + ".html"
+                if out != expected_name:
+                    fail("HTML output {} does not match expected filename {}".format(out, expected_name))
             else:
-                fail("Output {} does not have an expected extension".format(out))
-
-            if out != expected_name:
-                fail("Output {} does match expected filename {}. Check for typos and follow our naming convention".format(out, expected_name))
+                fail("Output {} does not have an expected extension (.vhd, .bsv, .json, .html)".format(out))
         # Get the rdl python executable since we'll be using it for
         #  for generating our outputs
         rdl_gen_py = ctx.attrs._rdl_gen[RunInfo]
@@ -108,9 +116,22 @@ def _rdl_file_impl(ctx):
         json_maps = [x for x in outs if x.extension == ".json"]
         if len(json_maps) > 0:
             providers.append(RDLJsonMaps(files=json_maps))
+        bsv_pkgs = [x for x in outs if x.extension == ".bsv"]
+        if len(bsv_pkgs) > 0:
+            providers.append(RDLBSVPkgs(files=bsv_pkgs))
+
+        # Create sub-targets for each output type to allow selective access
+        sub_targets = {}
+        for out in outs:
+            # Create a sub-target for each individual file (e.g., [bsv], [html], [json])
+            extension = out.extension[1:]  # Remove leading dot
+            sub_targets[extension] = [DefaultInfo(default_output=out)]
 
         # Toss a basic default provider in here for the generated files
-        providers.append(DefaultInfo(default_outputs=outs))
+        providers.append(DefaultInfo(
+            default_outputs=outs,
+            sub_targets=sub_targets
+        ))
     else:
         providers.append(
             DefaultInfo(default_output=ctx.attrs.src)

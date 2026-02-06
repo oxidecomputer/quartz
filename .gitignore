@@ -17,6 +17,8 @@ devcontainer.json
 # VS Code settings
 .vscode
 
+# Claude settings
+.claude/*
 # pycharm
 /.idea
 

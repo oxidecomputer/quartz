@@ -1,0 +1,175 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# Copyright 2026 Oxide Computer Company
+
+# BXL script to discover and list all BSV Bluesim test targets
+# Usage: buck2 bxl //tools/bsv-tests.bxl:bsv_test_gen
+# To run all tests: buck2 bxl //tools/bsv-tests.bxl:bsv_test_gen | while IFS= read -r line; do eval "$line"; done
+
+def bsv_tests(ctx):
+    """Query the build graph for all BSV Bluesim test targets and output run commands"""
+
+    # Get all targets from root
+    target_universe = ctx.target_universe("//...").target_set()
+
+    # Get dependencies
+    targets = ctx.cquery().deps(target_universe)
+
+    # Filter for bsv_bluesim_binary rules (these are the executable tests)
+    # These are created by the bsv_bluesim_tests macro
+    bsv_test_targets = ctx.cquery().kind("^bsv_bluesim_binary$", targets)
+
+    # Sort by target label for consistent output
+    sorted_tests = sorted(bsv_test_targets, key=lambda x: str(x.label))
+
+    # Analyze targets to ensure they're valid
+    results = ctx.analysis(sorted_tests)
+
+    # Print buck2 run command for each test
+    for label, result in results.items():
+        ctx.output.print("buck2 run " + str(label.raw_target()))
+
+def bsv_tests_verbose(ctx):
+    """Query and display detailed information about BSV test targets"""
+
+    # Get all targets from root
+    target_universe = ctx.target_universe("//...").target_set()
+
+    # Get dependencies
+    targets = ctx.cquery().deps(target_universe)
+
+    # Filter for bsv_bluesim_binary rules
+    bsv_test_targets = ctx.cquery().kind("^bsv_bluesim_binary$", targets)
+
+    # Sort by target label
+    sorted_tests = sorted(bsv_test_targets, key=lambda x: str(x.label))
+
+    # Analyze targets
+    results = ctx.analysis(sorted_tests)
+
+    ctx.output.print("=" * 80)
+    ctx.output.print("BSV Bluesim Test Targets")
+    ctx.output.print("=" * 80)
+    ctx.output.print("")
+
+    # Group tests by package (directory)
+    tests_by_package = {}
+    for label, result in results.items():
+        raw_label = str(label.raw_target())
+        # Extract package path (everything before the last :)
+        package = raw_label.rsplit(":", 1)[0]
+        target_name = raw_label.rsplit(":", 1)[1]
+
+        if package not in tests_by_package:
+            tests_by_package[package] = []
+        tests_by_package[package].append(target_name)
+
+    # Print grouped by package
+    for package in sorted(tests_by_package.keys()):
+        ctx.output.print("Package: " + package)
+        ctx.output.print("-" * 80)
+        for target in sorted(tests_by_package[package]):
+            ctx.output.print("  " + target)
+            ctx.output.print("    buck2 run " + package + ":" + target)
+        ctx.output.print("")
+
+    total_tests = len(results)
+    ctx.output.print("=" * 80)
+    ctx.output.print("Total tests found: " + str(total_tests))
+    ctx.output.print("=" * 80)
+    ctx.output.print("")
+    ctx.output.print("To run all tests:")
+    ctx.output.print("  buck2 bxl //tools/bsv-tests.bxl:bsv_test_gen | while IFS= read -r line; do eval \"$line\"; done")
+    ctx.output.print("")
+
+def bsv_tests_by_package(ctx):
+    """Generate test run commands grouped by package with batch execution"""
+
+    # Get all targets from root
+    target_universe = ctx.target_universe("//...").target_set()
+
+    # Get dependencies
+    targets = ctx.cquery().deps(target_universe)
+
+    # Filter for bsv_bluesim_binary rules
+    bsv_test_targets = ctx.cquery().kind("^bsv_bluesim_binary$", targets)
+
+    # Sort by target label
+    sorted_tests = sorted(bsv_test_targets, key=lambda x: str(x.label))
+
+    # Analyze targets
+    results = ctx.analysis(sorted_tests)
+
+    # Group tests by package
+    tests_by_package = {}
+    for label, result in results.items():
+        raw_label = str(label.raw_target())
+        package = raw_label.rsplit(":", 1)[0]
+        target_name = raw_label.rsplit(":", 1)[1]
+
+        if package not in tests_by_package:
+            tests_by_package[package] = []
+        tests_by_package[package].append(target_name)
+
+    # Generate bash script to run tests by package
+    ctx.output.print("#!/bin/bash")
+    ctx.output.print("# Auto-generated BSV test runner")
+    ctx.output.print("# Run with: buck2 bxl //tools/bsv-tests.bxl:bsv_test_by_package > run_tests.sh && chmod +x run_tests.sh && ./run_tests.sh")
+    ctx.output.print("")
+    ctx.output.print("set -e")
+    ctx.output.print("")
+    ctx.output.print("FAILED_TESTS=()")
+    ctx.output.print("PASSED_TESTS=()")
+    ctx.output.print("")
+
+    for package in sorted(tests_by_package.keys()):
+        ctx.output.print("echo '" + "=" * 80 + "'")
+        ctx.output.print("echo 'Running tests in " + package + "'")
+        ctx.output.print("echo '" + "=" * 80 + "'")
+        ctx.output.print("")
+
+        for target in sorted(tests_by_package[package]):
+            full_target = package + ":" + target
+            ctx.output.print("echo 'Running test: " + target + "'")
+            ctx.output.print("if buck2 run " + full_target + "; then")
+            ctx.output.print("  PASSED_TESTS+=('" + full_target + "')")
+            ctx.output.print("  echo 'PASS: " + target + "'")
+            ctx.output.print("else")
+            ctx.output.print("  FAILED_TESTS+=('" + full_target + "')")
+            ctx.output.print("  echo 'FAIL: " + target + "'")
+            ctx.output.print("fi")
+            ctx.output.print("echo ''")
+        ctx.output.print("")
+
+    ctx.output.print("echo '='*80")
+    ctx.output.print("echo 'Test Summary'")
+    ctx.output.print("echo '='*80")
+    ctx.output.print("echo \"Passed: ${#PASSED_TESTS[@]}\"")
+    ctx.output.print("echo \"Failed: ${#FAILED_TESTS[@]}\"")
+    ctx.output.print("")
+    ctx.output.print("if [ ${#FAILED_TESTS[@]} -gt 0 ]; then")
+    ctx.output.print("  echo ''")
+    ctx.output.print("  echo 'Failed tests:'")
+    ctx.output.print("  for test in \"${FAILED_TESTS[@]}\"; do")
+    ctx.output.print("    echo \"  $test\"")
+    ctx.output.print("  done")
+    ctx.output.print("  exit 1")
+    ctx.output.print("fi")
+
+# Main entry points
+bsv_test_gen = bxl_main(
+    impl = bsv_tests,
+    cli_args = {},
+)
+
+bsv_test_verbose = bxl_main(
+    impl = bsv_tests_verbose,
+    cli_args = {},
+)
+
+bsv_test_by_package = bxl_main(
+    impl = bsv_tests_by_package,
+    cli_args = {},
+)

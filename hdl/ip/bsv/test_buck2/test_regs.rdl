@@ -1,0 +1,36 @@
+// Test RDL file for buck2 BSV generation
+addrmap test_regs {
+    name = "Test Register Map";
+    desc = "Simple register map for testing BSV generation from RDL";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Control Register";
+        desc = "Control register with enable bits";
+        field {
+            desc = "Enable bit";
+        } ENABLE[0:0] = 0;
+        field {
+            desc = "Reset bit";
+        } RESET[1:1] = 0;
+        field {
+            desc = "Mode selection";
+        } MODE[3:2] = 0;
+    } CTRL @ 0x0;
+
+    reg {
+        name = "Status Register";
+        desc = "Status register with read-only flags";
+        default sw = r;
+        default hw = w;
+        field {
+            desc = "Ready flag";
+        } READY[0:0] = 0;
+        field {
+            desc = "Error flag";
+        } ERROR[1:1] = 0;
+    } STATUS @ 0x4;
+};

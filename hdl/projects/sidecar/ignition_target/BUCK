@@ -1,0 +1,80 @@
+load("//tools:bsv.bzl", "bsv_verilog", "bsv_yosys_design", "bsv_nextpnr_ice40_bitstream")
+
+# Ignition Target for Sidecar
+
+# Verilog generation for all Rev B/C modules
+bsv_verilog(
+    name = "IgnitionTargetSidecar",
+    top = "IgnitionTargetSidecar.bsv",
+    modules = [
+        "mkSidecarRevBTargetWithResetButton",
+        "mkSidecarRevBTargetWithPowerButton",
+        "mkSidecarRevBTarget",
+    ],
+    deps = [
+        "//hdl/ip/bsv/ignition:Target",
+        "//hdl/ip/bsv/ignition:TargetWrapper",
+    ],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+    bsc_flags = [
+        "-opt-undetermined-vals",
+        "-unspecified-to", "X",
+    ],
+)
+
+# Rev B, C targets - Reset Button variant
+bsv_yosys_design(
+    name = "ignition_target_rev_b_reset_button_top",
+    top_module = "mkSidecarRevBTargetWithResetButton",
+    verilog_dep = ":IgnitionTargetSidecar",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ice40",
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "ignition_target_sidecar_rev_b_c_reset_button",
+    visibility = ["PUBLIC"],
+    yosys_design = ":ignition_target_rev_b_reset_button_top",
+    family = "lp1k",
+    package = "qn84",
+    pinmap = "//hdl/ip/bsv/ignition:ignition_target.pcf",
+    nextpnr_args = ["--freq", "50"],
+)
+
+# Rev B, C targets - Power Button variant
+bsv_yosys_design(
+    name = "ignition_target_rev_b_power_button_top",
+    top_module = "mkSidecarRevBTargetWithPowerButton",
+    verilog_dep = ":IgnitionTargetSidecar",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ice40",
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "ignition_target_sidecar_rev_b_c_power_button",
+    visibility = ["PUBLIC"],
+    yosys_design = ":ignition_target_rev_b_power_button_top",
+    family = "lp1k",
+    package = "qn84",
+    pinmap = "//hdl/ip/bsv/ignition:ignition_target.pcf",
+    nextpnr_args = ["--freq", "50"],
+)
+
+# Rev B, C targets - Standard variant
+bsv_yosys_design(
+    name = "ignition_target_rev_b_top",
+    top_module = "mkSidecarRevBTarget",
+    verilog_dep = ":IgnitionTargetSidecar",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ice40",
+)
+
+bsv_nextpnr_ice40_bitstream(
+    name = "ignition_target_sidecar_rev_b_c",
+    visibility = ["PUBLIC"],
+    yosys_design = ":ignition_target_rev_b_top",
+    family = "lp1k",
+    package = "qn84",
+    pinmap = "//hdl/ip/bsv/ignition:ignition_target.pcf",
+    nextpnr_args = ["--freq", "50"],
+)

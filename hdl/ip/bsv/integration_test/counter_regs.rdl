@@ -1,0 +1,52 @@
+// Integration test: RDL register definitions for counter module
+addrmap counter_regs {
+    name = "Counter Register Map";
+    desc = "Simple counter with control and status registers for integration testing";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Control Register";
+        desc = "Control register for counter module";
+        field {
+            desc = "Enable counting";
+        } ENABLE[0:0] = 0;
+        field {
+            desc = "Reset counter to zero";
+            sw = rw;
+            hw = r;
+        } RESET[1:1] = 0;
+        field {
+            desc = "Count direction: 0=up, 1=down";
+        } DIR[2:2] = 0;
+        field {
+            desc = "Increment step size";
+        } STEP[7:4] = 1;
+    } CTRL @ 0x0;
+
+    reg {
+        name = "Status Register";
+        desc = "Counter status and value";
+        default sw = r;
+        default hw = w;
+        field {
+            desc = "Counter overflow flag";
+        } OVERFLOW[0:0] = 0;
+        field {
+            desc = "Counter underflow flag";
+        } UNDERFLOW[1:1] = 0;
+        field {
+            desc = "Current counter value";
+        } VALUE[31:16] = 0;
+    } STATUS @ 0x4;
+
+    reg {
+        name = "Max Value Register";
+        desc = "Maximum counter value before overflow";
+        field {
+            desc = "Maximum value";
+        } MAX[15:0] = 65535;
+    } MAX_VAL @ 0x8;
+};

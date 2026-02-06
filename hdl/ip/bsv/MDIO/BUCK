@@ -1,0 +1,36 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "MDIO",
+    srcs = ["MDIO.bsv"],
+    deps = [
+        "//hdl/ip/bsv:Bidirection",
+        "//hdl/ip/bsv:Strobe",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "MDIOPeripheralModel",
+    srcs = ["test/MDIOPeripheralModel.bsv"],
+    deps = [":MDIO"],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "MDIOTests",
+    suite = "test/MDIOTests.bsv",
+    modules = [
+        "mkMDIOReadTest",
+        "mkMDIOWriteTest",
+        "mkMDIOIgnoreWrongPhyAddrTest",
+    ],
+    deps = [
+        ":MDIO",
+        ":MDIOPeripheralModel",
+    ],
+)

@@ -1,0 +1,215 @@
+load("//tools:bsv.bzl", "bsv_library", "bsv_verilog", "bsv_yosys_design", "bsv_nextpnr_ecp5_bitstream", "bsv_bluesim_tests")
+load("//tools:rdl.bzl", "rdl_file")
+
+# RDL register definitions
+rdl_file(
+    name = "vsc8562_rdl",
+    src = "VSC8562/vsc8562.rdl",
+    outputs = [],
+)
+
+rdl_file(
+    name = "qsfp_modules_top_rdl",
+    src = "QSFPModule/qsfp_modules_top.rdl",
+    outputs = [],
+)
+
+rdl_file(
+    name = "qsfp_x32_controller_rdl",
+    src = "qsfp_x32_controller.rdl",
+    deps = [
+        ":vsc8562_rdl",
+        "//hdl/ip/bsv/I2C:I2CCore_rdl",
+        ":qsfp_modules_top_rdl",
+    ],
+    outputs = [
+        "QsfpX32ControllerRegsPkg.bsv",
+        "qsfp_x32_controller.html",
+        "qsfp_x32_controller.json",
+    ],
+)
+
+# BSV Libraries
+bsv_library(
+    name = "QsfpX32ControllerRegsPkg",
+    srcs = [":qsfp_x32_controller_rdl[bsv]"],
+    deps = [
+        ":qsfp_x32_controller_rdl",
+        "//hdl/ip/bsv:RegCommon",
+    ],
+)
+
+bsv_library(
+    name = "VSC8562",
+    srcs = ["VSC8562/VSC8562.bsv"],
+    deps = [
+        ":QsfpX32ControllerRegsPkg",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        "//hdl/ip/bsv/MDIO:MDIO",
+        "//hdl/ip/bsv:Bidirection",
+        "//hdl/ip/bsv:Strobe",
+    ],
+)
+
+bsv_library(
+    name = "QsfpX32ControllerTopRegs",
+    srcs = ["QsfpX32ControllerTopRegs.bsv"],
+    deps = [
+        "//hdl/ip/bsv:CommonFunctions",
+        ":QsfpX32ControllerRegsPkg",
+    ],
+)
+
+bsv_library(
+    name = "QsfpModuleController",
+    srcs = ["QSFPModule/QsfpModuleController.bsv"],
+    deps = [
+        ":QsfpX32ControllerRegsPkg",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv:CommonInterfaces",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        "//hdl/ip/bsv/I2C:I2CCore",
+        "//hdl/ip/bsv:Bidirection",
+        "//hdl/ip/bsv:Countdown",
+        "//hdl/ip/bsv:Debouncer",
+    ],
+)
+
+bsv_library(
+    name = "QsfpModulesTop",
+    srcs = ["QSFPModule/QsfpModulesTop.bsv"],
+    deps = [
+        ":QsfpModuleController",
+        ":QsfpX32ControllerRegsPkg",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv:CommonInterfaces",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        "//hdl/ip/bsv/I2C:I2CCore",
+    ],
+)
+
+bsv_library(
+    name = "QsfpX32ControllerSpiServer",
+    srcs = ["QsfpX32ControllerSpiServer.bsv"],
+    deps = [
+        "//hdl/ip/bsv:CommonInterfaces",
+        ":QsfpX32ControllerTopRegs",
+        ":QsfpX32ControllerRegsPkg",
+        ":VSC8562",
+        ":QsfpModulesTop",
+    ],
+)
+
+bsv_library(
+    name = "QsfpX32Controller",
+    srcs = ["QsfpX32Controller.bsv"],
+    deps = [
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv/examples:Blinky",
+        "//hdl/ip/bsv/interfaces:SPI",
+        ":QsfpX32ControllerTopRegs",
+        ":QsfpX32ControllerRegsPkg",
+        ":QsfpX32ControllerSpiServer",
+        ":VSC8562",
+        ":QsfpModulesTop",
+    ],
+)
+
+bsv_library(
+    name = "QsfpX32ControllerTop",
+    srcs = ["QsfpX32ControllerTop.bsv"],
+    deps = [
+        ":QsfpX32Controller",
+        "//hdl/ip/bsv/I2C:I2CCore",
+        "//hdl/ip/bsv:IOSync",
+        "//hdl/ip/bsv:Strobe",
+    ],
+)
+
+# Verilog generation with inout filter
+bsv_verilog(
+    name = "QsfpX32ControllerTopV",
+    top = "QsfpX32ControllerTop.bsv",
+    modules = ["mkQsfpX32ControllerTop"],
+    deps = [":QsfpX32ControllerTop"],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+)
+
+# Yosys synthesis for ECP5
+bsv_yosys_design(
+    name = "sidecar_qsfp_x32_controller_top",
+    top_module = "mkQsfpX32ControllerTop",
+    verilog_dep = ":QsfpX32ControllerTopV",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ecp5",  # Use ECP5 synthesis
+)
+
+# ECP5 bitstream generation
+bsv_nextpnr_ecp5_bitstream(
+    name = "sidecar_qsfp_x32_controller_rev_b_c",
+    visibility = ["PUBLIC"],
+    yosys_design = ":sidecar_qsfp_x32_controller_top",
+    family = "45k",         # ECP5 45k
+    package = "CABGA554",   # Package type
+    pinmap = "qsfp_x32.lpf",
+    nextpnr_args = [],
+)
+
+# Tests
+bsv_bluesim_tests(
+    name = "QsfpModuleControllerTests",
+    suite = "QSFPModule/test/QsfpModuleControllerTests.bsv",
+    modules = [
+        "mkIntLTest",
+        "mkModPrsLTest",
+        "mkNoLPModeWhenModuleIsUnpoweredTest",
+        "mkNoModuleTest",
+        "mkNoPowerTest",
+        "mkRemovePowerEnableTest",
+        "mkPowerGoodTimeoutTest",
+        "mkPowerGoodLostTest",
+        "mkI2CReadTest",
+        "mkI2CWriteTest",
+        "mkInitializationTest",
+        "mkUninitializationAfterRemovalTest",
+        "mkI2CSclStretchTimeoutTest",
+        "mkI2CSclStretchTest",
+        "mkI2CReadTimeoutTest",
+        "mkI2CWriteTimeoutTest",
+    ],
+    deps = [
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv:TestUtils",
+        "//hdl/ip/bsv/I2C:I2CCommon",
+        "//hdl/ip/bsv/I2C:I2CCore",
+        "//hdl/ip/bsv/I2C:I2CPeripheralModel",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv:CommonInterfaces",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        ":QsfpModuleController",
+        ":QsfpX32ControllerRegsPkg",
+    ],
+)
+
+bsv_bluesim_tests(
+    name = "VSC8562Tests",
+    suite = "VSC8562/test/VSC8562Tests.bsv",
+    modules = [
+        "mkPowerOnByDefaultTest",
+        "mkComaModeTest",
+        "mkPowerDownTest",
+        "mkPowerGoodTimeoutTest",
+        "mkSmiTest",
+        "mkMdintTest",
+    ],
+    deps = [
+        "//hdl/ip/bsv:Bidirection",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv:TestUtils",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+        "//hdl/ip/bsv/MDIO:MDIO",
+        "//hdl/ip/bsv/MDIO:MDIOPeripheralModel",
+        ":VSC8562",
+    ],
+)

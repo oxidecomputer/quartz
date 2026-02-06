@@ -1,0 +1,304 @@
+load("//tools:bsv.bzl", "bsv_bluesim_tests")
+load("//tools:bsv.bzl", "bsv_library")
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "TestHelpers",
+    srcs = ["IgnitionTestHelpers.bsv"],
+    deps = [
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv:Encoding8b10b",
+        "//hdl/ip/bsv:TestUtils",
+        "//hdl/ip/bsv/test:Encoding8b10bReference",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "Bench",
+    srcs = [
+        "BenchTransceiver.bsv",
+        "ControllerBench.bsv",
+        "TargetBench.bsv",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Controller",
+        "//hdl/ip/bsv/ignition:Target",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_library
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "IgnitionControllerAndTargetBench",
+    srcs = ["IgnitionControllerAndTargetBench.bsv"],
+    deps = [
+        "//hdl/ip/bsv/ignition:Controller",
+        "//hdl/ip/bsv/ignition:Target",
+        "//hdl/ip/bsv:SerialIO",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "TargetTests",
+    suite = "TargetTests.bsv",
+    modules = [
+        "mkPeriodicStatusMessagesTest",
+        "mkReportReceiverStatusTest",
+        "mkReportLinkEventsTest",
+        "mkReportLinkEventsMultipleOccurencesTest",
+        "mkReportFaultsTest",
+        "mkControllerPresentTest",
+        "mkSystemPowerOnRequestTest",
+        "mkSystemPowerOffRequestTest",
+        "mkSystemResetRequestTest",
+        "mkSystemResetShortButtonPressTest",
+        "mkSystemResetLongButtonPressTest",
+        "mkSystemPowerOnWhenResetButtonPressTest",
+        "mkSystemPowerAbortOnA2FaultTest",
+        "mkSystemPowerAbortOnA3FaultTest",
+        "mkSystemPowerAbortOnA3FaultTimeoutTest",
+        "mkRequestRestartAfterSystemPowerAbortTest",
+        "mkResetButtonRestartAfterSystemPowerAbortTest",
+        "mkPowerButtonRestartAfterSystemPowerAbortTest",
+        "mkPowerFaultBitsStickyAfterSystemPowerAbortTest",
+        "mkSystemPowerFaultMonitorDisabledDuringResetTest",
+        "mkSystemPowerHotswapControllerRestartTest",
+    ],
+    deps = [
+        ":Bench",
+        ":TestHelpers",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "ControllerTests",
+    suite = "ControllerTests.bsv",
+    modules = [
+        "mkPeriodicHelloTest",
+        "mkTargetPresentTest",
+        "mkTargetStateValidIfPresentTest",
+        "mkTargetLinkStatusTest",
+        "mkSendSystemPowerOffRequestTest",
+        "mkSendSystemPowerOnRequestTest",
+        "mkSendSystemResetRequestTest",
+        "mkDropHelloTest",
+        "mkDropRequestTest",
+        "mkTargetLinkEventsTest",
+    ],
+    deps = [
+        ":Bench",
+        ":TestHelpers",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "MessageParserTests",
+    suite = "MessageParserTests.bsv",
+    modules = [
+        "mkParseIdle1Test",
+        "mkParseIdle1PolarityInvertedTest",
+        "mkParseIdle2Test",
+        "mkParseIdle2PolarityInvertedTest",
+        "mkParseHelloTest",
+        "mkParseSystemPowerOnRequestTest",
+        "mkParseSystemPowerOffRequestTest",
+        "mkParseSystemResetRequestTest",
+        "mkParseStatusTest",
+        "mkParseVersionInvalidTest",
+        "mkParseMessageTypeInvalidTest",
+        "mkParseRequestInvalidTest",
+        "mkParseChecksumInvalidTest",
+        "mkParseOrderedSetInvalidTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "ControllerMessageParserTests",
+    suite = "ControllerMessageParserTests.bsv",
+    modules = [
+        "mkParseIdle1Test",
+        "mkParseIdle1PolarityInvertedTest",
+        "mkParseIdle2Test",
+        "mkParseIdle2PolarityInvertedTest",
+        "mkParseHelloTest",
+        "mkParseSystemPowerOnRequestTest",
+        "mkParseSystemPowerOffRequestTest",
+        "mkParseSystemResetRequestTest",
+        "mkParseStatusTest",
+        "mkParseVersionInvalidTest",
+        "mkParseMessageTypeInvalidTest",
+        "mkParseRequestInvalidTest",
+        "mkParseChecksumInvalidTest",
+        "mkParseOrderedSetInvalidTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "DeparserTests",
+    suite = "DeparserTests.bsv",
+    modules = [
+        "mkDeparseHelloTest",
+        "mkDeparseSystemPowerOffRequestTest",
+        "mkDeparseSystemPowerOnRequestTest",
+        "mkDeparseSystemResetRequestTest",
+        "mkDeparseStatusTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "CRCTests",
+    suite = "CRCTests.bsv",
+    modules = [
+        "mkPattern1Test",
+        "mkPattern2Test",
+        "mkPattern3Test",
+        "mkPattern4Test",
+        "mkPattern5Test",
+        "mkPattern6Test",
+        "mkPattern7Test",
+        "mkHelloTest",
+        "mkSystemPowerOffRequestTest",
+        "mkSystemPowerOnRequestTest",
+        "mkSystemResetRequestTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "ReceiverTests",
+    suite = "ReceiverTests.bsv",
+    modules = [
+        "mkStartUpFromIdleTest",
+        "mkStartUpFromIdlePolarityInvertedTest",
+        "mkResetAfterInvalidCommaLikeCharacter",
+        "mkLockedTimeoutTest",
+        "mkNoLockedTimeoutIfReceiverLockedTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv/ignition:Transceiver",
+        "//hdl/ip/bsv:TestUtils",
+        "//hdl/ip/bsv/test:Encoding8b10bReference",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "TransmitterTests",
+    suite = "TransmitterTests.bsv",
+    modules = [
+        "mkTransmitIdleTest",
+        "mkTransmitIdle1HelloEndOfMessage2Idle1Test",
+        "mkTransmitIdle1RequestIdle2Test",
+        "mkTransmitIdleBetweenBackToBackHelloTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv/ignition:Transceiver",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "TransceiverTests",
+    suite = "TransceiverTests.bsv",
+    modules = [
+        "mkStartUpTest",
+        "mkStartUpPolarityInvertedTest",
+        "mkReceiveHelloTest",
+        "mkRestartFromIdleLowTest",
+        "mkRestartFromIdleHighTest",
+        "mkRestartFromAlmostCommaPatternTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv/ignition:Transceiver",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "TargetTransceiverTests",
+    suite = "TargetTransceiverTests.bsv",
+    modules = [
+        "mkStartUpLink0Test",
+        "mkStartUpLink0PolarityInvertedTest",
+        "mkStartUpLink1Test",
+        "mkStartUpLink1PolarityInvertedTest",
+        "mkStartUpLink0Link1Test",
+        "mkStartUpLink0PolarityInvertedLink1Test",
+        "mkStartUpLink0Link1PolarityInvertedTest",
+        "mkStartUpLink0PolarityInvertedLink1PolarityInvertedTest",
+        "mkReceiveHelloLink0Test",
+        "mkReceiveHelloLink1Test",
+        "mkReceiveHelloLink0Link1Test",
+        "mkRestartLink0FromIdleLowTest",
+        "mkRestartLink1FromIdleLowTest",
+    ],
+    deps = [
+        ":TestHelpers",
+        "//hdl/ip/bsv/ignition:Protocol",
+        "//hdl/ip/bsv/ignition:Transceiver",
+        "//hdl/ip/bsv:TestUtils",
+    ],
+)
+
+# bsv_bluesim_tests
+bsv_bluesim_tests(
+    name = "IntegrationTests",
+    suite = "IntegrationTests.bsv",
+    modules = [
+        "mkControllerAlwaysTransmitOverrideTest",
+        "mkControllerTargetPresentTest",
+        "mkNoLockedTimeoutIfReceiversLockedTest",
+        "mkReceiversLockedTimeoutTest",
+        "mkTargetLinkEventsTest",
+        "mkTargetRoTFaultTest",
+        "mkTargetSystemResetTest",
+    ],
+    deps = [
+        ":IgnitionControllerAndTargetBench",
+        ":TestHelpers",
+    ],
+)
