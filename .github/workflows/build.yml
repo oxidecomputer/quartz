@@ -36,8 +36,13 @@ jobs:
       - name: Get changed files and base commit
         id: changed-files
         run: |
-          # Always compare against origin/main to detect all changes in the branch
-          BASE_COMMIT="origin/main"
+          # On main (post-merge), compare against the previous commit;
+          # on branches, compare against origin/main to detect all changes.
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            BASE_COMMIT="HEAD~1"
+          else
+            BASE_COMMIT="origin/main"
+          fi
 
           # Generate list of changed files in BTD format: "M path/to/file"
           # BTD expects Mercurial-like format with status code (M/A/D) and space separator
@@ -95,6 +100,7 @@ jobs:
               echo "Found $TARGETS affected targets"
               echo "BTD output preview:"
               head -20 /tmp/btd_output.json || true
+              echo "succeeded=true" >> "$GITHUB_OUTPUT"
             else
               EXIT_CODE=$?
               echo "::error::BTD command failed with exit code $EXIT_CODE"
@@ -103,13 +109,14 @@ jobs:
               echo "BTD stderr:"
               cat /tmp/btd_stderr.txt || echo "No stderr file generated"
               echo "::warning::BTD failed, will run all targets"
-              echo '{"targets": []}' > /tmp/btd_output.json
+              echo '[]' > /tmp/btd_output.json
+              echo "succeeded=false" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "::warning::supertd not installed, will run all targets"
             echo "PATH: $PATH"
-            # Fallback: empty targets means run everything
-            echo '{"targets": []}' > /tmp/btd_output.json
+            echo '[]' > /tmp/btd_output.json
+            echo "succeeded=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Parse affected targets
@@ -117,10 +124,15 @@ jobs:
         run: |
           mkdir -p /tmp/btd_results
 
-          # Run parser script
+          # Run parser script; --fallback means BTD failed so run everything
+          FALLBACK_FLAG=""
+          if [ "${{ steps.btd.outputs.succeeded }}" != "true" ]; then
+            FALLBACK_FLAG="--fallback"
+          fi
+
           python3 .github/scripts/parse-affected-targets.py \
             /tmp/btd_output.json \
-            /tmp/btd_results || {
+            /tmp/btd_results $FALLBACK_FLAG || {
             echo "::warning::Parser failed, creating empty matrices"
             # Create empty matrices on failure
             for matrix in vunit_matrix bsv_test_matrix ice40_matrix ecp5_matrix vivado_matrix; do
