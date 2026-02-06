@@ -1,30 +1,5 @@
 load("//tools:bsv.bzl", "bsv_bluesim_tests")
 load("//tools:bsv.bzl", "bsv_library")
-load("//tools:rdl.bzl", "rdl_file")
-
-# rdl_file
-# Note: Buck2 RDL rule enforces strict naming convention
-# BSV outputs use "Regs" suffix, VHDL uses "_pkg" suffix
-rdl_file(
-    visibility = ["PUBLIC"],
-    name = "I2CCore_rdl",
-    outputs = [
-        "I2CCoreRegs.bsv",
-        "I2CCore.html",
-        "I2CCore.json",
-    ],
-    src = "I2CCore.rdl",
-)
-
-# bsv_library
-bsv_library(
-    visibility = ["PUBLIC"],
-    name = "I2CCoreRegs",
-    srcs = [":I2CCore_rdl"],
-    deps = [
-        "//hdl/ip/bsv:RegCommon",
-    ],
-)
 
 # bsv_library
 bsv_library(
