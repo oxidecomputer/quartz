@@ -67,5 +67,7 @@ ice40_bitstream(
     top= ":cosmo_hp_top",
     family="hx8k",
     package="ct256",
-    pinmap="cosmo_hp.pcf"
+    pinmap="cosmo_hp.pcf",
+    version_template_hex = "//hdl/ip/bsv:version_rom_template_hex",
+    version_replacement_hex = "//hdl/ip/bsv:version_rom_replacement_hex",
 )

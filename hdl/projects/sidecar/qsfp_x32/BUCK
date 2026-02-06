@@ -19,7 +19,6 @@ rdl_file(
     src = "qsfp_x32_controller.rdl",
     deps = [
         ":vsc8562_rdl",
-        "//hdl/ip/bsv/I2C:I2CCore_rdl",
         ":qsfp_modules_top_rdl",
     ],
     outputs = [

@@ -297,8 +297,11 @@ def bitstream(ctx, input_checkpoint):
         "max_threads": ctx.attrs.max_threads,
         "input_checkpoint": input_checkpoint,
     }
+    if ctx.attrs.version_replacement_hex:
+        out_json["version_hex"] = ctx.attrs.version_replacement_hex
+
     vivado_flow_tcl, _ = _vivado_tcl_gen_common(ctx, flow, out_json)
-    
+
     # create a bitstream file
     bitstream_bit = ctx.actions.declare_output("{}.bit".format(ctx.attrs.name))
     bitstream_bin = ctx.actions.declare_output("{}.bin".format(ctx.attrs.name))
@@ -309,7 +312,10 @@ def bitstream(ctx, input_checkpoint):
     # on cache. We need this step to run if the input file content, or
     # constraint file content changes
 
-    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl, hidden=input_checkpoint)
+    hidden_deps = [input_checkpoint]
+    if ctx.attrs.version_replacement_hex:
+        hidden_deps.append(ctx.attrs.version_replacement_hex)
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl, hidden=hidden_deps)
     # Add output files to tclargs
     vivado.add("-tclargs", 
         bitstream_bit.as_output(),
@@ -367,6 +373,11 @@ vivado_bitstream = rule(
         "post_synth_tcl_files": attrs.list(attrs.source(doc="TCL files for project to source for things like ILA probes (post-synthesis)"), default=[]),
         "synth_args":  attrs.list(attrs.string(), default = []),
         "max_threads": attrs.int(doc="Max threads for Vivado", default=8),
+        "version_replacement_hex": attrs.option(
+            attrs.source(),
+            default=None,
+            doc="Replacement hex for version stamping (volatile, git data)",
+        ),
         "_vivado_gen": attrs.exec_dep(
                 doc="Generate a Vivado tcl for this project",
                 default="root//tools/vivado_gen:vivado_gen",
