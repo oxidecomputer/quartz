@@ -543,10 +543,28 @@ def _bsv_nextpnr_ice40_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
         category = "nextpnr",
     )
 
+    # Version stamping: patch BRAM init data with real git version
+    icepack_input = asc_file
+    if ctx.attrs.version_template_hex and ctx.attrs.version_replacement_hex:
+        stamped_asc = ctx.actions.declare_output("{}_stamped.asc".format(ctx.attrs.name))
+        stamp_cmd = cmd_args()
+        stamp_cmd.add("python3", ctx.attrs._icebram_wrapper)
+        stamp_cmd.add(ctx.attrs._icebram[RunInfo])
+        stamp_cmd.add(ctx.attrs.version_template_hex)
+        stamp_cmd.add(ctx.attrs.version_replacement_hex)
+        stamp_cmd.add(asc_file)
+        stamp_cmd.add(stamped_asc.as_output())
+
+        ctx.actions.run(
+            stamp_cmd,
+            category = "icebram",
+        )
+        icepack_input = stamped_asc
+
     # Run icepack to create bitstream
     icepack_cmd = cmd_args()
     icepack_cmd.add(ctx.attrs._icepack[RunInfo])
-    icepack_cmd.add(asc_file)
+    icepack_cmd.add(icepack_input)
     icepack_cmd.add(bit_file.as_output())
 
     ctx.actions.run(
@@ -572,8 +590,12 @@ bsv_nextpnr_ice40_bitstream = rule(
         "package": attrs.string(doc = "FPGA package (e.g., 'sg48', 'ct256')"),
         "pinmap": attrs.source(doc = "Pin constraints file (.pcf)"),
         "nextpnr_args": attrs.list(attrs.string(), default = [], doc = "Additional nextpnr arguments"),
+        "version_template_hex": attrs.option(attrs.source(), default = None, doc = "Template hex for icebram (from pattern)"),
+        "version_replacement_hex": attrs.option(attrs.source(), default = None, doc = "Replacement hex for icebram (volatile, git data)"),
         "_nextpnr_ice40": attrs.toolchain_dep(default = "toolchains//:nextpnr-ice40"),
         "_icepack": attrs.toolchain_dep(default = "toolchains//:icepack"),
+        "_icebram": attrs.toolchain_dep(default = "toolchains//:icebram"),
+        "_icebram_wrapper": attrs.source(default = "//tools:icebram_wrapper"),
     },
 )
 
@@ -611,10 +633,28 @@ def _bsv_nextpnr_ecp5_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
         category = "nextpnr_ecp5",
     )
 
+    # Version stamping: patch BRAM init data with real git version
+    ecppack_input = config_file
+    if ctx.attrs.version_template_hex and ctx.attrs.version_replacement_hex:
+        stamped_config = ctx.actions.declare_output("{}_stamped.config".format(ctx.attrs.name))
+        stamp_cmd = cmd_args()
+        stamp_cmd.add("python3", ctx.attrs._ecpbram_wrapper)
+        stamp_cmd.add(ctx.attrs._ecpbram[RunInfo])
+        stamp_cmd.add(ctx.attrs.version_template_hex)
+        stamp_cmd.add(ctx.attrs.version_replacement_hex)
+        stamp_cmd.add(config_file)
+        stamp_cmd.add(stamped_config.as_output())
+
+        ctx.actions.run(
+            stamp_cmd,
+            category = "ecpbram",
+        )
+        ecppack_input = stamped_config
+
     # Run ecppack to create bitstream
     ecppack_cmd = cmd_args()
     ecppack_cmd.add(ctx.attrs._ecppack[RunInfo])
-    ecppack_cmd.add(config_file)
+    ecppack_cmd.add(ecppack_input)
     ecppack_cmd.add(bit_file.as_output())
 
     ctx.actions.run(
@@ -640,7 +680,11 @@ bsv_nextpnr_ecp5_bitstream = rule(
         "package": attrs.string(doc = "FPGA package (e.g., 'CABGA381', 'CSFBGA285')"),
         "pinmap": attrs.source(doc = "Pin constraints file (.lpf)"),
         "nextpnr_args": attrs.list(attrs.string(), default = [], doc = "Additional nextpnr arguments"),
+        "version_template_hex": attrs.option(attrs.source(), default = None, doc = "Template hex for ecpbram (from pattern)"),
+        "version_replacement_hex": attrs.option(attrs.source(), default = None, doc = "Replacement hex for ecpbram (volatile, git data)"),
         "_nextpnr_ecp5": attrs.toolchain_dep(default = "toolchains//:nextpnr-ecp5"),
         "_ecppack": attrs.toolchain_dep(default = "toolchains//:ecppack"),
+        "_ecpbram": attrs.toolchain_dep(default = "toolchains//:ecpbram"),
+        "_ecpbram_wrapper": attrs.source(default = "//tools:icebram_wrapper"),
     },
 )

@@ -8,17 +8,13 @@ rdl_file(
     visibility = ['PUBLIC']
 )
 
-# Janky generate git sha via genrule
-# There are a lot of better ways this might be done, but this was the simplest.
-# It does mean there's a re-build for any change to the git repo, but for now that's fine.
-# Longer-term, we might evaluate backannotating ROMs or something with this build info
-# This also breaks windows due to shell use
+# Legacy volatile genrule (kept for backward compatibility)
 genrule(
     name = "git_sha",
     out = "git_sha_pkg.vhd",
     default_outs = ["git_sha_pkg.vhd"],
     cmd = '''echo "library ieee;\nuse ieee.std_logic_1164.all;\npackage git_sha_pkg is\n    constant short_sha : std_logic_vector(31 downto 0) := X\\""`git rev-parse --short=8 HEAD`\\"";\nend package git_sha_pkg;\" > $OUT''',
-    
+
 )
 
 vhdl_unit(
@@ -27,12 +23,20 @@ vhdl_unit(
     visibility = ['PUBLIC']
 )
 
+# BRAM-backed version ROM for post-P&R stamping
+vhdl_unit(
+    name = "version_rom",
+    srcs = ["version_rom.vhd"],
+    standard = "2008",
+    visibility = ['PUBLIC']
+)
+
 #  2008-based signals in the this block
 vhdl_unit(
     name = "info_2k8",
     srcs = ["info_2k8.vhd"],
     deps = [
-        ":git_sha_pkg",
+        ":version_rom",
         ":info_regs_rdl",
         "//hdl/ip/vhd/axi_blocks:axilite_if_2k8",
         ],

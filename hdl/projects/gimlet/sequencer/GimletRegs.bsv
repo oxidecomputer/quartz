@@ -9,9 +9,9 @@ import ConfigReg::*;
 import StmtFSM::*;
 
 // Oxide imports
+import Vector::*;
 import IrqBlock::*;
 import RegCommon::*;
-import git_version::*;
 import GimletSeqFpgaRegs::*;
 import NicBlock::*;
 // import EarlyPowerBlock::*;
@@ -36,7 +36,7 @@ interface GimletRegIF;
     interface RegPins pins;
 endinterface
 
-module mkGimletRegs(GimletRegIF);
+module mkGimletRegs#(Vector#(4, Bit#(8)) ver, Vector#(4, Bit#(8)) sha)(GimletRegIF);
     // Registers
     ConfigReg#(Id0) id0 <- mkReg(defaultValue);
     ConfigReg#(Id1) id1 <- mkReg(defaultValue);
@@ -187,10 +187,10 @@ module mkGimletRegs(GimletRegIF);
         case (address)
             fromInteger(id0Offset) : readdata <= tagged Valid (pack(id0));
             fromInteger(id1Offset) : readdata <= tagged Valid (pack(id1));
-            fromInteger(ver0Offset) : readdata <= tagged Valid (version[0]);
-            fromInteger(ver1Offset) : readdata <= tagged Valid (version[1]);
-            fromInteger(ver2Offset) : readdata <= tagged Valid (version[2]);
-            fromInteger(ver3Offset) : readdata <= tagged Valid (version[3]);
+            fromInteger(ver0Offset) : readdata <= tagged Valid (ver[0]);
+            fromInteger(ver1Offset) : readdata <= tagged Valid (ver[1]);
+            fromInteger(ver2Offset) : readdata <= tagged Valid (ver[2]);
+            fromInteger(ver3Offset) : readdata <= tagged Valid (ver[3]);
             fromInteger(sha0Offset) : readdata <= tagged Valid (sha[0]);
             fromInteger(sha1Offset) : readdata <= tagged Valid (sha[1]);
             fromInteger(sha2Offset) : readdata <= tagged Valid (sha[2]);

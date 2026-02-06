@@ -12,7 +12,6 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.info_regs_pkg.all;
-use work.git_sha_pkg.all;
 
 entity info_2k8 is
     generic(
@@ -55,7 +54,8 @@ end entity;
 architecture rtl of info_2k8 is
 
     constant identity : identity_type := rec_reset;
-    constant git_info : git_info_type := (sha => short_sha);
+    signal short_sha : std_logic_vector(31 downto 0);
+    signal git_info : git_info_type;
     signal checksum : fpga_checksum_type := rec_reset;
     signal scratchpad : scratchpad_type := rec_reset;
     signal hubris_compat: hubris_compat_type := rec_reset;
@@ -63,6 +63,15 @@ architecture rtl of info_2k8 is
     signal active_write: std_logic;
 
 begin
+
+    git_info <= (sha => short_sha);
+
+    version_rom_inst: entity work.version_rom
+    port map(
+        clk       => clk,
+        reset     => reset,
+        short_sha => short_sha
+    );
 
     axil_target_txn_inst: entity work.axil_target_txn
     port map(
