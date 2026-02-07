@@ -55,6 +55,9 @@ entity uart_channel_top is
         np_avail: out std_logic;
         to_host_tx_fifo_usedwds : out std_logic_vector(log2ceil(fifo_depth) downto 0);
         ipcc_to_host_byte_cntr : out std_logic_vector(31 downto 0);
+        host_to_sp_fifo_usedwds : out std_logic_vector(log2ceil(fifo_depth) downto 0);
+        -- Sticky: set when oob_free goes low, cleared only by espi_reset
+        oob_free_saw_full : out std_logic
     );
 
 end entity;
@@ -84,6 +87,7 @@ architecture rtl of uart_channel_top is
 begin
 
     to_host_tx_fifo_usedwds <= tx_rusedwds;
+    host_to_sp_fifo_usedwds <= rx_wusedwds;
 
     -- Not going to support any Non-posted transactions
     -- on this interface
@@ -205,6 +209,20 @@ begin
                 if rx_rempty = '1' and tx_rempty = '1' then
                     bleeding <= '0';
                 end if;
+            end if;
+        end if;
+    end process;
+
+    -- Sticky detector: captures if oob_free ever went low since last espi_reset
+    oob_free_sticky: process(clk, reset)
+    begin
+        if reset then
+            oob_free_saw_full <= '0';
+        elsif rising_edge(clk) then
+            if espi_reset then
+                oob_free_saw_full <= '0';
+            elsif oob_free = '0' and enabled = '1' then
+                oob_free_saw_full <= '1';
             end if;
         end if;
     end process;

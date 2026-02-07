@@ -18,10 +18,10 @@ use work.qspi_vc_pkg.all;
 use work.espi_controller_vc_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_spec_regs_pkg.all;
+use work.espi_regs_pkg;
 use work.espi_dbg_vc_pkg.all;
 use work.espi_tb_pkg.all;
 
-use work.espi_regs_pkg.all;
 entity espi_tb is
     generic (
 
@@ -105,7 +105,7 @@ begin
                 check_equal(response.status, expected_status, "Status did not match reset value");
                 exp_data_32 := (others => '0');
                 -- Should have an empty response queue
-                read_bus(net, bus_handle, To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.STATUS_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Response queue not empty before bad crc command");
 
                 -- Issue a command with a bad CRC
@@ -113,7 +113,7 @@ begin
                 dbg_wait_for_done(net);
                 wait for 1 us;
                 -- Expect no responses
-                read_bus(net, bus_handle, To_StdLogicVector(FIFO_STATUS_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.FIFO_STATUS_OFFSET, bus_handle.p_address_length), data_32);
                 exp_data_32 := (others => '0');
                 check_equal(data_32, exp_data_32, "Expected no response to bad CRC command");
 
@@ -250,19 +250,19 @@ begin
                 -- verify counts are correct.
                 wait for 1 us;
                 -- Check *last* post code register
-                read_bus(net, bus_handle, To_StdLogicVector(LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Single post code register readback failed");
                 -- Check post code buffer entry 0
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Post code buffer readback failed");
                 -- Check post code count register
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000001"), "Post code count register readback failed");
 
                 -- issue an espi reset and verify post code count resets
                 dbg_espi_reset(net);
                 wait for 1 us;
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000000"), "Post code count register did not reset after espi reset");
 
 
@@ -277,13 +277,13 @@ begin
                 dbg_wait_for_done(net);
                 wait for 1 us;
                 -- Check *last* post code register
-                read_bus(net, bus_handle, To_StdLogicVector(LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Single post code register readback failed");
                 -- Check post code buffer entry 0
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Post code buffer readback failed");
                 -- Check post code count register
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000001"), "Post code count register readback failed");
 
                 exp_data_32 := x"000101de";
@@ -293,21 +293,21 @@ begin
                 wait for 1 us;
 
                 -- Check *last* post code register
-                read_bus(net, bus_handle, To_StdLogicVector(LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.LAST_POST_CODE_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Single post code register readback failed");
                 -- Check post code buffer entry 0
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_BUFFER_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"000001de"), "Post code buffer 0 readback failed");
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_BUFFER_OFFSET + 4, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_BUFFER_OFFSET + 4, bus_handle.p_address_length), data_32);
                 check_equal(data_32, exp_data_32, "Post code buffer 1 readback failed");
                 -- Check post code count register
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000002"), "Post code count register readback failed");
 
                 -- issue an espi reset and verify post code count resets
                 dbg_espi_reset(net);
                 wait for 1 us;
-                read_bus(net, bus_handle, To_StdLogicVector(POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000000"), "Post code count register did not reset after espi reset");
 
             elsif run("put_iowr_short") then

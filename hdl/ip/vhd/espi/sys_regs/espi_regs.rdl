@@ -126,12 +126,21 @@ addrmap espi_regs {
     } post_code_count;
 
     reg {
-        name = "IPCC_TO_HOST_USEDWDS";
+        name = "IPCC_SP_TO_HOST_USEDWDS";
         desc = "Count of usedwds in the IPCC to host TX FIFO";
         field {
             desc = "";
         } count[31:0] = 0;
     } ipcc_to_host_usedwds;
+
+    reg {
+        name = "IPCC_HOST_TO_SP_USEDWDS";
+        desc = "Count of used words in the host-to-SP IPCC RX FIFO";
+        field {
+            default sw = r;
+            desc = "";
+        } count[31:0] = 0;
+    } ipcc_host_to_sp_usedwds;
 
     reg {
         name = "IPCC_TO_HOST_BYTE_CNTR";
@@ -156,6 +165,107 @@ addrmap espi_regs {
             desc = "";
         } count[31:0] = 0;
     } ipcc_dummy_fill_count;
+
+    reg espi_status {
+        field {
+            desc = "When '1', indicates the target has a channel 3
+                Flash Access non-posted header and data up to
+                maximum payload size available to send.
+                This bit is only applicable when controller
+                attached flash sharing is supported and in
+                operation. Otherwise, the bit is a don't care.";
+        } FLASH_NP_AVAIL[13:13];
+        field {
+            desc = "When '1', indicates the target has a channel 3
+                Flash Access completion header and data up to
+                maximum payload size available to send.
+                This bit is only applicable when target attached
+                flash sharing is supported and in operation.
+                Otherwise, the bit is a don't care.";
+        } FLASH_C_AVAIL[12:12];
+        field {
+            desc = "When '1', indicates the target is free to accept
+                at least one channel 3 Flash Access non-posted
+                header and data up to maximum payload size.
+                This bit is only applicable when target attached
+                flash sharing is supported and in operation.
+                Otherwise, the bit is a don't care.";
+        } FLASH_NP_FREE[9:9];
+        field {
+            desc = "When '1', indicates the target is free to accept
+                at least one channel 3 Flash Access completion
+                header and data up to maximum payload size.
+                This bit must be always a '1'. The target must
+                be able to accept the completion for the non-
+                posted request it sends.
+                This bit is only applicable when controller
+                attached flash sharing is supported and in
+                operation. Otherwise, the bit is a don't care.";
+        } FLASH_C_FREE[8:8];
+        field {
+            desc = "When '1', indicates the target has a channel 2
+                OOB (tunneled SMBus) message with data up
+                to maximum payload size available to send.";
+        } OOB_AVAIL[7:7];
+        field {
+            desc = "When '1', indicates the target has a channel 1
+                tunneled virtual wire available to send.";
+        } VWIRE_AVAIL[6:6];
+         field {
+            desc = "When '1', indicates the target has a channel 0
+                peripheral non-posted header available to
+                send.";
+        } NP_AVAIL[5:5];
+
+        field {
+            desc = "When '1', indicates the target has a channel 0
+                peripheral posted or completion header and
+                optional data up to maximum payload size
+                available to send.";
+        } PC_AVAIL[4:4];
+        
+        field {
+            desc = "When '1', indicates the target is free to accept
+                at least one channel 2 OOB (tunneled SMBus)
+                message with data up to maximum payload size.";
+        } OOB_FREE[3:3];
+         field {
+            desc = "This bit must be always a '1'. Tunneling of
+                channel 1 virtual wires is not flow controlled.";
+        } VWIRE_FREE[2:2];
+         field {
+            desc = "When '1', indicates the target is free to accept
+                at least one channel 0 peripheral non-posted
+                header and 1 DW of Data (if applicable).";
+        } NP_FREE[1:1];
+        field {
+            desc = "When '1', indicates the target is free to accept
+            at least one channel 0 peripheral posted or
+            completion header and data up to maximum
+            payload size.";
+        } PC_FREE[0:0];
+        
+    };
+
+    espi_status LIVE_ESPI_STATUS;
+    LIVE_ESPI_STATUS->name = "LIVE_ESPI_STATUS"; 
+
+    espi_status LAST_RESP_STATUS;
+    LAST_RESP_STATUS->name = "LAST_RESP_STATUS";
+
+
+    reg {
+        name = "OOB_FREE_SAW_FULL";
+        desc = "Sticky bit: set to 1 if oob_free ever went low (RX FIFO nearly full) since last eSPI reset. Cleared only by eSPI reset.";
+        field {
+            default sw = r;
+            desc = "";
+        } saw_full[0:0] = 0;
+    } oob_free_saw_full;
+
+    // Read-only view of the eSPI spec registers, so the SP can
+    // observe what the eSPI host has configured.
+    eSPI_Spec spec_regs @ 0x0080;
 
      mem post_code_buffer_mem {
         mementries = 4096;
