@@ -11,6 +11,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.espi_regs_pkg.all;
+use work.espi_spec_regs_view_pkg.all;
+use work.espi_spec_regs_pkg;
 use work.qspi_link_layer_pkg.all;
 use work.axil15x32_pkg.all;
 use work.calc_pkg.log2ceil;
@@ -26,12 +28,16 @@ entity espi_regs is
         espi_reset : in std_logic;
         stuff_fifo : out std_logic;
         stuff_wds : out std_logic_vector(15 downto 0);
+        -- read-only view of eSPI spec registers
+        spec_regs_view : view spec_regs_sink;
         -- debug interface
         dbg_chan : view dbg_regs_if;
         to_host_tx_fifo_usedwds : in std_logic_vector(12 downto 0);
         ipcc_to_host_byte_cntr : in std_logic_vector(31 downto 0);
-
-
+        live_espi_status : in std_logic_vector(15 downto 0);
+        last_resp_status : in std_logic_vector(15 downto 0);
+        host_to_sp_fifo_usedwds : in std_logic_vector(12 downto 0);
+        oob_free_saw_full : in std_logic
     );
 end entity;
 
@@ -49,6 +55,9 @@ architecture rtl of espi_regs is
     signal post_code_count_reg : post_code_count_type;
     signal stuff_count       : ipcc_dummy_fill_count_type;
     signal stuff_enable      : ipcc_dummy_fill_en_type;
+    signal oob_free_saw_full_reg : oob_free_saw_full_type;
+    signal last_resp_status_reg : espi_status_type;
+    signal live_status_reg : espi_status_type;
     constant BUFFER_ENTRIES : integer := 4096;
     constant BUFFER_ADDR_WIDTH : integer := log2ceil(BUFFER_ENTRIES);
     signal pc_buf_waddr : std_logic_vector(BUFFER_ADDR_WIDTH - 1 downto 0);
@@ -60,6 +69,9 @@ begin
     fifo_status_reg.resp_used_wds <= dbg_chan.rdstatus.usedwds;
     status_reg.busy <= dbg_chan.busy;
     flags_reg.alert <= dbg_chan.alert_pending;
+    oob_free_saw_full_reg.saw_full <= oob_free_saw_full;
+    last_resp_status_reg <= unpack(X"0000" & last_resp_status);
+    live_status_reg <= unpack(X"0000" & live_espi_status);
 
     axi_if.read_data.data <= rdata;
 
@@ -173,6 +185,29 @@ begin
                         rdata <= pack(stuff_count);
                     when IPCC_DUMMY_FILL_EN_OFFSET =>
                         rdata <= pack(stuff_enable);
+                    when LIVE_ESPI_STATUS_OFFSET =>
+                        rdata <= pack(live_status_reg);
+                    when LAST_RESP_STATUS_OFFSET =>
+                        rdata <= pack(last_resp_status_reg);
+                    when IPCC_HOST_TO_SP_USEDWDS_OFFSET =>
+                        rdata <= resize(host_to_sp_fifo_usedwds, rdata'length);
+                    when OOB_FREE_SAW_FULL_OFFSET =>
+                        rdata <= pack(oob_free_saw_full_reg);
+                    -- Read-only eSPI spec registers (base 0x0080)
+                    when SPEC_REGS_DEVICE_ID_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.device_id);
+                    when SPEC_REGS_GENERAL_CAPABILITIES_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.general_capabilities);
+                    when SPEC_REGS_CH0_CAPABILITIES_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.ch0_capabilities);
+                    when SPEC_REGS_CH1_CAPABILITIES_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.ch1_capabilities);
+                    when SPEC_REGS_CH2_CAPABILITIES_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.ch2_capabilities);
+                    when SPEC_REGS_CH3_CAPABILITIES_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.ch3_capabilities);
+                    when SPEC_REGS_CH3_CAPABILITIES2_OFFSET =>
+                        rdata <= espi_spec_regs_pkg.pack(spec_regs_view.ch3_capabilities2);
                     when POST_CODE_BUFFER_MEM_RANGE =>
                         rdata <= post_code_buffer_rdata;
                     when others =>

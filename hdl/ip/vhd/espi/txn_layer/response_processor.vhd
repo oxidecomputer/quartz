@@ -37,7 +37,9 @@ entity response_processor is
         -- uart channel responses
         sp_to_host_espi : view uart_resp_sink;
 
-        alert_needed : out   boolean
+        alert_needed : out   boolean;
+        -- Packed status_t that was last sent on the wire
+        last_resp_status : out std_logic_vector(15 downto 0)
     );
 end entity;
 
@@ -62,6 +64,7 @@ architecture rtl of response_processor is
         state         : response_state_t;
         status_idx    : std_logic;
         status        : status_t;
+        last_sent_status : status_t;
         resp_idx      : integer range 0 to 255;
         payload_cnt   : std_logic_vector(11 downto 0);
         temp_length  : std_logic_vector(11 downto 0);
@@ -78,6 +81,7 @@ architecture rtl of response_processor is
     (
         IDLE,
         '0',
+        rec_reset,
         rec_reset,
         0,
         (others => '0'),
@@ -131,10 +135,11 @@ begin
     
 
     response_done <= r.response_done;
+    last_resp_status <= pack(r.last_sent_status);
 
     -- We need to issue alerts when the live status does not match the last-sent
     -- status
-    alert_needed <= true when r.has_responded and live_status /= r.status else false;
+    alert_needed <= true when r.has_responded and live_status /= r.last_sent_status else false;
     -- Response classes:
     -- Get Stats -> response, status, crc
     -- Set Config -> response, status, crc
@@ -320,6 +325,7 @@ begin
         -- Status words
         if r.state = STATUS and r.status_idx = '0' then
             v.status := live_status;
+            v.last_sent_status := live_status;
             v.cur_data := pack(live_status)(7 downto 0);
         elsif r.state = STATUS then
             v.cur_data := pack(r.status)(15 downto 8);
@@ -329,10 +335,6 @@ begin
             -- Reset the command processor state machine
             v := reg_reset;
         end if;
-        -- -- abort the transaction if we're not selected
-        -- if not chip_sel_active then
-        --     v.state := IDLE;
-        -- end if;
         rin <= v;
     end process;
 

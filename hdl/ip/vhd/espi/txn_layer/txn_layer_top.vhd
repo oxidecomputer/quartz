@@ -56,7 +56,10 @@ entity txn_layer_top is
         response_done   : out   boolean;
         aborted_due_to_bad_crc : out boolean;
         -- "Streaming" data to serialize and transmit
-        data_from_host : view byte_sink
+        data_from_host : view byte_sink;
+        live_espi_status : out std_logic_vector(15 downto 0);
+        -- Packed status_t that was last sent on the wire
+        last_resp_status : out std_logic_vector(15 downto 0)
     );
 end entity;
 
@@ -72,6 +75,8 @@ architecture rtl of txn_layer_top is
     signal resp_regs_if   : resp_reg_if;
 
 begin
+
+    live_espi_status <= pack(live_status);
 
     -- Basic counter that counts bytes from the shifters
     -- The shifters deal with the QSPI mode so we will
@@ -154,7 +159,8 @@ begin
             response_crc   => tx_running_crc,
             flash_resp     => flash_resp,
             sp_to_host_espi => sp_to_host_espi,
-            alert_needed   => alert_needed
+            alert_needed   => alert_needed,
+            last_resp_status => last_resp_status
         );
 
     resp_regs_if.write       <= regs_if.write;

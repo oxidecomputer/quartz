@@ -15,6 +15,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.espi_spec_regs_pkg.all;
+use work.espi_spec_regs_view_pkg.all;
 use work.link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 
@@ -25,6 +26,9 @@ entity espi_spec_regs is
 
         regs_if : view regs_side;
         espi_reset : in std_logic;
+
+        -- Read-only view of all spec registers for the sys_regs block
+        spec_regs_view : view spec_regs_source;
 
         qspi_mode            : out   qspi_mode_t;
         wait_states          : out   std_logic_vector(3 downto 0);
@@ -41,6 +45,7 @@ architecture rtl of espi_spec_regs is
     signal ch1_capabilities : ch1_capabilities_type;
     signal ch2_capabilities : ch2_capabilities_type;
     signal ch3_capabilities : ch3_capabilities_type;
+    constant ch3_capabilities2 : ch3_capabilities2_type := rec_reset;
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
     signal qspi_freq        : qspi_freq_t;
@@ -53,6 +58,15 @@ begin
 
     flash_channel_enable <= ch3_capabilities.flash_channel_enable = '1';
     oob_enabled <= ch2_capabilities.chan_en;
+
+    spec_regs_view.device_id            <= device_id;
+    spec_regs_view.general_capabilities <= gen_capabilities;
+    spec_regs_view.ch0_capabilities     <= ch0_capabilities;
+    spec_regs_view.ch1_capabilities     <= ch1_capabilities;
+    spec_regs_view.ch2_capabilities     <= ch2_capabilities;
+    spec_regs_view.ch3_capabilities     <= ch3_capabilities;
+    spec_regs_view.ch3_capabilities2    <= ch3_capabilities2;
+
     -- Write-side of the spec-defined registers
     write_reg: process(clk, reset)
     begin

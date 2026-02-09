@@ -14,6 +14,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
+use work.espi_spec_regs_view_pkg.all;
 use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
 use work.link_layer_pkg.all;
@@ -68,6 +69,7 @@ architecture rtl of espi_target_top is
     signal flash_c_avail : std_logic;
     signal flash_channel_enable : boolean;
     signal dbg_chan : dbg_chan_t;
+    signal spec_regs : spec_regs_t;
     signal response_done : boolean;
     signal pc_free : std_logic;
     signal pc_avail : std_logic;
@@ -107,6 +109,10 @@ architecture rtl of espi_target_top is
     signal oob_enabled : std_logic;
     signal stuff_fifo :  std_logic;
     signal stuff_wds : std_logic_vector(15 downto 0);
+    signal last_resp_status : std_logic_vector(15 downto 0);
+    signal host_to_sp_fifo_usedwds : std_logic_vector(12 downto 0);
+    signal oob_free_saw_full : std_logic;
+    signal live_espi_status : std_logic_vector(15 downto 0);
 
 begin
 
@@ -254,11 +260,16 @@ begin
        stuff_fifo => stuff_fifo,
        stuff_wds => stuff_wds,
        dbg_chan => dbg_chan,
+       spec_regs_view => spec_regs,
        post_code => post_code,
        post_code_valid => post_code_valid,
        espi_reset => espi_reset_strobe_syncd,
        to_host_tx_fifo_usedwds => to_host_tx_fifo_usedwds,
-       ipcc_to_host_byte_cntr => ipcc_to_host_byte_cntr
+       ipcc_to_host_byte_cntr => ipcc_to_host_byte_cntr,
+       live_espi_status => live_espi_status,
+       last_resp_status => last_resp_status,
+       host_to_sp_fifo_usedwds => host_to_sp_fifo_usedwds,
+       oob_free_saw_full => oob_free_saw_full
    );
 
     -- txn layer blocks
@@ -292,7 +303,9 @@ begin
             np_avail => np_avail,
             oob_free => oob_free,
             oob_avail => oob_avail,
-            vwire_avail => vwire_avail
+            vwire_avail => vwire_avail,
+            live_espi_status => live_espi_status,
+            last_resp_status => last_resp_status
         );
 
     -- espi-internal register block
@@ -302,6 +315,7 @@ begin
             reset          => reset,
             espi_reset     => espi_reset_strobe_syncd,
             regs_if        => regs_if,
+            spec_regs_view => spec_regs,
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
             flash_channel_enable => flash_channel_enable,
@@ -350,7 +364,9 @@ begin
        oob_avail => oob_avail,
        oob_free => oob_free,
        to_host_tx_fifo_usedwds => to_host_tx_fifo_usedwds,
-       ipcc_to_host_byte_cntr => ipcc_to_host_byte_cntr
+       ipcc_to_host_byte_cntr => ipcc_to_host_byte_cntr,
+       host_to_sp_fifo_usedwds => host_to_sp_fifo_usedwds,
+       oob_free_saw_full => oob_free_saw_full
    );
 
    -- vwire channel logic
