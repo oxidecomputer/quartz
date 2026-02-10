@@ -151,6 +151,33 @@ def convert_addr_map_only(
 
     return json_obj
 
+def _flatten_children(
+    rdlc: RDLCompiler, obj: Union[AddrmapNode, RegfileNode],
+    parent_offset: int = 0, prefix: str = ""
+) -> list:
+    """Recursively flatten nested addrmap/regfile children into a flat list
+    of registers and memories with adjusted offsets and prefixed names."""
+    result = []
+    for child in obj.children():
+        if isinstance(child, (AddrmapNode, RegfileNode)):
+            nested_prefix = f"{prefix}{child.inst_name}_"
+            nested_offset = parent_offset + child.address_offset
+            result.extend(_flatten_children(rdlc, child, nested_offset, nested_prefix))
+        elif isinstance(child, RegNode):
+            json_child = convert_reg(rdlc, child)
+            json_child["inst_name"] = f"{prefix}{json_child['inst_name']}"
+            json_child["addr_offset"] = parent_offset + child.address_offset
+            result.append(json_child)
+        elif isinstance(child, MemNode):
+            json_child = convert_mem(child)
+            json_child["inst_name"] = f"{prefix}{json_child['inst_name']}"
+            json_child["addr_offset"] = parent_offset + child.address_offset
+            result.append(json_child)
+        else:
+            raise RuntimeError("Unknown child type seen during JSON generation.")
+    return result
+
+
 def convert_addrmap_or_regfile(
     rdlc: RDLCompiler, obj: Union[AddrmapNode, RegfileNode]
 ) -> dict:
@@ -169,18 +196,6 @@ def convert_addrmap_or_regfile(
 
     json_obj["inst_name"] = obj.inst_name
     json_obj["addr_offset"] = obj.address_offset
-
-    json_obj["children"] = []
-    for child in obj.children():
-        if isinstance(child, (AddrmapNode, RegfileNode)):
-            json_child = convert_addrmap_or_regfile(rdlc, child)
-        elif isinstance(child, RegNode):
-            json_child = convert_reg(rdlc, child)
-        elif isinstance(child, MemNode):
-            json_child = convert_mem(child)
-        else:
-            raise RuntimeError("Unknown child type seen during JSON generation.")
-
-        json_obj["children"].append(json_child)
+    json_obj["children"] = _flatten_children(rdlc, obj)
 
     return json_obj
