@@ -125,7 +125,7 @@ begin
            -- to get this working well we're going to cap the payload at 61 bytes
            -- we can re-evaluate this later, but this will support the smallest OOB channel
            -- with 3 bytes of SMB headers
-           response_chan_mux.length     <= minimum(sp_to_host_espi.avail_bytes, 61);  -- cap to tx max
+           response_chan_mux.length     <= resize(minimum(sp_to_host_espi.avail_bytes, 61), response_chan_mux.length'length);  -- cap to tx max
            flash_resp.ready             <= '0';
            resp_data <= sp_to_host_espi.st.data;
            sp_to_host_espi.st.ready <= '1' when data_to_host.ready = '1' and r.cur_valid = '1' and r.state = RESPONSE_PAYLOAD else '0';

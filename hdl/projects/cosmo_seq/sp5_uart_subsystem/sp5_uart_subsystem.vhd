@@ -133,7 +133,7 @@ begin
         parity => false,
         use_hw_handshake => true,
         fifo_depth => CONSOLE_FIFO_DEPTH,
-        full_threshold => CONSOLE_FIFO_DEPTH
+        full_threshold => CONSOLE_FIFO_ALMOST_FULL
     )
      port map(
         clk => clk,
@@ -180,7 +180,7 @@ begin
         parity => false,
         use_hw_handshake => true,
         fifo_depth => IPCC_FIFO_DEPTH,
-        full_threshold => IPCC_FIFO_DEPTH
+        full_threshold => IPCC_FIFO_ALMOST_FULL
     )
      port map(
         clk => clk,

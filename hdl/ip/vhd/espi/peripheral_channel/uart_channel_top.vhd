@@ -102,7 +102,7 @@ begin
     -- tx_rusedwds is potentially cycles behind the empty flag due to fifo latencies.
     -- since we're using it in the avail bytes, we need to ensure we're at least > 0
     sp_to_host_espi.st.valid <= '1' when tx_rempty /= '1' and tx_rusedwds > 0 else '0';
-    sp_to_host_espi.avail_bytes <= resize(tx_rusedwds, sp_to_host_espi.avail_bytes'length);
+    sp_to_host_espi.avail_bytes <= tx_rusedwds;
     to_sp_uart_valid <= not rx_rempty;
 
     fifo_read_by_espi <= sp_to_host_espi.st.valid and sp_to_host_espi.st.ready;
