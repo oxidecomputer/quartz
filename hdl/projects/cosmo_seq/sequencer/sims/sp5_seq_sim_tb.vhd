@@ -35,10 +35,12 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
+        alias sp5_t6_perst_l is << signal th.sp5_t6_perst_l : std_logic >>;
         variable read_data       : std_logic_vector(31 downto 0);
         variable seq_state       : seq_api_status_a0_sm;
         constant grpa_v3p3_actor : actor_t := find("grpa_v3p3_sp5_a1");
         constant nic_actor       : actor_t := find("nic_model");
+        variable nic_state : nic_api_status_nic_sm;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -78,22 +80,151 @@ begin
                 test_mapo_fault_injection(net, find("grpc_vddcr_soc"), "VDDCR_SOC");
             elsif run("nic_mapo_fault_v1p5_nic_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P5_NIC_A0HP);
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
+
             elsif run("nic_mapo_fault_v1p2_nic_pcie_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P2_NIC_PCIE_A0HP);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
             elsif run("nic_mapo_fault_v1p2_nic_enet_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P2_NIC_ENET_A0HP);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
+
             elsif run("nic_mapo_fault_v3p3_nic_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V3P3_NIC_A0HP);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
             elsif run("nic_mapo_fault_v1p1_nic_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P1_NIC_A0HP);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
             elsif run("nic_mapo_fault_v1p4_nic_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V1P4_NIC_A0HP);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
             elsif run("nic_mapo_fault_v0p96_nic_vdd_a0hp") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_V0P96_NIC_VDD_A0HP);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
             elsif run("nic_mapo_fault_nic_hsc_12v") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_NIC_HSC_12V);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
             elsif run("nic_mapo_fault_nic_hsc_5v") then
                 test_nic_rail_mapo_fault_injection(net, nic_actor, RAIL_NIC_HSC_5V);
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
+            elsif run("nic_force_mapo") then
+                info("Starting normal A0 power sequence");
+                write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);
+
+                poll_for_nic_state(net, DONE);
+                
+                -- Force a MAPO condition on the NIC by forcing the rails to be not good when we expect them to be up
+                write_bus(net, bus_handle, To_StdLogicVector(NIC_OVERRIDES_OFFSET, bus_handle.p_address_length), NIC_OVERRIDES_NIC_TEST_MAPO_MASK);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = IDLE, true, "Expected nic sequencer to return to IDLE state after forced MAPO condition");
+
+                -- Check IFR register for NICMAPO bit
+                read_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+                info("IFR register after NIC fault: " & to_hstring(read_data));
+                check_equal((read_data and IFR_NICMAPO_MASK) /= x"00000000", true,
+                    "Expected NICMAPO bit to be set in IFR");
+
+                -- Check that IRF register for NICMAPO can clear
+                info("Clear NICMAPO bit in IFR");
+                write_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), IFR_NICMAPO_MASK);  -- writing a 1 to the bit should clear it
+
+                read_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+                info("IFR register after NIC fault cleared " & to_hstring(read_data));
+                check_equal((read_data and IFR_NICMAPO_MASK) = x"00000000", true,
+                    "Expected NICMAPO bit to be clear after clearing IFR.");
+
+                -- now check recovery
+                sp5_t6_perst_l <= force '0';
+                wait for 1 us;
+                sp5_t6_perst_l <= release;
+                poll_for_nic_state(net, DONE);
+                 -- Check that nic sequencer returned to DONE state
+                read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                nic_state := encode(read_data(7 downto 0));
+                check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
+                
             end if;
         end loop;
 

@@ -391,6 +391,7 @@ architecture rtl of cosmo_seq_top is
 
     signal sp5_t6_power_en : std_logic;
     signal sp5_t6_perst_l : std_logic;
+    signal sp5_t6_faulted : std_logic;
     signal espi_resp_csn : std_logic;
     signal hp_int_n : std_logic;
 
@@ -684,6 +685,7 @@ begin
         pcie_clk_buff_m2b_oe_l => fpga1_to_pcie_clk_buff_m2b_oe_l,
         t6_power_en => sp5_t6_power_en,
         t6_perst_l => sp5_t6_perst_l,
+        t6_faulted => sp5_t6_faulted,
         pcie_aux_rsw_perst_l => pcie_aux_fpga1_to_rsw_perst_l,
         pcie_aux_rsw_prsnt_buff_l => pcie_aux_rsw_to_fpga1_prsnt_buff_l,
         pcie_aux_rsw_pwrflt_buff_l=> pcie_aux_rsw_to_fpga1_pwrflt_buff_l,
@@ -728,6 +730,7 @@ begin
         nic_seq_pins => nic_seq_pins,
         nic_dbg_pins => nic_dbg_pins,
         sp5_t6_perst_l => sp5_t6_perst_l,
+        sp5_t6_faulted => sp5_t6_faulted,
         ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
         ignition_creset => fpga1_to_ign_trgt_fpga_creset,
         reg_alert_l_pins => reg_alert_l_pins

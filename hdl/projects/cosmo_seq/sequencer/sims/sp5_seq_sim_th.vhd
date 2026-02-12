@@ -72,7 +72,7 @@ architecture th of sp5_seq_sim_th is
     signal nic_rails_pins : nic_power_t;
     signal a0_ok : std_logic;
     signal a0_idle : std_logic;
-    signal sp5_t6_perst_l : std_logic;
+    signal sp5_t6_perst_l : std_logic := '1';
     signal axi_if : axil8x32_pkg.axil_t;
     signal nic_dbg_pins : t6_debug_if;
 

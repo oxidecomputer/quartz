@@ -10,7 +10,8 @@ use ieee.numeric_std.all;
 
 entity irq_block is
     generic (
-        IRQ_OUT_ACTIVE_HIGH : boolean
+        IRQ_OUT_ACTIVE_HIGH : boolean;
+        NUM_IRQS : natural
     );
     port (
         clk : in std_logic;
@@ -18,13 +19,13 @@ entity irq_block is
         -- raw  IRQ, can be level or edge sensitive.
         -- if level, upstack code will need to clear the driving bit to prevent repeated interrupts.
         -- and just clearing the flag here will not be sufficient.
-        irq_in : in std_logic_vector;
-        irq_en : in std_logic_vector(irq_in'range);
-        level_edge_n : in std_logic_vector(irq_in'range);  -- 1 for level sensitive, 0 for edge sensitive
-        irq_out : out std_logic_vector(irq_in'range);
-        irq_clear : in std_logic_vector(irq_in'range);
-        irq_force : in std_logic_vector(irq_in'range);
-        irq_pin : out std_logic;
+        irq_in : in std_logic_vector(NUM_IRQS - 1 downto 0);
+        irq_en : in std_logic_vector(NUM_IRQS - 1 downto 0);
+        level_edge_n : in std_logic_vector(NUM_IRQS - 1 downto 0);  -- 1 for level sensitive, 0 for edge sensitive
+        irq_out : out std_logic_vector(NUM_IRQS - 1 downto 0);
+        irq_clear : in std_logic_vector(NUM_IRQS - 1 downto 0);
+        irq_force : in std_logic_vector(NUM_IRQS - 1 downto 0);
+        irq_pin : out std_logic
         
     );
 end entity;
