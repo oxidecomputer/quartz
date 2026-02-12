@@ -55,6 +55,7 @@ entity sp5_sequencer is
         reg_alert_l_pins : view power_alert_at_fpga;
 
         sp5_t6_perst_l : in std_logic;
+        sp5_t6_faulted : out std_logic;
 
         ignition_mux_sel : out std_logic;
         ignition_creset : out std_logic;
@@ -101,6 +102,8 @@ architecture rtl of sp5_sequencer is
 
 
 begin
+
+    sp5_t6_faulted <= nic_faulted;
 
     sync: entity work.seq_sync
      port map(

@@ -96,6 +96,8 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
     IER->name = "Interrupt Enable Register";
     irq IGR;
     IGR->name = "Interrupt Generate Register self-clearing (W1S)";
+    irq ILR;
+    ILR->name = "Interrupt Live Register (read-only). Current 'raw' inputs to the IRQ block";
 
     reg {
         name = "Sequencer Status Register";
@@ -199,8 +201,28 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         your friendly hw engineer for a true decode if needed.";
         default sw = r;
 
+        enum a0_hw_state_machine {
+                IDLE = 8'h00 {desc = "";};
+                DDR_BULK_EN = 8'h01 {desc = "";};
+                GROUP_A_EN = 8'h02 {desc = "";};
+                GROUP_A_PG_AND_WAIT = 8'h03 {desc = "";};
+                RSM_RST_DEASSERT = 8'h04 {desc = "";};
+                RTC_CLK_WAIT = 8'h05 {desc = "";}; // PBTN low for 20ms
+                SLP_CHECKPOINT = 8'h06 {desc = "";};
+                GROUP_B_EN = 8'h07 {desc = "";};
+                GROUP_B_PG_AND_WAIT = 8'h08 {desc = "";};
+                GROUP_C_EN = 8'h09 {desc = "";};
+                GROUP_C_PG_AND_WAIT = 8'h0a {desc = "";};
+                ASSERT_PWRGOOD = 8'h0b {desc = "";};
+                WAIT_PWROK = 8'h0c {desc = "";};
+                WAIT_RESET_L_RELEASE = 8'h0d {desc = "";};
+                DONE = 8'h0e {desc = "";};
+                SAFE_DISABLE = 8'h0f {desc = "";};
+        };
+
         field {
             desc = "Sequencer Raw Status";
+            encode = a0_hw_state_machine;
         } hw_sm[7:0];
     } seq_raw_status;
     
@@ -222,7 +244,6 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "Nic SM Status";
             encode = nic_state_machine;
         } nic_sm[7:0];
-        // TODO: A1 state machine decode in here
     } nic_api_status;
 
     reg {
@@ -233,8 +254,19 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         your friendly hw engineer for a true decode if needed.";
         default sw = r;
 
+        enum  nic_hw_state_machine {
+            IDLE = 8'h00 {desc = "";};
+            PWR_EN = 8'h01 {desc = "";};
+            WAIT_FOR_PGS = 8'h02 {desc = "";};
+            EARLY_CLD_RST = 8'h03 {desc = "";};
+            EARLY_PERST = 8'h04 {desc = "";};
+            EARLY_PERST_ASSERT = 8'h05 {desc = "";};
+            DONE = 8'h06 {desc = "";};
+        };
+
         field {
             desc = "NIC Sequencer Raw Status";
+            encode = nic_hw_state_machine;
         } hw_sm[7:0];
     } nic_raw_status;
 
@@ -453,6 +485,9 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         field {
             desc = "nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
         } nic_pcie_clk_buff_oe_l[1] = 1;
+        field {
+            desc = "Self-clearing. Set to 1 to trigger a NIC-domain MAPO for testing purposes.";
+        } nic_test_mapo[1] = 1;
     } nic_overrides;
 
      reg {

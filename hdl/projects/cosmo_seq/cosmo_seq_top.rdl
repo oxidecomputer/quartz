@@ -11,7 +11,7 @@ addrmap pca9506_axi_regs {
 };
 addrmap cosmo_seq_top {
     default regwidth = 32;
-    // Instantiate 2 to test nesting
+    
     info_regs info @ 0x0;
     spi_nor_regs spi_nor @ 0x0100;
     sequencer_regs sequencer @ 0x0200;

@@ -50,8 +50,6 @@ architecture rtl of nic_seq is
     constant TWENTY_MS : integer := 20 * ONE_MS;
     constant THIRTY_MS : integer := 30 * ONE_MS;
 
-    type state_t is ( IDLE, PWR_EN, WAIT_FOR_PGS, EARLY_CLD_RST, EARLY_PERST, EARLY_PERST_ASSERT, DONE );
-
     type reset_state_t is (IN_RESET, CLD_RST_DEASSERTED, PERST_DEASSERTED);
     type rst_r_t is record
         state : reset_state_t;
@@ -68,10 +66,11 @@ architecture rtl of nic_seq is
     );
 
     type nic_r_t is record
-        state : state_t;
+        state : nic_raw_status_hw_sm;
         enable_last : std_logic;
         enable_pend : std_logic;
         cnts  : unsigned(31 downto 0);
+        nic_perst_l_last : std_logic;
         nic_power_en : std_logic;
         nic_perst_l : std_logic;
         nic_cld_rst_l : std_logic;
@@ -85,6 +84,7 @@ architecture rtl of nic_seq is
         enable_last => '0',
         enable_pend => '0',
         cnts => (others => '0'),
+        nic_perst_l_last => '0',
         nic_power_en => '0',
         nic_perst_l => '0',
         nic_cld_rst_l => '0',
@@ -100,7 +100,7 @@ architecture rtl of nic_seq is
 
 begin
 
-    raw_state.hw_sm <= std_logic_vector(to_unsigned(state_t'pos(nic_r.state), raw_state.hw_sm'length));
+    raw_state.hw_sm <= nic_r.state;
     
     nic_idle <= '1' when nic_r.state = IDLE else '0';
 
@@ -160,13 +160,17 @@ begin
     begin
 
         v := nic_r;
+        v.nic_perst_l_last := sp5_t6_perst_l;
+         
 
         -- Fault monitoring: if we expect NIC rails to be up and they're not, that's a fault
         nic_faulted_var := '1' when nic_r.nic_expected = '1' and (not is_power_good(nic_rails)) else '0';
          v.enable_last := sw_enable;
-        if sw_enable and not nic_r.enable_last then
-            -- To re-enable, we require software to generate a rising_edge
-            -- here, by clearing the enable and then setting it again
+        if (sw_enable and not nic_r.enable_last) = '1' or (nic_r.faulted = '1' and nic_r.nic_perst_l_last = '0' and sp5_t6_perst_l = '1') then
+            -- To re-enable, there are 2 possible cases:
+            -- Normally, we require sw to clear and enable the register for normal power up cases.
+            -- In a MAPO situation though, the SP5 has "power control".  sp5_t6_perst_l just followes the slot power
+            -- enable here, so if we have MAPO'd (faulted = '1') and we see a perst de-assert from the SP5, we'll attempt to sequence again.
             v.enable_pend := '1';
             -- we'll use this to clear the faulted flags
             v.faulted := '0';
@@ -251,7 +255,7 @@ begin
 
         -- MAPO fault handling - monitored in all non-IDLE states
         if nic_r.state /= IDLE then
-            if nic_faulted_var = '1' or upstream_ok = '0' then
+            if nic_faulted_var = '1' or upstream_ok = '0' or nic_overrides_reg.nic_test_mapo = '1' then
                 v.faulted := '1';
                 -- In fault case, immediately transition to IDLE
                 -- regardless of current state

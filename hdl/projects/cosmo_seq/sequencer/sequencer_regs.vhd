@@ -61,7 +61,6 @@ architecture rtl of sequencer_regs is
     signal ifr : irq_type;
     signal ier : irq_type;
     signal irq_out : std_logic_vector(sizeof(ier) - 1 downto 0);
-    signal commbined_irq : irq_type;
 
     signal status : status_type;
 
@@ -95,6 +94,8 @@ architecture rtl of sequencer_regs is
     signal pcie_clk_ctrl : pcie_clk_ctrl_type;
     constant  EDGE : std_logic := '0';
     constant LEVEL : std_logic := '1';
+    -- Set up IRQ expected trigger types here, we pass this into the 
+    -- irq block so it will handle things correctly.
     constant level_edge_n : irq_type := 
         (
             pwr_cont3_to_fpga1_alert => LEVEL,
@@ -129,6 +130,7 @@ begin
     ignition_creset <= ignition_control.ignition_creset;
     allow_backplane_pcie_clk <= pcie_clk_ctrl.clk_en;
 
+    -- Map a bunch of discrete signals into the irq_raw vector.
     irq_raw <= (
         pwr_cont3_to_fpga1_alert => not reg_alert_l.pwr_cont3_to_fpga1_alert_l,
         pwr_cont2_to_fpga1_alert => not reg_alert_l.pwr_cont2_to_fpga1_alert_l,
@@ -159,7 +161,8 @@ begin
 
     irq_block_inst: entity work.irq_block
     generic map(
-        IRQ_OUT_ACTIVE_HIGH => false
+        IRQ_OUT_ACTIVE_HIGH => false,
+        NUM_IRQS => sizeof(irq_raw)
     )
      port map(
         clk => clk,
@@ -186,17 +189,14 @@ begin
             amd_pwrok_last <= '0';
             amd_pwrgd_out_last <= '0';
             seq_api_status_max <= (a0_sm => IDLE);
-            seq_raw_status_max <= (hw_sm => (others => '0'));
+            seq_raw_status_max <= (hw_sm => IDLE);
             nic_api_status_max <= (nic_sm => IDLE);
-            nic_raw_status_max <= (hw_sm => (others => '0'));
+            nic_raw_status_max <= (hw_sm => IDLE);
             amd_reset_fedges <= (counts => (others => '0'));
             amd_pwrok_fedges <= (counts => (others => '0'));
             amd_pwrgd_out_fedges <= (counts => (others => '0'));
-            irq_l_out <= '1';
             
         elsif rising_edge(clk) then
-            irq_l_out <= '0' when unsigned'(pack(commbined_irq)) /= 0 else '1';
-
 
             therm_trip_last <= therm_trip;
             smerr_assert_last <= smerr_assert;
@@ -214,7 +214,7 @@ begin
 
              -- Max hold for seq raw status.  Clear on rising edge of enable
              if a0_en_redge then
-                seq_raw_status_max <= (hw_sm => (others => '0'));
+                seq_raw_status_max <= (hw_sm => IDLE);
             elsif seq_raw_status_max.hw_sm <= seq_raw_status.hw_sm then
                 seq_raw_status_max <= seq_raw_status;
             end if;
@@ -228,7 +228,7 @@ begin
 
              -- Max hold for nic raw status.  Clear on rising edge of enable
              if a0_en_redge then
-                nic_raw_status_max <= (hw_sm => (others => '0'));
+                nic_raw_status_max <= (hw_sm => IDLE);
             elsif nic_raw_status_max.hw_sm <= nic_raw_status.hw_sm then
                 nic_raw_status_max <= nic_raw_status;
             end if;
@@ -300,9 +300,11 @@ begin
         elsif rising_edge(clk) then
            irq_clear <= reset_0s;  -- clear single-cycle flags.
            igr <= reset_0s;
+           nic_overrides.nic_test_mapo <= '0'; -- Clear test MAPO bit every cycle, so it's a single-cycle pulse when set.
 
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
+                    -- This is a W1C register, so we write the incoming data directly to the clear signal, and let the irq block handle clearing the ifr bits.
                     when IFR_OFFSET => irq_clear <= unpack(axi_if.write_data.data);
                     when IER_OFFSET => ier <= unpack(axi_if.write_data.data);
                     when IGR_OFFSET => igr <= unpack(axi_if.write_data.data);
@@ -332,6 +334,8 @@ begin
                 case to_integer(axi_if.read_address.addr) is
                     when IFR_OFFSET => rdata <= pack(ifr);
                     when IER_OFFSET => rdata <= pack(ier);
+                    when IGR_OFFSET => rdata <= pack(igr);
+                    when ILR_OFFSET => rdata <= pack(irq_raw);
                     when STATUS_OFFSET => rdata <= pack(status);
                     when EARLY_POWER_CTRL_OFFSET => rdata <= pack(early_power_ctrl);
                     when EARLY_POWER_RDBKS_OFFSET => rdata <= pack(early_power_rdbks);

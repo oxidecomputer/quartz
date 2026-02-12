@@ -55,6 +55,7 @@ entity sp5_hotplug_subsystem is
         -- T6 things
         t6_power_en : out std_logic;
         t6_perst_l : out std_logic;
+        t6_faulted : in std_logic;
 
         -- Sidecar things
         pcie_aux_rsw_perst_l : out std_logic;
@@ -179,7 +180,7 @@ begin
     -- T6
     t6_power_en <= not io_o(2)(4) when io_oe(0)(4) else '0';
     io(2)(3) <= '1';  -- PEDET for T6
-    io(2)(1) <= '1'; -- TODO: power fault l
+    io(2)(1) <= not t6_faulted;
     io(2)(2) <= '1'; -- attnsw_l
     io(2)(0) <= '0'; -- PRSNT_L for T6
     t6_perst_l <= t6_power_en;

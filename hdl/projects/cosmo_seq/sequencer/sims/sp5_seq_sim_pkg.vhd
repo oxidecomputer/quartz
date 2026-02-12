@@ -160,7 +160,7 @@ package body sp5_seq_sim_pkg is
         -- Wait for NIC to power up and enable fault monitoring
         info("Waiting for NIC to be fully monitored");
         -- Poll for A0 sequence to complete (wait for DONE state)
-        poll_for_nic_state(net, NIC_RESET);
+        poll_for_nic_state(net, DONE);
 
     
         read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
@@ -185,8 +185,19 @@ package body sp5_seq_sim_pkg is
         info("NIC state after NIC MAPO on " & rail_name & ": " & to_hstring(read_data(7 downto 0)));
         check_equal(nic_state = IDLE, true, "Expected nic sequencer to return to IDLE state after NIC MAPO on " & rail_name);
 
+        -- Check that IRF register for NICMAPO can clear
+        info("Clear NICMAPO bit in IFR");
+        write_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), IFR_NICMAPO_MASK);  -- writing a 1 to the bit should clear it
+        
+        read_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+        info("IFR register after NIC fault cleared " & rail_name & ": " & to_hstring(read_data));
+        check_equal((read_data and IFR_NICMAPO_MASK) = x"00000000", true,
+                    "Expected NICMAPO bit to be clear after clearing IFR. testing rail: " & rail_name);
+        
         -- Re-enable power-good for cleanup
         nic_model_msg_pkg.enable_power_good(net => net, actor => nic_actor, rail_name => rail_name);
+
+        
 
         info("NIC MAPO fault injection test completed successfully for rail: " & rail_name);
     end procedure;
