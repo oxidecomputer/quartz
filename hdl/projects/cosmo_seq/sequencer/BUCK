@@ -18,6 +18,7 @@ vhdl_unit(
     deps = [
         ":sequencer_regs_rdl",
         "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/irq:irq_block",
         "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
     ],
     visibility = ["PUBLIC"],

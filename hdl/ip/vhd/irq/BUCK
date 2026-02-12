@@ -1,0 +1,9 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+
+vhdl_unit(
+    name = "irq_block",
+    srcs = ["irq_block.vhd"],
+    deps = [],
+    visibility = ['PUBLIC'],
+)
