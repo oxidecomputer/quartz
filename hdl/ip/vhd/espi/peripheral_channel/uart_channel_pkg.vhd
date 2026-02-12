@@ -25,7 +25,7 @@ package uart_channel_pkg is
 
     type uart_resp_t is record
         st : st_uart_t;
-        avail_bytes : std_logic_vector(11 downto 0);
+        avail_bytes : std_logic_vector(12 downto 0);
     end record;
 
     view uart_resp_src of uart_resp_t is
