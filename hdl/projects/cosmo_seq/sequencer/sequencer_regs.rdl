@@ -25,7 +25,7 @@ addrmap sequencer_regs {
             desc = "A1A0 MAPO- A fault in the A1-A0 domain(s) caused a MAPO (sticky since fpga reset or last clear)";
         } a0mapo[1];
         field {
-            desc = "Nic MAPO- A fault in the A0 domain caused a MAPO (sticky since fpga reset or last clear)";
+            desc = "Nic MAPO- A fault in the NIC domain caused a MAPO (sticky since fpga reset or last clear)";
         } nicmapo[1];
         field {
             desc = "AMD PWROK falling edge while in >=A0 (sticky since fpga reset or last clear)";
@@ -91,9 +91,11 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
        };
     // Set up interrupt registers using a common irq_type
     irq IFR;
-    IFR->name = "Interrupt Flag Register";
+    IFR->name = "Interrupt Flag Register (W1C)";
     irq IER;
     IER->name = "Interrupt Enable Register";
+    irq IGR;
+    IGR->name = "Interrupt Generate Register self-clearing (W1S)";
 
     reg {
         name = "Sequencer Status Register";
