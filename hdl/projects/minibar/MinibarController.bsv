@@ -56,11 +56,15 @@ module mkMinibarController#(Parameters parameters) (MinibarController);
     Blinky#(50_000_000) blinky_inst <- Blinky::mkBlinky();
 
     //
-    // Useful timer for the rest of the design
+    // Useful timers for the rest of the design
     //
     Strobe#(20) tick_1khz   <-
-        mkLimitStrobe(1, parameters.system_frequency_hz / 1000, 0);
+        mkLimitStrobe(1, parameters.system_frequency_hz / 1_000, 0);
     mkFreeRunningStrobe(tick_1khz);
+
+    Strobe#(6) tick_1mhz <-
+        mkLimitStrobe(1, (parameters.system_frequency_hz / 1_000_000), 0);
+    mkFreeRunningStrobe(tick_1mhz);
 
     //
     // A collection of miscellaneous registers we wrap up in a single module
@@ -72,6 +76,9 @@ module mkMinibarController#(Parameters parameters) (MinibarController);
     // A block to support the operations and test sled<->CEM PCIe
     //
     MinibarPcie pcie_ <- mkMinibarPcie(parameters.pcie_pg_timeout_ms);
+    mkConnection(asIfc(tick_1khz), asIfc(pcie_.tick_1ms));
+    mkConnection(asIfc(tick_1mhz), asIfc(pcie_.tick_1us));
+    mkConnection(misc_regs.pcie_connector_present, pcie_.sled_present);
 
     //
     // Ignition Controllers
