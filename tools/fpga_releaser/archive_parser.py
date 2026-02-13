@@ -15,7 +15,7 @@ def get_relevant_files_from_buck_zip(fpga_name, zip):
             continue
         if item.filename.endswith(".bz2"):
             zip_names.append(item.filename)
-        if "/maps/" in item.filename and (item.filename.endswith(".json") or item.filename.endswith(".html")):
+        if "maps/" in item.filename and (item.filename.endswith(".json") or item.filename.endswith(".html")):
             zip_names.append(item.filename)
         if item.filename.endswith("nextpnr.log"):
            zip_names.append(item.filename)

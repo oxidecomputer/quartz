@@ -59,6 +59,15 @@ jobs:
 
           echo "base_commit=$BASE_COMMIT" >> "$GITHUB_OUTPUT"
 
+          # Check if this workflow or the shared parser script changed.
+          # These aren't buck2 inputs so BTD won't detect them, but they
+          # can affect simulation runs (toolchain versions, env vars).
+          if git diff --name-only "$BASE_COMMIT" HEAD | grep -qE '\.github/workflows/simulation\.yml|\.github/scripts/'; then
+            echo "ci_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ci_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate base snapshot
         run: |
           git checkout ${{ steps.changed-files.outputs.base_commit }}
@@ -121,9 +130,12 @@ jobs:
         run: |
           mkdir -p /tmp/btd_results
 
-          # Run parser script; --fallback means BTD failed so run everything
+          # Run parser script; --fallback means run everything
           FALLBACK_FLAG=""
           if [ "${{ steps.btd.outputs.succeeded }}" != "true" ]; then
+            FALLBACK_FLAG="--fallback"
+          elif [ "${{ steps.changed-files.outputs.ci_changed }}" = "true" ]; then
+            echo "CI workflow changed — re-running all simulation targets"
             FALLBACK_FLAG="--fallback"
           fi
 
