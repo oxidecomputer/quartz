@@ -7,7 +7,7 @@ load("vivado_toolchain.bzl", "vivado_toolchain")
 load("vsg_toolchain.bzl", "vsg_toolchain")
 load("bsv_toolchain.bzl", "bsv_toolchain")
 
-load("yosys_toolchain.bzl", "icepack_toolchain", "nextpnr_ice40_toolchain", "nextpnr_ecp5_toolchain", "ecppack_toolchain", "yosys_toolchain")
+load("yosys_toolchain.bzl", "icepack_toolchain", "nextpnr_ice40_toolchain", "nextpnr_ecp5_toolchain", "ecppack_toolchain", "icebram_toolchain", "ecpbram_toolchain", "yosys_toolchain")
 
 system_genrule_toolchain(
     name = "genrule",
@@ -66,6 +66,16 @@ nextpnr_ecp5_toolchain(
 
 ecppack_toolchain(
     name = "ecppack",
+    visibility = ["PUBLIC"],
+)
+
+icebram_toolchain(
+    name = "icebram",
+    visibility = ["PUBLIC"],
+)
+
+ecpbram_toolchain(
+    name = "ecpbram",
     visibility = ["PUBLIC"],
 )
 

@@ -19,7 +19,8 @@ load(
 def _ice40_bitstream_impl(ctx):
     yosys_synth_providers = yosys_vhdl_synth(ctx)
     next_pnr_providers = ice40_nextpnr(ctx, yosys_synth_providers)
-    icepack_providers = icepack(ctx, next_pnr_providers)
+    stamp_providers = icebram_stamp(ctx, next_pnr_providers)
+    icepack_providers = icepack(ctx, stamp_providers)
     compressed = compress_bitstream(ctx, icepack_providers)
     return [
         DefaultInfo(
@@ -30,7 +31,6 @@ def _ice40_bitstream_impl(ctx):
             }
         )
     ]
-    pass
 
 def yosys_vhdl_synth(ctx):
     providers = []
@@ -119,6 +119,22 @@ def next_pnr_family_flags(family):
     return "--{}".format(family)
 
 
+def icebram_stamp(ctx, next_pnr_providers):
+    """Optionally stamp version data into BRAM via icebram."""
+    if ctx.attrs.version_template_hex and ctx.attrs.version_replacement_hex:
+        asc = next_pnr_providers[0].default_outputs[0]
+        stamped_asc = ctx.actions.declare_output("{}_stamped.asc".format(ctx.attrs.name))
+        cmd = cmd_args()
+        cmd.add("python3", ctx.attrs._icebram_wrapper)
+        cmd.add(ctx.attrs._icebram[RunInfo])
+        cmd.add(ctx.attrs.version_template_hex)
+        cmd.add(ctx.attrs.version_replacement_hex)
+        cmd.add(asc)
+        cmd.add(stamped_asc.as_output())
+        ctx.actions.run(cmd, category="icebram")
+        return [DefaultInfo(default_output=stamped_asc)]
+    return next_pnr_providers
+
 def icepack(ctx, next_pnr_providers):
     providers = []
     
@@ -157,13 +173,27 @@ ice40_bitstream = rule(
                 doc="bz2 compressor",
                 default="root//tools/bz2compress:bz2compress",
             ),
+        "version_template_hex": attrs.option(
+            attrs.source(),
+            default=None,
+            doc="Template hex for icebram (from pattern)",
+        ),
+        "version_replacement_hex": attrs.option(
+            attrs.source(),
+            default=None,
+            doc="Replacement hex for icebram (volatile, git data)",
+        ),
         "_icepack": attrs.toolchain_dep(
-            doc="Use system python toolchain for running python stuff",
             default="toolchains//:icepack",
         ),
         "_nextpnr_ice40": attrs.toolchain_dep(
-            doc="Use system python toolchain for running python stuff",
             default="toolchains//:nextpnr-ice40",
+        ),
+        "_icebram": attrs.toolchain_dep(
+            default="toolchains//:icebram",
+        ),
+        "_icebram_wrapper": attrs.source(
+            default="//tools:icebram_wrapper",
         ),
     },
 )
