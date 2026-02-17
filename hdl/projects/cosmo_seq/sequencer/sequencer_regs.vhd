@@ -55,9 +55,12 @@ entity sequencer_regs is
 end entity;
 
 architecture rtl of sequencer_regs is
+    signal irq_raw : irq_type;
+    signal irq_clear : irq_type;
+    signal igr : irq_type;
     signal ifr : irq_type;
     signal ier : irq_type;
-    signal commbined_irq : irq_type;
+    signal irq_out : std_logic_vector(sizeof(ier) - 1 downto 0);
 
     signal status : status_type;
 
@@ -89,6 +92,37 @@ architecture rtl of sequencer_regs is
     signal smerr_assert_last : std_logic;
 
     signal pcie_clk_ctrl : pcie_clk_ctrl_type;
+    constant  EDGE : std_logic := '0';
+    constant LEVEL : std_logic := '1';
+    -- Set up IRQ expected trigger types here, we pass this into the 
+    -- irq block so it will handle things correctly.
+    constant level_edge_n : irq_type := 
+        (
+            pwr_cont3_to_fpga1_alert => LEVEL,
+            pwr_cont2_to_fpga1_alert => LEVEL,
+            pwr_cont1_to_fpga1_alert => LEVEL,
+            v0p96_nic_to_fpga1_alert => LEVEL,
+            vr_v5p0_sys_to_fpga1_alert => LEVEL,
+            vr_v3p3_sys_to_fpga1_alert => LEVEL,
+            vr_v1p8_sys_to_fpga1_alert => LEVEL,
+            main_hsc_alert => LEVEL,
+            v12_mcio_a0hp_hsc_alert => LEVEL,
+            v12_ddr5_ghijkl_hsc_alert => LEVEL,
+            v12_ddr5_abcdef_hsc_alert => LEVEL,
+            nic_hsc_alert => LEVEL,
+            m2_hsc_alert => LEVEL,
+            ibc_alert => LEVEL,
+            fan_west_hsc_alert => LEVEL,
+            fan_east_hsc_alert => LEVEL,
+            fan_central_hsc_alert => LEVEL,
+            amd_rstn_fedge => EDGE,
+            amd_pwrok_fedge => EDGE,
+            nicmapo => EDGE,
+            a0mapo => EDGE,
+            smerr_assert => EDGE,
+            thermtrip => EDGE,
+            fanfault => EDGE
+        );
 
 begin
 
@@ -96,7 +130,53 @@ begin
     ignition_creset <= ignition_control.ignition_creset;
     allow_backplane_pcie_clk <= pcie_clk_ctrl.clk_en;
 
-    commbined_irq <= ifr and ier;
+    -- Map a bunch of discrete signals into the irq_raw vector.
+    irq_raw <= (
+        pwr_cont3_to_fpga1_alert => not reg_alert_l.pwr_cont3_to_fpga1_alert_l,
+        pwr_cont2_to_fpga1_alert => not reg_alert_l.pwr_cont2_to_fpga1_alert_l,
+        pwr_cont1_to_fpga1_alert => not reg_alert_l.pwr_cont1_to_fpga1_alert_l,
+        v0p96_nic_to_fpga1_alert => not reg_alert_l.v0p96_nic_to_fpga1_alert_l,
+        vr_v5p0_sys_to_fpga1_alert => not reg_alert_l.vr_v5p0_sys_to_fpga1_alert_l,
+        vr_v3p3_sys_to_fpga1_alert => not reg_alert_l.vr_v3p3_sys_to_fpga1_alert_l,
+        vr_v1p8_sys_to_fpga1_alert => not reg_alert_l.vr_v1p8_sys_to_fpga1_alert_l,
+        main_hsc_alert => not reg_alert_l.main_hsc_to_fpga1_alert_l,
+        v12_mcio_a0hp_hsc_alert => not reg_alert_l.smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l,
+        v12_ddr5_ghijkl_hsc_alert => not reg_alert_l.smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert,
+        v12_ddr5_abcdef_hsc_alert => not reg_alert_l.smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert,
+        nic_hsc_alert => not reg_alert_l.smbus_nic_hsc_to_fpga1_alert_l,
+        m2_hsc_alert => not reg_alert_l.smbus_m2_hsc_to_fpga1_alert_l,
+        ibc_alert =>  not reg_alert_l.smbus_ibc_to_fpga1_alert_l,
+        fan_west_hsc_alert => not reg_alert_l.smbus_fan_west_hsc_to_fpga1_alert_l,
+        fan_east_hsc_alert => not reg_alert_l.smbus_fan_east_hsc_to_fpga1_alert_l,
+        fan_central_hsc_alert => not reg_alert_l.smbus_fan_central_hsc_to_fpga1_alert_l,
+        amd_rstn_fedge => amd_reset_l_fedge,
+        amd_pwrok_fedge => amd_pwrok_fedge,
+        nicmapo => nic_faulted,
+        a0mapo => a0_faulted,
+        smerr_assert => smerr_assert,
+        thermtrip => therm_trip,
+        -- TODO: not implemented yet
+        fanfault => '0'
+    );
+
+    irq_block_inst: entity work.irq_block
+    generic map(
+        IRQ_OUT_ACTIVE_HIGH => false,
+        NUM_IRQS => sizeof(irq_raw)
+    )
+     port map(
+        clk => clk,
+        reset => reset,
+        irq_in => compress(irq_raw),
+        irq_en => compress(ier),
+        level_edge_n => compress(level_edge_n),
+        irq_out => irq_out,
+        irq_clear => compress(irq_clear),
+        irq_force => compress(igr),
+        irq_pin => irq_l_out
+    );
+    ifr <= uncompress(irq_out);
+
 
     -- non-axi-specific logic
     seq_regs_specific: process(clk, reset)
@@ -109,17 +189,14 @@ begin
             amd_pwrok_last <= '0';
             amd_pwrgd_out_last <= '0';
             seq_api_status_max <= (a0_sm => IDLE);
-            seq_raw_status_max <= (hw_sm => (others => '0'));
+            seq_raw_status_max <= (hw_sm => IDLE);
             nic_api_status_max <= (nic_sm => IDLE);
-            nic_raw_status_max <= (hw_sm => (others => '0'));
+            nic_raw_status_max <= (hw_sm => IDLE);
             amd_reset_fedges <= (counts => (others => '0'));
             amd_pwrok_fedges <= (counts => (others => '0'));
             amd_pwrgd_out_fedges <= (counts => (others => '0'));
-            irq_l_out <= '1';
             
         elsif rising_edge(clk) then
-            irq_l_out <= '0' when unsigned'(pack(commbined_irq)) /= 0 else '1';
-
 
             therm_trip_last <= therm_trip;
             smerr_assert_last <= smerr_assert;
@@ -137,7 +214,7 @@ begin
 
              -- Max hold for seq raw status.  Clear on rising edge of enable
              if a0_en_redge then
-                seq_raw_status_max <= (hw_sm => (others => '0'));
+                seq_raw_status_max <= (hw_sm => IDLE);
             elsif seq_raw_status_max.hw_sm <= seq_raw_status.hw_sm then
                 seq_raw_status_max <= seq_raw_status;
             end if;
@@ -151,7 +228,7 @@ begin
 
              -- Max hold for nic raw status.  Clear on rising edge of enable
              if a0_en_redge then
-                nic_raw_status_max <= (hw_sm => (others => '0'));
+                nic_raw_status_max <= (hw_sm => IDLE);
             elsif nic_raw_status_max.hw_sm <= nic_raw_status.hw_sm then
                 nic_raw_status_max <= nic_raw_status;
             end if;
@@ -208,8 +285,10 @@ begin
     write_logic: process(clk, reset)
     begin
         if reset then
-            ifr <= reset_0s;
+            irq_clear <= reset_0s;
             ier <= reset_0s;
+            igr <= reset_0s;
+
             early_power_ctrl <= rec_reset;
             power_ctrl <= rec_reset;
             rails_pg_max <= reset_0s;
@@ -219,19 +298,16 @@ begin
             pcie_clk_ctrl <= rec_reset;
 
         elsif rising_edge(clk) then
-            ifr.thermtrip <= ifr.thermtrip or (not therm_trip_last and therm_trip);
-            ifr.smerr_assert <= ifr.smerr_assert or (not smerr_assert_last and smerr_assert);
-            ifr.amd_rstn_fedge <= ifr.amd_rstn_fedge or amd_reset_l_fedge;
-            ifr.amd_pwrok_fedge <= ifr.amd_pwrok_fedge or amd_pwrok_fedge;
-            ifr.a0mapo <= ifr.a0mapo or a0_faulted;
-            ifr.nicmapo <= ifr.nicmapo or nic_faulted;
-            -- TODO: not implemented yet
-            ifr.fanfault <= '0';
+           irq_clear <= reset_0s;  -- clear single-cycle flags.
+           igr <= reset_0s;
+           nic_overrides.nic_test_mapo <= '0'; -- Clear test MAPO bit every cycle, so it's a single-cycle pulse when set.
 
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
-                    when IFR_OFFSET => ifr <= unpack(axi_if.write_data.data);
+                    -- This is a W1C register, so we write the incoming data directly to the clear signal, and let the irq block handle clearing the ifr bits.
+                    when IFR_OFFSET => irq_clear <= unpack(axi_if.write_data.data);
                     when IER_OFFSET => ier <= unpack(axi_if.write_data.data);
+                    when IGR_OFFSET => igr <= unpack(axi_if.write_data.data);
                     when EARLY_POWER_CTRL_OFFSET => early_power_ctrl <= unpack(axi_if.write_data.data);
                     when POWER_CTRL_OFFSET => power_ctrl <= unpack(axi_if.write_data.data);
                     when RAIL_PGS_MAX_HOLD_OFFSET => rails_pg_max <= reset_0s;
@@ -242,25 +318,7 @@ begin
                     when others => null;
                 end case;
             end if;
-            -- These  are done after the write action since they are "live" and not sticky
-            -- so we don't allow writing to actually clear them so these will take precedence.
-            ifr.pwr_cont3_to_fpga1_alert <= not reg_alert_l.pwr_cont3_to_fpga1_alert_l;
-            ifr.pwr_cont2_to_fpga1_alert <= not reg_alert_l.pwr_cont2_to_fpga1_alert_l;
-            ifr.pwr_cont1_to_fpga1_alert <= not reg_alert_l.pwr_cont1_to_fpga1_alert_l;
-            ifr.v0p96_nic_to_fpga1_alert <= not reg_alert_l.v0p96_nic_to_fpga1_alert_l;
-            ifr.vr_v5p0_sys_to_fpga1_alert <= not reg_alert_l.vr_v5p0_sys_to_fpga1_alert_l;
-            ifr.vr_v3p3_sys_to_fpga1_alert <= not reg_alert_l.vr_v3p3_sys_to_fpga1_alert_l;
-            ifr.vr_v1p8_sys_to_fpga1_alert <= not reg_alert_l.vr_v1p8_sys_to_fpga1_alert_l;
-            ifr.main_hsc_alert <= not reg_alert_l.main_hsc_to_fpga1_alert_l;
-            ifr.v12_mcio_a0hp_hsc_alert <= not reg_alert_l.smbus_v12_mcio_a0hp_hsc_to_fpga1_alert_l;
-            ifr.v12_ddr5_ghijkl_hsc_alert <= not reg_alert_l.smbus_v12_ddr5_ghijkl_hsc_to_fpga1_alert;
-            ifr.v12_ddr5_abcdef_hsc_alert <= not reg_alert_l.smbus_v12_ddr5_abcdef_hsc_to_fpga1_alert;
-            ifr.nic_hsc_alert <= not reg_alert_l.smbus_nic_hsc_to_fpga1_alert_l;
-            ifr.m2_hsc_alert <= not reg_alert_l.smbus_m2_hsc_to_fpga1_alert_l;
-            ifr.ibc_alert <= not reg_alert_l.smbus_ibc_to_fpga1_alert_l;
-            ifr.fan_west_hsc_alert <= not reg_alert_l.smbus_fan_west_hsc_to_fpga1_alert_l;
-            ifr.fan_east_hsc_alert <= not reg_alert_l.smbus_fan_east_hsc_to_fpga1_alert_l;
-            ifr.fan_central_hsc_alert <= not reg_alert_l.smbus_fan_central_hsc_to_fpga1_alert_l;
+          
 
         end if;
     end process;
@@ -276,6 +334,8 @@ begin
                 case to_integer(axi_if.read_address.addr) is
                     when IFR_OFFSET => rdata <= pack(ifr);
                     when IER_OFFSET => rdata <= pack(ier);
+                    when IGR_OFFSET => rdata <= pack(igr);
+                    when ILR_OFFSET => rdata <= pack(irq_raw);
                     when STATUS_OFFSET => rdata <= pack(status);
                     when EARLY_POWER_CTRL_OFFSET => rdata <= pack(early_power_ctrl);
                     when EARLY_POWER_RDBKS_OFFSET => rdata <= pack(early_power_rdbks);

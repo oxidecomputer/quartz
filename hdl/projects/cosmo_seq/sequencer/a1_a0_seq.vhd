@@ -63,32 +63,8 @@ architecture rtl of a1_a0_seq is
     constant SIX_HUNDRED_MS: integer := 600 * ONE_MS;
     constant SIX_TWENTY_MS: integer := 620 * ONE_MS;
     constant ONE_SECOND: integer := 1000 * ONE_MS;
-    
-
-     -- This is going into a "RAW" register, 
-    -- exposed to hubris. Changes here may impact
-    -- debugging tools.  Should we push this to
-    -- the rdl? It makes maintenance here more annoying.
-    type seq_state_t is (
-        IDLE, 
-        DDR_BULK_EN, 
-        GROUP_A_EN, 
-        GROUP_A_PG_AND_WAIT,
-        RSM_RST_DEASSERT,
-        RTC_CLK_WAIT, -- PBTN low for 20ms
-        SLP_CHECKPOINT,
-        GROUP_B_EN,
-        GROUP_B_PG_AND_WAIT,
-        GROUP_C_EN, -- Maybe???
-        GROUP_C_PG_AND_WAIT,
-        ASSERT_PWRGOOD,
-        WAIT_PWROK,
-        WAIT_RESET_L_RELEASE,
-        DONE,
-        SAFE_DISABLE
-        );
     type seq_r_t is record
-        state : seq_state_t;
+        state : seq_raw_status_hw_sm;
         enable_pend: std_logic;
         enable_last: std_logic;
         cnts  : unsigned(31 downto 0);
@@ -171,7 +147,7 @@ begin
     end process;
 
     -- Decode state into a number representing position in the enum type
-    raw_state.hw_sm <= std_logic_vector(to_unsigned(seq_state_t'pos(seq_r.state), raw_state.hw_sm'length));
+    raw_state.hw_sm <= seq_r.state;
     
 
     seq_ns_logic: process(all)
