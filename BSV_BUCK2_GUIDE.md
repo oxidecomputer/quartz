@@ -722,7 +722,7 @@ buck2 build //hdl/ip/bsv:YourModule
 **Configuration Details:**
 
 - **Environment Variable**: `BSV_LIB_DIR`
-- **Default Value**: `/usr/local/lib/bluespec` (if not set)
+- **Default Value**: `/usr/local/bluespec/lib` (if not set)
 - **Config Location**: `.buckconfig` section `[bsv]`
 - **Toolchain File**: `toolchains/bsv_toolchain.bzl`
 
@@ -731,7 +731,7 @@ The toolchain reads this value through Buck2's configuration system:
 ```ini
 # .buckconfig
 [bsv]
-libdir = ${env.BSV_LIB_DIR:/usr/local/lib/bluespec}
+libdir = ${env.BSV_LIB_DIR:/opt/bsc-2022.01/lib}
 ```
 
 **Override in BUCK files** (if needed):

@@ -1,0 +1,139 @@
+load("//tools:bsv.bzl", "bsv_library", "bsv_verilog", "bsv_yosys_design", "bsv_nextpnr_ecp5_bitstream")
+load("//tools:rdl.bzl", "rdl_file")
+
+# SystemRDL register definitions
+rdl_file(
+    name = "minibar_controller_rdl",
+    src = "minibar_controller.rdl",
+    deps = [
+        "//hdl/ip/bsv/ignition:ignition_controller_rdl",
+    ],
+    outputs = [
+        "MinibarRegsPkg.bsv",
+        "minibar_controller.html",
+        "minibar_controller.json",
+    ],
+)
+
+# BSV register library
+bsv_library(
+    name = "MinibarRegsPkg",
+    srcs = [
+        ":minibar_controller_rdl[bsv]",
+    ],
+    deps = [
+        ":minibar_controller_rdl",
+        "//hdl/ip/bsv:RegCommon",
+    ],
+)
+
+# MinibarMiscRegs library
+bsv_library(
+    name = "MinibarMiscRegs",
+    srcs = [
+        "MinibarMiscRegs.bsv",
+    ],
+    deps = [
+        ":MinibarRegsPkg",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv:Debouncer",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+    ],
+)
+
+# MinibarPcie library
+bsv_library(
+    name = "MinibarPcie",
+    srcs = [
+        "MinibarPcie.bsv",
+    ],
+    deps = [
+        ":MinibarRegsPkg",
+        "//hdl/ip/bsv:CommonFunctions",
+        "//hdl/ip/bsv:Countdown",
+        "//hdl/ip/bsv:Debouncer",
+        "//hdl/ip/bsv/power_rail:PowerRail",
+    ],
+)
+
+# MinibarSpiServer library
+bsv_library(
+    name = "MinibarSpiServer",
+    srcs = [
+        "MinibarSpiServer.bsv",
+    ],
+    deps = [
+        ":MinibarRegsPkg",
+        ":MinibarMiscRegs",
+        ":MinibarPcie",
+        "//hdl/ip/bsv:CommonInterfaces",
+        "//hdl/ip/bsv:GitVersion",
+        "//hdl/ip/bsv:RegCommon",
+        "//hdl/ip/bsv/ignition:Controller",
+        "//hdl/ip/bsv/ignition:ControllerRegisters",
+    ],
+)
+
+# MinibarController library
+bsv_library(
+    name = "MinibarController",
+    srcs = [
+        "MinibarController.bsv",
+    ],
+    deps = [
+        ":MinibarSpiServer",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv/examples:Blinky",
+        "//hdl/ip/bsv/ignition:Controller",
+        "//hdl/ip/bsv/ignition:Transceiver",
+        "//hdl/ip/bsv/interfaces:SPI",
+    ],
+)
+
+# MinibarTop library
+bsv_library(
+    name = "MinibarTop",
+    srcs = [
+        "MinibarTop.bsv",
+    ],
+    deps = [
+        ":MinibarController",
+        "//hdl/ip/bsv:IOSync",
+        "//hdl/ip/bsv:SerialIO",
+        "//hdl/ip/bsv:Strobe",
+        "//hdl/ip/bsv/ignition:Transceiver",
+    ],
+)
+
+# Verilog generation with inout filter
+bsv_verilog(
+    name = "mkMinibarTopV",
+    top = "MinibarTop.bsv",
+    modules = [
+        "mkMinibarTop",
+    ],
+    deps = [
+        ":MinibarTop",
+    ],
+    verilog_filter = "//vnd/bluespec:basicinout.pl",
+)
+
+# Yosys synthesis for ECP5
+bsv_yosys_design(
+    name = "minibar_top",
+    top_module = "mkMinibarTop",
+    verilog_dep = ":mkMinibarTopV",
+    extra_sources = ["//vnd/bluespec:Verilog"],
+    target = "ecp5",
+)
+
+# ECP5 bitstream generation
+bsv_nextpnr_ecp5_bitstream(
+    name = "minibar_controller",
+    visibility = ["PUBLIC"],
+    yosys_design = ":minibar_top",
+    family = "45k",
+    package = "CABGA554",
+    pinmap = "minibar_controller.lpf",
+    nextpnr_args = ["--freq", "50"],
+)
