@@ -254,10 +254,10 @@ addrmap minibar_controller {
 
         field {
             desc = "fpga_to_v12_pcie_efuse_en pin control";
-        } V12_PCIE_EN[1:1] = 1;
+        } V12_PCIE_EN[1:1] = 0;
         field {
             desc = "fpga_to_v3p3_pcie_efuse_en pin control";
-        } V3P3_PCIE_EN[0:0] = 1;
+        } V3P3_PCIE_EN[0:0] = 0;
     } PCIE_POWER_CTRL;
 
     power_rail_state V12_PCIE;
@@ -293,6 +293,14 @@ addrmap minibar_controller {
         name = "Control for the PCIe interface related signals";
 
         field {
+            desc = "Value to drive pcie_aux_fpga_to_cem_perst_l if FPGA_PERST_OVERRIDE = '1'";
+        } FPGA_PERST_CONTROL[5:5] = 0;
+
+        field {
+            desc = "If '1', FPGA will take control of pcie_aux_fpga_to_cem_perst_l and drive it with the value of FPGA_PERST_CONTROL";
+        } FPGA_PERST_OVERRIDE[4:4] = 0;
+
+        field {
             desc = "control of pcie_aux_fpga_to_sled_pwrflt_l (active high, FPGA will invert)";
         } SLED_PWRFLT[3:3] = 0;
 
@@ -314,20 +322,24 @@ addrmap minibar_controller {
         default sw = r;
 
         field {
-            desc = "pcie_aux_cem_to_fpga_prsnt_l pin readback (normalized to active high)";
-        } CEM_PRSNT[5:5] = 0;
+            desc = "'1' if a sled PCIe connector is detected";
+        } SLED_CON[7:7] = 0;
 
         field {
-            desc = "pcie_aux_fpga_to_cem_perst_l pin readback (normalized to active high)";
-        } CEM_PERST[4:4] = 0;
+            desc = "pcie_aux_cem_to_fpga_prsnt_l pin readback";
+        } CEM_PRSNT_L[5:5] = 1;
 
         field {
-            desc = "pcie_aux_fpga_to_sled_prsnt_l pin readback (normalized to active high)";
-        } SLED_PRSNT[1:1] = 0;
+            desc = "pcie_aux_fpga_to_cem_perst_l pin readback";
+        } CEM_PERST_L[4:4] = 0;
 
         field {
-            desc = "pcie_aux_sled_to_fpga_perst_l pin readback (normalized to active high)";
-        } SLED_PERST[0:0] = 0;
+            desc = "pcie_aux_fpga_to_sled_prsnt_l pin readback";
+        } SLED_PRSNT_L[1:1] = 1;
+
+        field {
+            desc = "pcie_aux_sled_to_fpga_perst_l pin readback";
+        } SLED_PERST_L[0:0] = 0;
     } PCIE_RDBK;
 
     //
