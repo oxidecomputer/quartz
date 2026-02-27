@@ -148,7 +148,8 @@ package {{module_name}} is
   -- Memory {{register.type_name}} definitions
   constant {{register.type_name|upper}}_NUM_ENTRIES : integer := {{register.node.get_property('mementries')}};
   constant {{register.type_name|upper}}_BIT_WIDTH : integer := {{register.node.get_property('memwidth')}};
-  subtype {{register.type_name|upper}}_RANGE is integer range {{register.name|upper}}_OFFSET to {{register.name|upper}}_OFFSET + {{register.type_name|upper}}_NUM_ENTRIES - 1;
+  constant {{register.type_name|upper}}_BYTE_WIDTH : integer := {{register.type_name|upper}}_BIT_WIDTH / 8;
+  subtype {{register.type_name|upper}}_RANGE is integer range {{register.name|upper}}_OFFSET to {{register.name|upper}}_OFFSET + ({{register.type_name|upper}}_NUM_ENTRIES * {{register.type_name|upper}}_BYTE_WIDTH) - 1;
     {% endif %}
   {% endfor %}
 end {{module_name}};
