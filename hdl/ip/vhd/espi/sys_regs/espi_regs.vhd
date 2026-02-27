@@ -149,7 +149,7 @@ begin
     );
 
     -- Axi here are byte_addresses and we need to convert to word addresses for the dpr.
-    pc_buf_raddr <= shift_right(resize(axi_if.read_address.addr - POST_CODE_BUFFER_OFFSET, pc_buf_raddr'length), 2);
+    pc_buf_raddr <= resize(shift_right(resize(axi_if.read_address.addr - POST_CODE_BUFFER_OFFSET, axi_if.read_address.addr'length), 2), pc_buf_raddr'length);
 
     dbg_chan.wr.data <= axi_if.write_data.data;
     dbg_chan.wr.write <= '1' when axi_if.write_address.ready = '1' and to_integer(axi_if.write_address.addr) = CMD_FIFO_WDATA_OFFSET else '0';
