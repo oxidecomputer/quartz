@@ -39,7 +39,6 @@ bsv_library(
     name = "GimletRegs",
     srcs = ["GimletRegs.bsv"],
     deps = [
-        "//hdl/ip/bsv:GitVersion",
         ":IrqBlock",
         "//hdl/ip/bsv:RegCommon",
         ":GimletSeqFpgaRegs",
@@ -173,6 +172,7 @@ bsv_library(
     srcs = ["GimletTopIOSync.bsv"],
     deps = [
         "//hdl/ip/bsv/interfaces:ICE40",
+        "//hdl/ip/bsv:VersionROM",
         ":GimletSeqTop",
     ],
     bsc_flags = [
@@ -203,6 +203,7 @@ bsv_library(
     deps = [
         "//hdl/ip/bsv/interfaces:SPI",
         "//hdl/ip/bsv/interfaces:ICE40",
+        "//hdl/ip/bsv:VersionROM",
         ":GimletRegs",
     ],
     bsc_flags = [
@@ -249,6 +250,8 @@ bsv_nextpnr_ice40_bitstream(
     package = "ct256",
     pinmap = "gimlet_sequencer.pcf",
     nextpnr_args = [],
+    version_template_hex = "//hdl/ip/bsv:version_rom_template_hex",
+    version_replacement_hex = "//hdl/ip/bsv:version_rom_replacement_hex",
 )
 
 # Alternative power sequencer design
@@ -268,4 +271,6 @@ bsv_nextpnr_ice40_bitstream(
     package = "ct256",
     pinmap = "gimlet_sequencer.pcf",  # Same pinmap as gimlet_sequencer
     nextpnr_args = [],
+    version_template_hex = "//hdl/ip/bsv:version_rom_template_hex",
+    version_replacement_hex = "//hdl/ip/bsv:version_rom_replacement_hex",
 )

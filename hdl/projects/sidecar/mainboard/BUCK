@@ -120,7 +120,7 @@ bsv_library(
         ":TofinoDebugPort",
         "//hdl/ip/bsv/ignition:Controller",
         "//hdl/ip/bsv/ignition:ControllerRegisters",
-        "//hdl/ip/bsv:GitVersion",
+        "//hdl/ip/bsv:VersionROM",
         "//hdl/ip/bsv:RegCommon",
         "//hdl/ip/bsv:WriteOnceReg",
     ],
@@ -179,6 +179,8 @@ bsv_nextpnr_ecp5_bitstream(
     package = "CABGA554",
     pinmap = "sidecar_mainboard_controller.lpf",
     nextpnr_args = ["--speed", "6", "--freq", "50"],
+    version_template_hex = "//hdl/ip/bsv:version_rom_template_hex",
+    version_replacement_hex = "//hdl/ip/bsv:version_rom_replacement_hex",
 )
 
 # Rev B synthesis
@@ -199,4 +201,6 @@ bsv_nextpnr_ecp5_bitstream(
     package = "CABGA554",
     pinmap = "sidecar_mainboard_controller_rev_b.lpf",
     nextpnr_args = ["--speed", "6", "--freq", "50"],
+    version_template_hex = "//hdl/ip/bsv:version_rom_template_hex",
+    version_replacement_hex = "//hdl/ip/bsv:version_rom_replacement_hex",
 )
