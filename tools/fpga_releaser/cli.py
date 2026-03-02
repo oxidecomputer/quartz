@@ -35,17 +35,6 @@ def main():
         print("Please specify an FPGA project with --fpga")
         sys.exit(1)
 
-    if args.token is not None:
-          token = args.token
-    else:
-        token = os.getenv("GITHUB_TOKEN", None)
-    if token is None:
-        print("the --token option or an env_variable GITHUB_TOKEN is required to use this tool")
-        sys.exit(1)
-
-    repo = "quartz"
-    api = GhApi(owner='oxidecomputer', repo=repo, token=token)
-    
     project_info = project.get_config(args.fpga)
     print(f"Processing {args.fpga} with builder {project_info.builder}")
 
@@ -58,7 +47,20 @@ def main():
 
     if args.zip:
         project_info.local = True
-    
+
+    # Only require a GitHub token when we actually need to talk to GitHub
+    needs_gh = not args.skip_gh or args.zip is None
+    api = None
+    if needs_gh:
+        if args.token is not None:
+            token = args.token
+        else:
+            token = os.getenv("GITHUB_TOKEN", None)
+        if token is None:
+            print("the --token option or an env_variable GITHUB_TOKEN is required to use this tool")
+            sys.exit(1)
+        api = GhApi(owner='oxidecomputer', repo='quartz', token=token)
+
     zip_file = process_gh_build(args, api, project_info.job_name)
     project_info.add_archive(zip_file)
     
