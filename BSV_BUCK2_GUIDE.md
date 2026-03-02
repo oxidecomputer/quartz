@@ -64,8 +64,9 @@ which bsc
 # Python packages for RDL
 pip install -r tools/requirements.txt
 
-# Optional: Set custom Bluespec library directory
-# export BSV_LIB_DIR=/path/to/bluespec/lib
+# Optional: Set custom Bluespec library directory in .buckconfig.local
+# [bsv]
+# libdir = /path/to/bluespec/lib
 # (See "Toolchain Configuration" in Advanced Topics for details)
 ```
 
@@ -709,30 +710,26 @@ bsv_library(
 
 #### BSV Library Directory
 
-The BSV toolchain can be configured to use a custom Bluespec library directory via the `BSV_LIB_DIR` environment variable:
+The BSV toolchain reads the Bluespec library path from the `[bsv] libdir` key in `.buckconfig`. The default is `/opt/bsc-2022.01/lib` (matching the CI runner environment). To override it locally, create a `.buckconfig.local` (which is gitignored):
+
+```ini
+# .buckconfig.local
+[bsv]
+libdir = /opt/bluespec/lib
+```
+
+You can also override on the command line:
 
 ```bash
-# Set custom Bluespec library path
-export BSV_LIB_DIR=/path/to/custom/bluespec/lib
-
-# Build with custom library path
-buck2 build //hdl/ip/bsv:YourModule
+buck2 build -c bsv.libdir=/opt/bluespec/lib //hdl/ip/bsv:YourModule
 ```
 
 **Configuration Details:**
 
-- **Environment Variable**: `BSV_LIB_DIR`
-- **Default Value**: `/usr/local/bluespec/lib` (if not set)
-- **Config Location**: `.buckconfig` section `[bsv]`
+- **Config Key**: `[bsv] libdir`
+- **Default Value**: `/opt/bsc-2022.01/lib`
+- **Config Location**: `.buckconfig` (override in `.buckconfig.local`)
 - **Toolchain File**: `toolchains/bsv_toolchain.bzl`
-
-The toolchain reads this value through Buck2's configuration system:
-
-```ini
-# .buckconfig
-[bsv]
-libdir = ${env.BSV_LIB_DIR:/opt/bsc-2022.01/lib}
-```
 
 **Override in BUCK files** (if needed):
 

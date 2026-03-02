@@ -5,6 +5,7 @@ __pycache__
 
 # Buck2 ignores
 /buck-out
+.buckconfig.local
 
 # VUnit ignores
 /vunit_out
