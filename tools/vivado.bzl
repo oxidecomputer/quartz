@@ -10,12 +10,11 @@ load(
 )
 
 load(
-    ":hdl_common.bzl", 
-    "HDLFileInfo", 
-    "VHDLFileInfo", 
+    ":hdl_common.bzl",
+    "HDLFileInfo",
+    "VHDLFileInfo",
     "HDLFileInfoTSet",
-    "RDLHtmlMaps",
-    "RDLJsonMaps",
+    "collect_rdl_maps",
 )
 
 load(
@@ -108,18 +107,8 @@ def synthesize(ctx):
     report = ctx.actions.declare_output("{}.rpt".format(name_and_flow))
     # Build vivado command
 
-    # Dump some register map stuff
-    maps = []
-    json_maps = ctx.attrs.top.get(RDLJsonMaps)
-    if json_maps != None:
-            for file in set(json_maps.files):
-                new_file = ctx.actions.declare_output("maps", file.basename)
-                maps.append(ctx.actions.copy_file(new_file, file))
-    html_maps = ctx.attrs.top.get(RDLHtmlMaps)
-    if html_maps != None:
-            for file in set(html_maps.files):
-                new_file = ctx.actions.declare_output("maps", file.basename)
-                maps.append(ctx.actions.copy_file(new_file, file))
+    # Collect register maps into maps/ output directory
+    maps = collect_rdl_maps(ctx, ctx.attrs.top)
 
     # This is a bit sketchy but we're declaring any maps as hidden inputs
     # here to force the generation of these files since nothing downstream

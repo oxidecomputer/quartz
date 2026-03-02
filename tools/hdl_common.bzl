@@ -21,6 +21,43 @@ RDLJsonMaps = provider(fields=["files"])
 RDLBSVPkgs = provider(fields=["files"])
 
 
+def propagate_rdl_maps(deps):
+    """Collect RDL map providers from deps and return providers to propagate them."""
+    providers = []
+    html_maps = []
+    json_maps = []
+    for x in deps:
+        if x.get(RDLHtmlMaps):
+            html_maps.extend(x[RDLHtmlMaps].files)
+        if x.get(RDLJsonMaps):
+            json_maps.extend(x[RDLJsonMaps].files)
+    if len(html_maps) > 0:
+        providers.append(RDLHtmlMaps(files=html_maps))
+    if len(json_maps) > 0:
+        providers.append(RDLJsonMaps(files=json_maps))
+    return providers
+
+
+def collect_rdl_maps(ctx, dep):
+    """Copy RDL map files from dep into a maps/ output subdirectory.
+
+    Returns a list of copy artifacts suitable for use as hidden inputs
+    to force Buck2 to materialize them.
+    """
+    maps = []
+    json_maps = dep.get(RDLJsonMaps)
+    if json_maps != None:
+        for file in set(json_maps.files):
+            new_file = ctx.actions.declare_output("maps", file.basename)
+            maps.append(ctx.actions.copy_file(new_file, file))
+    html_maps = dep.get(RDLHtmlMaps)
+    if html_maps != None:
+        for file in set(html_maps.files):
+            new_file = ctx.actions.declare_output("maps", file.basename)
+            maps.append(ctx.actions.copy_file(new_file, file))
+    return maps
+
+
 VHDLFileInfo = record(
     src = field(Artifact),
     library = field(str, default=""),
