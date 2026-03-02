@@ -9,13 +9,12 @@ load(
     "PythonToolchainInfo",
 )
 load(
-    ":hdl_common.bzl", 
-    "HDLFileInfo", 
-    "GenVHDLInfo", 
-    "HDLFileInfoTSet", 
+    ":hdl_common.bzl",
+    "HDLFileInfo",
+    "GenVHDLInfo",
+    "HDLFileInfoTSet",
     "VHDLFileInfo",
-    "RDLHtmlMaps",
-    "RDLJsonMaps",
+    "propagate_rdl_maps",
 )
 
 
@@ -26,21 +25,8 @@ def _hdl_unit_impl(ctx: AnalysisContext) -> list[Provider]:
     # or generated files that are VHDL (ie from RDL etc)
     deps_tset = [x[HDLFileInfo].set_all for x in ctx.attrs.deps if x.get(HDLFileInfo)]
 
-    # Want to flow up any html maps from the deps to the top level
-    html_maps = []
-    for x in ctx.attrs.deps:
-        if x.get(RDLHtmlMaps):
-            html_maps.extend(x[RDLHtmlMaps].files)
-    if len(html_maps) > 0:
-        providers.append(RDLHtmlMaps(files=html_maps))
-
-    # Want to flow up any json maps from the deps to the top level
-    json_maps = []
-    for x in ctx.attrs.deps:
-        if x.get(RDLJsonMaps):
-            json_maps.extend(x[RDLJsonMaps].files)
-    if len(json_maps) > 0:
-        providers.append(RDLJsonMaps(files=json_maps))
+    # Flow up any RDL maps from deps to the top level
+    providers.extend(propagate_rdl_maps(ctx.attrs.deps))
 
 
     # Now that we have all the deps, make them children of the tset containing any sources

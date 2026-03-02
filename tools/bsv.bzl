@@ -7,7 +7,7 @@
 # BSV (Bluespec SystemVerilog) build rules
 
 load(":bsv_common.bzl", "BSVFileInfo", "BSVLibraryInfo", "BSVVerilogInfo", "BSVSimInfo", "BSVFileInfoTSet")
-load(":hdl_common.bzl", "RDLBSVPkgs")
+load(":hdl_common.bzl", "RDLBSVPkgs", "propagate_rdl_maps", "collect_rdl_maps")
 # Toolchain accessed via RunInfo - no custom provider needed
 
 def _bsv_library_impl(ctx: AnalysisContext) -> list[Provider]:
@@ -161,7 +161,7 @@ def _bsv_library_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         BSVLibraryInfo(tset = top_tset, bo_dir = bo_dir_for_info),
         DefaultInfo(default_outputs = default_outputs),
-    ]
+    ] + propagate_rdl_maps(ctx.attrs.deps)
 
 bsv_library = rule(
     impl = _bsv_library_impl,
@@ -247,7 +247,7 @@ def _bsv_verilog_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         BSVVerilogInfo(modules = verilog_modules),
         DefaultInfo(default_outputs = list(verilog_modules.values())),
-    ]
+    ] + propagate_rdl_maps(ctx.attrs.deps)
 
 bsv_verilog = rule(
     impl = _bsv_verilog_impl,
@@ -500,7 +500,7 @@ def _bsv_yosys_design_impl(ctx: AnalysisContext) -> list[Provider]:
 
     return [
         DefaultInfo(default_output = yosys_json),
-    ]
+    ] + propagate_rdl_maps([ctx.attrs.verilog_dep])
 
 bsv_yosys_design = rule(
     impl = _bsv_yosys_design_impl,
@@ -519,13 +519,16 @@ def _bsv_nextpnr_ice40_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
     # Get Yosys JSON from dependency
     yosys_json = ctx.attrs.yosys_design[DefaultInfo].default_outputs[0]
 
+    # Collect register maps into maps/ output directory
+    maps = collect_rdl_maps(ctx, ctx.attrs.yosys_design)
+
     # Output files
     asc_file = ctx.actions.declare_output("{}.asc".format(ctx.attrs.name))
     bit_file = ctx.actions.declare_output("{}.bin".format(ctx.attrs.name))
     pnr_log = ctx.actions.declare_output("nextpnr.log")
 
     # Run nextpnr-ice40
-    pnr_cmd = cmd_args()
+    pnr_cmd = cmd_args(hidden = maps)
     pnr_cmd.add(ctx.attrs._nextpnr_ice40[RunInfo])
     pnr_cmd.add("--{}".format(ctx.attrs.family))  # e.g., --up5k
     pnr_cmd.add("--package", ctx.attrs.package)   # e.g., sg48
@@ -587,13 +590,16 @@ def _bsv_nextpnr_ecp5_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
     # Get Yosys JSON from dependency
     yosys_json = ctx.attrs.yosys_design[DefaultInfo].default_outputs[0]
 
+    # Collect register maps into maps/ output directory
+    maps = collect_rdl_maps(ctx, ctx.attrs.yosys_design)
+
     # Output files
     config_file = ctx.actions.declare_output("{}.config".format(ctx.attrs.name))
     bit_file = ctx.actions.declare_output("{}.bit".format(ctx.attrs.name))
     pnr_log = ctx.actions.declare_output("nextpnr.log")
 
     # Run nextpnr-ecp5
-    pnr_cmd = cmd_args()
+    pnr_cmd = cmd_args(hidden = maps)
     pnr_cmd.add(ctx.attrs._nextpnr_ecp5[RunInfo])
     pnr_cmd.add("--{}".format(ctx.attrs.family))  # e.g., --25k, --45k, --85k
     pnr_cmd.add("--package", ctx.attrs.package)   # e.g., CABGA381, CSFBGA285
