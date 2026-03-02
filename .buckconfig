@@ -28,6 +28,6 @@ disk_cache_dir_max_size = 10737418240
 mode = sqlite
 
 [bsv]
-# BSV library directory - reads from BSV_LIB_DIR environment variable
-# Falls back to /opt/bsc-2022.01/lib if not set (GitHub Actions standard path)
-libdir = ${env.BSV_LIB_DIR:/opt/bsc-2022.01/lib}
+# /opt/bsc-2022.01/lib (GitHub Actions standard path)
+# use a .buckconfig.local to override for local development if needed
+libdir = /opt/bsc-2022.01/lib
