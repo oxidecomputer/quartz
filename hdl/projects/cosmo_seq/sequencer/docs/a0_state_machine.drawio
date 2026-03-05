@@ -1,0 +1,259 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.1.1 Chrome/132.0.6834.210 Electron/34.3.3 Safari/537.36" version="26.1.1">
+  <diagram name="A0 State Machine" id="a0-seq-fsm">
+    <mxGraphModel dx="1254" dy="1196" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1800" background="#141B1D" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;font style=&quot;font-size: 24px;&quot;&gt;cosmo_seq A1/A0 Sequencer&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontColor=#48D597;fontFamily=monospace;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="400" y="20" width="400" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;a1_a0_seq.vhd — SP5 power sequencing state machine&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="400" y="55" width="400" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="s_idle" value="&lt;b&gt;IDLE&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;All enables off&lt;br&gt;All expected = 0&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="100" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_ddr" value="&lt;b&gt;DDR_BULK_EN&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Enable DDR HSCs&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="200" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_ga_en" value="&lt;b&gt;GROUP_A_EN&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Enable V1P5_RTC, V3P3, V1P8&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="290" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_ga_pg" value="&lt;b&gt;GROUP_A_PG_AND_WAIT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Wait PG stable 1s&lt;br&gt;Sets group_a_expected, ddr_bulk_expected&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#F5B944;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="380" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rsm" value="&lt;b&gt;RSM_RST_DEASSERT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Release RSMRST_L&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="480" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rtc" value="&lt;b&gt;RTC_CLK_WAIT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;PWR_BTN_L pulse @ 200ms&lt;br&gt;Release @ 220ms&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#F5B944;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="570" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_slp" value="&lt;b&gt;SLP_CHECKPOINT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Wait SLP_S3_L, SLP_S5_L,&lt;br&gt;DDR bulk PG&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#8BA1FF;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="670" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_gb_en" value="&lt;b&gt;GROUP_B_EN&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Enable V1P1_SP5&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="770" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_gb_pg" value="&lt;b&gt;GROUP_B_PG_AND_WAIT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Wait PG stable 1ms&lt;br&gt;Sets group_b_expected&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#F5B944;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="860" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_gc_en" value="&lt;b&gt;GROUP_C_EN&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Enable VDDIO, VDDCR_CPU0/1, VDDCR_SOC&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="960" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_gc_pg" value="&lt;b&gt;GROUP_C_PG_AND_WAIT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Wait PG stable 2ms&lt;br&gt;Sets group_c_expected&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#F5B944;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="1050" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_pwrgood" value="&lt;b&gt;ASSERT_PWRGOOD&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Drive PWR_GOOD to SP5&lt;br&gt;Assert IS_COSMO&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="1150" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s_pwrok" value="&lt;b&gt;WAIT_PWROK&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Wait SP5 PWR_OK&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#8BA1FF;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="1250" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_resetl" value="&lt;b&gt;WAIT_RESET_L_RELEASE&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Wait SP5 RESET_L deassert&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#8BA1FF;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="480" y="1340" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_done" value="&lt;b&gt;DONE&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;A0 power good&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#48D597;strokeColor=#48D597;strokeWidth=2;fontColor=#1C372E;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="500" y="1430" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_disable" value="&lt;b&gt;SAFE_DISABLE&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Deassert PWR_GOOD&lt;br&gt;Wait 2ms, then IDLE&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#FB6E88;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;arcSize=20;" parent="1" vertex="1">
+          <mxGeometry x="810" y="1430" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fault_box" value="&lt;b&gt;MAPO FAULT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Any expected rail PG lost&lt;br&gt;OR upstream_ok deasserts&lt;br&gt;→ immediate IDLE, faulted=1&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FB6E88;strokeColor=#FB6E88;strokeWidth=2;fontColor=#1C372E;fontFamily=monospace;arcSize=10;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+          <mxGeometry x="100" y="700" width="230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;" parent="1" source="s_idle" target="s_ddr" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1_label" value="enable_pend &amp;amp;&amp;amp; upstream_ok" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e1" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="100" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=1.5;" parent="1" source="s_ddr" target="s_ga_en" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=1.5;" parent="1" source="s_ga_en" target="s_ga_pg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_ga_pg" target="s_rsm" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4_label" value="is_power_good(A) for 1s" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e4" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="85" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=1.5;" parent="1" source="s_rsm" target="s_rtc" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_rtc" target="s_slp" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6_label" value="220ms elapsed" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e6" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="55" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_slp" target="s_gb_en" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7_label" value="SLP_S3/S5 deasserted &amp;amp;&amp;amp; DDR PG" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e7" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="120" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=1.5;" parent="1" source="s_gb_en" target="s_gb_pg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_gb_pg" target="s_gc_en" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_label" value="is_power_good(B) for 1ms" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e9" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="90" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=1.5;" parent="1" source="s_gc_en" target="s_gc_pg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_gc_pg" target="s_pwrgood" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11_label" value="is_power_good(C) for 2ms" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e11" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="90" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=1.5;" parent="1" source="s_pwrgood" target="s_pwrok" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_pwrok" target="s_resetl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13_label" value="pwr_ok" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e13" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="30" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#48D597;strokeWidth=2;" parent="1" source="s_resetl" target="s_done" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14_label" value="reset_l" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e14" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint x="30" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_done_dis" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FB6E88;strokeWidth=2;" parent="1" source="s_done" target="s_disable" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_done_dis_label" value="&lt;font color=&quot;#FB6E88&quot;&gt;!sw_enable | thermtrip | smerr&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e_done_dis" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" relative="1" as="geometry">
+            <mxPoint y="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_dis_idle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FB6E88;strokeWidth=2;" parent="1" source="s_disable" target="s_idle" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1080" y="1460" />
+              <mxPoint x="1080" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_dis_idle_label" value="&lt;font color=&quot;#FB6E88&quot;&gt;2ms elapsed&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e_dis_idle" vertex="1" connectable="0">
+          <mxGeometry x="0.7" relative="1" as="geometry">
+            <mxPoint x="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sw_dis" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FB6E88;strokeWidth=1.5;dashed=1;dashPattern=8 4;" parent="1" source="s_pwrgood" target="s_disable" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="1180" />
+              <mxPoint x="810" y="1430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sw_dis_label" value="&lt;font color=&quot;#FB6E88&quot;&gt;!sw_enable &amp;amp;&amp;amp;&lt;br&gt;state &amp;gt;= ASSERT_PWRGOOD&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e_sw_dis" vertex="1" connectable="0">
+          <mxGeometry x="-0.5" relative="1" as="geometry">
+            <mxPoint x="75" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sw_idle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FB6E88;strokeWidth=1.5;dashed=1;dashPattern=8 4;" parent="1" source="s_slp" target="s_idle" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="700" />
+              <mxPoint x="420" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sw_idle_label" value="&lt;font color=&quot;#FB6E88&quot;&gt;!sw_enable &amp;amp;&amp;amp;&lt;br&gt;state &amp;lt; ASSERT_PWRGOOD&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e_sw_idle" vertex="1" connectable="0">
+          <mxGeometry x="-0.8" relative="1" as="geometry">
+            <mxPoint x="-75" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_mapo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FB6E88;strokeWidth=2;" parent="1" source="fault_box" target="s_idle" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="215" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_mapo_label" value="&lt;font color=&quot;#FB6E88&quot;&gt;→ IDLE, faulted=1&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontFamily=monospace;fontSize=10;labelBackgroundColor=none;" parent="e_mapo" vertex="1" connectable="0">
+          <mxGeometry x="0.3" relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_mapo_scope" style="rounded=1;strokeColor=#FB6E88;strokeWidth=1;dashed=1;dashPattern=4 4;endArrow=none;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="480" y="410" as="sourcePoint" />
+            <mxPoint x="330" y="710" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=1;opacity=80;" parent="1" vertex="1">
+          <mxGeometry x="40" y="100" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_title" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#48D597;fontFamily=monospace;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="55" y="105" width="100" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="" style="rounded=1;fillColor=#1C372E;strokeColor=#48D597;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="60" y="135" width="30" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1t" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Enable / transition state&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="100" y="133" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="" style="rounded=1;fillColor=#1C372E;strokeColor=#F5B944;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="60" y="160" width="30" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2t" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Timed wait / PG check&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="100" y="158" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="" style="rounded=1;fillColor=#1C372E;strokeColor=#8BA1FF;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="60" y="185" width="30" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3t" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;SP5 handshake checkpoint&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="100" y="183" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="" style="rounded=1;fillColor=#48D597;strokeColor=#48D597;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="60" y="210" width="30" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4t" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Terminal success (DONE)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="100" y="208" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="" style="rounded=1;fillColor=#1C372E;strokeColor=#FB6E88;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="60" y="235" width="30" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5t" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Fault / disable path&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="100" y="233" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg6" value="" style="endArrow=classic;strokeColor=#FB6E88;strokeWidth=1.5;dashed=1;dashPattern=8 4;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="268" as="sourcePoint" />
+            <mxPoint x="90" y="268" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg6t" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;sw_enable=0 disable path&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontColor=#E7E7E8;fontFamily=monospace;" parent="1" vertex="1">
+          <mxGeometry x="100" y="258" width="200" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
