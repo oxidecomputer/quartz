@@ -19,6 +19,8 @@ entity sp_i2c_subsystem is
 
         axi_if : view axil8x32_pkg.axil_target;
         in_a0 : in std_logic;
+        sp_mux_reset_l : in std_logic;
+
 
         sp_scl : in std_logic;
         sp_scl_o : out std_logic;
@@ -46,7 +48,8 @@ architecture rtl of sp_i2c_subsystem is
     constant mux_i2c_addr: std_logic_vector(6 downto 0) :=  b"1110_000";
 
     signal mux_is_active : std_logic;
-    signal mux_reset : std_logic;
+    signal mux_reset_reg : std_logic;
+    signal mux_reset_final : std_logic;
     constant deselected : std_logic_vector(1 downto 0) := "11";
 
 begin
@@ -56,8 +59,10 @@ begin
         clk => clk,
         reset => reset,
         axi_if => axi_if,
-        main_reset => mux_reset
+        main_reset => mux_reset_reg
     );
+
+    mux_reset_final <= mux_reset_reg or (not sp_mux_reset_l);
 
      -------------------------------------
     -- SP I2C STUFF
@@ -69,7 +74,7 @@ begin
      port map(
         clk => clk,
         reset => reset,
-        mux_reset => mux_reset,
+        mux_reset => mux_reset_final,
         allowed_to_enable => '1',
         mux_is_active => mux_is_active,
         scl => sp_scl,

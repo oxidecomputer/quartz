@@ -130,10 +130,11 @@ set_property -dict { PACKAGE_PIN F14 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to
 set_property -dict { PACKAGE_PIN F12 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_irq_l[4] }];
 set_property -dict { PACKAGE_PIN A19 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_irq_l[5] }];
 set_property -dict { PACKAGE_PIN E17 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_irq_l[6] }];
-set_property -dict { PACKAGE_PIN G13 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_misc_a }];
+set_property -dict { PACKAGE_PIN G13 IOSTANDARD LVCMOS33 } [get_ports { sp_to_fpga1_mux_reset_l }];
 set_property -dict { PACKAGE_PIN G11 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_misc_b }];
 set_property -dict { PACKAGE_PIN F11 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_misc_c }];
 set_property -dict { PACKAGE_PIN G10 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_misc_d }];
+set_property -dict { PACKAGE_PIN F10 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_misc_a }];
 set_property -dict { PACKAGE_PIN J21 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_sp_mux_ign_mux_sel }];
 set_property -dict { PACKAGE_PIN C2 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_v12_ddr5_abcdef_hsc_en }];
 set_property -dict { PACKAGE_PIN C1 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_v12_ddr5_ghijkl_hsc_en }];
