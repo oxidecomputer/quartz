@@ -47,6 +47,7 @@ architecture rtl of spi_nor_regs is
     signal   rx_fifo_ack        : std_logic;
     signal active_write       : std_logic;
     signal active_read        : std_logic;
+    signal rx_fifo_read_data_pipe : std_logic_vector(rx_fifo_read_data'range);
 
 begin
 
@@ -117,6 +118,19 @@ end process;
    
 
 -- vsg_off
+-- Having timing issues with the  RX FIFO data. This is safe
+-- because SP can't do back-to-back reads of the RX FIFO so we always have at least
+-- 1 clock cycle for data propagation.
+read_pipeline: process(clk, reset)
+begin
+    if reset then
+        rx_fifo_read_data_pipe <= (others => '0');
+    elsif rising_edge(clk) then
+        -- pipeline logic if needed
+        rx_fifo_read_data_pipe <= rx_fifo_read_data;
+    end if;
+end process;
+
 read_logic: process(clk, reset)
 begin
     if reset then
@@ -133,7 +147,7 @@ begin
                 when INSTR_OFFSET => rdata <= pack(instr);
                 when ADDR_OFFSET => rdata <= pack(addr);
                 when RX_FIFO_RDATA_OFFSET => 
-                    rdata <= rx_fifo_read_data;
+                    rdata <= rx_fifo_read_data_pipe;
                     rx_fifo_ack <= '1';
                 when SP5FLASHOFFSET_OFFSET => rdata <= pack(sp5_flash_offset);
                 when APOBFLASHADDR_OFFSET => rdata <= pack(apob_flash_addr);
