@@ -149,4 +149,5 @@ set_io --warn-no-port spi_sp_mux_to_fpga2_sck R11
 set_io --warn-no-port uart_fpga2_to_sp_dat N4
 set_io --warn-no-port uart_sp_to_fpga2_dat R1
 set_io --warn-no-port v12_mcio_a0hp_pg H6
+set_io --warn-no-port -pullup yes sp_to_fpga2_mux_reset_l D14
 set_frequency clk_50mhz_fpga2 50

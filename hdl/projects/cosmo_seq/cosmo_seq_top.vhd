@@ -118,7 +118,6 @@ entity cosmo_seq_top is
         fpga1_to_sp_mux_ign_mux_sel : out std_logic;
         fpga1_to_ign_trgt_fpga_creset : out std_logic; -- swap to output when we want to use this
         seq_rev_id : in std_logic_vector(2 downto 0);
-
         fpga1_spare_v1p8 : out std_logic_vector(7 downto 0);
         fpga1_spare_v3p3_0 : out std_logic;
         fpga1_spare_v3p3_1 : out std_logic;
@@ -197,6 +196,7 @@ entity cosmo_seq_top is
         rsw_to_sp5_pcie_attached_buff_l : in std_logic;
 
         -- non-FMC SP interface things
+        sp_to_fpga1_mux_reset_l : in std_logic;
         fpga1_to_sp_int_l : in std_logic;
         fpga1_to_sp_irq_l : out std_logic_vector(6 downto 1);
         fpga1_to_sp_misc_a : in std_logic;
@@ -420,14 +420,22 @@ architecture rtl of cosmo_seq_top is
     signal dbg_pins_uart_in : std_logic;
     signal dbg_pins_uart_in_rts_l : std_logic;
     signal uart_headder_fall_back_to_debug_pins : std_logic;
+    signal sp_mux_reset_l_syncd : std_logic;
 
 begin
 
-    meta_sync_inst: entity work.meta_sync
+    meta_sync_inst_hp_irq: entity work.meta_sync
      port map(
         async_input => fpga2_hp_irq_n_unsyncd,
         clk => clk_125m,
         sycnd_output => fpga2_hp_irq_n
+    );
+
+    meta_sync_inst_mux_reset_l: entity work.meta_sync
+     port map(
+        async_input => sp_to_fpga1_mux_reset_l,
+        clk => clk_125m,
+        sycnd_output => sp_mux_reset_l_syncd
     );
 
     -- SP5 SEC (not available on rev1 cosmo, not yet implemented for rev2!)
@@ -638,6 +646,7 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         in_a0 => a0_ok,
+        sp_mux_reset_l => sp_mux_reset_l_syncd,
         axi_if => responders_8b(SP_I2C_RESP_IDX),
         sp_scl => i2c_sp_to_fpga1_scl,
         sp_scl_o => sp_scl_o,

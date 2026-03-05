@@ -149,6 +149,7 @@ entity cosmo_hp_top is
         fpga2_spare_v3p3: out std_logic_vector(7 downto 0);
         fpga2_status_led: out std_logic;
         -- SP I/F
+        sp_to_fpga2_mux_reset_l : in  std_logic;
         fpga2_to_sp_int_l: in std_logic_vector(2 downto 0); -- 3..1 in sch
         smbus_sp_to_fpga2_smclk: inout std_logic;
         smbus_sp_to_fpga2_smdat: inout std_logic;
@@ -175,20 +176,11 @@ end entity;
 
 architecture rtl of cosmo_hp_top is
     type io_i2c_addr_t is array (natural range <>) of std_logic_vector(6 downto 0);
-    type mux_sel_t is array (natural range <>) of std_logic_vector(1 downto 0);
     constant io_i2c_addr:  io_i2c_addr_t(0 to 1) := (
         b"0100_000",  -- CEM A, B, C, D, E  I/O
         b"0100_001"   -- CEM F, G, H, I, J  I/O
     );
-    constant mux_i2c_addr:  io_i2c_addr_t(0 to 4) := (
-        b"1110_000",  -- Mux 4: CEMs A, B, C
-        b"1110_001",  -- Mux 5: CEMS D, E, F
-        b"1110_010",  -- Mux 6: MCIO1, MCIO2, CEM G
-        b"1110_011",  -- Mux 7: CEM H, I, J
-        b"1110_100"   -- Mux 8: Front Bus
-    );
 
-    signal mux_sel : mux_sel_t(mux_i2c_addr'range);
     -- hotplug breakout
     signal sp5_tgt_scl : std_logic_vector(1 downto 0);
     signal sp5_tgt_scl_o : std_logic_vector(1 downto 0);
@@ -201,12 +193,6 @@ architecture rtl of cosmo_hp_top is
     signal sp5_sda_o : std_logic;
     signal sp5_sda_oe: std_logic;
     -- i2c mux breakout
-    signal sp_tgt_scl : std_logic_vector(4 downto 0);
-    signal sp_tgt_scl_o : std_logic_vector(4 downto 0);
-    signal sp_tgt_scl_oe : std_logic_vector(4 downto 0);
-    signal sp_tgt_sda : std_logic_vector(4 downto 0);
-    signal sp_tgt_sda_o : std_logic_vector(4 downto 0);
-    signal sp_tgt_sda_oe : std_logic_vector(4 downto 0);
     signal sp_scl_o : std_logic;
     signal sp_scl_oe: std_logic;
     signal sp_sda_o : std_logic;
@@ -288,6 +274,7 @@ architecture rtl of cosmo_hp_top is
     signal amd_gen_int : std_logic;
     signal spi_fpga2_to_sp_mux_dat_int : std_logic;
     signal fpga2_to_clk_buff_ufl_oe_l_int : std_logic;
+    signal sp_mux_reset_l_syncd : std_logic;
     
 begin
 
@@ -302,11 +289,18 @@ begin
 
     sp5_to_fpga_genint_3v3_l <= 'Z';  -- Broken on rev1 due to U33's direction
 
-    meta_sync_inst: entity work.meta_sync
+    meta_sync_inst_in_a0: entity work.meta_sync
      port map(
         async_input => in_a0_unsyncd,
         clk => clk_50m,
         sycnd_output => in_a0
+    );
+
+    meta_sync_inst_mux_reset: entity work.meta_sync
+     port map(
+        async_input => sp_to_fpga2_mux_reset_l,
+        clk => clk_50m,
+        sycnd_output => sp_mux_reset_l_syncd
     );
 
     -------------------------------------
@@ -533,7 +527,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
      port map(
         clk => clk_50m,
         reset => reset_50m,
-        mux_reset => '0',
+        mux_reset => not sp_mux_reset_l_syncd,
         allowed_to_enable => '1',
         mux_is_active => open,
         scl => smbus_sp_to_fpga2_smclk,
