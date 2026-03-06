@@ -105,31 +105,37 @@ class FPGAImage:
             yosys.report_utilization(self._get_fit_report())
 
     def _get_nextpnr_log(self):
-        if self.toolchain == "yosys":
-            for filename in self.filenames:
-                if "nextpnr.log" in filename:
-                    with self.archive.open(filename, "r") as f:
-                        return f.read().decode("utf-8")
-        else:
+        if self.toolchain != "yosys":
             raise ValueError(f"Unsupported toolchain ({self.toolchain}) for nextpnr log retrieval.")
+        for filename in self.filenames:
+            if "nextpnr.log" in filename:
+                with self.archive.open(filename, "r") as f:
+                    return f.read().decode("utf-8")
+        raise FileNotFoundError(
+            f"nextpnr.log not found in archive. Available files: {self.filenames}"
+        )
         
     def _get_vivado_timing_log(self):
-        if self.toolchain == "vivado":
-            for filename in self.filenames:
-                if "route_timing.rpt" in filename:
-                    with self.archive.open(filename, "r") as f:
-                        return f.read().decode("utf-8")
-        else:
+        if self.toolchain != "vivado":
             raise ValueError(f"Unsupported toolchain ({self.toolchain}) for vivado log retrieval.")
+        for filename in self.filenames:
+            if "route_timing.rpt" in filename:
+                with self.archive.open(filename, "r") as f:
+                    return f.read().decode("utf-8")
+        raise FileNotFoundError(
+            f"route_timing.rpt not found in archive. Available files: {self.filenames}"
+        )
         
     def _get_vivado_fit_log(self):
-        if self.toolchain == "vivado":
-            for filename in self.filenames:
-                if "place_optimize_utilization.rpt" in filename:
-                    with self.archive.open(filename, "r") as f:
-                        return f.read().decode("utf-8")
-        else:
+        if self.toolchain != "vivado":
             raise ValueError(f"Unsupported toolchain ({self.toolchain}) for vivado log retrieval.")
+        for filename in self.filenames:
+            if "place_optimize_utilization.rpt" in filename:
+                with self.archive.open(filename, "r") as f:
+                    return f.read().decode("utf-8")
+        raise FileNotFoundError(
+            f"place_optimize_utilization.rpt not found in archive. Available files: {self.filenames}"
+        )
 
     def _get_timing_report(self):
         if self.toolchain == "yosys":

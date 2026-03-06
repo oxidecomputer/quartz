@@ -5,14 +5,24 @@
 # the nextpnr log at that same directory called nextpnr.log
 # all the stuff in the _maps_ directory at that same level
 
+def _matches_fpga(fpga_name, filename):
+    return fpga_name in filename or fpga_name.replace('-', '_') in filename
+
+
 def get_relevant_files_from_buck_zip(fpga_name, zip):
+    # Local builds (--local) zip the full buck-out tree containing multiple
+    # projects, so we filter by fpga name.  GitHub artifact zips are
+    # single-project with shallow paths — no filtering needed.  Distinguish
+    # by checking max path depth: buck-out trees have deeply nested paths.
+    all_names = [item.filename for item in zip.infolist()]
+    max_depth = max((name.count('/') for name in all_names), default=0)
+    filter_by_name = max_depth > 2
+
     zip_names = []
     for item in zip.infolist():
-        # folders use _ instead of -
-        if fpga_name not in item.filename and fpga_name.replace('-', '_') not in item.filename:
-            # filter out stuff without the fpga name in it
-            # (might be other projects if local build etc)
-            continue
+        if filter_by_name:
+            if not _matches_fpga(fpga_name, item.filename):
+                continue
         if item.filename.endswith(".bz2"):
             zip_names.append(item.filename)
         if "maps/" in item.filename and (item.filename.endswith(".json") or item.filename.endswith(".html")):
