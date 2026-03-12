@@ -490,6 +490,32 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         } nic_test_mapo[1] = 1;
     } nic_overrides;
 
+    rails #(.sw_kind(rw)) rail_masks ;
+    rail_masks->name = "Rail PG masks. Set to '1' to prevent the sequencer from seeing a particular rail's PG as 'good' for testing purposes."; 
+
+    reg {
+        name = "SP5 sequencer Test Masks";
+        desc = "Set corresponding bit to 1 to mask off a particular signal from asserting during sequencing to test sequencing behavior in the presense of 'faults'.";
+        field {
+            desc = "Setting this bit makes the sequencer never see fan East hotswap PG pin active";
+        } fan_hsc_east_pg[1] = 0;
+        field {
+            desc = "Setting this bit makes the sequencer never see fan Central hotswap PG pin active";
+        } fan_hsc_central_pg[1] = 0;
+         field {
+            desc = "Setting this bit makes the sequencer never see fan West hotswap PG pin active";
+        } fan_hsc_west_pg[1] = 0;
+        field {
+            desc = "Setting this bit makes the sequencer never see pwr_ok.";
+        } pwr_ok_msk[1];
+        field {
+            desc = "Setting this bit to '1' makes the sequencer never see slp_s3_l assert, to test behavior when this signal is not asserted by SP5 during sequencing.";
+        } slp_s3_l_msk[1];
+        field {
+            desc = "Setting this bit to '1' makes the sequencer never see slp_s5_l assert, to test behavior when this signal is not asserted by SP5 during sequencing.";
+        } slp_s5_l_msk[1];
+    } sp5_seq_test_mask;
+
      reg {
         name = "ignition flash and reconfig control";
         desc = "For debugging purposes, allows the sequencer to write to the ignition flash and reconfigure it. Turning this mux on isolates the front FPGA my muxing away from it";
