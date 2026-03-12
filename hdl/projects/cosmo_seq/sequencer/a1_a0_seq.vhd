@@ -159,6 +159,7 @@ begin
         variable a_faulted : std_logic;
         variable b_faulted : std_logic;
         variable c_faulted : std_logic;
+        variable ddr_bulk_faulted : std_logic;
     begin
         v := seq_r;
 
@@ -193,6 +194,7 @@ begin
         a_faulted := '1' when seq_r.group_a_expected = '1' and (not is_power_good(group_a)) else '0';
         b_faulted := '1' when seq_r.group_b_expected = '1' and (not is_power_good(group_b)) else '0';
         c_faulted := '1' when seq_r.group_c_expected = '1' and (not is_power_good(group_c)) else '0';
+        ddr_bulk_faulted := '1' when seq_r.ddr_bulk_expected = '1' and (not is_power_good(ddr_bulk)) else '0';
         
         -- single cycle flags
         v.faulted := '0';
@@ -366,7 +368,7 @@ begin
 
         -- fault and MAPO case that are monitored in all non-IDLE cases
         if seq_r.state /= IDLE then
-            if a_faulted  or b_faulted or c_faulted or (not upstream_ok) then
+            if a_faulted or b_faulted or c_faulted or ddr_bulk_faulted or (not upstream_ok) then
                 v.faulted := '1';
                 -- In the fault cases, we immediately transition to IDLE
                 -- regardless of the current state, and don't have time to

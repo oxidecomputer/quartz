@@ -72,6 +72,7 @@ architecture rtl of sp5_sequencer is
     signal nic_raw_status : nic_raw_status_type;
     signal rails_en_rdbk : rails_type;
     signal rails_pg_rdbk : rails_type;
+    signal rail_masks : rails_type;
     
     signal fans_power_ok : std_logic;
     -- We have the following states for the sequencing block
@@ -98,6 +99,7 @@ architecture rtl of sp5_sequencer is
     signal a0_faulted : std_logic;
     signal nic_faulted : std_logic;
     signal reg_alert_l : seq_power_alert_pins_t;
+    signal sp5_seq_test_mask : sp5_seq_test_mask_type;
     
 
 
@@ -119,6 +121,8 @@ begin
         nic_seq_pins => nic_seq_pins,
         early_power => early_power,
         ddr_bulk => ddr_bulk,
+        rail_masks => rail_masks,
+        sp5_seq_test_mask => sp5_seq_test_mask,
         group_a => group_a,
         group_b => group_b,
         group_c => group_c,
@@ -144,6 +148,8 @@ begin
         seq_raw_status => seq_raw_status,
         nic_api_status => nic_api_status,
         nic_raw_status => nic_raw_status,
+        rail_masks => rail_masks,
+        sp5_seq_test_mask => sp5_seq_test_mask,
         debug_enables => debug_enables,
         nic_overrides => nic_overrides,
         a0_faulted => a0_faulted,
@@ -213,6 +219,7 @@ begin
     rails_pg_rdbk.v1p5_rtc <= group_a.pwr_v1p5_rtc.pg;
     rails_pg_rdbk.ghijkl_hsc <= ddr_bulk.ghijkl_hsc.pg;
     rails_pg_rdbk.abcdef_hsc <= ddr_bulk.abcdef_hsc.pg;
+
     -- SP5 sequencing readbacks
     sp5_readbacks.pwr_good <= sp5_seq.pwr_good;
     sp5_readbacks.pwr_btn_l <= sp5_seq.pwr_btn_l;
@@ -235,9 +242,9 @@ begin
     nic_readbacks.perst_l <= nic_seq.perst_l;
     nic_readbacks.cld_rst_l <= nic_seq.cld_rst_l;
 
-    fans_power_ok <= early_power.fan_west_hsc_pg and 
-                     early_power.fan_central_hsc_pg and 
-                     early_power.fan_east_hsc_pg;
+    fans_power_ok <= early_power_rdbks.fan_hsc_west_pg and 
+                     early_power_rdbks.fan_hsc_central_pg and 
+                     early_power_rdbks.fan_hsc_east_pg;
     a1_a0_seq_inst: entity work.a1_a0_seq
      generic map(
         CNTS_P_MS => CNTS_P_MS

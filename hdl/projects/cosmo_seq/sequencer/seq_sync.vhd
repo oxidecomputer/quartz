@@ -9,6 +9,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.sequencer_io_pkg.all;
+use work.sequencer_regs_pkg.all;
 
 entity seq_sync is
     port (
@@ -26,6 +27,8 @@ entity seq_sync is
         nic_seq_pins: view nic_seq_at_fpga;
         reg_alert_l_pins : view power_alert_at_fpga;
         -- internal, synchronized interfaces
+        rail_masks : in rails_type;
+        sp5_seq_test_mask : in sp5_seq_test_mask_type;
         early_power : view early_power_on_board;
         ddr_bulk: view ddr_bulk_at_reg;
         group_a : view group_a_power_at_reg;
@@ -41,6 +44,22 @@ entity seq_sync is
 architecture rtl of seq_sync is
    signal  nic_sync_5v_hsc_pg_l : std_logic;
    signal nic_sync_12v_hsc_pg_l : std_logic;
+   signal fan_central_pg_raw : std_logic;
+   signal fan_east_pg_raw : std_logic;
+   signal fan_west_pg_raw : std_logic;
+   signal ddr_bulk_abcdef_hsc_pg_raw : std_logic;
+   signal ddr_bulk_ghijkl_hsc_pg_raw : std_logic;
+   signal pwr_v1p5_rtc_pg_raw : std_logic;
+   signal v3p3_sp5_a1_pg_raw : std_logic;
+   signal v1p8_sp5_a1_pg_raw : std_logic;
+   signal v1p1_sp5_pg_raw : std_logic;
+   signal vddio_sp5_a0_pg_raw : std_logic;
+   signal vddcr_cpu1_pg_raw : std_logic;
+   signal vddcr_cpu0_pg_raw : std_logic;
+   signal vddcr_soc_pg_raw : std_logic;
+   signal sp5_pwr_ok_raw : std_logic;
+   signal sp5_slp_s3_l_raw : std_logic;
+   signal sp5_slp_s5_l_raw : std_logic;
 begin
 
     -- Early power sync stuff
@@ -51,20 +70,23 @@ begin
      port map(
         async_input => early_power_pins.fan_central_hsc_pg,
         clk => clk,
-        sycnd_output => early_power.fan_central_hsc_pg
+        sycnd_output => fan_central_pg_raw
     );
+    early_power.fan_central_hsc_pg <= fan_central_pg_raw when sp5_seq_test_mask.fan_hsc_central_pg = '0' else '0';
     fan_east_pg: entity work.meta_sync
     port map(
        async_input => early_power_pins.fan_east_hsc_pg,
        clk => clk,
-       sycnd_output => early_power.fan_east_hsc_pg
+       sycnd_output => fan_east_pg_raw
     );
+    early_power.fan_east_hsc_pg <= fan_east_pg_raw when sp5_seq_test_mask.fan_hsc_east_pg = '0' else '0';
     fan_west_pg: entity work.meta_sync
     port map(
        async_input => early_power_pins.fan_west_hsc_pg,
        clk => clk,
-       sycnd_output => early_power.fan_west_hsc_pg
+       sycnd_output => fan_west_pg_raw
     );
+    early_power.fan_west_hsc_pg <= fan_west_pg_raw when sp5_seq_test_mask.fan_hsc_west_pg = '0' else '0';
     fan_fail: entity work.meta_sync
     port map(
        async_input => early_power_pins.fan_fail,
@@ -79,14 +101,16 @@ begin
     port map(
        async_input => ddr_bulk_pins.abcdef_hsc.pg,
        clk => clk,
-       sycnd_output => ddr_bulk.abcdef_hsc.pg
+       sycnd_output => ddr_bulk_abcdef_hsc_pg_raw
     );
+    ddr_bulk.abcdef_hsc.pg <= ddr_bulk_abcdef_hsc_pg_raw when rail_masks.abcdef_hsc = '0' else '0';
     ghijkl_hsc_pg: entity work.meta_sync
     port map(
        async_input => ddr_bulk_pins.ghijkl_hsc.pg,
        clk => clk,
-       sycnd_output => ddr_bulk.ghijkl_hsc.pg
+       sycnd_output => ddr_bulk_ghijkl_hsc_pg_raw
     );
+   ddr_bulk.ghijkl_hsc.pg <= ddr_bulk_ghijkl_hsc_pg_raw when rail_masks.ghijkl_hsc = '0' else '0';
 
     -- group a sync stuff
     group_a_pins.pwr_v1p5_rtc.enable <= group_a.pwr_v1p5_rtc.enable;
@@ -96,29 +120,33 @@ begin
     port map(
        async_input => group_a_pins.pwr_v1p5_rtc.pg,
        clk => clk,
-       sycnd_output => group_a.pwr_v1p5_rtc.pg
+       sycnd_output => pwr_v1p5_rtc_pg_raw
     );
+    group_a.pwr_v1p5_rtc.pg <= pwr_v1p5_rtc_pg_raw when rail_masks.v1p5_rtc = '0' else '0';
     v3p3_sp5_a1_pg: entity work.meta_sync
     port map(
        async_input => group_a_pins.v3p3_sp5_a1.pg,
        clk => clk,
-       sycnd_output => group_a.v3p3_sp5_a1.pg
+       sycnd_output => v3p3_sp5_a1_pg_raw
     );
+    group_a.v3p3_sp5_a1.pg <= v3p3_sp5_a1_pg_raw when rail_masks.v3p3_sp5 = '0' else '0';
     v1p8_sp5_a1_pg: entity work.meta_sync
     port map(
        async_input => group_a_pins.v1p8_sp5_a1.pg,
        clk => clk,
-       sycnd_output => group_a.v1p8_sp5_a1.pg
+       sycnd_output => v1p8_sp5_a1_pg_raw
     );
-
+    group_a.v1p8_sp5_a1.pg <= v1p8_sp5_a1_pg_raw when rail_masks.v1p8_sp5 = '0' else '0';
+   
     -- group b sync stuff
     group_b_pins.v1p1_sp5.enable <= group_b.v1p1_sp5.enable;
     v1p1_sp5_pg: entity work.meta_sync
     port map(
        async_input => group_b_pins.v1p1_sp5.pg,
        clk => clk,
-       sycnd_output => group_b.v1p1_sp5.pg
+       sycnd_output => v1p1_sp5_pg_raw
     );
+      group_b.v1p1_sp5.pg <= v1p1_sp5_pg_raw when rail_masks.v1p1_sp5 = '0' else '0';
 
     -- group c sync stuff
     group_c_pins.vddio_sp5_a0.enable <= group_c.vddio_sp5_a0.enable;
@@ -129,26 +157,30 @@ begin
     port map(
        async_input => group_c_pins.vddio_sp5_a0.pg,
        clk => clk,
-       sycnd_output => group_c.vddio_sp5_a0.pg
+       sycnd_output => vddio_sp5_a0_pg_raw
     );
+    group_c.vddio_sp5_a0.pg <= vddio_sp5_a0_pg_raw when rail_masks.vddio_sp5 = '0' else '0';
     vddcr_cpu1_pg: entity work.meta_sync
     port map(
        async_input => group_c_pins.vddcr_cpu1.pg,
        clk => clk,
-       sycnd_output => group_c.vddcr_cpu1.pg
+       sycnd_output => vddcr_cpu1_pg_raw
     );
+      group_c.vddcr_cpu1.pg <= vddcr_cpu1_pg_raw when rail_masks.vddcr_cpu1 = '0' else '0';
     vddcr_cpu0_pg: entity work.meta_sync
     port map(
        async_input => group_c_pins.vddcr_cpu0.pg,
        clk => clk,
-       sycnd_output => group_c.vddcr_cpu0.pg
+       sycnd_output => vddcr_cpu0_pg_raw
     );
+    group_c.vddcr_cpu0.pg <= vddcr_cpu0_pg_raw when rail_masks.vddcr_cpu0 = '0' else '0';
     vddcr_soc_pg: entity work.meta_sync
     port map(
        async_input => group_c_pins.vddcr_soc.pg,
        clk => clk,
-       sycnd_output => group_c.vddcr_soc.pg
+       sycnd_output => vddcr_soc_pg_raw
     );
+    group_c.vddcr_soc.pg <= vddcr_soc_pg_raw when rail_masks.vddcr_soc = '0' else '0';
 
     -- SP5 seq stuff
     sp5_seq_pins.rsmrst_l <= sp5_seq.rsmrst_l;
@@ -177,20 +209,23 @@ begin
     port map(
        async_input => sp5_seq_pins.pwr_ok,
        clk => clk,
-       sycnd_output => sp5_seq.pwr_ok
+       sycnd_output => sp5_pwr_ok_raw
     );
+    sp5_seq.pwr_ok <= sp5_pwr_ok_raw when sp5_seq_test_mask.pwr_ok_msk = '0' else '0';
     slp_s3_l_sync: entity work.meta_sync
     port map(
        async_input => sp5_seq_pins.slp_s3_l,
        clk => clk,
-       sycnd_output => sp5_seq.slp_s3_l
+       sycnd_output => sp5_slp_s3_l_raw
     );
+    sp5_seq.slp_s3_l <= sp5_slp_s3_l_raw when sp5_seq_test_mask.slp_s3_l_msk = '0' else '0';
     slp_s5_l_sync: entity work.meta_sync
     port map(
        async_input => sp5_seq_pins.slp_s5_l,
        clk => clk,
-       sycnd_output => sp5_seq.slp_s5_l
+       sycnd_output => sp5_slp_s5_l_raw
     );
+    sp5_seq.slp_s5_l <= sp5_slp_s5_l_raw when sp5_seq_test_mask.slp_s5_l_msk = '0' else '0';
     pwrgd_out_sync: entity work.meta_sync
     port map(
        async_input => sp5_seq_pins.pwrgd_out,

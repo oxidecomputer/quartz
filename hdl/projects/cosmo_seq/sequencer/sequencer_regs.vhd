@@ -33,6 +33,8 @@ entity sequencer_regs is
         therm_trip : in std_logic;
         smerr_assert : in std_logic;
         a0_faulted : in std_logic;
+        rail_masks : out rails_type;
+        sp5_seq_test_mask : out sp5_seq_test_mask_type;
         -- from nic block
         nic_api_status : in nic_api_status_type;
         nic_raw_status : in nic_raw_status_type;
@@ -296,6 +298,8 @@ begin
             nic_overrides <= rec_reset;
             ignition_control <= rec_reset;
             pcie_clk_ctrl <= rec_reset;
+            rail_masks <= reset_0s;
+            sp5_seq_test_mask <= reset_0s;
 
         elsif rising_edge(clk) then
            irq_clear <= reset_0s;  -- clear single-cycle flags.
@@ -313,6 +317,8 @@ begin
                     when RAIL_PGS_MAX_HOLD_OFFSET => rails_pg_max <= reset_0s;
                     when DEBUG_ENABLES_OFFSET => debug_enables <= unpack(axi_if.write_data.data);
                     when NIC_OVERRIDES_OFFSET => nic_overrides <= unpack(axi_if.write_data.data);
+                    when RAIL_MASKS_OFFSET => rail_masks <= unpack(axi_if.write_data.data);
+                    when SP5_SEQ_TEST_MASK_OFFSET => sp5_seq_test_mask <= unpack(axi_if.write_data.data);
                     when IGNITION_CONTROL_OFFSET => ignition_control <= unpack(axi_if.write_data.data);
                     when PCIE_CLK_CTRL_OFFSET => pcie_clk_ctrl <= unpack(axi_if.write_data.data);
                     when others => null;
@@ -353,6 +359,8 @@ begin
                     when SP5_READBACKS_OFFSET => rdata <= pack(sp5_readbacks);
                     when NIC_READBACKS_OFFSET => rdata <= pack(nic_readbacks);
                     when DEBUG_ENABLES_OFFSET => rdata <= pack(debug_enables);
+                    when RAIL_MASKS_OFFSET => rdata <= pack(rail_masks);
+                    when SP5_SEQ_TEST_MASK_OFFSET => rdata <= pack(sp5_seq_test_mask);
                     when NIC_OVERRIDES_OFFSET => rdata <= pack(nic_overrides);
                     when IGNITION_CONTROL_OFFSET => rdata <= pack(ignition_control);
                     when PCIE_CLK_CTRL_OFFSET => rdata <= pack(pcie_clk_ctrl);
