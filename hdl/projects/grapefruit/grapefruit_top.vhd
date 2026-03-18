@@ -188,7 +188,10 @@ entity grapefruit_top is
         i2c_scm_to_hpm_scl12: inout std_logic;
 
         fpga_to_fruid_scl: inout std_logic;
-        fpga_to_fruid_sda: inout std_logic
+        fpga_to_fruid_sda: inout std_logic;
+
+        fpga_led0: out std_logic;
+        fpga_led1: out std_logic
     );
 end entity;
 

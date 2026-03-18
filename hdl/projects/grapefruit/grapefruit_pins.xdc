@@ -213,3 +213,5 @@ set_property -dict { PACKAGE_PIN D5 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_t
 set_property -dict { PACKAGE_PIN G8 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda12 }];
 set_property -dict { PACKAGE_PIN B1 IOSTANDARD LVCMOS33 } [get_ports { fpga_to_fruid_scl }];
 set_property -dict { PACKAGE_PIN C2 IOSTANDARD LVCMOS33 } [get_ports { fpga_to_fruid_sda }];
+set_property -dict { PACKAGE_PIN M8 IOSTANDARD LVCMOS33 } [get_ports { fpga_led0 }];
+set_property -dict { PACKAGE_PIN M7 IOSTANDARD LVCMOS33 } [get_ports { fpga_led1 }];
