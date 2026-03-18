@@ -6,11 +6,37 @@
 
 import argparse
 import json
+import shutil
 import subprocess
 import os
 import sys
 from pathlib import Path
 from datetime import date
+
+
+def _find_buck2():
+    """Resolve buck2 binary path.
+
+    The par/pex wrapper can strip PATH, so bare 'buck2' may not be found
+    by subprocess. Resolve it up front using the environment we inherited.
+    """
+    found = shutil.which("buck2")
+    if found:
+        return found
+    # Check common install locations
+    for candidate in [
+        Path.home() / ".local" / "bin" / "buck2",
+        Path.home() / ".cargo" / "bin" / "buck2",
+        Path("/usr/local/bin/buck2"),
+        Path("/opt/homebrew/bin/buck2"),
+    ]:
+        if candidate.is_file():
+            return str(candidate)
+    # Fall back and hope for the best
+    return "buck2"
+
+
+BUCK2 = _find_buck2()
 
 try:
     import tomli_w
@@ -44,7 +70,7 @@ def vhdl_format(args):
     # Call buck2 and get the list of vhdl files that we own for
     # formatting (ie no 3rd party things)
     buck_bxl = subprocess.run(
-        ["buck2", "bxl", "//tools/vsg-format.bxl:vsg_format_gen"], 
+        [BUCK2, "bxl", "//tools/vsg-format.bxl:vsg_format_gen"],
         encoding="utf-8", 
         check=True, 
         capture_output=True
@@ -111,7 +137,7 @@ def vhdl_ls_toml_gen(args):
     # We capture stdout here because we need to parse the json but 
     # allow the stderr to go to the console
     buck_bxl = subprocess.Popen(
-        ["buck2", "bxl", "//tools/vhdl-ls.bxl:vhdl_ls_toml_gen"], 
+        [BUCK2, "bxl", "//tools/vhdl-ls.bxl:vhdl_ls_toml_gen"],
         encoding="utf-8",
         stdout=subprocess.PIPE
     )

@@ -21,11 +21,13 @@ system_cxx_toolchain(
 
 system_python_toolchain(
     name = "python",
+    interpreter = read_root_config("python", "interpreter", "python3"),
     visibility = ["PUBLIC"],
 )
 
 system_python_bootstrap_toolchain(
     name = "python_bootstrap",
+    interpreter = read_root_config("python", "interpreter", "python3"),
     visibility = ["PUBLIC"],
 )
 
