@@ -62,19 +62,19 @@ architecture rtl of espi_flash_txn_mgr is
         len: std_logic_vector(31 downto 0);
     end record;
     constant reg_reset : reg_t := (
-        idle, -- state
-        '0', -- cmd_rdack
-        0, -- data_bytes
-        0, -- dummy_cycles
-        0, -- txn_bytes
-        0, -- rem_bytes
-        (others => '0'), -- raw_addr
-        (others => '0'), -- apob_addr
-        (others => '0'), -- image_addr
-        (others => '0'), -- cur_flash_addr
-        (others => '0'), -- apob_end_addr
-        (others => '0'), -- next_flash_addr
-        (others => '0') -- len
+        state => idle,
+        cmd_rdack => '0',
+        data_bytes => 0,
+        dummy_cycles => 0,
+        txn_bytes => 0,
+        rem_bytes => 0,
+        raw_addr => (others => '0'),
+        apob_addr => (others => '0'),
+        image_addr => (others => '0'),
+        cur_flash_addr => (others => '0'),
+        apob_end_addr => (others => '0'),
+        next_flash_addr => (others => '0'),
+        len => (others => '0')
     );
 
     signal r, rin: reg_t;
