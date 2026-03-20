@@ -165,9 +165,6 @@ entity grapefruit_top is
         qspi1_scm_to_hpm_dat: inout std_logic_vector(3 downto 0);
         spi_hpm_to_scm_tpm_cs_l : in std_logic;
 
-        i2c_sp_to_fpga_scl: inout std_logic;
-        i2c_sp_to_fpga_sda: inout std_logic;
-
         i2c_scm_to_hpm_scl0: inout std_logic;
         i2c_scm_to_hpm_sda0: inout std_logic;
         i2c_scm_to_hpm_scl1: inout std_logic;
@@ -186,9 +183,6 @@ entity grapefruit_top is
         i2c_scm_to_hpm_scl11: inout std_logic;
         i2c_scm_to_hpm_sda12: inout std_logic;
         i2c_scm_to_hpm_scl12: inout std_logic;
-
-        fpga_to_fruid_scl: inout std_logic;
-        fpga_to_fruid_sda: inout std_logic;
 
         fpga_led0: out std_logic;
         fpga_led1: out std_logic

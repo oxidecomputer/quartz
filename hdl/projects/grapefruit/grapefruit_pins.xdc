@@ -191,8 +191,6 @@ set_property -dict { PACKAGE_PIN R5 IOSTANDARD LVCMOS33 } [get_ports { qspi1_scm
 set_property -dict { PACKAGE_PIN R6 IOSTANDARD LVCMOS33 } [get_ports { qspi1_scm_to_hpm_dat[1] }];
 set_property -dict { PACKAGE_PIN R7 IOSTANDARD LVCMOS33 } [get_ports { qspi1_scm_to_hpm_dat[0] }];
 set_property -dict { PACKAGE_PIN R3 IOSTANDARD LVCMOS33 } [get_ports { spi_hpm_to_scm_tpm_cs_l }];
-set_property -dict { PACKAGE_PIN F8 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp_to_fpga_scl }];
-set_property -dict { PACKAGE_PIN F5 IOSTANDARD LVCMOS33 } [get_ports { i2c_sp_to_fpga_sda }];
 set_property -dict { PACKAGE_PIN E8 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl0 }];
 set_property -dict { PACKAGE_PIN B9 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda0 }];
 set_property -dict { PACKAGE_PIN A9 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl1 }];
@@ -211,7 +209,5 @@ set_property -dict { PACKAGE_PIN C5 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_t
 set_property -dict { PACKAGE_PIN D6 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda11 }];
 set_property -dict { PACKAGE_PIN D5 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_scl12 }];
 set_property -dict { PACKAGE_PIN G8 IOSTANDARD LVCMOS33 } [get_ports { i2c_scm_to_hpm_sda12 }];
-set_property -dict { PACKAGE_PIN B1 IOSTANDARD LVCMOS33 } [get_ports { fpga_to_fruid_scl }];
-set_property -dict { PACKAGE_PIN C2 IOSTANDARD LVCMOS33 } [get_ports { fpga_to_fruid_sda }];
 set_property -dict { PACKAGE_PIN M8 IOSTANDARD LVCMOS33 } [get_ports { fpga_led0 }];
 set_property -dict { PACKAGE_PIN M7 IOSTANDARD LVCMOS33 } [get_ports { fpga_led1 }];
