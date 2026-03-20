@@ -275,19 +275,17 @@ architecture rtl of cosmo_hp_top is
     signal spi_fpga2_to_sp_mux_dat_int : std_logic;
     signal fpga2_to_clk_buff_ufl_oe_l_int : std_logic;
     signal sp_mux_reset_l_syncd : std_logic;
-    signal active_mux_encode_dbg : std_logic_vector(3 downto 0);
+
 begin
 
     fpga2_to_fpga1_io(1 downto 0) <= (others => 'Z');
     amd_gen_int_l <= amd_gen_int;  -- connect the alert generation to fpga1
 
-    fpga2_spare_v3p3(7) <= smbus_sp_to_fpga2_smclk;
-    fpga2_spare_v3p3(6) <= smbus_sp_to_fpga2_smdat;
-    fpga2_spare_v3p3(5) <= active_mux_encode_dbg(3);
-    fpga2_spare_v3p3(4) <= active_mux_encode_dbg(2);
-    fpga2_spare_v3p3(3) <= active_mux_encode_dbg(1);
-    fpga2_spare_v3p3(2) <= active_mux_encode_dbg(0);
-    fpga2_spare_v3p3(1) <= sp_mux_reset_l_syncd;
+    fpga2_spare_v3p3(7) <= amd_gen_int_l;
+    fpga2_spare_v3p3(6) <= cema_to_fpga2_pg_l;
+    fpga2_spare_v3p3(5) <= cema_to_fpga2_prsnt_l;
+    fpga2_spare_v3p3(4) <= cema_to_fpga2_pwrflt_l;
+    fpga2_spare_v3p3(2) <= cema_to_fpga2_sharkfin_present;
 
     sp5_to_fpga_genint_3v3_l <= 'Z';  -- Broken on rev1 due to U33's direction
 
@@ -543,7 +541,7 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         mux2_sel => fpga2_to_i2c_mux6_sel,
         mux3_sel => fpga2_to_i2c_mux7_sel,
         mux4_sel => fpga2_to_i2c_mux8_sel,
-        active_mux_encode => active_mux_encode_dbg
+        active_mux_encode => open
     );
 
     -- tri-state muxes, top level
