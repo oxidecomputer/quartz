@@ -60,7 +60,9 @@ entity oximux16_top is
         mux1_sel : out std_logic_vector(1 downto 0);
         mux2_sel : out std_logic_vector(1 downto 0);
         mux3_sel : out std_logic_vector(1 downto 0);
-        mux4_sel : out std_logic_vector(1 downto 0)
+        mux4_sel : out std_logic_vector(1 downto 0);
+        -- for debug
+        active_mux_encode : out std_logic_vector(3 downto 0)
     );
 end entity;
 
@@ -132,7 +134,8 @@ begin
         resp_valid => resp_valid,
         resp_ready => resp_ready,
         start_condition => start_condition,
-        stop_condition => stop_condition
+        stop_condition => stop_condition,
+        active_mux_encode => active_mux_encode
     );
 
 

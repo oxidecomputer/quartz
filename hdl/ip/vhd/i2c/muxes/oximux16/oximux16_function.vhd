@@ -47,7 +47,9 @@ entity oximux16_function is
         -- response interface
         resp_data : out std_logic_vector(7 downto 0);
         resp_valid : out std_logic;
-        resp_ready : in std_logic
+        resp_ready : in std_logic;
+        -- for debug
+        active_mux_encode : out std_logic_vector(3 downto 0)
     );
 
 
@@ -208,6 +210,25 @@ begin
                             "01" when control1_reg.mux4_chC = '1' else -- MUX4 C
                             "11";
             -- we don't support channel 15 since it doesn't map out to TMUX131s nicely
+
+            -- Put a binary encoded representation of mux control to get a
+            -- logically dense view to assist debug.
+            active_mux_encode <=    x"0" when control0_reg.mux0_chA = '1' else
+                                    x"1" when control0_reg.mux0_chB = '1' else
+                                    x"2" when control0_reg.mux0_chC = '1' else
+                                    x"3" when control0_reg.mux1_chA = '1' else
+                                    x"4" when control0_reg.mux1_chB = '1' else
+                                    x"5" when control0_reg.mux1_chC = '1' else
+                                    x"6" when control0_reg.mux2_chA = '1' else
+                                    x"7" when control0_reg.mux2_chB = '1' else
+                                    x"8" when control1_reg.mux2_chC = '1' else
+                                    x"9" when control1_reg.mux3_chA = '1' else
+                                    x"A" when control1_reg.mux3_chB = '1' else
+                                    x"B" when control1_reg.mux3_chC = '1' else
+                                    x"C" when control1_reg.mux4_chA = '1' else
+                                    x"D" when control1_reg.mux4_chB = '1' else
+                                    x"E" when control1_reg.mux4_chC = '1' else
+                                    x"F";
         end if;
     end process;
 

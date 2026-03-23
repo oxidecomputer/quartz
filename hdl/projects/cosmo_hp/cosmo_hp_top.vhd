@@ -275,7 +275,7 @@ architecture rtl of cosmo_hp_top is
     signal spi_fpga2_to_sp_mux_dat_int : std_logic;
     signal fpga2_to_clk_buff_ufl_oe_l_int : std_logic;
     signal sp_mux_reset_l_syncd : std_logic;
-    
+
 begin
 
     fpga2_to_fpga1_io(1 downto 0) <= (others => 'Z');
@@ -540,7 +540,8 @@ axil_interconnect_2k8_inst: entity work.axil_interconnect_2k8
         mux1_sel => fpga2_to_i2c_mux5_sel,
         mux2_sel => fpga2_to_i2c_mux6_sel,
         mux3_sel => fpga2_to_i2c_mux7_sel,
-        mux4_sel => fpga2_to_i2c_mux8_sel
+        mux4_sel => fpga2_to_i2c_mux8_sel,
+        active_mux_encode => open
     );
 
     -- tri-state muxes, top level

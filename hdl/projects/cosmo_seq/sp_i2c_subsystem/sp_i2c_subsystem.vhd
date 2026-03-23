@@ -89,7 +89,8 @@ begin
         mux1_sel => i2c_mux2_sel,
         mux2_sel => i2c_mux3_sel,
         mux3_sel => open, -- un-used on this i2c bus
-        mux4_sel => open -- un-used on this i2c bus
+        mux4_sel => open, -- un-used on this i2c bus,
+        active_mux_encode => open
     );
     
     -- Set up the mux-sels here
