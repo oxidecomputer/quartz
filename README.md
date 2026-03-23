@@ -71,6 +71,8 @@ See [this issue](https://github.com/facebook/buck2/issues/468) for more info
 - You'll need python3/pip installed and accessible on your path. We have python 3.10
 working in linux, and python 3.12 working in windows. Python 3.9 did not work in 
 windows at least, we have no other data points on other python versions.
+- Most recent Python installations require you to install packages and work in a virtual environment. See the
+Python Virtual Environments section below for running from a virtual environment.
 - If you're updating an already checked out repo to a new buck version, you'll need to update the submodules!!
 - You'll need to install required python packages `pip install -r tools/requirements.txt`
 - You'll need to have nvc (https://github.com/nickg/nvc). For linux, this can be obtained as a .deb
@@ -84,6 +86,20 @@ able to use symlinks, and should consider setting `LongPathsEnabled` in regedit 
 - When building Xilinx design, Vivado will need to be installed and on your `$PATH`.
 - Adjusting paths may require restarting of the buck2 background process so that it notices
 the changes. This can be done with `buck2 clean`
+
+### Python Virtual Environments
+
+To set up a virtual environment for quartz development you can do the following. In this example
+the virtual environment is named `quartz` and placed in a folder called `venv` in your home
+directory, but you can name it whatever you want and put it wherever you want.
+
+```
+python3 -m venv ~/venv/quartz
+source ~/venv/quartz/bin/activate
+./setup.sh
+```
+
+From this point you can run buck commands as normal.
 
 ### vivado macros
 There are simulation-only XPM macros available in the `vnd/xpm/xpm_vhdl` submodule, provided
