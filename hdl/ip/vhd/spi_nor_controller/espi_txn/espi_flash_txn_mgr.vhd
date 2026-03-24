@@ -18,10 +18,21 @@ entity espi_flash_txn_mgr is
         reset: in std_logic;
         -- From Hubris control
         espi_reads_allowed: in std_logic;
-        cur_flash_addr_offset: in signed(31 downto 0);
-        cur_apob_flash_addr: in std_logic_vector(31 downto 0);
-        cur_apob_flash_len: in std_logic_vector(31 downto 0);
-        cur_apob_flash_offset: in std_logic_vector(31 downto 0);
+        -- SP-controlled absolute flash address for the desired host image base address.
+        -- We have 2 image slots, SP choses which of these is the starting address. This is signed
+        -- and the value is added directly to the incomming raw AMD addresses to get a physical flash address, mapped into
+        -- the right image region.
+        sp_host_image_flash_addr_offset: in signed(31 downto 0);
+        -- APOB region moves around in a given host image. The location of this is pre-determined (and stored in metadata)
+        -- the SP provides this absolute flash address for the start of the APOB region for the current image, 
+        --and we use this to determine if a given transaction is targeting the APOB region or not so we can adjust addresses accordingly.
+        amd_begin_apob_flash_addr: in std_logic_vector(31 downto 0);
+        -- SP provides the length of the remapping window to cover the APOB region that AMD will be fetching.
+        apob_window_len: in std_logic_vector(31 downto 0);
+        -- Absolute address of the desired APOB region in flash, used for address translation. 
+        -- This is the base address that corresponds to the start of the APOB region, which is what the SP provides to us, 
+        -- and then we add offsets to it based on the incoming transaction addresses to figure out where in flash we're actually reading from.
+        sp_apob_base_flash_addr: in std_logic_vector(31 downto 0);
         -- espi cmd fifo interface
         espi_cmd_fifo_rdata: in std_logic_vector(31 downto 0);
         espi_cmd_fifo_rdack: out std_logic;
@@ -123,17 +134,17 @@ begin
                     -- to unsigned also to do the math, so we add a leading zero bit, and then resize back down to 32bits.
                     -- normal flash address, just adjust by the offset
                     assert unsigned(v.raw_addr) < x"10000000" report "Address must be less than 256MB" severity failure;
-                    v.image_addr := std_logic_vector(resize(signed('0' & v.raw_addr) + cur_flash_addr_offset, 32));
+                    v.image_addr := std_logic_vector(resize(signed('0' & v.raw_addr) + sp_host_image_flash_addr_offset, 32));
 
                     -- Option 2: APOB slot 0 or 1
                     v.apob_addr := std_logic_vector(
-                        unsigned(cur_apob_flash_offset) + -- an absolute offset in flash
+                        unsigned(sp_apob_base_flash_addr) + -- an absolute offset in flash
                         unsigned(v.raw_addr) - 
-                        unsigned(cur_apob_flash_addr)
+                        unsigned(amd_begin_apob_flash_addr)
                     );
 
                     -- pre-calculate the end address of the APOB region so we can check against it later (again for timing)
-                    v.apob_end_addr := std_logic_vector((unsigned(cur_apob_flash_addr) + unsigned(cur_apob_flash_len)));
+                    v.apob_end_addr := std_logic_vector((unsigned(amd_begin_apob_flash_addr) + unsigned(apob_window_len)));
                 end if;
             when read_cmd_addr =>
                 -- The SP5 only knows about one flash slot, and hubris controls which
@@ -142,7 +153,7 @@ begin
                 -- on out.
                 -- Now check if the registered address lands in the active APOB region. If not,
                 -- use the active image address.
-                if unsigned(r.raw_addr) >= unsigned(cur_apob_flash_addr) and
+                if unsigned(r.raw_addr) >= unsigned(amd_begin_apob_flash_addr) and
                    unsigned(r.raw_addr) <  unsigned(r.apob_end_addr)then
                     v.cur_flash_addr := r.apob_addr;
                    else

@@ -130,7 +130,10 @@ addrmap spi_nor_regs {
 
     reg {
         name = "APOB Flash location address";
-        desc = "Allows the SP to configure the start of the flash range which is remapped to APOB flash region";
+        desc = "Allows the SP to configure the start of the flash range which is remapped to APOB flash region.
+        This is where AMD thinks the APOB region starts in its view of the world, so this is the address that AMD
+        would fetch the APOB and where the FPGA will start the remapping. The SP provides this.
+        Mapping is APOBFlashOffset +(APOBFlashAddr - AMD's raw address) when AMD's raw address is within the remapped APOB region (APOBFlashAddr <= AMD's raw address < APOBFlashAddr + ApobFlashLen).";
         field {
             desc = "Start address of the APOB flash region";
         } offset[31:0] = 0;
@@ -138,7 +141,10 @@ addrmap spi_nor_regs {
 
     reg {
         name = "APOB Flash length";
-        desc = "Allows the SP to configure the length of the flash range which is remapped to APOB flash region";
+        desc = "Allows the SP to configure the length of the flash range which is remapped to APOB flash region. 
+        This is added to APOBFlashAddr to determine the end of the APOB region in AMD raw addresses, and we use
+        this to determine if an incomming transaction requires remapping to the APOB region or not.
+        Mapping is APOBFlashOffset +(APOBFlashAddr - AMD's raw address) when AMD's raw address is within the remapped APOB region (APOBFlashAddr <= AMD's raw address < APOBFlashAddr + ApobFlashLen).";
         field {
             desc = "Length of the APOB flash region";
         } offset[31:0] = 0;
@@ -146,7 +152,9 @@ addrmap spi_nor_regs {
 
     reg {
         name = "APOB Flash offset address";
-        desc = "Allows the SP to configure the selected APOB region via its absolute address in flash";
+        desc = "Allows the SP to configure the selected APOB region via its absolute address in flash. This is a
+        physical flash address for the starting address of the selected APOB region.
+        Mapping is APOBFlashOffset +(APOBFlashAddr - AMD's raw address) when AMD's raw address is within the remapped APOB region (APOBFlashAddr <= AMD's raw address < APOBFlashAddr + ApobFlashLen).";
         field {
             desc = "Offset of the APOB flash slot";
         } offset[31:0] = 0;
