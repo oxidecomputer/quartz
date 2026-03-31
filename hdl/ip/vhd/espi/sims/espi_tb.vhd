@@ -52,6 +52,7 @@ begin
         variable gen_int         : integer;
         variable payload_size    : integer;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
+        variable pcfree_deasserted : boolean;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -309,6 +310,101 @@ begin
                 wait for 1 us;
                 read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000000"), "Post code count register did not reset after espi reset");
+
+            -- ============================================================
+            -- Verify that pc_free correctly deasserts when the RX FIFO
+            -- approaches capacity, and reasserts after draining.
+            -- Checks:
+            --   1. pc_free is TRUE when FIFO is empty
+            --   2. pc_free transitions to FALSE during fill (via response status)
+            --   3. oob_free_saw_full sticky bit is set
+            --   4. pc_free recovers to TRUE after UART loopback drains
+            -- ============================================================
+            elsif run("tla_pcfree_regression") then
+                enable_debug_mode(net);
+                -- Enable OOB Channel
+                cmd := build_set_config_cmd(CH2_CAPABILITIES_OFFSET, CH2_CAPABILITIES_CHAN_EN_MASK);
+                dbg_send_cmd(net, cmd);
+                dbg_wait_for_done(net);
+                dbg_get_response(net, 4, response);
+                check(response.crc_ok, "OOB enable CRC failed");
+
+                -- Verify pc_free is TRUE when FIFO is empty
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(espi_regs_pkg.LIVE_ESPI_STATUS_OFFSET, bus_handle.p_address_length),
+                         data_32);
+                check_equal(data_32(0), '1',
+                            "pc_free should be TRUE when FIFO is empty");
+
+                -- Fill the RX FIFO by sending PUT_OOB messages in a loop.
+                -- Each message carries 61 bytes of payload. The UART loopback
+                -- drains at ~15 bytes per PUT cycle, so net fill rate is ~46
+                -- bytes per iteration. We need FIFO to reach 4096-64 = 4032.
+                -- ~90 PUTs pushes well past the pc_free threshold.
+                pcfree_deasserted := false;
+                for batch in 0 to 89 loop
+                    payload_size := 61;
+                    my_queue := new_queue;
+                    for i in 0 to payload_size - 1 loop
+                        push_byte(my_queue, (batch + i) mod 256);
+                    end loop;
+                    dbg_send_uart_oob_no_pec_cmd(net, my_queue);
+                    dbg_wait_for_done(net);
+                    dbg_get_response(net, 4, response);
+                    check(response.crc_ok, "PUT batch " & integer'image(batch) & " CRC failed");
+                    -- Track pc_free in each PUT response status
+                    status_rec := unpack(response.status);
+                    if batch = 0 then
+                        check_equal(status_rec.pc_free, '1',
+                                    "pc_free should be TRUE in first PUT response");
+                    end if;
+                    if status_rec.pc_free = '0' and not pcfree_deasserted then
+                        report "pc_free deasserted at PUT batch " & integer'image(batch);
+                        pcfree_deasserted := true;
+                    end if;
+                end loop;
+                check(pcfree_deasserted,
+                      "pc_free never deasserted during fill loop");
+
+                wait for 1 us;
+
+                -- Read the RX FIFO used words for diagnostics
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(espi_regs_pkg.IPCC_HOST_TO_SP_USEDWDS_OFFSET, bus_handle.p_address_length),
+                         data_32);
+                gen_int := to_integer(unsigned(data_32));
+                report "RX FIFO host_to_sp usedwds after 90 PUTs: " & integer'image(gen_int);
+                -- FIFO should be past the pc_free threshold (4096-64 = 4032)
+                check(gen_int > 4032,
+                      "Expected RX FIFO usedwds > 4032, got " & integer'image(gen_int));
+
+                -- Read live eSPI status: verify pc_free and oob_free are FALSE
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(espi_regs_pkg.LIVE_ESPI_STATUS_OFFSET, bus_handle.p_address_length),
+                         data_32);
+                report "Live eSPI status after fill: " & to_hstring(data_32);
+                -- PC_FREE is bit 0, OOB_FREE is bit 3
+                check_equal(data_32(0), '0',
+                            "pc_free should be FALSE when FIFO is near-full");
+                check_equal(data_32(3), '0',
+                            "oob_free should be FALSE when FIFO is near-full");
+
+                -- Check the oob_free_saw_full sticky bit
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(espi_regs_pkg.OOB_FREE_SAW_FULL_OFFSET, bus_handle.p_address_length),
+                         data_32);
+                check_equal(data_32(0), '1',
+                            "oob_free_saw_full should be set (FIFO was near-full)");
+
+                -- Wait for UART loopback to drain enough bytes for pc_free
+                -- to recover. At CLKS_PER_BIT=41 / 125 MHz, one byte takes
+                -- ~3.28 us. We need to drain at most 64 bytes (210 us).
+                wait for 500 us;
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(espi_regs_pkg.LIVE_ESPI_STATUS_OFFSET, bus_handle.p_address_length),
+                         data_32);
+                check_equal(data_32(0), '1',
+                            "pc_free should recover to TRUE after UART drains");
 
             elsif run("put_iowr_short") then
                 put_iowr_short4(net, X"0080", X"EE0000A2", response_code, status,  crc_ok);
