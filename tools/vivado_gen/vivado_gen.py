@@ -39,6 +39,7 @@ class Project:
         report_file: str,
         max_threads: int,
         input_checkpoint: str,
+        version_hex: str = "",
     ):
         self.flow = flow
         self.part = part
@@ -52,6 +53,7 @@ class Project:
         self.report_file = report_file
         self.max_threads = max_threads
         self.input_checkpoint = Path(input_checkpoint)
+        self.version_hex = Path(version_hex) if version_hex else None
     
     @classmethod
     def from_dict(cls, inputs):
@@ -76,7 +78,8 @@ class Project:
             synth_args=inputs.get("synth_args"),
             report_file=inputs.get("report_file"),
             max_threads=inputs.get("max_threads"),
-            input_checkpoint=inputs.get("input_checkpoint", "")
+            input_checkpoint=inputs.get("input_checkpoint", ""),
+            version_hex=inputs.get("version_hex", ""),
         )
 def main():
 
