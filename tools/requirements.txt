@@ -2,7 +2,7 @@ systemrdl-compiler == 1.23.0
 click == 8.1.2
 Jinja2 == 3.1.6
 inflection == 0.5.1
-vunit_hdl == 5.0.0.dev5
+vunit_hdl == 5.0.0.dev9
 tomli-w == 1.2.0
 tomli == 2.2.1
 crc == 7.0.0
