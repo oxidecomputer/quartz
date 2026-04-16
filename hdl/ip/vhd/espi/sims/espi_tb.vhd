@@ -21,6 +21,7 @@ use work.espi_spec_regs_pkg.all;
 use work.espi_regs_pkg;
 use work.espi_dbg_vc_pkg.all;
 use work.espi_tb_pkg.all;
+use work.sp5_post_code_pkg.all;
 
 entity espi_tb is
     generic (
@@ -310,6 +311,71 @@ begin
                 wait for 1 us;
                 read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_COUNT_OFFSET, bus_handle.p_address_length), data_32);
                 check_equal(data_32, std_logic_vector'(x"00000000"), "Post code count register did not reset after espi reset");
+
+            elsif run("post_code_monitor_check") then
+                enable_debug_mode(net);
+                -- Send each tracked post code in turn, verifying the corresponding
+                -- sticky bit accumulates in the monitor register.
+                dbg_send_post_code(net, POST_CODE_BL_SUCCESS_C_MAIN);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000001"), "bl_success_c_main bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_TP_PROC_MEM_AFTER_MEM_DATA_INIT);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000003"), "tp_proc_mem_after_mem_data_init bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_TP_ABL7_RESUME_INITIALIZATION);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000007"), "tp_abl7_resume_initialization bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_TP_ABL_MEMORY_DDR_TRAINING_START);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"0000000f"), "tp_abl_memory_ddr_training_start bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_TP_PROC_CPU_OPTIMIZED_BOOT_START);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"0000001f"), "tp_proc_cpu_optimized_boot_start bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_TP_ABL4_APOB);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"0000003f"), "tp_abl4_apob bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_BL_SUCCESS_BIOS_LOAD_COMPLETE);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"0000007f"), "bl_success_bios_load_complete bit should be set");
+
+                dbg_send_post_code(net, POST_CODE_PHBLHELLO);
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"000000ff"), "phbl_hello bit should be set, all bits should now be set");
+
+                -- A non-matching post code must not change the monitor register.
+                dbg_send_post_code(net, x"DEADBEEF");
+                dbg_wait_for_done(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"000000ff"), "non-matching post code must not alter monitor register");
+
+                -- espi_reset must clear all monitor bits.
+                dbg_espi_reset(net);
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.POST_CODE_MONITOR_OFFSET, bus_handle.p_address_length), data_32);
+                check_equal(data_32, std_logic_vector'(x"00000000"), "monitor register must clear on espi reset");
 
             -- ============================================================
             -- Verify that pc_free correctly deasserts when the RX FIFO
