@@ -14,6 +14,7 @@ use work.espi_regs_pkg.all;
 use work.espi_spec_regs_view_pkg.all;
 use work.espi_spec_regs_pkg;
 use work.qspi_link_layer_pkg.all;
+use work.sp5_post_code_pkg.all;
 use work.axil15x32_pkg.all;
 use work.calc_pkg.log2ceil;
 
@@ -58,6 +59,7 @@ architecture rtl of espi_regs is
     signal oob_free_saw_full_reg : oob_free_saw_full_type;
     signal last_resp_status_reg : espi_status_type;
     signal live_status_reg : espi_status_type;
+    signal post_code_monitor_reg : post_code_monitor_type;
     constant BUFFER_ENTRIES : integer := 4096;
     constant BUFFER_ADDR_WIDTH : integer := log2ceil(BUFFER_ENTRIES);
     signal pc_buf_waddr : std_logic_vector(BUFFER_ADDR_WIDTH - 1 downto 0);
@@ -104,6 +106,7 @@ begin
             control_reg <= rec_reset;
             last_post_code_reg <= rec_reset;
             post_code_count_reg <= rec_reset;
+            post_code_monitor_reg <= rec_reset;
             pc_buf_waddr <= (others => '0');
             stuff_count <= rec_reset;
             stuff_enable <= rec_reset;
@@ -123,10 +126,12 @@ begin
             if espi_reset then
                 last_post_code_reg <= rec_reset;
                 post_code_count_reg <= rec_reset;
+                post_code_monitor_reg <= rec_reset;
                 pc_buf_waddr <= (others => '0');
             elsif post_code_valid then
                last_post_code_reg <= unpack(post_code);
                post_code_count_reg <= unpack(post_code_count_reg.count + 1);
+               post_code_monitor_reg <= post_code_monitor_reg or decode_post_code_monitor(post_code);
                pc_buf_waddr <= pc_buf_waddr + 1;
             end if;
         end if;
@@ -177,6 +182,7 @@ begin
                         resp_fifo_ack <= '1';
                     when LAST_POST_CODE_OFFSET => rdata <= pack(last_post_code_reg);
                     when POST_CODE_COUNT_OFFSET => rdata <= pack(post_code_count_reg);
+                    when POST_CODE_MONITOR_OFFSET => rdata <= pack(post_code_monitor_reg);
                     when IPCC_TO_HOST_USEDWDS_OFFSET =>
                         rdata <= resize(to_host_tx_fifo_usedwds, rdata'length);
                     when IPCC_TO_HOST_BYTE_CNTR_OFFSET =>
