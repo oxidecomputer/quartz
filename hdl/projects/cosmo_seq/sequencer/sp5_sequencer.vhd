@@ -241,6 +241,7 @@ begin
     nic_readbacks.ext_rst_l <= nic_seq.ext_rst_l;
     nic_readbacks.perst_l <= nic_seq.perst_l;
     nic_readbacks.cld_rst_l <= nic_seq.cld_rst_l;
+    nic_readbacks.sp5_perst_l <= sp5_t6_perst_l;
 
     fans_power_ok <= early_power_rdbks.fan_hsc_west_pg and 
                      early_power_rdbks.fan_hsc_central_pg and 

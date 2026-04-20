@@ -440,6 +440,9 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         field {
             desc = "sp5_mfg_mode_l live status, (From SP5 to FPGA)";
         } sp5_mfg_mode_l[1];
+        field {
+            desc = "sp5_perst_l live status, (From SP5 hotplug to FPGA)";
+        } sp5_perst_l[1];
     } nic_readbacks;
 
     reg {
