@@ -19,6 +19,40 @@ set output_bin [lindex $argv 1]
 set_param general.maxThreads {{project.max_threads}}
 open_checkpoint {{project.input_checkpoint.absolute().as_posix()}}
 
+{% if project.version_hex %}
+# Version stamping: patch the version ROM BRAM with real git data.
+# Read the replacement hex file (256 lines, one byte per line).
+set fp [open "{{project.version_hex.absolute().as_posix()}}" r]
+set hex_data {}
+while {[gets $fp line] >= 0} {
+    set line [string trim $line]
+    if {$line ne ""} {
+        lappend hex_data $line
+    }
+}
+close $fp
+
+# Find the version ROM BRAM cell by hierarchical name.
+set bram_cells [get_cells -hierarchical -filter {PRIMITIVE_TYPE =~ BMEM.bram.* && NAME =~ *version_rom*}]
+if {[llength $bram_cells] == 1} {
+    set bram [lindex $bram_cells 0]
+    # Build INIT_00 (256 bits = 32 bytes). Byte 0 is at bits [7:0]
+    # (rightmost in the hex string), byte 31 at bits [255:248].
+    set init_hex ""
+    for {set i 31} {$i >= 0} {incr i -1} {
+        if {$i < [llength $hex_data]} {
+            append init_hex [lindex $hex_data $i]
+        } else {
+            append init_hex "00"
+        }
+    }
+    set_property INIT_00 256'h$init_hex $bram
+    puts "Version ROM stamped: INIT_00 = $init_hex"
+} else {
+    puts "WARNING: Expected 1 version ROM BRAM, found [llength $bram_cells]"
+}
+{% endif %}
+
 #write_debug_probes -force $PROJ_DIR/${PROJ_NAME}.ltx
 # This is a bit funky with buck2 in that this command writes out both the
 # .bit and the .bin. We take both names in as arguments to make buck2 happy

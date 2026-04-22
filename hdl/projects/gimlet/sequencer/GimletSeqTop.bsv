@@ -41,16 +41,18 @@ endinterface
 //
 // This is the "inner-top" module, meaning we expect everything to already be synchronized.
 //
-module mkGimletInnerTop #(GimletSeqTopParameters parameters) (InnerTop);
+module mkGimletInnerTop #(GimletSeqTopParameters parameters,
+                          Vector#(4, Bit#(8)) ver,
+                          Vector#(4, Bit#(8)) sha) (InnerTop);
     // SPI interface
     SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync();
     SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     SpiDecodeIF decode <- mkSpiRegDecode();
     mkConnection(spi_sync.syncd_pins, phy.pins);
     mkConnection(decode.spi_byte, phy.decoder_if);  // Output of the SPI PHY block to the SPI decoder block (client/server interface)
-   
+
     // Register block
-    GimletRegIF regs <- mkGimletRegs();
+    GimletRegIF regs <- mkGimletRegs(ver, sha);
     mkConnection(decode.reg_con, regs.decoder_if);  // Client of SPI decoder to Server of registers block.
     // State machine blocks
     // NicBlockTop nic_block <- mkNicBlock(parameters.one_ms_counts);
@@ -209,8 +211,10 @@ endinterface
 
 module mkBench(Bench);
     let sim_params = GimletSeqTopParameters {one_ms_counts: 500};   // Speed up sim time
-    
-    InnerTop dut <- mkGimletInnerTop(sim_params);
+    // Sentinel values for simulation (real data stamped post-P&R)
+    Vector#(4, Bit#(8)) ver = reverse(unpack(32'hDEADBEEF));
+    Vector#(4, Bit#(8)) sha = reverse(unpack(32'hCAFEBABE));
+    InnerTop dut <- mkGimletInnerTop(sim_params, ver, sha);
 
     // SPI controller
     ModelSpiController controller <- mkModelSpiController();
