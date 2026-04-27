@@ -26,3 +26,8 @@ job_name = "gfruit-image"
 hubris_path = "drv/spartan7-loader/grapefruit"
 builder = "buck2"
 toolchain = "vivado"
+
+[observer-ignition]
+job_name = "observer-ignition-image"
+builder = "buck2"
+toolchain = "yosys"
