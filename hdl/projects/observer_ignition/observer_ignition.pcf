@@ -37,8 +37,8 @@ set_io --warn-no-port v1p2_fpga2_a2_pg K11
 set_io --warn-no-port v2p5_fpga2_a2_pg H10
 set_io --warn-no-port a2_en G10
 set_io --warn-no-port v3p3_sys_a2_pg D10
-set_io --warn-no-port v1p0_mgmt_a2_pg D9
-set_io --warn-no-port v2p5_mgmt_a2_pg E11
+set_io --warn-no-port v1p0_mgmt_a2_pg E11
+set_io --warn-no-port v2p5_mgmt_a2_pg D9
 set_io --warn-no-port sp_fault_l C11
 set_io --warn-no-port rot_fault_l B11
 
