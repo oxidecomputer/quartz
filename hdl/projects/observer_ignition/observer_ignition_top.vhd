@@ -22,6 +22,7 @@ entity observer_ignition_top is
         ign_trgt_fpga_spare_v3p3 : out std_logic_vector(7 downto 0);
         ign_trgt_id : in std_logic_vector(7 downto 0);
         ign_trgt_fpga_lvds_status_led_en_l : out std_logic;
+        a2_power_status_l : out std_logic;
         ign_trgt_fpga_pushbutton_reset_l : in std_logic;
         lvds_rsw0_to_ign_trgt_fpga_p : inout std_logic;
         lvds_ign_trgt_fpga_to_rsw0_p : inout std_logic;
@@ -42,7 +43,7 @@ end entity;
 architecture rtl of observer_ignition_top is
     signal sw0_serial_in : std_logic;
     signal sw0_serial_out : std_logic;
-    signal sw1_serial_in : std_logic := '0';
+    signal sw1_serial_in : std_logic;
     signal sw1_serial_out : std_logic;
     signal a2_pg : std_logic;
     signal led_counter : unsigned(24 downto 0) := (others => '0');
@@ -82,6 +83,8 @@ begin
             a2_pg <= v3p3_sys_a2_pg and v1p0_mgmt_a2_pg and v2p5_mgmt_a2_pg;
         end if;
     end process;
+
+    a2_power_status_l <= not a2_pg; -- Active low power good LED
 
     ignition_target_common_inst: entity work.ignition_target_common
      generic map(

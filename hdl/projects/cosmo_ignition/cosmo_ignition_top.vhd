@@ -53,7 +53,7 @@ end entity;
 architecture rtl of cosmo_ignition_top is
     signal sw0_serial_in : std_logic;
     signal sw0_serial_out : std_logic;
-    signal sw1_serial_in : std_logic := '0';
+    signal sw1_serial_in : std_logic;
     signal sw1_serial_out : std_logic;
     signal hotswap_restart_l : std_logic;
     signal led_counter : unsigned(24 downto 0) := (others => '0');
