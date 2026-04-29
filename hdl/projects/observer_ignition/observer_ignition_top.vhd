@@ -4,7 +4,7 @@
 --
 -- Copyright 2026 Oxide Computer Company
 
--- Cosmo Front Hot-plug FPGA targeting an ice40 HX8k
+-- Observer power shelf controller FPGA targeting an ice40 HX8k
 
 
 library ieee;
