@@ -1,12 +1,14 @@
 package AllEnable;
 
 import Connectable::*;
+import Vector::*;
 
 // Cobalt-provided stuff
 import ICE40::*;
 import SPI::*;
 
 import GimletRegs::*;
+import VersionROM::*;
 
 interface SpiPeripheralPinsTop;
     (* prefix = "" *)
@@ -116,8 +118,10 @@ module mkGimletPowerSeqTop (Pins);
     SpiPeripheralSync spi_sync <- mkSpiPeripheralPinSync();    
     SpiPeripheralPhy phy <- mkSpiPeripheralPhy();
     SpiDecodeIF decode <- mkSpiRegDecode();
-    // Regiser block
-    GimletRegIF regs <- mkGimletRegs();
+    // Version ROM (BRAM, stamped post-P&R)
+    VersionROMIfc ver_rom <- mkVersionROM;
+    // Register block
+    GimletRegIF regs <- mkGimletRegs(ver_rom.version, ver_rom.sha);
 
     //  SPI
     mkConnection(spi_sync.syncd_pins, phy.pins);    // Output of spi synchronizer to SPI PHY block (just pins interface)

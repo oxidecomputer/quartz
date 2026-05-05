@@ -31,7 +31,7 @@ bsv_library(
     srcs = ["SettableCRC.bsv"],
 )
 
-# Generate git version BSV file
+# Generate git version BSV file (legacy, kept for cobble compatibility)
 genrule(
     name = "git_version_bsv",
     visibility = ["PUBLIC"],
@@ -40,11 +40,35 @@ genrule(
     cmd_exe = "echo Not supported on Windows",
 )
 
-# bsv_library
+# bsv_library (legacy, kept for cobble compatibility)
 bsv_library(
     visibility = ["PUBLIC"],
     name = "GitVersion",
     srcs = [":git_version_bsv"],
+)
+
+# BRAM-backed version ROM for post-P&R stamping. Replaces GitVersion
+# in bitstream flows so that version data doesn't invalidate the cache.
+bsv_library(
+    visibility = ["PUBLIC"],
+    name = "VersionROM",
+    srcs = ["VersionROM.bsv"],
+)
+
+export_file(
+    name = "version_rom_template_hex",
+    src = "version_rom_template.hex",
+    visibility = ["PUBLIC"],
+)
+
+# Volatile genrule: generates replacement hex with real git data.
+# Only consumed by bitstream rules, so cache invalidation is limited
+# to the final stamp+pack steps.
+genrule(
+    name = "version_rom_replacement_hex",
+    visibility = ["PUBLIC"],
+    out = "version_rom_replacement.hex",
+    bash = "python3 $(location //tools:gen_version_hex) $OUT",
 )
 
 # bsv_library
