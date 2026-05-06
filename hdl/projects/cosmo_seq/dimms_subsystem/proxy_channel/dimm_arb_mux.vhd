@@ -66,7 +66,6 @@ entity dimm_arb_mux is
 
         fpga_i2c_has_bus : out std_logic;
         sp5_playback_i2c_has_bus : out std_logic;
-        forced_idle_delay : out std_logic;
         sp5_i2c_has_bus : out std_logic;
         
     );
@@ -125,13 +124,11 @@ architecture rtl of dimm_arb_mux is
         state       : sample_state_t;
         data_bits   : unsigned(6 downto 0);
         bit_count   : integer range 0 to 7;
-        allowed_to_handoff : std_logic;
     end record;
     constant SAMPLE_REG_RESET : sample_reg_t := (
         state          => SAMPLE_IDLE,
         data_bits       => (others => '0'),
-        bit_count       => 0,
-        allowed_to_handoff => '0'
+        bit_count       => 0
     );
     signal sample_r, sample_rin : sample_reg_t;
     signal dimm_i2c_idle : std_logic;
@@ -166,7 +163,6 @@ begin
                                          mux_r.state = POWER_UP_CLEAR or 
                                          mux_r.state = ENSURE_PLAYBACK_HOLD else '0';
     sp5_i2c_has_bus <= '1' when mux_r.state = CPU_HAS_BUS else '0';
-    forced_idle_delay <= '1' when  mux_r.state = BUS_IDLE_DELAY else '0';
     fpga_i2c_abort_or_finish <= mux_r.fpga_abort_or_finish;
 
     -- need to enforce minimum idle time on the bus before we can
