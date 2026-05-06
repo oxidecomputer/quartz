@@ -152,7 +152,13 @@ architecture rtl of dimm_arb_mux is
     signal playback_scl_fedge : std_logic;
     signal dimm_i2c_idle_cnts : integer range 0 to BUS_IDLE_MIN := 0;
 
+    -- Observability hook for unit-level testbench: NVC external names cannot
+    -- traverse record fields, so mirror sample_r.bit_count onto a scalar signal.
+    signal dbg_sample_bit_count : integer range 0 to 7 := 0;
+
 begin
+
+    dbg_sample_bit_count <= sample_r.bit_count;
 
     fpga_i2c_has_bus <= '1' when fpga_i2c_grant else '0';
     sp5_playback_i2c_has_bus <= '1' when mux_r.state = PLAY_STORED_START or 
