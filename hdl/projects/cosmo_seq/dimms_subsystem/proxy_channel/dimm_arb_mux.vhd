@@ -221,15 +221,16 @@ begin
                     -- as we could move the data on the other block.
                     v.data_bits(v.bit_count) := cpu_sda_in;
                     v.bit_count := v.bit_count + 1;
-                    if mux_r.playback_done = '1' or cpu_stop_detected = '1' then
+                    if v.bit_count = 7 then
                         -- all bits sampled, go back to idle
                         -- we should *always* get to playback done before we hit 7 bits.
-                       v.state := SAMPLE_IDLE;
-                    elsif v.bit_count = 7 then
-                        -- all bits sampled, go back to idle
-                        -- we should *always* get to playback done before we hit 7 bits.
-                       v.state := SAMPLE_ERROR;
+                        v.state := SAMPLE_ERROR;
                     end if;
+                end if;
+                if mux_r.playback_done = '1' or cpu_stop_detected = '1' then
+                    -- all bits sampled, go back to idle
+                    -- we should *always* get to playback done before we hit 7 bits.
+                    v.state := SAMPLE_IDLE;
                 end if;
             when SAMPLE_ERROR =>
                 -- Unexpected state, go back to idle
@@ -354,7 +355,7 @@ begin
             when ENSURE_PLAYBACK_HOLD =>
                 if mux_r.hold_timer < (FAST_SCL_PERIOD / 2) then
                     v.hold_timer := mux_r.hold_timer + 1;
-                else
+                elsif cpu_scl_in = '0' then  -- Need to make sure we transition on an SCL low after hold
                     v.hold_timer := 0;
                     v.state := CPU_HAS_BUS;
                 end if;
@@ -401,6 +402,9 @@ begin
         -- out of the playback states. We could end up in a scenario where we are transitioning
         -- out of playback *right* on or near an CPU scl edge which can cause runt pulses and make
         -- things unhappy as we'll have possibly missed a bit due to i2c glitch filtering.   
+        elsif mux_r.state = ENSURE_PLAYBACK_HOLD then
+           v.scl_cnts := 0;
+           -- scl will keep current state during the hold.
         elsif mux_r.state /= ENSURE_PLAYBACK_HOLD then
            v.scl_cnts := 0;
            v.scl_out := '1';
