@@ -50,6 +50,7 @@ begin
         variable rnd    : RandomPType;
         variable cpu_tx_q   : queue_t   := new_queue;
         variable cpu_ack_q  : queue_t   := new_queue;
+        variable request_msg : msg_t;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -310,9 +311,13 @@ begin
                 -- before releasing it, far below the t_HD;STA minimum of 260 ns (FAST_PLUS).
                 -- Observable: playback_active drops after a single cycle instead of persisting
                 -- through ENSURE_PLAYBACK_HOLD (~500 ns for FAST_PLUS at 125 MHz).
+                --
+                -- Send the I2C START non-blocking so the bench can immediately wait for
+                -- the playback_active rising edge rather than blocking in i2c_write_txn
+                -- for ~200 us while the playback window opens and closes.
                 wait for 15 us;
-                push_byte(cpu_tx_q, to_integer(std_logic_vector'(X"AA")));
-                i2c_write_txn(net, address(I2C_DIMM1F_TGT_VC), cpu_tx_q, cpu_ack_q, I2C_CTRL_VC0.p_actor);
+                request_msg := new_msg(i2c_send_start);
+                send(net, I2C_CTRL_VC0.p_actor, request_msg);
                 -- Wait for the mux to enter the playback window (PLAY_STORED_START asserts
                 -- sp5_playback_i2c_has_bus = '1').
                 wait until playback_active = '1' for 100 us;
@@ -324,6 +329,12 @@ begin
                 check_true(playback_active = '1',
                     "Bug GH # 498: playback_active dropped in under 200 ns -- " &
                     "ENSURE_PLAYBACK_HOLD was bypassed, start-condition hold time violated");
+                -- Clean up: let the start finish, then stop the transaction.
+                wait_until_idle(net, I2C_CTRL_VC0.p_actor);
+                request_msg := new_msg(i2c_send_stop);
+                send(net, I2C_CTRL_VC0.p_actor, request_msg);
+                wait_until_idle(net, I2C_CTRL_VC0.p_actor);
+                wait for 100 us;
 
             elsif run("spd_sm_prefetch_again") then
                 wait for 15 us; --allow power up clear

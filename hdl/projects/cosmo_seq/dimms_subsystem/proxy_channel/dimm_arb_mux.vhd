@@ -311,10 +311,11 @@ begin
             when PLAY_STORED_START =>
                 -- play back the stored start condition
                 -- if the CPU is still in the start condition but SCL is still high
-                -- just hand over the bus immediately. We'll have generated start already here.
+                -- go through ENSURE_PLAYBACK_HOLD to satisfy I2C t_HD;STA hold time.
                 v.dimm_sda_oe := '1';  --generate a start by pulling sda low
                 if sample_r.state = SAMPLE_START and cpu_scl_in = '1' then
-                    v.state := CPU_HAS_BUS;
+                    v.state := ENSURE_PLAYBACK_HOLD;
+                    v.hold_timer := 0;
                     v.playback_done := '1';
                 elsif playback_scl_fedge = '1'  then
                     if sample_r.state = SAMPLE_DATA and sample_r.bit_count > 0 then
