@@ -238,6 +238,7 @@ begin
             when SAMPLE_ERROR =>
                 -- Unexpected state, go back to idle
                 v.state := SAMPLE_IDLE;
+                v.bit_count := 0;
         end case;
 
         sample_rin <= v;
