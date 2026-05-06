@@ -343,7 +343,7 @@ begin
                 elsif playback_scl_fedge = '1' and mux_r.playback_bits < sample_r.bit_count then
                     -- oe = 1 is output = 0 so there's an inversion here.
                     v.dimm_sda_oe := not sample_r.data_bits(mux_r.playback_bits);
-                elsif  playback_scl_fedge = '1' and mux_r.playback_bits = sample_r.bit_count and cpu_scl_in = '0' then
+                elsif  playback_scl_fedge = '1' and mux_r.playback_bits = sample_r.bit_count then
                     -- we've played all the bits we have, just float sda until we can hand off
                     v.state := ENSURE_PLAYBACK_HOLD;
                     v.playback_done := '1';
