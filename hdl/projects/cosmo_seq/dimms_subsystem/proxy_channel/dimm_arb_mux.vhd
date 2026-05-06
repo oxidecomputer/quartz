@@ -337,18 +337,9 @@ begin
                 -- We're going to play back one bit per synthesized scl rising edge until we catch
                 -- up with the sampled bits. We'll to CPU_HAS_BUS only if we've caught up
                 -- and CPU's SCL is low so that the SDA handoff is clean.
-                
+
                 if playback_scl_redge = '1' then
                     v.playback_bits := mux_r.playback_bits + 1;
-                    if v.playback_bits = sample_r.bit_count and cpu_scl_in = '1' then
-                            v.state := ENSURE_PLAYBACK_HOLD;
-                            v.playback_done := '1';
-                            v.playback_bits := 0;
-                            v.hold_timer := 0;
-                            -- prevent small glitches or arbitration oddities. Since we've caught up
-                        -- and are at a scl fedge, match the CPU's sda line for a smooth transition
-                            v.dimm_sda_oe := not cpu_sda_in;
-                    end if;
                 elsif playback_scl_fedge = '1' and mux_r.playback_bits < sample_r.bit_count then
                     -- oe = 1 is output = 0 so there's an inversion here.
                     v.dimm_sda_oe := not sample_r.data_bits(mux_r.playback_bits);
