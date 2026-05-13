@@ -20,7 +20,7 @@ parser.add_argument("--token", default=None, help="Pass in your GitHub personal 
 parser.add_argument("--branch", default="main", help="Quartz branch to use for the artifact")
 parser.add_argument("--fpga", help="Name of FPGA project to release")
 parser.add_argument("--hubris", default=None, help="Path to hubris git checkout as target for copying files. Will skip if None")
-parser.add_argument("--local", default=False, action="store_true", help="Path to local build directory. Will skip if None")
+parser.add_argument("--local", default=False, action="store_true", help="Utilize local build directory, not GH.")
 parser.add_argument("--skip-gh", default=False, action="store_true", help="Skip doing GH release. Note that doing this still generates release metadata that just will be wrong")
 parser.add_argument("--zip", default=None, help="Path to zip file to use instead of downloading from GitHub")
 
@@ -49,7 +49,7 @@ def main():
         project_info.local = True
 
     # Only require a GitHub token when we actually need to talk to GitHub
-    needs_gh = not args.skip_gh or args.zip is None
+    needs_gh = not (args.skip_gh or args.zip is None)
     api = None
     if needs_gh:
         if args.token is not None:
@@ -91,7 +91,6 @@ def main():
     print(f"Materializing files at {hubris_path} for hubris commit")
     project_info.materialize_relevant_files(hubris_path, exclusions=hubris_ignore)
 
-    
 
 def process_gh_build(args, api, name: str):
 
