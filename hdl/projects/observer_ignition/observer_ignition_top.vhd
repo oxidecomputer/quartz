@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2026 Oxide Computer Company
 
 -- Observer power shelf controller FPGA targeting an ice40 HX8k
 

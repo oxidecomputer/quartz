@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
 
 -- Provides clock-crossing between the link layer and transaction layer
 -- and provides the debug mux for disconnecting the link layer and using

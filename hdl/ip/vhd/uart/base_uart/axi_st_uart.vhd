@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
 
 -- A very simple UART that streams rx'd bytes out an axi streaming port
 -- and transmits bytes from an input axi streaming port, no buffering

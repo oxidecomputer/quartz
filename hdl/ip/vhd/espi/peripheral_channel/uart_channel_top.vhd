@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
 
 -- This block provides the transaction queueing and management for the peripheral
 -- channel. It is responsible for queueing up transactions, issuing bytes to

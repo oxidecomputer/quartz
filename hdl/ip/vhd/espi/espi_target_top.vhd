@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
 
 -- Top level of the eSPI target block. This block is responsible for
 -- basic synchronization of the eSPI signals, and instantiation of the

@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
 
 -- Simple i2c glitch filtering for targets  I2C spec
 -- This block incurs a delay of 1 sync cycle and n filter cycles

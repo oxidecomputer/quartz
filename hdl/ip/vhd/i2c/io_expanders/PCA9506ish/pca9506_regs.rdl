@@ -1,4 +1,3 @@
-// Copyright 2025 Oxide Computer Company
 // This is SystemRDL description of emulated i2c mux registers
 regfile pca9506_raw_regs #(longint unsigned SIZE = 8) {
     default regwidth = SIZE;

@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2024 Oxide Computer Company
 
 -- Main command parser and processing for the eSPI transaction layer.
 -- Pulls from a FIFO from the link layer or debug layer and processes

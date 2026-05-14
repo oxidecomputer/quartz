@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2025 Oxide Computer Company
 
 -- This provides the digital portion of a 4 channel i2c mux, based on the software interface
 -- of a PCA9545.  Currently no interrupts are supported as we don't need them so those
