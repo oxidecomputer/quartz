@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2025 Oxide Computer Company
 
 -- Take an array of records from each of the 10 CEMs and generate
 -- input synchronizers for each of them, and give back an output

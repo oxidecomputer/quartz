@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2025 Oxide Computer Company
 
 -- This block provides the logic and control register for the i2c mux
 -- as well as the response logic for interfacing with the i2c_target_phy block

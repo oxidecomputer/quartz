@@ -1,4 +1,3 @@
-// Copyright 2025 Oxide Computer Company
 // This is SystemRDL description of emulated i2c mux registers
 
 addrmap emulated_pca9545_regs {

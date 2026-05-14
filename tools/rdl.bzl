@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-# Copyright 2024 Oxide Computer Company
 
 # RDL files can have 0 or more dependencies on other RDL files
 # This block provides the following providers:

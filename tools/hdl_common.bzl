@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-# Copyright 2024 Oxide Computer Company
 
 # This stuff is factored here because it is used potentially in multiple bzl files
 # and we don't want deal with possible circular dependencies

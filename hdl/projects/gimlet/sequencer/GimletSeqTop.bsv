@@ -1,4 +1,3 @@
-// Copyright 2021 Oxide Computer Company
 
 package GimletSeqTop;
 

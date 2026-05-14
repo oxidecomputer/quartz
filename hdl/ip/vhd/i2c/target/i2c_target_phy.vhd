@@ -2,7 +2,6 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Copyright 2025 Oxide Computer Company
 
 -- This block provides an i2c-compliant "phy" for use with additional logic
 -- to create i2c target functions. It is intended to be generic and shareable

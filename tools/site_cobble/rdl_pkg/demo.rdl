@@ -1,4 +1,3 @@
-// Copyright 2022 Oxide Computer Company
 // This is an example SystemRDL description of the sw-accesible registers
 
 regfile a_reg_block {
