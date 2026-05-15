@@ -237,10 +237,9 @@ begin
                 if seq_r.cnts = ONE_SECOND then
                     v.cnts := (others => '0');
                     v.state := RSM_RST_DEASSERT;
-                    -- we enable fault monitoring here on the group A rails and DDR, until we de-sequence
+                    -- we enable fault monitoring here on the group A rails until we de-sequence
                     -- these are expected to remain up.
                     v.group_a_expected := '1';  
-                    v.ddr_bulk_expected := '1';
                 end if;
             --  Release RSM_RST_L
             when RSM_RST_DEASSERT =>
@@ -269,6 +268,9 @@ begin
                    slp_s5_l_final = '1' and
                    is_power_good(ddr_bulk) then
                     v.state := GROUP_B_EN;
+                    v.ddr_bulk_expected := '1';
+                    -- DDR bulk is now expected to remain up, so we can enable fault monitoring on it. 
+                    --If it's not, we'll hang here until hubris aborts.
                 end if;
             -- Enable Group B supplies
             -- TODO: We need a pause/sync with hubris here after they have checked

@@ -15,7 +15,7 @@ library vunit_lib;
 
 use work.sp5_seq_sim_pkg.all;
 use work.sequencer_regs_pkg.all;
-use work.rail_model_msg_pkg.all;
+use work.rail_model_msg_pkg;
 use work.nic_model_msg_pkg.all;
 
 
@@ -37,8 +37,10 @@ begin
         alias sp5_t6_perst_l is << signal th.sp5_t6_perst_l : std_logic >>;
         variable read_data       : std_logic_vector(31 downto 0);
         variable seq_state       : seq_api_status_a0_sm;
-        constant grpa_v3p3_actor : actor_t := find("grpa_v3p3_sp5_a1");
-        constant nic_actor       : actor_t := find("nic_model");
+        constant grpa_v3p3_actor  : actor_t := find("grpa_v3p3_sp5_a1");
+        constant nic_actor        : actor_t := find("nic_model");
+        constant ddr_abcdef_actor : actor_t := find("rail_ddr_abcdef_hsc");
+        constant ddr_ghijkl_actor : actor_t := find("rail_ddr_ghijkl_hsc");
         variable nic_state : nic_api_status_nic_sm;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
@@ -186,6 +188,35 @@ begin
                 read_bus(net, bus_handle, To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
                 nic_state := encode(read_data(7 downto 0));
                 check_equal(nic_state = DONE, true, "Expected nic sequencer to return to DONE state after SP5 recovery");
+            elsif run("ddr_bulk_no_pg_abcdef_hsc") then
+                -- DDR bulk PG absent during sequencing stalls the SM at SLP_CHECKPOINT
+                -- (ddr_bulk_expected is only armed when SLP_CHECKPOINT advances, so no MAPO fires).
+                rail_model_msg_pkg.disable_power_good(net, ddr_abcdef_actor);
+                write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);
+                poll_for_seq_state(net, SP5_EARLY_CHECKPOINT);
+                read_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+                check_equal((read_data and IFR_A0MAPO_MASK) = x"00000000", true,
+                    "Expected no A0MAPO: absent DDR bulk PG should stall at SLP_CHECKPOINT, not fault");
+                read_bus(net, bus_handle, To_StdLogicVector(SEQ_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                seq_state := encode(read_data(7 downto 0));
+                check_equal(seq_state = SP5_EARLY_CHECKPOINT, true,
+                    "Expected sequencer stalled at SP5_EARLY_CHECKPOINT");
+                -- Restore PG and verify the sequence completes normally
+                rail_model_msg_pkg.enable_power_good(net, ddr_abcdef_actor);
+                poll_for_seq_state(net, DONE);
+            elsif run("ddr_bulk_no_pg_ghijkl_hsc") then
+                rail_model_msg_pkg.disable_power_good(net, ddr_ghijkl_actor);
+                write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);
+                poll_for_seq_state(net, SP5_EARLY_CHECKPOINT);
+                read_bus(net, bus_handle, To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+                check_equal((read_data and IFR_A0MAPO_MASK) = x"00000000", true,
+                    "Expected no A0MAPO: absent DDR bulk PG should stall at SLP_CHECKPOINT, not fault");
+                read_bus(net, bus_handle, To_StdLogicVector(SEQ_API_STATUS_OFFSET, bus_handle.p_address_length), read_data);
+                seq_state := encode(read_data(7 downto 0));
+                check_equal(seq_state = SP5_EARLY_CHECKPOINT, true,
+                    "Expected sequencer stalled at SP5_EARLY_CHECKPOINT");
+                rail_model_msg_pkg.enable_power_good(net, ddr_ghijkl_actor);
+                poll_for_seq_state(net, DONE);
             elsif run("nic_force_mapo") then
                 info("Starting normal A0 power sequence");
                 write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);
