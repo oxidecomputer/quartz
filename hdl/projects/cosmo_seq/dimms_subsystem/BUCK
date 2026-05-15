@@ -56,7 +56,7 @@ vunit_sim(
 
 vunit_sim(
     name = "spd_proxy_top_tb",
-    srcs = glob(["sims/*.vhd"], exclude = ["sims/*tb_pkg.vhd"]),
+    srcs = glob(["sims/*.vhd"], exclude = ["sims/*tb_pkg.vhd", "sims/dimm_arb_mux_tb.vhd"]),
     deps = [
         ":dimms_subsystem_top",
         ":spd_shared_sim_pkg",
@@ -65,5 +65,12 @@ vunit_sim(
         "//hdl/ip/vhd/vunit_components:i2c_target_vc",
         "//hdl/ip/vhd/vunit_components:i2c_controller_vc"
     ],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "dimm_arb_mux_tb",
+    srcs = ["sims/dimm_arb_mux_tb.vhd"],
+    deps = [":dimms_subsystem_top"],
     visibility = ['PUBLIC'],
 )

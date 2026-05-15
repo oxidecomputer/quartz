@@ -66,7 +66,6 @@ entity dimm_arb_mux is
 
         fpga_i2c_has_bus : out std_logic;
         sp5_playback_i2c_has_bus : out std_logic;
-        forced_idle_delay : out std_logic;
         sp5_i2c_has_bus : out std_logic;
         
     );
@@ -125,13 +124,11 @@ architecture rtl of dimm_arb_mux is
         state       : sample_state_t;
         data_bits   : unsigned(6 downto 0);
         bit_count   : integer range 0 to 7;
-        allowed_to_handoff : std_logic;
     end record;
     constant SAMPLE_REG_RESET : sample_reg_t := (
         state          => SAMPLE_IDLE,
         data_bits       => (others => '0'),
-        bit_count       => 0,
-        allowed_to_handoff => '0'
+        bit_count       => 0
     );
     signal sample_r, sample_rin : sample_reg_t;
     signal dimm_i2c_idle : std_logic;
@@ -152,7 +149,13 @@ architecture rtl of dimm_arb_mux is
     signal playback_scl_fedge : std_logic;
     signal dimm_i2c_idle_cnts : integer range 0 to BUS_IDLE_MIN := 0;
 
+    -- Observability hook for unit-level testbench: NVC external names cannot
+    -- traverse record fields, so mirror sample_r.bit_count onto a scalar signal.
+    signal dbg_sample_bit_count : integer range 0 to 7 := 0;
+
 begin
+
+    dbg_sample_bit_count <= sample_r.bit_count;
 
     fpga_i2c_has_bus <= '1' when fpga_i2c_grant else '0';
     sp5_playback_i2c_has_bus <= '1' when mux_r.state = PLAY_STORED_START or 
@@ -160,7 +163,6 @@ begin
                                          mux_r.state = POWER_UP_CLEAR or 
                                          mux_r.state = ENSURE_PLAYBACK_HOLD else '0';
     sp5_i2c_has_bus <= '1' when mux_r.state = CPU_HAS_BUS else '0';
-    forced_idle_delay <= '1' when  mux_r.state = BUS_IDLE_DELAY else '0';
     fpga_i2c_abort_or_finish <= mux_r.fpga_abort_or_finish;
 
     -- need to enforce minimum idle time on the bus before we can
@@ -219,19 +221,21 @@ begin
                     -- as we could move the data on the other block.
                     v.data_bits(v.bit_count) := cpu_sda_in;
                     v.bit_count := v.bit_count + 1;
-                    if mux_r.playback_done = '1' or cpu_stop_detected = '1' then
+                    if v.bit_count = 7 then
                         -- all bits sampled, go back to idle
                         -- we should *always* get to playback done before we hit 7 bits.
-                       v.state := SAMPLE_IDLE;
-                    elsif v.bit_count = 7 then
-                        -- all bits sampled, go back to idle
-                        -- we should *always* get to playback done before we hit 7 bits.
-                       v.state := SAMPLE_ERROR;
+                        v.state := SAMPLE_ERROR;
                     end if;
+                end if;
+                if mux_r.playback_done = '1' or cpu_stop_detected = '1' then
+                    -- all bits sampled, go back to idle
+                    -- we should *always* get to playback done before we hit 7 bits.
+                    v.state := SAMPLE_IDLE;
                 end if;
             when SAMPLE_ERROR =>
                 -- Unexpected state, go back to idle
                 v.state := SAMPLE_IDLE;
+                v.bit_count := 0;
         end case;
 
         sample_rin <= v;
@@ -305,10 +309,11 @@ begin
             when PLAY_STORED_START =>
                 -- play back the stored start condition
                 -- if the CPU is still in the start condition but SCL is still high
-                -- just hand over the bus immediately. We'll have generated start already here.
+                -- go through ENSURE_PLAYBACK_HOLD to satisfy I2C t_HD;STA hold time.
                 v.dimm_sda_oe := '1';  --generate a start by pulling sda low
                 if sample_r.state = SAMPLE_START and cpu_scl_in = '1' then
-                    v.state := CPU_HAS_BUS;
+                    v.state := ENSURE_PLAYBACK_HOLD;
+                    v.hold_timer := 0;
                     v.playback_done := '1';
                 elsif playback_scl_fedge = '1'  then
                     if sample_r.state = SAMPLE_DATA and sample_r.bit_count > 0 then
@@ -331,22 +336,13 @@ begin
                 -- We're going to play back one bit per synthesized scl rising edge until we catch
                 -- up with the sampled bits. We'll to CPU_HAS_BUS only if we've caught up
                 -- and CPU's SCL is low so that the SDA handoff is clean.
-                
+
                 if playback_scl_redge = '1' then
                     v.playback_bits := mux_r.playback_bits + 1;
-                    if v.playback_bits = sample_r.bit_count and cpu_scl_in = '1' then
-                            v.state := ENSURE_PLAYBACK_HOLD;
-                            v.playback_done := '1';
-                            v.playback_bits := 0;
-                            v.hold_timer := 0;
-                            -- prevent small glitches or arbitration oddities. Since we've caught up
-                        -- and are at a scl fedge, match the CPU's sda line for a smooth transition
-                            v.dimm_sda_oe := not cpu_sda_in;
-                    end if;
                 elsif playback_scl_fedge = '1' and mux_r.playback_bits < sample_r.bit_count then
                     -- oe = 1 is output = 0 so there's an inversion here.
                     v.dimm_sda_oe := not sample_r.data_bits(mux_r.playback_bits);
-                elsif  playback_scl_fedge = '1' and mux_r.playback_bits = sample_r.bit_count and cpu_scl_in = '0' then
+                elsif  playback_scl_fedge = '1' and mux_r.playback_bits = sample_r.bit_count then
                     -- we've played all the bits we have, just float sda until we can hand off
                     v.state := ENSURE_PLAYBACK_HOLD;
                     v.playback_done := '1';
@@ -359,7 +355,7 @@ begin
             when ENSURE_PLAYBACK_HOLD =>
                 if mux_r.hold_timer < (FAST_SCL_PERIOD / 2) then
                     v.hold_timer := mux_r.hold_timer + 1;
-                else
+                elsif cpu_scl_in = '0' then  -- Need to make sure we transition on an SCL low after hold
                     v.hold_timer := 0;
                     v.state := CPU_HAS_BUS;
                 end if;
@@ -406,6 +402,9 @@ begin
         -- out of the playback states. We could end up in a scenario where we are transitioning
         -- out of playback *right* on or near an CPU scl edge which can cause runt pulses and make
         -- things unhappy as we'll have possibly missed a bit due to i2c glitch filtering.   
+        elsif mux_r.state = ENSURE_PLAYBACK_HOLD then
+           v.scl_cnts := 0;
+           -- scl will keep current state during the hold.
         elsif mux_r.state /= ENSURE_PLAYBACK_HOLD then
            v.scl_cnts := 0;
            v.scl_out := '1';

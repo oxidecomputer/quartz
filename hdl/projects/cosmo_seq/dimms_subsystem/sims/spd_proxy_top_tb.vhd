@@ -32,18 +32,26 @@ entity spd_proxy_top_tb is
 end entity;
 
 architecture tb of spd_proxy_top_tb is
-
 begin
 
     th: entity work.spd_proxy_top_th;
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
+        -- Issue https://github.com/oxidecomputer/quartz/issues/498 
+        -- (PLAY_STORED_START hold-time) is the only dimm_arb_mux bug that is
+        -- observable at the integration level: STANDARD-mode CPU SCL is too slow
+        -- relative to the FAST_PLUS playback machine for Bugs 1/2/4 to manifest
+        -- before the start-hold-time branch fires, so those bugs are covered by
+        -- the unit-level testbench instead.
+        alias playback_active is
+            << signal th.DUT.proxy_channel_top_bus0.sp5_playback_i2c_has_bus : std_logic >>;
         variable cmd : cmd_type;
         variable data32 : std_logic_vector(31 downto 0);
         variable rnd    : RandomPType;
         variable cpu_tx_q   : queue_t   := new_queue;
         variable cpu_ack_q  : queue_t   := new_queue;
+        variable request_msg : msg_t;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -283,6 +291,51 @@ begin
                 write_bus(net, bus_handle, To_StdLogicVector(SPD_SELECT_OFFSET, bus_handle.p_address_length), data32);
                 read_bus(net, bus_handle, To_StdLogicVector(SPD_RDATA_OFFSET, bus_handle.p_address_length), data32);
                 check_match(data32, std_logic_vector'(X"DDCCBBAA"), "Read data mismatch");
+
+            -- -----------------------------------------------------------------------
+            -- Bug regression tests for dimm_arb_mux
+            --
+            -- Issue https://github.com/oxidecomputer/quartz/issues/498(start-condition hold time) is observable at the integration
+            -- level here.  With STANDARD-mode CPU SCL the FPGA abort completes long
+            -- before the CPU's first SCL falling edge, so PLAY_STORED_START always
+            -- fires the SAMPLE_START hold-time branch and Bugs 1/2/4 never get a
+            -- chance to manifest.  Those bugs are covered by the unit-level testbench
+            -- in dimm_arb_mux_tb.vhd, which drives sample_r.state directly.
+            -- -----------------------------------------------------------------------
+
+            elsif run("arb_bug_start_hold_time") then
+                -- when the CPU starts a transaction while the bus is idle, the mux
+                -- reaches PLAY_STORED_START while sample_r.state=SAMPLE_START and
+                -- cpu_scl_in='1' (CPU still in start hold-time).  The immediate branch
+                -- goes directly to CPU_HAS_BUS, skipping ENSURE_PLAYBACK_HOLD entirely.
+                -- The DIMM bus sees the FPGA drive SDA low for only one system clock (~8 ns)
+                -- before releasing it, far below the t_HD_STA minimum of 260 ns (FAST_PLUS).
+                -- Observable: playback_active drops after a single cycle instead of persisting
+                -- through ENSURE_PLAYBACK_HOLD (~500 ns for FAST_PLUS at 125 MHz).
+                --
+                -- Send the I2C START non-blocking so the bench can immediately wait for
+                -- the playback_active rising edge rather than blocking in i2c_write_txn
+                -- for ~200 us while the playback window opens and closes.
+                wait for 15 us;
+                request_msg := new_msg(i2c_send_start);
+                send(net, I2C_CTRL_VC0.p_actor, request_msg);
+                -- Wait for the mux to enter the playback window (PLAY_STORED_START asserts
+                -- sp5_playback_i2c_has_bus = '1').
+                wait until playback_active = '1' for 100 us;
+                check_true(playback_active = '1', "Bug GH # 498: playback never activated");
+                -- ENSURE_PLAYBACK_HOLD keeps playback_active='1' for FAST_SCL_PERIOD/2 cycles
+                -- = 62 * 8 ns = ~496 ns.  With Bug GH # 498 it drops in a single cycle (~8 ns).
+                -- Checking at 200 ns reliably distinguishes the two cases.
+                wait for 200 ns;
+                check_true(playback_active = '1',
+                    "Bug GH # 498: playback_active dropped in under 200 ns -- " &
+                    "ENSURE_PLAYBACK_HOLD was bypassed, start-condition hold time violated");
+                -- Clean up: let the start finish, then stop the transaction.
+                wait_until_idle(net, I2C_CTRL_VC0.p_actor);
+                request_msg := new_msg(i2c_send_stop);
+                send(net, I2C_CTRL_VC0.p_actor, request_msg);
+                wait_until_idle(net, I2C_CTRL_VC0.p_actor);
+                wait for 100 us;
 
             elsif run("spd_sm_prefetch_again") then
                 wait for 15 us; --allow power up clear
