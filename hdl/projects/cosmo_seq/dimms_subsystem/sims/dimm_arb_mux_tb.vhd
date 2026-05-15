@@ -6,9 +6,11 @@
 
 -- Unit-level testbench for dimm_arb_mux.
 --
--- Bug 1 cannot be triggered at the integration level: the FPGA abort always finishes
--- before the CPU's first SCL falling edge (~2-3 µs vs the 5 µs STANDARD half-period),
--- so PLAY_STORED_START is entered while sample_r.state=SAMPLE_START and Bug 3 fires
+-- https://github.com/oxidecomputer/quartz/issues/496 cannot be triggered at the integration 
+-- level: the FPGA abort always finishes
+-- before the CPU's first SCL falling edge (~2-3 us vs the 5 us STANDARD half-period),
+-- so PLAY_STORED_START is entered while sample_r.state=SAMPLE_START and 
+-- https://github.com/oxidecomputer/quartz/issues/498 fires
 -- instead.  Direct stimulus control lets us reach PLAY_STORED_DATA with bit_count=1
 -- while keeping cpu_scl_in='1' through the catch-up rising edge.
 
@@ -120,8 +122,8 @@ begin
 
         while test_suite loop
             if run("arb_bug_sda_glitch_during_playback") then
-                -- GH # 469
-                -- Release reset, wait for POWER_UP_CLEAR (~9 *� 1000 ns at FAST_PLUS)
+                -- Issue https://github.com/oxidecomputer/quartz/issues/469
+                -- Release reset, wait for POWER_UP_CLEAR (~9 x 1000 ns at FAST_PLUS)
                 -- and for dimm_i2c_idle to assert (~504 ns with both dimm lines held high).
                 reset <= '1';
                 clk_tick;
@@ -129,7 +131,7 @@ begin
                 wait for 10 us;
 
                 -- Step 1: CPU start condition: SDA falls while SCL is high.
-                -- cpu_start_detected fires� -> mux: IDLE ->�� CPU_REQ_GRANT.
+                -- cpu_start_detected fires -> mux: IDLE -> CPU_REQ_GRANT.
                 -- sample: SAMPLE_IDLE -> SAMPLE_START.
                 cpu_scl_in    <= '1';
                 cpu_sda_in    <= '0';
@@ -139,7 +141,7 @@ begin
                 clk_tick;
 
                 -- Step 2: CPU SCL falling edge.
-                -- sample: SAMPLE_START ->�� SAMPLE_DATA (bit_count still 0).
+                -- sample: SAMPLE_START -> SAMPLE_DATA (bit_count still 0).
                 cpu_scl_in    <= '0';
                 cpu_scl_fedge <= '1';
                 clk_tick;
@@ -155,9 +157,10 @@ begin
                 clk_tick;
 
                 -- Step 4: Grant the bus.
-                -- sample_r.state=SAMPLE_DATA (not SAMPLE_START) �->� GH #498 cannot fire
+                -- sample_r.state=SAMPLE_DATA (not SAMPLE_START) -> 
+                -- Issue https://github.com/oxidecomputer/quartz/issues/498 cannot fire
                 -- even though cpu_scl_in='1'.
-                -- mux: CPU_REQ_GRANT ->�� PLAY_STORED_START (dimm_i2c_idle='1' already).
+                -- mux: CPU_REQ_GRANT -> PLAY_STORED_START (dimm_i2c_idle='1' already).
                 bus_grant <= '1';
                 wait until sp5_playback_i2c_has_bus = '1';
 
@@ -169,13 +172,13 @@ begin
                 -- rising edge, releasing SDA while the playback SCL is still high.
                 --
                 -- Timeline from PLAY_STORED_START entry (playback SCL starts at '1'):
-                --   T + ~500 ns : first playback FEDGE → enter PLAY_STORED_DATA,
+                --   T + ~500 ns : first playback FEDGE -> enter PLAY_STORED_DATA,
                 --                 dimm_sda_oe set to not(data_bits(0))='1' (no change)
                 --   T + ~1000 ns: first playback REDGE, playback_bits=1=bit_count,
-                --                 cpu_scl_in='1' → Bug 1 exits to ENSURE_PLAYBACK_HOLD,
+                --                 cpu_scl_in='1' -> Bug 1 exits to ENSURE_PLAYBACK_HOLD,
                 --                 schedules dimm_sda_oe='0' for next cycle
-                --   T + ~1008 ns: playback_sda_if.oe '1'→'0' while playback_scl_if.o='1'
-                --                 → sda_glitch_monitor fires check_false → test fails
+                --   T + ~1008 ns: playback_sda_if.oe '1'->'0' while playback_scl_if.o='1'
+                --                 -> sda_glitch_monitor fires check_false -> test fails
                 cpu_sda_in <= '1';
                 wait for 2 us;
 
@@ -183,9 +186,9 @@ begin
                 wait for 500 ns;
 
             elsif run("arb_bug_playback_stall") then
-                -- Direct stimulus reproduction of Bug 2.
+                -- Direct stimulus reproduction of https://github.com/oxidecomputer/quartz/issues/497.
                 --
-                -- Bug GH # 497: in PLAY_STORED_DATA, when playback_bits catches up to bit_count
+                -- Bug: in PLAY_STORED_DATA, when playback_bits catches up to bit_count
                 -- at a falling playback SCL edge while cpu_scl_in='1', the exit condition
                 -- `playback_scl_fedge='1' and playback_bits=bit_count and cpu_scl_in='0'`
                 -- is FALSE because cpu_scl_in is '1'.  The following REDGE overshoots to
@@ -193,14 +196,14 @@ begin
                 -- so the machine spins in PLAY_STORED_DATA forever.
                 --
                 -- The setup is identical to the Bug GH # 496 test (SAMPLE_DATA, bit_count=1) but
-                -- the check monitors sp5_i2c_has_bus rather than SDA.  With Bug GH # 497 fixed the
-                -- mux exits to ENSURE_PLAYBACK_HOLD → CPU_HAS_BUS within ~2 us.
+                -- the check monitors sp5_i2c_has_bus rather than SDA.  With GH # 497 fixed the
+                -- mux exits to ENSURE_PLAYBACK_HOLD -> CPU_HAS_BUS within ~2 us.
                 reset <= '1';
                 clk_tick;
                 reset <= '0';
                 wait for 10 us;
 
-                -- CPU start condition: SAMPLE_IDLE ->�� SAMPLE_START, mux: IDLE ->�� CPU_REQ_GRANT.
+                -- CPU start condition: SAMPLE_IDLE -> SAMPLE_START, mux: IDLE -> CPU_REQ_GRANT.
                 cpu_scl_in    <= '1';
                 cpu_sda_in    <= '0';
                 cpu_sda_fedge <= '1';
@@ -208,7 +211,7 @@ begin
                 cpu_sda_fedge <= '0';
                 clk_tick;
 
-                -- CPU SCL falling edge: SAMPLE_START �-> SAMPLE_DATA (bit_count=0).
+                -- CPU SCL falling edge: SAMPLE_START -> SAMPLE_DATA (bit_count=0).
                 cpu_scl_in    <= '0';
                 cpu_scl_fedge <= '1';
                 clk_tick;
@@ -228,22 +231,33 @@ begin
                 clk_tick;
 
                 -- Grant bus with sample_r.state=SAMPLE_DATA (not SAMPLE_START) so Bug GH # 498
-                -- cannot fire.  Mux enters PLAY_STORED_START → PLAY_STORED_DATA.
+                -- cannot fire.  Mux enters PLAY_STORED_START -> PLAY_STORED_DATA.
                 bus_grant <= '1';
                 wait until sp5_playback_i2c_has_bus = '1';
 
                 -- Timeline from PLAY_STORED_START entry (playback SCL starts at '1'):
-                --   T + ~504 ns : FEDGE 1 → PLAY_STORED_DATA, playback_bits=0
-                --   T + ~1008 ns: REDGE 1 → playback_bits=1; cpu_scl_in='0' blocks Bug 1
+                --   T + ~504 ns : FEDGE 1 -> PLAY_STORED_DATA, playback_bits=0
+                --   T + ~1008 ns: REDGE 1 -> playback_bits=1; cpu_scl_in='0' blocks Bug 1
                 --   T + ~1512 ns: FEDGE 2 (catch-up FEDGE for bit_count=1)
                 -- Wait past REDGE 1 but before FEDGE 2, then raise cpu_scl_in='1' so the
-                -- Bug 2 exit condition (cpu_scl_in='0') is blocked at FEDGE 2.  With Bug 2
+                -- this bug's exit condition (cpu_scl_in='0') is blocked at FEDGE 2.  With Bug 2
                 -- the mux then stalls in PLAY_STORED_DATA forever.
                 wait for 1100 ns;
                 cpu_scl_in <= '1';
 
-                -- With Bug GH # 497 fixed, the FEDGE exit fires regardless of cpu_scl_in
-                -- when playback_bits=bit_count=1, and sp5_i2c_has_bus asserts within ~2 us.
+                -- Hold cpu_scl_in='1' past FEDGE 2 (~1512 ns) so we exercise the
+                -- PLAY_STORED_DATA FEDGE-exit-without-cpu_scl_in path, then drop
+                -- cpu_scl_in='0' so the ENSURE_PLAYBACK_HOLD handoff (gated on
+                -- cpu_scl_in='0' after the hold timer) can fire.
+                wait for 1 us;
+                cpu_scl_in    <= '0';
+                cpu_scl_fedge <= '1';
+                clk_tick;
+                cpu_scl_fedge <= '0';
+
+                -- With this bug fixed, the FEDGE exit fires regardless of cpu_scl_in
+                -- when playback_bits=bit_count=1; once cpu_scl_in drops low the
+                -- ENSURE_PLAYBACK_HOLD handoff completes and sp5_i2c_has_bus asserts.
                 wait until sp5_i2c_has_bus = '1' for 50 us;
                 check_true(sp5_i2c_has_bus = '1',
                     "Bug GH # 497: mux stalled in PLAY_STORED_DATA -- never reached CPU_HAS_BUS");
@@ -252,15 +266,15 @@ begin
                 wait for 500 ns;
 
             elsif run("arb_bug_sample_error_stale_bitcount") then
-                -- Direct stimulus reproduction of Bug 4 (GH # 499).
+                -- Direct stimulus reproduction of https://github.com/oxidecomputer/quartz/issues/499.
                 --
                 -- SAMPLE_ERROR is entered when bit_count reaches 7 (the bit_count subtype
-                -- saturates).  The buggy SAMPLE_ERROR → SAMPLE_IDLE transition does not
+                -- saturates).  The buggy SAMPLE_ERROR -> SAMPLE_IDLE transition does not
                 -- reset bit_count, so the next sample_r.bit_count read returns the stale
                 -- value 7.  The fix sets v.bit_count := 0 in SAMPLE_ERROR.
                 --
                 -- This is a white-box check: we drive seven CPU SCL rising edges to push
-                -- the sampler through SAMPLE_DATA → SAMPLE_ERROR → SAMPLE_IDLE, then read
+                -- the sampler through SAMPLE_DATA -> SAMPLE_ERROR -> SAMPLE_IDLE, then read
                 -- the internal bit_count via an external name.  bus_grant stays low so
                 -- the mux remains in CPU_REQ_GRANT (playback_done='0') and does not
                 -- short-circuit the sampler via mux_r.playback_done.
@@ -269,7 +283,7 @@ begin
                 reset <= '0';
                 wait for 10 us;
 
-                -- CPU start: SAMPLE_IDLE → SAMPLE_START (resets bit_count to 0).
+                -- CPU start: SAMPLE_IDLE -> SAMPLE_START (resets bit_count to 0).
                 cpu_scl_in    <= '1';
                 cpu_sda_in    <= '0';
                 cpu_sda_fedge <= '1';
@@ -277,7 +291,7 @@ begin
                 cpu_sda_fedge <= '0';
                 clk_tick;
 
-                -- First SCL falling edge: SAMPLE_START → SAMPLE_DATA.
+                -- First SCL falling edge: SAMPLE_START -> SAMPLE_DATA.
                 cpu_scl_in    <= '0';
                 cpu_scl_fedge <= '1';
                 clk_tick;
@@ -301,7 +315,7 @@ begin
                     end if;
                 end loop;
 
-                -- Allow SAMPLE_ERROR → SAMPLE_IDLE to settle.
+                -- Allow SAMPLE_ERROR -> SAMPLE_IDLE to settle.
                 for i in 0 to 3 loop
                     clk_tick;
                 end loop;

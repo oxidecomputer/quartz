@@ -38,7 +38,8 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
-        -- Bug 3 (PLAY_STORED_START hold-time) is the only dimm_arb_mux bug that is
+        -- Issue https://github.com/oxidecomputer/quartz/issues/498 
+        -- (PLAY_STORED_START hold-time) is the only dimm_arb_mux bug that is
         -- observable at the integration level: STANDARD-mode CPU SCL is too slow
         -- relative to the FAST_PLUS playback machine for Bugs 1/2/4 to manifest
         -- before the start-hold-time branch fires, so those bugs are covered by
@@ -294,7 +295,7 @@ begin
             -- -----------------------------------------------------------------------
             -- Bug regression tests for dimm_arb_mux
             --
-            -- Only Bug 3 (start-condition hold time) is observable at the integration
+            -- Issue https://github.com/oxidecomputer/quartz/issues/498(start-condition hold time) is observable at the integration
             -- level here.  With STANDARD-mode CPU SCL the FPGA abort completes long
             -- before the CPU's first SCL falling edge, so PLAY_STORED_START always
             -- fires the SAMPLE_START hold-time branch and Bugs 1/2/4 never get a
@@ -303,12 +304,12 @@ begin
             -- -----------------------------------------------------------------------
 
             elsif run("arb_bug_start_hold_time") then
-                -- Bug GH # 498: when the CPU starts a transaction while the bus is idle, the mux
+                -- when the CPU starts a transaction while the bus is idle, the mux
                 -- reaches PLAY_STORED_START while sample_r.state=SAMPLE_START and
                 -- cpu_scl_in='1' (CPU still in start hold-time).  The immediate branch
                 -- goes directly to CPU_HAS_BUS, skipping ENSURE_PLAYBACK_HOLD entirely.
                 -- The DIMM bus sees the FPGA drive SDA low for only one system clock (~8 ns)
-                -- before releasing it, far below the t_HD;STA minimum of 260 ns (FAST_PLUS).
+                -- before releasing it, far below the t_HD_STA minimum of 260 ns (FAST_PLUS).
                 -- Observable: playback_active drops after a single cycle instead of persisting
                 -- through ENSURE_PLAYBACK_HOLD (~500 ns for FAST_PLUS at 125 MHz).
                 --
