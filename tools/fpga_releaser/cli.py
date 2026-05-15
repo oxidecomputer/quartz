@@ -48,8 +48,14 @@ def main():
     if args.zip:
         project_info.local = True
 
-    # Only require a GitHub token when we actually need to talk to GitHub
-    needs_gh = not (args.skip_gh or args.zip is None)
+    if args.skip_gh and args.zip is None:
+        print("--skip-gh requires --zip or --local to supply a build archive")
+        sys.exit(1)
+
+    # Only require a GitHub token when we actually need to talk to GitHub.
+    # With --skip-gh we have a local archive (enforced above) and won't push a
+    # release, so the API client stays unused.
+    needs_gh = not args.skip_gh
     api = None
     if needs_gh:
         if args.token is not None:
