@@ -1,7 +1,7 @@
 # We're going to be handed a zip archive of the buck2 build
 # It contains a directory with some hash name
 # For a yosys build we're going to need the following things:
-# the bz2 file
+# the bz2 or bit file
 # the nextpnr log at that same directory called nextpnr.log
 # all the stuff in the _maps_ directory at that same level
 
@@ -24,6 +24,8 @@ def get_relevant_files_from_buck_zip(fpga_name, zip):
             if not _matches_fpga(fpga_name, item.filename):
                 continue
         if item.filename.endswith(".bz2"):
+            zip_names.append(item.filename)
+        if item.filename.endswith(".bit"):
             zip_names.append(item.filename)
         if "maps/" in item.filename and (item.filename.endswith(".json") or item.filename.endswith(".html")):
             zip_names.append(item.filename)
