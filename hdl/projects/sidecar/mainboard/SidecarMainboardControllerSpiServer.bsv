@@ -175,6 +175,10 @@ module mkSpiServer #(
                 fromOffset(fan1StateOffset): read(fans[1].state);
                 fromOffset(fan2StateOffset): read(fans[2].state);
                 fromOffset(fan3StateOffset): read(fans[3].state);
+                fromOffset(fan0DbgIoOffset): read(fans[0].dbg_io);
+                fromOffset(fan1DbgIoOffset): read(fans[1].dbg_io);
+                fromOffset(fan2DbgIoOffset): read(fans[2].dbg_io);
+                fromOffset(fan3DbgIoOffset): read(fans[3].dbg_io);
 
                 // Front IO
                 fromOffset(frontIoStateOffset): read(front_io_hsc);
@@ -200,6 +204,10 @@ module mkSpiServer #(
             fromOffset(fan1StateOffset): update(request.op, fans[1].state, request.wdata);
             fromOffset(fan2StateOffset): update(request.op, fans[2].state, request.wdata);
             fromOffset(fan3StateOffset): update(request.op, fans[3].state, request.wdata);
+            fromOffset(fan0DbgIoOffset): update(request.op, fans[0].dbg_io, request.wdata);
+            fromOffset(fan1DbgIoOffset): update(request.op, fans[1].dbg_io, request.wdata);
+            fromOffset(fan2DbgIoOffset): update(request.op, fans[2].dbg_io, request.wdata);
+            fromOffset(fan3DbgIoOffset): update(request.op, fans[3].dbg_io, request.wdata);
             fromOffset(frontIoStateOffset): update(request.op, front_io_hsc, request.wdata);
         endcase
 

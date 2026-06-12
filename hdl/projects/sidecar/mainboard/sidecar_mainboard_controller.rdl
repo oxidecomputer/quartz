@@ -32,6 +32,28 @@ reg fan_state {
     } ENABLE[0:0] = 0;
 };
 
+reg fan_dbg_io {
+    regwidth = 8;
+    default sw = rw;
+    default hw = r;
+
+    field {
+        desc = "Set to '1' to mux FPGA logic to these signals into the control path.";
+    } DEBUG_ENABLED[7:7] = 0;
+    field {
+        desc = "Used instead of FANx_HSC_TO_FPGA_PG.";
+    } POWER_GOOD[3:3] = 0;
+    field {
+        desc = "Simulate a fault from the fan HSC.";
+    } POWER_FAULT[2:2] = 0;
+    field {
+        desc = "Used instead of FANx_TO_FPGA_PRESENT_2V5.";
+    } PRESENT[1:1] = 0;
+    field {
+        desc = "Forces FPGA_TO_FANx_HSC_EN to this value.";
+    } ENABLE[0:0] = 0;
+};
+
 addrmap sidecar_mainboard_controller {
     name = "Sidecar Mainboard Controller";
     desc = "Register description of the Sidecar Mainboard Controller";
@@ -182,6 +204,18 @@ addrmap sidecar_mainboard_controller {
 
     fan_state FAN3_STATE;
     FAN3_STATE->name = "Fan 3 State";
+
+    fan_dbg_io FAN0_DBG_IO;
+    FAN0_DBG_IO->name = "Fan 0 Debug I/O";
+
+    fan_dbg_io FAN1_DBG_IO;
+    FAN1_DBG_IO->name = "Fan 1 Debug I/O";
+
+    fan_dbg_io FAN2_DBG_IO;
+    FAN2_DBG_IO->name = "Fan 2 Debug I/O";
+
+    fan_dbg_io FAN3_DBG_IO;
+    FAN3_DBG_IO->name = "Fan 3 Debug I/O";
 
     power_rail_state FRONT_IO_STATE @ 0x30;
     FRONT_IO_STATE->name = "Front IO State";

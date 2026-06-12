@@ -123,6 +123,7 @@ endinterface
 
 interface FanModuleRegisters;
     interface Reg#(FanState) state;
+    interface Reg#(FanDbgIo) dbg_io;
 endinterface
 
 interface FanModuleSequencer;
@@ -132,15 +133,23 @@ interface FanModuleSequencer;
 endinterface
 
 module mkFanModuleSequencer (FanModuleSequencer);
+    // Physical pins
+    Reg#(Bool) hsc_en_pin <- mkReg(False);
+    Reg#(Bool) hsc_pg_pin <- mkReg(False);
+    Reg#(Bool) hsc_fault_pin <- mkReg(False);
+
+    // Debug IO from SW-controlled registers
+    Reg#(FanDbgIo) fan_dbg_io <- mkReg(defaultValue);
+    Wire#(Bool) fan_pg_int <- mkDWire(False);
+    Wire#(Bool) fan_fault_int <- mkDWire(False); 
 
     // The device controlling the rail here is an ADM1272 hot swap controller.
     // Fault information is preserved until cleared via PMBUS OPERATION off or
     // CLEAR_FAULT, so this rail will disable on abort (losing PG during normal
-    // operation). PG Timeout is 10 ms.
-    //
-    // TODO(aaron): Change timeout from 0 (no timeout) back to 10 upon
-    // implementation of https://github.com/oxidecomputer/hardware-sidecar/issues/791
-    PowerRail#(4) adm1272 <- mkPowerRailDisableOnAbort(0);
+    // operation). PG Timeout is 25 ms.
+    PowerRail#(5) adm1272 <- mkPowerRailDisableOnAbort(25);
+    mkConnection(adm1272.pins.pg, fan_pg_int);
+    mkConnection(adm1272.pins.fault, fan_fault_int);
 
     // This represents the debounced fan presence signal. Presence will only be
     // asserted internally after being observed for 500ms on the pin while it
@@ -174,8 +183,28 @@ module mkFanModuleSequencer (FanModuleSequencer);
         end
     endrule
 
+    (* fire_when_enabled *)
+    rule do_io_mux;
+        if (fan_dbg_io.debug_enabled == 1) begin
+            hsc_en_pin <= unpack(fan_dbg_io.enable);
+            fan_pg_int <= unpack(fan_dbg_io.power_good);
+            fan_fault_int <= unpack(fan_dbg_io.power_fault);
+        end else begin
+            hsc_en_pin <= adm1272.pins.en();
+            fan_pg_int <= hsc_pg_pin;
+            fan_fault_int <= hsc_fault_pin;
+        end
+    endrule
+
     interface FanModulePins pins;
-        interface PowerRail::Pins hsc = adm1272.pins;
+        interface PowerRail::Pins hsc;
+            method en = hsc_en_pin;
+            method pg = hsc_pg_pin._write;
+            // fault is not wired up on Sidecar, but I hook things up here
+            // anyway in the event we ever do it would then just be a top
+            // level update
+            method fault = hsc_fault_pin._write;
+        endinterface
         method present = fan_present._write;
         method led = led;
     endinterface
@@ -195,6 +224,7 @@ module mkFanModuleSequencer (FanModuleSequencer);
                 enable_sw <= unpack(next.enable);
             endmethod
         endinterface
+        interface Reg dbg_io = fan_dbg_io;
     endinterface
 
     method tick_1ms = tick_1ms_;
