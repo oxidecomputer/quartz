@@ -1,0 +1,75 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "sgmii_pkg",
+    srcs = ["sgmii_pkg.vhd"],
+    deps = [
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "sgmii_pcs_rx",
+    srcs = ["sgmii_pcs_rx.vhd"],
+    deps = [
+        ":sgmii_pkg",
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+        "//hdl/ip/vhd/8b10b:decode_8b10b",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "sgmii_pcs_tx",
+    srcs = ["sgmii_pcs_tx.vhd"],
+    deps = [
+        ":sgmii_pkg",
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+        "//hdl/ip/vhd/8b10b:encode_8b10b",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "sgmii_an",
+    srcs = ["sgmii_an.vhd"],
+    deps = [
+        ":sgmii_pkg",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "sgmii_pcs",
+    srcs = ["sgmii_pcs.vhd"],
+    deps = [
+        ":sgmii_pkg",
+        ":sgmii_pcs_rx",
+        ":sgmii_pcs_tx",
+        ":sgmii_an",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "sgmii_pcs_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":sgmii_pcs",
+        ":sgmii_pkg",
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    visibility = ['PUBLIC'],
+)

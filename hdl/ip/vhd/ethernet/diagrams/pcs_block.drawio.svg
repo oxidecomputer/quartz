@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1080" height="560" viewBox="0 0 1080 560" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#33475b"/>
+    </marker>
+  </defs>
+  <style>
+    .blk  { fill:#dde7f7; stroke:#3a5a8c; stroke-width:1.8; }
+    .cod  { fill:#e7eefb; stroke:#3a5a8c; stroke-width:1.5; }
+    .an   { fill:#fbe6c8; stroke:#b9852e; stroke-width:1.8; }
+    .reg  { fill:#eef7ee; stroke:#3e7d3e; stroke-width:1.5; }
+    .t    { fill:#15212e; font-size:13px; }
+    .tb   { fill:#15212e; font-size:14px; font-weight:bold; }
+    .ts   { fill:#41556a; font-size:11px; }
+    .wire { stroke:#33475b; stroke-width:1.6; fill:none; }
+    .fb   { stroke:#3e7d3e; stroke-width:1.4; fill:none; stroke-dasharray:5 3; }
+  </style>
+
+  <text x="20" y="28" class="tb" font-size="16">sgmii_pcs internals (operates on aligned 10b code groups @125 MHz)</text>
+
+  <!-- ===== RX datapath (top) ===== -->
+  <text x="20" y="70" class="tb">Receive (line &#8594; GMII)</text>
+  <rect class="cod" x="150" y="85" width="150" height="60" rx="6"/>
+  <text x="225" y="110" class="t" text-anchor="middle">decode_8b10b</text>
+  <text x="225" y="128" class="ts" text-anchor="middle">10b &#8594; {k, data}</text>
+
+  <rect class="blk" x="350" y="80" width="190" height="70" rx="6"/>
+  <text x="445" y="104" class="t" text-anchor="middle">RX ordered-set FSM</text>
+  <text x="445" y="122" class="ts" text-anchor="middle">strip idle, recover frame</text>
+  <text x="445" y="138" class="ts" text-anchor="middle">/S/ &#8594; preamble, /T//R/ end</text>
+
+  <rect class="reg" x="150" y="170" width="150" height="40" rx="6"/>
+  <text x="225" y="195" class="ts" text-anchor="middle">RX running disparity</text>
+
+  <text x="40" y="120" class="ts">rx_code[9:0]</text>
+  <path class="wire" d="M110,115 L150,115" marker-end="url(#arr)"/>
+  <path class="wire" d="M300,115 L350,115" marker-end="url(#arr)"/>
+  <path class="wire" d="M540,105 L660,105" marker-end="url(#arr)"/>
+  <text x="600" y="96" class="ts" text-anchor="middle">g2r (8b, dv, er)</text>
+  <path class="fb" d="M225,170 L225,145"/>
+  <path class="fb" d="M225,145 L300,145"/>
+  <text x="232" y="165" class="ts">dispout&#8594;dispin</text>
+
+  <!-- config extract to AN -->
+  <path class="wire" d="M470,150 L470,250" marker-end="url(#arr)"/>
+  <text x="478" y="200" class="ts">/C/ config word</text>
+
+  <!-- ===== AN (middle) ===== -->
+  <rect class="an" x="350" y="250" width="320" height="120" rx="8"/>
+  <text x="510" y="274" class="tb" text-anchor="middle">sgmii_an &#8212; Clause-37 FSM</text>
+  <text x="510" y="296" class="ts" text-anchor="middle">ENABLE &#8594; RESTART &#8594; ABILITY &#8594; ACK</text>
+  <text x="510" y="312" class="ts" text-anchor="middle">&#8594; COMPLETE &#8594; IDLE &#8594; LINK_OK</text>
+  <text x="510" y="334" class="ts" text-anchor="middle">3&#215; ability/ack match, link timer</text>
+  <text x="510" y="352" class="ts" text-anchor="middle">resolves speed / duplex / link_up</text>
+
+  <path class="wire" d="M350,330 L300,330" marker-end="url(#arr)"/>
+  <text x="305" y="322" class="ts">xmit,</text>
+  <text x="305" y="350" class="ts">tx_config_word</text>
+  <path class="wire" d="M670,300 L760,300" marker-end="url(#arr)"/>
+  <text x="690" y="292" class="ts">speed/link/duplex</text>
+
+  <!-- ===== TX datapath (bottom) ===== -->
+  <text x="20" y="430" class="tb">Transmit (GMII &#8594; line)</text>
+  <rect class="blk" x="350" y="440" width="190" height="70" rx="6"/>
+  <text x="445" y="464" class="t" text-anchor="middle">TX ordered-set FSM</text>
+  <text x="445" y="482" class="ts" text-anchor="middle">idle /I/ , config /C/ ,</text>
+  <text x="445" y="498" class="ts" text-anchor="middle">/S/ data /T//R/ ; valid/ready</text>
+
+  <rect class="cod" x="600" y="445" width="150" height="60" rx="6"/>
+  <text x="675" y="470" class="t" text-anchor="middle">encode_8b10b</text>
+  <text x="675" y="488" class="ts" text-anchor="middle">{k, data} &#8594; 10b</text>
+
+  <rect class="reg" x="600" y="525" width="150" height="30" rx="6"/>
+  <text x="675" y="545" class="ts" text-anchor="middle">TX running disparity</text>
+
+  <text x="200" y="468" class="ts">r2g (8b, dv, er)</text>
+  <path class="wire" d="M310,475 L350,475" marker-end="url(#arr)"/>
+  <path class="wire" d="M540,475 L600,475" marker-end="url(#arr)"/>
+  <path class="wire" d="M750,470 L820,470" marker-end="url(#arr)"/>
+  <text x="790" y="462" class="ts" text-anchor="middle">tx_code[9:0]</text>
+  <path class="fb" d="M675,525 L675,505"/>
+
+  <!-- AN drives TX -->
+  <path class="wire" d="M445,370 L445,440" marker-end="url(#arr)"/>
+  <text x="452" y="410" class="ts">xmit / tx config</text>
+</svg>

@@ -1,0 +1,39 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "r2g_expander",
+    srcs = ["r2g_expander.vhd"],
+    deps = [
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "sgmii_to_rgmii",
+    srcs = ["sgmii_to_rgmii.vhd"],
+    deps = [
+        ":r2g_expander",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pcs",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_mac",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "sgmii_to_rgmii_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":sgmii_to_rgmii",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pcs",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
+    ],
+    visibility = ['PUBLIC'],
+)

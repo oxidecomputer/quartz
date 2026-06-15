@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1080" height="640" viewBox="0 0 1080 640" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#33475b"/>
+    </marker>
+  </defs>
+  <style>
+    .blk  { fill:#dde7f7; stroke:#3a5a8c; stroke-width:1.8; }
+    .ddr  { fill:#fbe6c8; stroke:#b9852e; stroke-width:1.6; }
+    .t    { fill:#15212e; font-size:13px; }
+    .tb   { fill:#15212e; font-size:14px; font-weight:bold; }
+    .ts   { fill:#41556a; font-size:11px; }
+    .wire { stroke:#33475b; stroke-width:1.6; fill:none; }
+    .sig  { stroke:#3a5a8c; stroke-width:1.6; fill:none; }
+    .clk  { stroke:#b9852e; stroke-width:1.6; fill:none; }
+  </style>
+
+  <text x="20" y="28" class="tb" font-size="16">rgmii_mac datapath (tri-speed, behavioral DDR wrappers)</text>
+
+  <!-- TX path -->
+  <text x="20" y="66" class="tb">Transmit (GMII g2r &#8594; RGMII)</text>
+  <rect class="blk" x="150" y="80" width="170" height="70" rx="6"/>
+  <text x="235" y="104" class="t" text-anchor="middle">phase / decimate</text>
+  <text x="235" y="122" class="ts" text-anchor="middle">sample 1 octet per</text>
+  <text x="235" y="138" class="ts" text-anchor="middle">byte period (&#247;N)</text>
+
+  <rect class="blk" x="360" y="80" width="170" height="70" rx="6"/>
+  <text x="445" y="104" class="t" text-anchor="middle">nibble / ctl mux</text>
+  <text x="445" y="122" class="ts" text-anchor="middle">lo/hi nibble, in-band</text>
+  <text x="445" y="138" class="ts" text-anchor="middle">status during IFG</text>
+
+  <rect class="ddr" x="570" y="80" width="170" height="70" rx="6"/>
+  <text x="655" y="104" class="t" text-anchor="middle">oddr_wrapper &#215;6</text>
+  <text x="655" y="122" class="ts" text-anchor="middle">txd[3:0], tx_ctl, txc</text>
+  <text x="655" y="138" class="ts" text-anchor="middle">DDR @1000 / SDR @100/10</text>
+
+  <text x="40" y="110" class="ts">g2r (8b)</text>
+  <path class="wire" d="M105,115 L150,115" marker-end="url(#arr)"/>
+  <path class="wire" d="M320,115 L360,115" marker-end="url(#arr)"/>
+  <path class="wire" d="M530,115 L570,115" marker-end="url(#arr)"/>
+  <path class="wire" d="M740,115 L820,115" marker-end="url(#arr)"/>
+  <text x="790" y="106" class="ts" text-anchor="middle">RGMII TX</text>
+  <text x="170" y="170" class="ts">speed &#8594; byte period = 1 / 10 / 100 clk cycles; txc = 125 / 25 / 2.5 MHz</text>
+
+  <!-- RX path -->
+  <text x="20" y="226" class="tb">Receive (RGMII &#8594; GMII r2g, rxc domain)</text>
+  <rect class="ddr" x="150" y="240" width="170" height="70" rx="6"/>
+  <text x="235" y="264" class="t" text-anchor="middle">iddr_wrapper &#215;5</text>
+  <text x="235" y="282" class="ts" text-anchor="middle">sample on rxc edges</text>
+  <text x="235" y="298" class="ts" text-anchor="middle">(clk-to-data skew)</text>
+
+  <rect class="blk" x="360" y="240" width="190" height="70" rx="6"/>
+  <text x="455" y="264" class="t" text-anchor="middle">recombine</text>
+  <text x="455" y="282" class="ts" text-anchor="middle">1000: byte / rxc cycle</text>
+  <text x="455" y="298" class="ts" text-anchor="middle">100/10: 2 cycles / byte</text>
+
+  <rect class="blk" x="590" y="240" width="170" height="70" rx="6"/>
+  <text x="675" y="264" class="t" text-anchor="middle">in-band decode</text>
+  <text x="675" y="282" class="ts" text-anchor="middle">link / speed / duplex</text>
+  <text x="675" y="298" class="ts" text-anchor="middle">during IFG (rx_ctl=0)</text>
+
+  <text x="40" y="270" class="ts">RGMII RX</text>
+  <path class="wire" d="M105,275 L150,275" marker-end="url(#arr)"/>
+  <path class="wire" d="M320,275 L360,275" marker-end="url(#arr)"/>
+  <path class="wire" d="M550,275 L590,275" marker-end="url(#arr)"/>
+  <path class="wire" d="M455,310 L455,360" marker-end="url(#arr)"/>
+  <text x="462" y="335" class="ts">r2g (8b) + rx_active</text>
+  <path class="wire" d="M675,310 L675,360" marker-end="url(#arr)"/>
+  <text x="682" y="335" class="ts">inband</text>
+
+  <!-- timing strip -->
+  <text x="20" y="420" class="tb">DDR (1000) vs SDR (100/10) framing of one byte B = {hi, lo}</text>
+
+  <!-- 1000 DDR -->
+  <text x="20" y="452" class="t">1000:</text>
+  <path class="clk" d="M70,470 L110,470 L110,445 L150,445 L150,470 L190,470 L190,445 L230,445 L230,470 L270,470"/>
+  <text x="60" y="474" class="ts" text-anchor="end">txc</text>
+  <line class="sig" x1="70" y1="500" x2="270" y2="500"/>
+  <line x1="110" y1="492" x2="110" y2="508" class="sig"/>
+  <line x1="150" y1="492" x2="150" y2="508" class="sig"/>
+  <line x1="190" y1="492" x2="190" y2="508" class="sig"/>
+  <line x1="230" y1="492" x2="230" y2="508" class="sig"/>
+  <text x="60" y="504" class="ts" text-anchor="end">txd</text>
+  <text x="130" y="497" class="ts" text-anchor="middle">lo</text>
+  <text x="170" y="497" class="ts" text-anchor="middle">hi</text>
+  <text x="210" y="497" class="ts" text-anchor="middle">lo'</text>
+  <text x="250" y="497" class="ts" text-anchor="middle">hi'</text>
+  <text x="300" y="486" class="ts">lo on rising edge, hi on falling edge: one byte per 125 MHz cycle</text>
+
+  <!-- 100/10 SDR -->
+  <text x="20" y="556" class="t">100/10:</text>
+  <path class="clk" d="M70,574 L150,574 L150,549 L230,549 L230,574 L310,574 L310,549 L390,549 L390,574 L430,574"/>
+  <text x="60" y="578" class="ts" text-anchor="end">txc</text>
+  <line class="sig" x1="70" y1="604" x2="430" y2="604"/>
+  <line x1="150" y1="596" x2="150" y2="612" class="sig"/>
+  <line x1="230" y1="596" x2="230" y2="612" class="sig"/>
+  <line x1="310" y1="596" x2="310" y2="612" class="sig"/>
+  <line x1="390" y1="596" x2="390" y2="612" class="sig"/>
+  <text x="60" y="608" class="ts" text-anchor="end">txd</text>
+  <text x="110" y="601" class="ts" text-anchor="middle">lo</text>
+  <text x="190" y="601" class="ts" text-anchor="middle">lo</text>
+  <text x="270" y="601" class="ts" text-anchor="middle">hi</text>
+  <text x="350" y="601" class="ts" text-anchor="middle">hi</text>
+  <text x="460" y="590" class="ts">same nibble on both edges; a byte spans two (divided) txc periods</text>
+</svg>

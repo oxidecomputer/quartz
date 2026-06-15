@@ -1,0 +1,8 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "gmii_pkg",
+    srcs = ["gmii_pkg.vhd"],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)

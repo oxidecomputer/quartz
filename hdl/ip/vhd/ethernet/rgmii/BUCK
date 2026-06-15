@@ -1,0 +1,73 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "rgmii_pkg",
+    srcs = ["rgmii_pkg.vhd"],
+    deps = [
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "oddr_wrapper",
+    srcs = ["ddr/oddr_wrapper.vhd"],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "iddr_wrapper",
+    srcs = ["ddr/iddr_wrapper.vhd"],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "rgmii_tx",
+    srcs = ["rgmii_tx.vhd"],
+    deps = [
+        ":rgmii_pkg",
+        ":oddr_wrapper",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "rgmii_rx",
+    srcs = ["rgmii_rx.vhd"],
+    deps = [
+        ":rgmii_pkg",
+        ":iddr_wrapper",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "rgmii_mac",
+    srcs = ["rgmii_mac.vhd"],
+    deps = [
+        ":rgmii_pkg",
+        ":rgmii_tx",
+        ":rgmii_rx",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "rgmii_mac_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":rgmii_mac",
+        ":rgmii_pkg",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    visibility = ['PUBLIC'],
+)

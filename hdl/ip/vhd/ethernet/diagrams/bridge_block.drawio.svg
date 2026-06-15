@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1180" height="560" viewBox="0 0 1180 560" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#33475b"/>
+    </marker>
+  </defs>
+  <style>
+    .mod   { fill:#dde7f7; stroke:#3a5a8c; stroke-width:2; }
+    .sub   { fill:#ffffff; stroke:#5b7aa8; stroke-width:1.5; }
+    .acc   { fill:#fbe6c8; stroke:#b9852e; stroke-width:1.5; }
+    .line  { fill:#eef7ee; stroke:#3e7d3e; stroke-width:1.5; }
+    .t     { fill:#15212e; font-size:13px; }
+    .tb    { fill:#15212e; font-size:14px; font-weight:bold; }
+    .ts    { fill:#41556a; font-size:11px; }
+    .wire  { stroke:#33475b; stroke-width:1.6; fill:none; }
+    .dom   { fill:none; stroke:#9bb0c9; stroke-width:1; stroke-dasharray:6 4; }
+  </style>
+
+  <text x="20" y="28" class="tb" font-size="16">SGMII &#8596; RGMII Bridge (sgmii_to_rgmii)</text>
+
+  <!-- clock-domain hint boxes -->
+  <rect class="dom" x="40" y="60" width="690" height="470" rx="6"/>
+  <text x="50" y="78" class="ts">system clock domain (125 MHz)</text>
+  <rect class="dom" x="745" y="300" width="300" height="200" rx="6"/>
+  <text x="755" y="318" class="ts">rxc domain (line rate)</text>
+
+  <!-- SGMII line endpoint -->
+  <rect class="line" x="55" y="200" width="120" height="120" rx="6"/>
+  <text x="115" y="235" class="t" text-anchor="middle">SGMII line</text>
+  <text x="115" y="255" class="ts" text-anchor="middle">1.25 Gbaud</text>
+  <text x="115" y="270" class="ts" text-anchor="middle">aligned 10b</text>
+  <text x="115" y="285" class="ts" text-anchor="middle">code groups</text>
+
+  <!-- PCS module -->
+  <rect class="mod" x="215" y="95" width="250" height="400" rx="8"/>
+  <text x="340" y="118" class="tb" text-anchor="middle">sgmii_pcs (Module 1)</text>
+
+  <rect class="sub" x="235" y="135" width="210" height="70" rx="6"/>
+  <text x="340" y="158" class="t" text-anchor="middle">RX: decode_8b10b</text>
+  <text x="340" y="176" class="ts" text-anchor="middle">ordered-set recovery</text>
+  <text x="340" y="192" class="ts" text-anchor="middle">/S/ data /T//R/ , err&#8594;rx_er</text>
+
+  <rect class="acc" x="235" y="225" width="210" height="60" rx="6"/>
+  <text x="340" y="248" class="t" text-anchor="middle">sgmii_an</text>
+  <text x="340" y="266" class="ts" text-anchor="middle">Clause-37 auto-neg FSM</text>
+
+  <rect class="sub" x="235" y="305" width="210" height="70" rx="6"/>
+  <text x="340" y="328" class="t" text-anchor="middle">TX: ordered-set gen</text>
+  <text x="340" y="346" class="ts" text-anchor="middle">encode_8b10b</text>
+  <text x="340" y="362" class="ts" text-anchor="middle">idle / config / frame</text>
+
+  <!-- RGMII module -->
+  <rect class="mod" x="765" y="95" width="240" height="400" rx="8"/>
+  <text x="885" y="118" class="tb" text-anchor="middle">rgmii_mac (Module 2)</text>
+
+  <rect class="sub" x="785" y="140" width="200" height="80" rx="6"/>
+  <text x="885" y="163" class="t" text-anchor="middle">rgmii_tx</text>
+  <text x="885" y="181" class="ts" text-anchor="middle">decimate &#247;N, nibble mux</text>
+  <text x="885" y="197" class="ts" text-anchor="middle">oddr_wrapper (DDR/SDR)</text>
+  <text x="885" y="213" class="ts" text-anchor="middle">TX_CTL = en / en^er</text>
+
+  <rect class="sub" x="785" y="345" width="200" height="80" rx="6"/>
+  <text x="885" y="368" class="t" text-anchor="middle">rgmii_rx</text>
+  <text x="885" y="386" class="ts" text-anchor="middle">iddr_wrapper capture</text>
+  <text x="885" y="402" class="ts" text-anchor="middle">recombine (1000/100/10)</text>
+  <text x="885" y="418" class="ts" text-anchor="middle">in-band status decode</text>
+
+  <!-- r2g rate expander -->
+  <rect class="acc" x="545" y="345" width="150" height="80" rx="6"/>
+  <text x="620" y="368" class="t" text-anchor="middle">r2g_expander</text>
+  <text x="620" y="386" class="ts" text-anchor="middle">dual-clock FIFO</text>
+  <text x="620" y="402" class="ts" text-anchor="middle">rxc &#8594; clk</text>
+  <text x="620" y="418" class="ts" text-anchor="middle">replicate &#215;N</text>
+
+  <!-- RGMII line endpoint -->
+  <rect class="line" x="1055" y="200" width="110" height="160" rx="6"/>
+  <text x="1110" y="232" class="t" text-anchor="middle">RGMII</text>
+  <text x="1110" y="248" class="t" text-anchor="middle">line</text>
+  <text x="1110" y="272" class="ts" text-anchor="middle">txc/tx_ctl</text>
+  <text x="1110" y="287" class="ts" text-anchor="middle">txd[3:0]</text>
+  <text x="1110" y="312" class="ts" text-anchor="middle">rxc/rx_ctl</text>
+  <text x="1110" y="327" class="ts" text-anchor="middle">rxd[3:0]</text>
+
+  <!-- forward path: SGMII line -> PCS RX -> g2r -> RGMII TX -> RGMII line -->
+  <path class="wire" d="M175,235 L235,200 L235,170" marker-end="url(#arr)"/>
+  <text x="190" y="190" class="ts">rx_code[9:0]</text>
+  <path class="wire" d="M445,170 L785,170" marker-end="url(#arr)"/>
+  <text x="600" y="160" class="t" text-anchor="middle">g2r (GMII 8b)</text>
+  <path class="wire" d="M985,180 L1055,235" marker-end="url(#arr)"/>
+
+  <!-- return path: RGMII line -> RGMII RX -> expander -> PCS TX -> SGMII line -->
+  <path class="wire" d="M1055,325 L985,385" marker-end="url(#arr)"/>
+  <path class="wire" d="M785,385 L695,385" marker-end="url(#arr)"/>
+  <text x="740" y="375" class="ts" text-anchor="middle">r2g</text>
+  <path class="wire" d="M545,385 L445,340" marker-end="url(#arr)"/>
+  <text x="500" y="378" class="ts" text-anchor="middle">r2g</text>
+  <path class="wire" d="M235,340 L235,300 L175,285" marker-end="url(#arr)"/>
+  <text x="180" y="320" class="ts">tx_code[9:0]</text>
+
+  <!-- speed / status -->
+  <path class="wire" d="M445,255 L885,255 L885,140" marker-end="url(#arr)"/>
+  <text x="620" y="245" class="t" text-anchor="middle">speed (resolved)</text>
+  <path class="wire" d="M340,225 L340,135" marker-end="url(#arr)"/>
+  <path class="wire" d="M340,205 L340,225"/>
+  <text x="352" y="218" class="ts">rx config /C/</text>
+  <path class="wire" d="M395,225 L395,150"/>
+  <text x="400" y="300" class="ts">xmit, tx cfg</text>
+  <path class="wire" d="M300,225 L300,310" />
+
+  <text x="50" y="520" class="ts">link_up / speed / duplex exported from sgmii_an; advertised ability is host-configured (PHY role).</text>
+</svg>
