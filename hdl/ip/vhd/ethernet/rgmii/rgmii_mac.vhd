@@ -15,6 +15,9 @@ use work.gmii_pkg.all;
 use work.rgmii_pkg.all;
 
 entity rgmii_mac is
+    generic (
+        TARGET : string := "SIM"   -- DDR primitive target (see iddr/oddr_wrapper)
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -41,6 +44,9 @@ architecture rtl of rgmii_mac is
 begin
 
     tx_inst: entity work.rgmii_tx
+        generic map (
+            TARGET => TARGET
+        )
         port map (
             clk          => clk,
             reset        => reset,
@@ -52,6 +58,9 @@ begin
         );
 
     rx_inst: entity work.rgmii_rx
+        generic map (
+            TARGET => TARGET
+        )
         port map (
             reset        => reset,
             speed        => speed,

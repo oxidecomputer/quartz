@@ -69,7 +69,7 @@ begin
                     if data_in_valid = '1' and data_in_align_ready = '1' then
                         
                         if ((data_in = K28_5n) or (data_in = K28_5p)) and align_cnts < MIN_PATTERNS_TO_LOCK then
-                            -- Found alignment pattern count it, 0 the symbole counter and continue
+                            -- Found alignment pattern count it, 0 the symbol counter and continue
                             align_cnts <= align_cnts + 1;
                             symbol_cnts <= (others => '0');
                         else

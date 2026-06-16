@@ -29,7 +29,8 @@ use work.rgmii_pkg.all;
 entity sgmii_to_rgmii is
     generic (
         INCLUDE_AUTONEG   : boolean  := true;
-        LINK_TIMER_CYCLES : positive := 1250000
+        LINK_TIMER_CYCLES : positive := 1250000;
+        TARGET            : string   := "SIM"   -- RGMII DDR primitive target
     );
     port (
         clk   : in    std_logic;
@@ -101,6 +102,9 @@ begin
         );
 
     rgmii_inst: entity work.rgmii_mac
+        generic map (
+            TARGET => TARGET
+        )
         port map (
             clk          => clk,
             reset        => reset,

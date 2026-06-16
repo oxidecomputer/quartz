@@ -4,9 +4,11 @@
 --
 -- Single-bit DDR output register. `d_rise` is presented during the clock-high
 -- phase (launched on the rising edge) and `d_fall` during the clock-low phase.
--- Only the behavioral SIM model is implemented today; the vendor generate
--- branches are reserved for Xilinx ODDR / Lattice ODDRX1F primitives so a board
--- target can be dropped in without touching the RGMII core.
+--
+-- TARGET selects the implementation:
+--   "SIM"    - behavioral DDR mux, for simulation/loopback.
+--   "XILINX" - UltraScale+ ODDRE1 primitive (d_rise -> D1, d_fall -> D2).
+-- The Lattice ODDRX1F branch is left as a stub for a future board target.
 
 library ieee;
     use ieee.std_logic_1164.all;
@@ -24,6 +26,26 @@ entity oddr_wrapper is
 end entity;
 
 architecture rtl of oddr_wrapper is
+
+    -- UltraScale+ DDR output register. Declared locally so the analyzer/LSP is
+    -- happy; Vivado binds it to the UNISIM cell by name during synthesis. This
+    -- branch is never elaborated under the SIM target the testbenches use.
+    component oddre1 is
+        generic (
+            is_c_inverted  : bit    := '0';
+            is_d1_inverted : bit    := '0';
+            is_d2_inverted : bit    := '0';
+            srval          : bit    := '0'
+        );
+        port (
+            q  : out   std_ulogic;
+            c  : in    std_ulogic;
+            d1 : in    std_ulogic;
+            d2 : in    std_ulogic;
+            sr : in    std_ulogic
+        );
+    end component;
+
 begin
 
     sim_gen: if TARGET = "SIM" generate
@@ -32,15 +54,26 @@ begin
         q <= d_rise when clk = '1' else d_fall;
     end generate;
 
-    -- xilinx_gen: if TARGET = "XILINX" generate
-    --     ODDR primitive (DDR_CLK_EDGE => "SAME_EDGE") instantiation
-    -- end generate;
+    xilinx_gen: if TARGET = "XILINX" generate
+        oddr_i: component oddre1
+            generic map (
+                srval => '0'
+            )
+            port map (
+                q  => q,
+                c  => clk,
+                d1 => d_rise,   -- launched on the rising edge of clk
+                d2 => d_fall,   -- launched on the falling edge of clk
+                sr => '0'
+            );
+    end generate;
+
     -- lattice_gen: if TARGET = "LATTICE" generate
     --     ODDRX1F primitive instantiation
     -- end generate;
 
-    assert TARGET = "SIM"
-        report "oddr_wrapper: only the SIM TARGET is implemented"
+    assert TARGET = "SIM" or TARGET = "XILINX"
+        report "oddr_wrapper: unsupported TARGET '" & TARGET & "'"
         severity failure;
 
 end architecture;

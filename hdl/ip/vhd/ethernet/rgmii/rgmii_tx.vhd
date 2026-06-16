@@ -20,6 +20,9 @@ use work.gmii_pkg.all;
 use work.rgmii_pkg.all;
 
 entity rgmii_tx is
+    generic (
+        TARGET : string := "SIM"   -- DDR primitive target (see oddr_wrapper)
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -98,6 +101,9 @@ begin
 
     txd_gen: for i in 0 to 3 generate
         oddr_i: entity work.oddr_wrapper
+            generic map (
+                TARGET => TARGET
+            )
             port map (
                 clk    => clk,
                 d_rise => txd_rise(i),
@@ -107,6 +113,9 @@ begin
     end generate;
 
     ctl_oddr: entity work.oddr_wrapper
+        generic map (
+            TARGET => TARGET
+        )
         port map (
             clk    => clk,
             d_rise => ctl_rise,
@@ -116,6 +125,9 @@ begin
 
     -- txc: DDR-forwarded 125 MHz clock at 1000, divided clock at 100/10
     txc_oddr: entity work.oddr_wrapper
+        generic map (
+            TARGET => TARGET
+        )
         port map (
             clk    => clk,
             d_rise => '1',

@@ -20,6 +20,9 @@ use work.gmii_pkg.all;
 use work.rgmii_pkg.all;
 
 entity rgmii_rx is
+    generic (
+        TARGET : string := "SIM"   -- DDR primitive target (see iddr_wrapper)
+    );
     port (
         reset : in    std_logic;
 
@@ -57,6 +60,9 @@ begin
 
     rxd_gen: for i in 0 to 3 generate
         iddr_i: entity work.iddr_wrapper
+            generic map (
+                TARGET => TARGET
+            )
             port map (
                 clk    => rgmii_rxc,
                 q      => rgmii_rxd(i),
@@ -66,6 +72,9 @@ begin
     end generate;
 
     ctl_iddr: entity work.iddr_wrapper
+        generic map (
+            TARGET => TARGET
+        )
         port map (
             clk    => rgmii_rxc,
             q      => rgmii_rx_ctl,
