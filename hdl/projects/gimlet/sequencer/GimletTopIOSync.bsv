@@ -9,6 +9,7 @@ import ICE40::*;
 import SPI::*;
 
 // Local stuff
+import Vector::*;
 import GimletSeqTop::*;
 import GimletSeqFpgaRegs::*;
 import A1Block::*;
@@ -16,6 +17,7 @@ import A0Block::*;
 import NicBlock::*;
 import PowerRail::*;
 import GimletRegs::*;
+import VersionROM::*;
 
 
 interface SpiPeripheralPinsTop;
@@ -306,7 +308,8 @@ module mkGimletSeqTop (SeqPins);
 
     InputSync sync <- mkInputSync();
 
-    let inner <- mkGimletInnerTop(synth_params, reset_by reset_sync);
+    VersionROMIfc ver_rom <- mkVersionROM(reset_by reset_sync);
+    let inner <- mkGimletInnerTop(synth_params, ver_rom.version, ver_rom.sha, reset_by reset_sync);
     
     ConfigReg#(BoardRev) brd_rev <- mkConfigRegU();
     

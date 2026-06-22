@@ -94,6 +94,7 @@ vivado_bitstream(
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["*ip.tcl"]),
     #post_synth_tcl_files=glob(["*ila.tcl"]),
+    version_replacement_hex = "//hdl/ip/bsv:version_rom_replacement_hex",
 )
 
 python_library(
