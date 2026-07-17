@@ -21,8 +21,8 @@ addrmap espi_regs {
         desc = "";
 
         field {
-            default sw = woclr;
             desc = "Sticky bit for alert, set to 1 when alert is needed, cleared by writing 1";
+            woclr = true;
         } alert[0:0] =  0;
     } flags;
 
@@ -49,9 +49,9 @@ addrmap espi_regs {
     reg {
         name = "Status Register";
         desc = "";
+        default sw = r;
 
         field {
-            default sw = r;
             desc = "Set to one to 1 when hw is running the spi transaction, no new transactions
             may be issued until it is finished. Technically represents cs_n being low.";
         } busy[0:0] =  0;
@@ -61,14 +61,14 @@ addrmap espi_regs {
     reg {
         name = "Fifo Status Register";
         desc = "";
+        default sw = r;
+
         field {
-            default sw = r;
             desc = "Show used words in command FIFO (word = 32bits/4 bytes),
             1024 words so 4kB";
         } cmd_used_wds[31:16] =  0;
 
         field {
-            default sw = r;
             desc = "Show used FIFO words in response FIFO (word = 32bits/4 bytes),
             1024 words so 4kB";
         } resp_used_wds[15:0] =  0;
@@ -127,52 +127,38 @@ addrmap espi_regs {
     reg {
         name = "Post Code Monitor";
         desc = "Monitor and set flags based on certain incoming post codes. This is useful for testing and debug to trigger certain actions based on post codes seen from the host.";
+        default sw = r;
+        default hw = w;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0x1de90001 - PHBLhello. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } phbl_hello[7:7] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xee1000bb - BL_SUCCESS_BIOS_LOAD_COMPLETE. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } bl_success_bios_load_complete[6:6] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xea00e0c9 - TpAbl4Apob. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } tp_abl4_apob[5:5] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xea00e055 - TpProcCpuOptimizedBootStart. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } tp_proc_cpu_optimized_boot_start[4:4] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xea00e340 - TpAblMemoryDdrTrainingStart - seen instead of TpAbl7ResumeInitialization when no eMCR. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } tp_abl_memory_ddr_training_start[3:3] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xea00e101 - TpAbl7ResumeInitialization - eMCR starting (not seen if no eMCR). Sticky: set when post code is seen, cleared by hardware on new boot.";
         } tp_abl7_resume_initialization[2:2] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xea00e046 - TpProcMemAfterMemDataInit - memory data initialised. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } tp_proc_mem_after_mem_data_init[1:1] = 0;
 
         field {
-            default sw = r;
-            default hw = w;
             desc = "0xee1000a0 - BL_SUCCESS_C_MAIN - Successfully entered Main. Sticky: set when post code is seen, cleared by hardware on new boot.";
         } bl_success_c_main[0:0] = 0;
 
@@ -189,8 +175,8 @@ addrmap espi_regs {
     reg {
         name = "IPCC_HOST_TO_SP_USEDWDS";
         desc = "Count of used words in the host-to-SP IPCC RX FIFO";
+        default sw = r;
         field {
-            default sw = r;
             desc = "";
         } count[31:0] = 0;
     } ipcc_host_to_sp_usedwds;
@@ -311,7 +297,7 @@ addrmap espi_regs {
         name = "OOB_FREE_SAW_FULL";
         desc = "Sticky bit: set to 1 if oob_free ever went low (RX FIFO nearly full) since last eSPI reset. Cleared only by eSPI reset.";
         field {
-            default sw = r;
+            sw = r;
             desc = "";
         } saw_full[0:0] = 0;
     } oob_free_saw_full;

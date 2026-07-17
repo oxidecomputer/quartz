@@ -11,9 +11,9 @@ addrmap info_regs {
     reg {
         name = "Identity";
         desc = "";
+        default sw = r;
 
         field {
-            default sw = r;
             desc = "Read-only bits showing 0x1de";
         } data[32] =  0x1de;
     } identity;
@@ -21,9 +21,9 @@ addrmap info_regs {
     reg {
         name = "Hubris Compatibility Straps";
         desc = "";
+        default sw = r;
 
         field {
-            default sw = r;
             desc = "Read-only bits showing resistor strapping for hubris compatibility value";
         } data[32] =  0;
     } hubris_compat;
@@ -31,9 +31,9 @@ addrmap info_regs {
     reg {
         name = "GIT SHORT SHA";
         desc = "";
+        default sw = r;
 
         field {
-             default sw = r;
             desc = "Read-only bits showing the 4byte short-sha of the git commit";
         } sha[32] =  0;
     } git_info;

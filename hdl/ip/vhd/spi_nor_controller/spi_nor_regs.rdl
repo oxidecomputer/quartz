@@ -34,35 +34,28 @@ addrmap spi_nor_regs {
     reg {
         name = "SPI Status Register";
         desc = "";
+        default sw = r;
         field {
-            default sw = r;
             desc = "Show used FIFO words in TX_FIFO (word = 32bits/4 bytes),
             max of 256 bytes, so 64 words";
         } tx_used_wds[30:24] =  0;
         field {
-            default sw = r;
             desc = "Set to one to 1 when TX FIFO is full";
         } tx_full[23:23] =  0;
          field {
-            default sw = r;
             desc = "Set to one to 1 when TX FIFO is empty";
         } tx_empty[22:22] =  0;
         field {
-            default sw = r;
             desc = "Show used FIFO words in RX_FIFO (word = 32bits/4 bytes),
             max of 256 bytes, so 64 words";
         } rx_used_wds[14:8] =  0;
         field {
-            default sw = r;
             desc = "Set to one to 1 when RX FIFO is full";
         } rx_full[7:7] =  0;
          field {
-            default sw = r;
             desc = "Set to one to 1 when RX FIFO is empty";
         } rx_empty[6:6] =  0;
-
         field {
-            default sw = r;
             desc = "Set to one to 1 when hw is running the spi transaction, no new transactions
             may be issued until it is finished. Technically represents cs_n being low.";
         } busy[0:0] =  0;
