@@ -15,4 +15,5 @@ addrmap cosmo_hp_top {
     info_regs info @ 0x0;
     pca9506_axi_regs cemAtoE_hotplug @ 0x0100;
     pca9506_axi_regs cemFtoJ_hotplug @ 0x0200;
+    hp_debug_regs debug @ 0x0300;
 };
