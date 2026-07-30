@@ -19,8 +19,49 @@ image::espi_block.drawio.svg[align="center"]
 
 This block deals with the physical layer of the eSPI interface and contains the serializer/deserializer
 and qspi I/O.  Sampled data is sent to the command processor (transaction layer) with a byte-wide streaming
-interface via a CDC FIFO.  Responses from the response processor (transaction layer) are received via a 
+interface via a CDC FIFO.  Responses from the response processor (transaction layer) are received via a
 byte-wide streaming interface (through CDC FIFO) and shipped out the serializer.
+
+==== Source-synchronous serdes
+
+The serdes is clocked directly by the eSPI SCLK rather than being oversampled in the
+fabric domain. Oversampling put a fixed ~10-16ns between a real SCLK edge and the
+resulting sample or launch, which is a whole half-period at 50MHz and beyond -- and was
+already close to failing on the output path at 20MHz. That latency cannot be reduced:
+one flop is the minimum on an asynchronous input, and the sample granularity is fixed by
+the fabric clock.
+
+The split is along the line of what has to keep working when SCLK is not running:
+
+* `espi_phy` -- shift registers, the command sizer, and the command/turnaround/response
+  phase state machine. Clocked by SCLK, with chip select as an asynchronous domain reset.
+  Keeping the sizer here means the phase boundary is exact and never crosses a domain; a
+  crossed phase decision would carry a cycle of uncertainty, which at 66MHz is most of a
+  bit time.
+* `link_txn_bookkeeper` -- byte handoff, WAIT_STATE insertion, and in-band reset
+  detection, in the fabric domain. In-band reset is recognised here rather than in the
+  sizer because it has to be reported when chip select rises, and there is no SCLK edge
+  left at that point to clock it out.
+* `resp_byte_xfifo` -- a small gray-pointer asynchronous FIFO carrying response bytes
+  into the SCLK domain. `dcfifo_xpm` cannot be used for this: its reset needs cycles of
+  both clocks, and SCLK stops between transactions, so a reset issued while idle would
+  never retire. This one takes an asynchronous clear from chip select instead.
+
+The packet FIFOs and the alert generator stay in the fabric domain.
+
+===== Sizer latency and the opcode fast path
+
+The sizer needs three SCLK to raise `valid` after a byte completes: one for the byte
+strobe to land and two state transitions. That was free when it ran at 200MHz, but these
+are now SCLK periods. A two-byte command such as GET_STATUS is 16 SCLK in single mode and
+8 in dual, so there is room -- but only 4 in quad, which is too late to place the
+turnaround.
+
+For every command whose length follows from the opcode alone, the answer is known the
+moment the first byte lands, so `espi_phy` takes that combinationally and leaves the
+sizer to the commands that carry a length in their header. Those are long enough that its
+latency does not matter. The fast path deliberately does not fire for the in-band reset
+opcode, which has no length and must never produce a response.
 
 This is the only block expected to run in the faster clock domain.  To realize this, functionality,
 we're leveraging the eSPI "WAIT_STATE" feature on every response, which allows us cycles to get from
@@ -66,6 +107,36 @@ We can do the same calculation for each of the speeds/modes resulting in this ta
 
 The physical-layer inserts these wait states automatically before fetching
 from the response FIFO as they are not counted in the CRC generation.
+
+==== Verifying the wait state table
+
+The derivation above is an estimate, and moving the serdes into the SCLK domain added a
+handoff it does not account for. The table was therefore checked against the simulator
+rather than re-derived on paper: `wait_states_from_freq_and_mode` was forced to a constant
+and the `mode_freq_sweep_*` tests run at each value. Too few wait states makes the link
+layer pad the response with 0xFF, which shows up immediately as a CRC mismatch.
+
+....
+forced count   first configuration to fail
+1              single/66MHz
+2              dual/66MHz
+3              quad/50MHz
+4              quad/66MHz
+5              none
+....
+
+Reading the minimum off the boundaries gives single/66 = 2, dual/66 = 3, quad/50 = 4 and
+quad/66 = 5, which is exactly what the table already says, and the counts for the
+remaining configurations are all sufficient. So the added SCLK-domain handoff did not
+grow the round trip enough to matter -- the response buffer absorbs it, since the wait
+states only have to cover the latency of the *first* byte.
+
+Two caveats. The tight configurations sit exactly on the boundary, with no margin: if the
+real round trip is even one byte-time longer than the simulation models it, quad at 66MHz
+will fail. And the sweep only exercises GET_STATUS, GET_CONFIGURATION and flash reads, so
+a command whose response the transaction layer is slower to produce could need more than
+the table gives it. The "4 slow clocks to do operational logic" in the derivation above is
+still an assumption, not a measurement.
 
 
 === Debug Interface

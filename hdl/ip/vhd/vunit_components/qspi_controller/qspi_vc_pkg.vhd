@@ -94,6 +94,22 @@ package qspi_vc_pkg is
         constant mode  : qspi_mode_t
     );
 
+    --! Set the SCLK period. Takes effect immediately, so only call this
+    --! between transactions. Named for the clock rather than matching the
+    --! `set_period` message type, since a constant and a procedure cannot
+    --! share an identifier.
+    procedure set_sclk_period (
+        signal net      : inout network_t;
+        constant actor  : actor_t;
+        constant period : time
+    );
+
+    --! Drop any queued tx/rx bytes. Useful between sweep iterations.
+    procedure reset_vc (
+        signal net     : inout network_t;
+        constant actor : actor_t
+    );
+
     procedure get_rx_queue (
         signal net     : inout network_t;
         constant actor : actor_t;
@@ -227,6 +243,31 @@ package body qspi_vc_pkg is
     begin
         push(request_msg, encode(mode));
         send(net, actor, request_msg);
+    end;
+
+    procedure set_sclk_period (
+        signal net      : inout network_t;
+        constant actor  : actor_t;
+        constant period : time
+    ) is
+
+        variable request_msg : msg_t := new_msg(set_period);
+
+    begin
+        push(request_msg, period);
+        send(net, actor, request_msg);
+    end;
+
+    procedure reset_vc (
+        signal net     : inout network_t;
+        constant actor : actor_t
+    ) is
+
+        variable request_msg : msg_t := new_msg(do_reset);
+
+    begin
+        send(net, actor, request_msg);
+        wait_until_idle(net, actor);
     end;
 
     procedure get_rx_queue (

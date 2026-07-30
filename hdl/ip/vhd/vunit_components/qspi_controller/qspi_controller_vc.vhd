@@ -109,6 +109,11 @@ begin
                     push(tx_byte_queue, a_byte);
                 end loop;
             end if;
+        elsif msg_type = do_reset then
+            -- Drop anything left over from a previous transaction so a sweep
+            -- can move to the next configuration from a known state.
+            flush(tx_byte_queue);
+            flush(rx_byte_queue);
         elsif msg_type = set_period then
             -- Control the sclk period via the api
             -- note that this takes effect immediately

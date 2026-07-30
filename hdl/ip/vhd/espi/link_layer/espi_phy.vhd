@@ -71,6 +71,14 @@ architecture rtl of espi_phy is
     signal size_info         : size_info_t;
     signal sizer_cmd         : byte_stream;
 
+    -- Fast path for opcode-determined packet lengths, see below.
+    signal first_byte      : std_logic_vector(7 downto 0);
+    signal have_first_byte : std_logic;
+    signal fast_hdr        : hdr_t;
+    signal fast_size_valid : std_logic;
+    signal eff_size        : std_logic_vector(12 downto 0);
+    signal eff_size_valid  : std_logic;
+
     -- I/O mode capture. The host can issue a SET_CONFIGURATION that changes
     -- the mode, and the command processor applies it mid-transaction -- but
     -- the response to that very command still has to go out in the old mode.
@@ -138,11 +146,13 @@ begin
             -- rx_toggle_r and rx_byte_r are deliberately absent here: see
             -- their declarations. They only carry meaning together, and both
             -- are stale-but-harmless between transactions.
-            rx_reg       <= (rx_reg'low => '1', others => '0');
-            rx_byte_stb  <= '0';
-            sclk_cnt     <= (others => '0');
-            mode_latched <= '0';
-            txn_mode_r   <= single;
+            rx_reg          <= (rx_reg'low => '1', others => '0');
+            rx_byte_stb     <= '0';
+            sclk_cnt        <= (others => '0');
+            mode_latched    <= '0';
+            txn_mode_r      <= single;
+            first_byte      <= (others => '0');
+            have_first_byte <= '0';
         elsif rising_edge(sclk) then
             rx_byte_stb <= '0';
             sclk_cnt    <= sclk_cnt + 1;
@@ -166,6 +176,10 @@ begin
                 rx_byte_stb <= '1';
                 rx_toggle_r <= not rx_toggle_r;
                 rx_reg      <= (rx_reg'low => '1', others => '0');
+                if have_first_byte = '0' then
+                    first_byte      <= nxt(7 downto 0);
+                    have_first_byte <= '1';
+                end if;
             else
                 rx_reg <= nxt;
             end if;
@@ -196,8 +210,30 @@ begin
 
     completed_byte_cnt <= shift_right(sclk_cnt, get_sclk_to_bytes_shift_amt_by_mode(mode_sel));
 
-    in_turnaround_phase <= size_info.valid = '1' and
-                           completed_byte_cnt >= size_info.size and
+    -- The sizer needs three SCLK to raise `valid` after a byte completes: one
+    -- for the byte strobe to land, then two state transitions. That was free
+    -- when it ran at 200MHz, but here those are SCLK periods. A two-byte
+    -- command is 16 SCLK in single mode and 8 in dual, so there is room -- but
+    -- only 4 in quad, and the turnaround has to be placed after the 4th edge.
+    --
+    -- For the commands whose length follows from the opcode alone, and that is
+    -- every short command including GET_STATUS, the answer is already known
+    -- the moment the first byte lands. Take it combinationally from there and
+    -- leave the sizer to the commands that carry a length in the header, which
+    -- are long enough that its latency does not matter. Note this deliberately
+    -- does not fire for the in-band reset opcode, which has no length and must
+    -- never produce a response.
+    fast_hdr.opcode     <= first_byte;
+    fast_hdr.cycle_type <= (others => '0');
+    fast_hdr.len        <= (others => '0');
+
+    fast_size_valid <= '1' when have_first_byte = '1' and known_size_by_opcode(fast_hdr) else '0';
+
+    eff_size_valid <= fast_size_valid or size_info.valid;
+    eff_size       <= size_by_header(fast_hdr) when fast_size_valid = '1' else size_info.size;
+
+    in_turnaround_phase <= eff_size_valid = '1' and
+                           completed_byte_cnt >= eff_size and
                            in_response_phase = '0';
 
     -- ------------------------------------------------------------------

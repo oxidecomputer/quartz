@@ -31,6 +31,74 @@ end entity;
 
 architecture tb of espi_tb is
 
+    -- One entry per link configuration exercised by the sweeps below. The
+    -- target and the controller VC have to be told separately: the target via
+    -- SET_CONFIGURATION, the VC through its own API. `qspi_mode_t` is declared
+    -- in both qspi_vc_pkg and espi_base_types_pkg, so it needs qualifying.
+    type link_cfg_t is record
+        io_mode  : work.qspi_vc_pkg.qspi_mode_t;
+        mode_sel : general_capabilities_io_mode_sel;
+        freq_sel : general_capabilities_op_freq_select;
+        period   : time;
+    end record;
+
+    type link_cfg_array_t is array (natural range <>) of link_cfg_t;
+
+    -- Every mode against every frequency the spec defines. 33 and 66MHz are
+    -- 30.303ns and 15.152ns respectively; rounded to the nearest ns here,
+    -- which errs slightly fast and so is the harsher test.
+    constant all_link_cfgs : link_cfg_array_t := (
+        (single, SINGLE, TWENTY,      50 ns),
+        (single, SINGLE, TWENTYFIVE,  40 ns),
+        (single, SINGLE, THIRTYTHREE, 30 ns),
+        (single, SINGLE, FIFTY,       20 ns),
+        (single, SINGLE, SIXTYSIX,    15 ns),
+        (dual,   DUAL,   TWENTY,      50 ns),
+        (dual,   DUAL,   TWENTYFIVE,  40 ns),
+        (dual,   DUAL,   THIRTYTHREE, 30 ns),
+        (dual,   DUAL,   FIFTY,       20 ns),
+        (dual,   DUAL,   SIXTYSIX,    15 ns),
+        (quad,   QUAD,   TWENTY,      50 ns),
+        (quad,   QUAD,   TWENTYFIVE,  40 ns),
+        (quad,   QUAD,   THIRTYTHREE, 30 ns),
+        (quad,   QUAD,   FIFTY,       20 ns),
+        (quad,   QUAD,   SIXTYSIX,    15 ns)
+    );
+
+    function cfg_name (constant cfg : link_cfg_t) return string is
+    begin
+        return general_capabilities_io_mode_sel'image(cfg.mode_sel) & "/" &
+               general_capabilities_op_freq_select'image(cfg.freq_sel);
+    end function;
+
+    -- Move both ends of the link to `cfg`. Order matters: the target latches
+    -- the I/O mode at chip select, so the response to the SET_CONFIGURATION
+    -- that changes the mode still comes back in the old one. The VC may only
+    -- switch after that transaction has completed.
+    procedure set_link_cfg (
+        signal net   : inout network_t;
+        constant cfg : link_cfg_t
+    ) is
+        variable vc_actor      : actor_t := find("espi_vc");
+        variable gen_cap       : general_capabilities_type;
+        variable data          : std_logic_vector(31 downto 0);
+        variable response_code : std_logic_vector(7 downto 0);
+        variable status        : std_logic_vector(15 downto 0);
+        variable crc_ok        : boolean;
+    begin
+        get_config(net, GENERAL_CAPABILITIES_OFFSET, data, response_code, status, crc_ok);
+        check(crc_ok, "set_link_cfg: GET_CONFIGURATION CRC failed moving to " & cfg_name(cfg));
+        gen_cap                := unpack(data);
+        gen_cap.io_mode_sel    := cfg.mode_sel;
+        gen_cap.op_freq_select := cfg.freq_sel;
+        set_config(net, GENERAL_CAPABILITIES_OFFSET, pack(gen_cap), response_code, status, crc_ok);
+        check(crc_ok, "set_link_cfg: SET_CONFIGURATION CRC failed moving to " & cfg_name(cfg));
+
+        set_mode(net, vc_actor, cfg.io_mode);
+        set_sclk_period(net, vc_actor, cfg.period);
+        wait for 1 us;
+    end procedure;
+
 begin
 
     th: entity work.espi_th;
@@ -478,7 +546,63 @@ begin
 
                 get_status(net, response_code, status, crc_ok);
                 check(crc_ok, "get status CRC Check failed");
-                
+
+            -- The sweeps below walk every I/O mode against every frequency the
+            -- spec defines. A CRC failure is the signal that matters: if the
+            -- wait-state count is too small for a configuration, the link layer
+            -- pads the response with 0xFF and the CRC stops matching.
+            elsif run("mode_freq_sweep_status") then
+                -- GET_STATUS is the shortest command there is (opcode plus
+                -- CRC), so the sizer has the least time to work out where the
+                -- turnaround falls. Quad at 66MHz leaves it two SCLK.
+                for i in all_link_cfgs'range loop
+                    set_link_cfg(net, all_link_cfgs(i));
+                    for rep in 0 to 1 loop
+                        get_status(net, response_code, status, crc_ok);
+                        check(crc_ok, "GET_STATUS CRC failed at " & cfg_name(all_link_cfgs(i)));
+                        expected_status := pack(status_t'(rec_reset));
+                        check_equal(status, expected_status,
+                                    "Status wrong at " & cfg_name(all_link_cfgs(i)));
+                    end loop;
+                end loop;
+
+            elsif run("mode_freq_sweep_config") then
+                -- Eight bytes out, eight back. Also covers the mode change
+                -- itself, since set_link_cfg is a config write.
+                for i in all_link_cfgs'range loop
+                    set_link_cfg(net, all_link_cfgs(i));
+                    get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                    check(crc_ok, "GET_CONFIGURATION CRC failed at " & cfg_name(all_link_cfgs(i)));
+                    check_equal(data_32(27 downto 26),
+                                std_logic_vector(to_unsigned(
+                                    general_capabilities_io_mode_sel'pos(all_link_cfgs(i).mode_sel), 2)),
+                                "io_mode_sel did not stick at " & cfg_name(all_link_cfgs(i)));
+                    check_equal(data_32(22 downto 20),
+                                std_logic_vector(to_unsigned(
+                                    general_capabilities_op_freq_select'pos(all_link_cfgs(i).freq_sel), 3)),
+                                "op_freq_select did not stick at " & cfg_name(all_link_cfgs(i)));
+                end loop;
+
+            elsif run("mode_freq_sweep_flash_read") then
+                -- The long-response path, and so the real test of whether the
+                -- wait-state count covers the round trip to the transaction
+                -- layer and back at each mode and frequency.
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status, crc_ok);
+                check(crc_ok, "Flash channel enable CRC failed");
+                for i in all_link_cfgs'range loop
+                    set_link_cfg(net, all_link_cfgs(i));
+                    put_flash_read(net, X"03020000", 16, response_code, status, crc_ok);
+                    check(crc_ok, "put_flash_read CRC failed at " & cfg_name(all_link_cfgs(i)));
+                    status_rec := unpack(status);
+                    if status_rec.flash_c_avail = '0' then
+                        wait_for_alert(net);
+                    end if;
+                    get_flash_c(net, 16, my_queue, response_code, status, crc_ok);
+                    check(crc_ok, "get_flash_c CRC failed at " & cfg_name(all_link_cfgs(i)));
+                    flush(my_queue);
+                end loop;
+
             end if;
         end loop;
         wait for 10 us;
@@ -486,7 +610,9 @@ begin
         wait;
     end process;
 
-    -- Example total test timeout dog
-    test_runner_watchdog(runner, 4 ms);
+    -- Example total test timeout dog. The mode/frequency sweeps walk 15
+    -- configurations in a single test case, so this is well above what any
+    -- individual test needs.
+    test_runner_watchdog(runner, 20 ms);
 
 end tb;
