@@ -70,3 +70,18 @@ set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -hold 1
 
 
+
+# #######################
+# eSPI Interface
+# #######################
+# The link layer clocks its serdes directly from the eSPI SCLK, so SCLK drives
+# a BUFG. espi_hpm_to_scm_clk lands on W3 (IO_L10P_T1_34), which is not a
+# clock-capable pin at all, so the clock reaches the BUFG through general
+# interconnect and the dedicated-route rule has to be waived.
+#
+# There are deliberately no eSPI timing constraints here. Grapefruit stays at
+# the default single-I/O 20MHz and is not a target for the faster modes -- with
+# an uncontrolled clock insertion delay there is nothing meaningful to
+# constrain against. Exercising the fast modes on this board would need SCLK
+# rewired to a clock-capable pin (T3/U3/U4 are SRCC/MRCC in the same bank).
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets espi_hpm_to_scm_clk_IBUF]

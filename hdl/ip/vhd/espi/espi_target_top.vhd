@@ -80,7 +80,6 @@ architecture rtl of espi_target_top is
     signal sp_to_host_espi : uart_resp_t;
     signal aborted_due_to_bad_crc : boolean;
     signal cs_n_syncd : std_logic;
-    signal sclk_syncd : std_logic;
     signal vwire_if : vwire_if_type;
     signal vwire_avail : std_logic;
     signal qspi_cmd : byte_stream;
@@ -126,16 +125,6 @@ begin
         sycnd_output => cs_n_syncd
     );
 
-    sclk_meta_sync_inst: entity work.meta_sync
-     generic map(
-        stages => 1
-    )
-     port map(
-        async_input => sclk,
-        clk => clk_200m,
-        sycnd_output => sclk_syncd
-    );
-
     wait_state_sync: entity work.bacd
      generic map(
         always_valid_in_b => true
@@ -169,12 +158,15 @@ begin
        bus_latch => qspi_mode_vec_fast
    );
 
-    qspi_link_layer_inst: entity work.link_layer
+    -- The link layer is source-synchronous: it clocks its serdes from sclk
+    -- directly, so it takes the raw pins rather than the fabric-synchronized
+    -- copies used elsewhere in this block.
+    qspi_link_layer_inst: entity work.espi_link_layer
      port map(
         clk => clk_200m,
         reset => reset_200m,
-        cs_n => cs_n_syncd,
-        sclk => sclk_syncd,
+        cs_n => cs_n,
+        sclk => sclk,
         io => io,
         io_o => io_o,
         io_oe => io_oe,

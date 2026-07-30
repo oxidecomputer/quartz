@@ -144,6 +144,16 @@ set_false_path -from [get_ports {*}] -to [get_ports {fpga1_spare_v1p8[*]}]
 # #######################
 # eSPI Interface
 # #######################
+# The link layer clocks its serdes directly from the eSPI SCLK, so SCLK drives
+# a BUFG. espi0_sp5_to_fpga1_clk lands on U3, which is the N side of the L11
+# SRCC pair -- for a single-ended input only the P side (U4, which the board
+# uses for dat[0]) can reach a clock buffer over the dedicated path. That is
+# fixed by the board, so the clock gets to the BUFG through general
+# interconnect and the dedicated-route rule has to be waived. The cost is extra
+# and less predictable clock insertion delay, which comes straight out of the
+# budget at the higher eSPI frequencies.
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets espi0_sp5_to_fpga1_clk_IBUF]
+
 # TODO: This is likely not correct but I need to re-write the link-layer logic again
 # and then re-constrain
 # 20MHz espi constraints, 50ns clock periods.
