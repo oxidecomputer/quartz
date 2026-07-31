@@ -179,6 +179,35 @@ than sending too many -- so the honest fix is to refuse the mode/frequency combi
 rather than to clamp.
 
 
+=== Advertised link capabilities
+
+The host decides how fast to drive the link by reading the read-only support fields of
+GENERAL_CAPABILITIES (spec register 0x08) and then selecting something within them. Those
+fields are driven by an SP-facing register, `link_caps`, in the AXI register block.
+
+It defaults to single I/O at 20MHz, which is what the block did before the register
+existed, so a system that never writes it behaves exactly as it used to. The SP is expected
+to write it before releasing the host from reset.
+
+Two things about it are worth knowing:
+
+* **It survives an eSPI in-band reset.** Everything else in the capability register is
+  cleared by one, and an in-band reset happens at the start of every boot -- so if the
+  advertised support were cleared with the rest, the link would drop to single/20MHz
+  permanently after the first one. The support fields are re-driven from `link_caps` on
+  every clock, which makes them immune to the ordering of the reset logic as well.
+* **The selection is clamped to it in hardware.** A host is not supposed to select beyond
+  what is advertised, but clamping means one that does cannot drive the link somewhere the
+  design has not been constrained for. The selection field still reads back whatever the
+  host wrote; it is the *effective* mode and frequency that are clamped. Note the I/O mode
+  support encoding is not ordered the way the selection is -- `Quad` means "single and quad
+  only", with dual excluded -- so this is a lookup rather than a numeric comparison.
+  Frequency support genuinely is a maximum, so that one is a comparison.
+
+This is also the intended mechanism for backing off in the field. If a sled turns out not
+to close timing at the frequency it was constrained for, the fix is a different value in
+this register, not a new bitstream.
+
 === Debug Interface
 We can enable a debug interface that muxes the streaming interfaces away from the serdes blocks and connects
 them to FIFOs that are accessible via the AXI bus. This allows software to inject eSPI commands and capture

@@ -26,6 +26,12 @@ entity espi_spec_regs is
         regs_if : view regs_side;
         espi_reset : in std_logic;
 
+        --! What to advertise to the host as supported, owned by the SP via the
+        --! AXI register block. These also cap what the host is allowed to
+        --! select -- see the clamp below.
+        adv_io_mode_support : in std_logic_vector(1 downto 0);
+        adv_op_freq_support : in std_logic_vector(2 downto 0);
+
         -- Read-only view of all spec registers for the sys_regs block
         spec_regs_view : view spec_regs_source;
 
@@ -48,6 +54,24 @@ architecture rtl of espi_spec_regs is
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
     signal qspi_freq        : qspi_freq_t;
+    signal eff_io_mode_sel     : general_capabilities_io_mode_sel;
+    signal eff_op_freq_select  : general_capabilities_op_freq_select;
+
+    --! Is `sel` within what `support` advertises? Note the support encoding is
+    --! not ordered the way the selection is: QUAD means "single and quad only",
+    --! with dual excluded, so this cannot be a numeric comparison.
+    function mode_is_allowed (
+        constant sel     : general_capabilities_io_mode_sel;
+        constant support : general_capabilities_io_mode_support
+    ) return boolean is
+    begin
+        case support is
+            when SINGLE => return sel = SINGLE;
+            when DUAL   => return sel = SINGLE or sel = DUAL;
+            when QUAD   => return sel = SINGLE or sel = QUAD;
+            when ANY    => return sel = SINGLE or sel = DUAL or sel = QUAD;
+        end case;
+    end function;
 
 begin
 
@@ -78,10 +102,10 @@ begin
         elsif rising_edge(clk) then
             if regs_if.addr = GENERAL_CAPABILITIES_OFFSET and regs_if.write = '1' then
                 gen_capabilities <= unpack(regs_if.wdata);
-                -- clean up RO fields by keeping current val
-                gen_capabilities.io_mode_support <= gen_capabilities.io_mode_support;
+                -- clean up RO fields by keeping current val. io_mode_support and
+                -- op_freq_support are handled once at the end of this process
+                -- instead, since they are driven by the SP rather than held.
                 gen_capabilities.alert_support <= gen_capabilities.alert_support;
-                gen_capabilities.op_freq_support <= gen_capabilities.op_freq_support;
                 gen_capabilities.flash_support <= gen_capabilities.flash_support;
                 gen_capabilities.oob_support <= gen_capabilities.oob_support;
                 gen_capabilities.virt_wire_support <= gen_capabilities.virt_wire_support;
@@ -138,6 +162,14 @@ begin
                 ch2_capabilities <= rec_reset;
                 ch3_capabilities <= rec_reset;
             end if;
+
+            -- Last word wins, so this one assignment covers the host write path,
+            -- the in-band reset above, and steady state alike. That matters:
+            -- what the target advertises belongs to the SP, and an in-band reset
+            -- happens at the start of every boot, so letting it fall back to the
+            -- register default would drop the link to single/20MHz for good.
+            gen_capabilities.io_mode_support <= encode(adv_io_mode_support);
+            gen_capabilities.op_freq_support <= encode(adv_op_freq_support);
         end if;
     end process;
 
@@ -169,14 +201,32 @@ begin
         end if;
     end process;
 
-    qspi_mode <= quad when gen_capabilities.io_mode_sel = quad else
-                 dual when gen_capabilities.io_mode_sel = dual else
+    -- The host is not supposed to select beyond what we advertise, but clamping
+    -- it in hardware means a host that does cannot drive the link somewhere the
+    -- design has not been constrained for. Falls back to the advertised maximum
+    -- rather than refusing outright, so the link stays usable.
+    eff_io_mode_sel <= gen_capabilities.io_mode_sel
+                       when mode_is_allowed(gen_capabilities.io_mode_sel,
+                                            gen_capabilities.io_mode_support)
+                       else SINGLE;
+
+    -- Frequency really is ordered, and the support field is a maximum, so this
+    -- one is a positional comparison. The two enums share an ordering, hence the
+    -- pos/val hop between them.
+    eff_op_freq_select <= gen_capabilities.op_freq_select
+                          when general_capabilities_op_freq_select'pos(gen_capabilities.op_freq_select) <=
+                               general_capabilities_op_freq_support'pos(gen_capabilities.op_freq_support)
+                          else general_capabilities_op_freq_select'val(
+                               general_capabilities_op_freq_support'pos(gen_capabilities.op_freq_support));
+
+    qspi_mode <= quad when eff_io_mode_sel = quad else
+                 dual when eff_io_mode_sel = dual else
                  single;
 
-    qspi_freq <= sixtysix when gen_capabilities.op_freq_select = sixtysix else
-                 fifty when gen_capabilities.op_freq_select = fifty else
-                 thirtythree when gen_capabilities.op_freq_select = thirtythree else
-                 twentyfive when gen_capabilities.op_freq_select = twentyfive else
+    qspi_freq <= sixtysix when eff_op_freq_select = sixtysix else
+                 fifty when eff_op_freq_select = fifty else
+                 thirtythree when eff_op_freq_select = thirtythree else
+                 twentyfive when eff_op_freq_select = twentyfive else
                  twenty;
     
 

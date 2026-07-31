@@ -111,6 +111,8 @@ architecture rtl of espi_target_top is
     signal host_to_sp_fifo_usedwds : std_logic_vector(12 downto 0);
     signal oob_free_saw_full : std_logic;
     signal live_espi_status : std_logic_vector(15 downto 0);
+    signal adv_io_mode_support : std_logic_vector(1 downto 0);
+    signal adv_op_freq_support : std_logic_vector(2 downto 0);
 
 begin
 
@@ -260,7 +262,9 @@ begin
        live_espi_status => live_espi_status,
        last_resp_status => last_resp_status,
        host_to_sp_fifo_usedwds => host_to_sp_fifo_usedwds,
-       oob_free_saw_full => oob_free_saw_full
+       oob_free_saw_full => oob_free_saw_full,
+       adv_io_mode_support => adv_io_mode_support,
+       adv_op_freq_support => adv_op_freq_support
    );
 
     -- txn layer blocks
@@ -307,6 +311,8 @@ begin
             espi_reset     => espi_reset_strobe_syncd,
             regs_if        => regs_if,
             spec_regs_view => spec_regs,
+            adv_io_mode_support => adv_io_mode_support,
+            adv_op_freq_support => adv_op_freq_support,
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
             flash_channel_enable => flash_channel_enable,

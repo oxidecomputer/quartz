@@ -37,7 +37,12 @@ entity espi_regs is
         live_espi_status : in std_logic_vector(15 downto 0);
         last_resp_status : in std_logic_vector(15 downto 0);
         host_to_sp_fifo_usedwds : in std_logic_vector(12 downto 0);
-        oob_free_saw_full : in std_logic
+        oob_free_saw_full : in std_logic;
+        --! What the target advertises to the host as supported. Passed as plain
+        --! vectors rather than the generated record so the spec register block
+        --! does not have to depend on this one's package.
+        adv_io_mode_support : out std_logic_vector(1 downto 0);
+        adv_op_freq_support : out std_logic_vector(2 downto 0)
     );
 end entity;
 
@@ -56,6 +61,7 @@ architecture rtl of espi_regs is
     signal stuff_count       : ipcc_dummy_fill_count_type;
     signal stuff_enable      : ipcc_dummy_fill_en_type;
     signal oob_free_saw_full_reg : oob_free_saw_full_type;
+    signal link_caps_reg : link_caps_type;
     signal last_resp_status_reg : espi_status_type;
     signal live_status_reg : espi_status_type;
     signal post_code_monitor_reg : post_code_monitor_type;
@@ -71,6 +77,8 @@ begin
     status_reg.busy <= dbg_chan.busy;
     flags_reg.alert <= dbg_chan.alert_pending;
     oob_free_saw_full_reg.saw_full <= oob_free_saw_full;
+    adv_io_mode_support <= link_caps_reg.io_mode_support;
+    adv_op_freq_support <= link_caps_reg.op_freq_support;
     last_resp_status_reg <= unpack(X"0000" & last_resp_status);
     live_status_reg <= unpack(X"0000" & live_espi_status);
 
@@ -109,6 +117,10 @@ begin
             pc_buf_waddr <= (others => '0');
             stuff_count <= rec_reset;
             stuff_enable <= rec_reset;
+            -- Deliberately not cleared by espi_reset below: the advertised
+            -- capabilities belong to the SP, and an in-band reset happens at
+            -- the start of every boot.
+            link_caps_reg <= rec_reset;
         elsif rising_edge(clk) then
             control_reg.cmd_fifo_reset <= '0';  -- self clearing
             control_reg.cmd_size_fifo_reset <= '0';  -- self clearing
@@ -119,6 +131,7 @@ begin
                     when CONTROL_OFFSET => control_reg <= unpack(axi_if.write_data.data);
                     when IPCC_DUMMY_FILL_COUNT_OFFSET => stuff_count <= unpack(axi_if.write_data.data);
                     when IPCC_DUMMY_FILL_EN_OFFSET => stuff_enable <= unpack(axi_if.write_data.data);
+                    when LINK_CAPS_OFFSET => link_caps_reg <= unpack(axi_if.write_data.data);
                     when others => null;
                 end case;
             end if;
@@ -198,6 +211,8 @@ begin
                         rdata <= resize(host_to_sp_fifo_usedwds, rdata'length);
                     when OOB_FREE_SAW_FULL_OFFSET =>
                         rdata <= pack(oob_free_saw_full_reg);
+                    when LINK_CAPS_OFFSET =>
+                        rdata <= pack(link_caps_reg);
                     -- Read-only eSPI spec registers (base 0x0080)
                     when SPEC_REGS_DEVICE_ID_OFFSET =>
                         rdata <= espi_spec_regs_pkg.pack(spec_regs_view.device_id);

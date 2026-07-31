@@ -302,6 +302,47 @@ addrmap espi_regs {
         } saw_full[0:0] = 0;
     } oob_free_saw_full;
 
+    reg {
+        name = "Advertised Link Capabilities";
+        desc = "Controls what the target advertises to the eSPI host in the read-only
+        support fields of GENERAL_CAPABILITIES (spec register 0x08). The host reads those
+        to decide what to negotiate, so this is what gates the link speed and width.
+
+        Defaults to single I/O at 20MHz, which is the behaviour the block had before this
+        register existed. The SP must write it before releasing the host from reset for
+        anything faster to be negotiated.
+
+        Unlike the rest of the capability register this survives an eSPI in-band reset:
+        the values are owned by the SP, not by the host, and an in-band reset happens at
+        the start of every boot.
+
+        The bit positions deliberately match the corresponding fields in
+        GENERAL_CAPABILITIES, so a value read back from the mirror at 0x0080 lines up with
+        what is written here.
+
+        Note that selecting a mode or frequency beyond what is advertised here is clamped
+        in hardware, so a host that ignores the advertised support cannot drive the link
+        faster than the design is constrained for.";
+
+        field {
+            desc = "I/O modes advertised as supported:
+            00b: Single I/O only,
+            01b: Single and Dual I/O,
+            10b: Single and Quad I/O,
+            11b: Single, Dual and Quad I/O";
+        } io_mode_support[25:24] = 0x0;
+
+        field {
+            desc = "Maximum operating frequency advertised as supported. Lower
+            frequencies are always supported as well.
+            000b: 20MHz,
+            001b: 25MHz,
+            010b: 33MHz,
+            011b: 50MHz,
+            100b: 66MHz";
+        } op_freq_support[18:16] = 0x0;
+    } link_caps;
+
     // Read-only view of the eSPI spec registers, so the SP can
     // observe what the eSPI host has configured.
     eSPI_Spec spec_regs @ 0x0080;

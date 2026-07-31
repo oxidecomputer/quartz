@@ -122,6 +122,25 @@ architecture tb of espi_tb is
                     integer'image(corner_cfg_idx'length) & " configurations failed");
     end procedure;
 
+    -- Write the SP-facing advertised capability register. Bit positions match
+    -- the corresponding fields in GENERAL_CAPABILITIES on purpose.
+    procedure set_advertised_caps (
+        signal net                : inout network_t;
+        constant io_mode_support  : general_capabilities_io_mode_support;
+        constant op_freq_support  : general_capabilities_op_freq_support
+    ) is
+        variable data : std_logic_vector(31 downto 0) := (others => '0');
+    begin
+        data(25 downto 24) := std_logic_vector(to_unsigned(
+            general_capabilities_io_mode_support'pos(io_mode_support), 2));
+        data(18 downto 16) := std_logic_vector(to_unsigned(
+            general_capabilities_op_freq_support'pos(op_freq_support), 3));
+        write_bus(net, bus_handle,
+                  To_StdLogicVector(espi_regs_pkg.LINK_CAPS_OFFSET, bus_handle.p_address_length),
+                  data);
+        wait for 1 us;
+    end procedure;
+
     -- Bounded version of wait_for_alert. The unbounded one spins until the
     -- watchdog fires, which loses the whole result matrix when a single
     -- configuration misbehaves.
@@ -203,6 +222,7 @@ begin
         variable cfg_ok          : boolean;
         variable transition_ok   : boolean;
         variable alert_seen      : boolean;
+        variable gen_cap_reg     : general_capabilities_type;
         variable idx             : integer;
         variable vc              : actor_t;
         variable sweep_results   : cfg_results_t;
@@ -642,6 +662,10 @@ begin
             -- wait-state count is too small for a configuration, the link layer
             -- pads the response with 0xFF and the CRC stops matching.
             elsif run("mode_freq_sweep_status") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- GET_STATUS is the shortest command there is (opcode plus
                 -- CRC), so the sizer has the least time to work out where the
                 -- turnaround falls. Quad at 66MHz leaves it two SCLK.
@@ -661,6 +685,10 @@ begin
                 report_sweep("GET_STATUS", sweep_results);
 
             elsif run("mode_freq_sweep_config") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- Eight bytes out, eight back. Also covers the mode change
                 -- itself, since set_link_cfg is a config write.
                 for i in all_link_cfgs'range loop
@@ -680,6 +708,10 @@ begin
                 report_sweep("GET/SET_CONFIGURATION", sweep_results);
 
             elsif run("mode_freq_sweep_flash_read") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- The long-response path, and so the real test of whether the
                 -- wait-state count covers the round trip to the transaction
                 -- layer and back at each mode and frequency.
@@ -713,6 +745,10 @@ begin
             -- cover the parts of the block that interact with I/O mode in ways
             -- the plain command sweeps above do not reach.
             elsif run("corner_sweep_alert") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- The in-band alert drives IO[1], which in quad mode is a data
                 -- line. espi_link_layer merges the alert output enable with the
                 -- PHY's response-phase enable and overrides io_o(1); the two are
@@ -739,6 +775,10 @@ begin
                 report_corners("ALERT", sweep_results);
 
             elsif run("corner_sweep_inband_reset") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- In-band reset detection moved out of the sizer and into the
                 -- fabric-domain bookkeeper, because it has to be reported when
                 -- chip select rises and there is no SCLK edge left by then. The
@@ -762,9 +802,13 @@ begin
                     set_sclk_period(net, vc, 50 ns);
                     wait for 1 us;
 
+                    -- Everything returns to its default except the advertised
+                    -- support, which belongs to the SP and survives by design.
                     get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
-                    cfg_ok := cfg_ok and crc_ok
-                              and (data_32 = pack(general_capabilities_type'(rec_reset)));
+                    gen_cap_reg                 := rec_reset;
+                    gen_cap_reg.io_mode_support := ANY;
+                    gen_cap_reg.op_freq_support := SIXTYSIX;
+                    cfg_ok := cfg_ok and crc_ok and (data_32 = pack(gen_cap_reg));
                     get_config(net, CH3_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
                     cfg_ok := cfg_ok and crc_ok and (data_32(0) = '0');
                     sweep_results(idx) := cfg_ok;
@@ -772,6 +816,10 @@ begin
                 report_corners("INBAND_RESET", sweep_results);
 
             elsif run("corner_sweep_iowr_short") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 for k in corner_cfg_idx'range loop
                     idx := corner_cfg_idx(k);
                     set_link_cfg(net, all_link_cfgs(idx), transition_ok);
@@ -790,6 +838,10 @@ begin
                 report_corners("PUT_IOWR_SHORT", sweep_results);
 
             elsif run("corner_sweep_oob_uart") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- The longest command the block accepts, so also the case where
                 -- bytes arrive back-to-back for longest. At quad/66MHz that is a
                 -- byte every 30ns into a fabric side with six cycles to absorb
@@ -808,6 +860,10 @@ begin
                 report_corners("PUT_OOB", sweep_results);
 
             elsif run("corner_sweep_sustained_flash_read") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- Maximum payload rather than the 16 bytes the other flash tests
                 -- use. Long responses stress the upstream FIFO keeping the
                 -- response buffer fed, which is a different failure mode from
@@ -839,6 +895,10 @@ begin
                 report_corners("SUSTAINED_FLASH_READ", sweep_results);
 
             elsif run("corner_sweep_truncated_response") then
+                -- The SP has to advertise the capability before the host
+                -- may negotiate up to it; without this the clamp holds the
+                -- link at the default single/20MHz.
+                set_advertised_caps(net, ANY, SIXTYSIX);
                 -- A controller that deasserts chip select part way through a
                 -- response leaves bytes in the link layer that were never sent.
                 -- The response buffer is cleared at chip select so they are
@@ -864,6 +924,92 @@ begin
                     sweep_results(idx) := cfg_ok;
                 end loop;
                 report_corners("TRUNCATED_RESPONSE", sweep_results);
+
+            -- The advertised capability register. What the host reads out of
+            -- GENERAL_CAPABILITIES is what it uses to decide how fast to drive
+            -- the link, so this is the knob that gates everything above.
+            elsif run("link_caps_default") then
+                -- Unwritten, the block has to look exactly as it did before the
+                -- register existed: single I/O only, 20MHz only.
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                exp_data_32 := pack(general_capabilities_type'(rec_reset));
+                check_equal(data_32, exp_data_32,
+                            "Default capabilities must match the pre-register behaviour");
+
+            elsif run("link_caps_negotiation") then
+                set_advertised_caps(net, ANY, SIXTYSIX);
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32(25 downto 24), std_logic_vector'("11"),
+                            "io_mode_support should advertise all modes");
+                check_equal(data_32(18 downto 16), std_logic_vector'("100"),
+                            "op_freq_support should advertise 66MHz");
+
+                -- Now actually negotiate up to the advertised maximum and run
+                -- traffic there.
+                set_link_cfg(net, all_link_cfgs(14), transition_ok);
+                check(transition_ok, "Negotiating to quad/66MHz failed");
+                get_status(net, response_code, status, crc_ok);
+                check(crc_ok, "GET_STATUS CRC failed after negotiating to quad/66MHz");
+                expected_status := pack(status_t'(rec_reset));
+                check_equal(status, expected_status, "Status wrong at quad/66MHz");
+
+            elsif run("link_caps_clamp") then
+                -- Leave the advertised capabilities at their default, then have
+                -- the host select quad/66MHz anyway. The selection field is
+                -- writable and reports back what was asked for, but the link
+                -- itself has to stay where we advertised -- so the controller,
+                -- which stays in single mode, must still be understood.
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                gen_cap_reg                := unpack(data_32);
+                gen_cap_reg.io_mode_sel    := QUAD;
+                gen_cap_reg.op_freq_select := SIXTYSIX;
+                set_config(net, GENERAL_CAPABILITIES_OFFSET, pack(gen_cap_reg), response_code, status, crc_ok);
+                check(crc_ok, "SET_CONFIGURATION CRC failed");
+                wait for 1 us;
+
+                -- Controller deliberately left in single mode. If the clamp were
+                -- missing the target would now be shifting four bits per clock
+                -- and this would come back as noise.
+                get_status(net, response_code, status, crc_ok);
+                check(crc_ok, "Link did not stay in the advertised mode");
+                expected_status := pack(status_t'(rec_reset));
+                check_equal(status, expected_status, "Status wrong after clamped selection");
+
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32(27 downto 26), std_logic_vector'("10"),
+                            "io_mode_sel should still report what the host selected");
+                check_equal(data_32(25 downto 24), std_logic_vector'("00"),
+                            "io_mode_support should still advertise single only");
+
+            elsif run("link_caps_survives_inband_reset") then
+                -- An in-band reset clears the capability register at the start
+                -- of every boot. The advertised support is the SP's, not the
+                -- host's, so it has to survive -- otherwise the link would drop
+                -- to single/20MHz permanently after the first reset.
+                set_advertised_caps(net, ANY, SIXTYSIX);
+                set_link_cfg(net, all_link_cfgs(14), transition_ok);
+                check(transition_ok, "Negotiating to quad/66MHz failed");
+
+                send_reset(net);
+                wait for 10 us;
+                set_mode(net, vc, single);
+                set_sclk_period(net, vc, 50 ns);
+                wait for 1 us;
+
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed after in-band reset");
+                check_equal(data_32(25 downto 24), std_logic_vector'("11"),
+                            "Advertised io_mode_support must survive an in-band reset");
+                check_equal(data_32(18 downto 16), std_logic_vector'("100"),
+                            "Advertised op_freq_support must survive an in-band reset");
+                check_equal(data_32(27 downto 26), std_logic_vector'("00"),
+                            "io_mode_sel should return to its default on in-band reset");
+                check_equal(data_32(22 downto 20), std_logic_vector'("000"),
+                            "op_freq_select should return to its default on in-band reset");
 
             end if;
         end loop;
