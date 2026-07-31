@@ -60,8 +60,21 @@ turnaround.
 For every command whose length follows from the opcode alone, the answer is known the
 moment the first byte lands, so `espi_phy` takes that combinationally and leaves the
 sizer to the commands that carry a length in their header. Those are long enough that its
-latency does not matter. The fast path deliberately does not fire for the in-band reset
-opcode, which has no length and must never produce a response.
+latency does not matter.
+
+The fast path must skip the in-band reset opcode. It appears in
+`known_size_by_opcode` but has no length, and `size_by_header` rejects it outright --
+`cmd_sizer` gets away with this only because it tests for reset *before* it consults the
+size tables. Excluded from the fast path, a reset falls through to the sizer, which routes
+it to the in-band reset handling and never produces a response.
+
+===== In-band reset returns the link to its defaults
+
+An in-band reset restores the whole capability register, which means the negotiated I/O
+mode and frequency go back to single and 20MHz along with everything else. A controller
+that was running quad at 66MHz has to follow the target back down, or the two ends
+disagree about how to interpret the next transaction. This is spec behaviour rather than
+anything specific to this implementation, but it is easy to miss.
 
 This is the only block expected to run in the faster clock domain.  To realize this, functionality,
 we're leveraging the eSPI "WAIT_STATE" feature on every response, which allows us cycles to get from

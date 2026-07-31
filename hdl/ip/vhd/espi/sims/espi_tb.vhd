@@ -73,6 +73,11 @@ architecture tb of espi_tb is
 
     type cfg_results_t is array (all_link_cfgs'range) of boolean;
 
+    -- Each mode at its slowest and fastest. The full fifteen are only worth
+    -- walking for the cheap sweeps; these cover the interesting corners for
+    -- the longer tests.
+    constant corner_cfg_idx : integer_vector := (0, 4, 5, 9, 10, 14);
+
     -- Report every configuration, then fail once at the end. A sweep that
     -- halted on the first bad configuration would only ever tell us about one
     -- of the fifteen, which is not enough to see where the margin actually
@@ -95,6 +100,46 @@ architecture tb of espi_tb is
         check_equal(n_failed, 0,
                     sweep_name & ": " & integer'image(n_failed) & " of " &
                     integer'image(results'length) & " configurations failed");
+    end procedure;
+
+    -- As report_sweep, but only over the corner configurations.
+    procedure report_corners (
+        constant sweep_name : string;
+        constant results    : cfg_results_t
+    ) is
+        variable n_failed : natural := 0;
+    begin
+        for k in corner_cfg_idx'range loop
+            if results(corner_cfg_idx(k)) then
+                info(sweep_name & ": pass at " & cfg_name(all_link_cfgs(corner_cfg_idx(k))));
+            else
+                n_failed := n_failed + 1;
+                warning(sweep_name & ": FAIL at " & cfg_name(all_link_cfgs(corner_cfg_idx(k))));
+            end if;
+        end loop;
+        check_equal(n_failed, 0,
+                    sweep_name & ": " & integer'image(n_failed) & " of " &
+                    integer'image(corner_cfg_idx'length) & " configurations failed");
+    end procedure;
+
+    -- Bounded version of wait_for_alert. The unbounded one spins until the
+    -- watchdog fires, which loses the whole result matrix when a single
+    -- configuration misbehaves.
+    procedure wait_for_alert_bounded (
+        signal net       : inout network_t;
+        constant timeout : time;
+        variable ok      : out boolean
+    ) is
+        variable alert : boolean := false;
+        variable t0    : time    := now;
+    begin
+        loop
+            get_any_pending_alert(net, alert);
+            exit when alert;
+            exit when now - t0 > timeout;
+            wait for 100 ns;
+        end loop;
+        ok := alert;
     end procedure;
 
     -- Move both ends of the link to `cfg`. Order matters: the target latches
@@ -157,10 +202,18 @@ begin
         variable pcfree_deasserted : boolean;
         variable cfg_ok          : boolean;
         variable transition_ok   : boolean;
+        variable alert_seen      : boolean;
+        variable idx             : integer;
+        variable vc              : actor_t;
         variable sweep_results   : cfg_results_t;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
+
+        -- Resolved here rather than as an initializer: the VC creates its actor
+        -- during elaboration and the ordering against this process is not
+        -- guaranteed.
+        vc := find("espi_vc");
         
         -- shared variable in _tb_pkg
         rnd.InitSeed(rnd'instance_name);
@@ -655,6 +708,162 @@ begin
                     sweep_results(i) := cfg_ok;
                 end loop;
                 report_sweep("FLASH_READ", sweep_results);
+
+            -- Everything below walks the corners rather than all fifteen. These
+            -- cover the parts of the block that interact with I/O mode in ways
+            -- the plain command sweeps above do not reach.
+            elsif run("corner_sweep_alert") then
+                -- The in-band alert drives IO[1], which in quad mode is a data
+                -- line. espi_link_layer merges the alert output enable with the
+                -- PHY's response-phase enable and overrides io_o(1); the two are
+                -- meant to be mutually exclusive in time because alerts only
+                -- fire while chip select is deasserted.
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status, crc_ok);
+                if not crc_ok then
+                    warning("Flash channel enable response CRC failed");
+                end if;
+                for k in corner_cfg_idx'range loop
+                    idx := corner_cfg_idx(k);
+                    set_link_cfg(net, all_link_cfgs(idx), transition_ok);
+                    cfg_ok := true;
+                    put_flash_read(net, X"03020000", 16, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+                    wait_for_alert_bounded(net, 500 us, alert_seen);
+                    cfg_ok := cfg_ok and alert_seen;
+                    get_flash_c(net, 16, my_queue, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+                    flush(my_queue);
+                    sweep_results(idx) := cfg_ok;
+                end loop;
+                report_corners("ALERT", sweep_results);
+
+            elsif run("corner_sweep_inband_reset") then
+                -- In-band reset detection moved out of the sizer and into the
+                -- fabric-domain bookkeeper, because it has to be reported when
+                -- chip select rises and there is no SCLK edge left by then. The
+                -- window is tightest in quad at 66MHz.
+                for k in corner_cfg_idx'range loop
+                    idx := corner_cfg_idx(k);
+                    set_link_cfg(net, all_link_cfgs(idx), transition_ok);
+                    cfg_ok := true;
+
+                    -- Leave some state behind that the reset has to clear.
+                    flash_cap_reg.flash_channel_enable := '1';
+                    set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+
+                    send_reset(net);
+                    wait for 10 us;
+                    -- The reset takes the target's capabilities back to their
+                    -- defaults, which means single I/O at 20MHz. The controller
+                    -- has to follow it back or the link is out of sync.
+                    set_mode(net, vc, single);
+                    set_sclk_period(net, vc, 50 ns);
+                    wait for 1 us;
+
+                    get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok
+                              and (data_32 = pack(general_capabilities_type'(rec_reset)));
+                    get_config(net, CH3_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok and (data_32(0) = '0');
+                    sweep_results(idx) := cfg_ok;
+                end loop;
+                report_corners("INBAND_RESET", sweep_results);
+
+            elsif run("corner_sweep_iowr_short") then
+                for k in corner_cfg_idx'range loop
+                    idx := corner_cfg_idx(k);
+                    set_link_cfg(net, all_link_cfgs(idx), transition_ok);
+                    cfg_ok := true;
+                    exp_data_32 := X"EE0000A2";
+                    put_iowr_short4(net, X"0080", exp_data_32, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+                    -- Confirm the payload actually landed rather than just that
+                    -- the response looked well formed.
+                    read_bus(net, bus_handle,
+                             To_StdLogicVector(espi_regs_pkg.LAST_POST_CODE_OFFSET, bus_handle.p_address_length),
+                             data_32);
+                    cfg_ok := cfg_ok and (data_32 = exp_data_32);
+                    sweep_results(idx) := cfg_ok;
+                end loop;
+                report_corners("PUT_IOWR_SHORT", sweep_results);
+
+            elsif run("corner_sweep_oob_uart") then
+                -- The longest command the block accepts, so also the case where
+                -- bytes arrive back-to-back for longest. At quad/66MHz that is a
+                -- byte every 30ns into a fabric side with six cycles to absorb
+                -- each one.
+                for k in corner_cfg_idx'range loop
+                    idx := corner_cfg_idx(k);
+                    set_link_cfg(net, all_link_cfgs(idx), transition_ok);
+                    cfg_ok := true;
+                    payload_size := 61;
+                    my_queue := build_rand_byte_queue(payload_size);
+                    put_oob_no_pec(net, my_queue, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+                    wait for 300 us;
+                    sweep_results(idx) := cfg_ok;
+                end loop;
+                report_corners("PUT_OOB", sweep_results);
+
+            elsif run("corner_sweep_sustained_flash_read") then
+                -- Maximum payload rather than the 16 bytes the other flash tests
+                -- use. Long responses stress the upstream FIFO keeping the
+                -- response buffer fed, which is a different failure mode from
+                -- the first-byte latency the wait states cover. The fake flash
+                -- returns a counting pattern, so a dropped or duplicated byte
+                -- shows up as a content mismatch and not only as a bad CRC.
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status, crc_ok);
+                if not crc_ok then
+                    warning("Flash channel enable response CRC failed");
+                end if;
+                for k in corner_cfg_idx'range loop
+                    idx := corner_cfg_idx(k);
+                    set_link_cfg(net, all_link_cfgs(idx), transition_ok);
+                    cfg_ok := true;
+                    put_flash_read(net, X"03020000", 64, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+                    wait_for_alert_bounded(net, 1 ms, alert_seen);
+                    get_flash_c(net, 64, my_queue, response_code, status, crc_ok);
+                    cfg_ok := cfg_ok and crc_ok;
+                    for j in 0 to 63 loop
+                        if pop_byte(my_queue) /= j then
+                            cfg_ok := false;
+                        end if;
+                    end loop;
+                    flush(my_queue);
+                    sweep_results(idx) := cfg_ok;
+                end loop;
+                report_corners("SUSTAINED_FLASH_READ", sweep_results);
+
+            elsif run("corner_sweep_truncated_response") then
+                -- A controller that deasserts chip select part way through a
+                -- response leaves bytes in the link layer that were never sent.
+                -- The response buffer is cleared at chip select so they are
+                -- discarded; the previous design left them queued, where they
+                -- would prepend themselves to the *next* response. Check the
+                -- next response is clean.
+                for k in corner_cfg_idx'range loop
+                    idx := corner_cfg_idx(k);
+                    set_link_cfg(net, all_link_cfgs(idx), transition_ok);
+                    cfg_ok := true;
+
+                    -- GET_STATUS answers with 4 bytes; ask for 2 and walk away.
+                    cmd := build_get_status_cmd;
+                    enqueue_tx_data_bytes(net, vc, cmd.num_bytes, cmd.queue);
+                    enqueue_transaction(net, vc, cmd.num_bytes, 2);
+                    get_rx_queue(net, vc, my_queue);
+                    flush(my_queue);
+                    wait for 5 us;
+
+                    get_status(net, response_code, status, crc_ok);
+                    expected_status := pack(status_t'(rec_reset));
+                    cfg_ok := cfg_ok and crc_ok and (status = expected_status);
+                    sweep_results(idx) := cfg_ok;
+                end loop;
+                report_corners("TRUNCATED_RESPONSE", sweep_results);
 
             end if;
         end loop;

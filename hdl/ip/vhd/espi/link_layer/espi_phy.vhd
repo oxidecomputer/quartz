@@ -227,7 +227,16 @@ begin
     fast_hdr.cycle_type <= (others => '0');
     fast_hdr.len        <= (others => '0');
 
-    fast_size_valid <= '1' when have_first_byte = '1' and known_size_by_opcode(fast_hdr) else '0';
+    -- opcode_reset is listed in known_size_by_opcode but has no length, and
+    -- size_by_header rejects it outright. cmd_sizer copes by testing for reset
+    -- before it consults the size tables at all; the fast path has to do the
+    -- same, or an in-band reset walks straight into size_by_header's "Unknown
+    -- opcode". Excluded here it falls through to the sizer, which routes it to
+    -- the in-band reset path and never produces a response -- which is correct.
+    fast_size_valid <= '1' when have_first_byte = '1'
+                            and first_byte /= opcode_reset
+                            and known_size_by_opcode(fast_hdr)
+                       else '0';
 
     eff_size_valid <= fast_size_valid or size_info.valid;
     eff_size       <= size_by_header(fast_hdr) when fast_size_valid = '1' else size_info.size;
