@@ -155,33 +155,39 @@ package body espi_base_types_pkg is
     ) return std_logic_vector is
         variable wait_states : std_logic_vector(3 downto 0) := (others => '0');
     begin
-        -- As described in our block's documentation, 
-        -- we arrive at a turn-around time of 53ns * 2 + 32 ns = 138ns. Each WAIT_STATE will count as 
-        -- 1 byte-time per espi spec, so the number of needed waits changes based
-        -- on the bus width and speed.  We've pre-calcuated them here.
+        -- Each WAIT_STATE counts as one byte-time per the eSPI spec, so the
+        -- number needed to cover the round trip to the transaction layer and
+        -- back changes with bus width and frequency.
+        --
+        -- These are measured, not derived. Forcing this function to a constant
+        -- and running the mode_freq_sweep_* tests at each value gives the
+        -- minimum that works for every configuration -- too few wait states
+        -- pads the response with 0xFF and fails CRC. The table below is that
+        -- measured minimum plus one byte-time of margin. See espi.adoc for the
+        -- full matrix and what the margin is protecting against.
         case freq is
             when twenty =>
                 case mode is
                     when single =>
-                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
                     when dual =>
-                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
                     when quad =>
                         wait_states := To_Std_Logic_Vector(2, wait_states'length);
                 end case;
             when twentyfive =>
                 case mode is
                     when single =>
-                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
-                    when dual =>
-                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
-                    when quad =>
                         wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(3, wait_states'length);
                 end case;
             when thirtythree =>
                 case mode is
                     when single =>
-                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
+                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
                     when dual =>
                         wait_states := To_Std_Logic_Vector(2, wait_states'length);
                     when quad =>
@@ -190,20 +196,20 @@ package body espi_base_types_pkg is
             when fifty =>
                 case mode is
                     when single =>
-                        wait_states := To_Std_Logic_Vector(1, wait_states'length);
-                    when dual =>
-                        wait_states := To_Std_Logic_Vector(2, wait_states'length);
-                    when quad =>
-                        wait_states := To_Std_Logic_Vector(4, wait_states'length);
-                end case;
-            when sixtysix =>
-                case mode is
-                    when single =>
                         wait_states := To_Std_Logic_Vector(2, wait_states'length);
                     when dual =>
                         wait_states := To_Std_Logic_Vector(3, wait_states'length);
                     when quad =>
                         wait_states := To_Std_Logic_Vector(5, wait_states'length);
+                end case;
+            when sixtysix =>
+                case mode is
+                    when single =>
+                        wait_states := To_Std_Logic_Vector(3, wait_states'length);
+                    when dual =>
+                        wait_states := To_Std_Logic_Vector(4, wait_states'length);
+                    when quad =>
+                        wait_states := To_Std_Logic_Vector(6, wait_states'length);
                 end case;
         end case;
 

@@ -108,35 +108,62 @@ We can do the same calculation for each of the speeds/modes resulting in this ta
 The physical-layer inserts these wait states automatically before fetching
 from the response FIFO as they are not counted in the CRC generation.
 
-==== Verifying the wait state table
+==== Measuring the wait state table
 
 The derivation above is an estimate, and moving the serdes into the SCLK domain added a
-handoff it does not account for. The table was therefore checked against the simulator
-rather than re-derived on paper: `wait_states_from_freq_and_mode` was forced to a constant
-and the `mode_freq_sweep_*` tests run at each value. Too few wait states makes the link
-layer pad the response with 0xFF, which shows up immediately as a CRC mismatch.
+handoff it does not account for. So the table is measured rather than derived:
+`wait_states_from_freq_and_mode` is forced to a constant and the `mode_freq_sweep_*` tests
+run at each value from 0 to 6. Too few wait states makes the link layer pad the response
+with 0xFF, which shows up immediately as a CRC mismatch.
+
+The sweeps report every configuration and fail once at the end rather than halting on the
+first bad one, so a single run yields the whole matrix. Two things are easy to get wrong
+here and both were, at first:
+
+* The configuration change itself runs at the *previous* configuration's mode and speed,
+  so its result has to be attributed there and not to the configuration being moved to.
+  Otherwise every configuration inherits its predecessor's failure.
+* VUnit suppresses log output for passing tests, so the runs where everything worked
+  silently produced no data at all. The sweep needs `-v`.
+
+Measured minimum, with all three sweeps agreeing on every entry:
 
 ....
-forced count   first configuration to fail
-1              single/66MHz
-2              dual/66MHz
-3              quad/50MHz
-4              quad/66MHz
-5              none
+             20MHz  25MHz  33MHz  50MHz  66MHz
+single           1      1      1      1      2
+dual             1      1      1      2      3
+quad             1      2      2      4      5
 ....
 
-Reading the minimum off the boundaries gives single/66 = 2, dual/66 = 3, quad/50 = 4 and
-quad/66 = 5, which is exactly what the table already says, and the counts for the
-remaining configurations are all sufficient. So the added SCLK-domain handoff did not
-grow the round trip enough to matter -- the response buffer absorbs it, since the wait
-states only have to cover the latency of the *first* byte.
+Twelve of the fifteen sat exactly on the boundary against the previous table, so the table
+is now that measured minimum **plus one byte-time of margin**:
 
-Two caveats. The tight configurations sit exactly on the boundary, with no margin: if the
-real round trip is even one byte-time longer than the simulation models it, quad at 66MHz
-will fail. And the sweep only exercises GET_STATUS, GET_CONFIGURATION and flash reads, so
-a command whose response the transaction layer is slower to produce could need more than
-the table gives it. The "4 slow clocks to do operational logic" in the derivation above is
-still an assumption, not a measurement.
+....
+             20MHz  25MHz  33MHz  50MHz  66MHz
+single           2      2      2      2      3
+dual             2      2      2      3      4
+quad             2      3      3      5      6
+....
+
+What the margin is for is worth being precise about, because it is not protecting against
+the simulation being wrong about the hardware. The FIFO and handoff latencies are
+deterministic and the simulation models them exactly. What is *not* covered is the
+transaction layer taking longer to produce a response for some command the sweep does not
+exercise -- it only drives GET_STATUS, GET_CONFIGURATION and flash reads. The "4 slow
+clocks to do operational logic" in the derivation above is still an assumption, and a
+byte-time of margin buys roughly that much slack back at the frequencies where it is
+tightest.
+
+The cost is one byte-time per response, about 1.4% of a 64-byte flash read at any
+frequency, since both the margin and the payload scale together.
+
+NOTE: `max_wait` (GENERAL_CAPABILITIES bits 15:12) is the controller telling the target the
+most WAIT_STATE bytes it will tolerate, and this design ignores the field. The reset value
+of 0 means 16, so the default is fine, but a controller that sets it between 1 and 5 would
+be violated at quad/50MHz and quad/66MHz. Clamping to it is not obviously right either --
+sending fewer wait states than the round trip needs corrupts the response, which is worse
+than sending too many -- so the honest fix is to refuse the mode/frequency combination
+rather than to clamp.
 
 
 === Debug Interface
