@@ -6,7 +6,14 @@ create_clock -add -name fmc_clk_pin -period 15.000 -waveform {0 7.500}  [get_por
 # Create a virtual clock, to represent the source clock of the FMC interface
 create_clock -name fmc_virt_clk -period 15.000;
 
-set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125m_cosmo_pll} -group {clk_200m_cosmo_pll}
+# eSPI SCLK, and a virtual clock standing in for the SP5's copy of it, which is
+# what its own launch and capture flops actually see. Created here rather than
+# down in the eSPI section because set_clock_groups below has to be able to name
+# them, and xdc is evaluated top to bottom.
+create_clock -name espi_clk      -period 15.152 -waveform {0 7.576} [get_ports espi0_sp5_to_fpga1_clk]
+create_clock -name espi_virt_clk -period 15.152 -waveform {0 7.576}
+
+set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125m_cosmo_pll} -group {clk_200m_cosmo_pll} -group {espi_clk espi_virt_clk}
 
 
 # #######################
@@ -154,31 +161,73 @@ set_false_path -from [get_ports {*}] -to [get_ports {fpga1_spare_v1p8[*]}]
 # budget at the higher eSPI frequencies.
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets espi0_sp5_to_fpga1_clk_IBUF]
 
-# TODO: This is likely not correct but I need to re-write the link-layer logic again
-# and then re-constrain
-# 20MHz espi constraints, 50ns clock periods.
-# ESPI interface has 2.2ns of trace delay
-# AMD says 7ns of data setup
-# AMD says 0.3ns of data hold
-# AMD Data output valid time min 1 max 3
-# in delay max = tco_ext to max delay ext to fpga
-# in delay min = minTco_ext to min delay ext to fpga
-# out delay max = ext setup + max delay fpga to external
-# out delay min = ext hold + min delay fpga to external
+# Constrained at the eSPI spec maximum of 66MHz. The advertised capability
+# register defaults to single I/O at 20MHz, so this is a ceiling the design is
+# proven against, not a promise about what we ship -- backing off to 50 or
+# 33MHz in the field is a register write, not a rebuild.
 
-# when sending to the SP5, it's going to take 2.2ns of trace time, and it needs to be there
-# Clock took 2.2 ns to get to us, it's going to take 2.2ns of trace time to get back to the SP5
-# and SP5 wants 7 ns of setup time. We also eat ~4ns by syncing the espi clock.
+# Board delay, each direction. eSPI trace is 2.2ns.
+set espi_trace   2.2
 
-# outputs
-# max = 7ns (SP5's needed setup time) + clock delay to FPGA (2.2ns) + return delay (2.2ns)
-# min = .3ns (SP5's needed hold time) + clock delay to FPGA (2.2ns) + return delay (2.2ns)
+# SP5 AC characteristics.
+# TDIST, the SP5's data-in setup, is 7ns and is referenced to the FALLING edge
+# of SCLK -- the SP5 captures what we drive on the falling edge, not the rising
+# one. Since we also launch on the falling edge, the real flight budget is a
+# full SCLK period rather than a half, which is why this interface works at all
+# at 20MHz.
+set sp5_tdist    7.0
+set sp5_th       0.3
+set sp5_tco_max  3.0
+set sp5_tco_min  1.0
 
+# #################
+# Inputs.
+# The SP5 launches on the falling edge and we capture on the rising edge, so
+# -clock_fall on the launch. The clock and the data travel the same direction
+# over the same board delay, so the two 2.2ns terms cancel and the delay is
+# just the SP5's clock-to-out.
+set_input_delay -clock espi_virt_clk -clock_fall -max $sp5_tco_max [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_input_delay -clock espi_virt_clk -clock_fall -min $sp5_tco_min [get_ports espi0_sp5_to_fpga1_dat[*]]
 
-# Data 
-# max= 7.5ns (1/2 period) + 3ns (maxreal tco)
-# min= 7.5ns (1/2 period) + 1ns (min real tco)
+# Chip select is asserted well ahead of the first SCLK edge, but it gates the
+# SCLK-domain state machine and asynchronously resets it, so constrain it too.
+set_input_delay -clock espi_virt_clk -clock_fall -max $sp5_tco_max [get_ports espi0_sp5_to_fpga1_cs_l]
+set_input_delay -clock espi_virt_clk -clock_fall -min $sp5_tco_min [get_ports espi0_sp5_to_fpga1_cs_l]
 
-# This is a stop-gap to provide some kind of output timing constraints per the eSPI base spec
-set_max_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 6
-set_min_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 0
+# #################
+# Outputs.
+# Captured by the SP5 on its falling edge, so -clock_fall here as well. Unlike
+# the input case the board delays add rather than cancel: the FPGA's copy of
+# SCLK is already 2.2ns late, and the data then takes another 2.2ns to get back,
+# while espi_virt_clk is declared with the same waveform as the port clock.
+#   output_delay_max = TDIST + data trace + clock trace
+set_output_delay -clock espi_virt_clk -clock_fall -max [expr {$sp5_tdist + 2 * $espi_trace}] [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_output_delay -clock espi_virt_clk -clock_fall -min [expr {-$sp5_th}]                     [get_ports espi0_sp5_to_fpga1_dat[*]]
+
+# #################
+# Crossings into and out of the SCLK domain.
+# The mode and wait-state buses are quasi-static: they only change as a result
+# of a SET_CONFIGURATION and are stable while chip select is deasserted. Bound
+# them rather than declaring them false, so the tools still keep the skew sane.
+# set_max_delay -datapath_only takes precedence over the asynchronous clock
+# group above for the paths it names (UG949).
+set_max_delay -datapath_only -from [get_clocks clk_125m_cosmo_pll] -to [get_clocks espi_clk] 5.0
+set_max_delay -datapath_only -from [get_clocks clk_200m_cosmo_pll] -to [get_clocks espi_clk] 5.0
+set_max_delay -datapath_only -from [get_clocks espi_clk] -to [get_clocks clk_200m_cosmo_pll] 5.0
+
+# The output enable is not a per-bit signal. It is asserted on the falling edge
+# that opens the response phase and then held for the whole response, and the
+# first data bit does not leave until the *next* falling edge -- so it has a
+# half period of head start that the default single-cycle analysis does not know
+# about. Give it the extra period it actually has.
+set_multicycle_path -setup 2 -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/resp_oe_reg*}] \
+                             -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_multicycle_path -hold  1 -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/resp_oe_reg*}] \
+                             -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+
+# Pack the serializer's output registers into the IOBs. Most of what is left in
+# the output data path is routing between the register and the pad, and this is
+# where it goes. IO[1] will not pack -- the in-band alert has to be able to pull
+# it low with no SCLK running, so there is a LUT between the register and the pad
+# on that bit only.
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/io_o_r_reg*}]

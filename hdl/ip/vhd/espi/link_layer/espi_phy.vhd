@@ -99,10 +99,36 @@ architecture rtl of espi_phy is
 
     -- TX
     signal tx_reg            : std_logic_vector(7 downto 0);
+    signal io_o_r            : std_logic_vector(3 downto 0);
     signal tx_bits_left      : natural range 0 to 8;
     signal ta_fall_cnt       : natural range 0 to 3;
     signal in_response_phase : std_logic;
     signal in_turnaround_phase : boolean;
+
+    --! The four pad values for a byte in flight. IO[3] always carries the MSB
+    --! so the taps line up across modes; the lower lines pick up successively
+    --! lower bits as the bus widens. IO[0] in single mode is unused and gated
+    --! off by the output enable.
+    function tap_by_mode (
+        constant d    : std_logic_vector(7 downto 0);
+        constant mode : qspi_mode_t
+    ) return std_logic_vector is
+        variable r : std_logic_vector(3 downto 0) := (others => '1');
+    begin
+        r(3) := d(7);
+        r(2) := d(6);
+        case mode is
+            when single =>
+                r(1) := d(7);
+            when dual =>
+                r(1) := d(7);
+                r(0) := d(6);
+            when quad =>
+                r(1) := d(5);
+                r(0) := d(4);
+        end case;
+        return r;
+    end function;
 
     --! Output enables by mode. Note IO[1] is the response data line in single
     --! mode -- it doubles as the alert pin per the AMD convention.
@@ -253,9 +279,18 @@ begin
     -- opens after F2 and the first byte is launched on F3, matching the edge
     -- relationship of the previous implementation.
     response_serializer: process(sclk, cs_n)
+        variable nxt_tx : std_logic_vector(7 downto 0);
     begin
         if cs_n = '1' then
             tx_reg            <= (others => '1');
+            -- IO[1] idles low rather than high, so the in-band alert only has
+            -- to assert the output enable to pull the line down. Keeping the
+            -- alert out of the io_o data path is what lets this register pack
+            -- into the IOB; a mux between it and the pad would prevent that.
+            -- Safe because alert_gen only permits an alert once chip select has
+            -- been deasserted for a couple of cycles, by which point this reset
+            -- has long since applied.
+            io_o_r            <= (1 => '0', others => '1');
             tx_bits_left      <= 0;
             ta_fall_cnt       <= 0;
             in_response_phase <= '0';
@@ -263,6 +298,7 @@ begin
             tx_rdack          <= '0';
         elsif falling_edge(sclk) then
             tx_rdack <= '0';
+            nxt_tx   := tx_reg;
 
             if in_response_phase = '1' then
                 if tx_bits_left = 0 then
@@ -270,14 +306,14 @@ begin
                     -- lines at the end of a transaction and stands in as the
                     -- ERROR response when we choose not to answer.
                     if tx_empty = '0' then
-                        tx_reg   <= tx_data;
+                        nxt_tx   := tx_data;
                         tx_rdack <= '1';
                     else
-                        tx_reg <= (others => '1');
+                        nxt_tx := (others => '1');
                     end if;
                     tx_bits_left <= 8 - shift_amt;
                 else
-                    tx_reg       <= shift_left(tx_reg, shift_amt);
+                    nxt_tx       := shift_left(tx_reg, shift_amt);
                     tx_bits_left <= tx_bits_left - shift_amt;
                 end if;
             elsif in_turnaround_phase then
@@ -288,17 +324,23 @@ begin
                     ta_fall_cnt <= ta_fall_cnt + 1;
                 end if;
             end if;
+
+            tx_reg <= nxt_tx;
+            -- Register the pad values here rather than muxing tx_reg
+            -- combinationally outside the process. Two reasons, and the first
+            -- is a correctness one: the mux select derives from mode_sel, which
+            -- is captured on a *rising* edge, so a combinational mux hands the
+            -- output path a mixed launch edge and only half a period to reach
+            -- the pad. Second, a registered output can be packed into the IOB,
+            -- which is where the rest of the output delay goes.
+            --
+            -- Bit timing on the wire is unchanged: the pad previously showed
+            -- tap(tx_reg) immediately after this edge updated tx_reg, and now
+            -- shows the same taps registered on that same edge.
+            io_o_r <= tap_by_mode(nxt_tx, mode_sel);
         end if;
     end process;
 
-    -- Output muxing. IO[3] always carries the MSB so the taps line up across
-    -- modes; the lower lines pick up successively lower bits as the bus widens.
-    io_o(3) <= tx_reg(7);
-    io_o(2) <= tx_reg(6);
-    io_o(1) <= tx_reg(5) when mode_sel = quad else
-               tx_reg(7);
-    io_o(0) <= tx_reg(4) when mode_sel = quad else
-               tx_reg(6) when mode_sel = dual else
-               '1';  -- unused, gated off by the output enable
+    io_o <= io_o_r;
 
 end rtl;

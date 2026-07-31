@@ -208,6 +208,55 @@ This is also the intended mechanism for backing off in the field. If a sled turn
 to close timing at the frequency it was constrained for, the fix is a different value in
 this register, not a new bitstream.
 
+=== Output path timing
+
+The output path is the hard direction, and the reason is asymmetric: the eSPI clock
+reaches the serializer through general interconnect rather than a dedicated clock route,
+because neither cosmo nor grapefruit puts SCLK on a pin that can drive a clock buffer
+directly. That insertion delay -- about 5ns on cosmo -- *helps* the receive path, since it
+moves the sample point later into the data eye, but it is spent straight out of the
+transmit budget.
+
+Measured on cosmo, routed, constrained at 66MHz:
+
+....
+clock insertion (pin -> serializer)   5.03 ns
+serializer register -> pad            2.64 ns   (IOB packed, irreducible)
+board trace, each direction           2.20 ns
+SP5 TDIST (data-in setup)             7.00 ns
+....
+
+The SP5 captures what we drive on the *falling* edge of SCLK, so a bit launched on our
+falling edge has a full SCLK period to arrive, not a half. At 66MHz that is 15.15ns, of
+which TDIST and the two trace crossings consume 11.4ns, leaving 3.75ns for insertion delay
+plus clock-to-pad. Against 7.66ns actual, that is short by about 3.9ns.
+
+Three things get the output path to where it is, all of which are worth keeping regardless
+of what frequency is eventually run:
+
+* The pad values are *registered* in the serializer rather than muxed out of `tx_reg`
+  combinationally. Beyond enabling IOB packing this is a correctness fix: the mux select
+  derives from the captured I/O mode, which lands on a rising edge, so a combinational mux
+  handed the output path a mixed launch edge and half the budget it should have had.
+* Those registers are packed into the IOBs, which is where most of the remaining route
+  delay went.
+* IO[1] idles low so the in-band alert only has to assert the output enable. Overriding the
+  data combinationally put a LUT between register and pad on that one bit and stopped it
+  packing.
+
+Closing the remaining gap needs the launch moved a half period earlier -- onto the rising
+edge preceding the falling edge used today -- which keeps every bit landing on the same SP5
+capture edge but gives it 1.5 periods of flight instead of 1, and needs
+`set_multicycle_path -setup 2` so the tools analyse against the right capture edge. That is
+worth roughly +7.6ns, taking the path from -3.9ns to about +3.6ns.
+
+NOTE: a PLL or MMCM would be the natural way to cancel the insertion delay and shift the
+launch phase arbitrarily, and it is not available here: eSPI gates SCLK, so the clock is
+absent between transactions. An MMCM needs a continuously present input and takes on the
+order of 100us to lock, against transactions lasting a few microseconds. If a platform is
+ever found to free-run SCLK, revisit this -- deskew plus an arbitrary phase shift is
+strictly better than quantising to half a period.
+
 === Debug Interface
 We can enable a debug interface that muxes the streaming interfaces away from the serdes blocks and connects
 them to FIFOs that are accessible via the AXI bus. This allows software to inject eSPI commands and capture

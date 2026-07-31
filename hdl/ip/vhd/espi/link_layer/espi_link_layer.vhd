@@ -136,10 +136,11 @@ begin
 
     io_oe <= resp_oe or "0010" when active_alert = '1' else resp_oe;
 
-    -- IO[1] doubles as the alert pin per the AMD convention.
-    io_o(3 downto 2) <= phy_io_o(3 downto 2);
-    io_o(1)          <= '0' when active_alert = '1' else phy_io_o(1);
-    io_o(0)          <= phy_io_o(0);
+    -- IO[1] doubles as the alert pin per the AMD convention. The alert works by
+    -- asserting the output enable alone: the PHY idles IO[1] low while chip
+    -- select is deasserted, so no mux is needed here, which keeps the PHY's
+    -- output register adjacent to the pad and packable into the IOB.
+    io_o <= phy_io_o;
 
     -- Debug aid only: mark the window where we are driving the response.
     saleae_response_cs_gen: process(clk, reset)
