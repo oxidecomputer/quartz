@@ -244,30 +244,60 @@ of what frequency is eventually run:
   data combinationally put a LUT between register and pad on that one bit and stopped it
   packing.
 
-The requirement is that the total flight time from the controller's clock edge to its own
-capture edge fits in one SCLK period minus TDIST, which at 66MHz is 8.15ns against 12.06ns
-actual. Only the insertion delay is attackable, and only partly: better BUFG and serializer
-placement might recover 2ns of it, which still leaves the path around 1.7ns short.
+The requirement is that the flight time from the controller's clock edge to its own capture
+edge fits in the available budget. With a falling-edge launch that budget is one SCLK period
+minus TDIST, which at 66MHz is 8.15ns against 12.06ns actual -- short by about 3.9ns, and not
+recoverable by placement alone.
 
-CAUTION: launching a half period earlier, on the rising edge, looks like it should fix this
-and does not. It buys margin only while the flight time exceeds a half period. That holds at
-66MHz, where flight is 12ns against a 7.58ns half period, and fails at 20MHz, where the bit
-has already been replaced by its successor before the protocol's capture edge arrives -- the
-controller captures at a fixed edge one period after the target should have launched, not
-wherever the data happens to land. Making the early launch conditional on the negotiated
-frequency would work, since `qspi_freq` is already plumbed into the link layer, at the cost
-of doubling the verification matrix.
+==== Frequency-conditional early launch
 
-Otherwise 66MHz on this board needs the insertion delay gone, which means SCLK on a pin that
-can drive a clock buffer directly. On cosmo that is a swap of SCLK and `dat[0]` between U3
-and U4.
+The serializer therefore launches on the *rising* edge above 33MHz, a half period ahead of
+the falling edge, which gives each bit 1.5 SCLK periods of flight instead of 1. Every bit
+still lands on the same controller capture edge; only the launch moves.
 
-NOTE: a PLL or MMCM would be the natural way to cancel the insertion delay and shift the
-launch phase arbitrarily, and it is not available here: eSPI gates SCLK, so the clock is
-absent between transactions. An MMCM needs a continuously present input and takes on the
-order of 100us to lock, against transactions lasting a few microseconds. If a platform is
-ever found to free-run SCLK, revisit this -- deskew plus an arbitrary phase shift is
-strictly better than quantising to half a period.
+This cannot be done unconditionally. The controller captures at a fixed edge one period after
+the target is supposed to have launched, not wherever the data happens to land, so launching
+early only helps while the flight time still exceeds a half period. Writing the two
+conditions out, for a bit that must be valid at capture edge `F`:
+
+....
+launch at F - 1.0 period (falling):  valid if           flight <= 1.0 period
+launch at F - 1.5 period (rising):   valid if 0.5 period <= flight <= 1.5 period
+....
+
+With flight at 12ns the early launch is correct at 50MHz and 66MHz and wrong at 33MHz and
+below, where the next bit has already replaced this one before the controller looks. That is
+exactly where the simulation sweeps begin failing if the condition is forced on, so the
+threshold is verified rather than asserted -- the harness models the round trip precisely so
+that it can catch this.
+
+Note the direction of the dependency, because it is unusual: this is the one place in the
+block whose correctness needs a physical delay to be large *enough*. A future board that put
+SCLK on a clock-capable pin would cut the insertion delay, and the early launch would have to
+be re-evaluated rather than inherited.
+
+50MHz does not need the early launch -- a full period covers the flight with about 1ns spare
+-- but is included so that the falling-edge path is only ever used at 33MHz and below, where
+it has better than twice the budget it needs. That is what makes it sound to exclude the late
+path from the 66MHz timing analysis rather than leave it reported as a failure no
+configuration can reach.
+
+Cosmo closes at 66MHz with about 1ns on the eSPI output path. Two exceptions carry their
+justification in `cosmo_timing.xdc`: a multicycle on the early launch, and false paths on the
+I/O mode and launch-edge selects, which are frozen at the first SCLK edge of a transaction
+and cannot move while data is flowing.
+
+==== Capping the frequency in an implementation
+
+`espi_target_top` takes a `max_freq_mhz` generic that caps what the block will advertise,
+whatever the SP writes to `link_caps`. It exists because the advertised capability is a claim
+about timing closure, and timing closure is a property of a particular board and constraint
+set rather than of the RTL. Grapefruit is built at 20MHz for this reason: its SCLK pin is not
+clock capable and it has no eSPI timing constraints, so there is nothing for a higher claim to
+rest on. Cosmo is built at 66MHz to match what its constraints close at.
+
+The register and the generic compose: the effective advertised support is the lower of the
+two, so software can only ever reduce what a build already claims.
 
 === Debug Interface
 We can enable a debug interface that muxes the streaming interfaces away from the serdes blocks and connects

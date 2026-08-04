@@ -13,6 +13,11 @@ use work.axi_st8_pkg.all;
 
 
 entity sp5_espi_flash_subsystem is
+    generic (
+        --! Ceiling on the eSPI frequency this build will advertise, in MHz.
+        --! Must match what the project's timing constraints actually close at.
+        max_freq_mhz : natural := 66
+    );
     port(
         clk_125m : in std_logic;
         reset_125m : in std_logic;
@@ -125,6 +130,9 @@ begin
     -- logic runs at 125MHz so all the interfaces are synchronous
     -- to 125MHz
     espi_target_top_inst: entity work.espi_target_top
+     generic map(
+        max_freq_mhz => max_freq_mhz
+     )
      port map(
         clk_200m => clk_200m,
         reset_200m => reset_200m,

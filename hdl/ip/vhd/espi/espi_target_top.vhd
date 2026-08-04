@@ -21,6 +21,14 @@ use work.link_layer_pkg.all;
 use work.axil15x32_pkg.all;
 
 entity espi_target_top is
+    generic (
+        --! Hard ceiling on the operating frequency this implementation will
+        --! advertise, in MHz, regardless of what the SP writes to link_caps.
+        --! Set it to what the board and its constraints actually close at: a
+        --! build that cannot meet timing at 66MHz has no business telling the
+        --! host it can. Rounded down to the nearest eSPI-defined step.
+        max_freq_mhz : natural := 66
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -113,6 +121,8 @@ architecture rtl of espi_target_top is
     signal live_espi_status : std_logic_vector(15 downto 0);
     signal adv_io_mode_support : std_logic_vector(1 downto 0);
     signal adv_op_freq_support : std_logic_vector(2 downto 0);
+    signal early_launch_slow : std_logic;
+    signal early_launch_fast : std_logic;
 
 begin
 
@@ -177,6 +187,7 @@ begin
         resp_from_fifo => qspi_resp,
         wait_states => wait_states_fast,
         qspi_mode => encode(qspi_mode_vec_fast),
+        early_launch => early_launch_fast,
         alert_needed => alert_needed_fast,
         espi_reset => espi_link_layer
     );
@@ -196,6 +207,15 @@ begin
         dbg_espi_reset => dbg_espi_reset
     );
 
+
+    -- Quasi-static, same as the mode: only moves on a SET_CONFIGURATION, and the
+    -- PHY latches it at the first SCLK edge of a transaction.
+    early_launch_sync: entity work.meta_sync
+     port map(
+        async_input => early_launch_slow,
+        clk => clk_200m,
+        sycnd_output => early_launch_fast
+    );
 
     alert_needed_slow <= '1' when alert_needed else '0';
     alert_sync: entity work.meta_sync
@@ -305,6 +325,9 @@ begin
 
     -- espi-internal register block
     espi_regs_inst: entity work.espi_spec_regs
+        generic map (
+            max_freq_mhz => max_freq_mhz
+        )
         port map (
             clk            => clk,
             reset          => reset,
@@ -313,6 +336,7 @@ begin
             spec_regs_view => spec_regs,
             adv_io_mode_support => adv_io_mode_support,
             adv_op_freq_support => adv_op_freq_support,
+            early_launch   => early_launch_slow,
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
             flash_channel_enable => flash_channel_enable,

@@ -51,6 +51,12 @@ entity espi_phy is
         --! by the latch below.
         qspi_mode : in    qspi_mode_t;
 
+        --! Launch each bit a half period early, on the rising edge rather than
+        --! the falling one. Only valid where the flight time back to the
+        --! controller exceeds a half SCLK period -- see the comment on the
+        --! serializer. Quasi-static and latched with the I/O mode.
+        early_launch : in    std_logic;
+
         -- Received bytes, handed to the fabric domain with a toggle. `rx_byte`
         -- is held for a full byte time, so the fabric side can sample it any
         -- time it sees the toggle move.
@@ -85,6 +91,8 @@ architecture rtl of espi_phy is
     signal mode_latched : std_logic;
     signal txn_mode_r   : qspi_mode_t;
     signal mode_sel     : qspi_mode_t;
+    signal txn_early_r  : std_logic;
+    signal early_sel    : std_logic;
     signal shift_amt    : natural range 1 to 4;
 
     -- RX
@@ -99,7 +107,8 @@ architecture rtl of espi_phy is
 
     -- TX
     signal tx_reg            : std_logic_vector(7 downto 0);
-    signal io_o_r            : std_logic_vector(3 downto 0);
+    signal io_o_early        : std_logic_vector(3 downto 0);
+    signal io_o_late         : std_logic_vector(3 downto 0);
     signal tx_bits_left      : natural range 0 to 8;
     signal ta_fall_cnt       : natural range 0 to 3;
     signal in_response_phase : std_logic;
@@ -151,6 +160,7 @@ begin
     -- `mode_sel` covers the first edge itself, before the capture register
     -- has anything in it.
     mode_sel  <= txn_mode_r when mode_latched = '1' else qspi_mode;
+    early_sel <= txn_early_r when mode_latched = '1' else early_launch;
     shift_amt <= get_qspi_shift_amt_by_mode(mode_sel);
 
     -- ------------------------------------------------------------------
@@ -177,6 +187,7 @@ begin
             sclk_cnt        <= (others => '0');
             mode_latched    <= '0';
             txn_mode_r      <= single;
+            txn_early_r     <= '0';
             first_byte      <= (others => '0');
             have_first_byte <= '0';
         elsif rising_edge(sclk) then
@@ -185,7 +196,8 @@ begin
 
             mode_latched <= '1';
             if mode_latched = '0' then
-                txn_mode_r <= mode_sel;
+                txn_mode_r  <= mode_sel;
+                txn_early_r <= early_sel;
             end if;
 
             nxt := shift_left(rx_reg, shift_amt);
@@ -272,31 +284,64 @@ begin
                            in_response_phase = '0';
 
     -- ------------------------------------------------------------------
+    -- Response phase state machine
+    -- ------------------------------------------------------------------
+    -- Turnaround spans three SCLK edges after the last command bit is sampled.
+    -- The output enable stays on the falling edge deliberately: it must not come
+    -- up before the controller has released the bus, and the falling edge is
+    -- where that handover happens.
+    response_phase_sm: process(sclk, cs_n)
+    begin
+        if cs_n = '1' then
+            ta_fall_cnt       <= 0;
+            in_response_phase <= '0';
+            resp_oe           <= (others => '0');
+        elsif falling_edge(sclk) then
+            if in_response_phase = '0' and in_turnaround_phase then
+                if ta_fall_cnt = 1 then
+                    in_response_phase <= '1';
+                    resp_oe           <= oe_by_mode(mode_sel);
+                else
+                    ta_fall_cnt <= ta_fall_cnt + 1;
+                end if;
+            end if;
+        end if;
+    end process;
+
+    -- ------------------------------------------------------------------
     -- Response serializer
     -- ------------------------------------------------------------------
-    -- Turnaround spans three SCLK edges after the last command bit is
-    -- sampled: F1, R1, F2. Counting falling edges only, the response phase
-    -- opens after F2 and the first byte is launched on F3, matching the edge
-    -- relationship of the previous implementation.
+    -- Always runs on the rising edge. `io_o_early` therefore presents each bit a
+    -- half period ahead of where the old falling-edge serializer put it, and
+    -- `io_o_late` below re-registers it on the falling edge to reproduce the
+    -- original timing exactly. Which one reaches the pad is selected at run time
+    -- by the negotiated frequency.
+    --
+    -- Why this is not simply always-early: the controller captures at a fixed
+    -- edge one period after the target is *supposed* to have launched, not
+    -- wherever the data happens to land. Launching early only buys time while
+    -- the flight time back to the controller still exceeds a half period -- if it
+    -- does not, the next bit has already replaced this one by the time the
+    -- controller looks, and the whole response shifts by a bit. On cosmo flight
+    -- is about 12ns, so early launch is correct at 66MHz (half period 7.6ns) and
+    -- wrong at 20MHz (half period 25ns).
+    --
+    -- That makes this the one place in the block whose correctness depends on a
+    -- physical delay rather than only on the protocol. The testbench models the
+    -- round trip precisely so it can catch the mistake; forcing early launch on
+    -- at 20MHz fails the sweeps immediately.
     response_serializer: process(sclk, cs_n)
         variable nxt_tx : std_logic_vector(7 downto 0);
     begin
         if cs_n = '1' then
-            tx_reg            <= (others => '1');
-            -- IO[1] idles low rather than high, so the in-band alert only has
-            -- to assert the output enable to pull the line down. Keeping the
-            -- alert out of the io_o data path is what lets this register pack
-            -- into the IOB; a mux between it and the pad would prevent that.
-            -- Safe because alert_gen only permits an alert once chip select has
-            -- been deasserted for a couple of cycles, by which point this reset
-            -- has long since applied.
-            io_o_r            <= (1 => '0', others => '1');
-            tx_bits_left      <= 0;
-            ta_fall_cnt       <= 0;
-            in_response_phase <= '0';
-            resp_oe           <= (others => '0');
-            tx_rdack          <= '0';
-        elsif falling_edge(sclk) then
+            tx_reg       <= (others => '1');
+            -- IO[1] idles low so the in-band alert only has to assert the output
+            -- enable; keeping the alert out of this data path is what lets these
+            -- registers sit next to the pad.
+            io_o_early   <= (1 => '0', others => '1');
+            tx_bits_left <= 0;
+            tx_rdack     <= '0';
+        elsif rising_edge(sclk) then
             tx_rdack <= '0';
             nxt_tx   := tx_reg;
 
@@ -316,31 +361,23 @@ begin
                     nxt_tx       := shift_left(tx_reg, shift_amt);
                     tx_bits_left <= tx_bits_left - shift_amt;
                 end if;
-            elsif in_turnaround_phase then
-                if ta_fall_cnt = 1 then
-                    in_response_phase <= '1';
-                    resp_oe           <= oe_by_mode(mode_sel);
-                else
-                    ta_fall_cnt <= ta_fall_cnt + 1;
-                end if;
+                tx_reg     <= nxt_tx;
+                io_o_early <= tap_by_mode(nxt_tx, mode_sel);
             end if;
-
-            tx_reg <= nxt_tx;
-            -- Register the pad values here rather than muxing tx_reg
-            -- combinationally outside the process. Two reasons, and the first
-            -- is a correctness one: the mux select derives from mode_sel, which
-            -- is captured on a *rising* edge, so a combinational mux hands the
-            -- output path a mixed launch edge and only half a period to reach
-            -- the pad. Second, a registered output can be packed into the IOB,
-            -- which is where the rest of the output delay goes.
-            --
-            -- Bit timing on the wire is unchanged: the pad previously showed
-            -- tap(tx_reg) immediately after this edge updated tx_reg, and now
-            -- shows the same taps registered on that same edge.
-            io_o_r <= tap_by_mode(nxt_tx, mode_sel);
         end if;
     end process;
 
-    io_o <= io_o_r;
+    -- Half a period of delay, which is what turns the early launch back into the
+    -- original falling-edge one.
+    late_launch_reg: process(sclk, cs_n)
+    begin
+        if cs_n = '1' then
+            io_o_late <= (1 => '0', others => '1');
+        elsif falling_edge(sclk) then
+            io_o_late <= io_o_early;
+        end if;
+    end process;
+
+    io_o <= io_o_early when early_sel = '1' else io_o_late;
 
 end rtl;

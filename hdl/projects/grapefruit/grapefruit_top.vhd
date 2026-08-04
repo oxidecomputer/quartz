@@ -403,7 +403,14 @@ begin
     -- logic runs at 125MHz so all the interfaces are synchronous
     -- to 125MHz
     resize_axil(fabric_responders(3), responders_8b(3));
+    -- Capped at 20MHz: grapefruit has no eSPI timing constraints, and its SCLK
+    -- pin is not clock capable, so there is nothing to close timing against. The
+    -- generic makes that a property of the build rather than something software
+    -- has to remember.
     espi_target_top_inst: entity work.espi_target_top
+     generic map(
+        max_freq_mhz => 20
+     )
      port map(
         clk_200m => clk_200m,
         reset_200m => reset_200m,

@@ -524,7 +524,12 @@ begin
     -- all the system interfaces run at 125MHz for common clocking
     resize_axil(fabric_responders(ESPI_RESP_IDX), responders_15b(ESPI_RESP_IDX));
     resize_axil(fabric_responders(SPINOR_RESP_IDX), responders_8b(SPINOR_RESP_IDX));
+    -- 66MHz is the eSPI spec maximum and what cosmo_timing.xdc constrains. The
+    -- link_caps register still defaults to 20MHz single, so software opts in.
     espi_spinor_ss: entity work.sp5_espi_flash_subsystem
+     generic map(
+        max_freq_mhz => 66
+     )
      port map(
         clk_125m => clk_125m,
         reset_125m => reset_125m,

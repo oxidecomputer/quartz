@@ -19,6 +19,11 @@ use work.link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 
 entity espi_spec_regs is
+    generic (
+        --! Hard ceiling on the advertised operating frequency, in MHz. Rounded
+        --! down to the nearest eSPI-defined step.
+        max_freq_mhz : natural := 66
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -34,6 +39,11 @@ entity espi_spec_regs is
 
         -- Read-only view of all spec registers for the sys_regs block
         spec_regs_view : view spec_regs_source;
+
+        --! Launch response bits a half period early. Only correct at the top
+        --! frequency, where the flight time back to the controller still exceeds
+        --! a half SCLK period -- see the serializer in espi_phy.
+        early_launch         : out   std_logic;
 
         qspi_mode            : out   qspi_mode_t;
         wait_states          : out   std_logic_vector(3 downto 0);
@@ -56,6 +66,26 @@ architecture rtl of espi_spec_regs is
     signal qspi_freq        : qspi_freq_t;
     signal eff_io_mode_sel     : general_capabilities_io_mode_sel;
     signal eff_op_freq_select  : general_capabilities_op_freq_select;
+
+    --! The highest eSPI-defined frequency step at or below `max_mhz`.
+    function op_freq_support_cap (
+        constant max_mhz : natural
+    ) return general_capabilities_op_freq_support is
+    begin
+        if max_mhz >= 66 then
+            return SIXTYSIX;
+        elsif max_mhz >= 50 then
+            return FIFTY;
+        elsif max_mhz >= 33 then
+            return THIRTYTHREE;
+        elsif max_mhz >= 25 then
+            return TWENTYFIVE;
+        else
+            return TWENTY;
+        end if;
+    end function;
+
+    constant freq_cap : general_capabilities_op_freq_support := op_freq_support_cap(max_freq_mhz);
 
     --! Is `sel` within what `support` advertises? Note the support encoding is
     --! not ordered the way the selection is: QUAD means "single and quad only",
@@ -169,7 +199,16 @@ begin
             -- happens at the start of every boot, so letting it fall back to the
             -- register default would drop the link to single/20MHz for good.
             gen_capabilities.io_mode_support <= encode(adv_io_mode_support);
-            gen_capabilities.op_freq_support <= encode(adv_op_freq_support);
+            -- Whichever is lower: what the SP asked us to advertise, or what this
+            -- implementation was built to support. The generic is the backstop --
+            -- software cannot talk a build into a frequency its timing does not
+            -- close at.
+            if general_capabilities_op_freq_support'pos(encode(adv_op_freq_support)) >
+               general_capabilities_op_freq_support'pos(freq_cap) then
+                gen_capabilities.op_freq_support <= freq_cap;
+            else
+                gen_capabilities.op_freq_support <= encode(adv_op_freq_support);
+            end if;
         end if;
     end process;
 
@@ -222,6 +261,22 @@ begin
     qspi_mode <= quad when eff_io_mode_sel = quad else
                  dual when eff_io_mode_sel = dual else
                  single;
+
+    -- Early launch is valid only where the flight time back to the controller
+    -- still exceeds a half SCLK period; below that the next bit has already
+    -- replaced this one by the controller's capture edge and the response shifts
+    -- by a bit. Measured flight on cosmo is about 12ns, so the boundary sits
+    -- between 33MHz (half period 15.2ns) and 50MHz (10ns) -- which is exactly
+    -- where the simulation sweeps start failing if this is forced on, so the
+    -- threshold is verified rather than assumed.
+    --
+    -- 66MHz *needs* it. 50MHz does not -- a full period covers the flight with
+    -- about 1ns to spare -- but it is included anyway so that the falling-edge
+    -- path is only ever used at 33MHz and below, where it has better than twice
+    -- the budget it needs. That is what makes it safe to exclude the late path
+    -- from the 66MHz timing analysis instead of leaving it reported as failing.
+    early_launch <= '1' when eff_op_freq_select = SIXTYSIX or
+                             eff_op_freq_select = FIFTY else '0';
 
     qspi_freq <= sixtysix when eff_op_freq_select = sixtysix else
                  fifty when eff_op_freq_select = fifty else

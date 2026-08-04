@@ -225,9 +225,36 @@ set_multicycle_path -setup 2 -from [get_cells -hier -filter {NAME =~ *qspi_link_
 set_multicycle_path -hold  1 -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/resp_oe_reg*}] \
                              -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
 
-# Pack the serializer's output registers into the IOBs. Most of what is left in
-# the output data path is routing between the register and the pad, and this is
-# where it goes. IO[1] will not pack -- the in-band alert has to be able to pull
-# it low with no SCLK running, so there is a LUT between the register and the pad
-# on that bit only.
-set_property IOB TRUE [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/io_o_r_reg*}]
+# The serializer launches on the rising edge and the controller captures on the
+# falling edge one period later, so 1.5 SCLK periods of flight -- a half period
+# more than the default single-cycle analysis assumes. This is what closes the
+# output path at 66MHz.
+set_multicycle_path -setup 2 -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/io_o_early_reg*}] \
+                             -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_multicycle_path -hold  1 -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/io_o_early_reg*}] \
+                             -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+
+# The falling-edge launch path exists for 33MHz and below -- the link layer
+# switches to the early launch above that, since below it early launch would land
+# the wrong bit on the controller's capture edge. At 33MHz that path has close to
+# 19ns of budget against about 8ns of actual delay, so analysing it against a
+# 66MHz period says nothing useful; it is excluded rather than left reported as a
+# failure that no configuration can actually hit.
+set_false_path -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/io_o_late_reg*}] \
+               -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+
+# The output registers cannot pack into the IOBs: selecting the launch edge at
+# run time needs a mux between them and the pad. That costs about 2ns of data
+# path versus an IOB-resident register, which the extra half period of flight
+# more than pays for.
+#
+# The mux select is quasi-static and not a per-bit path. It is frozen at the
+# first SCLK edge of a transaction -- many edges before the response phase can
+# begin -- and cannot change while data is flowing, so the tools have no useful
+# per-cycle requirement to check here.
+set_false_path -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/mode_latched_reg*}] \
+               -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_false_path -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/txn_early_r_reg*}] \
+               -to   [get_ports espi0_sp5_to_fpga1_dat[*]]
+set_false_path -from [get_cells -hier -filter {NAME =~ *qspi_link_layer_inst/phy/txn_mode_r_reg*}] \
+               -to   [get_ports espi0_sp5_to_fpga1_dat[*]]

@@ -46,6 +46,9 @@ entity espi_link_layer is
         -- System interface (from slow domain, already sync'd)
         wait_states  : in    std_logic_vector(3 downto 0);
         qspi_mode    : in    qspi_mode_t;
+        --! Launch a half period early; only valid at the top frequency. See the
+        --! serializer in espi_phy.
+        early_launch : in    std_logic;
         alert_needed : in    std_logic;
 
         --! Registered in the fabric domain, synchronized onward externally.
@@ -82,6 +85,7 @@ begin
             io_o      => phy_io_o,
             resp_oe   => resp_oe,
             qspi_mode => qspi_mode,
+            early_launch => early_launch,
             rx_byte   => rx_byte,
             rx_toggle => rx_toggle,
             tx_data   => resp_rdata,
