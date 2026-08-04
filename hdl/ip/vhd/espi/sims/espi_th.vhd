@@ -29,6 +29,7 @@ architecture th of espi_th is
     signal   ss_n       : std_logic_vector(7 downto 0);
     signal   sclk       : std_logic;
     signal   io         : std_logic_vector(3 downto 0);
+    constant target_io_delay : time := 12 ns;
     signal   io_o       : std_logic_vector(3 downto 0);
     signal   io_oe      : std_logic_vector(3 downto 0);
     constant qspi_actor : qspi_vc_t := new_qspi_vc("espi_vc");
@@ -154,11 +155,19 @@ begin
             flash_rdata_rdack   => flash_rfifo_rdack
         );
 
-    io_tris: process(all)
-    begin
-        for i in io'range loop
-            io(i) <= io_o(i) when io_oe(i) = '1' else 'H';
-        end loop;
-    end process;
+    -- Model the real round trip from the controller's SCLK edge to the target's
+    -- data arriving back at it: clock trace out to the FPGA, clock insertion
+    -- delay to the serializer, register to pad, and data trace back. On cosmo
+    -- that measures about 12ns and is dominated by the clock insertion, since
+    -- SCLK cannot take a dedicated clock route on either board.
+    --
+    -- Without this the simulation is zero-delay, which means it cannot tell
+    -- which SCLK edge the controller actually captures on -- precisely the thing
+    -- the output path is short of margin for. It is a fixed physical delay, so
+    -- it matters more the faster the link runs.
+    target_io_delay_gen: for i in io'range generate
+        io(i) <= transport io_o(i) after target_io_delay when io_oe(i) = '1' else
+                 'H' after target_io_delay;
+    end generate;
 
 end th;

@@ -244,11 +244,23 @@ of what frequency is eventually run:
   data combinationally put a LUT between register and pad on that one bit and stopped it
   packing.
 
-Closing the remaining gap needs the launch moved a half period earlier -- onto the rising
-edge preceding the falling edge used today -- which keeps every bit landing on the same SP5
-capture edge but gives it 1.5 periods of flight instead of 1, and needs
-`set_multicycle_path -setup 2` so the tools analyse against the right capture edge. That is
-worth roughly +7.6ns, taking the path from -3.9ns to about +3.6ns.
+The requirement is that the total flight time from the controller's clock edge to its own
+capture edge fits in one SCLK period minus TDIST, which at 66MHz is 8.15ns against 12.06ns
+actual. Only the insertion delay is attackable, and only partly: better BUFG and serializer
+placement might recover 2ns of it, which still leaves the path around 1.7ns short.
+
+CAUTION: launching a half period earlier, on the rising edge, looks like it should fix this
+and does not. It buys margin only while the flight time exceeds a half period. That holds at
+66MHz, where flight is 12ns against a 7.58ns half period, and fails at 20MHz, where the bit
+has already been replaced by its successor before the protocol's capture edge arrives -- the
+controller captures at a fixed edge one period after the target should have launched, not
+wherever the data happens to land. Making the early launch conditional on the negotiated
+frequency would work, since `qspi_freq` is already plumbed into the link layer, at the cost
+of doubling the verification matrix.
+
+Otherwise 66MHz on this board needs the insertion delay gone, which means SCLK on a pin that
+can drive a clock buffer directly. On cosmo that is a swap of SCLK and `dat[0]` between U3
+and U4.
 
 NOTE: a PLL or MMCM would be the natural way to cancel the insertion delay and shift the
 launch phase arbitrarily, and it is not available here: eSPI gates SCLK, so the clock is

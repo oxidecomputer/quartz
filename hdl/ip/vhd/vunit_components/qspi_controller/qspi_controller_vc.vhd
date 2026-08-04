@@ -243,8 +243,14 @@ begin
             -- changes to be reflected but some other processes
             -- want to follow things also so we also provide signal
             -- version of rx_rem_byes for inter-process communication
+            -- The controller captures target data on the FALLING edge of sclk,
+            -- not the rising one -- the SP5's data-in setup (TDIST) is specified
+            -- against that edge. Sampling here on the same edge the target
+            -- launches on is correct in simulation: delta semantics mean this
+            -- process reads the pre-edge value, which is the bit the target
+            -- drove a period earlier.
             while rx_rem_bytes > 0 loop
-                wait until rising_edge(sclk);
+                wait until falling_edge(sclk);
                 rx_nxt := rx_reg;
                 rx_nxt       := shift_left(rx_nxt, shift_amt);
                 if mode = SINGLE then
