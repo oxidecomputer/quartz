@@ -21,6 +21,13 @@ vhdl_unit(
 )
 
 vhdl_unit(
+    name = "spi_nor_target_vc",
+    srcs = glob(["spi_nor_target/*.vhd"]),
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
     name = "i2c_cmd_vc",
     srcs = glob(["i2c_cmd/*.vhd"]),
     visibility = ['PUBLIC'],

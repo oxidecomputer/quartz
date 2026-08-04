@@ -9,6 +9,15 @@ use ieee.numeric_std_unsigned.all;
 use work.spi_nor_pkg.all;
 
 entity spi_txn_mgr is
+    generic (
+        -- clk cycles from cs_n asserting to the first sclk edge (tSLCH)
+        cs_setup_cnts : natural := 4;
+        -- Minimum clk cycles cs_n must stay high between transactions (tSHSL).
+        -- The eSPI read path chains page reads back to back and will otherwise
+        -- re-assert cs_n the cycle after it goes high, which the flash does not
+        -- allow. This is in clk cycles, so it does not scale with sclk.
+        cs_high_cnts : natural := 7
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -20,15 +29,20 @@ entity spi_txn_mgr is
         -- instr: in std_logic_vector(7 downto 0);
         -- go_flag: in std_logic;
         -- link interface
-        cs_n         : out   std_logic;
+        cs_n : out   std_logic;
+        -- Second copy of the cs_n flop, for the pin only, so it can be packed
+        -- into the IOB. Same reasoning as spi_clk_gen's sclk_pin.
+        cs_n_pin     : out   std_logic;
         sclk         : in    std_logic;
         rx_byte_done : in    boolean;
         rx_link_byte : in    std_logic_vector(7 downto 0);
-        tx_byte_done : in    boolean;
+        tx_byte_req  : in    boolean;
         tx_link_byte : out   std_logic_vector(7 downto 0);
         in_rx_phases : out   boolean;
         in_tx_phases : out   boolean;
-        cur_io_mode  : out   io_mode;
+        -- Lanes to stop driving ahead of a turnaround, see below
+        release_lanes : out   std_logic_vector(3 downto 0);
+        cur_io_mode   : out   io_mode;
         -- fifo interface
         rx_fifo_data  : out   std_logic_vector(7 downto 0);
         rx_fifo_write : out   std_logic;
@@ -42,7 +56,6 @@ architecture rtl of spi_txn_mgr is
     attribute mark_debug : string;
     constant BYTES_24BIT_ADDR  : integer := 3;
     constant BYTES_32BIT_ADDR  : integer := 4;
-    constant CS_CLK_DELAY_CNTS : integer := 4;
 
     type state_t is (idle, cs_assert, instruction, addr, dummy, wdata, rdata, cs_deassert);
 
@@ -51,8 +64,11 @@ architecture rtl of spi_txn_mgr is
         txn     : txn_info_t;
         csn     : std_logic;
         counter : integer range 0 to 512;
+        -- Counts down the enforced cs_n high time. Separate from `counter`
+        -- because it has to keep running while we sit in idle.
+        cs_high : integer range 0 to 63;
     end record;
-    constant r_reset : reg_type := (idle, txn_info_t_reset, '1', 0);
+    constant r_reset : reg_type := (idle, txn_info_t_reset, '1', 0, 0);
 
     signal r, rin    : reg_type;
     attribute mark_debug of r : signal is "TRUE";
@@ -66,11 +82,17 @@ architecture rtl of spi_txn_mgr is
     ) return io_mode is
     begin
         if state = idle or
+           state = cs_assert or
            state = instruction or
            state = addr or
            state = dummy then
             -- no matter what the transaction moves to, we're in single mode
-            -- for these phases
+            -- for these phases. cs_assert belongs here because the serializer is
+            -- already shifting the opcode out during it: sclk is enabled as soon
+            -- as we assert cs_n, and at clk/2 the first sclk edge lands inside
+            -- cs_assert rather than after it. Reporting the data mode here made
+            -- the opcode go out 4 bits at a time, so the part saw a different
+            -- instruction entirely.
             return single;
         else
             -- otherwise use the mode specified by the opcode
@@ -79,12 +101,22 @@ architecture rtl of spi_txn_mgr is
     end;
 
     -- This function takes the state and returns if we're driving data lines
-    -- currently
+    -- currently.
+    --
+    -- cs_deassert counts as driving for anything that is not a read: the part
+    -- samples our last bit on the sclk edge after we leave wdata, and io_oe is
+    -- registered, so releasing there would change mosi on the very edge being
+    -- sampled once a half period is a single clk cycle. Holding until cs_n rises
+    -- is what a controller should do anyway. Reads must not drive here, since
+    -- the part keeps driving until it is deselected.
     function is_in_tx_phases (
+        txn: txn_info_t;
         state: state_t
     ) return boolean is
     begin
-        return state = cs_assert or state = wdata or state = dummy or state = addr or state = instruction;
+        return state = cs_assert or state = wdata or state = dummy or
+               state = addr or state = instruction or
+               (state = cs_deassert and txn.data_kind /= read);
     end;
 
     -- This function takes the state and returns if we're sampling data lines
@@ -104,7 +136,7 @@ begin
     rx_fifo_data  <= rx_link_byte;
     rx_fifo_write <= '1' when rx_byte_done else '0';
     in_rx_phases  <= is_in_rx_phases(r.state);
-    in_tx_phases  <= is_in_tx_phases(r.state);
+    in_tx_phases  <= is_in_tx_phases(r.txn, r.state);
 
     -- more complicated outputs
 
@@ -114,14 +146,28 @@ begin
         cur_io_mode <= get_cur_io_mode(r.txn, r.state);
     end process;
 
-    -- Set up a bunch of muxes, and other signals that are used in the modules below
-    -- mux into the serializer: we are sending static data sometimes, and fifo data sometimes
-    tx_link_byte <= spi_cmd.instr when (r.state = instruction or r.state = cs_assert) else
-                    spi_cmd.addr(8 * r.counter + 7 downto 8 * r.counter) when r.state = addr else
-                    tx_fifo_data when r.state = wdata else
-                    (others => '1');
-    -- we only want to FIFO ack when we were reading from the fifo, not the static data
-    tx_fifo_ack <= '1' when tx_byte_done and r.state = wdata else '0';
+    -- Stop driving the lanes the flash is about to drive, an sclk cycle before
+    -- it starts. Only multi-bit reads with dummy cycles need this: during the
+    -- dummy phase cur_io_mode is still single, so io0/io3 are being driven for
+    -- HOLD avoidance right up to the point a dual or quad read takes them over.
+    -- At 20MHz the registered io_oe happened to drop in time; at clk/2 it does
+    -- not, and the overlap shows up as marginal first bytes rather than an
+    -- obvious failure. Lanes the part never drives in this mode are left alone.
+    release_gen: process(all)
+    begin
+        release_lanes <= "0000";
+        if r.state = dummy and r.txn.data_kind = read and r.counter <= 1 then
+            case r.txn.data_mode is
+                when quad =>
+                    release_lanes <= "1111";
+                when dual =>
+                    release_lanes <= "0011";
+                when single =>
+                    -- the part only drives io1, which we are not driving
+                    release_lanes <= "0000";
+            end case;
+        end if;
+    end process;
 
     -- main controller state machine
     controller: process(all)
@@ -130,13 +176,20 @@ begin
     begin
         v := r;
         slk_redge := sclk = '1' and sclk_last = '0';
+
+        if r.cs_high > 0 then
+            v.cs_high := r.cs_high - 1;
+        end if;
         case r.state is
             when idle =>
-                if spi_cmd.go_flag then
+                -- Hold off until the part's minimum cs_n high time has elapsed.
+                -- The eSPI manager re-asserts go_flag as soon as it sees us go
+                -- un-busy, which is the same cycle cs_n rises.
+                if spi_cmd.go_flag = '1' and r.cs_high = 0 then
                     v.state := cs_assert;
                     -- build up transaction info based on opcode
                     v.txn := get_txn_info(spi_cmd.instr);
-                    v.counter := CS_CLK_DELAY_CNTS;
+                    v.counter := cs_setup_cnts;
                 end if;
             when cs_assert =>
                 if r.counter = 0 then
@@ -149,7 +202,7 @@ begin
                 -- address phase, or issue dummy clocks,
                 -- or go directly to a read/write phase
                 -- so we check all the options here
-                if tx_byte_done then
+                if tx_byte_req then
                     case r.txn.addr_kind is
                         when bit24 =>
                             v.counter := BYTES_24BIT_ADDR - 1; -- zero indexed
@@ -170,7 +223,7 @@ begin
                                         v.state := wdata;
                                     when none =>
                                         v.state := cs_deassert;
-                                        v.counter := CS_CLK_DELAY_CNTS;
+                                        v.counter := cs_setup_cnts;
                                 end case;
                             end if;
                     end case;
@@ -181,7 +234,7 @@ begin
                 -- dummy clocks. I don't think there are commands
                 -- that issue an address and then do nothing but
                 -- we added the de-assert state for completeness
-                if tx_byte_done and r.counter = 0 then
+                if tx_byte_req and r.counter = 0 then
                     if r.txn.uses_dummys then
                         v.state := dummy;
                         v.counter := to_integer(spi_cmd.dummy_cycles);
@@ -193,9 +246,9 @@ begin
                         v.counter := to_integer(spi_cmd.data_bytes);
                     else
                         v.state := cs_deassert;
-                        v.counter := CS_CLK_DELAY_CNTS;
+                        v.counter := cs_setup_cnts;
                     end if;
-                elsif tx_byte_done then
+                elsif tx_byte_req then
                     v.counter := r.counter - 1;
                 end if;
             when dummy =>
@@ -208,7 +261,7 @@ begin
                         v.counter := to_integer(spi_cmd.data_bytes);
                     else
                         v.state := cs_deassert;
-                        v.counter := CS_CLK_DELAY_CNTS;
+                        v.counter := cs_setup_cnts;
                     end if;
                 elsif slk_redge then
                     v.counter := r.counter - 1;
@@ -217,11 +270,11 @@ begin
                 -- Data counter is 1 indexded to better align
                 -- with sw expectations so we're done when
                 -- r.counter = 1
-                if tx_byte_done and r.counter = 1 then
+                if tx_byte_req and r.counter = 1 then
                     -- We're done with the transaction
                     v.state := cs_deassert;
-                    v.counter := CS_CLK_DELAY_CNTS;
-                elsif tx_byte_done then
+                    v.counter := cs_setup_cnts;
+                elsif tx_byte_req then
                     v.counter := r.counter - 1;
                 end if;
             when rdata =>
@@ -231,7 +284,7 @@ begin
                 if rx_byte_done and r.counter = 1 then
                     -- We're done with the transaction
                     v.state := cs_deassert;
-                    v.counter := CS_CLK_DELAY_CNTS;
+                    v.counter := cs_setup_cnts;
                 elsif rx_byte_done then
                     v.counter := r.counter - 1;
                 end if;
@@ -248,6 +301,34 @@ begin
             v.csn := '0';
         elsif v.state = idle then
             v.csn := '1';
+            -- Arm the high-time counter on the edge that raises cs_n so the
+            -- next transaction cannot start too soon.
+            if r.csn = '0' then
+                v.cs_high := cs_high_cnts;
+            end if;
+        end if;
+
+        -- The serializer consumes a byte on the same edge that this state
+        -- machine advances, so the byte it sees has to come from the state we
+        -- are moving *to*, not the one we are leaving. Driving this off `r`
+        -- works only while the phase advance lands a cycle before the shifter
+        -- reload, which stops being true once the sclk half period is a single
+        -- clk cycle.
+        if v.state = instruction or v.state = cs_assert then
+            tx_link_byte <= spi_cmd.instr;
+        elsif v.state = addr then
+            tx_link_byte <= spi_cmd.addr(8 * v.counter + 7 downto 8 * v.counter);
+        elsif v.state = wdata then
+            tx_link_byte <= tx_fifo_data;
+        else
+            tx_link_byte <= (others => '1');
+        end if;
+
+        -- Only ack the FIFO for bytes that actually came from it
+        if tx_byte_req and v.state = wdata then
+            tx_fifo_ack <= '1';
+        else
+            tx_fifo_ack <= '0';
         end if;
 
         rin <= v;
@@ -258,9 +339,13 @@ begin
         if reset then
             r <= r_reset;
             sclk_last <= '0';
+            cs_n_pin <= '1';
         elsif rising_edge(clk) then
             sclk_last <= sclk;
             r <= rin;
+            -- Duplicate of r.csn, driven from the same next-state value so the
+            -- two flops always agree and change on the same edge.
+            cs_n_pin <= rin.csn;
         end if;
     end process;
 

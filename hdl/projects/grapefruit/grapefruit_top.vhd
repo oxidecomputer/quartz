@@ -338,6 +338,12 @@ begin
 
     resize_axil(fabric_responders(1), responders_8b(1));
     spi_nor_top_inst: entity work.spi_nor_top
+     generic map(
+        -- 125MHz / 2 = 62.5MHz sclk; see sp5_espi_flash_subsystem for why this
+        -- is the ceiling and how rx_sample_taps relates to the board round trip.
+        sclk_divisor => 0,
+        rx_sample_taps => 2
+    )
      port map(
         clk => clk_125m,
         reset => reset_125m,

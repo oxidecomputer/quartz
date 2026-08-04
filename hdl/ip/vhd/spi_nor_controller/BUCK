@@ -37,6 +37,7 @@ vunit_sim(
         ":spi_nor_top",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/axi_blocks:axil8_resizer",
+        "//hdl/ip/vhd/vunit_components:spi_nor_target_vc",
         ],
     visibility = ["PUBLIC"],
 )
