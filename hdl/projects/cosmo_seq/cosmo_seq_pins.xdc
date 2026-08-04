@@ -226,7 +226,7 @@ set_property -dict { PACKAGE_PIN N1 IOSTANDARD LVCMOS18 } [get_ports { spi0_sp5_
 set_property -dict { PACKAGE_PIN P3 IOSTANDARD LVCMOS18 } [get_ports { spi1_sp5_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN P2 IOSTANDARD LVCMOS18 } [get_ports { spi2_sp5_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN E15 IOSTANDARD LVCMOS33 SLEW FAST} [get_ports { spi_fpga1_to_flash_clk }];
-set_property -dict { PACKAGE_PIN C17 IOSTANDARD LVCMOS33 } [get_ports { spi_fpga1_to_flash_cs_l }];
+set_property -dict { PACKAGE_PIN C17 IOSTANDARD LVCMOS33 SLEW FAST} [get_ports { spi_fpga1_to_flash_cs_l }];
 set_property -dict { PACKAGE_PIN E16 IOSTANDARD LVCMOS33 SLEW FAST} [get_ports { spi_fpga1_to_flash_dat[0] }];
 set_property -dict { PACKAGE_PIN B14 IOSTANDARD LVCMOS33 SLEW FAST} [get_ports { spi_fpga1_to_flash_dat[1] }];
 set_property -dict { PACKAGE_PIN A14 IOSTANDARD LVCMOS33 SLEW FAST} [get_ports { spi_fpga1_to_flash_dat[2] }];

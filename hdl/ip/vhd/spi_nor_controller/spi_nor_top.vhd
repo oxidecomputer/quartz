@@ -11,6 +11,18 @@ use work.spi_nor_regs_pkg.all;
 use work.axil8x32_pkg.all;
 
 entity spi_nor_top is
+    generic (
+        -- sclk = clk / (2 * (sclk_divisor + 1)). 0 gives clk/2, which is the
+        -- fastest this structure supports.
+        sclk_divisor : natural := 2;
+        -- Read data sample point, in half-clk steps after the sclk rising edge.
+        -- 2 is the historical behaviour (one whole clk after the edge). See
+        -- spi_link for how the taps map onto capture flops.
+        rx_sample_taps : natural range 0 to 4 := 2;
+        -- Chip select timing, in clk cycles. Independent of sclk.
+        cs_setup_cnts : natural := 4;
+        cs_high_cnts  : natural := 7
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -40,11 +52,17 @@ end entity;
 
 architecture rtl of spi_nor_top is
 
-    constant div_val              : unsigned(15 downto 0) := to_unsigned(2, 16);
+    constant div_val              : unsigned(15 downto 0) := to_unsigned(sclk_divisor, 16);
     signal   rx_byte_done         : boolean;
-    signal   tx_byte_done         : boolean;
+    signal   tx_byte_req          : boolean;
     signal   in_rx_phases         : boolean;
     signal   in_tx_phases         : boolean;
+    signal   release_lanes        : std_logic_vector(3 downto 0);
+    -- Internal copies of sclk and cs_n. The versions that leave the block are
+    -- duplicate flops with no internal fanout so they can be packed into the
+    -- IOBs; these are what the phase logic looks at.
+    signal   sclk_internal        : std_logic;
+    signal   cs_n_internal        : std_logic;
     signal   link_rx_byte         : std_logic_vector(7 downto 0);
     signal   link_tx_byte         : std_logic_vector(7 downto 0);
     signal   cur_io_mode          : io_mode;
@@ -87,6 +105,9 @@ begin
     -- this does clock-gen, and has the serializer and
     -- deserializer that operate during tx and rx phases
     link: entity work.spi_link
+        generic map (
+            rx_sample_taps => rx_sample_taps
+        )
         port map (
             clk   => clk,
             reset => reset,
@@ -95,15 +116,17 @@ begin
             divisor      => div_val,
             in_tx_phases => in_tx_phases,
             in_rx_phases => in_rx_phases,
+            release_lanes => release_lanes,
             rx_byte      => link_rx_byte,
             rx_byte_done => rx_byte_done,
             tx_byte      => link_tx_byte,
-            tx_byte_done => tx_byte_done,
+            tx_byte_req  => tx_byte_req,
             sclk_redge   => open,
             sclk_fedge   => open,
             -- spi link signals
-            sclk  => sclk,
-            cs_n  => cs_n,
+            sclk     => sclk_internal,
+            sclk_pin => sclk,
+            cs_n     => cs_n_internal,
             io    => io,
             io_o  => io_o,
             io_oe => io_oe
@@ -113,20 +136,26 @@ begin
     -- feeds data to/from the serializer/deserializer
     -- to/from FIFOs
     spi_txn_mgr_inst: entity work.spi_txn_mgr
+        generic map (
+            cs_setup_cnts => cs_setup_cnts,
+            cs_high_cnts  => cs_high_cnts
+        )
         port map (
             clk   => clk,
             reset => reset,
             -- registers i/f
             spi_cmd       => spi_cmd_if,
             -- link i/f
-            cs_n          => cs_n,
-            sclk          => sclk,
+            cs_n          => cs_n_internal,
+            cs_n_pin      => cs_n,
+            sclk          => sclk_internal,
             rx_byte_done  => rx_byte_done,
             rx_link_byte  => link_rx_byte,
-            tx_byte_done  => tx_byte_done,
+            tx_byte_req   => tx_byte_req,
             tx_link_byte  => link_tx_byte,
             in_rx_phases  => in_rx_phases,
             in_tx_phases  => in_tx_phases,
+            release_lanes => release_lanes,
             cur_io_mode   => cur_io_mode,
             tx_fifo_ack   => tx_fifo_read8,
             tx_fifo_data  => tx_fifo_data8,
@@ -155,7 +184,7 @@ begin
         port map (
             clk          => clk,
             reset        => reset,
-            txn_complete => cs_n,
+            txn_complete => cs_n_internal,
             -- TX FIFO Interface
             read_data    => tx_fifo_data8,
             read_ack     => tx_fifo_read8,
@@ -237,7 +266,7 @@ begin
 
     spisr_reg.rx_full <= '1' when spisr_reg.rx_used_wds = 64 else '0';
 
-    spisr_reg.busy <= '1' when cs_n = '0' else '0';
+    spisr_reg.busy <= '1' when cs_n_internal = '0' else '0';
 
     -- Hubris-interactable registers for control and status
     spi_nor_regs_inst: entity work.spi_nor_regs

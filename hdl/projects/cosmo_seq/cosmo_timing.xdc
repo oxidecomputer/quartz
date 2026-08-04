@@ -172,3 +172,115 @@ set_false_path -from [get_ports {*}] -to [get_ports {fpga1_spare_v1p8[*]}]
 # This is a stop-gap to provide some kind of output timing constraints per the eSPI base spec
 set_max_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 6
 set_min_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 0
+
+# #######################
+# SPI NOR flash interface (Winbond W25Q01JV)
+# #######################
+# sclk is toggled by fabric logic off clk_125m at clk/2, so 62.5MHz, a 16ns
+# period with an 8ns half period. Nothing inside the FPGA is clocked by it, so
+# there is deliberately no create_generated_clock here: what actually has to be
+# bounded is the clock-to-data skew leaving the FPGA and the pin-to-flop delay
+# coming back, and both are directly constrainable.
+#
+# Trace delays are short and local; using the same 6.8ns/m as the FMC block
+# above. TODO: replace with the measured lengths off 913-0000023.
+set flash_trace_max 0.40
+set flash_trace_min 0.10
+
+# Pull the launch flops into the IOBs. Every one of these is a dedicated
+# duplicate whose only load is its pin (see spi_clk_gen's sclk_pin and
+# spi_txn_mgr's cs_n_pin), which is what makes packing legal. It matters a lot:
+# left in the fabric the placer put them wherever it liked and measured 12 to 13
+# ns of routing to the pin, which both blew the clock-to-data skew budget and
+# pushed the read round trip past every available sample point. In the IOB the
+# delay is small, deterministic, and the same for all four.
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/clk_gen/sclk_pin_reg}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/spi_txn_mgr_inst/cs_n_pin_reg}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_o_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_oe_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_cap_*_reg[*]}]
+
+# #################
+# Outputs: sclk, and dat[] during the instruction, address and write phases.
+# cs_n is handled separately below.
+#
+# The part samples mosi on the sclk rising edge, and the FPGA launches both mosi
+# and the sclk falling edge from the same clk edge. So the flash sees a full half
+# period of setup, less whatever skew the IOBs and routing add between the clock
+# pin and the data pins:
+#
+#   skew_budget = half_period - tDVCH = 8.0 - 2.0 = 6.0 ns
+#
+# Constraining all of these pins into one delay window makes the worst-case skew
+# the difference between the two bounds, which is the quantity that matters here:
+# the same clock insertion delay applies to every one of these launch flops, so it
+# cancels out of the skew and only the window width has to fit the budget.
+#
+# Note the window looks wide (4.5ns against a 6ns budget) for four pins that are
+# all IOB-packed and launched off the same clk edge. That is because max and min
+# delay checks compare the slow corner of one path against the fast corner of
+# another, so most of the width is process/voltage/temperature spread rather than
+# pin-to-pin skew, which is well under a nanosecond here. The bound is a tripwire
+# against a pin losing its IOB or picking up extra logic, not a skew estimate.
+#
+# Hold is not a concern for the part: mosi is held until the following falling
+# edge, 8ns after the sampling edge, against a tCHDX of 3ns.
+#
+# These numbers assume the IOB packing above. Packed, the flop-to-pin delay is
+# about 3.3ns and essentially all of it is logic -- 0.001ns of routing -- so a
+# tight window is both meetable and meaningful. Left in the fabric the same paths
+# measured 12 to 13ns of routing and varied by several ns between builds.
+set_max_delay 5.0 -to [get_ports {spi_fpga1_to_flash_clk \
+                                  spi_fpga1_to_flash_dat[*]}]
+set_min_delay 0.5 -to [get_ports {spi_fpga1_to_flash_clk \
+                                  spi_fpga1_to_flash_dat[*]}]
+
+# Two things are deliberately outside that window, because pulling them into it
+# would make the placer work hard on paths that have an order of magnitude more
+# real slack than the data pins do:
+#
+#   cs_n         only has to be low before the first sclk edge and stay low after
+#                the last. spi_txn_mgr spends cs_setup_cnts = 4 clk cycles, 32ns,
+#                on each, against tSLCH/tCHSH of 5ns.
+#   the tristate carries no data and only has to have settled before the part
+#   enable       starts driving, which release_lanes gives it a full sclk cycle
+#                to do.
+set_max_delay 16.0 -to [get_ports spi_fpga1_to_flash_cs_l]
+set_max_delay 16.0 -from [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_oe_reg[*]}] \
+                   -to [get_ports spi_fpga1_to_flash_dat[*]]
+
+# #################
+# Inputs: dat[] during read phases.
+#
+# The controller samples read data at a fixed point S after the sclk rising edge,
+# set by the rx_sample_taps generic on spi_nor_top. S has to satisfy
+#
+#   round_trip_valid - half_period  <=  S  <=  half_period + round_trip_hold
+#
+# where round_trip_valid is built from the part's tCLQV and round_trip_hold from
+# its tCLQX. Note the upper limit comes from tCLQX, not tCLQV: sampling too late
+# catches the next bit rather than the current one.
+#
+# With the IOB packing and the output bounds above:
+#   flop to sclk pin        3.30 max    1.50 min
+#   sclk trace              0.40        0.10
+#   flash tCLQV / tCLQX     6.00        1.50
+#   data trace back         0.40        0.10
+#   pin to capture flop     1.50        0.50
+#                          -----       -----
+#   round_trip_valid max   11.60       round_trip_hold min   3.70
+#
+# so at an 8ns half period S has to land in 3.6 .. 11.7ns. rx_sample_taps = 2 puts
+# it at 8ns, about 4ns clear of either limit. spi_nor_fast_tb and
+# spi_nor_fast_quick_io_tb model these delays and check both corners.
+#
+# If reads are marginal on hardware, sweep rx_sample_taps before assuming anything
+# else is wrong; taps are 4ns apart so 1 and 3 bracket the shipped value.
+#
+# -datapath_only because this is a pin to flop propagation bound, not a
+# synchronous transfer: without it Vivado charges the MMCM's clock insertion
+# delay against the budget and the check becomes meaningless.
+#
+# The dedicated capture flops in spi_link are the only loads on these pins, so
+# these paths are exactly the pin-to-flop delay.
+set_max_delay 3.0 -datapath_only -from [get_ports spi_fpga1_to_flash_dat[*]]

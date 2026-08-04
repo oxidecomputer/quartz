@@ -11,6 +11,7 @@ library vunit_lib;
     context vunit_lib.vunit_context;
 use work.spi_nor_tb_pkg.all;
 use work.spi_nor_pkg.all;
+use work.spi_nor_target_vc_pkg.all;
 
 entity spi_nor_tb is
     generic (
@@ -31,6 +32,7 @@ begin
         -- reset_b uses the relative path form of external naming for example purposes.
         alias reset is <<signal .spi_nor_tb.th.reset : std_logic>>;
         alias cs_n  is <<signal .spi_nor_tb.th.cs_n : std_logic>>;
+        constant flash : actor_t := find("spi_nor_target");
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -40,12 +42,25 @@ begin
         wait until reset = '0';
         wait for 500 ns;
 
-        -- I haven't built a flash model yet, so I'm just doing some basic
-        -- waveform inspection here.
+        -- Give the flash model known contents so read paths can be checked
+        -- rather than just watched.
+        fill_pattern(net, flash);
+
         while test_suite loop
             if run("instr_only") then
-                write_data_size(net, 3);  -- read out 3 bytes
-                write_instr(net, READ_JEDEC_ID_OP);
+                check_jedec_id(net);
+            elsif run("read_quad_32addr_dummy") then
+                -- The read path that actually matters: hubris and the eSPI flash
+                -- reader both use 4-byte-address quad fast read with 8 dummies.
+                check_flash_read(net, FAST_READ_4BYTE_QUAD_OP, 8, 16#1200#, 64);
+            elsif run("read_single_32addr") then
+                check_flash_read(net, READ_DATA_4BYTE_OP, 0, 16#40#, 16);
+            elsif run("read_dual_32addr_dummy") then
+                check_flash_read(net, FAST_READ_4BYTE_DUAL_OP, 8, 16#80#, 16);
+            elsif run("write_then_read_back") then
+                check_program_readback(net, flash, 16#2000#);
+            elsif run("back_to_back_reads") then
+                check_back_to_back_reads(net, 16#400#, 16#500#, 32);
             elsif run("write_24addr_no_dummy") then
                 write_data(net, x"03020100");  -- do do words
                 write_data(net, x"07060504");  -- do do words

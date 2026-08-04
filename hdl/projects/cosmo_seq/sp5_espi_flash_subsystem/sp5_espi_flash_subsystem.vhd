@@ -152,6 +152,21 @@ begin
 
 
     spi_nor_top_inst: entity work.spi_nor_top
+        generic map(
+           -- 125MHz / 2 = 62.5MHz sclk. This is as fast as the block goes off
+           -- clk_125m, and it is the ceiling for a fixed sample point: the
+           -- round trip out to the flash and back has to land within half an
+           -- sclk period of rx_sample_taps, and above this rate that window
+           -- closes. Faster would need per-lane IDELAY read training.
+           sclk_divisor => 0,
+           -- Sample 8ns after the sclk rising edge. Taps are in half-clk (4ns)
+           -- steps. With the flash IO flops packed into the IOBs the round trip
+           -- out and back is bounded to roughly 3.7..11.6ns, which puts the
+           -- usable sample window at 3.6..11.7ns; 8ns sits about 4ns clear of
+           -- either end. cosmo_timing.xdc carries the arithmetic. Sweep this on
+           -- hardware if reads come back corrupted.
+           rx_sample_taps => 2
+        )
         port map(
            clk => clk_125m,
            reset => reset_125m,

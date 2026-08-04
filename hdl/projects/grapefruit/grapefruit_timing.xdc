@@ -69,4 +69,36 @@ set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -setup 2
 set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -hold 1
 
+# #######################
+# SPI NOR flash interface (Winbond W25Q01JV)
+# #######################
+# sclk is fabric-toggled off clk_125m at clk/2, so 62.5MHz with an 8ns half
+# period. See cosmo_timing.xdc for the full derivation; the short version is that
+# the outputs are bound to a common delay window so the clock-to-data skew at the
+# part stays inside half_period - tDVCH = 6ns, and the return path is bound so
+# the round trip stays inside the sample window that rx_sample_taps picks.
+#
+# TODO: replace the trace numbers with measured lengths for this board.
+
+# Launch and capture flops into the IOBs; see cosmo_timing.xdc for why this is
+# load-bearing rather than a nicety.
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/clk_gen/sclk_pin_reg}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/spi_txn_mgr_inst/cs_n_pin_reg}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_o_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_oe_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_cap_*_reg[*]}]
+
+set_max_delay 5.0 -to [get_ports {spi_fpga_to_flash_clk \
+                                  spi_fpga_to_flash_dat[*]}]
+set_min_delay 0.5 -to [get_ports {spi_fpga_to_flash_clk \
+                                  spi_fpga_to_flash_dat[*]}]
+
+# cs_n and the tristate enable are exempted from the data window; both have an
+# order of magnitude more real slack than the data pins. See cosmo_timing.xdc.
+set_max_delay 16.0 -to [get_ports spi_fpga_to_flash_cs_l]
+set_max_delay 16.0 -from [get_cells -hier -filter {NAME =~ *spi_nor_top_inst/link/io_oe_reg[*]}] \
+                   -to [get_ports spi_fpga_to_flash_dat[*]]
+
+set_max_delay 3.0 -datapath_only -from [get_ports spi_fpga_to_flash_dat[*]]
+
 
