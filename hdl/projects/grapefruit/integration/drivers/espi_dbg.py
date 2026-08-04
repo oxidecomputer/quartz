@@ -155,6 +155,13 @@ class OxideEspiDebug:
     cmd_fifo_wdata_reg = base_reg + 0x10
     resp_fifo_rdata_reg = base_reg + 0x14
     cmd_size_fifo_reg = base_reg + 0x18
+    # SP-facing advertised capabilities. Drives the read-only support fields of
+    # GENERAL_CAPABILITIES, which is what the host reads to decide how fast to
+    # drive the link. Bit positions match that register.
+    link_caps_reg = base_reg + 0x4C
+    # Read-only mirror of the eSPI spec registers.
+    spec_regs_base = base_reg + 0x80
+    spec_gen_caps_reg = spec_regs_base + 0x08
 
     def __init__(self, target_mem):
         self.mem = target_mem
@@ -175,6 +182,33 @@ class OxideEspiDebug:
         else:
             new_cap = cur_cap & (0x7fffffff)
         resp = self.set_config(cap_reg_offset, new_cap)
+
+    def get_link_caps(self) -> int:
+        return self.mem.read32(self.link_caps_reg)
+
+    def set_link_caps(self, io_mode_support: int, op_freq_support: int):
+        """Set what the target advertises to the host as supported.
+
+        io_mode_support: 0 single only, 1 +dual, 2 +quad, 3 any
+        op_freq_support: 0 20MHz, 1 25MHz, 2 33MHz, 3 50MHz, 4 66MHz
+
+        Note this is a ceiling request, not a guarantee: the build also carries a
+        max_freq_mhz generic and the advertised frequency is the lower of the two.
+        Grapefruit is built at 20MHz, so asking for more here is clamped.
+        """
+        assert 0 <= io_mode_support <= 3
+        assert 0 <= op_freq_support <= 4
+        self.mem.write32(self.link_caps_reg,
+                         (io_mode_support << 24) | (op_freq_support << 16))
+
+    def get_advertised_caps(self) -> int:
+        """GENERAL_CAPABILITIES as the host would read it, via the SP mirror."""
+        return self.mem.read32(self.spec_gen_caps_reg)
+
+    def espi_reset(self):
+        """Issue an in-band-equivalent eSPI reset through the debug path."""
+        val = self.mem.read32(self.ctrl_reg)
+        self.mem.write32(self.ctrl_reg, val | (1 << 5))
 
     def fifos_reset(self):
         reset_mask = 0xe

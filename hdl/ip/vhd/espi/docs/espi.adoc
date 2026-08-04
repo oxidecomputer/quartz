@@ -7,10 +7,18 @@
 
 = eSPI Target Core
 
-This block implements an eSPI target core. It is intended to provide SAFS (Slave attached Flash Storage)
-boot functionality for an SP5-class AMD processor. It is intended to support single, dual and quad I/O Modes
-at 66MHz which is the espi-spec maximum frequency. The actual internal fabric is intended to run at >3x the
-SPI frequency so we shoot for 200MHz here.
+This block implements an eSPI target core. It provides SAFS (Slave attached Flash Storage)
+boot functionality for an SP5-class AMD processor, in single, dual and quad I/O modes at up to
+66MHz, which is the eSPI specification maximum.
+
+The serializer and deserializer are clocked by the eSPI SCLK itself. An earlier version
+oversampled SCLK in a 200MHz fabric domain instead, which is why much of the rest of the block
+runs at 200MHz, but that approach cannot be constrained above 20MHz -- see the source
+synchronous serdes section below. Everything outside the link layer runs at 125MHz.
+
+What the target advertises to the host, and therefore what speed the link ends up running at,
+is set by an SP-facing register and bounded by a per-build generic. Both default to the
+slowest configuration, so a system that configures neither behaves as single I/O at 20MHz.
 
 == Overview
 image::espi_block.drawio.svg[align="center"]
@@ -76,10 +84,11 @@ that was running quad at 66MHz has to follow the target back down, or the two en
 disagree about how to interpret the next transaction. This is spec behaviour rather than
 anything specific to this implementation, but it is easy to miss.
 
-This is the only block expected to run in the faster clock domain.  To realize this, functionality,
-we're leveraging the eSPI "WAIT_STATE" feature on every response, which allows us cycles to get from
-the fast domain to the slow domain with the command packets, and have a couple of slow-domain cycles
-to push responses back into the response FIFO before they are needed.
+==== Wait states
+
+We leverage the eSPI WAIT_STATE feature on every response, which buys the cycles needed to get
+command packets from the link layer out to the transaction layer and the response back again
+before it has to go on the wire.
 
 The number of wait states depends on the speed and bus-width of the eSPI interface.  We make decisions
 in the slow domain based on the register settings and then propagate those decisions to the fast domain
@@ -101,7 +110,10 @@ many wait states we need to insert worst-case. Assigning 4 slow clocks to
 do operational logic, we arrive at a turn-around time of 53ns * 2 + 32 ns = 138ns. Each WAIT_STATE will count as a byte-time, so this changes based
 on the bus width and speed. Our worst-case here is quad mode, 66MHz so we have 2 clks/byte = 33ns/byte. We have 138ns / 33ns = 4.18 bytes rounding up to 5 waits.
 
-We can do the same calculation for each of the speeds/modes resulting in this table:
+The same calculation for each speed and mode gives the table below. NOTE: these are the
+original estimates and are *not* the values the design uses -- the table was subsequently
+measured against the simulator and is listed in the next section. They are kept here because
+the reasoning is still the reasoning.
 5 wait states for quad mode, 66MHz
 3 wait states for dual mode, 66MHz
 2 wait states for single mode, 66MHz
@@ -325,6 +337,13 @@ We implement the read commands of SAFS. We do not implement the write commands. 
 block with 4 1024kB queue entries. It issues read requests to the eSPI flash block and then waits for the response,
 once flash response data is enqueued it will alert the host that completed data is available and the host can
 issue a non-posted GET to read the data.
+
+=== The old oversampling link layer
+
+`link_layer.vhd` is the previous implementation and is retained, unreferenced, as a fallback
+until the source-synchronous one has run on hardware. It still compiles -- `espi_top` globs the
+directory -- so swapping back is a one-line change in `espi_target_top`. Delete it once the new
+one has booted a machine.
 
 == Simulation Environment
 The simulation environment provides both a qspi master verification component

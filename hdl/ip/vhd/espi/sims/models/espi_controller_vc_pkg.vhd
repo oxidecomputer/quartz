@@ -228,10 +228,7 @@ package body espi_controller_vc_pkg is
         -- send transaction
         enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
         enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
-        wait for 10 us;
-        report "Here1";
         get_rx_queue(net, msg_target, rx_queue);
-        report "Here";
         crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
         response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
         status := get_status_from_queue_and_flush(rx_queue);
