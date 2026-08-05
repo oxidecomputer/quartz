@@ -52,11 +52,25 @@ package basic_stream_pkg is
 
     constant push_basic_stream_msg          : msg_type_t := new_msg_type("push basic stream");
     constant pop_basic_stream_msg           : msg_type_t := new_msg_type("pop basic stream");
+    constant push_basic_pkt_stream_msg      : msg_type_t := new_msg_type("push basic pkt stream");
 
     procedure push_basic_stream(
         signal net      : inout network_t;
         basic_source    : basic_source_t;
         data            : std_logic_vector
+    );
+
+    -- Same as push_basic_stream but also carries a last flag, for driving the
+    -- axi_st_pkt_t flavour of the streaming interface. Consumed by
+    -- basic_pkt_source; a plain basic_source will reject the message type.
+    --
+    -- Like push_basic_stream this only queues the beat, it does not wait for it
+    -- to be accepted.
+    procedure push_basic_pkt_stream(
+        signal net      : inout network_t;
+        basic_source    : basic_source_t;
+        data            : std_logic_vector;
+        last            : boolean := false
     );
 
     procedure pop_basic_stream(
@@ -133,6 +147,19 @@ package body basic_stream_pkg is
         variable msg : msg_t := new_msg(push_basic_stream_msg);
     begin
         push_std_ulogic_vector(msg, data);
+        send(net, basic_source.p_actor, msg);
+    end;
+
+    procedure push_basic_pkt_stream(
+        signal net      : inout network_t;
+        basic_source    : basic_source_t;
+        data            : std_logic_vector;
+        last            : boolean := false
+    ) is
+        variable msg : msg_t := new_msg(push_basic_pkt_stream_msg);
+    begin
+        push_std_ulogic_vector(msg, data);
+        push_boolean(msg, last);
         send(net, basic_source.p_actor, msg);
     end;
 
