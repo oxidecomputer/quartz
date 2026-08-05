@@ -27,7 +27,6 @@ Quartz uses two build systems in parallel:
 - `buck2 run <target>` - Run a simulation
 - `buck2 bxl //tools/vunit-sims.bxl:vunit_sim_gen` - List all simulation testbenches
 - `buck2 run //tools/multitool:multitool -- lsp-toml` - Generate vhdl_ls.toml for LSP
-- `buck2 run //tools/multitool:multitool -- format` - Auto-format VHDL code
 - `buck2 run //tools/multitool:multitool -- tb-gen --name <name> --path <path>` - Generate testbench boilerplate
 
 #### Running All Simulations
@@ -102,11 +101,22 @@ Each VHDL module should have its own `vhdl_unit` rule in BUCK files. Package fil
 
 ## Development Tools
 
-### Code Formatting
-VHDL code uses vhdl-style-guide with custom rules in `vsg_config.json`. Format code with:
-```bash
-buck2 run //tools/multitool:multitool -- format
-```
+### VHDL Source Conventions
+
+**Character set:** VHDL source files must be ISO/IEC 8859-1 (Latin-1). Any Unicode
+character that does not overlap with Latin-1 has to be left out — that includes
+typographic punctuation (curly quotes, en/em dashes, ellipsis) and symbols such as
+Greek letters. Write `theta`/`rho` rather than `θ`/`ρ`, and `->` rather than `→`,
+including inside comments.
+
+**Comments:** use plain `--`. Do not use `--!` doc-comment markers, and do not add
+TerosHDL header notes to new files. Both are leftovers from a documentation
+renderer this repo no longer uses; some older files still carry them, but new code
+should not. Comments should explain *why* rather than *what*.
+
+Otherwise match the style of the surrounding code: 4-space indent, lowercase entity
+and signal names, `rtl` as the synthesizable architecture name, and active-high
+resets used asynchronously.
 
 ### LSP Support
 Generate vhdl_ls.toml for VHDL language server:
@@ -134,7 +144,6 @@ buck2 run //tools/fpga_releaser:cli -- --fpga <fpga-name> --hubris <hubris-path>
 - `docs/BSV_QUICK_START.md` - BSV Buck2 tutorial
 - `docs/BSV_MIGRATION_EXAMPLES.md` - BSV migration from cobble to Buck2
 - `RDL_EXAMPLES.md` - SystemRDL usage examples
-- `vsg_config.json` - VHDL formatting rules
 - `tools/requirements.txt` - Python dependencies
 
 ## Testing
@@ -194,12 +203,18 @@ end tb;
 
 #### Running Specific Test Cases
 
+Test names are passed positionally and accept glob patterns. There is no
+`--test-case` flag; passing one is an error.
+
 ```bash
 # Run all tests in a testbench
 buck2 run //path/to:testbench_name
 
 # Run a specific test case
-buck2 run //path/to:testbench_name -- --test-case="test_case_name"
+buck2 run //path/to:testbench_name -- "*test_case_name*"
+
+# List the test cases a testbench contains
+buck2 run //path/to:testbench_name -- --list
 ```
 
 ### VUnit Message Passing
