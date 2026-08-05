@@ -66,6 +66,9 @@ begin
         constant TXN_TIMEOUT : time := 5 us;
 
         variable rdata : std_logic_vector(31 downto 0);
+        variable lat0 : integer;
+        variable lat1 : integer;
+        variable lat2 : integer;
 
         -- Every accepted write must produce exactly one B, every accepted read
         -- exactly one R, and (for mapped addresses) exactly one responder side
@@ -155,6 +158,36 @@ begin
             wait until rising_edge(clk);
         end procedure;
 
+        --! Like manual_read, but also reports how many clocks the fabric took to
+        --! answer, so the testbench can show the configured stages are really in
+        --! the path rather than being generated away.
+        procedure manual_read_timed (
+            constant addr : in std_logic_vector;
+            variable data : out std_logic_vector(31 downto 0);
+            variable cycles : out integer
+        ) is
+            variable count : integer := 0;
+        begin
+            man_mode    <= '1';
+            man_araddr  <= addr;
+            man_rready  <= '1';
+            man_arvalid <= '1';
+            loop
+                wait until rising_edge(clk);
+                exit when init_rvalid = '1';
+                count := count + 1;
+                if count > 100 then
+                    check(false, "timed out waiting for read data");
+                    exit;
+                end if;
+            end loop;
+            data   := init_rdata;
+            cycles := count;
+            man_arvalid <= '0';
+            man_rready  <= '0';
+            wait until rising_edge(clk);
+        end procedure;
+
     begin
         test_runner_setup(runner, runner_cfg);
         wait until reset = '0';
@@ -177,13 +210,17 @@ begin
                 check_handshake_accounting(net, mapped_only => true);
 
             elsif run("back_to_back_same_responder") then
-                for word in 0 to 7 loop
-                    write_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 4 * word),
-                                   x"A5A50000" or w32(word));
-                end loop;
-                for word in 0 to 7 loop
-                    check_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 4 * word), axi_resp_okay,
-                                   x"A5A50000" or w32(word), "back to back readback");
+                -- run the burst against every responder in turn, so token and
+                -- payload reuse is covered at each configured pipe depth
+                for idx in config_array'range loop
+                    for word in 0 to 7 loop
+                        write_axi_lite(net, bus_handle, ba(idx, 4 * word),
+                                       x"A5A50000" or w32(16 * idx + word));
+                    end loop;
+                    for word in 0 to 7 loop
+                        check_axi_lite(net, bus_handle, ba(idx, 4 * word), axi_resp_okay,
+                                       x"A5A50000" or w32(16 * idx + word), "back to back readback");
+                    end loop;
                 end loop;
                 check_handshake_accounting(net, mapped_only => true);
 
@@ -300,6 +337,27 @@ begin
                 manual_read(ba(SRAM_A_IDX, 16#04#), rdata, OKAY);
                 check_equal(rdata, std_logic_vector'(x"600DF00D"),
                             "read decoded against a stale write address");
+                clear_manual;
+                check_handshake_accounting(net, mapped_only => true);
+
+            elsif run("pipe_latency") then
+                -- sram_a has no pipe, sram_b has one stage and the wide responder
+                -- two, so the answer must arrive strictly later each time
+                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#00#), x"00000011");
+                write_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 16#00#), x"00000022");
+                write_axi_lite(net, bus_handle, ba(WIDE_IDX, 16#00#), x"00000033");
+                wait_until_idle(net, bus_handle);
+
+                manual_read_timed(ba(SRAM_A_IDX, 16#00#), rdata, lat0);
+                check_equal(rdata, std_logic_vector'(x"00000011"), "unpiped readback");
+                manual_read_timed(ba(SRAM_B_IDX, 16#00#), rdata, lat1);
+                check_equal(rdata, std_logic_vector'(x"00000022"), "one stage readback");
+                manual_read_timed(ba(WIDE_IDX, 16#00#), rdata, lat2);
+                check_equal(rdata, std_logic_vector'(x"00000033"), "two stage readback");
+                info("read latency in clocks: 0 stages=" & to_string(lat0) &
+                     " 1 stage=" & to_string(lat1) & " 2 stages=" & to_string(lat2));
+                check(lat1 > lat0, "the one stage pipe added no latency");
+                check(lat2 > lat1, "the two stage pipe added no latency over one stage");
                 clear_manual;
                 check_handshake_accounting(net, mapped_only => true);
 

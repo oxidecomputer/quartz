@@ -87,10 +87,21 @@ vhdl_unit(
 )
 
 vhdl_unit(
+    name = "axil_pipe",
+    srcs = glob(["axil_pipe.vhd"]),
+    deps = [
+        ":axilite_common_pkg",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
     name = "axil_interconnect_2k8",
     srcs = glob(["axil_interconnect_2k8.vhd"]),
     deps = [
         ":axilite_if_2k8",
+        ":axil_pipe",
     ],
     standard = "2008",
     visibility = ['PUBLIC'],
