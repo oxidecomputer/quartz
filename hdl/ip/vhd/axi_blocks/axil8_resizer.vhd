@@ -31,13 +31,15 @@ begin
       responder.write_data.strb <= fabric.write_data.strb;
         
       responder.write_response.ready <= fabric.write_response.ready;
-      fabric.read_address.valid <= responder.read_address.valid;
-      responder.read_address.addr <= fabric.read_address.addr(responder.read_address.addr'length - 1 downto 0);
-      fabric.read_data.ready <= responder.read_data.ready;
       fabric.write_response.resp <= responder.write_response.resp;
       fabric.write_response.valid <= responder.write_response.valid;
+
+      responder.read_address.valid <= fabric.read_address.valid;
+      responder.read_address.addr <= fabric.read_address.addr(responder.read_address.addr'length - 1 downto 0);
       fabric.read_address.ready <= responder.read_address.ready;
-      responder.read_data.resp <= fabric.read_data.resp;
-      responder.read_data.valid <= fabric.read_data.valid;
+
+      responder.read_data.ready <= fabric.read_data.ready;
+      fabric.read_data.resp <= responder.read_data.resp;
+      fabric.read_data.valid <= responder.read_data.valid;
       fabric.read_data.data <= responder.read_data.data;
 end rtl;
