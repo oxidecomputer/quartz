@@ -1,7 +1,6 @@
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
---
 
 -- Acting as a SPI peripheral, turn specially formed transactions into
 -- AXI-lite memory read/write transactions

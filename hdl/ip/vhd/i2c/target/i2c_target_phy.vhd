@@ -1,7 +1,6 @@
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
---
 
 -- This block provides an i2c-compliant "phy" for use with additional logic
 -- to create i2c target functions. It is intended to be generic and shareable

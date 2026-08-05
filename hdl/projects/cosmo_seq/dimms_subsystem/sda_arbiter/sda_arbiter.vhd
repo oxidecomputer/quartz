@@ -1,9 +1,7 @@
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
---
--- Copyright 2025 Oxide Computer Company
---
+
 -- This block monitors two I2C SDA signals, `a` and `b`, with the intention that hey are
 -- essentially connected but proxied by the FPGA. It assumes the inactive state for the bus is high,
 -- and then monitors for `a` or `b` to pull the line low. It will then grant whichever side pulled

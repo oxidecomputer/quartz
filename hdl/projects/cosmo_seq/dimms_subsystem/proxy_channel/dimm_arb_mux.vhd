@@ -1,8 +1,6 @@
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
---
--- Copyright 2025 Oxide Computer Company
 
 -- 3 possible things trying to drive the DIMM i2c bus:
 -- 1) i2c transactions from the host CPU via slow i2c on a dedicated bus
