@@ -32,7 +32,7 @@ architecture th of spi_nor_th is
     signal   io_oe        : std_logic_vector(3 downto 0);
     constant config_array : axil_responder_cfg_array_t(0 downto 0) :=
     (
-        0 => (base_addr => x"00000100", addr_span_bits => 8)
+        0 => resp_cfg(base_addr => x"00000100", addr_span_bits => 8)
     );
     signal  responders   : axil32x32_pkg.axil_array_t(0 downto 0);
     signal  responders_8b : axil8x32_pkg.axil_array_t(0 downto 0);

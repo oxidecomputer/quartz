@@ -205,10 +205,10 @@ architecture rtl of grapefruit_top is
 
     -- TODO: someday I'd like the rdl stuff to both generate this and the fabric maybe?
     constant config_array : axil_responder_cfg_array_t := 
-     (0 => (base_addr => x"00000000", addr_span_bits => 8),
-      1 => (base_addr => x"00000100", addr_span_bits => 8),
-      2 => (base_addr => x"00000200", addr_span_bits => 8),
-      3 => (base_addr => x"00008000", addr_span_bits => 15)
+     (0 => resp_cfg(base_addr => x"00000000", addr_span_bits => 8),
+      1 => resp_cfg(base_addr => x"00000100", addr_span_bits => 8),
+      2 => resp_cfg(base_addr => x"00000200", addr_span_bits => 8),
+      3 => resp_cfg(base_addr => x"00008000", addr_span_bits => 15)
       );
     signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
     signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);

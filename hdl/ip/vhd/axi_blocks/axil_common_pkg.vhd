@@ -13,9 +13,23 @@ package axil_common_pkg is
     type axil_responder_config is record
         base_addr      : std_logic_vector(31 downto 0);
         addr_span_bits : integer;
+        -- Register stages the interconnect inserts in *each* direction between
+        -- the fabric and this responder, to buy back setup time on a responder
+        -- that is physically far from the fabric. Added round trip latency is
+        -- 2 * pipe_stages cycles plus a few fixed handshake cycles, so raise it
+        -- only where timing needs it. 0 is a zero cost pass-through.
+        pipe_stages    : natural;
     end record;
 
     type axil_responder_cfg_array_t is array (natural range <>) of axil_responder_config;
+
+    -- Constructor for a responder config, so adding a field later does not
+    -- break every aggregate in the tree.
+    function resp_cfg (
+        constant base_addr : std_logic_vector(31 downto 0);
+        constant addr_span_bits : integer;
+        constant pipe_stages : natural := 0
+    ) return axil_responder_config;
 
     type int_array is array (natural range <>) of integer;
 
@@ -47,6 +61,17 @@ package axil_common_pkg is
 end package;
 
 package body axil_common_pkg is
+
+    function resp_cfg (
+        constant base_addr : std_logic_vector(31 downto 0);
+        constant addr_span_bits : integer;
+        constant pipe_stages : natural := 0
+    ) return axil_responder_config is
+    begin
+        return (base_addr => base_addr,
+                addr_span_bits => addr_span_bits,
+                pipe_stages => pipe_stages);
+    end function;
 
     function span_mask (constant addr_span_bits : integer) return std_logic_vector is
         variable mask : std_logic_vector(31 downto 0) := (others => '0');

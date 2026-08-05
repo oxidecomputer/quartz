@@ -33,10 +33,10 @@ package axil_interconnect_sim_pkg is
     constant WIDE_IDX   : integer := 3;
 
     constant config_array : axil_responder_cfg_array_t(0 to 3) :=
-        (SRAM_A_IDX => (base_addr => x"00000000", addr_span_bits => 8),
-         SRAM_B_IDX => (base_addr => x"00000100", addr_span_bits => 8),
-         SLOW_IDX   => (base_addr => x"00000200", addr_span_bits => 8),
-         WIDE_IDX   => (base_addr => x"00008000", addr_span_bits => 15));
+        (SRAM_A_IDX => resp_cfg(base_addr => x"00000000", addr_span_bits => 8),
+         SRAM_B_IDX => resp_cfg(base_addr => x"00000100", addr_span_bits => 8),
+         SLOW_IDX   => resp_cfg(base_addr => x"00000200", addr_span_bits => 8),
+         WIDE_IDX   => resp_cfg(base_addr => x"00008000", addr_span_bits => 15));
 
     --! An integer as a bus address
     function ba (constant addr : integer) return std_logic_vector;

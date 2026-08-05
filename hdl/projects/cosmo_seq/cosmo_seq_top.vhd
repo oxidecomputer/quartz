@@ -345,14 +345,14 @@ architecture rtl of cosmo_seq_top is
      constant ESPI_RESP_IDX: integer := 7;
 
     constant config_array : axil_responder_cfg_array_t := 
-        (INFO_RESP_IDX => (base_addr => x"00000000", addr_span_bits => 8), 
-         SPINOR_RESP_IDX => (base_addr => x"00000100", addr_span_bits => 8),
-         SEQ_RESP_IDX => (base_addr => x"00000200", addr_span_bits => 8),
-         SP_I2C_RESP_IDX => (base_addr => x"00000300", addr_span_bits => 8),
-         SP5_HP_RESP_IDX => (base_addr => x"00000400", addr_span_bits => 8),
-         SPD_PROXY_RESP_IDX => (base_addr => x"00000500", addr_span_bits => 8),
-         DBG_CTRL_RESP_IDX => (base_addr => x"00000600", addr_span_bits => 8),
-         ESPI_RESP_IDX => (base_addr => x"00008000", addr_span_bits => 15)
+        (INFO_RESP_IDX => resp_cfg(base_addr => x"00000000", addr_span_bits => 8), 
+         SPINOR_RESP_IDX => resp_cfg(base_addr => x"00000100", addr_span_bits => 8),
+         SEQ_RESP_IDX => resp_cfg(base_addr => x"00000200", addr_span_bits => 8),
+         SP_I2C_RESP_IDX => resp_cfg(base_addr => x"00000300", addr_span_bits => 8),
+         SP5_HP_RESP_IDX => resp_cfg(base_addr => x"00000400", addr_span_bits => 8),
+         SPD_PROXY_RESP_IDX => resp_cfg(base_addr => x"00000500", addr_span_bits => 8),
+         DBG_CTRL_RESP_IDX => resp_cfg(base_addr => x"00000600", addr_span_bits => 8),
+         ESPI_RESP_IDX => resp_cfg(base_addr => x"00008000", addr_span_bits => 15)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
