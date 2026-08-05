@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
 
 vhdl_unit(
     name = "axilite_common_pkg",
@@ -91,6 +91,16 @@ vhdl_unit(
     srcs = glob(["axil_interconnect_2k8.vhd"]),
     deps = [
         ":axilite_if_2k8",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "axil_interconnect_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":axil_interconnect_2k8",
     ],
     standard = "2008",
     visibility = ['PUBLIC'],
