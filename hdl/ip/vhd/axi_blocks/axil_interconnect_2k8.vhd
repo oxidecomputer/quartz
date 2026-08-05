@@ -116,6 +116,26 @@ architecture rtl of axil_interconnect_2k8 is
     signal write_done : std_logic;
     signal read_done : std_logic;
 
+    -- Fabric side of each responder's optional pipeline. With pipe_stages = 0
+    -- these are wired straight through to the responder ports.
+    signal mux_write_address_valid : std_logic_vector(config_array'range);
+    signal mux_write_address_ready : std_logic_vector(config_array'range);
+    signal mux_write_address_addr : tgt_addr32_t(config_array'range);
+    signal mux_write_data_valid : std_logic_vector(config_array'range);
+    signal mux_write_data_ready : std_logic_vector(config_array'range);
+    signal mux_write_data_data : tgt_dat32_t(config_array'range);
+    signal mux_write_data_strb : tgt_strb_t(config_array'range);
+    signal mux_write_response_valid : std_logic_vector(config_array'range);
+    signal mux_write_response_ready : std_logic_vector(config_array'range);
+    signal mux_write_response_resp : tgt_resp_t(config_array'range);
+    signal mux_read_address_valid : std_logic_vector(config_array'range);
+    signal mux_read_address_ready : std_logic_vector(config_array'range);
+    signal mux_read_address_addr : tgt_addr32_t(config_array'range);
+    signal mux_read_data_valid : std_logic_vector(config_array'range);
+    signal mux_read_data_ready : std_logic_vector(config_array'range);
+    signal mux_read_data_data : tgt_dat32_t(config_array'range);
+    signal mux_read_data_resp : tgt_resp_t(config_array'range);
+
 begin
 
     assert config_array'low = 0
@@ -233,14 +253,14 @@ begin
 
         for i in config_array'range loop
             if sel_onehot(i) = '1' then
-                awready := responders_write_address_ready(i);
-                wready := responders_write_data_ready(i);
-                bvalid := responders_write_response_valid(i);
-                bresp := responders_write_response_resp(i);
-                arready := responders_read_address_ready(i);
-                rvalid := responders_read_data_valid(i);
-                rresp := responders_read_data_resp(i);
-                rdata := responders_read_data_data(i);
+                awready := mux_write_address_ready(i);
+                wready := mux_write_data_ready(i);
+                bvalid := mux_write_response_valid(i);
+                bresp := mux_write_response_resp(i);
+                arready := mux_read_address_ready(i);
+                rvalid := mux_read_data_valid(i);
+                rresp := mux_read_data_resp(i);
+                rdata := mux_read_data_data(i);
             end if;
         end loop;
 
@@ -276,20 +296,70 @@ begin
     -- responder's own span, and only the selected responder sees a valid. The
     -- masked-off address bits are hard constant zeros, so the fabric side of
     -- each responder's address bus collapses to span real wires.
+    --
+    -- Each responder then optionally goes through axil_pipe, which inserts
+    -- config_array(i).pipe_stages register stages in each direction so a
+    -- responder that sits a long way from the fabric does not have to be reached
+    -- and answered within one clock period. pipe_stages = 0 is a pass-through and
+    -- costs nothing.
     resp_gen: for i in config_array'range generate
         constant span : natural := config_array(i).addr_span_bits;
     begin
 
-        responders_write_address_addr(i) <= wr_addr32 and span_mask(span);
-        responders_read_address_addr(i) <= rd_addr32 and span_mask(span);
-        responders_write_data_data(i) <= initiator_write_data_data;
-        responders_write_data_strb(i) <= initiator_write_data_strb;
+        mux_write_address_addr(i) <= wr_addr32 and span_mask(span);
+        mux_read_address_addr(i) <= rd_addr32 and span_mask(span);
+        mux_write_data_data(i) <= initiator_write_data_data;
+        mux_write_data_strb(i) <= initiator_write_data_strb;
 
-        responders_write_address_valid(i) <= initiator_write_address_valid and sel_onehot(i);
-        responders_write_data_valid(i) <= initiator_write_data_valid and sel_onehot(i);
-        responders_write_response_ready(i) <= initiator_write_response_ready and sel_onehot(i);
-        responders_read_address_valid(i) <= initiator_read_address_valid and sel_onehot(i);
-        responders_read_data_ready(i) <= initiator_read_data_ready and sel_onehot(i);
+        mux_write_address_valid(i) <= initiator_write_address_valid and sel_onehot(i);
+        mux_write_data_valid(i) <= initiator_write_data_valid and sel_onehot(i);
+        mux_write_response_ready(i) <= initiator_write_response_ready and sel_onehot(i);
+        mux_read_address_valid(i) <= initiator_read_address_valid and sel_onehot(i);
+        mux_read_data_ready(i) <= initiator_read_data_ready and sel_onehot(i);
+
+        axil_pipe_inst: entity work.axil_pipe
+         generic map (
+            stages => config_array(i).pipe_stages,
+            addr_width => span
+        )
+         port map (
+            clk => clk,
+            reset => reset,
+            sink_awaddr => mux_write_address_addr(i),
+            sink_awvalid => mux_write_address_valid(i),
+            sink_awready => mux_write_address_ready(i),
+            sink_wdata => mux_write_data_data(i),
+            sink_wstrb => mux_write_data_strb(i),
+            sink_wvalid => mux_write_data_valid(i),
+            sink_wready => mux_write_data_ready(i),
+            sink_bvalid => mux_write_response_valid(i),
+            sink_bresp => mux_write_response_resp(i),
+            sink_bready => mux_write_response_ready(i),
+            sink_araddr => mux_read_address_addr(i),
+            sink_arvalid => mux_read_address_valid(i),
+            sink_arready => mux_read_address_ready(i),
+            sink_rvalid => mux_read_data_valid(i),
+            sink_rdata => mux_read_data_data(i),
+            sink_rresp => mux_read_data_resp(i),
+            sink_rready => mux_read_data_ready(i),
+            source_awaddr => responders_write_address_addr(i),
+            source_awvalid => responders_write_address_valid(i),
+            source_awready => responders_write_address_ready(i),
+            source_wdata => responders_write_data_data(i),
+            source_wstrb => responders_write_data_strb(i),
+            source_wvalid => responders_write_data_valid(i),
+            source_wready => responders_write_data_ready(i),
+            source_bvalid => responders_write_response_valid(i),
+            source_bresp => responders_write_response_resp(i),
+            source_bready => responders_write_response_ready(i),
+            source_araddr => responders_read_address_addr(i),
+            source_arvalid => responders_read_address_valid(i),
+            source_arready => responders_read_address_ready(i),
+            source_rvalid => responders_read_data_valid(i),
+            source_rdata => responders_read_data_data(i),
+            source_rresp => responders_read_data_resp(i),
+            source_rready => responders_read_data_ready(i)
+        );
 
     end generate;
 
