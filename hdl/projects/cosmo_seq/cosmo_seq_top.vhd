@@ -352,7 +352,10 @@ architecture rtl of cosmo_seq_top is
          SP5_HP_RESP_IDX => resp_cfg(base_addr => x"00000400", addr_span_bits => 8),
          SPD_PROXY_RESP_IDX => resp_cfg(base_addr => x"00000500", addr_span_bits => 8),
          DBG_CTRL_RESP_IDX => resp_cfg(base_addr => x"00000600", addr_span_bits => 8),
-         ESPI_RESP_IDX => resp_cfg(base_addr => x"00008000", addr_span_bits => 15)
+         -- eSPI is the largest register file and the most distant block, and it
+         -- owns the worst 125MHz path in the design, so give the fabric a cycle
+         -- in each direction to get there and back.
+         ESPI_RESP_IDX => resp_cfg(base_addr => x"00008000", addr_span_bits => 15, pipe_stages => 1)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
