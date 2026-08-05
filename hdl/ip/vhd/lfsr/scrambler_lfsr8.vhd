@@ -44,16 +44,16 @@ entity scrambler_lfsr8 is
         -- with the pre-load state but we throw its advance away.
         load_valid : in    std_logic;
         load_data : in    std_logic_vector(7 downto 0);
-        -- Current register state, ie the keystream byte we're applying to
-        -- data_in this cycle. Brought out for monitoring.
-        lfsr_state : out   std_logic_vector(7 downto 0);
         -- Plaintext byte when scrambling, ciphertext byte when de-scrambling.
         data_in : in    std_logic_vector(7 downto 0);
         -- Assert for every scrambled character to advance the register.
         -- De-assert for control characters, which pass through unscrambled
         -- and leave the register alone.
         data_valid : in    std_logic;
-        data_out : out   std_logic_vector(7 downto 0)
+        data_out : out   std_logic_vector(7 downto 0);
+        -- Current register state, ie the keystream byte we're applying to
+        -- data_in this cycle. Brought out for monitoring or debugging.
+        lfsr_state : out   std_logic_vector(7 downto 0)
     );
 end entity;
 
@@ -73,7 +73,15 @@ begin
             if sync_reset then
                 lfsr_state <= seed;
             elsif load_valid then
-                lfsr_state <= load_data;
+                -- We disallow loading the all-zeros state, which is the LFSR lock-up state. The
+                -- LFSR will never advance out of it, so we swap in the seed here. This should
+                -- produce failures that are somewhat easier to debug than a silent lock-up,
+                -- and the user shouldn't have issued this in the first place.
+                if load_data = X"00" then
+                    lfsr_state <= seed;
+                else
+                    lfsr_state <= load_data;
+                end if;
             elsif data_valid then
                 lfsr_state <= lfsr8_next_char(lfsr_state);
             end if;
