@@ -1,0 +1,52 @@
+load("//tools:hdl.bzl", "sim_only_model", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "keccak_pkg",
+    srcs = ["keccak_pkg.vhd"],
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "sha3_256",
+    srcs = ["sha3_256.vhd"],
+    deps = [
+        ":keccak_pkg",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
+        "//hdl/ip/vhd/common:calc_pkg",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+sim_only_model(
+    name = "sha3_sim_pkg",
+    srcs = ["sims/sha3_sim_pkg.vhd"],
+    deps = [":keccak_pkg"],
+    visibility = ['PUBLIC'],
+)
+
+# Unit tests for the permutation itself, no RTL involved. Kept separate from
+# sha3_256_tb because this is the layer that anchors the round function against
+# published vectors, while sha3_256_tb checks the sponge and the stream
+# interface around it.
+vunit_sim(
+    name = "keccak_pkg_tb",
+    srcs = ["sims/keccak_pkg_tb.vhd"],
+    deps = [":sha3_sim_pkg"],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "sha3_256_tb",
+    srcs = [
+        "sims/sha3_256_th.vhd",
+        "sims/sha3_256_tb.vhd",
+    ],
+    deps = [
+        ":sha3_256",
+        ":sha3_sim_pkg",
+        "//hdl/ip/vhd/vunit_components:basic_stream",
+        "//hdl/ip/vhd/vunit_components:sim_gpio",
+    ],
+    visibility = ['PUBLIC'],
+)
