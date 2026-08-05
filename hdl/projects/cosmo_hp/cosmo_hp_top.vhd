@@ -205,10 +205,10 @@ architecture rtl of cosmo_hp_top is
     signal pca_int_n : std_logic_vector(io_i2c_addr'length - 1 downto 0);
 
     constant config_array : axil_responder_cfg_array_t := 
-    (0 => (base_addr => x"00000000", addr_span_bits => 8),
-     1 => (base_addr => x"00000100", addr_span_bits => 8),
-     2 => (base_addr => x"00000200", addr_span_bits => 8),
-     3 => (base_addr => x"00000300", addr_span_bits => 8)
+    (0 => resp_cfg(base_addr => x"00000000", addr_span_bits => 8),
+     1 => resp_cfg(base_addr => x"00000100", addr_span_bits => 8),
+     2 => resp_cfg(base_addr => x"00000200", addr_span_bits => 8),
+     3 => resp_cfg(base_addr => x"00000300", addr_span_bits => 8)
      );
 
     signal sp_write_address_addr : std_logic_vector(15 downto 0);
