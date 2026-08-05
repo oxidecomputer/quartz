@@ -1,7 +1,6 @@
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
---
 
 --! This block provides an FMC target interface from the STM32H7's
 --! local bus, crosses clock domains into the FPGA's core logic

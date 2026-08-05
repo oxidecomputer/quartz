@@ -1,7 +1,6 @@
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
---
 
 -- Main command parser and processing for the eSPI transaction layer.
 -- Pulls from a FIFO from the link layer or debug layer and processes
