@@ -288,12 +288,74 @@ buck2 run //hdl/ip/vhd/hash_engine:hash_engine_tb -- "*abort_midway*"
 buck2 run //hdl/ip/vhd/spi_nor_controller:spi_nor_top_sim
 ----
 
-== Not done yet
+== Integration
 
-The block is not wired into any project. Integrating it needs a responder entry in
-the project's `config_array`, a matching `addrmap` line in the top-level `.rdl`,
-and the two FIFOs between the engine and `spi_nor_top`'s new client port -- the
-same pattern `sp5_espi_flash_subsystem` uses for eSPI.
+Instantiated in `cosmo_seq` at *0x0700*, inside `sp5_espi_flash_subsystem` rather
+than at the top level, because that is where `spi_nor_top` and the eSPI flash
+FIFOs already live and the engine needs the same pattern. The subsystem gained a
+`hash_axi_if` port, its own pair of 256-deep command and response FIFOs, and the
+wiring to `spi_nor_top`'s second client port.
+
+Those FIFOs are reset from `reset_125m` only, deliberately not from the
+subsystem's `fifo_reset`. That one is pulsed on every eSPI reset, which happens at
+the start of every host boot and has nothing to do with a hash the SP may have in
+flight.
+
+At the top level `HASH_RESP_IDX` is appended to `config_array` as index 8. The
+fabric decodes each entry by address range, so index order is independent of
+address order and nothing else in the map moved:
+
+----
+0x0000  info            0x0500  dimms
+0x0100  spi_nor         0x0600  debug_ctrl
+0x0200  sequencer       0x0700  hash        <- new
+0x0300  sp_i2c          0x8000  espi
+0x0400  fpga1_hotplug
+----
+
+Measured in the routed `cosmo_seq` bitstream on `xc7s100fgga484-1`:
+
+[cols="3,1,1,1"]
+|===
+|Instance |LUT |FF |RAMB18
+
+|`hash_engine_inst` (total) |4945 |3480 |1
+|`sha3_256_inst` |4433 |2979 |0
+|`hash_engine_regs_inst` |83 |134 |0
+|===
+
+That is about 4.8% of the part, taking the whole design to 29148 of 102400 LUTs.
+The single block RAM is XPM's choice for the mixed-width software data FIFO. The
+core comes in below its out-of-context figure because `busy` is left open here and
+the surrounding logic optimises away.
+
+Timing still closes with all constraints met. The two worst paths in the design are
+in the DIMM SPD proxy and the eSPI link layer, not in anything added here.
+
+Building `spi_nor_top`'s new client port into the design exposed a latent bug in
+`dcfifo_mixed_xpm`: its `PROG_FULL_THRESH` expression divides by a value that is
+larger than the numerator whenever the read port is narrower than the write port,
+so it computed an out-of-range threshold and Vivado refused to synthesise. Nothing
+had synthesised a narrowing mixed-width FIFO before, so simulation never saw it.
+Fixed in the wrapper.
+
+Not yet done: `grapefruit` has the same `spi_nor_top` and could take the block the
+same way, but is untouched. It still elaborates unchanged -- the new client ports
+have defaults on their inputs and its instantiation simply leaves them off.
+
+=== A caveat on arbitration
+
+The grant in `spi_nor_top` is taken whenever the SPI engine is idle and no eSPI
+command is pending, and it is then held for the whole hash command. Nothing
+prevents that from happening while the host is booting, and a hash of a large
+range would block eSPI flash reads for as long as it runs.
+
+The intended usage is to measure while the host is down, but that is a convention,
+not an interlock. If it needs to be enforced, the cheapest change is to add
+`spicr.sp5_owns_flash = '0'` to the grant condition, which would defer hashing
+whenever the host owns the flash. That has its own cost: `busy` would then stay
+asserted indefinitely while the host holds the flash, with no timeout for software
+to notice.
 
 A real SPI NOR device model would let `hash_spi_nor_tb` check content-dependent
 behaviour rather than a run of `0xFF`. The tree has wanted one for a while;

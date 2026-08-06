@@ -35,7 +35,11 @@ entity sp5_espi_flash_subsystem is
         spi_nor_dat : in std_logic_vector(3 downto 0);
         spi_nor_dat_o : out std_logic_vector(3 downto 0);
         spi_nor_dat_oe : out std_logic_vector(3 downto 0);
-       
+
+        -- SHA3 hashing engine. It lives here rather than at the top level because
+        -- it reads the flash through spi_nor_top's second client port, so it needs
+        -- the same command/response FIFO pattern the eSPI flash channel uses.
+        hash_axi_if : view axil8x32_pkg.axil_target;
 
     );
 end entity;
@@ -54,6 +58,22 @@ architecture rtl of sp5_espi_flash_subsystem is
     signal flash_fifo_clear : std_logic;
     signal fifo_reset : std_logic;
     signal rst_cnts : integer range 0 to 5 := 5;
+
+    -- Hashing engine <-> spi_nor_top, the same shape as the eSPI pair above.
+    -- Deliberately not tied to fifo_reset: that is flushed on every eSPI reset,
+    -- which happens at the start of every boot and has nothing to do with a hash
+    -- the SP may have in flight. The engine resynchronises its own channel by
+    -- draining it, so a global reset is the only thing that needs to clear these.
+    signal hash_cmd_fifo_wdata : std_logic_vector(31 downto 0);
+    signal hash_cmd_fifo_write : std_logic;
+    signal hash_cmd_fifo_rdata : std_logic_vector(31 downto 0);
+    signal hash_cmd_fifo_rdack : std_logic;
+    signal hash_cmd_fifo_rempty : std_logic;
+    signal hash_data_fifo_wdata : std_logic_vector(7 downto 0);
+    signal hash_data_fifo_write : std_logic;
+    signal hash_rsp_fifo_rdata : std_logic_vector(7 downto 0);
+    signal hash_rsp_fifo_rdack : std_logic;
+    signal hash_rsp_fifo_rempty : std_logic;
 
 
 begin
@@ -117,6 +137,59 @@ begin
         rdreq => flash_rfifo_rdack,
         rempty => flash_rfifo_rempty,
         rusedwds => open
+    );
+
+    -- Hashing engine -> SPI NOR FIFO
+    hash_spinor_cmd_fifo: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 256,
+        data_width => 32,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk_125m,
+        reset => reset_125m,
+        write_en => hash_cmd_fifo_write,
+        wdata => hash_cmd_fifo_wdata,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk_125m,
+        rdata => hash_cmd_fifo_rdata,
+        rdreq => hash_cmd_fifo_rdack,
+        rempty => hash_cmd_fifo_rempty,
+        rusedwds => open
+    );
+    -- SPI NOR -> hashing engine FIFO
+    hash_spinor_data_fifo: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 256,
+        data_width => 8,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk_125m,
+        reset => reset_125m,
+        write_en => hash_data_fifo_write,
+        wdata => hash_data_fifo_wdata,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk_125m,
+        rdata => hash_rsp_fifo_rdata,
+        rdreq => hash_rsp_fifo_rdack,
+        rempty => hash_rsp_fifo_rempty,
+        rusedwds => open
+    );
+
+    hash_engine_inst: entity work.hash_engine_top
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => hash_axi_if,
+        cmd_fifo_wdata => hash_cmd_fifo_wdata,
+        cmd_fifo_write => hash_cmd_fifo_write,
+        rsp_fifo_rdata => hash_rsp_fifo_rdata,
+        rsp_fifo_rdack => hash_rsp_fifo_rdack,
+        rsp_fifo_rempty => hash_rsp_fifo_rempty
     );
 
     -- eSPI block
@@ -183,8 +256,13 @@ begin
            espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
            espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
            espi_data_fifo_wdata => espi_data_fifo_wdata,
-           espi_data_fifo_write => espi_data_fifo_write
-   
+           espi_data_fifo_write => espi_data_fifo_write,
+           hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
+           hash_cmd_fifo_rdack => hash_cmd_fifo_rdack,
+           hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,
+           hash_data_fifo_wdata => hash_data_fifo_wdata,
+           hash_data_fifo_write => hash_data_fifo_write
+
     );
 
 end rtl;

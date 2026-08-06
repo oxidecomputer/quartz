@@ -343,6 +343,7 @@ architecture rtl of cosmo_seq_top is
     constant SPD_PROXY_RESP_IDX : integer := 5;
     constant DBG_CTRL_RESP_IDX : integer := 6;
      constant ESPI_RESP_IDX: integer := 7;
+    constant HASH_RESP_IDX : integer := 8;
 
     constant config_array : axil_responder_cfg_array_t := 
         (INFO_RESP_IDX => resp_cfg(base_addr => x"00000000", addr_span_bits => 8), 
@@ -355,7 +356,8 @@ architecture rtl of cosmo_seq_top is
          -- eSPI is the largest register file and the most distant block, and it
          -- owns the worst 125MHz path in the design, so give the fabric a cycle
          -- in each direction to get there and back.
-         ESPI_RESP_IDX => resp_cfg(base_addr => x"00008000", addr_span_bits => 15, pipe_stages => 1)
+         ESPI_RESP_IDX => resp_cfg(base_addr => x"00008000", addr_span_bits => 15, pipe_stages => 1),
+         HASH_RESP_IDX => resp_cfg(base_addr => x"00000700", addr_span_bits => 8)
          );
     signal fmc_axi_if : axil26x32_pkg.axil_t;
     signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
@@ -526,6 +528,7 @@ begin
     -- all the system interfaces run at 125MHz for common clocking
     resize_axil(fabric_responders(ESPI_RESP_IDX), responders_15b(ESPI_RESP_IDX));
     resize_axil(fabric_responders(SPINOR_RESP_IDX), responders_8b(SPINOR_RESP_IDX));
+    resize_axil(fabric_responders(HASH_RESP_IDX), responders_8b(HASH_RESP_IDX));
     espi_spinor_ss: entity work.sp5_espi_flash_subsystem
      port map(
         clk_125m => clk_125m,
@@ -546,7 +549,8 @@ begin
         spi_nor_clk => spi_fpga1_to_flash_clk,
         spi_nor_dat => spi_fpga1_to_flash_dat,
         spi_nor_dat_o => spinor_io_o,
-        spi_nor_dat_oe => spinor_io_oe
+        spi_nor_dat_oe => spinor_io_oe,
+        hash_axi_if => responders_8b(HASH_RESP_IDX)
     );
     --Tristates for spi-nor flash pins and espi
     spi_nor_espi_tris:process(all)
