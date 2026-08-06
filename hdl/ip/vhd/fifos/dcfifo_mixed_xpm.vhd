@@ -64,12 +64,22 @@ entity dcfifo_mixed_xpm is
 end entity;
 
 architecture xpm of dcfifo_mixed_xpm is
-    constant read_depth : natural := wfifo_write_depth * wdata_width / rdata_width;
-
     constant read_mode         : string  := sel(showahead_mode, "fwft", "std");
     constant read_latency      : integer := sel(showahead_mode, 0, 1);
     constant prog_empty_thresh : integer := sel(showahead_mode, 3 + 2, 3);
-    constant prog_full_thresh  : integer := sel(showahead_mode, 3 + 2*(wfifo_write_depth/read_depth) + cdc_stages, 3 + cdc_stages);
+
+    -- XPM wants PROG_FULL_THRESH inside roughly
+    -- [5 + cdc_stages, wfifo_write_depth - 5 - cdc_stages] for a show-ahead async
+    -- FIFO, and rejects anything outside it at synthesis.
+    --
+    -- This used to scale headroom by wfifo_write_depth/read_depth. That is fine
+    -- while the read side is the narrower one, but when the read port is narrower
+    -- than the write port read_depth is the larger number and the integer division
+    -- is simply zero, leaving a threshold of 5 that XPM refuses. Nothing here
+    -- consumes prog_full, it is mapped to open below, so the value only has to be
+    -- legal rather than meaningful: half the write depth always is, for every
+    -- depth the generic permits.
+    constant prog_full_thresh : integer := wfifo_write_depth / 2;
 
 begin
 
