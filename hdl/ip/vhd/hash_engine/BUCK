@@ -1,0 +1,73 @@
+load("//tools:hdl.bzl", "sim_only_model", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "hash_engine_regs_rdl",
+    src = "hash_engine_regs.rdl",
+    outputs = [
+        "hash_engine_regs_pkg.vhd",
+        "hash_engine_regs.html",
+        "hash_engine_regs.json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "hash_engine_top",
+    srcs = glob(["*.vhd"]),
+    deps = [
+        ":hash_engine_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
+        "//hdl/ip/vhd/common:calc_pkg",
+        "//hdl/ip/vhd/fifos:dcfifo_mixed_xpm",
+        "//hdl/ip/vhd/sha3:sha3_256",
+    ],
+    standard = "2019",
+    visibility = ["PUBLIC"],
+)
+
+sim_only_model(
+    name = "hash_engine_sim_pkg",
+    srcs = [
+        "sims/hash_engine_sim_pkg.vhd",
+        "sims/fake_flash_responder.vhd",
+    ],
+    deps = [":hash_engine_regs_rdl"],
+    visibility = ["PUBLIC"],
+)
+
+vunit_sim(
+    name = "hash_engine_tb",
+    srcs = [
+        "sims/hash_engine_th.vhd",
+        "sims/hash_engine_tb.vhd",
+    ],
+    deps = [
+        ":hash_engine_sim_pkg",
+        ":hash_engine_top",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
+        "//hdl/ip/vhd/sha3:sha3_sim_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+# End to end through the real spi_nor_top and QSPI link. There is no flash device
+# model, but the bus floats high so every fetched byte is 0xFF, which is enough to
+# check the chunking, arbitration and plumbing.
+vunit_sim(
+    name = "hash_spi_nor_tb",
+    srcs = [
+        "sims/hash_spi_nor_th.vhd",
+        "sims/hash_spi_nor_tb.vhd",
+    ],
+    deps = [
+        ":hash_engine_sim_pkg",
+        ":hash_engine_top",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
+        "//hdl/ip/vhd/sha3:sha3_sim_pkg",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
+        "//hdl/ip/vhd/vunit_components:spi_nor_target_vc",
+    ],
+    visibility = ["PUBLIC"],
+)

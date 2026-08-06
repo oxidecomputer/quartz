@@ -1,0 +1,177 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+// SystemRDL description of the sw-accessible registers for the SHA3-256
+// hashing engine.
+
+addrmap hash_engine_regs {
+    name = "SHA3-256 hashing engine";
+    desc = "Hashes either a range of the host QSPI flash or data fed in by the
+    processor, optionally prefixed with a run of 0xFF bytes.";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Control Register";
+        desc = "";
+
+        field {
+            desc = "Write 1 to abort a hash in flight. Self clearing. The engine
+            returns to idle, clears busy and sets STATUS.aborted. Any digest from
+            a previous run is discarded.";
+        } abort[1:1] = 0;
+
+        field {
+            desc = "Write 1 to start a hash. Self clearing. Writing this while a
+            hash is already running restarts it from the beginning with the
+            currently programmed configuration. Configuration is sampled at start,
+            so changing CONFIG/PREPEND/FLASH_ADDR/LENGTH mid-hash has no effect on
+            the run in flight.";
+        } start[0:0] = 0;
+    } CONTROL;
+
+    reg {
+        name = "Configuration Register";
+        desc = "";
+
+        enum source_select {
+            LOCAL_REG = 4'h0 {desc = "Bytes come from processor writes to WDATA";};
+            HOST_QSPI = 4'h1 {desc = "Bytes are fetched from the host QSPI flash starting at FLASH_ADDR";};
+        };
+
+        field {
+            desc = "Selects where message bytes come from once any prepended 0xFF
+            bytes have been fed. 4 bits so more sources can be added later.";
+            encode = source_select;
+        } source[3:0] = 0;
+    } CONFIG;
+
+    reg {
+        name = "Prepend Byte Count";
+        desc = "Number of 0xFF bytes fed into the hash before any bytes from the
+        selected source. Counts towards LENGTH.";
+
+        field {
+            desc = "0xFF byte count";
+        } count[31:0] = 0;
+    } PREPEND;
+
+    reg {
+        name = "Flash Start Address";
+        desc = "Raw byte address in the flash device for the first fetched byte.
+        This is not remapped: unlike the eSPI flash read path there is no SP5 image
+        or APOB translation applied. Only used when CONFIG.source is HOST_QSPI.";
+
+        field {
+            desc = "Flash byte address";
+        } addr[31:0] = 0;
+    } FLASH_ADDR;
+
+    reg {
+        name = "Message Length";
+        desc = "Total number of bytes to hash, *including* the PREPEND 0xFF bytes.
+        The number of bytes taken from the selected source is LENGTH - PREPEND.
+        Must be non-zero and at least PREPEND, see STATUS.cfg_err.";
+
+        field {
+            desc = "Total message length in bytes";
+        } count[31:0] = 0;
+    } LENGTH;
+
+    reg {
+        name = "Status Register";
+        desc = "";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Set when a start was refused because the configuration is
+            invalid: LENGTH of zero, or PREPEND greater than LENGTH. Cleared on the
+            next accepted start.";
+        } cfg_err[5:5] = 0;
+
+        field {
+            desc = "Set when a hash was ended early by CONTROL.abort. Cleared on
+            the next accepted start.";
+        } aborted[4:4] = 0;
+
+        field {
+            desc = "Software data FIFO is empty.";
+        } wfifo_empty[3:3] = 0;
+
+        field {
+            desc = "Software data FIFO is full. Writes to WDATA while this is set
+            are dropped, so poll it when feeding from LOCAL_REG.";
+        } wfifo_full[2:2] = 0;
+
+        field {
+            desc = "Set when a hash has completed and the DIGEST registers hold a
+            valid result. Cleared on the next accepted start or on abort.";
+        } done[1:1] = 0;
+
+        field {
+            desc = "Set from an accepted start until the digest is available or the
+            hash is aborted.";
+        } busy[0:0] = 0;
+    } STATUS;
+
+    reg {
+        name = "Software Data Register";
+        desc = "Writing pushes 4 message bytes into the software data FIFO, least
+        significant byte first, ie bits 7:0 are consumed before bits 15:8. Only used
+        when CONFIG.source is LOCAL_REG. LENGTH determines where the message ends,
+        so unused trailing bytes of the final word are ignored and no byte enable is
+        needed. Check STATUS.wfifo_full before writing.";
+
+        field {
+            desc = "Four message bytes";
+        } data[31:0] = 0;
+    } WDATA;
+
+    reg {
+        name = "Progress";
+        desc = "Number of bytes fed into the hash core so far for the run in
+        flight, including prepended 0xFF bytes. Reads as the final count after a
+        hash completes.";
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "Bytes processed";
+        } bytes[31:0] = 0;
+    } PROGRESS;
+
+    // The digest is presented least significant word first, matching the core's
+    // byte order: DIGEST0 bits 7:0 are hash byte 0, the leftmost byte of the
+    // conventional hex string. Worked example, sha3-256("abc"):
+    //   3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532
+    // reads back as DIGEST0 = 0xa75d983a and DIGEST7 = 0x32154311.
+    reg digest_word {
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "32 bits of the digest";
+        } data[31:0] = 0;
+    };
+
+    digest_word DIGEST0;
+    DIGEST0->desc = "Digest bytes 0 to 3";
+    digest_word DIGEST1;
+    DIGEST1->desc = "Digest bytes 4 to 7";
+    digest_word DIGEST2;
+    DIGEST2->desc = "Digest bytes 8 to 11";
+    digest_word DIGEST3;
+    DIGEST3->desc = "Digest bytes 12 to 15";
+    digest_word DIGEST4;
+    DIGEST4->desc = "Digest bytes 16 to 19";
+    digest_word DIGEST5;
+    DIGEST5->desc = "Digest bytes 20 to 23";
+    digest_word DIGEST6;
+    DIGEST6->desc = "Digest bytes 24 to 27";
+    digest_word DIGEST7;
+    DIGEST7->desc = "Digest bytes 28 to 31";
+};
