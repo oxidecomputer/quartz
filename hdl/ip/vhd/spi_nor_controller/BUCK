@@ -20,6 +20,7 @@ vhdl_unit(
         "link/*.vhd",
         "spi_txn/*.vhd",
         "espi_txn/*.vhd",
+        "hash_txn/*.vhd",
     ]),
     standard = "2019",
     deps = [

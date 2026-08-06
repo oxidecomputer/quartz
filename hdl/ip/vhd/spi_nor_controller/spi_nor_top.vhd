@@ -47,6 +47,17 @@ entity spi_nor_top is
         espi_data_fifo_wdata : out std_logic_vector(7 downto 0);
         espi_data_fifo_write : out std_logic;
 
+        -- Second flash read client, same command/response FIFO shape as the eSPI
+        -- one above. Used by the hashing engine. Addresses here are raw: none of
+        -- the SP5 image or APOB translation applied to the eSPI path happens, and
+        -- it is not gated by sp5_owns_flash. Tie the command FIFO empty and leave
+        -- the rest open if the design has no such client.
+        hash_cmd_fifo_rdata: in std_logic_vector(31 downto 0) := (others => '0');
+        hash_cmd_fifo_rdack: out std_logic;
+        hash_cmd_fifo_rempty: in std_logic := '1';
+        hash_data_fifo_wdata : out std_logic_vector(7 downto 0);
+        hash_data_fifo_write : out std_logic;
+
     );
 end entity;
 
@@ -99,7 +110,11 @@ architecture rtl of spi_nor_top is
     signal apob_flash_offset : apobflashoffset_type;
     signal espi_cmd : spi_nor_cmd_t;
     signal hubris_cmd: spi_nor_cmd_t;
+    signal hash_cmd : spi_nor_cmd_t;
     signal spi_cmd_if : spi_nor_cmd_t;
+    signal hash_req : std_logic;
+    signal hash_grant : std_logic;
+    signal hash_fifo_write : std_logic;
 
 begin
 
@@ -174,14 +189,42 @@ begin
     hubris_cmd.dummy_cycles <= dummy_cycles_reg.count;
     hubris_cmd.instr <= instr_reg.opcode;
     hubris_cmd.go_flag <= go_strobe;
-    -- Mux between espi and register interface for read data (rx fifos)
-    reg_fifo_write_allowed <= '1' when spicr_reg.sp5_owns_flash = '0' else '0';
-    espi_fifo_write_allowed <= '1' when spicr_reg.sp5_owns_flash = '1' else '0';
+
+    -- The hash client takes the whole engine for the duration of one command,
+    -- chunking included, and only takes it when nothing else is mid transaction or
+    -- waiting. While it is not asking, everything below reduces to the original
+    -- two way sp5_owns_flash selection.
+    --
+    -- Note this does lock the eSPI path out for as long as a hash read runs, which
+    -- can be a whole flash image. That is the intended trade: measurement is
+    -- expected to happen while the host is not booting.
+    hash_grant_sm: process(clk, reset)
+    begin
+        if reset then
+            hash_grant <= '0';
+        elsif rising_edge(clk) then
+            if hash_grant = '0' then
+                if hash_req = '1' and cs_n = '1' and espi_cmd_fifo_rempty = '1' and
+                   go_strobe = '0' then
+                    hash_grant <= '1';
+                end if;
+            elsif hash_req = '0' then
+                hash_grant <= '0';
+            end if;
+        end if;
+    end process;
+
+    -- Mux between hash, espi and register interface for read data (rx fifos)
+    reg_fifo_write_allowed <= '1' when hash_grant = '0' and spicr_reg.sp5_owns_flash = '0' else '0';
+    espi_fifo_write_allowed <= '1' when hash_grant = '0' and spicr_reg.sp5_owns_flash = '1' else '0';
     reg_fifo_write <= reg_fifo_write_allowed and rx_fifo_write8;
     espi_fifo_write <= espi_fifo_write_allowed and rx_fifo_write8;
+    hash_fifo_write <= rx_fifo_write8 when hash_grant = '1' else '0';
 
-    spi_cmd_if <= hubris_cmd when spicr_reg.sp5_owns_flash = '0' else espi_cmd;
-    
+    spi_cmd_if <= hash_cmd when hash_grant = '1' else
+                  hubris_cmd when spicr_reg.sp5_owns_flash = '0' else
+                  espi_cmd;
+
     sp5_owns_flash <= spicr_reg.sp5_owns_flash;
     -- TODO: this would be more simple with a mixed width fifo
     -- but this was faster than digging around making a new wrapper
@@ -296,6 +339,25 @@ begin
             rx_fifo_read_data  => rx_fifo_rdata_reg,
             rx_fifo_read_ack   => rx_fifo_read_ack_reg
         );
+
+     -- Second read transaction manager, for the hashing engine. Raw addresses, and
+     -- a 32 bit length so a whole image fits in one command.
+     raw_flash_txn_mgr_inst: entity work.raw_flash_txn_mgr
+      port map(
+         clk => clk,
+         reset => reset,
+         cmd_fifo_rdata => hash_cmd_fifo_rdata,
+         cmd_fifo_rdack => hash_cmd_fifo_rdack,
+         cmd_fifo_rempty => hash_cmd_fifo_rempty,
+         req => hash_req,
+         grant => hash_grant,
+         cmd => hash_cmd,
+         spi_hw_busy => spisr_reg.busy,
+         data_byte => hash_data_fifo_wdata,
+         data_write => hash_data_fifo_write,
+         flash_rdata => rx_fifo_wdat8,
+         flash_rdata_write => hash_fifo_write
+     );
 
      -- Read transaction manager to/from the espi block
      espi_flash_txn_mgr_inst: entity work.espi_flash_txn_mgr
