@@ -104,6 +104,28 @@ package spi_nor_tb_pkg is
         constant count  : natural
     );
 
+    -- Erase a block and prove the part actually did it. Commands with an address
+    -- but no data phase are the ones that expose trailing-clock bugs: the part
+    -- discards the instruction rather than reporting anything, so nothing but a
+    -- readback notices.
+    procedure check_block_erase (
+        signal net     : inout network_t;
+        constant flash : actor_t;
+        constant addr  : natural
+    );
+
+    -- A full 256 byte page programmed in quad mode, which is exactly what the
+    -- hubris driver does. This is the hardest thing the tx path has to do: quad
+    -- data is two sclk cycles per byte, so at clk/2 a byte leaves every four clk
+    -- cycles, and every fourth byte crosses a 32 bit boundary in the tx FIFO.
+    -- A short single-mode write has eight times the slack and proves nothing
+    -- about it.
+    procedure check_quad_page_program (
+        signal net     : inout network_t;
+        constant flash : actor_t;
+        constant addr  : natural
+    );
+
 end package;
 
 package body spi_nor_tb_pkg is
@@ -292,6 +314,80 @@ package body spi_nor_tb_pkg is
             read_flash_byte(net, flash, addr + i, got);
             check_equal(got, std_logic_vector(to_unsigned(i, 8)),
                         "programmed byte mismatch at offset " & to_string(i));
+        end loop;
+    end;
+
+    procedure check_block_erase (
+        signal net     : inout network_t;
+        constant flash : actor_t;
+        constant addr  : natural
+    ) is
+
+        variable got : std_logic_vector(7 downto 0);
+
+    begin
+        -- Put something other than 0xFF in the way so a no-op erase cannot pass
+        for i in 0 to 7 loop
+            write_flash_byte(net, flash, addr + i, pattern_byte(addr + i));
+        end loop;
+
+        clear_fifos(net);
+        write_dummy(net, 0);
+        write_data_size(net, 0);
+
+        -- Issue the write enable the way the driver does. It carries neither an
+        -- address nor data, so it is the shortest command the block emits and
+        -- the least forgiving about trailing clocks -- and every erase and
+        -- program on real hardware is preceded by one, so a discarded write
+        -- enable looks exactly like a discarded erase.
+        write_instr(net, WRITE_ENABLE_OP);
+        wait_txn_done(net);
+
+        write_addr(net, To_StdLogicVector(addr, 32));
+        write_instr(net, BLOCK_ERASE_64K_4BYTE_OP);
+        wait_txn_done(net);
+
+        -- The model only applies the erase if the instruction was well formed,
+        -- so this catches a discarded command as well as a wrong address.
+        for i in 0 to 7 loop
+            read_flash_byte(net, flash, addr + i, got);
+            check_equal(got, std_logic_vector'(x"FF"),
+                        "block erase left byte " & to_string(i) & " unerased");
+        end loop;
+    end;
+
+    procedure check_quad_page_program (
+        signal net     : inout network_t;
+        constant flash : actor_t;
+        constant addr  : natural
+    ) is
+
+        variable word : std_logic_vector(31 downto 0);
+        variable got  : std_logic_vector(7 downto 0);
+
+    begin
+        clear_fifos(net);
+        erase_flash(net, flash, addr, 256);
+
+        write_dummy(net, 0);
+        write_data_size(net, 256);
+        write_addr(net, To_StdLogicVector(addr, 32));
+
+        -- 64 words fill the tx FIFO exactly, the same way the driver does it
+        for w in 0 to 63 loop
+            for b in 0 to 3 loop
+                word(8 * b + 7 downto 8 * b) := pattern_byte(addr + 4 * w + b);
+            end loop;
+            write_data(net, word);
+        end loop;
+
+        write_instr(net, QUAD_INPUT_PAGE_PROGRAM_4BYTE_OP);
+        wait_txn_done(net);
+
+        for i in 0 to 255 loop
+            read_flash_byte(net, flash, addr + i, got);
+            check_equal(got, pattern_byte(addr + i),
+                        "quad page program mismatch at offset " & to_string(i));
         end loop;
     end;
 

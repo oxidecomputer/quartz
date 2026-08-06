@@ -163,6 +163,12 @@ begin
         variable status     : std_logic_vector(7 downto 0) := x"00";
         variable erase_len  : natural                      := 0;
         variable do_erase   : boolean                      := false;
+        -- Set when the host clocks the part in a way that makes the instruction
+        -- invalid. The real part discards such a command silently, so anything
+        -- it would have done has to be suppressed too or the model is more
+        -- forgiving than the hardware and the testbench proves nothing.
+        variable cmd_invalid : boolean := false;
+        variable modelled    : boolean := true;
         variable cs_fall_at : time                         := 0 ps;
         variable cs_rise_at : time                         := 0 ps;
         variable first_clk  : boolean                      := true;
@@ -336,7 +342,9 @@ begin
                 when others =>
                     info(vc_logger, "Unmodelled opcode 0x" & to_hstring(opcode) &
                                     ", treating as no-operand");
-                    phase := ph_done;
+                    -- Don't police the clock count for something we can't decode
+                    modelled := false;
+                    phase    := ph_done;
             end case;
         end procedure;
 
@@ -375,17 +383,32 @@ begin
 
     begin
         if cs_n /= '0' then
+            if cs_n = '1' and cs_n'event then
+                cs_rise_at := now;
+
+                -- The part latches an instruction only if cs_n rises on a byte
+                -- boundary. Trailing clocks that leave a partial byte make the
+                -- whole command invalid, and it is discarded without any
+                -- indication -- an erase simply does not happen.
+                if bit_cnt /= 0 then
+                    cmd_invalid := true;
+                    error(vc_logger, "cs_n rose " & to_string(bit_cnt) &
+                                     " bits into a byte, instruction 0x" &
+                                     to_hstring(opcode) & " is discarded");
+                end if;
+            end if;
+
             -- Deselected: finish any pending erase, then reset per-transaction
             -- state. Erases are modelled as instantaneous on deselect.
             if do_erase then
-                mem.erase((mem_addr(addr) / erase_len) * erase_len, erase_len);
+                if not cmd_invalid then
+                    mem.erase((mem_addr(addr) / erase_len) * erase_len, erase_len);
+                end if;
                 do_erase := false;
             end if;
 
-            if cs_n = '1' and cs_n'event then
-                cs_rise_at := now;
-            end if;
-
+            cmd_invalid := false;
+            modelled    := true;
             phase      := ph_cmd;
             bit_cnt    := 0;
             in_width   := 1;
@@ -478,8 +501,21 @@ begin
                             out_left := 0;
                         end if;
 
-                    when ph_rd | ph_done =>
+                    when ph_rd =>
                         null;
+
+                    when ph_done =>
+                        -- The instruction and its operands are complete, so the
+                        -- host should have raised cs_n by now. Clocking on makes
+                        -- the command invalid: an erase or a write enable that
+                        -- gets trailing clocks is thrown away, which shows up
+                        -- much later as "the sector did not erase".
+                        if modelled and not cmd_invalid then
+                            cmd_invalid := true;
+                            error(vc_logger, "sclk continued after instruction 0x" &
+                                             to_hstring(opcode) &
+                                             " completed, command is discarded");
+                        end if;
                 end case;
             elsif falling_edge(sclk) then
                 if phase = ph_rd then

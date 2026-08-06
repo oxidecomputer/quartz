@@ -67,6 +67,10 @@ begin
                 check_program_readback(net, flash, 16#2000#);
             elsif run("back_to_back_reads") then
                 check_back_to_back_reads(net, 16#400#, 16#500#, 32);
+            elsif run("block_erase") then
+                check_block_erase(net, flash, 16#30000#);
+            elsif run("quad_page_program") then
+                check_quad_page_program(net, flash, 16#5000#);
             elsif run("output_delay_margin") then
                 for clqv_ns in 2 to 7 loop
                     info("checking with tCLQV = " & to_string(clqv_ns) & " ns");

@@ -38,15 +38,23 @@ architecture rtl of spi_clk_gen is
     signal internal_enable : boolean               := false;
     signal enable_last     : boolean               := false;
     signal sclk_int        : std_logic             := '0';
+    signal running         : boolean;
 
 begin
 
     sclk <= sclk_int;
 
+    -- internal_enable is registered, so on its own it lingers for a cycle after
+    -- enable drops -- long enough to emit one more toggle. For a command that
+    -- ends on an exact bit count, an erase or a program, that stray edge is a
+    -- whole extra bit and the part throws the instruction away. Qualifying with
+    -- the live enable stops the clock on the same edge the caller asked it to.
+    running <= internal_enable and enable;
+
     -- strobe is registered, so it is already asserted during the cycle that
     -- precedes the toggling edge. That makes this safe to use as a synchronous
     -- enable by anything that needs to change state exactly when sclk does.
-    sclk_fall_now <= internal_enable and strobe and sclk_int = '1';
+    sclk_fall_now <= running and strobe and sclk_int = '1';
 
     -- Pretty simple spi generator.
     -- start with a rising edge
@@ -87,7 +95,7 @@ begin
                 internal_enable <= false;
             end if;
 
-            if internal_enable then
+            if running then
                 nxt_sclk := sclk_int;
                 if strobe then
                     nxt_sclk := not sclk_int;

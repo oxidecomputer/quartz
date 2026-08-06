@@ -58,6 +58,7 @@ architecture rtl of spi_nor_top is
     signal   in_rx_phases         : boolean;
     signal   in_tx_phases         : boolean;
     signal   release_lanes        : std_logic_vector(3 downto 0);
+    signal   sclk_running         : boolean;
     -- Internal copies of sclk and cs_n. The versions that leave the block are
     -- duplicate flops with no internal fanout so they can be packed into the
     -- IOBs; these are what the phase logic looks at.
@@ -65,6 +66,7 @@ architecture rtl of spi_nor_top is
     signal   cs_n_internal        : std_logic;
     signal   link_rx_byte         : std_logic_vector(7 downto 0);
     signal   link_tx_byte         : std_logic_vector(7 downto 0);
+    signal   link_tx_mode         : io_mode;
     signal   cur_io_mode          : io_mode;
     signal   rx_fifo_write8       : std_logic;
     signal   tx_fifo_read8        : std_logic;
@@ -116,10 +118,12 @@ begin
             divisor      => div_val,
             in_tx_phases => in_tx_phases,
             in_rx_phases => in_rx_phases,
+            sclk_running => sclk_running,
             release_lanes => release_lanes,
             rx_byte      => link_rx_byte,
             rx_byte_done => rx_byte_done,
             tx_byte      => link_tx_byte,
+            tx_byte_mode => link_tx_mode,
             tx_byte_req  => tx_byte_req,
             sclk_redge   => open,
             sclk_fedge   => open,
@@ -153,8 +157,10 @@ begin
             rx_link_byte  => link_rx_byte,
             tx_byte_req   => tx_byte_req,
             tx_link_byte  => link_tx_byte,
+            tx_link_mode  => link_tx_mode,
             in_rx_phases  => in_rx_phases,
             in_tx_phases  => in_tx_phases,
+            sclk_running  => sclk_running,
             release_lanes => release_lanes,
             cur_io_mode   => cur_io_mode,
             tx_fifo_ack   => tx_fifo_read8,

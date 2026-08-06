@@ -26,16 +26,25 @@ entity spi_link is
         divisor      : in    unsigned(15 downto 0);
         in_tx_phases : in    boolean;
         in_rx_phases : in    boolean;
+        -- Runs the sclk generator. Not the same as in_tx_phases: the bus is
+        -- still driven while cs_n is being torn down, but the part must not see
+        -- any clock edges there.
+        sclk_running : in    boolean;
         -- Lanes to stop driving early, ahead of a controller-to-flash
         -- turnaround, so the two ends are never enabled at once
         release_lanes : in    std_logic_vector(3 downto 0);
         rx_byte      : out   std_logic_vector(7 downto 0);
         rx_byte_done : out   boolean;
+        -- The next byte to shift out. Must be held ready ahead of the reload
+        -- edge rather than produced in response to tx_byte_req: it lands
+        -- directly on the io_o launch flops, so anything combinational behind it
+        -- is in series with the shifter's own empty detect.
         tx_byte      : in    std_logic_vector(7 downto 0);
-        -- Asserted the cycle before the edge on which a new tx byte is
-        -- consumed. The transaction manager uses this both to advance its phase
-        -- and to present the next byte, so that the byte and the sclk edge that
-        -- launches it move together.
+        -- The io mode tx_byte belongs to, adopted at the reload edge
+        tx_byte_mode : in    io_mode;
+        -- Asserted during the cycle whose clk edge consumes a tx byte. The
+        -- transaction manager advances its phase on this, so the byte and the
+        -- sclk edge that launches it move together.
         tx_byte_req : out   boolean;
         sclk_redge  : out   boolean;
         sclk_fedge  : out   boolean;
@@ -160,7 +169,7 @@ begin
             clk           => clk,
             reset         => reset,
             divisor       => divisor,
-            enable        => in_tx_phases or in_rx_phases,
+            enable        => sclk_running,
             sclk          => sclk_int,
             sclk_pin      => sclk_pin,
             sclk_fall_now => sclk_fall_now
@@ -183,12 +192,15 @@ begin
         variable cs_n_assert_edge : boolean := false;
         variable nxt_tx_reg       : std_logic_vector(8 downto 0);
         variable nxt_mode         : io_mode;
+        variable oe_mode          : io_mode;
+        variable oe               : std_logic_vector(3 downto 0);
     begin
         if reset then
             tx_reg <= (others => '0');
             csn_last <= '1';
             cur_io_mode <= single;
             io_o <= (others => '1');
+            io_oe <= (others => '0');
         elsif rising_edge(clk) then
             csn_last <= cs_n;
             cs_n_assert_edge := cs_n = '0' and csn_last = '1';
@@ -196,11 +208,17 @@ begin
             -- The io mode only changes on a byte boundary, which is also when
             -- the shifter reloads, so the mode that applies to the bits going
             -- out at this edge is the one selected here.
+            --
+            -- req_io_mode comes off the registered transaction state, which has
+            -- not advanced yet on the edge that reloads the shifter. That is
+            -- fine while we are mid-phase, and it is what keeps reads right
+            -- (their phase change lands on a rising edge, away from any reload),
+            -- but the byte being loaded here may belong to the *next* phase. So
+            -- a reload takes the mode that travelled with the byte instead.
             nxt_mode := cur_io_mode;
             if (cs_n = '0' and sclk_fall_now) or cs_n = '1' then
                 nxt_mode := req_io_mode;
             end if;
-            cur_io_mode <= nxt_mode;
 
             nxt_tx_reg := tx_reg;
 
@@ -208,11 +226,13 @@ begin
                 -- as the controller here, we need to pre-load data before the first
                 -- clock
                 nxt_tx_reg := tx_byte & '1';
+                nxt_mode   := tx_byte_mode;
             elsif in_tx_phases and sclk_fall_now then
                 if shift_left(tx_reg, shift_amt) = SENTINEL_AT_TOP then
                     -- tx_register is "empty" load a new one
                     -- and the sentinel value
                     nxt_tx_reg := tx_byte & '1';
+                    nxt_mode   := tx_byte_mode;
                 else
                     nxt_tx_reg := shift_left(tx_reg, shift_amt);
                 end if;
@@ -220,8 +240,56 @@ begin
                 nxt_tx_reg := (others => '0');
             end if;
 
+            cur_io_mode <= nxt_mode;
+
+            -- Direction is decided here, alongside the data, so the two can
+            -- never disagree about which mode is in force. Computing it in its
+            -- own process off req_io_mode put the quad lanes' output enable one
+            -- clk behind the first quad data nibble, which at clk/2 is the edge
+            -- the part samples on.
+            --
+            -- Turning *on* follows nxt_mode so it lands with the data; turning
+            -- *off* follows req_io_mode, which moves as soon as the phase does,
+            -- because releasing early is what keeps us clear of the part on a
+            -- read turnaround.
+            if in_tx_phases then
+                oe_mode := nxt_mode;
+            else
+                oe_mode := req_io_mode;
+            end if;
+
+            if in_tx_phases then
+                case oe_mode is
+                    when single =>
+                        -- data going out 0 port, but need 3 port to be high so
+                        -- chip doesn't see a HOLD operation
+                        oe := (0 => '1', 3 => '1', others => '0');
+                    when dual =>
+                        -- data going out 0 and 1 ports, 3 port high so the chip
+                        -- doesn't see a HOLD operation
+                        oe := (1 downto 0 => '1', 3 => '1', others => '0');
+                    when quad =>
+                        oe := (others => '1');
+                end case;
+            else  -- rx only in all rx phases
+                case oe_mode is
+                    when single =>
+                        -- data coming in 1 port, but need 3 port to be high so
+                        -- chip doesn't see a HOLD operation
+                        oe := (3 => '1', others => '0');
+                    when dual =>
+                        -- data coming in 0, 1 ports, but need 3 port to be high so
+                        -- chip doesn't see a HOLD operation
+                        oe := (3 => '1', others => '0');
+                    when quad =>
+                        -- data coming in all ports, no outputs
+                        oe := (others => '0');
+                end case;
+            end if;
+
             tx_reg <= nxt_tx_reg;
             io_o   <= io_out_bits(nxt_tx_reg, nxt_mode);
+            io_oe  <= oe and not release_lanes;
         end if;
     end process;
 
@@ -239,45 +307,6 @@ begin
     -- cycles of a dual/quad read -- long enough to re-enable io3 for HOLD
     -- avoidance just as the part starts driving it. Direction has no reason to
     -- wait for a byte boundary, so it follows the transaction directly.
-    oe_control: process(clk, reset)
-        variable oe : std_logic_vector(3 downto 0);
-    begin
-        if reset then
-            io_oe <= (others => '0');
-        elsif rising_edge(clk) then
-            if in_tx_phases then
-                case req_io_mode is
-                    when single =>
-                        -- data going out 0 port, but need 3 port to be high so
-                        -- chip doesn't see a HOLD operation
-                        oe := (0 => '1', 3 => '1', others => '0');
-                    when dual =>
-                        -- data going out 0 port, but need 3 port to be high so
-                        -- chip doesn't see a HOLD operation
-                        oe := (1 downto 0 => '1', 3 => '1', others => '0');
-                    when quad =>
-                        oe := (others => '1');
-                end case;
-            else  -- rx only in all rx phases
-                case req_io_mode is
-                    when single =>
-                        -- data coming in 1 port, but need 3 port to be high so
-                        -- chip doesn't see a HOLD operation
-                        oe := (3 => '1', others => '0');
-                    when dual =>
-                        -- data coming in 0, 1 ports, but need 3 port to be high so
-                        -- chip doesn't see a HOLD operation
-                        oe := ( 3 => '1', others => '0');
-                    when quad =>
-                        -- data coming in all ports, no outputs
-                        oe := (others => '0');
-                end case;
-            end if;
-
-            io_oe <= oe and not release_lanes;
-        end if;
-    end process;
-
     -- Input capture. Two flops, one per clk phase, so the sample point can be
     -- placed on a half-clk grid without needing a faster clock.
     capture_p: process(clk)
