@@ -38,8 +38,14 @@ entity spi_txn_mgr is
         rx_link_byte : in    std_logic_vector(7 downto 0);
         tx_byte_req  : in    boolean;
         tx_link_byte : out   std_logic_vector(7 downto 0);
+        -- The io mode the byte above belongs to. Travels with it because the
+        -- serializer needs both on the same edge; see next_tx.
+        tx_link_mode : out   io_mode;
         in_rx_phases : out   boolean;
         in_tx_phases : out   boolean;
+        -- Gates the sclk generator. Narrower than in_tx_phases on purpose, see
+        -- is_sclk_running below.
+        sclk_running : out   boolean;
         -- Lanes to stop driving ahead of a turnaround, see below
         release_lanes : out   std_logic_vector(3 downto 0);
         cur_io_mode   : out   io_mode;
@@ -74,6 +80,15 @@ architecture rtl of spi_txn_mgr is
     attribute mark_debug of r : signal is "TRUE";
     signal sclk_last : std_logic;
 
+    -- The byte the serializer will load at its next reload, and the io mode it
+    -- belongs to, held ready ahead of the edge that consumes them. See next_tx.
+    type tx_prefetch_t is record
+        byte : std_logic_vector(7 downto 0);
+        mode : io_mode;
+    end record;
+
+    signal tx_pre : tx_prefetch_t;
+
     -- Some helper functions
     -- This block gets the expected IO mode given the state and the transaction we're running
     function get_cur_io_mode (
@@ -98,6 +113,20 @@ architecture rtl of spi_txn_mgr is
             -- otherwise use the mode specified by the opcode
             return txn.data_mode;
         end if;
+    end;
+
+    -- The phases sclk is allowed to run in. This is deliberately *not* the same
+    -- question as "are we driving the bus": cs_deassert drives but must not
+    -- clock. The part counts sclk edges to decide where an instruction ends, and
+    -- an erase or a write enable that gets even one trailing edge before cs_n
+    -- rises is discarded outright, with no error anywhere -- it just silently
+    -- does not happen. Conflating the two conditions is what broke erase.
+    function is_sclk_running (
+        state: state_t
+    ) return boolean is
+    begin
+        return state = cs_assert or state = instruction or state = addr or
+               state = dummy or state = wdata or state = rdata;
     end;
 
     -- This function takes the state and returns if we're driving data lines
@@ -128,15 +157,91 @@ architecture rtl of spi_txn_mgr is
         return state = rdata;
     end;
 
+    -- The byte the serializer will load at its *next* reload.
+    --
+    -- The serializer reloads on the same clk edge this state machine advances a
+    -- phase, so the byte has to already be sitting there when that edge arrives
+    -- rather than be selected by it. Driving the mux from `v` satisfied that by
+    -- hanging the entire selection off tx_reg in one combinational path:
+    -- shifter-empty detect, then the next-state decode, then a byte select off
+    -- the decremented counter, then the lane mux into io_o. At clk/6 there was
+    -- room for it; at clk/2 it was the design's critical path, eight levels of
+    -- LUT spending 6.9ns of an 8ns period to reach io_o.
+    --
+    -- *Which* byte comes next does not depend on *when* the request arrives,
+    -- though -- it is a function of the registered state alone. So compute it
+    -- from `r` and register it, leaving the reload edge nothing to do but copy a
+    -- flop. The prefetch settles two clks after each phase advance and byte
+    -- slots are at least four clks apart (quad data at clk/2, the fastest this
+    -- block runs), so it is always in place in time.
+    -- The prefetch carries the io mode with the byte, and it has to: the mode is
+    -- a property of the phase the byte belongs to, and the serializer needs both
+    -- at the same instant. Taking the mode from the registered state instead
+    -- means the first data byte of a dual or quad write is loaded while the
+    -- state still reads `addr`, so it goes out with single-bit lane assignment
+    -- and, worse, gets shifted by one instead of four. That leaves the shifter's
+    -- sentinel on an odd bit where the byte-complete compare can never match it,
+    -- so the byte counter stops advancing and the transaction never ends.
+    function next_tx (
+        r    : reg_type;
+        cmd  : spi_nor_cmd_t;
+        fifo : std_logic_vector(7 downto 0)
+    ) return tx_prefetch_t is
+        variable idx : integer range 0 to 3;
+    begin
+        case r.state is
+            when idle =>
+                -- The opcode is the first byte out. The serializer preloads it
+                -- on the cs_n assert edge, before the first sclk edge.
+                return (byte => cmd.instr, mode => single);
+            when cs_assert | instruction =>
+                -- Whatever follows the opcode: the top address byte, or the
+                -- first data byte for an opcode that writes without an address.
+                case r.txn.addr_kind is
+                    when bit32 =>
+                        return (byte => cmd.addr(31 downto 24), mode => single);
+                    when bit24 =>
+                        return (byte => cmd.addr(23 downto 16), mode => single);
+                    when none =>
+                        if not r.txn.uses_dummys and r.txn.data_kind = write then
+                            return (byte => fifo, mode => r.txn.data_mode);
+                        end if;
+                end case;
+            when addr =>
+                if r.counter > 0 then
+                    idx := r.counter - 1;
+                    return (byte => cmd.addr(8 * idx + 7 downto 8 * idx),
+                            mode => single);
+                elsif not r.txn.uses_dummys and r.txn.data_kind = write then
+                    return (byte => fifo, mode => r.txn.data_mode);
+                end if;
+            when wdata =>
+                -- The fifo was acked on the edge that consumed the previous
+                -- byte, so its head is already the one after it. The tail of the
+                -- phase keeps reporting the data mode so the lane assignment
+                -- does not twitch on the last edge.
+                return (byte => fifo, mode => r.txn.data_mode);
+            when others =>
+                null;
+        end case;
+
+        -- Nothing of ours to send: dummy cycles or a read, both of which shift
+        -- ones out a bit at a time.
+        return (byte => (others => '1'), mode => single);
+    end;
+
 begin
 
     -- "Simple outputs"
     cs_n <= r.csn;
+    tx_link_byte  <= tx_pre.byte;
+    tx_link_mode  <= tx_pre.mode;
     -- rx fifo is just a pass through here, no need for any muxing
     rx_fifo_data  <= rx_link_byte;
     rx_fifo_write <= '1' when rx_byte_done else '0';
     in_rx_phases  <= is_in_rx_phases(r.state);
     in_tx_phases  <= is_in_tx_phases(r.txn, r.state);
+    sclk_running  <= is_sclk_running(r.state);
 
     -- more complicated outputs
 
@@ -295,33 +400,24 @@ begin
                     v.counter := r.counter - 1;
                 end if;
         end case;
-        -- Deal with the chip selects once we've figured
-        -- out what state we're going to be in next
-        if v.state = cs_assert then
+        -- cs_n is derived from `r` rather than from the v.state we just decoded,
+        -- even though the two agree. cs_n_pin is an IOB flop, so whatever feeds
+        -- its D lands on the same kind of long launch path io_o does, and going
+        -- through v.state put the shifter's empty detect and the entire phase
+        -- decode on it for no reason: cs_n only moves on the idle -> cs_assert
+        -- and cs_deassert -> idle edges, and neither involves tx_byte_req.
+        -- Staying in cs_assert or idle leaves it where it already is.
+        if r.state = idle and spi_cmd.go_flag = '1' and r.cs_high = 0 then
             v.csn := '0';
-        elsif v.state = idle then
+        elsif r.state = cs_deassert and r.counter = 0 then
             v.csn := '1';
-            -- Arm the high-time counter on the edge that raises cs_n so the
-            -- next transaction cannot start too soon.
-            if r.csn = '0' then
-                v.cs_high := cs_high_cnts;
-            end if;
         end if;
 
-        -- The serializer consumes a byte on the same edge that this state
-        -- machine advances, so the byte it sees has to come from the state we
-        -- are moving *to*, not the one we are leaving. Driving this off `r`
-        -- works only while the phase advance lands a cycle before the shifter
-        -- reload, which stops being true once the sclk half period is a single
-        -- clk cycle.
-        if v.state = instruction or v.state = cs_assert then
-            tx_link_byte <= spi_cmd.instr;
-        elsif v.state = addr then
-            tx_link_byte <= spi_cmd.addr(8 * v.counter + 7 downto 8 * v.counter);
-        elsif v.state = wdata then
-            tx_link_byte <= tx_fifo_data;
-        else
-            tx_link_byte <= (others => '1');
+        -- Arm the high-time counter on the edge that raises cs_n so the next
+        -- transaction cannot start too soon. Off v.state, since cs_high feeds
+        -- nothing but internal logic.
+        if v.state = idle and r.csn = '0' then
+            v.cs_high := cs_high_cnts;
         end if;
 
         -- Only ack the FIFO for bytes that actually came from it
@@ -340,9 +436,13 @@ begin
             r <= r_reset;
             sclk_last <= '0';
             cs_n_pin <= '1';
+            tx_pre <= (byte => (others => '1'), mode => single);
         elsif rising_edge(clk) then
             sclk_last <= sclk;
             r <= rin;
+            -- Off `r`, not `rin`: the point of the prefetch is to give this
+            -- selection a full clk period of its own, clear of the reload edge.
+            tx_pre <= next_tx(r, spi_cmd, tx_fifo_data);
             -- Duplicate of r.csn, driven from the same next-state value so the
             -- two flops always agree and change on the same edge.
             cs_n_pin <= rin.csn;

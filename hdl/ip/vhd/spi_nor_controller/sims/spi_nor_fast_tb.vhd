@@ -66,6 +66,13 @@ begin
                 check_program_readback(net, flash, 16#2000#);
             elsif run("back_to_back_reads") then
                 check_back_to_back_reads(net, 16#400#, 16#500#, 32);
+            elsif run("block_erase") then
+                -- Commands with an address but no data phase leave the sclk
+                -- generator enabled a moment longer than the part allows if
+                -- the drive and clock-enable conditions are conflated.
+                check_block_erase(net, flash, 16#30000#);
+            elsif run("quad_page_program") then
+                check_quad_page_program(net, flash, 16#5000#);
             elsif run("output_delay_margin") then
                 -- Sweep the part's clock-low-to-output-valid delay across the
                 -- datasheet range and well beyond it, and require correct data
