@@ -13,25 +13,30 @@ create_clock -name mgtrefclk -period 8.000 [get_ports mgtrefclk_p]
 # RGMII receive clock from the PHY (125 MHz at 1000BASE-T).
 create_clock -name rgmii_rxc -period 8.000 [get_ports rgmii_rxc]
 
-# ----- RGMII RX input timing -------------------------------------------------
-# rxc is delayed on-chip (IDELAYE3) to sample inside the data eye, so the data
-# is treated as edge-aligned to the un-delayed rxc here. Adjust to the measured
-# clock-to-data window of the DP83867 (or once its internal RX delay is enabled).
+# ----- RGMII RX input timing (RGMII-ID / center-aligned) ---------------------
+# The DP83867 is programmed for RGMII internal delay at startup, so it centers
+# RXC in the RXD eye: data transitions land ~2 ns (half the 4 ns DDR bit period)
+# from each RXC edge, with a valid window around the edge. These numbers are a
+# representative DP83867-ID output window; finalize from the datasheet's RGMII
+# internal-delay data-to-clock spec (the SZG-ENET1G pod is length-matched, so the
+# board skew term is negligible).
 set rgmii_rx_ports [get_ports {rgmii_rxd[*] rgmii_rx_ctl}]
-set_input_delay -clock rgmii_rxc -max 1.500 $rgmii_rx_ports
-set_input_delay -clock rgmii_rxc -min -0.500 $rgmii_rx_ports
-set_input_delay -clock rgmii_rxc -max 1.500 -clock_fall -add_delay $rgmii_rx_ports
-set_input_delay -clock rgmii_rxc -min -0.500 -clock_fall -add_delay $rgmii_rx_ports
+set_input_delay -clock rgmii_rxc -max 2.600 $rgmii_rx_ports
+set_input_delay -clock rgmii_rxc -min 1.400 $rgmii_rx_ports
+set_input_delay -clock rgmii_rxc -max 2.600 -clock_fall -add_delay $rgmii_rx_ports
+set_input_delay -clock rgmii_rxc -min 1.400 -clock_fall -add_delay $rgmii_rx_ports
 
 # ----- RGMII TX output timing ------------------------------------------------
-# txc is DDR-forwarded from the 125 MHz user clock; constrain txd/tx_ctl to it.
-create_generated_clock -name rgmii_txc -source [get_pins -hier -filter {NAME =~ *txc_oddr*/C}] \
-    -divide_by 1 [get_ports rgmii_txc]
-set rgmii_tx_ports [get_ports {rgmii_txd[*] rgmii_tx_ctl}]
-set_output_delay -clock rgmii_txc -max 1.000 $rgmii_tx_ports
-set_output_delay -clock rgmii_txc -min -0.800 $rgmii_tx_ports
-set_output_delay -clock rgmii_txc -max 1.000 -clock_fall -add_delay $rgmii_tx_ports
-set_output_delay -clock rgmii_txc -min -0.800 -clock_fall -add_delay $rgmii_tx_ports
+# txc is DDR-forwarded from the 125 MHz user clock. The forwarded-clock generated
+# clock must reference the txc ODDRE1's clock pin, which only exists after
+# synthesis -- this project's flow reads XDC pre-synth, so define it in a
+# post-synth constraint (a post_synth_tcl_files script) rather than here, e.g.:
+#   set txc_oddr [get_cells -hier -filter {REF_NAME==ODDRE1 && NAME=~*txc_oddr*}]
+#   create_generated_clock -name rgmii_txc -source [get_pins $txc_oddr/C] \
+#       -divide_by 1 [get_ports rgmii_txc]
+#   set_output_delay -clock rgmii_txc -max 1.000  [get_ports {rgmii_txd[*] rgmii_tx_ctl}]
+#   set_output_delay -clock rgmii_txc -min -0.800 [get_ports {rgmii_txd[*] rgmii_tx_ctl}] ...
+# TX output timing is a bring-up item (see README); left unconstrained here.
 
 # ----- Asynchronous clock-domain boundaries ----------------------------------
 # The GT user clock, the system/IDELAY clock, and the RGMII rxc are independent.

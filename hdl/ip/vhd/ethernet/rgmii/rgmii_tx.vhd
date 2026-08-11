@@ -54,8 +54,9 @@ architecture rtl of rgmii_tx is
     signal ctl_rise   : std_logic;
     signal ctl_fall   : std_logic;
 
-    signal txc_1g  : std_logic;
-    signal txc_div : std_logic;
+    signal txc_div  : std_logic;
+    signal txc_rise : std_logic;
+    signal txc_fall : std_logic;
 
 begin
 
@@ -123,18 +124,22 @@ begin
             q      => rgmii_tx_ctl
         );
 
-    -- txc: DDR-forwarded 125 MHz clock at 1000, divided clock at 100/10
+    -- txc: DDR-forwarded 125 MHz clock at 1000, divided clock at 100/10. The ODDR
+    -- output drives the pin directly (no fabric mux) so it can be placed in the
+    -- pin's OLOGIC on a real device: at 1000 it forwards clk (rise='1'/fall='0');
+    -- at 100/10 both edges carry the divided-clock level so the ODDR reproduces it.
+    txc_rise <= '1' when is_1g = '1' else txc_div;
+    txc_fall <= '0' when is_1g = '1' else txc_div;
+
     txc_oddr: entity work.oddr_wrapper
         generic map (
             TARGET => TARGET
         )
         port map (
             clk    => clk,
-            d_rise => '1',
-            d_fall => '0',
-            q      => txc_1g
+            d_rise => txc_rise,
+            d_fall => txc_fall,
+            q      => rgmii_txc
         );
-
-    rgmii_txc <= txc_1g when is_1g = '1' else txc_div;
 
 end architecture;

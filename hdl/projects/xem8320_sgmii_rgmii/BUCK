@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "black_box")
+load("//tools:hdl.bzl", "vhdl_unit", "black_box", "vunit_sim")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
 # Black-box stubs for the Vivado-generated cores (the GT wizard and the IDELAY
@@ -9,15 +9,50 @@ black_box(
     srcs = glob(["black_box_entities/*.vhd"]),
 )
 
+# 2:1 gearbox + comma re-alignment between the GTY 20-bit raw datapath and the
+# soft PCS 10-bit code groups. Pure fabric logic; self-tested below.
+vhdl_unit(
+    name = "sgmii_gearbox",
+    srcs = ["gt/sgmii_gearbox.vhd"],
+    standard = "2019",
+)
+
 # GTY transceiver wrapper: presents the soft SGMII PCS with comma-aligned 10-bit
 # code groups in a single 125 MHz user-clock domain.
 vhdl_unit(
     name = "sgmii_gt",
     srcs = ["gt/sgmii_gt.vhd"],
     deps = [
+        ":sgmii_gearbox",
         ":bridge_black_boxes",
     ],
     standard = "2019",
+)
+
+vunit_sim(
+    name = "sgmii_gearbox_tb",
+    srcs = glob(["gt/sims/*.vhd"]),
+    deps = [
+        ":sgmii_gearbox",
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+    ],
+    standard = "2019",
+    visibility = ["PUBLIC"],
+)
+
+# MDIO master + DP83867 RGMII-ID startup init.
+vhdl_unit(
+    name = "mdio",
+    srcs = ["mdio/mdio_master.vhd", "mdio/dp83867_init.vhd"],
+    standard = "2019",
+)
+
+vunit_sim(
+    name = "mdio_master_tb",
+    srcs = glob(["mdio/sims/*.vhd"]),
+    deps = [":mdio"],
+    standard = "2019",
+    visibility = ["PUBLIC"],
 )
 
 vhdl_unit(
@@ -25,6 +60,7 @@ vhdl_unit(
     srcs = ["xem8320_sgmii_rgmii_top.vhd"],
     deps = [
         ":sgmii_gt",
+        ":mdio",
         ":bridge_black_boxes",
         "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
         "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
@@ -42,4 +78,5 @@ vivado_bitstream(
     part = "xcau25p-ffvb676-2-e",
     constraints = glob(["*.xdc"]),
     pre_synth_tcl_files = glob(["xilinx_ip_gen/*.tcl"]),
+    post_synth_tcl_files = ["post_synth_timing.tcl", "ila.tcl"],
 )

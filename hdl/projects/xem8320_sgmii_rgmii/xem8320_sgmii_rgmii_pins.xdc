@@ -25,11 +25,10 @@
 #   RESET_N D1P      M25 | (INT_N D1N M26, MDC D7P K22, MDIO D7N K23: unused)
 
 # ===== SGMII serial + GT reference clock (SMA J15-J18, GTY quad 226 ch 2) =====
-# GT pins are located by the transceiver channel; no IOSTANDARD.
-set_property PACKAGE_PIN H2 [get_ports gt_rxp]        ;# J15 MGTYRXP2_226
-set_property PACKAGE_PIN H1 [get_ports gt_rxn]        ;# J16 MGTYRXN2_226
-set_property PACKAGE_PIN J5 [get_ports gt_txp]        ;# J17 MGTYTXP2_226
-set_property PACKAGE_PIN J4 [get_ports gt_txn]        ;# J18 MGTYTXN2_226
+# GT serial pins are NOT LOC'd here: their package pins are fixed by the GT
+# channel the wizard enables (CHANNEL_ENABLE X0Y10 = quad 226 ch2 = the SMA
+# lanes H2/H1, J5/J4). LOC'ing them conflicts with the channel placement.
+# Only the reference-clock input is located.
 set_property PACKAGE_PIN P7 [get_ports mgtrefclk_p]   ;# MGTREFCLK0P_226 (onboard 125 MHz)
 set_property PACKAGE_PIN P6 [get_ports mgtrefclk_n]   ;# MGTREFCLK0N_226 (onboard 125 MHz)
 
@@ -52,13 +51,16 @@ set_property PACKAGE_PIN L25 [get_ports {rgmii_txd[1]}]  ;# TXD1   / D3N
 set_property PACKAGE_PIN K25 [get_ports {rgmii_txd[2]}]  ;# TXD2   / D5P
 set_property PACKAGE_PIN K26 [get_ports {rgmii_txd[3]}]  ;# TXD3   / D5N
 
-# PHY hardware reset (active-low)
+# PHY hardware reset (active-low) + MDIO management
 set_property PACKAGE_PIN M25 [get_ports phy_resetn]      ;# RESET_N / D1P
+set_property PACKAGE_PIN K22 [get_ports phy_mdc]         ;# MDC  / D7P
+set_property PACKAGE_PIN K23 [get_ports phy_mdio]        ;# MDIO / D7N
 
 set_property IOSTANDARD LVCMOS18 [get_ports {rgmii_txc rgmii_tx_ctl rgmii_txd[*]}]
 set_property SLEW FAST            [get_ports {rgmii_txc rgmii_tx_ctl rgmii_txd[*]}]
 set_property IOSTANDARD LVCMOS18 [get_ports {rgmii_rxc rgmii_rx_ctl rgmii_rxd[*]}]
-set_property IOSTANDARD LVCMOS18 [get_ports phy_resetn]
+set_property IOSTANDARD LVCMOS18 [get_ports {phy_resetn phy_mdc phy_mdio}]
+set_property PULLUP TRUE [get_ports phy_mdio]
 
 # ===== Status (Port A pins unused by the SZG-ENET1G, active-high) =============
 # D6 pair + two upper single-ended STD pins; the pod uses only D0-D5, D7, D1 and

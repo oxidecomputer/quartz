@@ -59,7 +59,14 @@ entity sgmii_to_rgmii is
         link_up         : out   std_logic;
         speed           : out   eth_speed_t;
         duplex          : out   std_logic;
-        rgmii_link_info : out   rgmii_inband_t   -- RGMII link-partner in-band status
+        rgmii_link_info : out   rgmii_inband_t;   -- RGMII link-partner in-band status
+
+        -- debug taps for bring-up observability (may be left open): recovered
+        -- RGMII RX frame-valid (rxc domain) and frame-valid into the PCS TX after
+        -- the rate expander (system clk). Localizes where a frame is lost.
+        dbg_rgmii_rx_dv : out   std_logic;
+        dbg_pcs_tx_dv   : out   std_logic;
+        dbg_pcs_tx      : out   std_logic_vector(3 downto 0)   -- PCS TX state/idle/frame_start
     );
 end entity;
 
@@ -77,6 +84,10 @@ begin
 
     speed           <= cur_speed;
     rgmii_link_info <= inband;
+
+    -- debug taps: frame-valid at the RGMII RX output and into the PCS TX
+    dbg_rgmii_rx_dv <= r2g_rgmii.dv;
+    dbg_pcs_tx_dv   <= r2g_pcs.dv;
 
     pcs_inst: entity work.sgmii_pcs
         generic map (
@@ -98,7 +109,8 @@ begin
             adv_config    => adv_config,
             link_up       => link_up,
             speed         => cur_speed,
-            duplex        => duplex
+            duplex        => duplex,
+            dbg_tx        => dbg_pcs_tx
         );
 
     rgmii_inst: entity work.rgmii_mac

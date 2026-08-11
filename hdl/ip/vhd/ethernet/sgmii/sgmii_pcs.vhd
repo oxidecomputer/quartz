@@ -47,7 +47,10 @@ entity sgmii_pcs is
         -- resolved status
         link_up : out   std_logic;
         speed   : out   eth_speed_t;
-        duplex  : out   std_logic
+        duplex  : out   std_logic;
+
+        -- debug tap from the TX datapath (may be left open)
+        dbg_tx : out   std_logic_vector(3 downto 0)
     );
 end entity;
 
@@ -83,7 +86,8 @@ begin
             gmii           => r2g,
             gmii_ready     => r2g_ready,
             tx_code        => tx_code,
-            tx_code_valid  => tx_code_valid
+            tx_code_valid  => tx_code_valid,
+            dbg_tx         => dbg_tx
         );
 
     an_gen: if INCLUDE_AUTONEG generate

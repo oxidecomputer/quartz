@@ -42,7 +42,10 @@ entity sgmii_pcs_tx is
 
         -- 1.25 Gbaud code-group output (one per clock)
         tx_code       : out   std_logic_vector(9 downto 0);
-        tx_code_valid : out   std_logic
+        tx_code_valid : out   std_logic;
+
+        -- debug tap (may be left open): (1:0)=state, (2)=idle_phase, (3)=frame_start
+        dbg_tx : out   std_logic_vector(3 downto 0)
     );
 end entity;
 
@@ -60,7 +63,10 @@ architecture rtl of sgmii_pcs_tx is
     signal enc_data : std_logic_vector(9 downto 0);
     signal enc_disp : std_logic;
 
-    signal frame_start : std_logic;
+    signal frame_start   : std_logic;
+    -- latch a frame request so a gmii.dv that arrives on the wrong idle_phase slot
+    -- (or only briefly) is not missed -- start on the next comma boundary
+    signal frame_pending : std_logic;
 
 begin
 
@@ -74,10 +80,27 @@ begin
 
     tx_code_valid <= '1';
 
-    -- a frame may start only on an idle ordered-set boundary
+    -- /S/ must occupy an EVEN code-group position -- it replaces the comma of
+    -- the next idle ordered set (802.3 Clause 36 TX_EVEN alignment). Fire while
+    -- the odd/data half of the current idle set is going out, so TX_SOP emits
+    -- /S/ in the slot the comma would have taken. Starting on idle_phase = '0'
+    -- instead puts /S/ one position late (odd): every following comma then lands
+    -- odd, which a conformant partner PCS reports as cgbad/sync loss and it
+    -- never recognizes the frame at all. A pending request (latched below) keeps
+    -- a held/transient dv from being missed when it never lands on this slot.
     frame_start <= '1' when state = TX_QUIET and xmit = XMIT_DATA
-                            and gmii.dv = '1' and idle_phase = '0'
+                            and (gmii.dv = '1' or frame_pending = '1')
+                            and idle_phase = '1'
                    else '0';
+
+    -- expose state / idle_phase / frame_start for bring-up debug
+    with state select dbg_tx(1 downto 0) <=
+        "00" when TX_QUIET,
+        "01" when TX_SOP,
+        "10" when TX_FRAME,
+        "11" when TX_EPD_R;
+    dbg_tx(2) <= idle_phase;
+    dbg_tx(3) <= frame_start;
 
     -- accept an octet when it begins the frame or while streaming frame data
     gmii_ready <= '1' when frame_start = '1'
@@ -99,9 +122,13 @@ begin
                 elsif idle_phase = '0' then
                     cur_cg <= COMMA;
                 elsif tx_disp = '1' then
-                    cur_cg <= d_byte(D5_6);    -- /I1/ restores RD to negative
-                else
+                    -- tx_disp here is the RD *after* the comma, so RD+ means the
+                    -- ordered set was entered at RD-: send /I2/ to keep RD- at the
+                    -- boundary (canonical 1000BASE-X idle). Getting this backwards
+                    -- emits a disparity-inverted idle a strict partner PCS rejects.
                     cur_cg <= d_byte(D16_2);   -- /I2/ preserves RD negative
+                else
+                    cur_cg <= d_byte(D5_6);    -- /I1/ restores RD to negative
                 end if;
             when TX_SOP =>
                 cur_cg <= SOP;
@@ -119,16 +146,25 @@ begin
     reg: process (clk, reset) is
     begin
         if reset = '1' then
-            state      <= TX_QUIET;
-            idle_phase <= '0';
-            cfg_phase  <= (others => '0');
-            c1c2       <= '0';
-            tx_disp    <= '0';
-            tx_code    <= (others => '0');
+            state         <= TX_QUIET;
+            idle_phase    <= '0';
+            cfg_phase     <= (others => '0');
+            c1c2          <= '0';
+            tx_disp       <= '0';
+            tx_code       <= (others => '0');
+            frame_pending <= '0';
         elsif rising_edge(clk) then
             -- register the encoded code group and the new running disparity
             tx_code <= enc_data;
             tx_disp <= enc_disp;
+
+            -- latch a frame request while idling; clear it as the frame starts
+            if state = TX_QUIET and xmit = XMIT_DATA and gmii.dv = '1' then
+                frame_pending <= '1';
+            end if;
+            if frame_start = '1' then
+                frame_pending <= '0';
+            end if;
 
             case state is
                 when TX_QUIET =>
