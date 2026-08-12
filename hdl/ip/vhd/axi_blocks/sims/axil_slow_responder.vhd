@@ -21,6 +21,8 @@ use work.axil_common_pkg.all;
 entity axil_slow_responder is
     generic (
         addr_width : integer := 8;
+        -- Longest stall this model will insert on any channel
+        max_delay : integer := 3;
         -- LFSR seed, so multiple instances can stall differently
         seed : std_logic_vector(7 downto 0) := x"A5"
     );
@@ -55,7 +57,6 @@ end entity;
 architecture rtl of axil_slow_responder is
 
     constant NUM_WORDS : integer := 16;
-    constant MAX_DELAY : integer := 3;
 
     type storage_t is array (0 to NUM_WORDS - 1) of std_logic_vector(31 downto 0);
 
@@ -66,20 +67,27 @@ architecture rtl of axil_slow_responder is
     signal w_done  : std_logic;
     signal ar_done : std_logic;
 
-    signal aw_cnt : integer range 0 to MAX_DELAY;
-    signal w_cnt  : integer range 0 to MAX_DELAY;
-    signal b_cnt  : integer range 0 to MAX_DELAY;
-    signal ar_cnt : integer range 0 to MAX_DELAY;
-    signal r_cnt  : integer range 0 to MAX_DELAY;
+    signal aw_cnt : integer range 0 to max_delay;
+    signal w_cnt  : integer range 0 to max_delay;
+    signal b_cnt  : integer range 0 to max_delay;
+    signal ar_cnt : integer range 0 to max_delay;
+    signal r_cnt  : integer range 0 to max_delay;
 
     signal awaddr_reg : std_logic_vector(addr_width - 1 downto 0);
     signal wdata_reg  : std_logic_vector(31 downto 0);
     signal wstrb_reg  : std_logic_vector(3 downto 0);
     signal rdata_reg  : std_logic_vector(31 downto 0);
 
+    -- The LFSR fields are two bits, so a caller asking for a shorter longest
+    -- stall than 3 needs the value clamped to stay inside the counter ranges.
     function delay_of (constant bits : std_logic_vector(1 downto 0)) return integer is
+        variable value : integer;
     begin
-        return to_integer(unsigned(bits));
+        value := to_integer(unsigned(bits));
+        if value > max_delay then
+            value := max_delay;
+        end if;
+        return value;
     end function;
 
 begin
@@ -111,10 +119,10 @@ begin
             w_done  <= '0';
             ar_done <= '0';
             aw_cnt  <= 0;
-            w_cnt   <= 1;
-            b_cnt   <= 1;
+            w_cnt   <= delay_of("01");
+            b_cnt   <= delay_of("01");
             ar_cnt  <= 0;
-            r_cnt   <= 1;
+            r_cnt   <= delay_of("01");
         elsif rising_edge(clk) then
             -- readys are single cycle pulses
             awready <= '0';
