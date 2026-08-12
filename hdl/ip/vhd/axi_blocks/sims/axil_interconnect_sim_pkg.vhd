@@ -38,13 +38,13 @@ package axil_interconnect_sim_pkg is
          SLOW_IDX   => resp_cfg(base_addr => x"00000200", addr_span_bits => 8, pipe_stages => 3),
          WIDE_IDX   => resp_cfg(base_addr => x"00008000", addr_span_bits => 15, pipe_stages => 2));
 
-    --! An integer as a bus address
+    -- An integer as a bus address
     function ba (constant addr : integer) return std_logic_vector;
 
-    --! Base address of a responder, plus a byte offset, as a bus address
+    -- Base address of a responder, plus a byte offset, as a bus address
     function ba (constant idx : integer; constant offset : integer) return std_logic_vector;
 
-    --! An integer as a 32 bit data word
+    -- An integer as a 32 bit data word
     function w32 (constant value : integer) return std_logic_vector;
 
 end package;

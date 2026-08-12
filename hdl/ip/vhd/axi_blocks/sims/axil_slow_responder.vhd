@@ -21,7 +21,7 @@ use work.axil_common_pkg.all;
 entity axil_slow_responder is
     generic (
         addr_width : integer := 8;
-        --! LFSR seed, so multiple instances can stall differently
+        -- LFSR seed, so multiple instances can stall differently
         seed : std_logic_vector(7 downto 0) := x"A5"
     );
     port (

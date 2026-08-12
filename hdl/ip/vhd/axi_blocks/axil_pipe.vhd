@@ -37,9 +37,9 @@ use work.axil_common_pkg.all;
 
 entity axil_pipe is
     generic (
-        --! Register stages inserted in *each* direction
+        -- Register stages inserted in *each* direction
         stages : natural;
-        --! Address bits this responder actually decodes
+        -- Address bits this responder actually decodes
         addr_width : natural
     );
     port (
@@ -134,8 +134,8 @@ begin
 
         signal sink_state : sink_state_t;
         signal sink_is_write : std_logic;
-        --! registered one-shot, so AW and W always handshake in the same cycle
-        --! and AWREADY never depends combinationally on AWVALID
+        -- registered one-shot, so AW and W always handshake in the same cycle
+        -- and AWREADY never depends combinationally on AWVALID
         signal sink_wr_ack : std_logic;
         signal sink_rd_ack : std_logic;
         signal sink_resp_valid : std_logic;
