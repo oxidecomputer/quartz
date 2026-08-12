@@ -4,5 +4,7 @@ addrmap top_level_map {
     gfruit_regs base @ 0x0;
     spi_nor_regs spi_nor @ 0x0100;
     gfruit_sgpio_regs sgpio @ 0x0200;
+    // 0x0700 to match cosmo_seq, so the same tooling offset works on both boards
+    hash_engine_regs hash @ 0x0700;
     espi_regs espi @ 0x8000;
 };

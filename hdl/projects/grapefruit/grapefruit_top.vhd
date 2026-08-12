@@ -208,11 +208,25 @@ architecture rtl of grapefruit_top is
      (0 => resp_cfg(base_addr => x"00000000", addr_span_bits => 8),
       1 => resp_cfg(base_addr => x"00000100", addr_span_bits => 8),
       2 => resp_cfg(base_addr => x"00000200", addr_span_bits => 8),
-      3 => resp_cfg(base_addr => x"00008000", addr_span_bits => 15)
+      3 => resp_cfg(base_addr => x"00008000", addr_span_bits => 15),
+      4 => resp_cfg(base_addr => x"00000700", addr_span_bits => 8)
       );
     signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
     signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);
      signal responders_15b : axil15x32_pkg.axil_array_t(config_array'range);
+    -- Hashing engine <-> spi_nor_top, the same shape as the eSPI pair below.
+    -- Reset from reset_125m only: the engine resynchronises its own response
+    -- channel by draining it, so nothing else should be clearing these.
+    signal hash_cmd_fifo_wdata : std_logic_vector(31 downto 0);
+    signal hash_cmd_fifo_write : std_logic;
+    signal hash_cmd_fifo_rdata : std_logic_vector(31 downto 0);
+    signal hash_cmd_fifo_rdack : std_logic;
+    signal hash_cmd_fifo_rempty : std_logic;
+    signal hash_data_fifo_wdata : std_logic_vector(7 downto 0);
+    signal hash_data_fifo_write : std_logic;
+    signal hash_rsp_fifo_rdata : std_logic_vector(7 downto 0);
+    signal hash_rsp_fifo_rdack : std_logic;
+    signal hash_rsp_fifo_rempty : std_logic;
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
     signal espi_cmd_fifo_rdack : std_logic;
     signal espi_cmd_fifo_rempty : std_logic;
@@ -358,8 +372,67 @@ begin
         espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
         espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
         espi_data_fifo_wdata => espi_data_fifo_wdata,
-        espi_data_fifo_write => espi_data_fifo_write
+        espi_data_fifo_write => espi_data_fifo_write,
+        hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
+        hash_cmd_fifo_rdack => hash_cmd_fifo_rdack,
+        hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,
+        hash_data_fifo_wdata => hash_data_fifo_wdata,
+        hash_data_fifo_write => hash_data_fifo_write
 
+    );
+
+    -- Hashing engine -> SPI NOR
+    hash_spinor_cmd_fifo: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 256,
+        data_width => 32,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk_125m,
+        reset => reset_125m,
+        write_en => hash_cmd_fifo_write,
+        wdata => hash_cmd_fifo_wdata,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk_125m,
+        rdata => hash_cmd_fifo_rdata,
+        rdreq => hash_cmd_fifo_rdack,
+        rempty => hash_cmd_fifo_rempty,
+        rusedwds => open
+    );
+    -- SPI NOR -> hashing engine
+    hash_spinor_data_fifo: entity work.dcfifo_xpm
+     generic map(
+        fifo_write_depth => 256,
+        data_width => 8,
+        showahead_mode => true
+    )
+     port map(
+        wclk => clk_125m,
+        reset => reset_125m,
+        write_en => hash_data_fifo_write,
+        wdata => hash_data_fifo_wdata,
+        wfull => open,
+        wusedwds => open,
+        rclk => clk_125m,
+        rdata => hash_rsp_fifo_rdata,
+        rdreq => hash_rsp_fifo_rdack,
+        rempty => hash_rsp_fifo_rempty,
+        rusedwds => open
+    );
+
+    resize_axil(fabric_responders(4), responders_8b(4));
+    hash_engine_inst: entity work.hash_engine_top
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders_8b(4),
+        cmd_fifo_wdata => hash_cmd_fifo_wdata,
+        cmd_fifo_write => hash_cmd_fifo_write,
+        rsp_fifo_rdata => hash_rsp_fifo_rdata,
+        rsp_fifo_rdack => hash_rsp_fifo_rdack,
+        rsp_fifo_rempty => hash_rsp_fifo_rempty
     );
 
      -- eSPI block -> SPI NOR  
@@ -407,7 +480,12 @@ begin
     -- Only the link layer runs at 200MHz, the remaining
     -- logic runs at 125MHz so all the interfaces are synchronous
     -- to 125MHz
-    resize_axil(fabric_responders(3), responders_8b(3));
+    -- The eSPI responder has a 15 bit span, so it has to be resized into the 15
+    -- bit array, which is what is wired to the block below. Resizing into the 8
+    -- bit one instead left responders_15b(3) undriven and the eSPI register
+    -- window at 0x8000 unreachable, while responders_8b(3) was written and never
+    -- read.
+    resize_axil(fabric_responders(3), responders_15b(3));
     espi_target_top_inst: entity work.espi_target_top
      port map(
         clk_200m => clk_200m,

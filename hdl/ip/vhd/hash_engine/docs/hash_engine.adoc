@@ -339,9 +339,11 @@ so it computed an out-of-range threshold and Vivado refused to synthesise. Nothi
 had synthesised a narrowing mixed-width FIFO before, so simulation never saw it.
 Fixed in the wrapper.
 
-Not yet done: `grapefruit` has the same `spi_nor_top` and could take the block the
-same way, but is untouched. It still elaborates unchanged -- the new client ports
-have defaults on their inputs and its instantiation simply leaves them off.
+`grapefruit` has it too, also at *0x0700*. That board instantiates `spi_nor_top`
+directly at the top level rather than inside a subsystem, so the FIFOs and the
+engine sit alongside the eSPI pair in `grapefruit_top` instead. Its responder is
+appended as index 4. The offset deliberately matches cosmo_seq even though
+grapefruit had 0x0300 free, so one tooling default covers both boards.
 
 === A caveat on arbitration
 
