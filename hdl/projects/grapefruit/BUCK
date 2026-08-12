@@ -29,6 +29,7 @@ rdl_file(
         ":gfruit_regs_rdl",
         ":gfruit_sgpio_regs_rdl",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_regs_rdl",
+        "//hdl/ip/vhd/hash_engine:hash_engine_regs_rdl",
         "//hdl/ip/vhd/espi:espi_regs_rdl",
     ],
     outputs = [
@@ -79,6 +80,8 @@ vhdl_unit(
         "//hdl/ip/vhd/uart:axi_fifo_uart",
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/spi_nor_controller:spi_nor_top",
+        "//hdl/ip/vhd/hash_engine:hash_engine_top",
+        "//hdl/ip/vhd/fifos:dcfifo_xpm",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
         "//hdl/ip/vhd/common:time_pkg",
         "//hdl/ip/vhd/common:tristate_if_pkg",
