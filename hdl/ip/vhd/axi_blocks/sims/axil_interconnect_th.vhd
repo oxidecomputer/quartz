@@ -23,7 +23,7 @@ architecture th of axil_interconnect_th is
     signal clk       : std_logic := '0';
     signal reset     : std_logic;
     signal reset_por : std_logic := '1';
-    --! testbench driven, so a reset can be injected mid transaction
+    -- testbench driven, so a reset can be injected mid transaction
     signal reset_force : std_logic := '0';
 
     -- The bus functional model drives these

@@ -158,9 +158,9 @@ begin
             wait until rising_edge(clk);
         end procedure;
 
-        --! Like manual_read, but also reports how many clocks the fabric took to
-        --! answer, so the testbench can show the configured stages are really in
-        --! the path rather than being generated away.
+        -- Like manual_read, but also reports how many clocks the fabric took to
+        -- answer, so the testbench can show the configured stages are really in
+        -- the path rather than being generated away.
         procedure manual_read_timed (
             constant addr : in std_logic_vector;
             variable data : out std_logic_vector(31 downto 0);
