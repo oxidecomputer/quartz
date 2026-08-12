@@ -32,10 +32,15 @@ package axil_interconnect_sim_pkg is
     constant SLOW_IDX   : integer := 2;
     constant WIDE_IDX   : integer := 3;
 
+    -- Drives both the deepest pipe in the map below and the slow responder's worst
+    -- case stall, so one number sets how much delay the testbench has to tolerate
+    -- on either side of the fabric.
+    constant MAX_DELAY : integer := 3;
+
     constant config_array : axil_responder_cfg_array_t(0 to 3) :=
         (SRAM_A_IDX => resp_cfg(base_addr => x"00000000", addr_span_bits => 8, pipe_stages => 0),
          SRAM_B_IDX => resp_cfg(base_addr => x"00000100", addr_span_bits => 8, pipe_stages => 1),
-         SLOW_IDX   => resp_cfg(base_addr => x"00000200", addr_span_bits => 8, pipe_stages => 3),
+         SLOW_IDX   => resp_cfg(base_addr => x"00000200", addr_span_bits => 8, pipe_stages => MAX_DELAY),
          WIDE_IDX   => resp_cfg(base_addr => x"00008000", addr_span_bits => 15, pipe_stages => 2));
 
     -- An integer as an initiator-width bus address

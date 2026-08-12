@@ -239,6 +239,7 @@ begin
     slow: entity work.axil_slow_responder
         generic map (
             addr_width => 8,
+            max_delay  => MAX_DELAY,
             seed       => x"5A"
         )
         port map (
