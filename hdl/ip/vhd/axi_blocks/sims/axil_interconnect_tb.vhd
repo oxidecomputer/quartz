@@ -85,8 +85,10 @@ begin
             check_equal(init_aw_hs, init_b_hs, "write address and write response handshakes disagree");
             check_equal(init_ar_hs, init_r_hs, "read address and read data handshakes disagree");
             if mapped_only then
-                check_equal(resp_aw_hs, init_aw_hs, "responder saw a different number of writes than the initiator issued");
-                check_equal(resp_ar_hs, init_ar_hs, "responder saw a different number of reads than the initiator issued");
+                check_equal(resp_aw_hs, init_aw_hs,
+                            "responder saw a different number of writes than the initiator issued");
+                check_equal(resp_ar_hs, init_ar_hs,
+                            "responder saw a different number of reads than the initiator issued");
             end if;
         end procedure;
 
@@ -196,16 +198,16 @@ begin
         while test_suite loop
             if run("write_read_each_responder") then
                 for idx in config_array'range loop
-                    write_axi_lite(net, bus_handle, ba(idx, 16#00#), x"C0DE0000" or w32(idx * 16));
-                    write_axi_lite(net, bus_handle, ba(idx, 16#08#), x"FEED0000" or w32(idx * 16));
+                    write_axi_lite(net, bus_handle, responder_addr(idx, 16#00#), x"C0DE0000" or data_word(idx * 16));
+                    write_axi_lite(net, bus_handle, responder_addr(idx, 16#08#), x"FEED0000" or data_word(idx * 16));
                 end loop;
                 -- read back after all the writes, so a fabric that leaks a write
                 -- into the wrong responder is caught rather than masked
                 for idx in config_array'range loop
-                    check_axi_lite(net, bus_handle, ba(idx, 16#00#), axi_resp_okay,
-                                   x"C0DE0000" or w32(idx * 16), "responder 0x00 readback");
-                    check_axi_lite(net, bus_handle, ba(idx, 16#08#), axi_resp_okay,
-                                   x"FEED0000" or w32(idx * 16), "responder 0x08 readback");
+                    check_axi_lite(net, bus_handle, responder_addr(idx, 16#00#), axi_resp_okay,
+                                   x"C0DE0000" or data_word(idx * 16), "responder 0x00 readback");
+                    check_axi_lite(net, bus_handle, responder_addr(idx, 16#08#), axi_resp_okay,
+                                   x"FEED0000" or data_word(idx * 16), "responder 0x08 readback");
                 end loop;
                 check_handshake_accounting(net, mapped_only => true);
 
@@ -214,12 +216,12 @@ begin
                 -- payload reuse is covered at each configured pipe depth
                 for idx in config_array'range loop
                     for word in 0 to 7 loop
-                        write_axi_lite(net, bus_handle, ba(idx, 4 * word),
-                                       x"A5A50000" or w32(16 * idx + word));
+                        write_axi_lite(net, bus_handle, responder_addr(idx, 4 * word),
+                                       x"A5A50000" or data_word(16 * idx + word));
                     end loop;
                     for word in 0 to 7 loop
-                        check_axi_lite(net, bus_handle, ba(idx, 4 * word), axi_resp_okay,
-                                       x"A5A50000" or w32(16 * idx + word), "back to back readback");
+                        check_axi_lite(net, bus_handle, responder_addr(idx, 4 * word), axi_resp_okay,
+                                       x"A5A50000" or data_word(16 * idx + word), "back to back readback");
                     end loop;
                 end loop;
                 check_handshake_accounting(net, mapped_only => true);
@@ -228,24 +230,25 @@ begin
                 -- alternate between the fastest and the slowest responder with no
                 -- idle time in between
                 for word in 0 to 7 loop
-                    write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 4 * word), x"11110000" or w32(word));
-                    write_axi_lite(net, bus_handle, ba(SLOW_IDX, 4 * word), x"22220000" or w32(word));
+                    write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 4 * word),
+                                   x"11110000" or data_word(word));
+                    write_axi_lite(net, bus_handle, responder_addr(SLOW_IDX, 4 * word), x"22220000" or data_word(word));
                 end loop;
                 for word in 0 to 7 loop
-                    check_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 4 * word), axi_resp_okay,
-                                   x"11110000" or w32(word), "sram_a readback");
-                    check_axi_lite(net, bus_handle, ba(SLOW_IDX, 4 * word), axi_resp_okay,
-                                   x"22220000" or w32(word), "slow readback");
+                    check_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 4 * word), axi_resp_okay,
+                                   x"11110000" or data_word(word), "sram_a readback");
+                    check_axi_lite(net, bus_handle, responder_addr(SLOW_IDX, 4 * word), axi_resp_okay,
+                                   x"22220000" or data_word(word), "slow readback");
                 end loop;
                 check_handshake_accounting(net, mapped_only => true);
 
             elsif run("read_after_write_same_addr") then
                 for idx in config_array'range loop
-                    write_axi_lite(net, bus_handle, ba(idx, 16#10#), x"5A5A1234");
-                    check_axi_lite(net, bus_handle, ba(idx, 16#10#), axi_resp_okay, x"5A5A1234",
+                    write_axi_lite(net, bus_handle, responder_addr(idx, 16#10#), x"5A5A1234");
+                    check_axi_lite(net, bus_handle, responder_addr(idx, 16#10#), axi_resp_okay, x"5A5A1234",
                                    "read immediately after write");
-                    write_axi_lite(net, bus_handle, ba(idx, 16#10#), x"A5A54321");
-                    check_axi_lite(net, bus_handle, ba(idx, 16#10#), axi_resp_okay, x"A5A54321",
+                    write_axi_lite(net, bus_handle, responder_addr(idx, 16#10#), x"A5A54321");
+                    check_axi_lite(net, bus_handle, responder_addr(idx, 16#10#), axi_resp_okay, x"A5A54321",
                                    "read immediately after overwrite");
                 end loop;
                 check_handshake_accounting(net, mapped_only => true);
@@ -253,60 +256,60 @@ begin
             elsif run("unmapped_slverr") then
                 -- the gap between the 8 bit responders and the wide one, the top
                 -- of that gap, and an address past every responder
-                write_axi_lite(net, bus_handle, ba(16#000300#), x"DEADDEAD", axi_resp_slverr);
-                check_axi_lite(net, bus_handle, ba(16#000300#), axi_resp_slverr, x"DEADBEEF",
+                write_axi_lite(net, bus_handle, bus_addr(16#000300#), x"DEADDEAD", axi_resp_slverr);
+                check_axi_lite(net, bus_handle, bus_addr(16#000300#), axi_resp_slverr, x"DEADBEEF",
                                "unmapped read at 0x300");
-                write_axi_lite(net, bus_handle, ba(16#007FFC#), x"DEADDEAD", axi_resp_slverr);
-                check_axi_lite(net, bus_handle, ba(16#007FFC#), axi_resp_slverr, x"DEADBEEF",
+                write_axi_lite(net, bus_handle, bus_addr(16#007FFC#), x"DEADDEAD", axi_resp_slverr);
+                check_axi_lite(net, bus_handle, bus_addr(16#007FFC#), axi_resp_slverr, x"DEADBEEF",
                                "unmapped read at 0x7FFC");
-                write_axi_lite(net, bus_handle, ba(16#010000#), x"DEADDEAD", axi_resp_slverr);
-                check_axi_lite(net, bus_handle, ba(16#010000#), axi_resp_slverr, x"DEADBEEF",
+                write_axi_lite(net, bus_handle, bus_addr(16#010000#), x"DEADDEAD", axi_resp_slverr);
+                check_axi_lite(net, bus_handle, bus_addr(16#010000#), axi_resp_slverr, x"DEADBEEF",
                                "unmapped read at 0x10000");
                 -- an unmapped access must not have disturbed a mapped one
-                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#04#), x"600D600D");
-                check_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#04#), axi_resp_okay, x"600D600D",
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#04#), x"600D600D");
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#04#), axi_resp_okay, x"600D600D",
                                "mapped access after unmapped");
                 check_handshake_accounting(net, mapped_only => false);
 
             elsif run("boundary_addresses") then
                 -- first and last word of each mapped region, which is where an
                 -- equality based decode and a magnitude compare could disagree
-                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#00#), x"00000001");
-                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#FC#), x"000000FC");
-                write_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 16#00#), x"00000100");
-                write_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 16#FC#), x"000001FC");
-                write_axi_lite(net, bus_handle, ba(WIDE_IDX, 16#0000#), x"00008000");
-                write_axi_lite(net, bus_handle, ba(WIDE_IDX, 16#0FFC#), x"00008FFC");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#00#), x"00000001");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#FC#), x"000000FC");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_B_IDX, 16#00#), x"00000100");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_B_IDX, 16#FC#), x"000001FC");
+                write_axi_lite(net, bus_handle, responder_addr(WIDE_IDX, 16#0000#), x"00008000");
+                write_axi_lite(net, bus_handle, responder_addr(WIDE_IDX, 16#0FFC#), x"00008FFC");
 
                 -- 0x00 and 0xFC land in different words of sram_a, and sram_b's
                 -- 0x100 must not have aliased on top of sram_a's 0x00
-                check_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#00#), axi_resp_okay, x"00000001",
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#00#), axi_resp_okay, x"00000001",
                                "sram_a low boundary");
-                check_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#FC#), axi_resp_okay, x"000000FC",
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#FC#), axi_resp_okay, x"000000FC",
                                "sram_a high boundary");
-                check_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 16#00#), axi_resp_okay, x"00000100",
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_B_IDX, 16#00#), axi_resp_okay, x"00000100",
                                "sram_b low boundary");
-                check_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 16#FC#), axi_resp_okay, x"000001FC",
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_B_IDX, 16#FC#), axi_resp_okay, x"000001FC",
                                "sram_b high boundary");
-                check_axi_lite(net, bus_handle, ba(WIDE_IDX, 16#0000#), axi_resp_okay, x"00008000",
+                check_axi_lite(net, bus_handle, responder_addr(WIDE_IDX, 16#0000#), axi_resp_okay, x"00008000",
                                "wide low boundary");
-                check_axi_lite(net, bus_handle, ba(WIDE_IDX, 16#0FFC#), axi_resp_okay, x"00008FFC",
+                check_axi_lite(net, bus_handle, responder_addr(WIDE_IDX, 16#0FFC#), axi_resp_okay, x"00008FFC",
                                "wide high boundary");
                 check_handshake_accounting(net, mapped_only => true);
 
             elsif run("glitchy_aw_initiator") then
-                manual_write(ba(SRAM_A_IDX, 16#10#), x"6060BEEF", 6, OKAY);
+                manual_write(responder_addr(SRAM_A_IDX, 16#10#), x"6060BEEF", 6, OKAY);
                 clear_manual;
-                check_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#10#), axi_resp_okay, x"6060BEEF",
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#10#), axi_resp_okay, x"6060BEEF",
                                "readback after an AW leading write");
                 check_handshake_accounting(net, mapped_only => true);
 
             elsif run("glitchy_aw_unmapped") then
                 -- the catch-all responder is the one that used to assert AWREADY
                 -- with no regard for WVALID
-                manual_write(ba(16#000300#), x"6060BEEF", 6, SLVERR);
+                manual_write(bus_addr(16#000300#), x"6060BEEF", 6, SLVERR);
                 clear_manual;
-                check_axi_lite(net, bus_handle, ba(16#000300#), axi_resp_slverr, x"DEADBEEF",
+                check_axi_lite(net, bus_handle, bus_addr(16#000300#), axi_resp_slverr, x"DEADBEEF",
                                "unmapped read after an AW leading write");
                 check_handshake_accounting(net, mapped_only => false);
 
@@ -315,11 +318,11 @@ begin
                 -- be able to shadow. write_axi_lite only queues the write, so
                 -- wait for the bus functional model to actually retire it
                 -- before taking the bus over by hand.
-                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#04#), x"600DF00D");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#04#), x"600DF00D");
                 wait_until_idle(net, bus_handle);
 
                 man_mode    <= '1';
-                man_awaddr  <= ba(SRAM_B_IDX, 16#00#);
+                man_awaddr  <= responder_addr(SRAM_B_IDX, 16#00#);
                 man_wdata   <= x"11112222";
                 man_wstrb   <= "1111";
                 man_bready  <= '1';
@@ -334,7 +337,7 @@ begin
                 -- tear the transaction down anyway and decode the next one.
                 man_wvalid <= '0';
                 man_bready <= '0';
-                manual_read(ba(SRAM_A_IDX, 16#04#), rdata, OKAY);
+                manual_read(responder_addr(SRAM_A_IDX, 16#04#), rdata, OKAY);
                 check_equal(rdata, std_logic_vector'(x"600DF00D"),
                             "read decoded against a stale write address");
                 clear_manual;
@@ -343,16 +346,16 @@ begin
             elsif run("pipe_latency") then
                 -- sram_a has no pipe, sram_b has one stage and the wide responder
                 -- two, so the answer must arrive strictly later each time
-                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#00#), x"00000011");
-                write_axi_lite(net, bus_handle, ba(SRAM_B_IDX, 16#00#), x"00000022");
-                write_axi_lite(net, bus_handle, ba(WIDE_IDX, 16#00#), x"00000033");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#00#), x"00000011");
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_B_IDX, 16#00#), x"00000022");
+                write_axi_lite(net, bus_handle, responder_addr(WIDE_IDX, 16#00#), x"00000033");
                 wait_until_idle(net, bus_handle);
 
-                manual_read_timed(ba(SRAM_A_IDX, 16#00#), rdata, lat0);
+                manual_read_timed(responder_addr(SRAM_A_IDX, 16#00#), rdata, lat0);
                 check_equal(rdata, std_logic_vector'(x"00000011"), "unpiped readback");
-                manual_read_timed(ba(SRAM_B_IDX, 16#00#), rdata, lat1);
+                manual_read_timed(responder_addr(SRAM_B_IDX, 16#00#), rdata, lat1);
                 check_equal(rdata, std_logic_vector'(x"00000022"), "one stage readback");
-                manual_read_timed(ba(WIDE_IDX, 16#00#), rdata, lat2);
+                manual_read_timed(responder_addr(WIDE_IDX, 16#00#), rdata, lat2);
                 check_equal(rdata, std_logic_vector'(x"00000033"), "two stage readback");
                 info("read latency in clocks: 0 stages=" & to_string(lat0) &
                      " 1 stage=" & to_string(lat1) & " 2 stages=" & to_string(lat2));
@@ -365,7 +368,7 @@ begin
                 -- kick off a read at the slow responder and reset while it is in
                 -- flight, then confirm the fabric comes back clean
                 man_mode    <= '1';
-                man_araddr  <= ba(SLOW_IDX, 16#00#);
+                man_araddr  <= responder_addr(SLOW_IDX, 16#00#);
                 man_rready  <= '1';
                 man_arvalid <= '1';
                 wait for 40 ns;
@@ -380,11 +383,11 @@ begin
                 man_mode <= '0';
                 wait for 200 ns;
 
-                write_axi_lite(net, bus_handle, ba(SLOW_IDX, 16#00#), x"AF7E8E5E");
-                check_axi_lite(net, bus_handle, ba(SLOW_IDX, 16#00#), axi_resp_okay, x"AF7E8E5E",
+                write_axi_lite(net, bus_handle, responder_addr(SLOW_IDX, 16#00#), x"AF7E8E5E");
+                check_axi_lite(net, bus_handle, responder_addr(SLOW_IDX, 16#00#), axi_resp_okay, x"AF7E8E5E",
                                "slow responder after a mid transaction reset");
-                write_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#00#), x"C1EA4000");
-                check_axi_lite(net, bus_handle, ba(SRAM_A_IDX, 16#00#), axi_resp_okay, x"C1EA4000",
+                write_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#00#), x"C1EA4000");
+                check_axi_lite(net, bus_handle, responder_addr(SRAM_A_IDX, 16#00#), axi_resp_okay, x"C1EA4000",
                                "sram_a after a mid transaction reset");
                 check_handshake_accounting(net, mapped_only => true);
             end if;

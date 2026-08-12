@@ -38,31 +38,32 @@ package axil_interconnect_sim_pkg is
          SLOW_IDX   => resp_cfg(base_addr => x"00000200", addr_span_bits => 8, pipe_stages => 3),
          WIDE_IDX   => resp_cfg(base_addr => x"00008000", addr_span_bits => 15, pipe_stages => 2));
 
-    -- An integer as a bus address
-    function ba (constant addr : integer) return std_logic_vector;
+    -- An integer as an initiator-width bus address
+    function bus_addr (constant addr : integer) return std_logic_vector;
 
-    -- Base address of a responder, plus a byte offset, as a bus address
-    function ba (constant idx : integer; constant offset : integer) return std_logic_vector;
+    -- Bus address of a register in a responder: its configured base address
+    -- plus a byte offset
+    function responder_addr (constant idx : integer; constant offset : integer) return std_logic_vector;
 
-    -- An integer as a 32 bit data word
-    function w32 (constant value : integer) return std_logic_vector;
+    -- An integer as a 32 bit AXI data word
+    function data_word (constant value : integer) return std_logic_vector;
 
 end package;
 
 package body axil_interconnect_sim_pkg is
 
-    function ba (constant addr : integer) return std_logic_vector is
+    function bus_addr (constant addr : integer) return std_logic_vector is
     begin
         return std_logic_vector(to_unsigned(addr, INITIATOR_ADDR_WIDTH));
     end function;
 
-    function ba (constant idx : integer; constant offset : integer) return std_logic_vector is
+    function responder_addr (constant idx : integer; constant offset : integer) return std_logic_vector is
     begin
         return std_logic_vector(unsigned(config_array(idx).base_addr(INITIATOR_ADDR_WIDTH - 1 downto 0))
                                 + to_unsigned(offset, INITIATOR_ADDR_WIDTH));
     end function;
 
-    function w32 (constant value : integer) return std_logic_vector is
+    function data_word (constant value : integer) return std_logic_vector is
     begin
         return std_logic_vector(to_unsigned(value, 32));
     end function;
