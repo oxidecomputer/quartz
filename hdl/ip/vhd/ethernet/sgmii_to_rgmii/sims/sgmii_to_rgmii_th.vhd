@@ -58,6 +58,31 @@ begin
     reset     <= '0' after 200 ns;
     dut_reset <= reset or tb_reset;
 
+    -- Clause-36 conformance checks on both transmit directions (the bridge's
+    -- SGMII TX is the stream a hard partner PCS judges; the partner instance is
+    -- the same soft PCS, so check it too)
+    bridge_tx_mon: entity work.sgmii_conformance_mon
+        generic map (
+            name => "bridge_tx_mon"
+        )
+        port map (
+            clk        => clk,
+            reset      => dut_reset,
+            code       => b2p,
+            code_valid => b2p_v
+        );
+
+    partner_tx_mon: entity work.sgmii_conformance_mon
+        generic map (
+            name => "partner_tx_mon"
+        )
+        port map (
+            clk        => clk,
+            reset      => dut_reset,
+            code       => p2b,
+            code_valid => p2b_v
+        );
+
     bridge: entity work.sgmii_to_rgmii
         generic map (
             INCLUDE_AUTONEG   => true,

@@ -33,6 +33,7 @@ vunit_sim(
         "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
         "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
         "//hdl/ip/vhd/ethernet/sgmii:sgmii_pcs",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_conformance_mon",
         "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
     ],
     visibility = ['PUBLIC'],

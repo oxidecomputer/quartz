@@ -48,13 +48,12 @@ architecture rtl of rgmii_tx is
 
     signal d_lo, d_hi : std_logic_vector(3 downto 0);
     signal nib        : std_logic_vector(3 downto 0);
-    signal status_nib : std_logic_vector(3 downto 0);
     signal txd_rise   : std_logic_vector(3 downto 0);
     signal txd_fall   : std_logic_vector(3 downto 0);
     signal ctl_rise   : std_logic;
     signal ctl_fall   : std_logic;
 
-    signal txc_div  : std_logic;
+    signal nphase   : natural range 0 to 49;   -- position within one txc period
     signal txc_rise : std_logic;
     signal txc_fall : std_logic;
 
@@ -81,24 +80,22 @@ begin
     end process;
 
     hi_half <= '1' when phase >= half_cycles else '0';
-    txc_div <= '1' when (phase mod half_cycles) < (half_cycles / 2) else '0';
 
     d_lo <= cur.data(3 downto 0);
     d_hi <= cur.data(7 downto 4);
     nib  <= d_hi when hi_half = '1' else d_lo;
 
-    -- during the inter-frame gap drive the in-band status nibble (link up, the
-    -- resolved speed/duplex) so the far end can recover link state
-    status_nib <= inband_to_nibble((link => '1', duplex => '1', speed => speed));
-
     -- 1000: lo on rising / hi on falling. 100/10: selected nibble on both edges.
-    -- When no frame octet is present, send in-band status instead.
-    txd_rise <= status_nib when cur.dv = '0' else
+    -- We are the MAC on this link, so TXD is meaningless during the inter-frame
+    -- gap (in-band status is a PHY->MAC construct): drive zeros.
+    txd_rise <= (others => '0') when cur.dv = '0' else
                 d_lo when is_1g = '1' else nib;
-    txd_fall <= status_nib when cur.dv = '0' else
+    txd_fall <= (others => '0') when cur.dv = '0' else
                 d_hi when is_1g = '1' else nib;
+    -- TX_CTL: tx_en on the rising edge, tx_en xor tx_er on the falling edge, at
+    -- every speed (RGMII v2.0 table 2; the encoding is not 1000-only)
     ctl_rise <= cur.dv;
-    ctl_fall <= (cur.dv xor cur.er) when is_1g = '1' else cur.dv;
+    ctl_fall <= cur.dv xor cur.er;
 
     txd_gen: for i in 0 to 3 generate
         oddr_i: entity work.oddr_wrapper
@@ -126,10 +123,16 @@ begin
 
     -- txc: DDR-forwarded 125 MHz clock at 1000, divided clock at 100/10. The ODDR
     -- output drives the pin directly (no fabric mux) so it can be placed in the
-    -- pin's OLOGIC on a real device: at 1000 it forwards clk (rise='1'/fall='0');
-    -- at 100/10 both edges carry the divided-clock level so the ODDR reproduces it.
-    txc_rise <= '1' when is_1g = '1' else txc_div;
-    txc_fall <= '0' when is_1g = '1' else txc_div;
+    -- pin's OLOGIC on a real device: at 1000 it forwards clk (rise='1'/fall='0').
+    -- At 100/10 the divided clock is built at ODDR half-cycle granularity: a txc
+    -- period spans half_cycles clks = 2*half_cycles half-cycles, of which exactly
+    -- half are driven high, giving a true 50% duty cycle even when half_cycles is
+    -- odd (5 at 100M would otherwise round to 40/60, outside the RGMII 45-55%).
+    nphase <= phase mod half_cycles;
+    txc_rise <= '1' when is_1g = '1' else
+                '1' when 2 * nphase < half_cycles else '0';
+    txc_fall <= '0' when is_1g = '1' else
+                '1' when 2 * nphase + 1 < half_cycles else '0';
 
     txc_oddr: entity work.oddr_wrapper
         generic map (

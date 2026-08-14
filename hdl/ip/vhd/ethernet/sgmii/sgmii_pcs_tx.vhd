@@ -6,7 +6,9 @@
 -- combinational 8B10B encoder. Driven by the auto-neg `xmit` mode:
 --   XMIT_CONFIG -> stream /C1//C2/ config ordered sets carrying tx_config_word
 --   XMIT_IDLE   -> stream /I1//I2/ idle ordered sets
---   XMIT_DATA   -> idle until gmii.dv, then /S/, data octets, /T/, /R/
+--   XMIT_DATA   -> idle until gmii.dv, then /S/, data octets, /T/, /R/ (and a
+--                  second /R/ when /T/ fell on an odd position, so idle always
+--                  resumes on an even ordered-set boundary)
 --
 -- The PCS is rate-agnostic: it emits one code group per GMII octet. SGMII
 -- 10/100 rate adaptation (each octet replicated 10x/100x) is handled at the
@@ -51,7 +53,7 @@ end entity;
 
 architecture rtl of sgmii_pcs_tx is
 
-    type tx_state_t is (TX_QUIET, TX_SOP, TX_FRAME, TX_EPD_R);
+    type tx_state_t is (TX_QUIET, TX_SOP, TX_FRAME, TX_EPD_R, TX_EPD_R2);
 
     signal state      : tx_state_t;
     signal idle_phase : std_logic;              -- 0 = comma, 1 = idle data
@@ -63,10 +65,23 @@ architecture rtl of sgmii_pcs_tx is
     signal enc_data : std_logic_vector(9 downto 0);
     signal enc_disp : std_logic;
 
+    -- xmit mode changes are honored only on ordered-set boundaries (Clause 36):
+    -- a /C/ set in flight is always completed (cfg_phase /= 0), and a new one
+    -- starts only from the even boundary (idle_phase = '0'), never truncating an
+    -- idle set or emitting the config comma at an odd position.
+    signal cfg_active : std_logic;
+
     signal frame_start   : std_logic;
     -- latch a frame request so a gmii.dv that arrives on the wrong idle_phase slot
     -- (or only briefly) is not missed -- start on the next comma boundary
     signal frame_pending : std_logic;
+
+    -- Code-group position parity during a frame ('1' = the code group going out
+    -- this cycle sits at an even position). Seeded by frame_start (/S/ is even)
+    -- and toggled every code group. Clause 36 end-of-packet: /T/ at even takes a
+    -- single /R/; /T/ at odd needs /T/R/R/ so idle resumes on an even boundary.
+    signal even_reg  : std_logic;
+    signal t_at_even : std_logic;
 
 begin
 
@@ -98,7 +113,7 @@ begin
         "00" when TX_QUIET,
         "01" when TX_SOP,
         "10" when TX_FRAME,
-        "11" when TX_EPD_R;
+        "11" when TX_EPD_R | TX_EPD_R2;
     dbg_tx(2) <= idle_phase;
     dbg_tx(3) <= frame_start;
 
@@ -107,12 +122,15 @@ begin
                           or (state = TX_FRAME and gmii.dv = '1')
                   else '0';
 
+    cfg_active <= '1' when (xmit = XMIT_CONFIG and idle_phase = '0') or cfg_phase /= 0
+                  else '0';
+
     -- Current code group as a combinational function of state.
     comb: process (all) is
     begin
         case state is
             when TX_QUIET =>
-                if xmit = XMIT_CONFIG then
+                if cfg_active = '1' then
                     case to_integer(cfg_phase) is
                         when 0      => cur_cg <= COMMA;
                         when 1      => cur_cg <= d_byte(D21_5) when c1c2 = '0' else d_byte(D2_2);
@@ -138,7 +156,7 @@ begin
                 else
                     cur_cg <= EOP;             -- /T/ once the octet stream ends
                 end if;
-            when TX_EPD_R =>
+            when TX_EPD_R | TX_EPD_R2 =>
                 cur_cg <= CEXT;                -- /R/
         end case;
     end process;
@@ -153,6 +171,8 @@ begin
             tx_disp       <= '0';
             tx_code       <= (others => '0');
             frame_pending <= '0';
+            even_reg      <= '0';
+            t_at_even     <= '0';
         elsif rising_edge(clk) then
             -- register the encoded code group and the new running disparity
             tx_code <= enc_data;
@@ -166,9 +186,17 @@ begin
                 frame_pending <= '0';
             end if;
 
+            -- frame position parity: /S/ goes out in the cycle after frame_start
+            -- at an even position; every code group after it toggles
+            if frame_start = '1' then
+                even_reg <= '1';
+            elsif state /= TX_QUIET then
+                even_reg <= not even_reg;
+            end if;
+
             case state is
                 when TX_QUIET =>
-                    if xmit = XMIT_CONFIG then
+                    if cfg_active = '1' then
                         idle_phase <= '0';
                         if cfg_phase = 3 then
                             cfg_phase <= (others => '0');
@@ -177,7 +205,6 @@ begin
                             cfg_phase <= cfg_phase + 1;
                         end if;
                     else
-                        cfg_phase  <= (others => '0');
                         idle_phase <= not idle_phase;
                         if frame_start = '1' then
                             state <= TX_SOP;   -- octet accepted, /S/ replaces it
@@ -189,10 +216,22 @@ begin
 
                 when TX_FRAME =>
                     if gmii.dv = '0' then
-                        state <= TX_EPD_R;     -- /T/ emitted this slot
+                        t_at_even <= even_reg;   -- parity of the /T/ in this slot
+                        state     <= TX_EPD_R;
                     end if;
 
                 when TX_EPD_R =>
+                    if t_at_even = '1' then
+                        -- /T/ even, this /R/ odd: idle resumes even
+                        idle_phase <= '0';
+                        state      <= TX_QUIET;
+                    else
+                        -- /T/ odd, this /R/ even: a second /R/ restores the
+                        -- even boundary (Clause 36 /T/R/R/ rule)
+                        state <= TX_EPD_R2;
+                    end if;
+
+                when TX_EPD_R2 =>
                     idle_phase <= '0';
                     state      <= TX_QUIET;
             end case;

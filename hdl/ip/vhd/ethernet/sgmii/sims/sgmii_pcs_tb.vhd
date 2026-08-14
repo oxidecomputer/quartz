@@ -122,6 +122,33 @@ begin
                 check_equal(rx_data(base + 1), std_logic_vector'(x"11"), "frame 0 payload");
                 check_equal(rx_data(base + 5), std_logic_vector'(x"44"), "frame 1 payload");
 
+            elsif run("s_even_alignment_sweep") then
+                -- launch frames against every idle-phase alignment: the harness
+                -- conformance monitor fails the test if any /S/ lands at an odd
+                -- position (it must replace the idle comma, not follow it)
+                base := rx_count;
+                for i in 0 to 7 loop
+                    send_frame((x"55", x"d5", std_logic_vector(to_unsigned(i, 8))));
+                    -- walk the next start across code-group alignments
+                    for j in 0 to i loop
+                        wait until rising_edge(clk);
+                    end loop;
+                    wait for 500 ns;
+                end loop;
+                wait for 3 us;
+                check_equal(rx_count - base, 24, "all swept frames recovered");
+
+            elsif run("epd_parity_lengths") then
+                -- even- and odd-octet frames (at 1000M one code group per octet):
+                -- /T/ parity differs, so the monitor checks both the single-/R/
+                -- and the /T/R/R/ end-of-packet paths
+                base := rx_count;
+                send_frame((x"55", x"d5", x"01", x"02"));
+                wait for 1 us;
+                send_frame((x"55", x"d5", x"01", x"02", x"03"));
+                wait for 3 us;
+                check_equal(rx_count - base, 9, "recovered both parity-length frames");
+
             elsif run("error_propagation") then
                 base := rx_count;
                 -- a mid-frame errored octet should surface as rx_er

@@ -45,6 +45,19 @@ begin
     clk   <= not clk after 4 ns;   -- 125 MHz
     reset <= '0' after 200 ns;
 
+    -- every code group the PCS transmits is checked for Clause-36 conformance
+    -- (legality/disparity, even-odd alignment, ordered-set structure, EPD rules)
+    conf_mon: entity work.sgmii_conformance_mon
+        generic map (
+            name => "pcs_tb_mon"
+        )
+        port map (
+            clk        => clk,
+            reset      => reset,
+            code       => line,
+            code_valid => line_valid
+        );
+
     dut: entity work.sgmii_pcs
         generic map (
             INCLUDE_AUTONEG   => true,

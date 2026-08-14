@@ -51,7 +51,11 @@ begin
     sim_gen: if TARGET = "SIM" generate
         -- Edge-aligned DDR: q follows the selected phase. The companion
         -- iddr_wrapper applies the RGMII clock-to-data skew on capture.
-        q <= d_rise when clk = '1' else d_fall;
+        -- The 1 ps inertial delay swallows delta-cycle glitches when an input
+        -- changes in the same instant clk rises (the registered ODDRE1 cannot
+        -- glitch, so the mux model must not either -- a zero-width pulse here
+        -- reads as a spurious clock edge to anything waiting on q).
+        q <= d_rise after 1 ps when clk = '1' else d_fall after 1 ps;
     end generate;
 
     xilinx_gen: if TARGET = "XILINX" generate
