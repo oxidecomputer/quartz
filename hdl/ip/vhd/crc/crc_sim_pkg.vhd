@@ -32,6 +32,17 @@ package crc_sim_pkg is
           gen_invalid_crc: boolean := false
     ) return std_logic_vector;
 
+    -- Non-parallel, non-synth Ethernet FCS (CRC32) function for testbench use.
+    -- Returns the four FCS octets in wire order: bits(7:0) transmit first.
+    impure function crc32_ethernet (
+          data: queue_t;
+          gen_invalid_crc: boolean := false
+    ) return std_logic_vector;
+
+    -- Register value left behind by crc32_ethernet's LFSR after consuming a
+    -- frame *including* a valid FCS (checkers compare against this)
+    constant ETH_CRC32_RESIDUE : std_logic_vector(31 downto 0) := X"DEBB20E3";
+
 end package;
 
 package body crc_sim_pkg is
@@ -98,6 +109,34 @@ package body crc_sim_pkg is
             last_q := not last_q;
         end if;
         return last_q xor final_xor_value;
+    end function;
+
+    -- Ethernet FCS: poly 0x04C11DB7 reflected (0xEDB88320), seed 0xFFFFFFFF,
+    -- complemented result. Bit-serial LSB-first so bytes apply in wire order.
+    impure function crc32_ethernet (
+        data: queue_t;
+        gen_invalid_crc: boolean := false
+    ) return std_logic_vector is
+        -- create a copy so we don't destroy the input queue here
+        constant crc_queue : queue_t := copy(data);
+        variable d : std_logic_vector(7 downto 0);
+        variable c : std_logic_vector(31 downto 0) := (others => '1');
+        variable feedback : std_logic;
+    begin
+        while not is_empty(crc_queue) loop
+            d := To_StdLogicVector(pop_byte(crc_queue), 8);
+            for i in 0 to 7 loop
+                feedback := c(0) xor d(i);
+                c := '0' & c(31 downto 1);
+                if feedback = '1' then
+                    c := c xor X"EDB88320";
+                end if;
+            end loop;
+        end loop;
+        if gen_invalid_crc then
+            c := not c;
+        end if;
+        return not c;
     end function;
 
 end package body;

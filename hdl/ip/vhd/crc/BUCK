@@ -13,7 +13,24 @@ vhdl_unit(
 )
 
 vhdl_unit(
+    name = "crc32_8wide",
+    srcs = ["crc32_8wide.vhd"],
+    visibility = ['PUBLIC']
+)
+
+vhdl_unit(
     name = "crc_sim_pkg",
     srcs = ["crc_sim_pkg.vhd"],
     visibility = ['PUBLIC']
+)
+
+vhdl_unit(
+    name = "crc32_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":crc32_8wide",
+        ":crc_sim_pkg",
+    ],
+    visibility = ['PUBLIC'],
 )
