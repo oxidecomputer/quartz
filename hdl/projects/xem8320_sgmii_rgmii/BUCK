@@ -7,6 +7,7 @@ load("//tools:vivado.bzl", "vivado_bitstream")
 black_box(
     name = "bridge_black_boxes",
     srcs = glob(["black_box_entities/*.vhd"]),
+    visibility = ["PUBLIC"],
 )
 
 # 2:1 gearbox + comma re-alignment between the GTY 20-bit raw datapath and the
@@ -15,6 +16,7 @@ vhdl_unit(
     name = "sgmii_gearbox",
     srcs = ["gt/sgmii_gearbox.vhd"],
     standard = "2019",
+    visibility = ["PUBLIC"],
 )
 
 # GTY transceiver wrapper: presents the soft SGMII PCS with comma-aligned 10-bit
@@ -27,6 +29,7 @@ vhdl_unit(
         ":bridge_black_boxes",
     ],
     standard = "2019",
+    visibility = ["PUBLIC"],
 )
 
 vunit_sim(
@@ -45,6 +48,7 @@ vhdl_unit(
     name = "mdio",
     srcs = ["mdio/mdio_master.vhd", "mdio/dp83867_init.vhd"],
     standard = "2019",
+    visibility = ["PUBLIC"],
 )
 
 vunit_sim(

@@ -25,6 +25,26 @@ vhdl_unit(
     visibility = ['PUBLIC'],
 )
 
+vhdl_unit(
+    name = "sgmii_to_rgmii_mgmt",
+    srcs = ["sgmii_to_rgmii_mgmt.vhd"],
+    deps = [
+        ":r2g_expander",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pcs",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_mac",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:udp_endpoint",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:gmii_pkt_buf",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:g2r_inject_mux",
+        "//hdl/ip/vhd/ethernet/eth_mgmt:eth_mgmt",
+        "//hdl/ip/vhd/ethernet/eth_mgmt:mgmt_flash",
+    ],
+    standard = "2008",
+    visibility = ['PUBLIC'],
+)
+
 vunit_sim(
     name = "sgmii_to_rgmii_tb",
     srcs = glob(["sims/*.vhd"]),
@@ -35,6 +55,26 @@ vunit_sim(
         "//hdl/ip/vhd/ethernet/sgmii:sgmii_pcs",
         "//hdl/ip/vhd/ethernet/sgmii:sgmii_conformance_mon",
         "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
+    ],
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "sgmii_to_rgmii_mgmt_tb",
+    srcs = glob(["sims_mgmt/*.vhd"]),
+    deps = [
+        ":sgmii_to_rgmii_mgmt",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pcs",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_conformance_mon",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:eth_hdr_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:udp_endpoint_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:eth_sim_pkg",
+        "//hdl/ip/vhd/ethernet/eth_mgmt:eth_mgmt_pkg",
+        "//hdl/ip/vhd/ethernet/eth_mgmt:sim_spi_flash",
+        "//hdl/ip/vhd/crc:crc_sim_pkg",
     ],
     visibility = ['PUBLIC'],
 )

@@ -222,3 +222,22 @@ buck2 run //tools/multitool:multitool -- lsp-toml
 * Add the asynchronous receive FIFO for a fully independent RGMII PHY `rxc`.
 * The advertised ability is host-configured (`adv_config`); a project may instead drive it
   from the RGMII in-band status to mirror the link-partner state upstream.
+
+== Managed bridge (sgmii_to_rgmii_mgmt)
+
+`sgmii_to_rgmii_mgmt` is a second top alongside `sgmii_to_rgmii`. It does not
+wrap it: both instantiate the same leaf blocks, and the managed one adds a
+packet buffer, an injection mux and the management plane, re-stitching the g2r
+direction so responses can be interleaved with forwarded traffic.
+
+image::diagrams/mgmt_composition.drawio.svg[align="center"]
+
+The tap is a copy of the deduplicated r2g octet stream (`r2g_expander`'s
+`byte_pop`); responses are injected into g2r at a frame boundary, behind
+whatever is already being forwarded. Forwarding stays byte-transparent in both
+directions.
+
+image::diagrams/mgmt_datapath.drawio.svg[align="center"]
+
+See `udp_endpoint/README.adoc` for the endpoint and
+`eth_mgmt/docs/mgmt_protocol.adoc` for the protocol.
