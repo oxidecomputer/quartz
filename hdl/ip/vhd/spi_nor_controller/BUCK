@@ -13,6 +13,22 @@ rdl_file(
 )
 
 
+# Just the reusable flash engine (command record, txn manager, link/clock
+# gen) without the axil registers, RDL, XPM FIFOs, or eSPI plumbing, for
+# standalone requesters like the Ethernet management block that own their
+# own command sequencing.
+vhdl_unit(
+    name = "spi_nor_core",
+    srcs = [
+        "spi_nor_pkg.vhd",
+        "link/spi_link.vhd",
+        "link/spi_clk_gen.vhd",
+        "spi_txn/spi_txn_mgr.vhd",
+    ],
+    standard = "2019",
+    visibility = ["PUBLIC"],
+)
+
 vhdl_unit(
     name = "spi_nor_top",
     srcs = glob([
