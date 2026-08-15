@@ -1,0 +1,53 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "eth_mgmt_pkg",
+    srcs = ["eth_mgmt_pkg.vhd"],
+    standard = "2008",
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "mgmt_flash",
+    srcs = ["mgmt_flash.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_mgmt_pkg",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_core",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "eth_mgmt",
+    srcs = ["eth_mgmt.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_mgmt_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:eth_hdr_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:udp_endpoint_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+# behavioral SPI flash, shared with integration testbenches elsewhere (the
+# file is also globbed into eth_mgmt_tb below)
+vhdl_unit(
+    name = "sim_spi_flash",
+    srcs = ["sims/sim_spi_flash.vhd"],
+    standard = "2008",
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "eth_mgmt_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":eth_mgmt",
+        ":mgmt_flash",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:udp_endpoint_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:eth_hdr_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
