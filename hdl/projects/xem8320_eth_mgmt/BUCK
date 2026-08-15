@@ -1,0 +1,35 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:vivado.bzl", "vivado_bitstream")
+
+# GT wrapper, gearbox, MDIO init and the black-box stubs are shared with the
+# xem8320_sgmii_rgmii bring-up project; this project only adds the managed
+# bridge and the flash/version plumbing.
+
+vhdl_unit(
+    name = "xem8320_eth_mgmt_top",
+    srcs = ["xem8320_eth_mgmt_top.vhd"],
+    deps = [
+        "//hdl/projects/xem8320_sgmii_rgmii:sgmii_gt",
+        "//hdl/projects/xem8320_sgmii_rgmii:mdio",
+        "//hdl/projects/xem8320_sgmii_rgmii:bridge_black_boxes",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii:sgmii_pkg",
+        "//hdl/ip/vhd/ethernet/rgmii:rgmii_pkg",
+        "//hdl/ip/vhd/ethernet/sgmii_to_rgmii:sgmii_to_rgmii_mgmt",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:eth_hdr_pkg",
+        "//hdl/ip/vhd/ethernet/udp_endpoint:udp_endpoint_pkg",
+        "//hdl/ip/vhd/synchronizers:async_reset_bridge",
+        "//hdl/ip/vhd/info:git_sha_pkg",
+    ],
+    standard = "2019",
+)
+
+vivado_bitstream(
+    name = "xem8320_eth_mgmt",
+    top_entity_name = "xem8320_eth_mgmt_top",
+    top = ":xem8320_eth_mgmt_top",
+    part = "xcau25p-ffvb676-2-e",
+    constraints = glob(["*.xdc"]),
+    pre_synth_tcl_files = glob(["xilinx_ip_gen/*.tcl"]),
+    post_synth_tcl_files = ["post_synth_timing.tcl", "ila.tcl"],
+)

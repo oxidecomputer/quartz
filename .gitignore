@@ -37,6 +37,8 @@ vivado*.log
 vivado*.str
 /clockinfo.txt
 **/*clockInfo.txt
+# Vivado congestion reports, dropped in the invocation directory
+/cong/
 *.txt
 *.zip
 *.fst
