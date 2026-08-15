@@ -47,6 +47,7 @@ architecture tb of r2g_expander_tb is
 
     signal gmii     : gmii_t;
     signal ready    : std_logic;
+    signal byte_pop : std_logic;
     signal overflow : std_logic;
 
     -- read-side reconstruction (checker process is sole writer)
@@ -57,6 +58,10 @@ architecture tb of r2g_expander_tb is
     signal len1      : natural := 0;
     signal len2      : natural := 0;
     signal nframes   : natural := 0;
+
+    -- independent reconstruction from the deduplicated byte_pop tap
+    signal pop_data  : byte_arr_t(0 to FRAME1_LEN + FRAME2_LEN + 15);
+    signal pop_count : natural := 0;
 
 begin
 
@@ -76,6 +81,7 @@ begin
             speed      => SPEED_100,
             gmii       => gmii,
             gmii_ready => ready,
+            byte_pop   => byte_pop,
             overflow   => overflow
         );
 
@@ -117,6 +123,20 @@ begin
                     acc       := 0;
                 end if;
                 dvp := gmii.dv;
+            end if;
+        end if;
+    end process;
+
+    -- the tap must deliver exactly one pulse per logical octet, while
+    -- gmii.data still carries that octet
+    pop_checker: process (rd_clk) is
+    begin
+        if rising_edge(rd_clk) then
+            if reset = '1' then
+                pop_count <= 0;
+            elsif byte_pop = '1' then
+                pop_data(pop_count) <= gmii.data;
+                pop_count           <= pop_count + 1;
             end if;
         end if;
     end process;
@@ -165,6 +185,14 @@ begin
                     check_equal(rx_data(FRAME1_LEN + i),
                                 std_logic_vector(to_unsigned((i + 7) mod 251, 8)),
                                 "frame 2 octet " & integer'image(i));
+                end loop;
+
+                -- byte_pop tap: exactly one pulse per octet, data matching
+                check_equal(pop_count, FRAME1_LEN + FRAME2_LEN,
+                            "byte_pop pulses must match total octet count");
+                for i in 0 to FRAME1_LEN + FRAME2_LEN - 1 loop
+                    check_equal(pop_data(i), rx_data(i),
+                                "byte_pop octet " & integer'image(i));
                 end loop;
             end if;
         end loop;

@@ -42,7 +42,14 @@ entity r2g_expander is
         rd_reset : in   std_logic;
         speed   : in    eth_speed_t;
         gmii    : out   gmii_t;         -- to PCS TX r2g
-        gmii_ready : in std_logic;      -- PCS accept
+        gmii_ready : in std_logic;
+
+        -- one pulse per logical octet, on its last replication cycle while
+        -- gmii.data still holds it: a deduplicated tap for logic that wants
+        -- the RGMII RX byte stream without the 10x/100x replication. dv
+        -- falling marks end of frame, as it does for the PCS. May be left
+        -- open.
+        byte_pop : out  std_logic;      -- PCS accept
 
         -- sticky debug flag (wr_clk domain): a write hit a full FIFO and was
         -- dropped (should never happen; reads drain faster than writes fill)
@@ -140,6 +147,10 @@ begin
     gmii.data <= head(7 downto 0);
     gmii.er   <= head(8);
     gmii.dv   <= running and not empty;
+
+    byte_pop <= '1' when running = '1' and empty = '0' and gmii_ready = '1'
+                         and acc = speed_cycles_per_byte(speed) - 1 else
+                '0';
 
     -- store-and-forward gate: hold the frame until START_THRESHOLD octets are
     -- buffered (or the timeout frees a shorter-than-threshold runt), then drain
