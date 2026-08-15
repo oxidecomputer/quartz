@@ -1,0 +1,109 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+
+vhdl_unit(
+    name = "eth_hdr_pkg",
+    srcs = ["eth_hdr_pkg.vhd"],
+    standard = "2008",
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "udp_endpoint_pkg",
+    srcs = ["udp_endpoint_pkg.vhd"],
+    standard = "2008",
+    deps = [":eth_hdr_pkg"],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "gmii_pkt_buf",
+    srcs = ["gmii_pkt_buf.vhd"],
+    standard = "2008",
+    deps = ["//hdl/ip/vhd/ethernet/gmii:gmii_pkg"],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "g2r_inject_mux",
+    srcs = ["g2r_inject_mux.vhd"],
+    standard = "2008",
+    deps = [
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+        "//hdl/ip/vhd/crc:crc32_8wide",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "eth_frame_rx",
+    srcs = ["eth_frame_rx.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_hdr_pkg",
+        "//hdl/ip/vhd/crc:crc32_8wide",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "eth_rx_parse",
+    srcs = ["eth_rx_parse.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_hdr_pkg",
+        ":udp_endpoint_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "eth_frame_tx",
+    srcs = ["eth_frame_tx.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_hdr_pkg",
+        ":udp_endpoint_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "udp_endpoint",
+    srcs = ["udp_endpoint.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_hdr_pkg",
+        ":udp_endpoint_pkg",
+        ":eth_frame_rx",
+        ":eth_rx_parse",
+        ":eth_frame_tx",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+# TB-support frame constructors, shared with integration testbenches in
+# other packages (the file is also globbed into udp_endpoint_tb below)
+vhdl_unit(
+    name = "eth_sim_pkg",
+    srcs = ["sims/eth_sim_pkg.vhd"],
+    standard = "2008",
+    deps = [
+        ":eth_hdr_pkg",
+        "//hdl/ip/vhd/crc:crc_sim_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "udp_endpoint_tb",
+    is_tb = True,
+    srcs = glob(["sims/*.vhd"]),
+    deps = [
+        ":udp_endpoint",
+        ":gmii_pkt_buf",
+        ":g2r_inject_mux",
+        "//hdl/ip/vhd/crc:crc_sim_pkg",
+        "//hdl/ip/vhd/ethernet/gmii:gmii_pkg",
+    ],
+    visibility = ["PUBLIC"],
+)
