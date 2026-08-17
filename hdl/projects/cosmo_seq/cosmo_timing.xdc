@@ -183,9 +183,12 @@ set_min_delay -to [get_ports espi0_sp5_to_fpga1_dat[*]] 0
 # coming back, and both are directly constrainable.
 #
 # Trace delays are short and local; using the same 6.8ns/m as the FMC block
-# above. TODO: replace with the measured lengths off 913-0000023.
-set flash_trace_max 0.40
-set flash_trace_min 0.10
+# above.
+# On cosmo flash trace min is 31.982mm (Dat0), and max is 33.436 (Dat3)
+# so min = 0.031982m * 6.8ns/m = 0.217
+# max = 0.033436 * 6.8ns/m = 0.227
+set flash_trace_max 0.227
+set flash_trace_min 0.217
 
 # Pull the launch flops into the IOBs. Every one of these is a dedicated
 # duplicate whose only load is its pin (see spi_clk_gen's sclk_pin and

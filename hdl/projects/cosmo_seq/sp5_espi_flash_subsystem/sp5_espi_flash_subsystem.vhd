@@ -165,7 +165,9 @@ begin
            -- usable sample window at 3.6..11.7ns; 8ns sits about 4ns clear of
            -- either end. cosmo_timing.xdc carries the arithmetic. Sweep this on
            -- hardware if reads come back corrupted.
-           rx_sample_taps => 2
+           rx_sample_taps => 2,
+            cs_setup_cnts => 4,
+            cs_high_cnts  => 7
         )
         port map(
            clk => clk_125m,
