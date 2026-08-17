@@ -67,8 +67,12 @@ def main():
             sys.exit(1)
         api = GhApi(owner='oxidecomputer', repo='quartz', token=token)
 
-    zip_file = process_gh_build(args, api, project_info.job_name)
+    zip_file, build_sha = process_gh_build(args, api, project_info.job_name)
     project_info.add_archive(zip_file)
+    # Pin the release to the commit CI actually built, not to whatever main
+    # points at by the time we get around to releasing.
+    if build_sha is not None:
+        project_info.add_build_sha(build_sha)
     
     # Do build reports
     timing_passed = project_info.report_timing()
@@ -99,7 +103,10 @@ def main():
 
 
 def process_gh_build(args, api, name: str):
-
+    """
+    Return the build archive and the commit sha it was built from (None for a
+    locally supplied archive, where we have no way to know).
+    """
     # Get build archive zip file
     # Get the latest artifact from the repo since we didn't specify a zip file
     if args.zip is None:
@@ -107,12 +114,14 @@ def process_gh_build(args, api, name: str):
         # Download the artifact from github
         artifact_inf = get_latest_artifact_info(api, name, branch=args.branch)
         zip_file = download_artifact(api, artifact_inf)
+        build_sha = artifact_inf["workflow_run"]["head_sha"]
     else:
         print("Using local zip file")
         # Use the zip file from the command line
         zip_file = zipfile.ZipFile(args.zip)
+        build_sha = None
 
-    return zip_file
+    return zip_file, build_sha
 
 
 def get_latest_artifact_info(api, fpga_name: str, branch: str = "main") -> dict:
@@ -121,18 +130,33 @@ def get_latest_artifact_info(api, fpga_name: str, branch: str = "main") -> dict:
     """
     artifacts = api.actions.list_artifacts_for_repo(name=fpga_name)
     artifacts = obj2dict(artifacts)
-    
-    artifacts = list(filter(lambda x: x["workflow_run"]["head_branch"] == branch, artifacts["artifacts"]))
-    if len(artifacts) == 0:
-        print(f"No artifacts found for {fpga_name} on {branch}")
-        return None
-    artifacts = sorted(artifacts, key=lambda x: arrow.get(x["created_at"]), reverse=True)
-    return artifacts[0]
+
+    on_branch = [x for x in artifacts["artifacts"] if x["workflow_run"]["head_branch"] == branch]
+    if len(on_branch) == 0:
+        print(f"No artifacts named {fpga_name} found on {branch}")
+        print("Check that job_name in config.toml matches the CI artifact name")
+        sys.exit(1)
+    # GitHub keeps expired artifacts in the listing but refuses to serve them,
+    # so drop them here rather than failing at download time.
+    live = [x for x in on_branch if not x["expired"]]
+    if len(live) == 0:
+        newest = max(on_branch, key=lambda x: arrow.get(x["created_at"]))
+        print(f"All {fpga_name} artifacts on {branch} have expired "
+              f"(most recent: {newest['created_at']})")
+        print("Re-run the build in CI to get a fresh artifact")
+        sys.exit(1)
+    live = sorted(live, key=lambda x: arrow.get(x["created_at"]), reverse=True)
+    return live[0]
 
 
 def download_artifact(api: GhApi, artifact_inf: dict):
     print(f"Downloading artifact {artifact_inf['name']} from GH: {artifact_inf['workflow_run']['head_branch']}")
     r = requests.get(artifact_inf["archive_download_url"], auth=("oxidecomputer", os.getenv("GITHUB_TOKEN", None)))
+    if r.status_code != 200:
+        # The body is JSON on error, and handing it to ZipFile just yields a
+        # confusing BadZipFile, so say what GitHub actually told us.
+        print(f"Failed to download artifact ({r.status_code}): {r.text}")
+        sys.exit(1)
     return zipfile.ZipFile(io.BytesIO(r.content))
 
 

@@ -22,7 +22,7 @@ builder = "buck2"
 toolchain = "vivado"
 
 [grapefruit]
-job_name = "gfruit-image"
+job_name = "grapefruit-image"
 hubris_path = "drv/spartan7-loader/grapefruit"
 builder = "buck2"
 toolchain = "vivado"
