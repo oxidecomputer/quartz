@@ -74,7 +74,6 @@ package spi_nor_tb_pkg is
 
     -- Checked scenarios, shared by the testbenches so the same coverage can be
     -- run at more than one sclk rate without duplicating it.
-
     procedure check_jedec_id (
         signal net : inout network_t
     );

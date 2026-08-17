@@ -23,7 +23,13 @@ architecture tb of spi_nor_tb is
 
 begin
 
-    th: entity work.spi_nor_th;
+    th: entity work.spi_nor_th
+    generic map(
+        sclk_divisor   => 2,
+        rx_sample_taps => 2,
+        out_delay => 3.7 ns,
+        in_delay  => 1.5 ns
+    );
 
     bench: process
         -- Note: External names are broken in GHDL llvm backends https://github.com/ghdl/ghdl/issues/2610
