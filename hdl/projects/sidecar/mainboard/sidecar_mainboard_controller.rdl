@@ -204,55 +204,84 @@ addrmap sidecar_mainboard_controller {
         } ACK_VID[1] = 0;
     } TOFINO_SEQ_CTRL @ 0x100;
 
-    reg {
+    reg tofino_seq_state {
         name = "Tofino Sequencer State";
         default sw = r;
         default hw = w;
 
+        enum seq_state {
+            Init = 3'd0 {desc = "Reset value";};
+            A2 = 3'd1 {desc = "Tofino 2 powered off";};
+            A0 = 3'd2 {desc = "Tofino 2 powered up";};
+            InPowerUp = 3'd3 {desc = "Tofino 2 powering up (transitory state)";};
+            InPowerDown = 3'd4 {desc = "Tofino 2 powering off (transitory state)";};
+        };
+
         field {
             desc = "Tofino Sequencer State";
-        } STATE[2:0] = 0;
-    } TOFINO_SEQ_STATE;
+            encode = seq_state;
+        } VALUE[2:0] = 0;
+    };
 
-    reg {
+    reg tofino_seq_step {
         name = "Tofino Sequencing Step";
         default sw = r;
         default hw = w;
 
+        enum seq_step {
+            Init = 4'd0 {desc = "Reset value";};
+            AwaitPowerUp = 4'd1 {desc = "Initial step";};
+            AwaitVdd18PowerGood = 4'd2 {desc = "Awaiting power good from VDD 1.8V rail";};
+            AwaitVddCorePowerGood = 4'd3 {desc = "Awaiting power good from VDD Core rail";};
+            AwaitVddPCIePowerGood = 4'd4 {desc = "Awaiting power good from VDD PCIe rail";};
+            AwaitVddtPowerGood = 4'd5 {desc = "Awaiting power good from VDDT rail";};
+            AwaitVdda15PowerGood = 4'd6 {desc = "Awaiting power good from VDDA 1.5V rail";};
+            AwaitVdda18PowerGood = 4'd7 {desc = "Awaiting power good from VDDA 1.8V rail";};
+            AwaitPoR = 4'd8 {desc = "Awaiting power on reset";};
+            AwaitVidValid = 4'd9 {desc = "Awaiting VID to become valid";};
+            AwaitVidAck = 4'd10 {desc = "Awaiting SP to ack VID after adjusting the VRs";};
+            AwaitPowerUpComplete = 4'd11 {desc = "Awaiting final power up sequencing delay";};
+            AwaitPowerDown = 4'd12 {desc = "Awaiting power down command";};
+            AwaitPowerDownComplete = 4'd13 {desc = "Awaiting power down sequencing to complete";};
+        };
+
         field {
             desc = "Sequencing Step";
-        } STEP[3:0] = 0;
-    } TOFINO_SEQ_STEP;
+            encode = seq_step;
+        } VALUE[3:0] = 0;
+    };
 
-    reg {
+    reg tofino_seq_error {
         name = "Tofino Sequencing Error";
         default sw = r;
         default hw = w;
 
+        enum seq_error {
+            None = 3'd0 {desc = "No error";};
+            PowerGoodTimeout = 3'd1 {desc = "Power Good ping for a rail was not asserted within the configured timeout.";};
+            PowerFault = 3'd2 {desc = "Fault pin for a rail was asserted.";};
+            PowerVrHot = 3'd3 {desc = "VR Hot pin was asserted for a rail.";};
+            PowerAbort = 3'd4 {desc = "Power Good pin for a rail was deasserted after having been asserted.";};
+            SoftwareAbort = 3'd5 {desc = "TOFINO_SEQ_CTRL::EN register was cleared by software.";};
+            VidAckTimeout = 3'd6 {desc = "TOFINO_SEQ_CTRL::ACK_VID was not set in time.";};
+            ThermalAlert = 3'd7 {desc = "Tofino die temp sensor (U64) asserted the tf_to_fpga_temp_therm_l net.";};
+        };
+
         field {
             desc = "Sequencing Error";
-        } ERROR[2:0] = 0;
-    } TOFINO_SEQ_ERROR;
+            encode = seq_error;
+        } VALUE[2:0] = 0;
+    };
 
-    reg {
-        name = "Tofino Sequencer Error State";
-        default sw = r;
-        default hw = w;
+    tofino_seq_state TOFINO_SEQ_STATE;
+    tofino_seq_step TOFINO_SEQ_STEP;
+    tofino_seq_error TOFINO_SEQ_ERROR;
 
-        field {
-            desc = "Sequencer state when error occured";
-        } STATE[2:0] = 0;
-    } TOFINO_SEQ_ERROR_STATE;
-
-    reg {
-        name = "Tofino Sequencing Error Step";
-        default sw = r;
-        default hw = w;
-
-        field {
-            desc = "Sequencing step when error occured";
-        } STEP[3:0] = 0;
-    } TOFINO_SEQ_ERROR_STEP;
+    // When an error does occur, snapshot where it happened
+    tofino_seq_state TOFINO_SEQ_ERROR_STATE;
+    TOFINO_SEQ_ERROR_STATE->name = "Tofino Sequencer State at Error";
+    tofino_seq_step TOFINO_SEQ_ERROR_STEP;
+    TOFINO_SEQ_ERROR_STEP->name = "Tofino Sequencer Step at Error";
 
     power_rail_state TOFINO_POWER_VDD18_STATE;
     TOFINO_POWER_VDD18_STATE->name = "VDD18 State";
