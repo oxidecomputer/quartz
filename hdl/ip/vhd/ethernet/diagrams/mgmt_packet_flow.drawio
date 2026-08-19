@@ -1,0 +1,115 @@
+<mxfile host="app.diagrams.net" version="26.1.1" scale="1" border="10">
+  <diagram id="packetflow" name="packet flow">
+    <mxGraphModel dx="1440" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="canvas" value="" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;strokeWidth=1;fillColor=#000000;fontColor=#48D597;strokeColor=#48D597;arcSize=2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry" />
+        </mxCell>
+
+        <mxCell id="title" value="xem8320_eth_mgmt -- the ways a packet can flow" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontColor=#48D597;fontSize=17;" vertex="1" parent="1">
+          <mxGeometry x="40" y="25" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sgmii" value="SGMII line&lt;br&gt;host / switch" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="185" width="140" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="pcs" value="sgmii_pcs" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="250" y="130" width="150" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="buf" value="gmii_pkt_buf&lt;br&gt;2 KB ring" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="455" y="140" width="175" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="mux" value="g2r_inject_mux" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="690" y="140" width="185" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="rtx" value="rgmii_tx" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="935" y="140" width="140" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="exp" value="r2g_expander" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="455" y="315" width="175" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="rrx" value="rgmii_rx" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="935" y="315" width="140" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="pins" value="RGMII pins&lt;br&gt;PHY -&gt; copper" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#48D597;strokeColor=#48D597;arcSize=5;fontSize=12;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="185" width="150" height="95" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ep" value="udp_endpoint&lt;br&gt;IPv6 + NDP + ICMPv6" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#F5B944;strokeColor=#F5B944;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="455" y="520" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="mgmt" value="eth_mgmt&lt;br&gt;protocol" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#F5B944;strokeColor=#F5B944;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="700" y="520" width="175" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="fl" value="mgmt_flash&lt;br&gt;+ spi_nor" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#F5B944;strokeColor=#F5B944;arcSize=5;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="935" y="520" width="150" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="nor" value="SPI NOR&lt;br&gt;config flash" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=middle;spacing=-3;strokeWidth=1;fillColor=#1C372E;fontColor=#F5B944;strokeColor=#F5B944;arcSize=5;fontSize=12;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="520" width="150" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ein" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;dashed=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.16;entryDx=0;entryDy=0;" edge="1" parent="1" source="sgmii" target="pcs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eout" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;dashed=1;exitX=0;exitY=0.86;exitDx=0;exitDy=0;entryX=1;entryY=0.78;entryDx=0;entryDy=0;" edge="1" parent="1" source="pcs" target="sgmii">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="g2r" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;exitX=1;exitY=0.16;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pcs" target="buf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;" edge="1" parent="1" source="buf" target="mux">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;" edge="1" parent="1" source="mux" target="rtx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="rtx" target="pins">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pins" target="rrx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="r2g" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;" edge="1" parent="1" source="rrx" target="exp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#48D597;strokeColor=#48D597;endArrow=classic;strokeWidth=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.86;entryDx=0;entryDy=0;" edge="1" parent="1" source="exp" target="pcs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tap" value="tap (copy)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#F5B944;strokeColor=#F5B944;endArrow=classic;strokeWidth=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="exp" target="ep">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inj" value="inject" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#F5B944;strokeColor=#F5B944;endArrow=classic;strokeWidth=1;fontSize=10;exitX=1;exitY=0.15;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;" edge="1" parent="1" source="ep" target="mux">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" value="UDP :28536" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#F5B944;strokeColor=#F5B944;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeWidth=1;fontSize=10;" edge="1" parent="1" source="ep" target="mgmt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c2" value="erase / program / read" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#F5B944;strokeColor=#F5B944;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeWidth=1;fontSize=10;verticalAlign=bottom;" edge="1" parent="1" source="mgmt" target="fl">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" value="SPI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontFamily=Courier New;fontColor=#F5B944;strokeColor=#F5B944;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeWidth=1;fontSize=10;dashed=1;" edge="1" parent="1" source="fl" target="nor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n1" value="the tap is a copy --&lt;br&gt;forwarding is never interrupted" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontColor=#F5B944;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="170" y="430" width="275" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="forwarded traffic wins;&lt;br&gt;injection waits for a frame&lt;br&gt;boundary + IFG" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontColor=#F5B944;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="228" width="265" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="a flash command's response is deferred;&lt;br&gt;anything arriving meanwhile is answered BUSY" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontColor=#F5B944;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="790" y="655" width="380" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="&lt;b&gt;what happens to a frame&lt;/b&gt;&lt;br&gt;&lt;br&gt;from RGMII (copper) -- always forwarded to SGMII, and a copy&lt;br&gt;goes to the endpoint, which does one of:&lt;br&gt;&amp;nbsp;&amp;nbsp;answers it itself ..... NDP NS/NA, ICMPv6 echo&lt;br&gt;&amp;nbsp;&amp;nbsp;hands it to eth_mgmt ... UDP port 28536&lt;br&gt;&amp;nbsp;&amp;nbsp;drops it ............... everything else&lt;br&gt;&lt;br&gt;from SGMII (host) -- forwarded to RGMII, never examined.&lt;br&gt;responses are injected toward RGMII only: management&lt;br&gt;rides the copper side." style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;strokeWidth=1;fillColor=none;fontColor=#F5B944;strokeColor=#F5B944;arcSize=3;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="50" y="650" width="620" height="200" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

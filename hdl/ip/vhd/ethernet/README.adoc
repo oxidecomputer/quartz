@@ -239,5 +239,13 @@ directions.
 
 image::diagrams/mgmt_datapath.drawio.svg[align="center"]
 
+End to end a frame has only a few possible fates. Everything arriving from the
+copper side is forwarded to SGMII *and* copied to the endpoint, which answers
+NDP and ICMPv6 echo itself and passes only UDP port 28536 up to `eth_mgmt`;
+everything arriving from the SGMII side is forwarded and never examined. That
+asymmetry is deliberate -- management rides the copper side only.
+
+image::diagrams/mgmt_packet_flow.drawio.svg[align="center"]
+
 See `udp_endpoint/README.adoc` for the endpoint and
 `eth_mgmt/docs/mgmt_protocol.adoc` for the protocol.
