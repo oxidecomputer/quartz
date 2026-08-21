@@ -17,7 +17,8 @@ rdl_file(
         "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_regs_rdl",
     ],
     outputs = [
-        "cosmo_seq_top.html", 
+        "cosmo_seq_top.adoc",
+        "cosmo_seq_top.html",
         "cosmo_seq_top.json"
     ]
 )
