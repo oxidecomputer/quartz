@@ -115,6 +115,7 @@ rdl_file(
     outputs = [
         "IgnitionControllerRegisters.bsv",
         "ignition_controller.html",
+        "ignition_controller.adoc",
         "ignition_controller.json",
     ],
     src = "ignition_controller.rdl",

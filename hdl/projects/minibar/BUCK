@@ -11,6 +11,7 @@ rdl_file(
     outputs = [
         "MinibarRegsPkg.bsv",
         "minibar_controller.html",
+        "minibar_controller.adoc",
         "minibar_controller.json",
     ],
 )
