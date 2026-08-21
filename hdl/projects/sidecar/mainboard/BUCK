@@ -24,6 +24,7 @@ bsv_library(
         ":sidecar_mainboard_controller_rdl[bsv]",
     ],
     deps = [
+        ":sidecar_mainboard_controller_rdl",
         "//hdl/ip/bsv:RegCommon",
     ],
 )

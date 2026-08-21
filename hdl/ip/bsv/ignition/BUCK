@@ -126,6 +126,7 @@ bsv_library(
     name = "ControllerRegisters",
     srcs = [":ignition_controller_rdl[bsv]"],
     deps = [
+        ":ignition_controller_rdl",
         "//hdl/ip/bsv:RegCommon",
     ],
 )

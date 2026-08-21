@@ -32,7 +32,9 @@ def propagate_rdl_maps(deps):
         if x.get(RDLDocMaps):
             files.extend(x[RDLDocMaps].files)
     if len(files) > 0:
-        return [RDLDocMaps(files=files)]
+        # Dedup at every level so the list can't grow with the number of distinct
+        # dep paths through a diamond-shaped graph.
+        return [RDLDocMaps(files=list(set(files)))]
     return []
 
 

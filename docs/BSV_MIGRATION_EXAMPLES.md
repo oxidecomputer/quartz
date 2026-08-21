@@ -514,6 +514,7 @@ bsv_library(
         ":ignition_controller_rdl[bsv]",
     ],
     deps = [
+        ":ignition_controller_rdl",
         "//hdl/ip/bsv:RegCommon",
     ],
 )
@@ -845,12 +846,29 @@ rdl_file(
 # BSV library uses only the .bsv output via sub-target
 bsv_library(
     name = "MyRegs",
-    srcs = [":my_regs_rdl[bsv]"],  # ← Use [bsv] sub-target, not full target
-    deps = ["//hdl/ip/bsv:RegCommon"],
+    srcs = [":my_regs_rdl[bsv]"],  # <- Use [bsv] sub-target, not full target
+    deps = [
+        ":my_regs_rdl",            # <- ALSO depend on the full target, see below
+        "//hdl/ip/bsv:RegCommon",
+    ],
 )
 ```
 
-**Common mistake:** Using the full RDL target causes BSC to try compiling `.html` and `.json` files.
+**Common mistake #1:** Using the full RDL target in `srcs` causes BSC to try compiling
+`.html` and `.json` files. Only the `[bsv]` sub-target belongs there.
+
+**Common mistake #2:** Omitting the RDL target from `deps`. The RDL target must appear
+in **both** places, and they do different jobs:
+
+- `srcs = [":my_regs_rdl[bsv]"]` gives BSC the generated `.bsv` and nothing else.
+- `deps = [":my_regs_rdl"]` carries the *providers*. `srcs` entries are plain
+  artifacts with no providers attached, so this is the only edge that propagates
+  `RDLDocMaps` — the register-map docs that `collect_rdl_maps` copies into the
+  `maps/` directory next to a bitstream. Leave it out and the bitstream silently
+  ships with no register maps.
+
+`bsv_library` fails analysis if you forget, so this is enforced rather than
+convention.
 
 ### Issue: Custom bsc_flags not working
 
