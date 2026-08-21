@@ -56,10 +56,15 @@ def _vivado_bitstream(ctx):
     router = route(ctx, placer_opt)
     bits = bitstream(ctx, router)
     compressed = compress_bitstream(ctx, bits)
+    # Register maps come out of the synth step as other_outputs; re-export them
+    # here so a plain `buck2 build` of the bitstream materializes maps/.
+    maps = synth[0].other_outputs
     return [
         DefaultInfo(
             default_output=compressed[0].default_outputs[0],
+            other_outputs=maps,
             sub_targets = {
+                "maps": [DefaultInfo(default_outputs=maps)],
                 "synth": synth,
                 "opt":  opt,
                 "place": placer,
@@ -106,15 +111,16 @@ def synthesize(ctx):
     report = ctx.actions.declare_output("{}.rpt".format(name_and_flow))
     # Build vivado command
 
-    # Collect register maps into maps/ output directory
+    # Collect register maps into maps/ output directory. Nothing downstream
+    # consumes these, so they ride out on this step's DefaultInfo as
+    # other_outputs and get re-exported by the bitstream rule. They are
+    # deliberately NOT hidden inputs to synthesis: that would make every
+    # register description edit re-run synthesis and everything after it, and it
+    # would leave materialization dependent on the synthesis action missing the
+    # cache.
     maps = collect_rdl_maps(ctx, ctx.attrs.top)
 
-    # This is a bit sketchy but we're declaring any maps as hidden inputs
-    # here to force the generation of these files since nothing downstream
-    # depends on them. Buck2 is too smart such that since nothing depends
-    # on them, it doesn't even build them 
-    # This is a bit of a hack but it works for now.
-    # The in_json_file is also a hidden input since it is generated
+    # The in_json_file is a hidden input since it is generated
     # This was a tricky source of bugs. We need to make sure synthesis
     # runs, *any* time the source files change (obviously).  However, the
     # way we're doing this is generating .tcl file for vivado to run in
@@ -129,14 +135,14 @@ def synthesize(ctx):
     # as a hidden input to the synthesis step. This will guarantee that changes
     # to file contents will be in caught and synthesis will re-run as expected.
 
-    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl, hidden=[in_json_file, maps])
+    vivado = _make_vivado_common(ctx, name_and_flow, vivado_flow_tcl, hidden=[in_json_file])
     # Add output files to tclargs
     vivado.add("-tclargs", checkpoint.as_output(), report.as_output())
   
     
     # Run vivado
     ctx.actions.run(vivado, category="vivado_{}".format(flow))
-    providers.append(DefaultInfo(default_output=checkpoint))
+    providers.append(DefaultInfo(default_output=checkpoint, other_outputs=maps))
     return providers
 
 
