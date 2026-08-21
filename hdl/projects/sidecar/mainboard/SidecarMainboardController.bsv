@@ -194,11 +194,15 @@ module mkMainboardController #(Parameters parameters)
 
     (* fire_when_enabled *)
     rule do_set_status;
+        // Binding the unpacked value to a typed signal to disambiguate `Init`,
+        // which is a member of both TofinoSeqStateValue and TofinoSeqStepValue.
+        TofinoSeqStateValue tofino_seq_state =
+            unpack(tofino_sequencer.registers.state.value);
+
         status_r <= Status {
             clk_1hz: (tick_2hz ? ~status_r.clk_1hz : status_r.clk_1hz),
-            tofino_sequencer_running:
-                tofino_sequencer.registers.state.state != 0,
-            tofino_in_a0: tofino_sequencer.registers.state.state == 2,
+            tofino_sequencer_running: tofino_seq_state != Init,
+            tofino_in_a0: tofino_seq_state == A0,
             pcie_present: pcie_endpoint.pins.present};
     endrule
 

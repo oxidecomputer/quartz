@@ -6,9 +6,6 @@
 package Tofino2Sequencer;
 
 export Parameters(..);
-export State(..);
-export Step(..);
-export Error(..);
 export Tofino2Resets(..);
 export Pins(..);
 export Registers(..);
@@ -69,49 +66,13 @@ instance DefaultValue#(Parameters);
             por_to_pcie_delay: 250};
 endinstance
 
-typedef enum {
-    Init                    = 0,
-    A2                      = 1,
-    A0                      = 2,
-    InPowerUp               = 3,
-    InPowerDown             = 4
-} State deriving (Eq, Bits, FShow);
-
-typedef enum {
-    Init                    = 0,
-    AwaitPowerUp            = 1,
-    AwaitVdd18PowerGood     = 2,
-    AwaitVddCorePowerGood   = 3,
-    AwaitVddPCIePowerGood   = 4,
-    AwaitVddtPowerGood      = 5,
-    AwaitVdda15PowerGood    = 6,
-    AwaitVdda18PowerGood    = 7,
-    AwaitPoR                = 8,
-    AwaitVidValid           = 9,
-    AwaitVidAck             = 10,
-    AwaitPowerUpComplete    = 11,
-    AwaitPowerDown          = 12,
-    AwaitPowerDownComplete  = 13
-} Step deriving (Eq, Bits, FShow);
-
-typedef enum {
-    None                    = 0,
-    PowerGoodTimeout        = 1,
-    PowerFault              = 2,
-    PowerVrHot              = 3,
-    PowerAbort              = 4,
-    SoftwareAbort           = 5,
-    VidAckTimeout           = 6,
-    ThermalAlert            = 7
-} Error deriving (Eq, Bits, FShow);
-
 interface Registers;
     interface Reg#(TofinoSeqCtrl) ctrl;
     interface ReadOnly#(TofinoSeqState) state;
     interface ReadOnly#(TofinoSeqStep) step;
     interface ReadOnly#(TofinoSeqError) error;
-    interface ReadOnly#(TofinoSeqErrorState) error_state;
-    interface ReadOnly#(TofinoSeqErrorStep) error_step;
+    interface ReadOnly#(TofinoSeqState) error_state;
+    interface ReadOnly#(TofinoSeqStep) error_step;
     interface ReadOnly#(PowerRailState) vdd18;
     interface ReadOnly#(PowerRailState) vddcore;
     interface ReadOnly#(PowerRailState) vddpcie;
@@ -260,13 +221,13 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     mkConnection(asIfc(tick), asIfc(delay));
 
     // FSM state.
-    ConfigReg#(State) state <- mkConfigReg(Init);
-    ConfigReg#(Step) step <- mkConfigReg(Init);
-    ConfigReg#(Error) error <- mkConfigRegU();
+    ConfigReg#(TofinoSeqStateValue) state <- mkConfigReg(Init);
+    ConfigReg#(TofinoSeqStepValue) step <- mkConfigReg(Init);
+    ConfigReg#(TofinoSeqErrorValue) error <- mkConfigRegU();
     // Copies of the state and step registers which get set when an error occurs
     // so software can analyze these events.
-    ConfigReg#(State) error_state <- mkConfigRegU();
-    ConfigReg#(Step) error_step <- mkConfigRegU();
+    ConfigReg#(TofinoSeqStateValue) error_state <- mkConfigRegU();
+    ConfigReg#(TofinoSeqStepValue) error_step <- mkConfigRegU();
 
     ConfigReg#(Tofino2Resets) tofino_resets <- mkConfigRegU();
     ConfigReg#(Bool) tofino_clocks_enable <- mkConfigRegU();
@@ -303,7 +264,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
     // Helpers, implementing the details of sequencing steps.
     //
 
-    function Stmt enable_rail(PowerRail rail, Step s) =
+    function Stmt enable_rail(PowerRail rail, TofinoSeqStepValue s) =
         seq
             // Set the enable pin and the sequencing step.
             action
@@ -426,7 +387,7 @@ module mkTofino2Sequencer #(Parameters parameters) (Tofino2Sequencer);
         power_fault <= any(PowerRail::fault, power_rails);
         power_vrhot <= any(PowerRail::vrhot, power_rails);
 
-        // Generate VID ack timout when appropriate. This is done by monitoring
+        // Generate VID ack timeout when appropriate. This is done by monitoring
         // the PoR to PCIe delay counter which is running during the AwaitVidAck
         // step for the given limit. The static asserts at the beginning of this
         // module assure that this limit is valid.

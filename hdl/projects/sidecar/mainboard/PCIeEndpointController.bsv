@@ -87,7 +87,7 @@ module mkPCIeEndpointController
         let sequencer_power_fault =
                 ctrl.present == 1 &&
                 ctrl.override_seq_power_fault == 0 &&
-                sequencer.registers.error.error != 0;
+                unpack(sequencer.registers.error.value) != None;
 
         power_fault <= (software_power_fault || sequencer_power_fault);
     endrule
