@@ -557,7 +557,7 @@ def _bsv_nextpnr_ice40_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
     pnr_log = ctx.actions.declare_output("nextpnr.log")
 
     # Run nextpnr-ice40
-    pnr_cmd = cmd_args(hidden = maps)
+    pnr_cmd = cmd_args()
     pnr_cmd.add(ctx.attrs._nextpnr_ice40[RunInfo])
     pnr_cmd.add("--{}".format(ctx.attrs.family))  # e.g., --up5k
     pnr_cmd.add("--package", ctx.attrs.package)   # e.g., sg48
@@ -589,9 +589,13 @@ def _bsv_nextpnr_ice40_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         DefaultInfo(
             default_output = bit_file,
+            # Register maps are not inputs to anything, so they need to be named
+            # here or buck2 would never build them.
+            other_outputs = maps,
             sub_targets = {
                 "asc": [DefaultInfo(default_output = asc_file)],
                 "json": [DefaultInfo(default_output = yosys_json)],
+                "maps": [DefaultInfo(default_outputs = maps)],
             }
         ),
     ]
@@ -628,7 +632,7 @@ def _bsv_nextpnr_ecp5_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
     pnr_log = ctx.actions.declare_output("nextpnr.log")
 
     # Run nextpnr-ecp5
-    pnr_cmd = cmd_args(hidden = maps)
+    pnr_cmd = cmd_args()
     pnr_cmd.add(ctx.attrs._nextpnr_ecp5[RunInfo])
     pnr_cmd.add("--{}".format(ctx.attrs.family))  # e.g., --25k, --45k, --85k
     pnr_cmd.add("--package", ctx.attrs.package)   # e.g., CABGA381, CSFBGA285
@@ -660,9 +664,13 @@ def _bsv_nextpnr_ecp5_bitstream_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         DefaultInfo(
             default_output = bit_file,
+            # Register maps are not inputs to anything, so they need to be named
+            # here or buck2 would never build them.
+            other_outputs = maps,
             sub_targets = {
                 "config": [DefaultInfo(default_output = config_file)],
                 "json": [DefaultInfo(default_output = yosys_json)],
+                "maps": [DefaultInfo(default_outputs = maps)],
             }
         ),
     ]

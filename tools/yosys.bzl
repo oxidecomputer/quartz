@@ -20,12 +20,17 @@ def _ice40_bitstream_impl(ctx):
     next_pnr_providers = ice40_nextpnr(ctx, yosys_synth_providers)
     icepack_providers = icepack(ctx, next_pnr_providers)
     compressed = compress_bitstream(ctx, icepack_providers)
+    # Register maps come out of the synth step as other_outputs; re-export them
+    # here so a plain `buck2 build` of the bitstream materializes maps/.
+    maps = yosys_synth_providers[0].other_outputs
     return [
         DefaultInfo(
             default_output=compressed[0].default_outputs[0],
+            other_outputs=maps,
             sub_targets = {
                 "synth": yosys_synth_providers,
                 "route": next_pnr_providers,
+                "maps": [DefaultInfo(default_outputs=maps)],
             }
         )
     ]
@@ -46,14 +51,15 @@ def yosys_vhdl_synth(ctx):
     }
     in_json_file = ctx.actions.write_json("yosys_synth_input.json", out_json, with_inputs=True)
 
-    # Collect register maps into maps/ output directory
+    # Collect register maps into maps/ output directory. Nothing downstream
+    # consumes these, so they ride out on this step's DefaultInfo as
+    # other_outputs and get re-exported by the bitstream rule. They are
+    # deliberately NOT hidden inputs to synthesis: that would make every
+    # register description edit re-run synthesis and place-and-route, and it
+    # would leave materialization dependent on the synthesis action missing the
+    # cache.
     maps = collect_rdl_maps(ctx, ctx.attrs.top)
 
-    # This is a bit sketchy but we're declaring any maps as hidden inputs
-    # here to force the generation of these files since nothing downstream
-    # depends on them. Buck2 is too smart such that since nothing depends
-    # on them, it doesn't even build them 
-    # This is a bit of a hack but it works for now.
     yosys_py = ctx.actions.declare_output("synth.py")
 
     yosys_gen = ctx.attrs._yosys_gen[RunInfo]
@@ -67,7 +73,7 @@ def yosys_vhdl_synth(ctx):
 
     yosys_synth_log = ctx.actions.declare_output("synth.log")
     yosys_ghdl_warns = ctx.actions.declare_output("ghdl_stderr.log")
-    yosys_synth_cmd = cmd_args(hidden=[in_json_file, maps])
+    yosys_synth_cmd = cmd_args(hidden=[in_json_file])
     yosys_synth_cmd.add(ctx.attrs._python[PythonToolchainInfo].interpreter)
     yosys_synth_cmd.add(yosys_py)
     yosys_synth_cmd.add("--output", yosys_json.as_output())
@@ -76,7 +82,7 @@ def yosys_vhdl_synth(ctx):
 
 
     ctx.actions.run(yosys_synth_cmd, category="yosys_run")
-    providers.append(DefaultInfo(default_output=yosys_json))
+    providers.append(DefaultInfo(default_output=yosys_json, other_outputs=maps))
 
     return providers
 
