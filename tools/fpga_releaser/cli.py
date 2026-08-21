@@ -24,7 +24,9 @@ parser.add_argument("--local", default=False, action="store_true", help="Utilize
 parser.add_argument("--skip-gh", default=False, action="store_true", help="Skip doing GH release. Note that doing this still generates release metadata that just will be wrong")
 parser.add_argument("--zip", default=None, help="Path to zip file to use instead of downloading from GitHub")
 
-hubris_ignore = [".html", ".log", ".rpt"]
+# Register map docs go to the GH release but not into hubris, which has no
+# consumer for them.
+hubris_ignore = [".html", ".adoc", ".log", ".rpt"]
 
 def main():
     """

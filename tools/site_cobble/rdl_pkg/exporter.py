@@ -15,12 +15,26 @@ from systemrdl import RDLWalker
 try:
     from models import Register, Field, ReservedField, Memory
     from listeners import BaseListener
-    from utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
+    from utils import (
+        to_camel_case,
+        to_snake_case,
+        vhdl_2008_bitstring,
+        adoc_inline,
+        adoc_cell,
+        adoc_para,
+    )
     loader = FileSystemLoader(Path(__file__).parent / "templates")
 except:
     from rdl_pkg.models import Register, Field, ReservedField, Memory
     from rdl_pkg.listeners import BaseListener
-    from rdl_pkg.utils import to_camel_case, to_snake_case, vhdl_2008_bitstring
+    from rdl_pkg.utils import (
+        to_camel_case,
+        to_snake_case,
+        vhdl_2008_bitstring,
+        adoc_inline,
+        adoc_cell,
+        adoc_para,
+    )
     loader = PackageLoader("rdl_pkg")
 
 from typing import Any, Dict, List
@@ -78,7 +92,9 @@ class BaseExporter:
         self.env.filters["to_camel_case"] = to_camel_case
         self.env.filters["to_snake_case"] = to_snake_case
         self.env.filters["vhdl_2008_bitstring"] = vhdl_2008_bitstring
-        self.templates = []
+        self.env.filters["adoc_inline"] = adoc_inline
+        self.env.filters["adoc_cell"] = adoc_cell
+        self.env.filters["adoc_para"] = adoc_para
         self.outputs = []
 
     def _write_files(self, context):
@@ -89,14 +105,6 @@ class BaseExporter:
 
 
 class MapofMapsExporter(BaseExporter):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Sort of a hack for now, load our jinja templates into a list
-        self.templates = [
-            self.env.get_template("toplvl_bsv.jinja2"),
-            self.env.get_template("regmap_html.jinja2"),
-        ]
-
     def export(
         self, node: Node, output_names: List[PathLike], **kwargs: "Dict[str, Any]"
     ) -> None:
@@ -138,20 +146,15 @@ class MapofMapsExporter(BaseExporter):
             "isinstance": isinstance,
             "registers": addr_map.registers,
             "flatten_names": True,
+            # The register list is flat, so templates that want a block's name,
+            # desc or base address need the top node to look the child up.
+            # register.node.owning_addrmap is the innermost map, not the block.
+            "map_node": node,
         }
         self._write_files(context)
 
 
 class MapExporter(BaseExporter):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.templates = [
-            # self.env.get_template('regmap_adoc.jinja2'),
-            self.env.get_template("regpkg_bsv.jinja2"),
-            self.env.get_template("regmap_html.jinja2"),
-            self.env.get_template("regpkg_vhdl.jinja2"),
-        ]
-
     def export(
         self, node: Node, output_names: List[PathLike], **kwargs: "Dict[str, Any]"
     ) -> None:
@@ -191,6 +194,7 @@ class MapExporter(BaseExporter):
             "isinstance": isinstance,
             "registers": addr_map.registers,
             "flatten_names": False,
+            "map_node": node,
         }
 
         self._write_files(context)

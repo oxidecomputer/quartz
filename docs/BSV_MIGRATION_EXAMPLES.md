@@ -330,7 +330,10 @@ bsv_bluesim_tests(
 
 ### Key Changes
 
-1. **RDL rule**: `rdl()` → `rdl_file()`, `sources` → `src` (singular)
+1. **RDL rule**: `rdl()` → `rdl_file()`, `sources` → `src` (singular). Buck2 requires
+   the target name to end in `_rdl` and the `src` basename to match it, so
+   `rdl('foo_registers', sources = ['foo.rdl'])` becomes
+   `rdl_file(name = "foo_rdl", src = "foo.rdl")`.
 2. **Load statements**: Added both `bsv.bzl` and `rdl.bzl` imports
 3. **Dependency structure**: Remains identical (Buck2 handles transitive deps automatically)
 4. **Generated files**: Same syntax for referencing generated BSV files (`:I2CCoreRegsPkg#I2CCoreRegs.bsv`)
@@ -495,7 +498,7 @@ bsv_library(
 )
 
 rdl_file(
-    name = "ignition_controller_registers",
+    name = "ignition_controller_rdl",
     src = "ignition_controller.rdl",
     outputs = [
         "IgnitionControllerRegisters.bsv",
@@ -508,10 +511,9 @@ rdl_file(
 bsv_library(
     name = "ControllerRegisters",
     srcs = [
-        ":ignition_controller_registers#IgnitionControllerRegisters.bsv",
+        ":ignition_controller_rdl[bsv]",
     ],
     deps = [
-        ":ignition_controller_registers",
         "//hdl/ip/bsv:RegCommon",
     ],
 )
