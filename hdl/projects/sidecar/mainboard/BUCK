@@ -12,6 +12,7 @@ rdl_file(
     outputs = [
         "SidecarMainboardControllerReg.bsv",
         "sidecar_mainboard_controller.html",
+        "sidecar_mainboard_controller.adoc",
         "sidecar_mainboard_controller.json",
     ],
 )

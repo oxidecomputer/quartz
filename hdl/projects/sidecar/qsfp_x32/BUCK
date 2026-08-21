@@ -24,6 +24,7 @@ rdl_file(
     outputs = [
         "QsfpX32ControllerRegsPkg.bsv",
         "qsfp_x32_controller.html",
+        "qsfp_x32_controller.adoc",
         "qsfp_x32_controller.json",
     ],
 )
