@@ -29,6 +29,7 @@ bsv_library(
     name = "GimletSeqFpgaRegs",
     srcs = [":gimlet_seq_fpga_regs_rdl[bsv]"],
     deps = [
+        ":gimlet_seq_fpga_regs_rdl",
         "//hdl/ip/bsv:RegCommon",
     ],
 )
