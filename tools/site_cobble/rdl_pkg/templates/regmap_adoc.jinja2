@@ -1,26 +1,163 @@
-{% macro top() -%}
-    {% for register in registers %}
-{{ register.get_property("name") }}
-[caption="Address: "]
-.{{ "{0:#06x}".format(register.offset) }} - {{ register.name }} Register
-[cols=4,options="header"]
+{#-
+ # This Source Code Form is subject to the terms of the Mozilla Public
+ # License, v. 2.0. If a copy of the MPL was not distributed with this
+ # file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ #
+ # AsciiDoc register map documentation. Used for every .adoc output of the RDL
+ # exporter, both for a single address map (MapExporter) and for a map of maps
+ # (MapofMapsExporter).
+ #
+ # Context, from rdl_pkg/exporter.py:
+ #   map_name       instance name of the top address map
+ #   map_node       systemrdl node of the top address map
+ #   registers      flat, address ordered list of Register and Memory models
+ #   flatten_names  true for a map of maps: names are prefixed with the block
+ #   isinstance, Register, Memory, ReservedField for type dispatch
+ #
+ # Everything between the tag::body and end::body markers is a self contained
+ # fragment, so a hand written document can pull the tables in with
+ #   include::<map_name>.adoc[tag=body,leveloffset=+1]
+-#}
+{% set anchor_root = map_name %}
+{% set reg_h = '===' if flatten_names else '==' %}
+{#- Identifier for a register/memory: block qualified in a map of maps -#}
+{% macro reg_name(register) -%}
+{{ register.prefixed_name if flatten_names else register.name }}
+{%- endmacro %}
+{% macro reg_id(register) -%}
+reg-{{ anchor_root }}-{{ reg_name(register) }}
+{%- endmacro %}
+{#- Bits/Access/Reset/Field/Description, plus one table per distinct encoding -#}
+{% macro field_table(register) %}
+
+[cols="1,1,1,3,8",options="header"]
 |===
-| Bits | SW Access | Name | Function
-        {% for field in register.fields %}
-|[{{ field.bsv_bitslice_str() }}] | {{field.get_property('sw').name}} | {{ field.name }} | {{ field.desc }}
-        {% endfor %}
+| Bits | Access | Reset | Field | Description
+{% for field in register.fields %}
+{% if isinstance(field, ReservedField) %}
+| {{ field.text_bitslice_str() }} | - | - | - | _Reserved_
+{% else %}
+{% set reset = field.get_property('reset') %}
+{% set encode_note %}{% if field.has_encode() %} +
+Encoded as `{{ field.get_property('encode').type_name }}`, see below.{% endif %}{% endset %}
+| {{ field.text_bitslice_str() }} | {{ field.get_property('sw').name }} | {{ "{:#x}".format(reset) if reset is not none else '-' }} | `{{ field.name }}` | {{ field.desc | adoc_cell }}{{ encode_note }}
+{% endif %}
+{% endfor %}
 |===
+{% set done = namespace(encodings=[]) %}
+{% for field in register.encoded_fields %}
+{% set encode = field.get_property('encode') %}
+{% if encode.type_name not in done.encodings %}
+{% set _ = done.encodings.append(encode.type_name) %}
 
-    {% endfor %}
-{% endmacro %}
+.Encoding `{{ encode.type_name }}`
+[cols="1,3,8",options="header"]
+|===
+| Value | Name | Description
+{% for member in encode %}
+| `{{ "{:#x}".format(member.value) }}` | `{{ member.name }}` | {{ member.rdl_desc | adoc_cell }}
+{% endfor %}
+|===
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+{#- One section per register or memory -#}
+{% macro register_section(register) %}
 
-Test Output:
+[#{{ reg_id(register) }}]
+{% set friendly = register.get_property('name') | adoc_inline %}
+{% set friendly = '' if friendly == register.node.inst_name else friendly %}
+{{ reg_h }} {{ reg_name(register) }}{{ ' (' ~ friendly ~ ')' if friendly else '' }}
 
-{{ top() }}
+{% if isinstance(register, Memory) %}
+Offset `{{ "{:#06x}".format(register.offset) }}`, {{ register.get_property('mementries') }} entries of {{ register.get_property('memwidth') }} bits ({{ register.node.size }} bytes), access `{{ register.get_property('sw').name }}`.
+{% else %}
+Offset `{{ "{:#06x}".format(register.offset) }}`, {{ register.width }} bits, reset {% if register.has_reset_definition %}`{{ "0x{:0{}x}".format(register.elaborated_reset, register.width // 4) }}`{% else %}unspecified{% endif %}.
+{% endif %}
+{% if register.get_property('desc') %}
 
+{{ register.get_property('desc') | adoc_para }}
+{% endif %}
+{% if not isinstance(register, Memory) %}
+{{ field_table(register) -}}
+{% endif %}
+{%- endmacro %}
+{#- Blocks (top level children of a map of maps) in address order -#}
+{% set blocks = namespace(names=[]) %}
+{% set counts = namespace(memories=0) %}
+{% for register in registers %}
+{% if isinstance(register, Memory) %}
+{% set counts.memories = counts.memories + 1 %}
+{% endif %}
+{% if flatten_names and register.prefix and register.prefix[0] not in blocks.names %}
+{% set _ = blocks.names.append(register.prefix[0]) %}
+{% endif %}
+{% endfor %}
+// This is a generated file using the RDL tooling. Do not edit by hand.
+:showtitle:
+:toc: left
+:toclevels: 2
+:numbered:
+:icons: font
+:sectanchors:
+:table-caption!:
 
-{#.Power Device Signal Routing#}
-{#[cols=7,options="header"]#}
-{#|===#}
-{#| Bits | Name | Function#}
-{#|===#}
+= {{ map_name }} register map
+
+// tag::body[]
+{% if map_node and map_node.get_property('desc') %}
+{{ map_node.get_property('desc') | adoc_para }}
+
+{% endif %}
+{{ registers | length - counts.memories }} registers{% if counts.memories == 1 %} and one memory{% elif counts.memories %} and {{ counts.memories }} memories{% endif %}{% if flatten_names %}, in {{ blocks.names | length }} blocks{% endif %}. Every offset is a byte address relative to the base of the `{{ map_name }}` address map.
+{% if flatten_names %}
+
+== Block map
+
+[cols="2,1,5",options="header"]
+|===
+| Block | Base | Description
+{% for block in blocks.names %}
+{% set node = map_node.get_child_by_name(block) if map_node else none %}
+| <<blk-{{ anchor_root }}-{{ block }},{{ block }}>> | `{{ "{:#06x}".format(node.absolute_address) if node else '-' }}` | {{ (node.get_property('name') if node else '') | adoc_cell }}
+{% endfor %}
+|===
+{% endif %}
+
+== Register summary
+
+[cols="1,4,5",options="header"]
+|===
+| Offset | Register | Description
+{% for register in registers %}
+| `{{ "{:#06x}".format(register.offset) }}` | <<{{ reg_id(register) }},{{ reg_name(register) }}>> | {% if isinstance(register, Memory) %}Memory, {{ register.get_property('mementries') }} x {{ register.get_property('memwidth') }} bits{% else %}{{ register.get_property('name') | adoc_cell }}{% endif %}
+
+{% endfor %}
+|===
+{% if flatten_names %}
+{% for block in blocks.names %}
+{% set node = map_node.get_child_by_name(block) if map_node else none %}
+
+[#blk-{{ anchor_root }}-{{ block }}]
+{% set friendly = (node.get_property('name') if node else '') | adoc_inline %}
+{% set friendly = '' if friendly == block else friendly %}
+== {{ block }}{{ ' (' ~ friendly ~ ')' if friendly else '' }}
+{% if node %}
+
+Base address `{{ "{:#06x}".format(node.absolute_address) }}`.
+{% endif %}
+{% if node and node.get_property('desc') %}
+
+{{ node.get_property('desc') | adoc_para }}
+{% endif %}
+{% for register in registers if register.prefix and register.prefix[0] == block %}
+{{ register_section(register) }}
+{% endfor %}
+{% endfor %}
+{% else %}
+{% for register in registers %}
+{{ register_section(register) }}
+{% endfor %}
+{% endif %}
+
+// end::body[]

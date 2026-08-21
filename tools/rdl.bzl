@@ -20,8 +20,7 @@ load(
     "HDLFileInfo",
     "HDLFileInfoTSet",
     "VHDLFileInfo",
-    "RDLHtmlMaps",
-    "RDLJsonMaps",
+    "RDLDocMaps",
     "RDLBSVPkgs",
 )
 
@@ -60,7 +59,7 @@ def _rdl_file_impl(ctx):
         # In general, our convention is <src_base_name>.<file_extension> but we want "_pkg" to be appended
         # in the VHDL case. BSV allows flexible naming to support CamelCase package names.
         for out in ctx.attrs.outputs:
-            # Allow .vhd, .bsv, .json, and .html outputs in buck
+            # Allow .vhd, .bsv, .json, .html, and .adoc outputs in buck
             if out.endswith(".vhd"):
                 expected_name = src_base_name + "_pkg.vhd"
                 if out != expected_name:
@@ -77,8 +76,12 @@ def _rdl_file_impl(ctx):
                 expected_name = src_base_name + ".html"
                 if out != expected_name:
                     fail("HTML output {} does not match expected filename {}".format(out, expected_name))
+            elif out.endswith(".adoc"):
+                expected_name = src_base_name + ".adoc"
+                if out != expected_name:
+                    fail("AsciiDoc output {} does not match expected filename {}".format(out, expected_name))
             else:
-                fail("Output {} does not have an expected extension (.vhd, .bsv, .json, .html)".format(out))
+                fail("Output {} does not have an expected extension (.vhd, .bsv, .json, .html, .adoc)".format(out))
         # Get the rdl python executable since we'll be using it for
         #  for generating our outputs
         rdl_gen_py = ctx.attrs._rdl_gen[RunInfo]
@@ -109,12 +112,9 @@ def _rdl_file_impl(ctx):
             all_gen_vhdl = ctx.actions.tset(HDLFileInfoTSet, children=gen_vhdl_tset)
             providers.append(HDLFileInfo(set_all=all_gen_vhdl))
 
-        html_maps = [x for x in outs if x.extension == ".html"]
-        if len(html_maps) > 0:
-            providers.append(RDLHtmlMaps(files=html_maps))
-        json_maps = [x for x in outs if x.extension == ".json"]
-        if len(json_maps) > 0:
-            providers.append(RDLJsonMaps(files=json_maps))
+        doc_maps = [x for x in outs if x.extension in [".html", ".json", ".adoc"]]
+        if len(doc_maps) > 0:
+            providers.append(RDLDocMaps(files=doc_maps))
         bsv_pkgs = [x for x in outs if x.extension == ".bsv"]
         if len(bsv_pkgs) > 0:
             providers.append(RDLBSVPkgs(files=bsv_pkgs))

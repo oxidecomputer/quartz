@@ -15,45 +15,40 @@ def rdl_project_as_args(value: Artifact):
 RDLTSet = transitive_set(args_projections={"args": rdl_project_as_args})
 
 RDLFileInfo = provider(fields={"set": provider_field(RDLTSet)})
-RDLHtmlMaps = provider(fields=["files"])
-RDLJsonMaps = provider(fields=["files"])
+RDLDocMaps = provider(fields=["files"])
 RDLBSVPkgs = provider(fields=["files"])
+
+# Extensions copied next to a bitstream in maps/. Kept explicit rather than
+# "everything in RDLDocMaps" so adding a new doc format stays a deliberate
+# decision about what ships with a build. Pairs with the filter in
+# tools/fpga_releaser/archive_parser.py.
+_MAPS_DIR_EXTENSIONS = [".json", ".html", ".adoc"]
 
 
 def propagate_rdl_maps(deps):
-    """Collect RDL map providers from deps and return providers to propagate them."""
-    providers = []
-    html_maps = []
-    json_maps = []
+    """Collect RDL doc-map providers from deps and return providers to propagate them."""
+    files = []
     for x in deps:
-        if x.get(RDLHtmlMaps):
-            html_maps.extend(x[RDLHtmlMaps].files)
-        if x.get(RDLJsonMaps):
-            json_maps.extend(x[RDLJsonMaps].files)
-    if len(html_maps) > 0:
-        providers.append(RDLHtmlMaps(files=html_maps))
-    if len(json_maps) > 0:
-        providers.append(RDLJsonMaps(files=json_maps))
-    return providers
+        if x.get(RDLDocMaps):
+            files.extend(x[RDLDocMaps].files)
+    if len(files) > 0:
+        return [RDLDocMaps(files=files)]
+    return []
 
 
 def collect_rdl_maps(ctx, dep):
-    """Copy RDL map files from dep into a maps/ output subdirectory.
+    """Copy RDL doc-map files from dep into a maps/ output subdirectory.
 
     Returns a list of copy artifacts suitable for use as hidden inputs
     to force Buck2 to materialize them.
     """
     maps = []
-    json_maps = dep.get(RDLJsonMaps)
-    if json_maps != None:
-        for file in set(json_maps.files):
-            new_file = ctx.actions.declare_output("maps", file.basename)
-            maps.append(ctx.actions.copy_file(new_file, file))
-    html_maps = dep.get(RDLHtmlMaps)
-    if html_maps != None:
-        for file in set(html_maps.files):
-            new_file = ctx.actions.declare_output("maps", file.basename)
-            maps.append(ctx.actions.copy_file(new_file, file))
+    doc_maps = dep.get(RDLDocMaps)
+    if doc_maps == None:
+        return maps
+    for file in set([f for f in doc_maps.files if f.extension in _MAPS_DIR_EXTENSIONS]):
+        new_file = ctx.actions.declare_output("maps", file.basename)
+        maps.append(ctx.actions.copy_file(new_file, file))
     return maps
 
 

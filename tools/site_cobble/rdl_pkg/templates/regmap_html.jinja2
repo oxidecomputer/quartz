@@ -292,6 +292,9 @@
         <td class="Description" colspan="16">&nbsp;{{register.get_property("name")}}</td>
         {% endif %}
     </tr>
+    {# Memories have no fields, and their width is the whole memory, so
+       fields_by_bytes would emit one empty row per byte of the memory. #}
+    {% if not isinstance(register, Memory) %}
     {# Loop over fields in bytes#}
     {% set outer_loop = loop %}
     {% for slice, byte_view in register.fields_by_bytes %}
@@ -325,8 +328,9 @@
         <td class="FieldDesc" colspan="2*">{{field.name}}</td>
         <td class="FieldDesc" colspan="1*">{{field.text_bitslice_str() }}</td>
         <td class="FieldDesc" colspan="2*">{{field.get_property('sw').name}}</td>
-        <td class="FieldDesc" colspan="2*">{{field.reset_str}}</td>
-        <td class="FieldDesc" colspan="14">{{field.desc}}
+        {% set reset = field.get_property('reset') %}
+        <td class="FieldDesc" colspan="2*">{{ "{:#0x}".format(reset) if reset is not none else '' }}</td>
+        <td class="FieldDesc" colspan="14">{{ field.desc or '' }}
         {% if field.has_encode() %}
         <br>
         <br>
@@ -338,6 +342,7 @@
     </tr>
     {% endif %}
     {% endfor %}
+    {% endif %}
     {% endfor %}
     </table>
     </body>
