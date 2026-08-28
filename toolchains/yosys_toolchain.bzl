@@ -29,6 +29,16 @@ _ecppack = select({
     "config//os:windows": "ecppack.exe",
 })
 
+_icebram = select({
+    "DEFAULT": "icebram",
+    "config//os:windows": "icebram.exe",
+})
+
+_ecpbram = select({
+    "DEFAULT": "ecpbram",
+    "config//os:windows": "ecpbram.exe",
+})
+
 
 def _generic_toolchain_impl(ctx):
     
@@ -69,6 +79,22 @@ ecppack_toolchain = rule(
     impl = _generic_toolchain_impl,
     attrs = {
         "exec": attrs.string(default = _ecppack),
+    },
+    is_toolchain_rule = True,
+)
+
+icebram_toolchain = rule(
+    impl = _generic_toolchain_impl,
+    attrs = {
+        "exec": attrs.string(default = _icebram),
+    },
+    is_toolchain_rule = True,
+)
+
+ecpbram_toolchain = rule(
+    impl = _generic_toolchain_impl,
+    attrs = {
+        "exec": attrs.string(default = _ecpbram),
     },
     is_toolchain_rule = True,
 )

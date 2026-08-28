@@ -13,7 +13,7 @@ import GetPut::*;
 import OInt::*;
 import Vector::*;
 
-import git_version::*;
+import VersionROM::*;
 import RegCommon::*;
 import WriteOnceReg::*;
 
@@ -55,6 +55,8 @@ module mkSpiServer #(
                     Add#(TLog#(n_ignition_controllers), b__, 8),
                     // Less than 40 Ignition Controllers.
                     Add#(n_ignition_controllers, c__, 40));
+    VersionROMIfc ver_rom <- mkVersionROM;
+
     Wire#(SpiRequest) in <- mkWire();
     Wire#(SpiResponse) out <- mkWire();
 
@@ -156,16 +158,16 @@ module mkSpiServer #(
                 fromOffset(cs3Offset): read(checksum[3]);
 
                 // Version
-                fromOffset(version0Offset): read(version[0]);
-                fromOffset(version1Offset): read(version[1]);
-                fromOffset(version2Offset): read(version[2]);
-                fromOffset(version3Offset): read(version[3]);
+                fromOffset(version0Offset): read(ver_rom.version[0]);
+                fromOffset(version1Offset): read(ver_rom.version[1]);
+                fromOffset(version2Offset): read(ver_rom.version[2]);
+                fromOffset(version3Offset): read(ver_rom.version[3]);
 
                 // SHA
-                fromOffset(sha0Offset): read(sha[0]);
-                fromOffset(sha1Offset): read(sha[1]);
-                fromOffset(sha2Offset): read(sha[2]);
-                fromOffset(sha3Offset): read(sha[3]);
+                fromOffset(sha0Offset): read(ver_rom.sha[0]);
+                fromOffset(sha1Offset): read(ver_rom.sha[1]);
+                fromOffset(sha2Offset): read(ver_rom.sha[2]);
+                fromOffset(sha3Offset): read(ver_rom.sha[3]);
 
                 // Scratchpad
                 fromOffset(scratchpadOffset): read(scratchpad);

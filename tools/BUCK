@@ -9,3 +9,15 @@ export_file(
     src = "gen_git_version_bsv_buck2.py",
     visibility = ["PUBLIC"],
 )
+
+export_file(
+    name = "gen_version_hex",
+    src = "gen_version_hex.py",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "icebram_wrapper",
+    src = "icebram_wrapper.py",
+    visibility = ["PUBLIC"],
+)

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(buck2 cquery:*)",
+      "Bash(BSV_LIB_DIR=/custom/test/path buck2 audit config:*)"
+    ]
+  }
+}
