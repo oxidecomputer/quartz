@@ -1,0 +1,74 @@
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:rdl.bzl", "rdl_file")
+load("//tools:vivado.bzl", "vivado_bitstream")
+
+rdl_file(
+    name = "metro_seq_top_rdl",
+    src = "metro_seq_top.rdl",
+    deps = [
+        "//hdl/projects/cosmo_seq/debug_module:debug_regs_rdl",
+        "//hdl/projects/cosmo_seq/sequencer:sequencer_regs_rdl",
+        "//hdl/projects/metro_seq/versal_subsystem:versal_flash_regs_rdl",
+        "//hdl/projects/cosmo_seq/dimms_subsystem:dimm_regs_rdl",
+        "//hdl/projects/cosmo_seq/sp_i2c_subsystem:sp_i2c_regs_rdl",
+        "//hdl/ip/vhd/info:info_regs_rdl",
+        "//hdl/ip/vhd/spi_nor_controller:spi_nor_regs_rdl",
+        "//hdl/ip/vhd/hash_engine:hash_engine_regs_rdl",
+        "//hdl/ip/vhd/espi:espi_regs_rdl",
+        "//hdl/ip/vhd/i2c/io_expanders/PCA9506ish:pca9506_regs_rdl",
+    ],
+    outputs = [
+        "metro_seq_top.adoc",
+        "metro_seq_top.html",
+        "metro_seq_top.json",
+    ],
+)
+
+vhdl_unit(
+    name = "metro_seq_top",
+    srcs = ["metro_seq_top.vhd"],
+    deps = [
+        ":metro_seq_top_rdl",
+        # Clocks, resets, info block and LED are the same on both boards, PLL
+        # IP included; see the export_file targets next to it.
+        "//hdl/projects/cosmo_seq:board_support",
+        "//hdl/ip/vhd/axi_blocks:axilite_common_pkg",
+        "//hdl/ip/vhd/axi_blocks:axil_interconnect",
+        "//hdl/ip/vhd/common:tristate_if_pkg",
+        "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
+        "//hdl/ip/vhd/hash_engine:hash_engine_top",
+        # The sequencer is shared: one entity, NIC_KIND => NIC_VERSAL here.
+        "//hdl/projects/cosmo_seq/sequencer:sequencer",
+        "//hdl/projects/metro_seq/versal_subsystem:versal_flash_subsystem",
+        "//hdl/projects/cosmo_seq/debug_module:debug_module_top",
+        # Shared verbatim with cosmo_seq -- identical hardware on both boards.
+        "//hdl/projects/cosmo_seq/sp5_espi_flash_subsystem:sp5_espi_flash_subsystem",
+        "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
+        "//hdl/projects/cosmo_seq/sp_i2c_subsystem:sp_i2c_subsystem",
+        "//hdl/projects/cosmo_seq/sp5_hotplug_subsystem:sp5_hotplug_subsystem",
+        "//hdl/projects/cosmo_seq/dimms_subsystem:dimms_subsystem_top",
+    ],
+    standard = "2019",
+)
+
+vivado_bitstream(
+    name = "metro_seq",
+    top_entity_name = "metro_seq_top",
+    top = ":metro_seq_top",
+    part = "xc7s100fgga484-1",
+    constraints = glob(["*.xdc"]),
+    pre_synth_tcl_files = [
+        "//hdl/projects/cosmo_seq:sys_pll_ip_tcl",
+        "//hdl/projects/cosmo_seq:fmc_pll_ip_tcl",
+    ],
+)
+
+# Analysis-only: vhdl_unit collects sources but does not run a compiler, so
+# without this nothing type-checks metro_seq_top until Vivado synthesis.
+vunit_sim(
+    name = "metro_seq_top_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [":metro_seq_top"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)

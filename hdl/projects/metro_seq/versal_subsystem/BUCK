@@ -1,0 +1,24 @@
+load("//tools:hdl.bzl", "vhdl_unit")
+load("//tools:rdl.bzl", "rdl_file")
+
+rdl_file(
+    name = "versal_flash_regs_rdl",
+    src = "versal_flash_regs.rdl",
+    outputs = [
+        "versal_flash_regs_pkg.vhd",
+        "versal_flash_regs.html",
+        "versal_flash_regs.json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+vhdl_unit(
+    name = "versal_flash_subsystem",
+    srcs = ["versal_flash_subsystem.vhd"],
+    deps = [
+        ":versal_flash_regs_rdl",
+        "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
+    ],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)

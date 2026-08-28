@@ -21,6 +21,12 @@ hubris_path = "drv/spartan7-loader/cosmo-seq"
 builder = "buck2"
 toolchain = "vivado"
 
+[metro-seq]
+job_name = "metro-seq-image"
+hubris_path = "drv/spartan7-loader/metro-seq"
+builder = "buck2"
+toolchain = "vivado"
+
 [grapefruit]
 job_name = "grapefruit-image"
 hubris_path = "drv/spartan7-loader/grapefruit"
