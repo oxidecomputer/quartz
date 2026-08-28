@@ -12,6 +12,7 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.axil8x32_pkg;
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sp5_seq_sim_pkg.all;
 

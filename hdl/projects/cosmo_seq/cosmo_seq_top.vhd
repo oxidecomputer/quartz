@@ -21,6 +21,7 @@ use work.axi_st8_pkg;
 use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sp5_uart_subsystem_pkg.all;
 

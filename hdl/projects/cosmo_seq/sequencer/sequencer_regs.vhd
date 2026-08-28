@@ -10,6 +10,7 @@ use ieee.numeric_std_unsigned.all;
 use work.axil_common_pkg.all;
 use work.axil8x32_pkg;
 
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sequencer_regs_pkg.all;
 

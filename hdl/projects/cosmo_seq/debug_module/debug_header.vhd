@@ -8,6 +8,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.debug_regs_pkg.all;
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 
 entity debug_header is

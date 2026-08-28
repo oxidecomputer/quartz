@@ -12,6 +12,7 @@ use work.axil8x32_pkg.all;
 
 use work.debug_regs_pkg.all;
 use work.sp5_uart_subsystem_pkg.all;
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 
 entity debug_module_top is
