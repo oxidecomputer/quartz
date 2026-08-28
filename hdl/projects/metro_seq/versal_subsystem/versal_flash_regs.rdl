@@ -1,0 +1,50 @@
+// SystemRDL description of the sw-accessible registers owning the Versal's
+// boot-flash mux on the Metro sequencer FPGA.
+
+addrmap versal_flash_regs {
+    name = "Versal boot flash mux control";
+    desc = "";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Flash Mux Control";
+        desc = "Requests the Versal's QSPI boot flash for the FPGA. The request
+        is only honoured while the sequencer is holding the Versal in reset, so
+        that the FPGA and the Versal can never drive the flash at once. The
+        sequencer also takes the flash on its own, without a request, while it
+        measures the image before boot and once the Versal has booted; see
+        mux_status.seq_owned.";
+        field {
+            desc = "Set to 1 to ask for the Versal's boot flash.";
+        } request[1] = 0;
+    } mux_ctrl;
+
+    reg {
+        name = "Flash Mux Status";
+        default sw = r;
+        field {
+            desc = "Set when the FPGA actually owns the flash: the sequencer
+            claimed it, or the request was made and the sequencer is holding
+            the Versal in reset.";
+        } granted[1] = 0;
+        field {
+            desc = "Set while the sequencer itself is claiming the flash for
+            the FPGA, during the pre-boot measurement and after the Versal has
+            booted.";
+        } seq_owned[1] = 0;
+        field {
+            desc = "Live readback of the mux select pin (From FPGA to the mux)";
+        } mux_sel[1] = 0;
+        field {
+            desc = "Live readback of the mux enable pin, active low (From FPGA to the mux)";
+        } mux_en_l[1] = 1;
+        field {
+            desc = "Live readback of whether the sequencer is holding the Versal
+            in reset, i.e. whether a request would be granted.";
+        } versal_held_in_reset[1] = 0;
+    } mux_status;
+
+};
