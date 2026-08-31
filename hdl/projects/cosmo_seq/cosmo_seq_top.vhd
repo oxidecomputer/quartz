@@ -335,6 +335,10 @@ architecture rtl of cosmo_seq_top is
     signal v1p2_nic_enet_a0hp_pg : std_logic;
     signal v1p1_nic_enet_a0hp_pg : std_logic;
     alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
+    -- deskewed/phase-shifted FMC clock from the MMCM in board_support; the
+    -- FMC domain runs on this, never on the raw pin
+    signal fmc_clk_buf : std_logic;
+    signal fmc_capture_clk_buf : std_logic;
     constant INFO_RESP_IDX : integer := 0;
     constant SPINOR_RESP_IDX: integer := 1;
     constant SEQ_RESP_IDX: integer := 2;
@@ -364,7 +368,7 @@ architecture rtl of cosmo_seq_top is
     signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);
     signal responders_15b : axil15x32_pkg.axil_array_t(config_array'range);
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
-    signal fmc_data_out_enable: std_logic;
+    signal fmc_data_out_hiz: std_logic_vector(15 downto 0);
 
     signal spinor_io_o : std_logic_vector(3 downto 0);
     signal spinor_io_oe : std_logic_vector(3 downto 0);
@@ -470,25 +474,32 @@ begin
     stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
     port map(
        chip_reset => reset_fmc,
-       fmc_clk => fmc_clk,
+       fmc_clk => fmc_clk_buf,
+       fmc_capture_clk => fmc_capture_clk_buf,
        a(24 downto 20) => "00000",
        a(19 downto 16) => fmc_sp_to_fpga1_a(19 downto 16),
        --a(23 downto 16) => fmc_sp_to_fpga1_a,
        addr_data_in => fmc_sp_to_fpga1_da,
        data_out => fmc_internal_data_out,
-       data_out_en => fmc_data_out_enable,
+       data_out_hiz => fmc_data_out_hiz,
        ne(3 downto 1) => "111",
        ne(0) => fmc_sp_to_fpga1_cs_l,
        noe => fmc_sp_to_fpga1_oe_l,
        nwe => fmc_sp_to_fpga1_we_l,
        nl => fmc_sp_to_fpga1_adv_l,
        nwait => fmc_sp_to_fpga1_wait_l,
+       timeout_count => open,
+       contention_count => open,
        aclk => clk_125m,
        aresetn => not reset_125m,
        axi_if => fmc_axi_if
    );
     -- tristate control for the FMC data bus
-    fmc_sp_to_fpga1_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+    -- per-bit tristate, hiz already in OBUFT T polarity so each pin's T
+    -- flop packs into its IOB with no inverter in between
+    fmc_da_tris: for i in fmc_sp_to_fpga1_da'range generate
+        fmc_sp_to_fpga1_da(i) <= 'Z' when fmc_data_out_hiz(i) = '1' else fmc_internal_data_out(i);
+    end generate;
 
    -- Axi decode/interconnect
    axil_interconnect_inst: entity work.axil_interconnect
@@ -510,6 +521,8 @@ begin
      port map(
         board_50mhz_clk => clk_50mhz_fpga1_1,
         sp_fmc_clk => fmc_clk,
+        fmc_clk_buf => fmc_clk_buf,
+        fmc_capture_clk_buf => fmc_capture_clk_buf,
         sp_system_reset_l => sp_to_fpga1_system_reset_l,
         clk_125m => clk_125m,
         reset_125m => reset_125m,

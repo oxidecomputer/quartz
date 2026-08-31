@@ -1,0 +1,203 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:revdate: 2026-09-10
+
+= FMC speed-up verification plan
+
+Verification for the FMC line-rate work: streaming FSM + input capture stage,
+cosmo at 100 MHz behind the fmc_pll MMCM, grapefruit at 66.67 MHz. Each phase
+gates the next; a failure stops the progression at a known-good configuration.
+Companion pieces: `fmc_if.adoc` (design + pacing contract),
+`tools/fmc_sweep/fmc_sweep.py` (the sweep driver), and the hubris revs
+(demo-server fixes, then the gated CLKDIV flip).
+
+Throughout: FMC_CLK divisor N means FMC_CLK = 200 MHz / N, so divisor 4 =
+50 MHz (shipping), 3 = 66.67 MHz, 2 = 100 MHz.
+
+== Phase 0: desk checks (no hardware)
+
+. Simulation regression: `buck2 run //hdl/ip/vhd/fmc_if:fmc_tb` -- all 19
+  tests, which cover single and back-to-back reads/writes, varied addresses,
+  FIFO backpressure, slow and wedged AXI responders, NWAIT timeout recovery
+  (including a missed transaction start), mid-transaction aborts, reset
+  between transactions, and randomized soaks, exercised at 50/66.67/100 MHz
+  fmc_clk against the 125 MHz AXI clock.
+  The harness fails any test on bus contention (model and DUT driving in the
+  same phase).
+. Timing closure: build both bitstreams and read the post-route summaries --
+  the build does NOT fail on timing, the reports are the authority:
++
+----
+buck2 build //hdl/projects/cosmo_seq:cosmo_seq //hdl/projects/grapefruit:grapefruit
+grep -A6 "Design Timing Summary" buck-out/.../cosmo_seq_route_timing.rpt
+grep -A6 "Design Timing Summary" buck-out/.../grapefruit_route_timing.rpt
+----
++
+Required: WNS and WHS both positive on both boards, zero failing endpoints,
+and the Inter Clock Table must show nonzero endpoint counts for every FMC
+class (fmc_virt_clk -> capture clock, capture -> FSM clock, FSM clock ->
+fmc_virt_clk). A class with zero endpoints means a constraint silently
+stopped matching (renamed cell or clock) and the "pass" is vacuous.
+Margins land near +0.1 setup / +0.02 hold on cosmo at 10 ns and somewhat
+looser on grapefruit at 15 ns, moving a few tens of picoseconds per rebuild;
+cosmo's output hold is the phase-limiting margin and the one to watch.
+. Datasheet re-verification (once, on paper): confirm against DS12110 that
+  the XDC's SP timing numbers (td(CLKL-NExL)=1, td(CLKL-AV)=2.5,
+  td(CLKL-ADV)=3, tsu(NWAIT-CLKH)=3, th(CLKH-NWAIT)=2) match the synchronous
+  multiplexed PSRAM tables at the relevant conditions, and that 100 MHz
+  FMC_CLK is within spec at VOS1. The constraints inherited these values
+  from the 66.67 MHz era and have not been re-read against rev-current
+  silicon docs.
+. hubris demo-server rev: land before any sweep. Runtime timing control
+  does not exist without it -- the task previously lacked the FMC controller
+  register region and faulted on every setter call (reported by hiffy as
+  success), and the setters themselves clobbered sibling BTR1 fields via
+  `btr1.write()`. It also adds the BTR1/BCR1 readback ops the sweep uses to
+  verify each divisor change and the block-transfer ops behind the phase-E
+  line-rate numbers.
+
+== Phase 1: grapefruit at 50 MHz (new RTL, old frequency)
+
+Goal: prove the streamlined FSM + capture stage is a drop-in at the
+shipping frequency, before any clock change. The FPGA is NWAIT-paced, so no
+behavioral difference is expected.
+
+. Build the archive with the new bitstream
+  (`buck2 run //tools/fpga_releaser:cli -- --fpga grapefruit --hubris <path>`
+  or the usual release flow) with hubris still at CLKDIV=3: the
+  demo-server rev included, the CLKDIV flip not included.
+. Flash, confirm hubris boots and the FPGA loads (spartan7-loader token
+  checks pass, grapefruit_seq comes up).
+. Baseline functional pass:
++
+----
+./tools/fmc_sweep/fmc_sweep.py --ip <lladdr> --interface <if> \
+    --archive <archive.zip> --json gf_baseline.json
+----
++
+This runs phases A-E at divisor 4 only: constant-register reads with gaps,
+scratch write/readback (info scratchpad at +0x10; fpga_checksum at +0xC is
+off-limits -- hubris uses it to decide whether to reprogram the FPGA),
+back-to-back write bursts into the scratchpad verified by ordering/last
+value, double-pass read sweeps of the post-code buffer (an external capture
+mem: readable, but AXI writes to it are dropped, so bulk
+write-verification is the simulation suite's job, not the bench's), a
+500-op seeded soak, and a throughput measurement. All must pass.
+. Record the phase-E numbers as the throughput baseline.
+. Leave a longer soak running with `--soak-seconds 3600` (the soak is
+  otherwise op-counted, and 500 UDP round trips finish in seconds).
+  Acceptance: zero mismatches, no UDP timeouts.
+
+== Phase 2: grapefruit sweep to 66.67 MHz
+
+. `--sweep 4,3` first. Phase ordering inside each step is deliberate:
+  constant reads come first because the SP never drives the bus during read
+  data phases, so a timing miss at a new frequency shows up as wrong data,
+  never as a driver fight. Do not reorder.
+. If divisor 3 passes: rerun with `--sweep 4,3,2`. Divisor 2 (100 MHz) is
+  expected to FAIL on grapefruit -- its clock enters on non-clock-capable
+  F17 with ~6 ns of detour insertion delay and no MMCM. The point is to
+  record where the cliff is and confirm the tool's failure handling:
+  it must stop at the first failing phase, restore divisor 4, and re-verify
+  phase A (`restored_baseline_ok: true` in the JSON).
+. Acceptance for 66.67 MHz: full A-E pass plus a >= 1 hour soak
+  (`--soak-seconds 3600`) at divisor 3,
+  and phase-E throughput ~1.33x the baseline batched numbers.
+
+== Phase 3: cosmo at 50 MHz (MMCM bitstream, old frequency)
+
+Goal: prove the MMCM clocking infrastructure -- dual-frequency lock, the
+clock-stop monitor, reset gating -- before touching the frequency.
+
+. Flash the new archive (CLKDIV still 3). First FMC access happening at all
+  proves the MMCM locked at a 50 MHz input (the VCO sits at its 600 MHz
+  minimum here -- this IS the risky corner of the dual-frequency config, so
+  a boot-loop or dead FMC points straight at lock failure; see the rollback
+  note below).
+. Run the full fmc_sweep at divisor 4; record baseline JSON.
+. Regenerate the ILA against the new netlist (the old fmc_ila.tcl net names
+  are stale: the clock is now `clk_fmc_fmc_pll`, the enable regs are
+  `data_out_hiz_int_reg[*]`, and `mark_debug` already tags fmc_state,
+  axi_state, txn, timeouts, contentions). Probe at minimum: fmc_state,
+  NWAIT, CS/ADV/WE/OE IBUFs, DA in/out, timeouts, contentions, and the
+  monitor's mmcm_reset/locked.
+. With the ILA, verify on live traffic:
+  * NWAIT cadence matches the model: one release-sample per beat, two
+    consecutive released samples per 32-bit access, wait re-asserted between
+    transactions.
+  * ES0491 dummy read cycles appear after bursts and provoke no state
+    change.
+  * `timeouts == 0` and `contentions == 0` after every soak. Nonzero
+    contention is a stop-ship: it means the pacing contract disagrees with
+    real silicon somewhere.
+. Robustness loops (the monitor/reset machinery):
+  * SP warm reset under active traffic, >= 50 iterations scripted. Each
+    time: FMC clock stops, monitor must hold the MMCM in reset, relock on
+    clock return, and peek/poke must work immediately after the SP is back.
+    No FPGA reprogram in this loop -- the bitstream rides through.
+  * FPGA reprogram (SP-driven, SP idle on FMC), >= 10 iterations, traffic
+    resumes cleanly each time.
+  * Full power cycle x5.
+  * Acceptance: zero hangs (an SP stuck in an FMC access = the timeout
+    machinery or reset gating failed), counters clean afterward.
+
+== Phase 4: cosmo sweep to 100 MHz
+
+. `--sweep 4,3,2` with the lab-image demo-server. All phases must pass at
+  every step; there is no acceptable-failure divisor on cosmo.
+. One-hour soak (`--soak-seconds 3600`) at divisor 2, counters zero.
+. MMCM phase margin sweep: rebuild bitstream variants with the phases
+  moved +/-18.75 deg = 5 MMCM taps = ~0.52 ns (the phase grid is
+  45/CLKOUT_DIVIDE = 3.75 deg per tap; edit `fmc_pll_ip.tcl`: FSM/output
+  phase 26.25/45/63.75, capture phase 116.25/135/153.75 -- move them
+  together first, then independently if a failure needs isolating). Run
+  the divisor-2 soak on each variant. Acceptance: the shipped phases pass
+  with both neighbors also passing, demonstrating >= ~0.5 ns of real
+  margin beyond STA. If a neighbor fails, the shipped point is marginal:
+  investigate before un-gating, don't ship on one passing point.
+. Re-verify the SP warm-reset loop at divisor 2 (relock now returns to a
+  1200 MHz VCO -- the other edge of the range).
+
+== Phase 5: end-to-end throughput
+
+. fmc_sweep phase E reports two families of numbers. `fmc_*` values come
+  from delta-timed server-side block ops (demo-server network ops 17-19:
+  checksum block reads and a fixed-address fill), where the round trip and
+  per-packet costs cancel and what remains is bus accesses -- these are the
+  line-rate measurements and must scale with the divisor (~1.33x going
+  4 -> 3, ~2x going 4 -> 2). `wire_*` values come from plain batched
+  peek/poke: ~9 network bytes per word swamps the ~0.4 us bus
+  access, so they are expected NOT to move with the divisor -- they are a
+  network/health reference, not a bus measurement. An `fmc_*` number that
+  fails to scale with the divisor means the divisor did not actually
+  change (or the block ops hit an error, which the checksum cross-checks
+  catch).
+. Timed cosmo-hf host-flash operations (the hot path: one status poll + one
+  data read per u32) before/after -- same image content, hubris timestamps
+  or a host-side stopwatch around a full read-back. Expected ~1.6-1.8x at
+  100 MHz; writes limited by flash program time, so use read-back as the
+  metric.
+. The phase-E `fmc_*` table across divisors goes in the PR description.
+
+== Phase 6: un-gate the hubris CLKDIV rev
+
+Per board, only after that board's phases pass: land the hubris rev that
+raises the boot-time divider (cosmo CLKDIV=1, grapefruit CLKDIV=2) in the
+same archive as its validated bitstream -- the archive carries both, so
+image and clock setting move atomically and no mixed-field state exists.
+
+Rollback at any point is the one-line CLKDIV revert: every bitstream in this
+series is NWAIT-paced and runs at 50 MHz unchanged. The single caveat is a
+cosmo MMCM that fails to lock at one input frequency (dual-VCO corner): that
+is a bitstream-level rollback, which is why Phase 3 proves the 50 MHz lock
+corner before anything else depends on it.
+
+== Open observability item
+
+`timeout_count` / `contention_count` are ports (left open at the tops) and
+mark_debug signals. Wiring them into a spare info/debug register would make
+the Phase 3/4 counter checks possible from software instead of the ILA and
+would let fmc_sweep gate every step on them; worth doing before the Phase 4
+soaks.

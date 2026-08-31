@@ -21,6 +21,11 @@ entity board_support is
         reset_125m : out std_logic;
         clk_200m : out std_logic;
         reset_200m : out std_logic;
+        -- deskewed/phase-shifted FMC clock from the FMC MMCM; everything in
+        -- the FMC domain must use this, not the raw pin
+        fmc_clk_buf : out std_logic;
+        -- later-phased sibling for the FMC input capture registers only
+        fmc_capture_clk_buf : out std_logic;
         reset_fmc : out std_logic;
         -- misc board signals
         fpga1_status_led : out std_logic;
@@ -38,6 +43,10 @@ architecture rtl of board_support is
     signal sp_system_reset_syncd : std_logic;
     signal pll_locked_async : std_logic;
     signal led_counter : unsigned(27 downto 0);
+    signal fmc_clk_g : std_logic;
+    signal fmc_capture_clk_g : std_logic;
+    signal fmc_mmcm_locked : std_logic;
+    signal fmc_mmcm_reset : std_logic;
 
 begin
 
@@ -76,15 +85,46 @@ begin
       
     );
 
-    -- Reset synchronizer into the clock domains
+    -- MMCM on the SP's (continuous) FMC clock: BUFG-in-feedback deskew plus
+    -- a small phase shift, which is what closes the single-cycle FMC pin
+    -- timing at 10 ns. See xilinx_ip_gen/fmc_pll_ip.tcl for the VCO and
+    -- phase reasoning.
+    fmc_pll_inst: entity work.fmc_pll
+     port map(
+        clk_fmc_in => sp_fmc_clk,
+        clk_fmc => fmc_clk_g,
+        clk_fmc_capture => fmc_capture_clk_g,
+        reset => fmc_mmcm_reset,
+        locked => fmc_mmcm_locked
+    );
+
+    -- Hold the MMCM in reset while the SP's clock is stopped (SP reset or
+    -- reconfiguration) and retry the lock if the input frequency changes.
+    fmc_clk_monitor_inst: entity work.fmc_clk_monitor
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        fmc_clk_raw => sp_fmc_clk,
+        mmcm_locked => fmc_mmcm_locked,
+        mmcm_reset => fmc_mmcm_reset
+    );
+
+    fmc_clk_buf         <= fmc_clk_g;
+    fmc_capture_clk_buf <= fmc_capture_clk_g;
+
+    -- Reset synchronizer into the clock domains. The FMC branch is clocked
+    -- by the MMCM output and additionally gated on MMCM lock: while
+    -- unlocked there are no FMC-domain clock edges and the async assert is
+    -- what keeps the FMC target's bus drive released.
     reset_sync_inst: entity work.reset_sync
     port map(
         pll_locked_async => pll_locked_async,
+        aux_locked_async => fmc_mmcm_locked,
         clk_125m => clk_125m,
         reset_125m => reset_125m,
         clk_200m => clk_200m,
         reset_200m => reset_200m,
-        sp_fmc_clk => sp_fmc_clk,
+        sp_fmc_clk => fmc_clk_g,
         reset_fmc_clk => reset_fmc
     );
 

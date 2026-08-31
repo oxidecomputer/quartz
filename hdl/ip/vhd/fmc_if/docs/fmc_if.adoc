@@ -2,8 +2,8 @@
 :toc: left
 :numbered:
 :icons: font
-:revision: 1.0
-:revdate: 2024-04-24
+:revision: 2.0
+:revdate: 2026-09-10
 
 = FMC Target interface
 
@@ -37,6 +37,83 @@ The AXI state machine monitors the transaction FIFO (and the WDATA FIFO in the
 case of writes) and wiggles the AXI signals appropriately to issue the
 read/write transactions.
 
+=== Pacing contract
+
+The wait line is held asserted by default and released under FSM control.
+After the SP samples the wait line released at rising edge N, its current
+data beat is valid on the bus at edge N+1, and each further release-sampled
+edge advances one beat; on reads the SP samples data on the same edge it
+samples the released wait. This cadence was proven on hardware; the FSM
+and the simulation model both encode it.
+
+All FMC inputs pass through dedicated per-pin capture registers (clocked by
+fmc_capture_clk, a later-phased MMCM sibling on boards that have one), so
+the FSM runs one cycle behind the bus; NWAIT pacing absorbs the delay.
+A 32-bit write occupies 6 fmc_clk cycles of bus time (address capture,
+dispatch, two arm cycles, two back-to-back beats); the AXI write is posted
+and completes behind the SP's back. A 32-bit read stalls through the
+CDC/AXI round trip and then streams its two beats on consecutive cycles.
+The `extra_beat_setup` generic re-inserts a dead cycle between read beats
+for a board that cannot close single-cycle data-out timing (the constraints
+must then carry matching setup-2 multicycle exceptions).
+
+=== Clocking, or how 100 MHz timing closes
+
+The wait line is sampled by the SP on every rising edge, so it is a
+single-cycle output path with no multicycle tricks available: the FPGA has
+period - tsu(NWAIT) - trace, about 6 ns at 10 ns, to get from its clock pin
+through a flop and back out. A plain IBUF+BUFG spends 3.5-6.5 ns of that on
+clock insertion alone, so at 100 MHz the internal FMC clock instead comes
+from an MMCM in phase-alignment mode (BUFG in the feedback path), which
+nulls the insertion delay and leaves the whole budget for the flop and
+output buffer. The output/enable/nwait flops are additionally packed into
+the IOBs, which is why data_out_hiz is one registered bit per pin in OBUFT
+T polarity.
+
+Inputs get the opposite treatment. The SP launches on its falling edge, so
+data arrives late in the cycle and the valid window at the pin is only a
+few nanoseconds wide; worse, STA charges the full corner spread of the MMCM
+clock network against a virtual clock with no pessimism removal. Rather
+than fight that, the MMCM produces a second output for the capture
+registers, phased later than the FSM clock (+135 deg vs +45 deg, see
+fmc_pll_ip.tcl), which parks the sampling instant comfortably inside the
+data-valid window. The capture registers are the only logic on that clock;
+the FSM consumes their outputs on its own clock a cycle later, which is
+where the "FSM runs one cycle behind the bus" above comes from. The +45 deg
+FSM/output phase is itself pinned by output hold on the NWAIT/data pins
+(earlier violates hold), so the two phases are not adjustable
+independently of the analysis in cosmo_timing.xdc.
+
+Both phases are specified in degrees, and the MMCM implements phase as
+VCO-referenced taps, so they are true fractions of the period: at 50 MHz
+the same bitstream places every edge proportionally later and every margin
+only grows. The constraints are therefore written once at 10 ns as a
+strict superset of all slower rates. The MMCM's VCO multiplier (M=12) is
+chosen so the VCO stays in range from a 50 MHz input through a 100 MHz
+one, letting one bitstream lock at any SP CLKDIV setting; a clock-stop
+monitor in the fabric holds the MMCM in reset while the SP's clock is
+absent and relocks it on return. A board without a clock-capable pin for
+the FMC clock (grapefruit) skips the MMCM, ties fmc_capture_clk to
+fmc_clk, and is bounded by the plain-BUFG budget to 66.67 MHz.
+
+=== Robustness
+
+* NWAIT timeout: a transaction that would stall the SP longer than
+  `timeout_cycles` (a wedged AXI responder, full FIFOs that never drain, or
+  a transaction start the FSM never observed -- chip select pinned with no
+  address latch seen, e.g. a miscaptured NADV) is abandoned: reads return
+  0xFFFF poison beats, writes are swallowed, and the sticky `timeout_count`
+  output increments. Data from a timed-out read that later arrives is
+  discarded before any live read is served. Without the missed-start case
+  the SP would hang on its bus with nothing to free it, which from software
+  looks like a silent death followed by a watchdog reboot.
+* Contention tripwire: the tristate control is re-derived from the live NOE/NE
+  pins every cycle it could drive, and `contention_count` increments if the
+  enable is ever up while the SP owns the bus (NADV or NWE low).
+* A mid-transaction chip-select abort cleans up within a few cycles; a write
+  whose transaction was already queued is completed with zero filler so the
+  AXI side never wedges waiting on write data.
+
 == Sim Env
 
 The simulation environment has a model of the STM32's FMC peripheral with some
@@ -50,18 +127,19 @@ testbench to properly interop with our AXI-Lite controller interface.
 
 == Current status
 
-This has been simulated against FMC models for single 32-bit read/writes. No
-bursting is supported currently. Only 32bit access with no consecutive access is
-implemented.
-
+Simulated against the FMC model for single 32-bit read/writes at 50, 66.67,
+and 100 MHz fmc_clk against a 125 MHz AXI clock, including back-to-back
+traffic, FIFO-full backpressure, slow and wedged AXI responders, timeout
+recovery, mid-transaction aborts, reset between transactions, and a
+randomized soak (`buck2 run //hdl/ip/vhd/fmc_if:fmc_tb`). No bursting beyond
+the two beats of a 32-bit access is supported; that is a deliberate scope
+decision. The model implements the WAITCFG=1/DATLAT=0 pacing contract,
+blocking writes via wait_until_idle, the ES0491 dummy read cycles, and
+one-shot abort injection.
 
 == Open Actions
 
-* Support multi-word transactions on FMC interface 
-
-* Support byte-enables FMC - AXI for <32bit access 
-
-* Clean up FMC model, especially around writes and figuring out blocking
+* Support byte-enables FMC - AXI for <32bit access
 
 == Future Investigation/Next steps
 
