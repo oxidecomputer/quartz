@@ -713,7 +713,8 @@ begin
     amd_hp_irq_n_final <= '0' when fpga2_hp_irq_n = '0' or hp_int_n = '0' else '1';
     sp5_to_fpga1_genint_l <= '0' when amd_hp_irq_n_final = '0' else 'Z';
 
-    fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
+    --fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
+    fpga1_to_pcie_clk_buff_rsw_oe_l <= '0';
 
     --Tristates for spi-nor flash pins and espi
     i2c_sp5_to_fpgax_hp_scl <= sp5_scl_o when sp5_scl_oe = '1' else 'Z';
