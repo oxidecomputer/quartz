@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim", "sim_only_model")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
@@ -19,11 +19,24 @@ vhdl_unit(
     visibility = ['PUBLIC']
 )
 
+# The register-access helpers are useful to any testbench that talks to a
+# PCA9506 over I2C, not just this one, so they are a target of their own.
+sim_only_model(
+    name = "pca9506_sim_pkg",
+    srcs = ["sims/i2c_pca9506ish_sim_pkg.vhd"],
+    deps = [
+        ":pca9506_regs_rdl",
+        "//hdl/ip/vhd/vunit_components:i2c_controller_vc",
+    ],
+    visibility = ['PUBLIC'],
+)
+
 vunit_sim(
     name = "i2c_pca9506ish_tb",
-    srcs = glob(["sims/**/*.vhd"]),
+    srcs = glob(["sims/**/*.vhd"], exclude = ["sims/i2c_pca9506ish_sim_pkg.vhd"]),
     deps = [
         ":pca9506_top",
+        ":pca9506_sim_pkg",
         "//hdl/ip/vhd/vunit_components:i2c_controller_vc",
         "//hdl/ip/vhd/i2c/target:i2c_phy_consolidator",
         "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
