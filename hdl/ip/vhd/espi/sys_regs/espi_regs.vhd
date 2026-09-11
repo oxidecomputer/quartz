@@ -25,6 +25,8 @@ entity espi_regs is
         post_code      : in std_logic_vector(31 downto 0);
         post_code_valid : in std_logic;
         espi_reset : in std_logic;
+        -- runtime half of the SAFS write permission, see espi_target_top
+        flash_write_enable : out std_logic;
         stuff_fifo : out std_logic;
         stuff_wds : out std_logic_vector(15 downto 0);
         -- read-only view of eSPI spec registers
@@ -161,6 +163,7 @@ begin
 
     dbg_chan.rd.rdack <= '1' when axi_if.read_data.ready = '1' and axi_if.read_data.valid = '1' and resp_fifo_ack = '1' else '0';
     dbg_chan.espi_reset <= control_reg.espi_reset;
+    flash_write_enable <= control_reg.flash_write_enable;
 
     read_logic: process(clk, reset)
     begin

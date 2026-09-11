@@ -12,6 +12,18 @@ use work.axi_st8_pkg.all;
 
 
 entity sp5_espi_flash_subsystem is
+    generic (
+        -- Passed to espi_target_top. Off for the SP5 boot flash, where the
+        -- host must never be able to modify what it boots from.
+        FLASH_WRITES_ALLOWED : boolean := false;
+        -- Passed to espi_target_top. A flash-only instance has no use for
+        -- the post code buffer.
+        POST_CODE_BUFFER_ENABLED : boolean := true;
+        -- spi_nor_top's rate and sample point. The defaults are the SP5 boot
+        -- flash's; a flash on a slower bank or a longer path wants its own.
+        SPI_NOR_SCLK_DIVISOR : natural := 0;
+        SPI_NOR_RX_SAMPLE_TAPS : natural range 0 to 4 := 2
+    );
     port(
         clk_125m : in std_logic;
         reset_125m : in std_logic;
@@ -61,6 +73,11 @@ architecture rtl of sp5_espi_flash_subsystem is
     signal flash_rfifo_rempty : std_logic;
     signal flash_fifo_clear : std_logic;
     signal fifo_reset : std_logic;
+    signal flash_wfifo_data : std_logic_vector(7 downto 0);
+    signal flash_wfifo_write : std_logic;
+    signal espi_wfifo_rdata : std_logic_vector(7 downto 0);
+    signal espi_wfifo_rdack : std_logic;
+    signal espi_wfifo_rempty : std_logic;
     signal rst_cnts : integer range 0 to 5 := 5;
 
 
@@ -132,7 +149,41 @@ begin
     -- Only the link layer runs at 200MHz, the remaining
     -- logic runs at 125MHz so all the interfaces are synchronous
     -- to 125MHz
+    -- Host to flash write payloads. One eSPI write's payload at most sits in
+    -- here at a time: the eSPI side issues one flash command at a time and
+    -- the payload is consumed before it reports the command done. Sized for
+    -- the flash channel's 1kB per-descriptor slot. Absent on a read-only
+    -- instance, where it would only ever be empty.
+    wfifo: if FLASH_WRITES_ALLOWED generate
+        espi_spinor_wdata_fifo: entity work.dcfifo_xpm
+         generic map(
+            fifo_write_depth => 1024,
+            data_width => 8,
+            showahead_mode => true
+        )
+         port map(
+            wclk => clk_125m,
+            reset => fifo_reset,
+            write_en => flash_wfifo_write,
+            wdata => flash_wfifo_data,
+            wfull => open,
+            wusedwds => open,
+            rclk => clk_125m,
+            rdata => espi_wfifo_rdata,
+            rdreq => espi_wfifo_rdack,
+            rempty => espi_wfifo_rempty,
+            rusedwds => open
+        );
+    else generate
+        espi_wfifo_rdata <= (others => '0');
+        espi_wfifo_rempty <= '1';
+    end generate;
+
     espi_target_top_inst: entity work.espi_target_top
+     generic map(
+        FLASH_WRITES_ALLOWED => FLASH_WRITES_ALLOWED,
+        POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED
+     )
      port map(
         clk_200m => clk_200m,
         reset_200m => reset_200m,
@@ -151,6 +202,8 @@ begin
         flash_rfifo_data => flash_rfifo_data,
         flash_rfifo_rdack => flash_rfifo_rdack,
         flash_rfifo_rempty => flash_rfifo_rempty,
+        flash_wfifo_data => flash_wfifo_data,
+        flash_wfifo_write => flash_wfifo_write,
         to_sp_uart_data => ipcc_uart_from_espi.data, 
         to_sp_uart_valid => ipcc_uart_from_espi.valid,
         to_sp_uart_ready => ipcc_uart_from_espi.ready,
@@ -167,14 +220,14 @@ begin
            -- round trip out to the flash and back has to land within half an
            -- sclk period of rx_sample_taps, and above this rate that window
            -- closes. Faster would need per-lane IDELAY read training.
-           sclk_divisor => 0,
+           sclk_divisor => SPI_NOR_SCLK_DIVISOR,
            -- Sample 8ns after the sclk rising edge. Taps are in half-clk (4ns)
            -- steps. With the flash IO flops packed into the IOBs the round trip
            -- out and back is bounded to roughly 3.7..11.6ns, which puts the
            -- usable sample window at 3.6..11.7ns; 8ns sits about 4ns clear of
            -- either end. cosmo_timing.xdc carries the arithmetic. Sweep this on
            -- hardware if reads come back corrupted.
-           rx_sample_taps => 2,
+           rx_sample_taps => SPI_NOR_RX_SAMPLE_TAPS,
             cs_setup_cnts => 4,
             cs_high_cnts  => 7
         )
@@ -193,6 +246,9 @@ begin
            espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
            espi_data_fifo_wdata => espi_data_fifo_wdata,
            espi_data_fifo_write => espi_data_fifo_write,
+           espi_wfifo_rdata => espi_wfifo_rdata,
+           espi_wfifo_rdack => espi_wfifo_rdack,
+           espi_wfifo_rempty => espi_wfifo_rempty,
            hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
            hash_cmd_fifo_rdack => hash_cmd_fifo_rdack,
            hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,

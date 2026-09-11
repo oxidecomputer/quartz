@@ -30,6 +30,7 @@ entity txn_layer_top is
         flash_np_free : in    std_logic;
         flash_c_avail : in    std_logic;
         -- flash channel requests/responses
+        flash_writes_allowed : in std_logic;
         flash_req  : view flash_chan_req_source;
         flash_resp : view flash_chan_resp_sink;
         -- uart channel requests/responses
@@ -128,6 +129,7 @@ begin
             espi_reset      => espi_reset,
             regs_if         => regs_if,
             vwire_if        => vwire_if,
+            flash_writes_allowed => flash_writes_allowed,
             flash_req       => flash_req,
             host_to_sp_espi => host_to_sp_espi,
             running_crc     => rx_running_crc,

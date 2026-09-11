@@ -222,7 +222,15 @@ begin
                 if data_to_host.ready then
                     v.resp_idx := r.resp_idx + 1;
                     if r.resp_idx = 2 then
-                        v.state := RESPONSE_PAYLOAD;
+                        -- A write or erase completes with no payload at all;
+                        -- counting one down from a zero length would run the
+                        -- payload stage for 4096 bytes.
+                        if r.temp_length = 0 then
+                            v.state := STATUS;
+                            v.status := live_status;
+                        else
+                            v.state := RESPONSE_PAYLOAD;
+                        end if;
                     end if;
                 end if;
             when RESPONSE_UART_HEADER =>

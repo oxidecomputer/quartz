@@ -1,0 +1,53 @@
+{
+  "seed": 478,
+  "steps": [
+    {
+      "divisor": 2,
+      "freq_mhz": 100.0,
+      "ok": true,
+      "udp_timeouts_retried": 9,
+      "phases": {
+        "A_const_reads": {
+          "ok": true,
+          "values": [
+            "0x000001de"
+          ]
+        },
+        "B_scratch": {
+          "ok": true,
+          "patterns": 68,
+          "mismatches": []
+        },
+        "C_stress": {
+          "ok": true,
+          "write_burst": 1024,
+          "read_words": 1024,
+          "mismatches": []
+        },
+        "D_soak": {
+          "ok": true,
+          "ops": 14923578,
+          "mismatches": []
+        },
+        "E_throughput": {
+          "ok": true,
+          "wire_write_MBps": 1.224,
+          "wire_read_MBps": 0.997,
+          "single_read_us": 226.8,
+          "fmc_read_MBps": 11.39,
+          "fmc_read_ns_per_word": 351,
+          "fmc_read_fixed_ns_per_word": 309,
+          "fmc_write_MBps": 49.98,
+          "fmc_write_ns_per_word": 80,
+          "note": "fmc_* numbers are bus line rate (delta-timed block ops); wire_* include per-word network cost and are insensitive to the FMC clock"
+        }
+      },
+      "btr1": "0x0010ffff",
+      "clkdiv_verified": true,
+      "sp_ticks_before": 48439,
+      "sp_ticks_after": 3649492,
+      "sp_rebooted": false
+    }
+  ],
+  "restored_baseline_ok": true
+}

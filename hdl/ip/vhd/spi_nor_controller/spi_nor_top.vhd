@@ -46,6 +46,13 @@ entity spi_nor_top is
         -- requested address
         espi_data_fifo_wdata : out std_logic_vector(7 downto 0);
         espi_data_fifo_write : out std_logic;
+        -- Host to flash bytes for an eSPI write command. The eSPI side pushes
+        -- a whole payload before the command that consumes it, so this is
+        -- never read while empty. Tie rempty high on a design whose eSPI
+        -- instance cannot write.
+        espi_wfifo_rdata : in std_logic_vector(7 downto 0) := (others => '0');
+        espi_wfifo_rdack : out std_logic;
+        espi_wfifo_rempty : in std_logic := '1';
 
         -- Second flash read client, same command/response FIFO shape as the eSPI
         -- one above. Used by the hashing engine. Addresses here are raw: none of
@@ -82,6 +89,10 @@ architecture rtl of spi_nor_top is
     signal   rx_fifo_write8       : std_logic;
     signal   tx_fifo_read8        : std_logic;
     signal   tx_fifo_data8        : std_logic_vector(7 downto 0);
+    -- The byte stream the engine actually shifts out, and where it comes from
+    signal   tx_byte              : std_logic_vector(7 downto 0);
+    signal   tx_byte_ack          : std_logic;
+    signal   tx_from_espi         : std_logic;
     signal   rx_fifo_wdat8        : std_logic_vector(7 downto 0);
     signal   tx_fifo_data32       : std_logic_vector(31 downto 0);
     signal   read_ack32           : std_logic;
@@ -178,8 +189,8 @@ begin
             sclk_running  => sclk_running,
             release_lanes => release_lanes,
             cur_io_mode   => cur_io_mode,
-            tx_fifo_ack   => tx_fifo_read8,
-            tx_fifo_data  => tx_fifo_data8,
+            tx_fifo_ack   => tx_byte_ack,
+            tx_fifo_data  => tx_byte,
             rx_fifo_data  => rx_fifo_wdat8,
             rx_fifo_write => rx_fifo_write8
         );
@@ -226,6 +237,13 @@ begin
                   espi_cmd;
 
     sp5_owns_flash <= spicr_reg.sp5_owns_flash;
+
+    -- Outbound bytes normally come from hubris' TX FIFO; during an eSPI page
+    -- program they come from the eSPI write payload FIFO instead. The engine
+    -- acks whichever it is reading.
+    tx_byte <= espi_wfifo_rdata when tx_from_espi = '1' else tx_fifo_data8;
+    tx_fifo_read8 <= tx_byte_ack when tx_from_espi = '0' else '0';
+    espi_wfifo_rdack <= tx_byte_ack when tx_from_espi = '1' else '0';
     -- TODO: this would be more simple with a mixed width fifo
     -- but this was faster than digging around making a new wrapper
     -- for now
@@ -366,6 +384,7 @@ begin
          reset => reset,
          espi_cmd => espi_cmd,
          spi_hw_busy => spisr_reg.busy,
+         tx_from_espi => tx_from_espi,
          espi_reads_allowed => spicr_reg.sp5_owns_flash,
          sp_host_image_flash_addr_offset => signed(sp5_flash_offset.offset),
          amd_begin_apob_flash_addr => apob_flash_addr.offset,
