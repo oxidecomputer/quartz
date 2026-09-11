@@ -26,7 +26,9 @@ entity espi_target_top is
         -- leaves it gated by the flash_write_enable control bit, which
         -- resets to off. Refused writes and erases get an unsuccessful
         -- completion.
-        FLASH_WRITES_ALLOWED : boolean := false
+        FLASH_WRITES_ALLOWED : boolean := false;
+        -- Whether to keep the 4k entry post code buffer, see espi_regs.
+        POST_CODE_BUFFER_ENABLED : boolean := true
     );
     port (
         clk   : in    std_logic;
@@ -265,6 +267,9 @@ begin
    chip_sel_active <= not txn_csn;
     -- system (axi-lite) register block
    espi_sys_regs_inst: entity work.espi_regs
+    generic map(
+       POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED
+    )
     port map(
        clk => clk,
        reset => reset,
