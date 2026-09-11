@@ -336,6 +336,26 @@ begin
                 -- and the engine still works afterwards
                 run_local(0, 32, "hash after a rejected start");
 
+            elsif run("reject_aux_on_single_flash") then
+                -- This bench builds the engine with the default NUM_FLASHES of
+                -- one, so asking for the second flash is a configuration error
+                -- like any other, and the engine must not go busy on it.
+                write_reg(net, CONFIG_OFFSET, pack(config_type'(source => AUX_QSPI)));
+                write_reg(net, PREPEND_OFFSET, To_StdLogicVector(0, 32));
+                write_reg(net, LENGTH_OFFSET, To_StdLogicVector(64, 32));
+                write_reg(net, FLASH_ADDR_OFFSET, To_StdLogicVector(0, 32));
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                wait for 2 us;
+
+                read_reg(net, STATUS_OFFSET, status);
+                check_equal((status and STATUS_CFG_ERR_MASK) /= (status'range => '0'), true,
+                            "AUX_QSPI on a single-flash engine should set cfg_err");
+                check_equal((status and STATUS_BUSY_MASK) = (status'range => '0'), true,
+                            "should never go busy");
+
+                -- and the engine still works afterwards
+                run_local(0, 32, "hash after a rejected aux start");
+
             elsif run("reject_prepend_gt_length") then
                 configure(CFG_LOCAL, 100, 50, 0);
                 write_reg(net, CONTROL_OFFSET, START_CMD);

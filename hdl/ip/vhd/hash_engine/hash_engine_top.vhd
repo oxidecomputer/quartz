@@ -28,6 +28,12 @@ use work.keccak_pkg.all;
 -- reset. This block never asks for it to be flushed: an abandoned read is dealt
 -- with by consuming the bytes still owed, see hash_feeder.
 entity hash_engine_top is
+    generic (
+        -- How many spi_nor flash clients hang off this engine. CONFIG.source
+        -- picks between them for a run; AUX_QSPI is a configuration error
+        -- when there is only one.
+        NUM_FLASHES : natural range 1 to 2 := 1
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -35,14 +41,20 @@ entity hash_engine_top is
         -- Axilite interface
         axi_if : view axil_target;
 
-        -- Flash read command FIFO: word 0 is a byte address, word 1 a byte count
-        cmd_fifo_wdata : out   std_logic_vector(31 downto 0);
-        cmd_fifo_write : out   std_logic;
-
-        -- Flash read response FIFO, showahead so rdack is a read acknowledge
-        rsp_fifo_rdata  : in    std_logic_vector(7 downto 0);
-        rsp_fifo_rdack  : out   std_logic;
-        rsp_fifo_rempty : in    std_logic
+        -- The spi_nor side of the engine's own command and response FIFOs, one
+        -- pair per flash. These match spi_nor_top's hash client port shape:
+        -- the flash pops commands (word 0 a byte address, word 1 a byte count)
+        -- and pushes response bytes. Only the flash selected for the run in
+        -- flight ever sees a non-empty command FIFO, so the others sit idle.
+        flash_cmd_rdata  : out   std_logic_vector(31 downto 0);
+        flash_cmd_rdack  : in    std_logic_vector(NUM_FLASHES - 1 downto 0);
+        flash_cmd_rempty : out   std_logic_vector(NUM_FLASHES - 1 downto 0);
+        flash_rsp_wdata  : in    std_logic_vector(NUM_FLASHES * 8 - 1 downto 0);
+        flash_rsp_write  : in    std_logic_vector(NUM_FLASHES - 1 downto 0);
+        -- Backpressure for clients that honour it. spi_nor_top does not (its
+        -- raw_flash_txn_mgr paces itself off the SPI link), but a behavioural
+        -- responder in simulation can push a byte a cycle and needs it.
+        flash_rsp_wfull  : out   std_logic_vector(NUM_FLASHES - 1 downto 0)
     );
 end entity;
 
@@ -76,6 +88,20 @@ architecture rtl of hash_engine_top is
     signal msg_stream   : axi_st8_pkg.axi_st_pkt_t;
     signal digest       : digest_t;
     signal digest_valid : std_logic;
+
+    -- Feeder side of the flash client FIFOs
+    signal cmd_fifo_wdata  : std_logic_vector(31 downto 0);
+    signal cmd_fifo_write  : std_logic;
+    signal cmd_fifo_rdack  : std_logic;
+    signal cmd_fifo_rempty : std_logic;
+    signal rsp_fifo_wdata  : std_logic_vector(7 downto 0);
+    signal rsp_fifo_write  : std_logic;
+    signal rsp_fifo_rdata  : std_logic_vector(7 downto 0);
+    signal rsp_fifo_rdack  : std_logic;
+    signal rsp_fifo_rempty : std_logic;
+    signal rsp_fifo_wfull  : std_logic;
+    -- Which flash the run in flight is reading, latched by the feeder at start
+    signal flash_sel : natural range 0 to NUM_FLASHES - 1;
 
 begin
 
@@ -123,6 +149,9 @@ begin
         );
 
     hash_feeder_inst: entity work.hash_feeder
+        generic map (
+            NUM_FLASHES => NUM_FLASHES
+        )
         port map (
             clk             => clk,
             reset           => reset,
@@ -144,12 +173,73 @@ begin
             sw_fifo_rdack   => sw_fifo_rdack,
             sw_fifo_rempty  => sw_fifo_rempty,
             sw_fifo_clear   => sw_clear,
+            flash_sel       => flash_sel,
             cmd_fifo_wdata  => cmd_fifo_wdata,
             cmd_fifo_write  => cmd_fifo_write,
             rsp_fifo_rdata  => rsp_fifo_rdata,
             rsp_fifo_rdack  => rsp_fifo_rdack,
             rsp_fifo_rempty => rsp_fifo_rempty
         );
+
+    -- Flash client FIFOs. One pair serves every flash: the selected flash is
+    -- the only one shown a non-empty command FIFO and the only one whose
+    -- response writes are taken, so the FIFOs never see two clients at once.
+    -- flash_sel holds still for the whole run, which is what lets this be a
+    -- plain mux rather than an arbiter.
+    cmd_fifo: entity work.dcfifo_xpm
+        generic map (
+            fifo_write_depth => 256,
+            data_width       => 32,
+            showahead_mode   => true
+        )
+        port map (
+            wclk     => clk,
+            reset    => reset,
+            write_en => cmd_fifo_write,
+            wdata    => cmd_fifo_wdata,
+            wfull    => open,
+            wusedwds => open,
+            rclk     => clk,
+            rdata    => flash_cmd_rdata,
+            rdreq    => cmd_fifo_rdack,
+            rempty   => cmd_fifo_rempty,
+            rusedwds => open
+        );
+
+    rsp_fifo: entity work.dcfifo_xpm
+        generic map (
+            fifo_write_depth => 256,
+            data_width       => 8,
+            showahead_mode   => true
+        )
+        port map (
+            wclk     => clk,
+            reset    => reset,
+            write_en => rsp_fifo_write,
+            wdata    => rsp_fifo_wdata,
+            wfull    => rsp_fifo_wfull,
+            wusedwds => open,
+            rclk     => clk,
+            rdata    => rsp_fifo_rdata,
+            rdreq    => rsp_fifo_rdack,
+            rempty   => rsp_fifo_rempty,
+            rusedwds => open
+        );
+
+    flash_mux: process(all)
+    begin
+        cmd_fifo_rdack <= flash_cmd_rdack(flash_sel);
+        rsp_fifo_wdata <= flash_rsp_wdata(flash_sel * 8 + 7 downto flash_sel * 8);
+        rsp_fifo_write <= flash_rsp_write(flash_sel);
+        flash_rsp_wfull <= (others => rsp_fifo_wfull);
+        for i in 0 to NUM_FLASHES - 1 loop
+            if i = flash_sel then
+                flash_cmd_rempty(i) <= cmd_fifo_rempty;
+            else
+                flash_cmd_rempty(i) <= '1';
+            end if;
+        end loop;
+    end process;
 
     -- Also report full while the FIFO is being flushed at the tail of a run, so a
     -- processor that polls before writing cannot push bytes into a FIFO that is in

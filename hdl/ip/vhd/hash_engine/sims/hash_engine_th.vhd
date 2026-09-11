@@ -14,10 +14,9 @@ library vunit_lib;
 use work.axil8x32_pkg;
 use work.hash_engine_sim_pkg.all;
 
--- The command and response FIFOs are real dcfifo_xpm instances here, not
--- behavioural stand-ins, because an integrating design owns them exactly like the
--- eSPI subsystem does. Neither is reset by the DUT: the engine resynchronises the
--- response channel by draining it, not by flushing.
+-- The engine owns its command and response FIFOs, so this harness only supplies
+-- what sits on their far side: a behavioural flash responder where spi_nor_top
+-- would be. hash_spi_nor_tb is the one that goes through the real controller.
 entity hash_engine_th is
 end entity;
 
@@ -28,18 +27,13 @@ architecture th of hash_engine_th is
 
     signal axi_bus : axil8x32_pkg.axil_t;
 
-    signal cmd_fifo_wdata : std_logic_vector(31 downto 0);
-    signal cmd_fifo_write : std_logic;
     signal cmd_fifo_rdata : std_logic_vector(31 downto 0);
-    signal cmd_fifo_rdack : std_logic;
-    signal cmd_fifo_empty : std_logic;
+    signal cmd_fifo_rdack : std_logic_vector(0 downto 0);
+    signal cmd_fifo_empty : std_logic_vector(0 downto 0);
 
     signal rsp_fifo_wdata : std_logic_vector(7 downto 0);
-    signal rsp_fifo_write : std_logic;
-    signal rsp_fifo_wfull : std_logic;
-    signal rsp_fifo_rdata : std_logic_vector(7 downto 0);
-    signal rsp_fifo_rdack : std_logic;
-    signal rsp_fifo_empty : std_logic;
+    signal rsp_fifo_write : std_logic_vector(0 downto 0);
+    signal rsp_fifo_wfull : std_logic_vector(0 downto 0);
 
 
 begin
@@ -74,66 +68,29 @@ begin
 
     dut: entity work.hash_engine_top
         port map (
-            clk             => clk,
-            reset           => reset,
-            axi_if          => axi_bus,
-            cmd_fifo_wdata  => cmd_fifo_wdata,
-            cmd_fifo_write  => cmd_fifo_write,
-            rsp_fifo_rdata  => rsp_fifo_rdata,
-            rsp_fifo_rdack  => rsp_fifo_rdack,
-            rsp_fifo_rempty => rsp_fifo_empty
+            clk              => clk,
+            reset            => reset,
+            axi_if           => axi_bus,
+            flash_cmd_rdata  => cmd_fifo_rdata,
+            flash_cmd_rdack  => cmd_fifo_rdack,
+            flash_cmd_rempty => cmd_fifo_empty,
+            flash_rsp_wdata  => rsp_fifo_wdata,
+            flash_rsp_write  => rsp_fifo_write,
+            flash_rsp_wfull  => rsp_fifo_wfull
         );
 
-    cmd_fifo: entity work.dcfifo_xpm
-        generic map (
-            fifo_write_depth => 256,
-            data_width       => 32,
-            showahead_mode   => true
-        )
-        port map (
-            wclk     => clk,
-            reset    => reset,
-            write_en => cmd_fifo_write,
-            wdata    => cmd_fifo_wdata,
-            wfull    => open,
-            wusedwds => open,
-            rclk     => clk,
-            rdata    => cmd_fifo_rdata,
-            rdreq    => cmd_fifo_rdack,
-            rempty   => cmd_fifo_empty,
-            rusedwds => open
-        );
-
-    rsp_fifo: entity work.dcfifo_xpm
-        generic map (
-            fifo_write_depth => 256,
-            data_width       => 8,
-            showahead_mode   => true
-        )
-        port map (
-            wclk     => clk,
-            reset    => reset,
-            write_en => rsp_fifo_write,
-            wdata    => rsp_fifo_wdata,
-            wfull    => rsp_fifo_wfull,
-            wusedwds => open,
-            rclk     => clk,
-            rdata    => rsp_fifo_rdata,
-            rdreq    => rsp_fifo_rdack,
-            rempty   => rsp_fifo_empty,
-            rusedwds => open
-        );
-
+    -- The engine owns the command and response FIFOs now; the responder sits
+    -- directly on their far ends, where spi_nor_top would in a real design.
     fake_flash: entity work.fake_flash_responder
         port map (
             clk        => clk,
             reset      => reset,
             cmd_rdata  => cmd_fifo_rdata,
-            cmd_rdack  => cmd_fifo_rdack,
-            cmd_rempty => cmd_fifo_empty,
-            rsp_wdata  => rsp_fifo_wdata,
-            rsp_write  => rsp_fifo_write,
-            rsp_wfull  => rsp_fifo_wfull
+            cmd_rdack  => cmd_fifo_rdack(0),
+            cmd_rempty => cmd_fifo_empty(0),
+            rsp_wdata  => rsp_fifo_wdata(7 downto 0),
+            rsp_write  => rsp_fifo_write(0),
+            rsp_wfull  => rsp_fifo_wfull(0)
         );
 
 end th;

@@ -214,19 +214,13 @@ architecture rtl of grapefruit_top is
     signal fabric_responders : axil32x32_pkg.axil_array_t(config_array'range);
     signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);
      signal responders_15b : axil15x32_pkg.axil_array_t(config_array'range);
-    -- Hashing engine <-> spi_nor_top, the same shape as the eSPI pair below.
-    -- Reset from reset_125m only: the engine resynchronises its own response
-    -- channel by draining it, so nothing else should be clearing these.
-    signal hash_cmd_fifo_wdata : std_logic_vector(31 downto 0);
-    signal hash_cmd_fifo_write : std_logic;
+    -- Hashing engine <-> spi_nor_top's hash client port. The engine owns the
+    -- FIFOs on this path; these are their spi_nor-side ends, one flash.
     signal hash_cmd_fifo_rdata : std_logic_vector(31 downto 0);
-    signal hash_cmd_fifo_rdack : std_logic;
-    signal hash_cmd_fifo_rempty : std_logic;
+    signal hash_cmd_fifo_rdack : std_logic_vector(0 downto 0);
+    signal hash_cmd_fifo_rempty : std_logic_vector(0 downto 0);
     signal hash_data_fifo_wdata : std_logic_vector(7 downto 0);
-    signal hash_data_fifo_write : std_logic;
-    signal hash_rsp_fifo_rdata : std_logic_vector(7 downto 0);
-    signal hash_rsp_fifo_rdack : std_logic;
-    signal hash_rsp_fifo_rempty : std_logic;
+    signal hash_data_fifo_write : std_logic_vector(0 downto 0);
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
     signal espi_cmd_fifo_rdack : std_logic;
     signal espi_cmd_fifo_rempty : std_logic;
@@ -383,52 +377,11 @@ begin
         espi_data_fifo_wdata => espi_data_fifo_wdata,
         espi_data_fifo_write => espi_data_fifo_write,
         hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
-        hash_cmd_fifo_rdack => hash_cmd_fifo_rdack,
-        hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,
+        hash_cmd_fifo_rdack => hash_cmd_fifo_rdack(0),
+        hash_cmd_fifo_rempty => hash_cmd_fifo_rempty(0),
         hash_data_fifo_wdata => hash_data_fifo_wdata,
-        hash_data_fifo_write => hash_data_fifo_write
+        hash_data_fifo_write => hash_data_fifo_write(0)
 
-    );
-
-    -- Hashing engine -> SPI NOR
-    hash_spinor_cmd_fifo: entity work.dcfifo_xpm
-     generic map(
-        fifo_write_depth => 256,
-        data_width => 32,
-        showahead_mode => true
-    )
-     port map(
-        wclk => clk_125m,
-        reset => reset_125m,
-        write_en => hash_cmd_fifo_write,
-        wdata => hash_cmd_fifo_wdata,
-        wfull => open,
-        wusedwds => open,
-        rclk => clk_125m,
-        rdata => hash_cmd_fifo_rdata,
-        rdreq => hash_cmd_fifo_rdack,
-        rempty => hash_cmd_fifo_rempty,
-        rusedwds => open
-    );
-    -- SPI NOR -> hashing engine
-    hash_spinor_data_fifo: entity work.dcfifo_xpm
-     generic map(
-        fifo_write_depth => 256,
-        data_width => 8,
-        showahead_mode => true
-    )
-     port map(
-        wclk => clk_125m,
-        reset => reset_125m,
-        write_en => hash_data_fifo_write,
-        wdata => hash_data_fifo_wdata,
-        wfull => open,
-        wusedwds => open,
-        rclk => clk_125m,
-        rdata => hash_rsp_fifo_rdata,
-        rdreq => hash_rsp_fifo_rdack,
-        rempty => hash_rsp_fifo_rempty,
-        rusedwds => open
     );
 
     resize_axil(fabric_responders(4), responders_8b(4));
@@ -437,11 +390,11 @@ begin
         clk => clk_125m,
         reset => reset_125m,
         axi_if => responders_8b(4),
-        cmd_fifo_wdata => hash_cmd_fifo_wdata,
-        cmd_fifo_write => hash_cmd_fifo_write,
-        rsp_fifo_rdata => hash_rsp_fifo_rdata,
-        rsp_fifo_rdack => hash_rsp_fifo_rdack,
-        rsp_fifo_rempty => hash_rsp_fifo_rempty
+        flash_cmd_rdata => hash_cmd_fifo_rdata,
+        flash_cmd_rdack => hash_cmd_fifo_rdack,
+        flash_cmd_rempty => hash_cmd_fifo_rempty,
+        flash_rsp_wdata => hash_data_fifo_wdata,
+        flash_rsp_write => hash_data_fifo_write
     );
 
      -- eSPI block -> SPI NOR  

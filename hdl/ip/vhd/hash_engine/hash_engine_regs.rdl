@@ -40,6 +40,9 @@ addrmap hash_engine_regs {
         enum source_select {
             LOCAL_REG = 4'h0 {desc = "Bytes come from processor writes to WDATA";};
             HOST_QSPI = 4'h1 {desc = "Bytes are fetched from the host QSPI flash starting at FLASH_ADDR";};
+            AUX_QSPI = 4'h2 {desc = "Bytes are fetched from the second QSPI flash starting at
+            FLASH_ADDR. Only designs with two flashes have one; elsewhere a start with
+            this source is refused as a configuration error.";};
         };
 
         field {

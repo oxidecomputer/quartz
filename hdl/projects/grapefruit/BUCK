@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "black_box")
+load("//tools:hdl.bzl", "vhdl_unit", "black_box", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
@@ -102,4 +102,14 @@ vivado_bitstream(
 python_library(
     name = 'drivers',
     srcs = glob(["integration/drivers/*.py"]),
+)
+
+# Analysis-only: vhdl_unit collects sources but does not run a compiler, so
+# without this nothing type-checks grapefruit_top until Vivado synthesis.
+vunit_sim(
+    name = "grapefruit_top_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [":grapefruit_top"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
 )

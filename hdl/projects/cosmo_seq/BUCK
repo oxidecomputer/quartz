@@ -70,6 +70,7 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/common:tristate_if_pkg",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
+        "//hdl/ip/vhd/hash_engine:hash_engine_top",
         "//hdl/projects/cosmo_seq/sp5_espi_flash_subsystem:sp5_espi_flash_subsystem",
         "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
         "//hdl/projects/cosmo_seq/sequencer:sequencer",

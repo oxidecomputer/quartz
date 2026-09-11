@@ -375,6 +375,13 @@ architecture rtl of cosmo_seq_top is
     signal spinor_io_oe : std_logic_vector(3 downto 0);
     signal espi_io_o : std_logic_vector(3 downto 0);
     signal espi_io_oe : std_logic_vector(3 downto 0);
+    -- hash engine <-> spi_nor flash client port(s)
+    constant HASH_NUM_FLASHES : natural := 1;
+    signal hash_flash_cmd_rdata : std_logic_vector(31 downto 0);
+    signal hash_flash_cmd_rdack : std_logic_vector(HASH_NUM_FLASHES - 1 downto 0);
+    signal hash_flash_cmd_rempty : std_logic_vector(HASH_NUM_FLASHES - 1 downto 0);
+    signal hash_flash_rsp_wdata : std_logic_vector(HASH_NUM_FLASHES * 8 - 1 downto 0);
+    signal hash_flash_rsp_write : std_logic_vector(HASH_NUM_FLASHES - 1 downto 0);
 
     signal ipcc_uart_from_espi_axi_st : axi_st8_pkg.axi_st_t;
     signal ipcc_uart_to_espi_axi_st : axi_st8_pkg.axi_st_t;
@@ -564,7 +571,29 @@ begin
         spi_nor_dat => spi_fpga1_to_flash_dat,
         spi_nor_dat_o => spinor_io_o,
         spi_nor_dat_oe => spinor_io_oe,
-        hash_axi_if => responders_8b(HASH_RESP_IDX)
+        hash_cmd_fifo_rdata => hash_flash_cmd_rdata,
+        hash_cmd_fifo_rdack => hash_flash_cmd_rdack(0),
+        hash_cmd_fifo_rempty => hash_flash_cmd_rempty(0),
+        hash_data_fifo_wdata => hash_flash_rsp_wdata(7 downto 0),
+        hash_data_fifo_write => hash_flash_rsp_write(0)
+    );
+
+    -- SHA3 hashing engine. It reads flash through spi_nor_top's second client
+    -- port and owns the FIFOs on that path; it sits here rather than inside the
+    -- eSPI wrapper so one engine can serve more than one flash.
+    hash_engine_inst: entity work.hash_engine_top
+     generic map(
+        NUM_FLASHES => HASH_NUM_FLASHES
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders_8b(HASH_RESP_IDX),
+        flash_cmd_rdata => hash_flash_cmd_rdata,
+        flash_cmd_rdack => hash_flash_cmd_rdack,
+        flash_cmd_rempty => hash_flash_cmd_rempty,
+        flash_rsp_wdata => hash_flash_rsp_wdata,
+        flash_rsp_write => hash_flash_rsp_write
     );
     --Tristates for spi-nor flash pins and espi
     spi_nor_espi_tris:process(all)
