@@ -35,11 +35,24 @@ vhdl_unit(
     visibility = ["PUBLIC"],
 )
 
+# Shared with metro_seq, which carries its own board_support but the same
+# FMC clock arrangement.
+vhdl_unit(
+    name = "fmc_clk_monitor",
+    srcs = ["board_support/fmc_clk_monitor.vhd"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)
+
 vhdl_unit(
     name = "board_support",
-    srcs = glob(["board_support/*.vhd"], exclude = ["board_support/reset_sync.vhd"]),
+    srcs = glob(["board_support/*.vhd"], exclude = [
+        "board_support/reset_sync.vhd",
+        "board_support/fmc_clk_monitor.vhd",
+    ]),
     deps = [
         ":reset_sync",
+        ":fmc_clk_monitor",
         ":cosmo_black_boxes",
         "//hdl/ip/vhd/info:info",
     ],
