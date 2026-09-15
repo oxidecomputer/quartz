@@ -27,12 +27,25 @@ use work.keccak_pkg.all;
 -- The integrator should hold the response FIFO in reset only from the global
 -- reset. This block never asks for it to be flushed: an abandoned read is dealt
 -- with by consuming the bytes still owed, see hash_feeder.
+--
+-- Besides the register interface there is a hardware request: a sequencer can
+-- raise hw_req to have a flash range (HW_FLASH_ADDR/HW_LENGTH, on the flash
+-- HW_FLASH_SEL names) hashed without software in the loop, and gets hw_ack
+-- back once the run is over, with hw_err saying whether it produced a digest.
+-- The digest is kept in its own registers so that a later software run does
+-- not overwrite it. A request that lands while a software run is in flight is
+-- refused rather than restarting the run; software starts that land while a
+-- hardware run is in flight are dropped. Four-phase: the requester holds
+-- hw_req until it sees hw_ack, and hw_ack drops once hw_req does.
 entity hash_engine_top is
     generic (
         -- How many spi_nor flash clients hang off this engine. CONFIG.source
         -- picks between them for a run; AUX_QSPI is a configuration error
         -- when there is only one.
-        NUM_FLASHES : natural range 1 to 2 := 1
+        NUM_FLASHES : natural range 1 to 2 := 1;
+        -- Which flash a hardware request reads: 0 the host flash, 1 the aux
+        -- flash (which needs NUM_FLASHES = 2).
+        HW_FLASH_SEL : natural range 0 to 1 := 0
     );
     port (
         clk   : in    std_logic;
@@ -40,6 +53,12 @@ entity hash_engine_top is
 
         -- Axilite interface
         axi_if : view axil_target;
+
+        -- Hardware request, see above. Leave hw_req unconnected on a design
+        -- without a requester.
+        hw_req : in    std_logic := '0';
+        hw_ack : out   std_logic;
+        hw_err : out   std_logic;
 
         -- The spi_nor side of the engine's own command and response FIFOs, one
         -- pair per flash. These match spi_nor_top's hash client port shape:
@@ -70,6 +89,36 @@ architecture rtl of hash_engine_top is
     signal prepend    : prepend_type;
     signal flash_addr : flash_addr_type;
     signal msg_length : length_type;
+
+    -- What the feeder actually sees: the software registers, or the hardware
+    -- request's configuration while one of those is in flight.
+    signal feeder_start      : std_logic;
+    signal feeder_cfg        : config_type;
+    signal feeder_prepend    : prepend_type;
+    signal feeder_flash_addr : flash_addr_type;
+    signal feeder_length     : length_type;
+
+    signal hw_flash_addr : hw_flash_addr_type;
+    signal hw_length     : hw_length_type;
+    signal hw_status     : hw_status_type;
+    signal hw_digest     : std_logic_vector(255 downto 0);
+
+    type hw_state_t is (idle, starting, running, acked);
+    type hw_reg_t is record
+        state   : hw_state_t;
+        start   : std_logic;
+        active  : std_logic;
+        ack     : std_logic;
+        err     : std_logic;
+        settle  : natural range 0 to 3;
+        status  : hw_status_type;
+        digest  : std_logic_vector(255 downto 0);
+    end record;
+    constant hw_reg_reset : hw_reg_t := (
+        state => idle, start => '0', active => '0', ack => '0', err => '0',
+        settle => 0, status => rec_reset, digest => (others => '0')
+    );
+    signal hw_r : hw_reg_t;
 
     signal status   : status_type;
     signal progress : progress_type;
@@ -119,9 +168,87 @@ begin
             status           => status,
             progress         => progress,
             digest           => digest,
+            hw_flash_addr    => hw_flash_addr,
+            hw_length        => hw_length,
+            hw_status        => hw_status,
+            hw_digest        => hw_digest,
             wdata_fifo_wdata => sw_fifo_wdata,
             wdata_fifo_write => sw_fifo_write
         );
+
+    -- Hardware request sequencing. The feeder latches its configuration on the
+    -- cycle it accepts a start, so the mux below only has to hold for as long as
+    -- the request is active, which it does.
+    feeder_start <= hw_r.start when hw_r.active = '1' else start_strobe;
+    feeder_cfg <= (source => AUX_QSPI) when hw_r.active = '1' and HW_FLASH_SEL = 1 else
+                  (source => HOST_QSPI) when hw_r.active = '1' else
+                  cfg;
+    feeder_prepend <= (count => (others => '0')) when hw_r.active = '1' else prepend;
+    feeder_flash_addr <= (addr => hw_flash_addr.addr) when hw_r.active = '1' else flash_addr;
+    feeder_length <= (count => hw_length.count) when hw_r.active = '1' else msg_length;
+
+    hw_ack <= hw_r.ack;
+    hw_err <= hw_r.err;
+    hw_status <= hw_r.status;
+    hw_digest <= hw_r.digest;
+
+    hw_request: process(clk, reset)
+    begin
+        if reset then
+            hw_r <= hw_reg_reset;
+        elsif rising_edge(clk) then
+            hw_r.start <= '0';
+            case hw_r.state is
+                when idle =>
+                    if hw_req = '1' then
+                        hw_r.status <= rec_reset;
+                        hw_r.err <= '0';
+                        if status.busy = '1' then
+                            -- A software run owns the engine; do not restart
+                            -- it out from under whoever started it.
+                            hw_r.status.engine_busy <= '1';
+                            hw_r.err <= '1';
+                            hw_r.ack <= '1';
+                            hw_r.state <= acked;
+                        else
+                            hw_r.active <= '1';
+                            hw_r.start <= '1';
+                            hw_r.status.busy <= '1';
+                            hw_r.settle <= 0;
+                            hw_r.state <= starting;
+                        end if;
+                    end if;
+                when starting =>
+                    -- The feeder answers a start two cycles later, with either
+                    -- busy or cfg_err. Neither is ours to look at before then.
+                    if hw_r.settle = 2 then
+                        hw_r.state <= running;
+                    else
+                        hw_r.settle <= hw_r.settle + 1;
+                    end if;
+                when running =>
+                    if status.cfg_err = '1' or status.aborted = '1' or
+                       (status.busy = '0' and status.done = '1') then
+                        hw_r.status.busy <= '0';
+                        hw_r.status.cfg_err <= status.cfg_err;
+                        hw_r.status.aborted <= status.aborted;
+                        hw_r.status.done <= status.done and not status.aborted;
+                        hw_r.err <= status.cfg_err or status.aborted;
+                        if status.done = '1' and status.aborted = '0' then
+                            hw_r.digest <= digest;
+                        end if;
+                        hw_r.active <= '0';
+                        hw_r.ack <= '1';
+                        hw_r.state <= acked;
+                    end if;
+                when acked =>
+                    if hw_req = '0' then
+                        hw_r.ack <= '0';
+                        hw_r.state <= idle;
+                    end if;
+            end case;
+        end if;
+    end process;
 
     -- Software data path. Written 32 bits at a time by the processor and read a
     -- byte at a time by the feeder, least significant byte first.
@@ -155,12 +282,12 @@ begin
         port map (
             clk             => clk,
             reset           => reset,
-            start_strobe    => start_strobe,
+            start_strobe    => feeder_start,
             abort_strobe    => abort_strobe,
-            cfg             => cfg,
-            prepend         => prepend,
-            flash_addr      => flash_addr,
-            msg_length      => msg_length,
+            cfg             => feeder_cfg,
+            prepend         => feeder_prepend,
+            flash_addr      => feeder_flash_addr,
+            msg_length      => feeder_length,
             busy            => status.busy,
             done            => status.done,
             aborted         => status.aborted,

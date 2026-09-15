@@ -46,10 +46,14 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
+        alias hw_req is << signal th.hw_req : std_logic >>;
+        alias hw_ack is << signal th.hw_ack : std_logic >>;
+        alias hw_err is << signal th.hw_err : std_logic >>;
 
         variable status   : std_logic_vector(31 downto 0);
         variable rdata    : std_logic_vector(31 downto 0);
         variable dig      : std_logic_vector(255 downto 0);
+        variable err      : std_logic;
         variable expected : digest_t;
         variable msg      : queue_t;
 
@@ -173,6 +177,34 @@ begin
             read_digest(net, d);
 
             check_equal(d, std_logic_vector(e), name);
+        end procedure;
+
+        -- Raise the hardware request, wait for the acknowledge, drop it and
+        -- wait for the acknowledge to clear. Returns what the engine said.
+        procedure hw_request (
+            variable err : out std_logic;
+            variable hw_status : out std_logic_vector(31 downto 0)
+        ) is
+        begin
+            -- register writes are queued; the request must see them landed
+            wait_until_idle(net, bus_handle);
+            hw_req <= '1';
+            wait until hw_ack = '1';
+            err := hw_err;
+            read_reg(net, HW_STATUS_OFFSET, hw_status);
+            hw_req <= '0';
+            wait until hw_ack = '0';
+        end procedure;
+
+        procedure read_hw_digest (
+            variable d : out std_logic_vector(255 downto 0)
+        ) is
+            variable w : std_logic_vector(31 downto 0);
+        begin
+            for i in 0 to 7 loop
+                read_reg(net, HW_DIGEST0_OFFSET + 4 * i, w);
+                d(32 * i + 31 downto 32 * i) := w;
+            end loop;
         end procedure;
 
         -- Drive a literal message through the manual path and check it against a
@@ -399,6 +431,49 @@ begin
                 run_local(0, 40, "first message");
                 run_flash(4, 80, 16#3000#, "second message, flash sourced");
                 run_local(8, 40, "third message, back to software");
+
+            elsif run("hw_request_hashes_flash_range") then
+                -- A sequencer's request measures the programmed range and the
+                -- digest survives a later software run.
+                expected := sha3_256_digest(expected_msg(0, 700, true, 16#3000#));
+                write_reg(net, HW_FLASH_ADDR_OFFSET, To_StdLogicVector(16#3000#, 32));
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(700, 32));
+                hw_request(err, status);
+                check_equal(err, '0', "hw request reported an error");
+                check_equal((status and HW_STATUS_DONE_MASK) /= (status'range => '0'), true, "HW_STATUS.done");
+                check_equal((status and HW_STATUS_BUSY_MASK) = (status'range => '0'), true, "HW_STATUS.busy clear");
+                read_hw_digest(dig);
+                check_equal(dig, std_logic_vector(expected), "hw digest of 700 bytes at 0x3000");
+                -- software digest is the same run's result too
+                read_digest(net, dig);
+                check_equal(dig, std_logic_vector(expected), "sw digest after hw run");
+
+                run_flash(0, 100, 16#0100#, "software run after the hw run");
+                read_hw_digest(dig);
+                check_equal(dig, std_logic_vector(expected), "hw digest kept after a software run");
+
+            elsif run("hw_request_zero_length_is_an_error") then
+                -- An unprogrammed range: refused as a configuration error,
+                -- reported, and the engine is still usable afterwards.
+                hw_request(err, status);
+                check_equal(err, '1', "hw request should report an error");
+                check_equal((status and HW_STATUS_CFG_ERR_MASK) /= (status'range => '0'), true, "HW_STATUS.cfg_err");
+                check_equal((status and HW_STATUS_DONE_MASK) = (status'range => '0'), true, "HW_STATUS.done clear");
+                run_flash(0, 64, 16#0200#, "software run after a refused hw request");
+
+            elsif run("hw_request_refused_while_software_busy") then
+                -- A software run that is waiting on data owns the engine; the
+                -- request is refused and the software run is left alone.
+                configure(CFG_LOCAL, 0, 8, 0);
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(64, 32));
+                hw_request(err, status);
+                check_equal(err, '1', "hw request should be refused");
+                check_equal((status and HW_STATUS_ENGINE_BUSY_MASK) /= (status'range => '0'), true, "HW_STATUS.engine_busy");
+                read_reg(net, STATUS_OFFSET, status);
+                check_equal((status and STATUS_BUSY_MASK) /= (status'range => '0'), true, "software run still busy");
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait_not_busy(net, status);
 
             elsif run("wfifo_full_backpressure") then
                 -- Fill the software FIFO with the engine idle, so nothing drains

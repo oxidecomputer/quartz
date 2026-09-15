@@ -177,4 +177,70 @@ addrmap hash_engine_regs {
     DIGEST6->desc = "Digest bytes 24 to 27";
     digest_word DIGEST7;
     DIGEST7->desc = "Digest bytes 28 to 31";
+
+    // Hardware-requested measurement. A sequencer can ask the engine to hash
+    // a flash range without software in the loop, for instance to measure a
+    // device's boot image before releasing it from reset. The range comes from
+    // the two registers below, the source is fixed by the design, and the
+    // result is kept apart from the software-driven DIGEST so a later run
+    // cannot overwrite it.
+    reg {
+        name = "Hardware Request Flash Address";
+        desc = "Raw byte address of the first byte hashed on a hardware request.
+        Not remapped, as FLASH_ADDR is not.";
+        field {
+            desc = "Flash byte address";
+        } addr[31:0] = 0;
+    } HW_FLASH_ADDR;
+
+    reg {
+        name = "Hardware Request Length";
+        desc = "Number of bytes hashed on a hardware request. Zero makes the
+        request fail with HW_STATUS.cfg_err, which is what an unprogrammed range
+        does; the requester decides what to make of that.";
+        field {
+            desc = "Message length in bytes";
+        } count[31:0] = 0;
+    } HW_LENGTH;
+
+    reg {
+        name = "Hardware Request Status";
+        desc = "Outcome of the most recent hardware request. All but busy hold
+        until the next request begins.";
+        default sw = r;
+        default hw = w;
+        field {
+            desc = "The request arrived while a software-started hash was running
+            and was refused; the software run was left alone.";
+        } engine_busy[4:4] = 0;
+        field {
+            desc = "The run was ended early by CONTROL.abort.";
+        } aborted[3:3] = 0;
+        field {
+            desc = "The run was refused as a configuration error, see HW_LENGTH.";
+        } cfg_err[2:2] = 0;
+        field {
+            desc = "The run completed and HW_DIGEST holds its result.";
+        } done[1:1] = 0;
+        field {
+            desc = "A hardware-requested run is in flight.";
+        } busy[0:0] = 0;
+    } HW_STATUS;
+
+    digest_word HW_DIGEST0;
+    HW_DIGEST0->desc = "Hardware request digest bytes 0 to 3";
+    digest_word HW_DIGEST1;
+    HW_DIGEST1->desc = "Hardware request digest bytes 4 to 7";
+    digest_word HW_DIGEST2;
+    HW_DIGEST2->desc = "Hardware request digest bytes 8 to 11";
+    digest_word HW_DIGEST3;
+    HW_DIGEST3->desc = "Hardware request digest bytes 12 to 15";
+    digest_word HW_DIGEST4;
+    HW_DIGEST4->desc = "Hardware request digest bytes 16 to 19";
+    digest_word HW_DIGEST5;
+    HW_DIGEST5->desc = "Hardware request digest bytes 20 to 23";
+    digest_word HW_DIGEST6;
+    HW_DIGEST6->desc = "Hardware request digest bytes 24 to 27";
+    digest_word HW_DIGEST7;
+    HW_DIGEST7->desc = "Hardware request digest bytes 28 to 31";
 };

@@ -257,7 +257,14 @@ begin
 
         if stop_run then
             -- Work out what the flash still owes us so DRAIN can swallow it.
-            v.drain_left := r.flash_req - r.flash_rx;
+            -- Nothing is owed unless the read command actually went out: a
+            -- software fed run, or a flash run abandoned during its prepend,
+            -- would otherwise wait in DRAIN for bytes that never come.
+            if r.src_qspi = '1' and r.cmd_sent = '1' then
+                v.drain_left := r.flash_req - r.flash_rx;
+            else
+                v.drain_left := (others => '0');
+            end if;
             v.finished   := '0';
             v.state      := DRAIN;
         else

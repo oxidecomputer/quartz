@@ -35,6 +35,11 @@ architecture th of hash_engine_th is
     signal rsp_fifo_write : std_logic_vector(0 downto 0);
     signal rsp_fifo_wfull : std_logic_vector(0 downto 0);
 
+    -- Hardware request handshake, driven from the testbench
+    signal hw_req : std_logic := '0';
+    signal hw_ack : std_logic;
+    signal hw_err : std_logic;
+
 
 begin
 
@@ -71,6 +76,9 @@ begin
             clk              => clk,
             reset            => reset,
             axi_if           => axi_bus,
+            hw_req           => hw_req,
+            hw_ack           => hw_ack,
+            hw_err           => hw_err,
             flash_cmd_rdata  => cmd_fifo_rdata,
             flash_cmd_rdack  => cmd_fifo_rdack,
             flash_cmd_rempty => cmd_fifo_empty,
