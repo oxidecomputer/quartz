@@ -197,7 +197,7 @@ architecture rtl of grapefruit_top is
     signal reset_200m : std_logic;
     signal reset_fmc: std_logic;
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
-    signal fmc_data_out_enable: std_logic;
+    signal fmc_data_out_hiz: std_logic_vector(15 downto 0);
 
     signal fmc_axi_if : axil26x32_pkg.axil_t;
 
@@ -307,17 +307,22 @@ begin
      port map(
         chip_reset => reset_fmc,
         fmc_clk => fmc_sp_to_fpga_clk,
+        -- no MMCM here (F17 is not clock-capable); the capture stage still
+        -- exists, it just runs on the same clock
+        fmc_capture_clk => fmc_sp_to_fpga_clk,
         a(24 downto 20) => "00000",
         a(19 downto 16) => fmc_sp_to_fpga_a,
         addr_data_in => fmc_sp_to_fpga_da,
         data_out => fmc_internal_data_out,
-        data_out_en => fmc_data_out_enable,
+        data_out_hiz => fmc_data_out_hiz,
         ne(3 downto 1) => "111",
         ne(0) => fmc_sp_to_fpga_cs1_l,
         noe => fmc_sp_to_fpga_oe_l,
         nwe => fmc_sp_to_fpga_we_l,
         nl => fmc_sp_to_fpga_adv_l,
         nwait => fmc_sp_to_fpga_wait_l,
+        timeout_count => open,
+        contention_count => open,
         aclk => clk_125m,
         aresetn => not reset_125m,
         axi_if => fmc_axi_if
@@ -337,7 +342,11 @@ begin
     );
 
     -- tristate control for the FMC data bus
-    fmc_sp_to_fpga_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+    -- per-bit tristate, hiz already in OBUFT T polarity so each pin's T
+    -- flop packs into its IOB with no inverter in between
+    fmc_da_tris: for i in fmc_sp_to_fpga_da'range generate
+        fmc_sp_to_fpga_da(i) <= 'Z' when fmc_data_out_hiz(i) = '1' else fmc_internal_data_out(i);
+    end generate;
     resize_axil(fabric_responders(0), responders_8b(0));
     info_regs: entity work.info
      generic map(
