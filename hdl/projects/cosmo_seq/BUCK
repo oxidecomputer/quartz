@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "black_box")
+load("//tools:hdl.bzl", "vhdl_unit", "black_box", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
@@ -90,4 +90,14 @@ vivado_bitstream(
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
     #post_synth_tcl_files=glob(["*ila.tcl"]),
+)
+
+# Analysis-only: vhdl_unit collects sources but does not run a compiler, so
+# without this nothing type-checks cosmo_seq_top until Vivado synthesis.
+vunit_sim(
+    name = "cosmo_seq_top_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [":cosmo_seq_top"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
 )

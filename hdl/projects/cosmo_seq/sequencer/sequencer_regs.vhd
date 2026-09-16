@@ -45,6 +45,20 @@ entity sequencer_regs is
         -- misc readbacks
         sp5_readbacks : in sp5_readbacks_type;
         nic_readbacks : in nic_readbacks_type;
+        -- power-good summaries for the status register
+        fans_power_ok : in std_logic;
+        a0_ok : in std_logic;
+        nic_power_ok : in std_logic;
+        -- Metro's Versal NIC. A board without one leaves these at their
+        -- defaults and the registers read as zero.
+        nic_done : in std_logic := '0';
+        versal_error_out : in std_logic := '0';
+        nic_hash_done : in std_logic := '0';
+        nic_hash_err : in std_logic := '0';
+        versal_readbacks : in versal_readbacks_type;
+        versal_overrides : out versal_overrides_type;
+        versal_boot_ctrl : out versal_boot_ctrl_type;
+        board_version : in board_version_type;
         -- Ignition mux and reconfig control
         ignition_mux_sel : out std_logic;
         ignition_creset : out std_logic;
@@ -85,6 +99,7 @@ architecture rtl of sequencer_regs is
     signal a0_en_last : std_logic;
 
     signal rails_pg_max : rails_type;
+    signal irq_pending : std_logic;
    
     signal rdata : std_logic_vector(31 downto 0);
     signal active_read : std_logic;
@@ -99,6 +114,9 @@ architecture rtl of sequencer_regs is
     -- irq block so it will handle things correctly.
     constant level_edge_n : irq_type := 
         (
+            nic_hash_err => EDGE,
+            versal_error_out => LEVEL,
+            pwr_cont4_to_fpga1_alert => LEVEL,
             pwr_cont3_to_fpga1_alert => LEVEL,
             pwr_cont2_to_fpga1_alert => LEVEL,
             pwr_cont1_to_fpga1_alert => LEVEL,
@@ -127,12 +145,26 @@ architecture rtl of sequencer_regs is
 
 begin
 
+    status <= (
+        fanpwrok => fans_power_ok,
+        a0pwrok => a0_ok,
+        nicpwrok => nic_power_ok,
+        nicdone => nic_done,
+        nic_hash_done => nic_hash_done,
+        nic_hash_err => nic_hash_err,
+        int_pend => irq_pending
+    );
+    irq_pending <= '1' when (compress(ifr) and compress(ier)) /= (compress(ier)'range => '0') else '0';
+
     ignition_mux_sel <= ignition_control.mux_to_ignition;
     ignition_creset <= ignition_control.ignition_creset;
     allow_backplane_pcie_clk <= pcie_clk_ctrl.clk_en;
 
     -- Map a bunch of discrete signals into the irq_raw vector.
     irq_raw <= (
+        nic_hash_err => nic_hash_err,
+        versal_error_out => versal_error_out,
+        pwr_cont4_to_fpga1_alert => not reg_alert_l.pwr_cont4_to_fpga1_alert_l,
         pwr_cont3_to_fpga1_alert => not reg_alert_l.pwr_cont3_to_fpga1_alert_l,
         pwr_cont2_to_fpga1_alert => not reg_alert_l.pwr_cont2_to_fpga1_alert_l,
         pwr_cont1_to_fpga1_alert => not reg_alert_l.pwr_cont1_to_fpga1_alert_l,
@@ -295,6 +327,8 @@ begin
             rails_pg_max <= reset_0s;
             debug_enables <= rec_reset;
             nic_overrides <= rec_reset;
+            versal_overrides <= rec_reset;
+            versal_boot_ctrl <= rec_reset;
             ignition_control <= rec_reset;
             pcie_clk_ctrl <= rec_reset;
             rail_masks <= reset_0s;
@@ -304,6 +338,13 @@ begin
            irq_clear <= reset_0s;  -- clear single-cycle flags.
            igr <= reset_0s;
            nic_overrides.nic_test_mapo <= '0'; -- Clear test MAPO bit every cycle, so it's a single-cycle pulse when set.
+           -- Max hold of the live power goods, cleared on a fresh sequence up
+           -- or by writing the register.
+           if a0_en_redge then
+               rails_pg_max <= reset_0s;
+           else
+               rails_pg_max <= rails_pg_max or rails_pg_rdbk;
+           end if;
 
             if active_write then
                 case to_integer(axi_if.write_address.addr) is
@@ -316,6 +357,8 @@ begin
                     when RAIL_PGS_MAX_HOLD_OFFSET => rails_pg_max <= reset_0s;
                     when DEBUG_ENABLES_OFFSET => debug_enables <= unpack(axi_if.write_data.data);
                     when NIC_OVERRIDES_OFFSET => nic_overrides <= unpack(axi_if.write_data.data);
+                    when VERSAL_OVERRIDES_OFFSET => versal_overrides <= unpack(axi_if.write_data.data);
+                    when VERSAL_BOOT_CTRL_OFFSET => versal_boot_ctrl <= unpack(axi_if.write_data.data);
                     when RAIL_MASKS_OFFSET => rail_masks <= unpack(axi_if.write_data.data);
                     when SP5_SEQ_TEST_MASK_OFFSET => sp5_seq_test_mask <= unpack(axi_if.write_data.data);
                     when IGNITION_CONTROL_OFFSET => ignition_control <= unpack(axi_if.write_data.data);
@@ -363,6 +406,10 @@ begin
                     when NIC_OVERRIDES_OFFSET => rdata <= pack(nic_overrides);
                     when IGNITION_CONTROL_OFFSET => rdata <= pack(ignition_control);
                     when PCIE_CLK_CTRL_OFFSET => rdata <= pack(pcie_clk_ctrl);
+                    when VERSAL_READBACKS_OFFSET => rdata <= pack(versal_readbacks);
+                    when VERSAL_OVERRIDES_OFFSET => rdata <= pack(versal_overrides);
+                    when VERSAL_BOOT_CTRL_OFFSET => rdata <= pack(versal_boot_ctrl);
+                    when BOARD_VERSION_OFFSET => rdata <= pack(board_version);
                     when others => rdata <= (others => '0');
                 end case;
             end if;

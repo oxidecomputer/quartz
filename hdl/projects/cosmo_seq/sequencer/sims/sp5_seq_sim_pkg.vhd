@@ -53,6 +53,20 @@ package sp5_seq_sim_pkg is
         constant rail_name   : in    string
     );
 
+    -- Bring the board to A0 and the NIC all the way to DONE.
+    procedure power_up_to_nic_done (
+        signal net : inout network_t
+    );
+
+    -- Drop one Versal rail (a rail_model of its own, unlike the T6's rails
+    -- which sit behind nic_model) once the Versal is up and check the NIC
+    -- MAPO path, including that the flag can be cleared afterwards.
+    procedure test_versal_rail_mapo_fault_injection (
+        signal net          : inout network_t;
+        constant rail_actor : in    actor_t;
+        constant rail_name  : in    string
+    );
+
 end package;
 
 package body sp5_seq_sim_pkg is
@@ -200,6 +214,69 @@ package body sp5_seq_sim_pkg is
         
 
         info("NIC MAPO fault injection test completed successfully for rail: " & rail_name);
+    end procedure;
+
+    procedure power_up_to_nic_done (
+        signal net : inout network_t
+    ) is
+        variable read_data : std_logic_vector(31 downto 0);
+        variable seq_state : seq_api_status_a0_sm;
+        variable nic_state : nic_api_status_nic_sm;
+    begin
+        write_bus(net, bus_handle,
+                  To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                  POWER_CTRL_A0_EN_MASK);
+        poll_for_seq_state(net, DONE);
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(SEQ_API_STATUS_OFFSET, bus_handle.p_address_length),
+                 read_data);
+        seq_state := encode(read_data(7 downto 0));
+        check_equal(seq_state = DONE, true, "Expected A0 sequencer to be in DONE state");
+
+        poll_for_nic_state(net, DONE);
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length),
+                 read_data);
+        nic_state := encode(read_data(7 downto 0));
+        check_equal(nic_state = DONE, true, "Expected NIC sequencer to be in DONE state");
+    end procedure;
+
+    procedure test_versal_rail_mapo_fault_injection (
+        signal net          : inout network_t;
+        constant rail_actor : in    actor_t;
+        constant rail_name  : in    string
+    ) is
+        variable read_data : std_logic_vector(31 downto 0);
+        variable nic_state : nic_api_status_nic_sm;
+    begin
+        power_up_to_nic_done(net);
+
+        info("Injecting Versal fault on rail: " & rail_name);
+        disable_power_good(net, rail_actor);
+        wait for 100 us;
+
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+        check_equal((read_data and IFR_NICMAPO_MASK) /= x"00000000", true,
+                    "Expected NICMAPO bit to be set in IFR for rail: " & rail_name);
+
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length),
+                 read_data);
+        nic_state := encode(read_data(7 downto 0));
+        check_equal(nic_state = IDLE, true,
+                    "Expected NIC sequencer to return to IDLE after MAPO on " & rail_name);
+
+        info("Clearing NICMAPO bit in IFR");
+        write_bus(net, bus_handle,
+                  To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length),
+                  IFR_NICMAPO_MASK);
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+        check_equal((read_data and IFR_NICMAPO_MASK) = x"00000000", true,
+                    "Expected NICMAPO bit to clear for rail: " & rail_name);
+
+        enable_power_good(net, rail_actor);
     end procedure;
 
 end package body;

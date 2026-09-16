@@ -16,7 +16,14 @@ use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sp5_seq_sim_pkg.all;
 
+-- One harness for both NIC flavours: NIC_KIND picks which NIC's models are
+-- instantiated, and the testbenches (sp5_seq_sim_tb for the T6, versal_seq_sim_tb
+-- for the Versal) each set it. Both NICs' pin records exist as signals so the
+-- testbenches can reach them; the absent NIC's are left at their tie-off values.
 entity sp5_seq_sim_th is
+    generic (
+        NIC_KIND : nic_kind_t := NIC_T6
+    );
 end entity;
 
 architecture th of sp5_seq_sim_th is
@@ -49,6 +56,7 @@ architecture th of sp5_seq_sim_th is
         fan_west_hsc_disable => 'Z'
         );
     signal reg_alert_l_pins : seq_power_alert_pins_t := (
+        pwr_cont4_to_fpga1_alert_l => '1',
         smbus_fan_central_hsc_to_fpga1_alert_l => '1',
         smbus_fan_east_hsc_to_fpga1_alert_l => '1',
         smbus_fan_west_hsc_to_fpga1_alert_l => '1',
@@ -68,12 +76,31 @@ architecture th of sp5_seq_sim_th is
         pwr_cont3_to_fpga1_alert_l => '1'
     );
     signal ddr_bulk_pins : ddr_bulk_power_t;
-    signal nic_rails_pins : nic_power_t;
+    signal nic_rails_pins : nic_power_t := nic_power_absent;
     signal a0_ok : std_logic;
     signal a0_idle : std_logic;
-    signal sp5_t6_perst_l : std_logic := '1';
+    signal sp5_nic_perst_l : std_logic := '1';
+    signal sp5_nic_chb_perst_l : std_logic := '1';
     signal axi_if : axil8x32_pkg.axil_t;
-    signal nic_dbg_pins : t6_debug_if;
+    signal nic_dbg_pins : nic_debug_if;
+
+    -- Versal side
+    signal versal_rails_pins : versal_power_t := versal_power_absent;
+    signal versal_boot_pins : versal_boot_t := versal_boot_absent;
+    signal versal_pcie_pins : versal_pcie_t := (
+        cha => (perst_l => 'Z', prsnt_l => '0', pwren_l => '0', clk_buff_oe_l => 'Z'),
+        chb => (perst_l => 'Z', prsnt_l => '0', pwren_l => '0', clk_buff_oe_l => 'Z')
+        );
+    signal versal_held_in_reset : std_logic;
+    signal flash_owned_by_seq : std_logic;
+    -- Hash engine stand-in. The testbench sets how long a measurement takes
+    -- and whether it fails; the handshake itself is modelled here.
+    signal hash_req : std_logic;
+    signal hash_ack : std_logic := '0';
+    signal hash_err : std_logic := '0';
+    signal hash_model_time : time := 20 us;
+    signal hash_model_fail : boolean := false;
+    signal hash_requests : natural := 0;
 
 begin
 
@@ -84,7 +111,8 @@ begin
    -- instantiate the sequencer
    dut: entity work.sp5_sequencer
     generic map(
-       CNTS_P_MS => 100
+       CNTS_P_MS => 100,
+       NIC_KIND => NIC_KIND
    )
     port map(
        clk => clk,
@@ -100,10 +128,20 @@ begin
        sp5_seq_pins => sp5_seq_pins,
        nic_rails_pins => nic_rails_pins,
        nic_seq_pins => nic_seq_pins,
+       versal_rails_pins => versal_rails_pins,
+       versal_boot_pins => versal_boot_pins,
+       versal_pcie_pins => versal_pcie_pins,
+       versal_held_in_reset => versal_held_in_reset,
+       flash_owned_by_seq => flash_owned_by_seq,
+       hash_req => hash_req,
+       hash_ack => hash_ack,
+       hash_err => hash_err,
+       version_id => "01",
        nic_dbg_pins => nic_dbg_pins,
-       sp5_t6_perst_l => sp5_t6_perst_l,
-      irq_l_out => open,
-      reg_alert_l_pins => reg_alert_l_pins
+       sp5_nic_perst_l => sp5_nic_perst_l,
+       sp5_nic_chb_perst_l => sp5_nic_chb_perst_l,
+       irq_l_out => open,
+       reg_alert_l_pins => reg_alert_l_pins
    );
 
    axi_lite_master_inst: entity vunit_lib.axi_lite_master
@@ -229,14 +267,76 @@ begin
        reset => reset,
        sp5_pins => sp5_seq_pins
    );
-   nic_model_inst: entity work.nic_model
-    generic map(
-       actor_name => "nic_model"
-    )
-    port map(
-       clk => clk,
-       reset => reset,
-       nic_rails => nic_rails_pins
-   );
+   t6: if NIC_KIND = NIC_T6 generate
+       nic_model_inst: entity work.nic_model
+        generic map(
+           actor_name => "nic_model"
+        )
+        port map(
+           clk => clk,
+           reset => reset,
+           nic_rails => nic_rails_pins
+       );
+   end generate;
+
+   versal: if NIC_KIND = NIC_VERSAL generate
+       versal_v3p3: entity work.rail_model
+       generic map(actor_name => "versal_v3p3")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v3p3);
+       versal_v1p8: entity work.rail_model
+       generic map(actor_name => "versal_v1p8")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v1p8);
+       versal_v1p5: entity work.rail_model
+       generic map(actor_name => "versal_v1p5")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v1p5);
+       versal_v1p5_avccaux: entity work.rail_model
+       generic map(actor_name => "versal_v1p5_avccaux")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v1p5_avccaux);
+       versal_v1p4: entity work.rail_model
+       generic map(actor_name => "versal_v1p4")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v1p4);
+       versal_v1p1: entity work.rail_model
+       generic map(actor_name => "versal_v1p1")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v1p1);
+       versal_v0p88: entity work.rail_model
+       generic map(actor_name => "versal_v0p88")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v0p88);
+       versal_v0p8_vccint: entity work.rail_model
+       generic map(actor_name => "versal_v0p8_vccint")
+       port map(clk => clk, reset => reset, rail => versal_rails_pins.v0p8_vccint);
+       -- The two transceiver rails have no enable of their own; they cascade
+       -- off the group that brings them up.
+       versal_v0p92_avcc: entity work.cascade_rail_model
+       port map(clk => clk, reset => reset, upstream_pg => versal_rails_pins.v0p88.pg, rail => versal_rails_pins.v0p92_avcc);
+       versal_v1p2_avtt: entity work.cascade_rail_model
+       port map(clk => clk, reset => reset, upstream_pg => versal_rails_pins.v1p5.pg, rail => versal_rails_pins.v1p2_avtt);
+
+       -- Four-phase handshake as hash_engine_top does it: acknowledge some
+       -- time after the request, hold it until the request drops.
+       hash_model: process
+       begin
+           wait until hash_req = '1';
+           hash_requests <= hash_requests + 1;
+           wait for hash_model_time;
+           if hash_req = '1' then
+               hash_err <= '1' when hash_model_fail else '0';
+               hash_ack <= '1';
+               wait until hash_req = '0';
+               hash_ack <= '0';
+           end if;
+       end process;
+
+       versal_model_inst: entity work.versal_model
+        generic map(
+           actor_name => "versal_model"
+        )
+        port map(
+           clk => clk,
+           reset => reset,
+           hsc_12v => versal_rails_pins.hsc_12v,
+           hsc_5v => versal_rails_pins.hsc_5v,
+           boot => versal_boot_pins
+       );
+   end generate;
 
 end th;

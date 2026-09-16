@@ -427,7 +427,12 @@ architecture rtl of cosmo_seq_top is
     alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
     signal uart_dbg_if : uart_dbg_t;
     signal allow_backplane_pcie_clk : std_logic;
-    signal nic_dbg_pins : t6_debug_if;
+    signal nic_dbg_pins : nic_debug_if;
+    -- No Versal on this board; the shared sequencer's Versal ports are tied
+    -- off to these and its Versal outputs left open.
+    signal versal_rails_unused : versal_power_t := versal_power_absent;
+    signal versal_boot_unused : versal_boot_t := versal_boot_absent;
+    signal versal_pcie_unused : versal_pcie_t := versal_pcie_absent;
     signal reg_alert_l_pins : seq_power_alert_pins_t;
     signal is_rev1 : std_logic;
     signal dbg_pins_uart_out : std_logic;
@@ -767,7 +772,8 @@ begin
     resize_axil(fabric_responders(SEQ_RESP_IDX), responders_8b(SEQ_RESP_IDX));
     seq: entity work.sp5_sequencer
      generic map(
-        CNTS_P_MS => calc_ms(desired_ms => 1, clk_period_ns => 8)
+        CNTS_P_MS => calc_ms(desired_ms => 1, clk_period_ns => 8),
+        NIC_KIND => NIC_T6
     )
      port map(
         clk => clk_125m,
@@ -785,9 +791,15 @@ begin
         sp5_seq_pins => sp5_seq_pins,
         nic_rails_pins => nic_rails,
         nic_seq_pins => nic_seq_pins,
+        versal_rails_pins => versal_rails_unused,
+        versal_boot_pins => versal_boot_unused,
+        versal_pcie_pins => versal_pcie_unused,
+        versal_held_in_reset => open,
+        flash_owned_by_seq => open,
+        hash_req => open,
         nic_dbg_pins => nic_dbg_pins,
-        sp5_t6_perst_l => sp5_t6_perst_l,
-        sp5_t6_faulted => sp5_t6_faulted,
+        sp5_nic_perst_l => sp5_t6_perst_l,
+        sp5_nic_faulted => sp5_t6_faulted,
         ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
         ignition_creset => fpga1_to_ign_trgt_fpga_creset,
         reg_alert_l_pins => reg_alert_l_pins
@@ -901,6 +913,7 @@ begin
     reg_alert_l_pins.v0p96_nic_to_fpga1_alert_l <= v0p96_nic_to_fpga1_alert_l;
     reg_alert_l_pins.pwr_cont2_to_fpga1_alert_l <= pwr_cont2_to_fpga1_alert_l;
     reg_alert_l_pins.pwr_cont3_to_fpga1_alert_l <= pwr_cont3_to_fpga1_alert_l;
+    reg_alert_l_pins.pwr_cont4_to_fpga1_alert_l <= '1';  -- no fourth controller on this board
 
     resize_axil(fabric_responders(SPD_PROXY_RESP_IDX), responders_8b(SPD_PROXY_RESP_IDX));
     dimm_spd_proxy_top_inst: entity work.dimms_subsystem_top

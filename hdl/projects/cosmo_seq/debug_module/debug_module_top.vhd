@@ -67,7 +67,7 @@ entity debug_module_top is
         espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
         espi_resp_csn: in std_logic;
         --T6 signals
-        nic_dbg_pins : view t6_debug_dbg;
+        nic_dbg_pins : view nic_debug_dbg;
 
         fpga1_spare_v1p8 : out std_logic_vector(7 downto 0); -- 8 spare pins on the debug header
 
@@ -238,11 +238,11 @@ begin
                             dbg_1v8_ctrl.pins5_4 <= ESPI_BUS;
                             dbg_1v8_ctrl.pins3_2 <= ESPI_BUS;
                             dbg_1v8_ctrl.pins1_0 <= ESPI_BUS;
-                        elsif dbg_convenience.t6_seq_en then
-                            dbg_1v8_ctrl.pins7_6 <= T6_SEQUENCER;
-                            dbg_1v8_ctrl.pins5_4 <= T6_SEQUENCER;
-                            dbg_1v8_ctrl.pins3_2 <= T6_SEQUENCER;
-                            dbg_1v8_ctrl.pins1_0 <= T6_SEQUENCER;
+                        elsif dbg_convenience.nic_seq_en then
+                            dbg_1v8_ctrl.pins7_6 <= NIC_SEQUENCER;
+                            dbg_1v8_ctrl.pins5_4 <= NIC_SEQUENCER;
+                            dbg_1v8_ctrl.pins3_2 <= NIC_SEQUENCER;
+                            dbg_1v8_ctrl.pins1_0 <= NIC_SEQUENCER;
                         end if;
 
                     when others => null;
