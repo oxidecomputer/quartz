@@ -47,6 +47,9 @@ entity sp5_espi_flash_subsystem is
         spi_nor_dat : in std_logic_vector(3 downto 0);
         spi_nor_dat_o : out std_logic_vector(3 downto 0);
         spi_nor_dat_oe : out std_logic_vector(3 downto 0);
+        -- Parks the flash pins when low, see spi_nor_top. Only a design that
+        -- shares the flash through a mux needs to drive it.
+        spi_nor_bus_enable : in std_logic := '1';
 
         -- spi_nor_top's second flash client port, for the hashing engine. The
         -- engine sits at the project top rather than in here so that one engine
@@ -241,6 +244,7 @@ begin
            io_o => spi_nor_dat_o,
            io_oe => spi_nor_dat_oe,
            sp5_owns_flash => open,
+           bus_enable => spi_nor_bus_enable,
            espi_cmd_fifo_rdata => espi_cmd_fifo_rdata,
            espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
            espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 

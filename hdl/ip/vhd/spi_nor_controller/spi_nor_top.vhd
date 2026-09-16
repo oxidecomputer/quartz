@@ -35,6 +35,14 @@ entity spi_nor_top is
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
         sp5_owns_flash : out std_logic;
+        -- Low parks the flash pins (cs_n high, sclk low, lanes released)
+        -- at the IOB flops themselves, for a design where the flash is
+        -- reached through a mux shared with another master. The controller
+        -- keeps running; only the pins are held off, so a grant lost mid
+        -- transaction stops driving within a clock. Muxing after the flops
+        -- instead would cost them their IOB placement and the read timing
+        -- window that depends on it.
+        bus_enable : in std_logic := '1';
         -- eSPI transaction interface.
         -- FIFO the command, which is simply an 32bit address
         -- as the first word and the transaction length as the 
@@ -146,6 +154,7 @@ begin
             in_rx_phases => in_rx_phases,
             sclk_running => sclk_running,
             release_lanes => release_lanes,
+            bus_enable   => bus_enable,
             rx_byte      => link_rx_byte,
             rx_byte_done => rx_byte_done,
             tx_byte      => link_tx_byte,
@@ -178,6 +187,7 @@ begin
             -- link i/f
             cs_n          => cs_n_internal,
             cs_n_pin      => cs_n,
+            bus_enable    => bus_enable,
             sclk          => sclk_internal,
             rx_byte_done  => rx_byte_done,
             rx_link_byte  => link_rx_byte,
