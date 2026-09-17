@@ -33,6 +33,8 @@ entity spi_txn_mgr is
         -- Second copy of the cs_n flop, for the pin only, so it can be packed
         -- into the IOB. Same reasoning as spi_clk_gen's sclk_pin.
         cs_n_pin     : out   std_logic;
+        -- Low parks the pin copy high (deselected). See spi_nor_top.
+        bus_enable   : in    std_logic := '1';
         sclk         : in    std_logic;
         rx_byte_done : in    boolean;
         rx_link_byte : in    std_logic_vector(7 downto 0);
@@ -445,7 +447,7 @@ begin
             tx_pre <= next_tx(r, spi_cmd, tx_fifo_data);
             -- Duplicate of r.csn, driven from the same next-state value so the
             -- two flops always agree and change on the same edge.
-            cs_n_pin <= rin.csn;
+            cs_n_pin <= rin.csn or not bus_enable;
         end if;
     end process;
 

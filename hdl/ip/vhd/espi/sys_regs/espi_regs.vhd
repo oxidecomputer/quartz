@@ -17,6 +17,12 @@ use work.axil15x32_pkg.all;
 use work.calc_pkg.log2ceil;
 
 entity espi_regs is
+    generic (
+        -- An instance that only ever serves the flash channel never sees a
+        -- post code, so it can leave the 4k entry buffer out; reads of it
+        -- then return zero.
+        POST_CODE_BUFFER_ENABLED : boolean := true
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -25,6 +31,8 @@ entity espi_regs is
         post_code      : in std_logic_vector(31 downto 0);
         post_code_valid : in std_logic;
         espi_reset : in std_logic;
+        -- runtime half of the SAFS write permission, see espi_target_top
+        flash_write_enable : out std_logic;
         stuff_fifo : out std_logic;
         stuff_wds : out std_logic_vector(15 downto 0);
         -- read-only view of eSPI spec registers
@@ -63,6 +71,9 @@ architecture rtl of espi_regs is
     signal pc_buf_waddr : std_logic_vector(BUFFER_ADDR_WIDTH - 1 downto 0);
     signal pc_buf_raddr : std_logic_vector(BUFFER_ADDR_WIDTH - 1 downto 0);
     signal post_code_buffer_rdata : std_logic_vector(31 downto 0);
+    -- The read in flight is of the buffer, so answer from its output
+    -- register rather than rdata
+    signal pc_buf_read : std_logic;
 
 begin
     fifo_status_reg.cmd_used_wds <= dbg_chan.wstatus.usedwds;
@@ -73,7 +84,7 @@ begin
     last_resp_status_reg <= unpack(X"0000" & last_resp_status);
     live_status_reg <= unpack(X"0000" & live_espi_status);
 
-    axi_if.read_data.data <= rdata;
+    axi_if.read_data.data <= post_code_buffer_rdata when pc_buf_read = '1' else rdata;
 
     stuff_wds <= stuff_count.count(15 downto 0);
     stuff_fifo <= stuff_enable.en;
@@ -135,21 +146,38 @@ begin
         end if;
     end process;
 
-    post_code_buffer: entity work.dual_clock_simple_dpr
-     generic map(
-        data_width => 32,
-        num_words => BUFFER_ENTRIES,
-        reg_output => false
-    )
-     port map(
-        wclk => clk,
-        waddr => pc_buf_waddr,
-        wdata => post_code,
-        wren => post_code_valid,
-        rclk => clk,
-        raddr => pc_buf_raddr,
-        rdata => post_code_buffer_rdata
-    );
+    -- The buffer is 128kb, which in distributed RAM was 3.6k LUTRAMs per
+    -- instance, enough to starve the placer on a part that also carries the
+    -- DIMM caches. In block RAM the read is registered, so the buffer is
+    -- answered one cycle after the AXI read is accepted, which is exactly
+    -- when rvalid rises: the read enable is the accept, so the output holds
+    -- for as long as the master takes to collect it.
+    pc_buf: if POST_CODE_BUFFER_ENABLED generate
+        type pc_mem_t is array (0 to BUFFER_ENTRIES - 1) of std_logic_vector(31 downto 0);
+        signal pc_mem : pc_mem_t;
+        attribute ram_style : string;
+        attribute ram_style of pc_mem : signal is "block";
+    begin
+        pc_mem_write: process(clk)
+        begin
+            if rising_edge(clk) then
+                if post_code_valid then
+                    pc_mem(to_integer(pc_buf_waddr)) <= post_code;
+                end if;
+            end if;
+        end process;
+
+        pc_mem_read: process(clk)
+        begin
+            if rising_edge(clk) then
+                if active_read then
+                    post_code_buffer_rdata <= pc_mem(to_integer(pc_buf_raddr));
+                end if;
+            end if;
+        end process;
+    else generate
+        post_code_buffer_rdata <= (others => '0');
+    end generate;
 
     -- Axi here are byte_addresses and we need to convert to word addresses for the dpr.
     pc_buf_raddr <= resize(shift_right(axi_if.read_address.addr - POST_CODE_BUFFER_OFFSET, 2), pc_buf_raddr'length);
@@ -161,15 +189,18 @@ begin
 
     dbg_chan.rd.rdack <= '1' when axi_if.read_data.ready = '1' and axi_if.read_data.valid = '1' and resp_fifo_ack = '1' else '0';
     dbg_chan.espi_reset <= control_reg.espi_reset;
+    flash_write_enable <= control_reg.flash_write_enable;
 
     read_logic: process(clk, reset)
     begin
         if reset then
             rdata <= (others => '0');
             resp_fifo_ack <= '0';
+            pc_buf_read <= '0';
         elsif rising_edge(clk) then
             resp_fifo_ack <= '0';
             if active_read then
+                pc_buf_read <= '0';
                 case to_integer(axi_if.read_address.addr) is
                     when FLAGS_OFFSET => rdata <= pack(flags_reg);
                     when CONTROL_OFFSET => rdata <= pack(control_reg);
@@ -213,7 +244,7 @@ begin
                     when SPEC_REGS_CH3_CAPABILITIES2_OFFSET =>
                         rdata <= espi_spec_regs_pkg.pack(spec_regs_view.ch3_capabilities2);
                     when POST_CODE_BUFFER_MEM_RANGE =>
-                        rdata <= post_code_buffer_rdata;
+                        pc_buf_read <= '1';
                     when others =>
                         rdata <= (others => '0');
                 end case;

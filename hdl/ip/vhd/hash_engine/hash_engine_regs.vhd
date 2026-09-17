@@ -38,6 +38,12 @@ entity hash_engine_regs is
         -- Bit 7 downto 0 is hash byte 0, so DIGESTn is digest(32n+31 downto 32n)
         digest   : in    std_logic_vector(255 downto 0);
 
+        -- hardware request path, see hash_engine_top
+        hw_flash_addr : out   hw_flash_addr_type;
+        hw_length     : out   hw_length_type;
+        hw_status     : in    hw_status_type;
+        hw_digest     : in    std_logic_vector(255 downto 0);
+
         -- Software data FIFO push port
         wdata_fifo_wdata : out   std_logic_vector(31 downto 0);
         wdata_fifo_write : out   std_logic
@@ -89,6 +95,8 @@ begin
         prepend <= rec_reset;
         flash_addr <= rec_reset;
         msg_length <= rec_reset;
+        hw_flash_addr <= rec_reset;
+        hw_length <= rec_reset;
         start_strobe <= '0';
         abort_strobe <= '0';
     elsif rising_edge(clk) then
@@ -104,6 +112,8 @@ begin
                 when PREPEND_OFFSET => prepend <= unpack(axi_if.write_data.data);
                 when FLASH_ADDR_OFFSET => flash_addr <= unpack(axi_if.write_data.data);
                 when LENGTH_OFFSET => msg_length <= unpack(axi_if.write_data.data);
+                when HW_FLASH_ADDR_OFFSET => hw_flash_addr <= unpack(axi_if.write_data.data);
+                when HW_LENGTH_OFFSET => hw_length <= unpack(axi_if.write_data.data);
                 when others => null;
             end case;
         end if;
@@ -135,6 +145,17 @@ begin
                 when DIGEST5_OFFSET => rdata <= digest(191 downto 160);
                 when DIGEST6_OFFSET => rdata <= digest(223 downto 192);
                 when DIGEST7_OFFSET => rdata <= digest(255 downto 224);
+                when HW_FLASH_ADDR_OFFSET => rdata <= pack(hw_flash_addr);
+                when HW_LENGTH_OFFSET => rdata <= pack(hw_length);
+                when HW_STATUS_OFFSET => rdata <= pack(hw_status);
+                when HW_DIGEST0_OFFSET => rdata <= hw_digest(31 downto 0);
+                when HW_DIGEST1_OFFSET => rdata <= hw_digest(63 downto 32);
+                when HW_DIGEST2_OFFSET => rdata <= hw_digest(95 downto 64);
+                when HW_DIGEST3_OFFSET => rdata <= hw_digest(127 downto 96);
+                when HW_DIGEST4_OFFSET => rdata <= hw_digest(159 downto 128);
+                when HW_DIGEST5_OFFSET => rdata <= hw_digest(191 downto 160);
+                when HW_DIGEST6_OFFSET => rdata <= hw_digest(223 downto 192);
+                when HW_DIGEST7_OFFSET => rdata <= hw_digest(255 downto 224);
                 when others => rdata <= (others => '0');
             end case;
         end if;

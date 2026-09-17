@@ -15,7 +15,12 @@ use work.time_pkg.all; -- for calc_ms and calc_us
 entity sp5_hotplug_subsystem is
     generic(
         PERST_US_ONESHOT : integer := 100000; -- 100ms for Tpvperl, this is used in the oneshot
-        NS_PER_CLK : integer := 8
+        NS_PER_CLK : integer := 8;
+        -- Metro's NIC presents a second PCIe endpoint to the SP5 that needs a
+        -- hotplug slot of its own. It goes on PCA9506 bank 4, which has always
+        -- been wired into the expander and referenced by nothing. Cosmo leaves
+        -- this off; the bank then stays exactly as inert as it is today.
+        NIC2_SLOT_ENABLED : boolean := false
     );
     port(
         clk : in std_logic;
@@ -50,10 +55,19 @@ entity sp5_hotplug_subsystem is
         pcie_clk_buff_m2b_oe_l : out std_logic;
         m2b_pwr_fault_l : in std_logic;
 
-        -- T6 things
+        -- NIC slot on bank 2. The T6 on cosmo, the Versal's channel A on metro.
+        -- Presence defaults to asserted, which is the tie cosmo has always had.
         t6_power_en : out std_logic;
         t6_perst_l : out std_logic;
         t6_faulted : in std_logic;
+        t6_prsnt_l : in std_logic := '0';
+
+        -- Second NIC slot on bank 4, only when NIC2_SLOT_ENABLED. Same shape as
+        -- the T6 slot: PERST is a copy of the power enable, no oneshot.
+        nic2_power_en : out std_logic;
+        nic2_perst_l : out std_logic;
+        nic2_faulted : in std_logic := '0';
+        nic2_prsnt_l : in std_logic := '0';
 
         -- Sidecar things
         pcie_aux_rsw_perst_l : out std_logic;
@@ -175,13 +189,30 @@ begin
         perst_l => m2b_perst_l
     );
 
-    -- T6
-    t6_power_en <= not io_o(2)(4) when io_oe(0)(4) else '0';
-    io(2)(3) <= '1';  -- PEDET for T6
+    -- NIC slot, bank 2 (the T6 on cosmo). The power enable only counts once the
+    -- SP5 has configured this bank's bit 4 as an output; until then the pull
+    -- default is "off".
+    t6_power_en <= not io_o(2)(4) when io_oe(2)(4) else '0';
+    io(2)(3) <= '1';  -- emils: nothing to report for a soldered-down NIC
     io(2)(1) <= not t6_faulted;
     io(2)(2) <= '1'; -- attnsw_l
-    io(2)(0) <= '0'; -- PRSNT_L for T6
+    io(2)(0) <= t6_prsnt_l;
     t6_perst_l <= t6_power_en;
+
+    -- Second NIC slot, bank 4. Only metro populates this; with the generic off
+    -- the bank reads back its zero initialiser and the outputs stay parked, so
+    -- an SP5 that pokes bank 4 on cosmo sees what it always has.
+    nic2_slot: if NIC2_SLOT_ENABLED generate
+        nic2_power_en <= not io_o(4)(4) when io_oe(4)(4) else '0';
+        io(4)(3) <= '1';  -- emils
+        io(4)(1) <= not nic2_faulted;
+        io(4)(2) <= '1'; -- attnsw_l
+        io(4)(0) <= nic2_prsnt_l;
+        nic2_perst_l <= nic2_power_en;
+    else generate
+        nic2_power_en <= '0';
+        nic2_perst_l <= '0';
+    end generate;
 
     -- Backplane connected switch
     pcie_aux_power_en <= not io_o(3)(4) when io_oe(3)(4) else '0';

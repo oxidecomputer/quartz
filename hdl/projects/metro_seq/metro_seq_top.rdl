@@ -1,0 +1,29 @@
+addrmap pca9506_axi_regs {
+    name = "pca9506 registers";
+    desc = "Registers accessible on the i2c bus for controlling the emulated PCA9545 i2c mux";
+
+    default regwidth = 32;
+    default sw = rw;
+    default hw = r;
+
+    pca9506_raw_regs #(.SIZE(32)) i2c;
+
+};
+// Offsets here must match the config_array constant in metro_seq_top.vhd; the
+// two are kept in step by hand, as they are in cosmo_seq.
+addrmap metro_seq_top {
+    default regwidth = 32;
+
+    info_regs info @ 0x0;
+    spi_nor_regs spi_nor @ 0x0100;
+    sequencer_regs sequencer @ 0x0200;
+    sp_i2c_regs sp_i2c @ 0x0300;
+    pca9506_axi_regs fpga1_hotplug @ 0x0400;
+    dimm_regs dimms @ 0x0500;
+    debug_regs debug_ctrl @ 0x0600;
+    hash_engine_regs hash @ 0x0700;
+    spi_nor_regs versal_flash @ 0x0800;
+    versal_flash_regs versal_flash_ctrl @ 0x0900;
+    espi_regs espi @ 0x8000;
+    espi_regs espi1 @ 0x10000;
+};

@@ -38,35 +38,35 @@ end entity;
 
 architecture th of hash_spi_nor_th is
 
+    -- Two flashes, indexed the way the engine's flash ports are: 0 is the
+    -- host's, 1 the auxiliary one CONFIG.source = AUX_QSPI selects.
+    constant NUM_FLASHES : natural := 2;
+
     signal clk   : std_logic := '0';
     signal reset : std_logic := '1';
 
     signal axi_bus     : axil8x32_pkg.axil_t;
-    signal spinor_axi  : axil8x32_pkg.axil_t;
+    type spinor_axi_t is array (0 to NUM_FLASHES - 1) of axil8x32_pkg.axil_t;
+    signal spinor_axi  : spinor_axi_t;
 
-    signal cmd_fifo_wdata : std_logic_vector(31 downto 0);
-    signal cmd_fifo_write : std_logic;
     signal cmd_fifo_rdata : std_logic_vector(31 downto 0);
-    signal cmd_fifo_rdack : std_logic;
-    signal cmd_fifo_empty : std_logic;
+    signal cmd_fifo_rdack : std_logic_vector(NUM_FLASHES - 1 downto 0);
+    signal cmd_fifo_empty : std_logic_vector(NUM_FLASHES - 1 downto 0);
+    signal rsp_fifo_wdata : std_logic_vector(NUM_FLASHES * 8 - 1 downto 0);
+    signal rsp_fifo_write : std_logic_vector(NUM_FLASHES - 1 downto 0);
 
-    signal rsp_fifo_wdata : std_logic_vector(7 downto 0);
-    signal rsp_fifo_write : std_logic;
-    signal rsp_fifo_rdata : std_logic_vector(7 downto 0);
-    signal rsp_fifo_rdack : std_logic;
-    signal rsp_fifo_empty : std_logic;
+    type lanes_t is array (0 to NUM_FLASHES - 1) of std_logic_vector(3 downto 0);
+    signal cs_n  : std_logic_vector(NUM_FLASHES - 1 downto 0);
+    signal sclk  : std_logic_vector(NUM_FLASHES - 1 downto 0);
+    signal io    : lanes_t;
+    signal io_o  : lanes_t;
+    signal io_oe : lanes_t;
 
-    signal cs_n  : std_logic;
-    signal sclk  : std_logic;
-    signal io    : std_logic_vector(3 downto 0);
-    signal io_o  : std_logic_vector(3 downto 0);
-    signal io_oe : std_logic_vector(3 downto 0);
-
-    signal flash_o    : std_logic_vector(3 downto 0);
-    signal flash_oe   : std_logic_vector(3 downto 0);
-    signal io_flash   : std_logic_vector(3 downto 0);
-    signal sclk_flash : std_logic;
-    signal csn_flash  : std_logic;
+    signal flash_o    : lanes_t;
+    signal flash_oe   : lanes_t;
+    signal io_flash   : lanes_t;
+    signal sclk_flash : std_logic_vector(NUM_FLASHES - 1 downto 0);
+    signal csn_flash  : std_logic_vector(NUM_FLASHES - 1 downto 0);
 
 begin
 
@@ -99,120 +99,91 @@ begin
         );
 
     dut: entity work.hash_engine_top
-        port map (
-            clk             => clk,
-            reset           => reset,
-            axi_if          => axi_bus,
-            cmd_fifo_wdata  => cmd_fifo_wdata,
-            cmd_fifo_write  => cmd_fifo_write,
-            rsp_fifo_rdata  => rsp_fifo_rdata,
-            rsp_fifo_rdack  => rsp_fifo_rdack,
-            rsp_fifo_rempty => rsp_fifo_empty
-        );
-
-    cmd_fifo: entity work.dcfifo_xpm
         generic map (
-            fifo_write_depth => 256,
-            data_width       => 32,
-            showahead_mode   => true
+            NUM_FLASHES => NUM_FLASHES
         )
         port map (
-            wclk     => clk,
-            reset    => reset,
-            write_en => cmd_fifo_write,
-            wdata    => cmd_fifo_wdata,
-            wfull    => open,
-            wusedwds => open,
-            rclk     => clk,
-            rdata    => cmd_fifo_rdata,
-            rdreq    => cmd_fifo_rdack,
-            rempty   => cmd_fifo_empty,
-            rusedwds => open
+            clk              => clk,
+            reset            => reset,
+            axi_if           => axi_bus,
+            flash_cmd_rdata  => cmd_fifo_rdata,
+            flash_cmd_rdack  => cmd_fifo_rdack,
+            flash_cmd_rempty => cmd_fifo_empty,
+            flash_rsp_wdata  => rsp_fifo_wdata,
+            flash_rsp_write  => rsp_fifo_write,
+            flash_rsp_wfull  => open
         );
 
-    rsp_fifo: entity work.dcfifo_xpm
-        generic map (
-            fifo_write_depth => 256,
-            data_width       => 8,
-            showahead_mode   => true
-        )
-        port map (
-            wclk     => clk,
-            reset    => reset,
-            write_en => rsp_fifo_write,
-            wdata    => rsp_fifo_wdata,
-            wfull    => open,
-            wusedwds => open,
-            rclk     => clk,
-            rdata    => rsp_fifo_rdata,
-            rdreq    => rsp_fifo_rdack,
-            rempty   => rsp_fifo_empty,
-            rusedwds => open
-        );
+    -- One spi_nor_top and one modelled part per flash, each hung off its own
+    -- pair of the engine's flash ports. The parts are told apart by actor
+    -- name; which of them a run reads is the whole point of the aux tests.
+    flashes: for f in 0 to NUM_FLASHES - 1 generate
+        constant actor : string := "spi_nor_target" & integer'image(f);
+    begin
+        -- The SPI controller's own register interface is not exercised here,
+        -- so park its initiator side idle. sp5_owns_flash stays at its reset
+        -- value of zero, which means the hubris register path is nominally
+        -- selected and the hash client has to win the engine on its own.
+        spinor_axi(f).read_address.valid   <= '0';
+        spinor_axi(f).read_address.addr    <= (others => '0');
+        spinor_axi(f).read_data.ready      <= '0';
+        spinor_axi(f).write_address.valid  <= '0';
+        spinor_axi(f).write_address.addr   <= (others => '0');
+        spinor_axi(f).write_data.valid     <= '0';
+        spinor_axi(f).write_data.data      <= (others => '0');
+        spinor_axi(f).write_data.strb      <= (others => '0');
+        spinor_axi(f).write_response.ready <= '0';
 
-    -- The SPI controller's own register interface is not exercised here, so park
-    -- its initiator side idle. sp5_owns_flash stays at its reset value of zero,
-    -- which means the hubris register path is nominally selected and the hash
-    -- client has to win the engine on its own.
-    spinor_axi.read_address.valid   <= '0';
-    spinor_axi.read_address.addr    <= (others => '0');
-    spinor_axi.read_data.ready      <= '0';
-    spinor_axi.write_address.valid  <= '0';
-    spinor_axi.write_address.addr   <= (others => '0');
-    spinor_axi.write_data.valid     <= '0';
-    spinor_axi.write_data.data      <= (others => '0');
-    spinor_axi.write_data.strb      <= (others => '0');
-    spinor_axi.write_response.ready <= '0';
+        spi_nor: entity work.spi_nor_top
+            port map (
+                clk                  => clk,
+                reset                => reset,
+                axi_if               => spinor_axi(f),
+                cs_n                 => cs_n(f),
+                sclk                 => sclk(f),
+                io                   => io(f),
+                io_o                 => io_o(f),
+                io_oe                => io_oe(f),
+                sp5_owns_flash       => open,
+                espi_cmd_fifo_rdata  => (others => '0'),
+                espi_cmd_fifo_rdack  => open,
+                espi_cmd_fifo_rempty => '1',
+                espi_data_fifo_wdata => open,
+                espi_data_fifo_write => open,
+                hash_cmd_fifo_rdata  => cmd_fifo_rdata,
+                hash_cmd_fifo_rdack  => cmd_fifo_rdack(f),
+                hash_cmd_fifo_rempty => cmd_fifo_empty(f),
+                hash_data_fifo_wdata => rsp_fifo_wdata(f * 8 + 7 downto f * 8),
+                hash_data_fifo_write => rsp_fifo_write(f)
+            );
 
-    spi_nor: entity work.spi_nor_top
-        port map (
-            clk                  => clk,
-            reset                => reset,
-            axi_if               => spinor_axi,
-            cs_n                 => cs_n,
-            sclk                 => sclk,
-            io                   => io,
-            io_o                 => io_o,
-            io_oe                => io_oe,
-            sp5_owns_flash       => open,
-            espi_cmd_fifo_rdata  => (others => '0'),
-            espi_cmd_fifo_rdack  => open,
-            espi_cmd_fifo_rempty => '1',
-            espi_data_fifo_wdata => open,
-            espi_data_fifo_write => open,
-            hash_cmd_fifo_rdata  => cmd_fifo_rdata,
-            hash_cmd_fifo_rdack  => cmd_fifo_rdack,
-            hash_cmd_fifo_rempty => cmd_fifo_empty,
-            hash_data_fifo_wdata => rsp_fifo_wdata,
-            hash_data_fifo_write => rsp_fifo_write
-        );
+        -- Everything the part sees is delayed by out_delay; everything the DUT
+        -- captures is delayed again by in_delay coming back.
+        sclk_flash(f) <= sclk(f) after out_delay;
+        csn_flash(f)  <= cs_n(f) after out_delay;
 
-    -- Everything the part sees is delayed by out_delay; everything the DUT
-    -- captures is delayed again by in_delay coming back.
-    sclk_flash <= sclk after out_delay;
-    csn_flash  <= cs_n after out_delay;
+        flash: entity work.spi_nor_target_vc
+            generic map (
+                actor_name => actor
+            )
+            port map (
+                cs_n  => csn_flash(f),
+                sclk  => sclk_flash(f),
+                io    => io_flash(f),
+                io_o  => flash_o(f),
+                io_oe => flash_oe(f)
+            );
 
-    flash: entity work.spi_nor_target_vc
-        generic map (
-            actor_name => "spi_nor_target"
-        )
-        port map (
-            cs_n  => csn_flash,
-            sclk  => sclk_flash,
-            io    => io_flash,
-            io_o  => flash_o,
-            io_oe => flash_oe
-        );
+        -- Both ends contribute to the resolved bus at the part, plus a weak
+        -- pull-up for the board's. If both drive a lane the resolution goes to
+        -- 'X', which the controller shifts in and the digest check then catches.
+        bus_gen: for i in 0 to 3 generate
+            io_flash(f)(i) <= io_o(f)(i) after out_delay when io_oe(f)(i) = '1' else 'Z' after out_delay;
+            io_flash(f)(i) <= flash_o(f)(i) when flash_oe(f)(i) = '1' else 'Z';
+            io_flash(f)(i) <= 'H';
+        end generate;
 
-    -- Both ends contribute to the resolved bus at the part, plus a weak pull-up
-    -- for the board's. If both drive a lane the resolution goes to 'X', which the
-    -- controller shifts in and the digest check then catches.
-    bus_gen: for i in io_flash'range generate
-        io_flash(i) <= io_o(i) after out_delay when io_oe(i) = '1' else 'Z' after out_delay;
-        io_flash(i) <= flash_o(i) when flash_oe(i) = '1' else 'Z';
-        io_flash(i) <= 'H';
+        io(f) <= io_flash(f) after in_delay;
     end generate;
-
-    io <= io_flash after in_delay;
 
 end th;

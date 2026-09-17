@@ -6,9 +6,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sequencer_regs_pkg.all;
 
+-- Synchronises the SP5-side pins, the fans, the DDR hotswaps and the alert
+-- pins, which every SP5 board shares. The NIC-side pins are board specific and
+-- have their own synchronisers, t6_sync and versal_sync.
 entity seq_sync is
     port (
         clk : in std_logic;
@@ -21,8 +25,6 @@ entity seq_sync is
         group_b_pins : view group_b_power_at_fpga;
         group_c_pins : view group_c_power_at_fpga;
         sp5_seq_pins : view sp5_seq_at_fpga;
-        nic_rails_pins : view nic_power_at_fpga;
-        nic_seq_pins: view nic_seq_at_fpga;
         reg_alert_l_pins : view power_alert_at_fpga;
         -- internal, synchronized interfaces
         rail_masks : in rails_type;
@@ -33,15 +35,11 @@ entity seq_sync is
         group_b : view group_b_power_at_reg;
         group_c : view group_c_power_at_reg;
         sp5_seq : view sp5_seq_at_sp5;
-        nic_rails : view nic_power_at_reg;
-        nic_seq: view nic_seq_at_nic;
         reg_alert_l : view power_alert_at_reg;
     );
     end entity;
 
 architecture rtl of seq_sync is
-   signal  nic_sync_5v_hsc_pg_l : std_logic;
-   signal nic_sync_12v_hsc_pg_l : std_logic;
    signal fan_central_pg_raw : std_logic;
    signal fan_east_pg_raw : std_logic;
    signal fan_west_pg_raw : std_logic;
@@ -231,87 +229,6 @@ begin
        sycnd_output => sp5_seq.pwrgd_out
     );
 
-    -- nic rails sync stuff
-    nic_rails_pins.nic_hsc_12v.enable <= nic_rails.nic_hsc_12v.enable;
-    v1p5_nic_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v1p5_nic_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v1p5_nic_a0hp.pg
-    );
-    v1p2_nic_pcie_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v1p2_nic_pcie_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v1p2_nic_pcie_a0hp.pg
-    );
-    v1p2_nic_enet_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v1p2_nic_enet_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v1p2_nic_enet_a0hp.pg
-    );
-    v3p3_nic_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v3p3_nic_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v3p3_nic_a0hp.pg
-    );
-    v1p1_nic_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v1p1_nic_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v1p1_nic_a0hp.pg
-    );
-    v1p4_nic_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v1p4_nic_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v1p4_nic_a0hp.pg
-    );
-    v0p96_nic_vdd_a0hp: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.v0p96_nic_vdd_a0hp.pg,
-       clk => clk,
-       sycnd_output => nic_rails.v0p96_nic_vdd_a0hp.pg
-    );
-    nic_hsc_12v: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.nic_hsc_12v.pg,
-       clk => clk,
-       sycnd_output => nic_sync_12v_hsc_pg_l
-    );
-    nic_hsc_5v: entity work.meta_sync
-    port map(
-       async_input => nic_rails_pins.nic_hsc_5v.pg,
-       clk => clk,
-       sycnd_output => nic_sync_5v_hsc_pg_l
-    );
-   
-    -- HSC's are actually pg_l signals, so invert them here
-    nic_rails.nic_hsc_5v.pg <= not nic_sync_5v_hsc_pg_l;
-    nic_rails.nic_hsc_12v.pg  <= not nic_sync_12v_hsc_pg_l;
-    -- nic sync-related stuff
-    nic_seq_pins.cld_rst_l <= nic_seq.cld_rst_l;
-    nic_seq_pins.perst_l <= nic_seq.perst_l;
-    nic_seq_pins.eeprom_wp_l <= nic_seq.eeprom_wp_l;
-    nic_seq_pins.eeprom_wp_buffer_oe_l <= nic_seq.eeprom_wp_buffer_oe_l;
-    nic_seq_pins.flash_wp_l <= nic_seq.flash_wp_l;
-    nic_seq_pins.nic_mfg_mode_l <= nic_seq.nic_mfg_mode_l;
-    nic_seq_pins.nic_pcie_clk_buff_oe_l <= nic_seq.nic_pcie_clk_buff_oe_l;
-    ext_rst_l_sync: entity work.meta_sync
-    port map(
-       async_input => nic_seq_pins.ext_rst_l,
-       clk => clk,
-       sycnd_output => nic_seq.ext_rst_l
-    );
-    sp5_mfg_mode_l_sync: entity work.meta_sync
-    port map(
-       async_input => nic_seq_pins.sp5_mfg_mode_l,
-       clk => clk,
-       sycnd_output => nic_seq.sp5_mfg_mode_l
-    );
-
     -- Alert sync stuff
        
 
@@ -418,6 +335,12 @@ begin
        async_input => reg_alert_l_pins.pwr_cont3_to_fpga1_alert_l,
        clk => clk,
        sycnd_output => reg_alert_l.pwr_cont3_to_fpga1_alert_l
+    );
+   pwr_cont4_to_fpga1_alert_l_sync: entity work.meta_sync
+    port map(
+       async_input => reg_alert_l_pins.pwr_cont4_to_fpga1_alert_l,
+       clk => clk,
+       sycnd_output => reg_alert_l.pwr_cont4_to_fpga1_alert_l
     );
 
     

@@ -20,6 +20,16 @@ use work.link_layer_pkg.all;
 use work.axil15x32_pkg.all;
 
 entity espi_target_top is
+    generic (
+        -- Whether this instance can ever forward SAFS flash writes and
+        -- erases. False strips the ability out of the build; true still
+        -- leaves it gated by the flash_write_enable control bit, which
+        -- resets to off. Refused writes and erases get an unsuccessful
+        -- completion.
+        FLASH_WRITES_ALLOWED : boolean := false;
+        -- Whether to keep the 4k entry post code buffer, see espi_regs.
+        POST_CODE_BUFFER_ENABLED : boolean := true
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -43,6 +53,10 @@ entity espi_target_top is
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
         flash_fifo_clear : out std_logic;
+        -- Write payload FIFO, host to flash. Only ever written on an
+        -- instance built with FLASH_WRITES_ALLOWED; leave open otherwise.
+        flash_wfifo_data : out std_logic_vector(7 downto 0);
+        flash_wfifo_write : out std_logic;
         -- Interfaces to the UART block
         to_sp_uart_data : out std_logic_vector(7 downto 0);
         to_sp_uart_valid: out std_logic;
@@ -66,6 +80,8 @@ architecture rtl of espi_target_top is
     signal flash_np_free  : std_logic;
     signal flash_c_avail : std_logic;
     signal flash_channel_enable : boolean;
+    signal flash_write_enable : std_logic;
+    signal flash_writes_permitted : std_logic;
     signal dbg_chan : dbg_chan_t;
     signal spec_regs : spec_regs_t;
     signal response_done : boolean;
@@ -251,6 +267,9 @@ begin
    chip_sel_active <= not txn_csn;
     -- system (axi-lite) register block
    espi_sys_regs_inst: entity work.espi_regs
+    generic map(
+       POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED
+    )
     port map(
        clk => clk,
        reset => reset,
@@ -258,6 +277,7 @@ begin
        stuff_fifo => stuff_fifo,
        stuff_wds => stuff_wds,
        dbg_chan => dbg_chan,
+       flash_write_enable => flash_write_enable,
        spec_regs_view => spec_regs,
        post_code => post_code,
        post_code_valid => post_code_valid,
@@ -286,6 +306,7 @@ begin
             data_to_host    => txn_resp,
             data_from_host  => txn_cmd,
             alert_needed    => alert_needed,
+            flash_writes_allowed => flash_writes_permitted,
             flash_req       => flash_req,
             flash_resp      => flash_resp,
             response_done   => response_done,
@@ -320,6 +341,11 @@ begin
             oob_enabled    => oob_enabled
         );
 
+    -- Both halves of the write permission have to agree; the generic keeps
+    -- the register bit from doing anything on an instance that must never
+    -- let the host write.
+    flash_writes_permitted <= '1' when FLASH_WRITES_ALLOWED and flash_write_enable = '1' else '0';
+
     -- flash access channel logic
    flash_channel_inst: entity work.flash_channel
     port map(
@@ -335,7 +361,9 @@ begin
        flash_cfifo_write => flash_cfifo_write,
        flash_rfifo_data => flash_rfifo_data,
        flash_rfifo_rdack => flash_rfifo_rdack,
-       flash_rfifo_rempty => flash_rfifo_rempty
+       flash_rfifo_rempty => flash_rfifo_rempty,
+       flash_wfifo_data => flash_wfifo_data,
+       flash_wfifo_write => flash_wfifo_write
    );
 
    -- uart channel logic

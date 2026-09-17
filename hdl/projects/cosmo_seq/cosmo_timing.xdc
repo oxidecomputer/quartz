@@ -1,20 +1,27 @@
 create_clock -add -name sys_clk_pin -period 20.000 -waveform {0 10.000}  [get_ports { clk_50mhz_fpga1_1 }];
-create_clock -add -name fmc_clk_pin -period 15.000 -waveform {0 7.500}  [get_ports { fmc_sp_to_fpga1_clk }];
+create_clock -add -name fmc_clk_pin -period 10.000 -waveform {0 5.000}  [get_ports { fmc_sp_to_fpga1_clk }];
 
 #
 # FMC interface constraints
 # Create a virtual clock, to represent the source clock of the FMC interface
-create_clock -name fmc_virt_clk -period 15.000;
+create_clock -name fmc_virt_clk -period 10.000;
 
-set_clock_groups -asynchronous -group {fmc_clk_pin fmc_virt_clk} -group {clk_125m_cosmo_pll} -group {clk_200m_cosmo_pll}
+# The FMC MMCM's output clock is derived from fmc_clk_pin and must stay in
+# the synchronous group with it and the virtual clock.
+set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks {fmc_clk_pin fmc_virt_clk}] -group {clk_125m_sys_pll} -group {clk_200m_sys_pll}
 
 
 # #######################
 # FMC Interface
 # #######################
 
-# SP output a continuous clock here.
-# The FMC interface is clocked at 66.67MHz, which is a 15ns period.
+# SP outputs a continuous clock here.
+# The FMC interface is constrained at 100MHz (10ns period), the CLKDIV=1
+# target rate; the same analysis is a strict superset of 50 and 66.67 MHz
+# operation. The internal FMC domain clock comes from an MMCM in
+# phase-alignment mode (see xilinx_ip_gen/fmc_pll_ip.tcl), so the flops
+# see the pin clock plus the deliberate +45deg phase shift and STA
+# accounts for it via the generated clock.
 # FPGA's input delays have to be low enough that they don't run into the uncertainty region due to any possible skew.
 # skew_bre is the shortest trace delay vs the clock, and skew_are is the longest trace delay vs the clock.
 # On cosmo, clock trace is 60.787 rev1, 53.026mm rev2 .  
@@ -57,17 +64,21 @@ set min_wait_delay 0.3635
 
 # Source sync so external_clk_delay is 0.
 # Setup time is 1ns, and we include the 1/2 period due to SP  shifting the data out on the falling edge.
-set sp_output_half_period 7.5
+set sp_output_half_period 5.0
 set sp_0_hold 0
 set sp_clk_delay 0
 
-# We have our  1/2 period of 7.5 ns due to SP outputting on falling edges, plus the td in the datasheet
+# We have our  1/2 period of 5 ns due to SP outputting on falling edges, plus the td in the datasheet
 set td_clkl_nehl 1
 set nl_output_delay [expr {$sp_output_half_period + $td_clkl_nehl}]
 set max_nl [expr {$sp_clk_delay + $nl_output_delay + $max_data_delay - $min_clock_delay}]
-# latest clock, earliest data. We assume a hold time of 0 for the SP.
+# latest clock, earliest data. We assume a hold time of 0 for the SP, but the SP
+# holds its outputs until the *next falling edge*, so the earliest change is a
+# half period after the capture edge. Without that term Vivado assumes the data
+# can change at the capture edge itself, which manufactures a phantom
+# input-hold requirement of nearly a half period.
 # min external: fastest data, slowest clock
-set min_nl [expr {$sp_clk_delay + $sp_0_hold + $min_data_delay - $max_clock_delay}]
+set min_nl [expr {$sp_clk_delay + $sp_output_half_period + $sp_0_hold + $min_data_delay - $max_clock_delay}]
 
 # Apply to all of these pins with similar or better timing relationships.
 set_input_delay -clock fmc_virt_clk -max $max_nl [get_ports fmc_sp_to_fpga1_cs_l]
@@ -85,8 +96,8 @@ set_input_delay -clock fmc_virt_clk -min $min_nl [get_ports fmc_sp_to_fpga1_bl_l
 set td_clkl_av 2.5
 set a_output_delay [expr {$sp_output_half_period + $td_clkl_av}]
 set max_a [expr {$sp_clk_delay + $a_output_delay + $max_data_delay - $min_clock_delay}]
-# Still 0 hold on these pins.
-set min_a [expr {$sp_clk_delay + $sp_0_hold + $min_data_delay - $max_clock_delay}]
+# Still 0 hold on these pins, held to the next falling edge as above.
+set min_a [expr {$sp_clk_delay + $sp_output_half_period + $sp_0_hold + $min_data_delay - $max_clock_delay}]
 set_input_delay -clock fmc_virt_clk -max $max_a [get_ports fmc_sp_to_fpga1_a[*]]
 set_input_delay -clock fmc_virt_clk -min $min_a [get_ports fmc_sp_to_fpga1_a[*]]
 
@@ -94,10 +105,22 @@ set_input_delay -clock fmc_virt_clk -min $min_a [get_ports fmc_sp_to_fpga1_a[*]]
 set  td_clkl_adv 3
 set ad_output_delay [expr {$sp_output_half_period + $td_clkl_adv}]
 set max_ad [expr {$sp_clk_delay + $ad_output_delay + $max_data_delay - $min_clock_delay}]
-# Still 0 hold on these pins.
-set min_ad [expr {$sp_clk_delay + $sp_0_hold + $min_data_delay - $max_clock_delay}]
+# Still 0 hold on these pins, held to the next falling edge as above.
+set min_ad [expr {$sp_clk_delay + $sp_output_half_period + $sp_0_hold + $min_data_delay - $max_clock_delay}]
 set_input_delay -clock fmc_virt_clk -max $max_ad [get_ports fmc_sp_to_fpga1_da[*]]
 set_input_delay -clock fmc_virt_clk -min $min_ad [get_ports fmc_sp_to_fpga1_da[*]]
+
+# The MMCM's +45deg phase shift puts the internal capture edge at 1.25 ns,
+# and STA's default edge relationship then times input paths from the
+# virtual-clock launch at 0 to that 1.25 ns edge -- a nonsense 1.25 ns
+# requirement. The intended capture edge is the *next* shifted edge at
+# 11.25 ns, which is exactly what setup-2 selects. The default hold
+# relationship (one cycle before the setup edge, back at 1.25 ns) is the
+# right check and passes with the half-period of real SP hold, so no -hold
+# adjustment. Output paths need nothing: launch at 1.25 ns against the SP's
+# capture at 10 ns is already the correct single-cycle relationship.
+set_multicycle_path 2 -setup -from [get_clocks fmc_virt_clk] -to [get_clocks *fmc_pll*]
+set_multicycle_path 2 -setup -from [get_clocks fmc_clk_pin] -to [get_clocks *fmc_pll*]
 
 #### END Of inputs
 
@@ -129,12 +152,17 @@ set_output_delay -clock fmc_virt_clk -max $max_da [get_ports fmc_sp_to_fpga1_da[
 set_output_delay -clock fmc_virt_clk -min $min_da [get_ports fmc_sp_to_fpga1_da[*]]
 
 
-# assuming wait_l works, we have multiple cycles to get the data out. This is likely needed due to the tri-state stuff here
-# and it has trouble meeting timing without the additional cycles. The fpga design compensates for this with wait_l.
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -setup 2
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -hold 1
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -setup 2
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga1_da[*]}] -hold 1
+# The streaming FSM presents read beats on consecutive cycles, so the
+# word0->word1 transition is a true single-cycle path and no multicycle
+# exception applies to the data pins. Single-cycle closes because the output
+# and tristate flops pack into the IOBs: data_out_reg and data_out_hiz_int_reg
+# are one flop per pin by construction, and nwait, a single-cycle path the SP
+# samples every rising edge, gets the same treatment. If a board cannot close
+# this way, set the extra_beat_setup generic and add setup-2/hold-1 exceptions
+# on the data/tristate paths to match.
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *stm32h7_fmc_target*/data_out_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *stm32h7_fmc_target*/data_out_hiz_int_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *stm32h7_fmc_target*/nwait_reg}]
 
 # End FMC
 

@@ -12,6 +12,18 @@ use work.axi_st8_pkg.all;
 
 
 entity sp5_espi_flash_subsystem is
+    generic (
+        -- Passed to espi_target_top. Off for the SP5 boot flash, where the
+        -- host must never be able to modify what it boots from.
+        FLASH_WRITES_ALLOWED : boolean := false;
+        -- Passed to espi_target_top. A flash-only instance has no use for
+        -- the post code buffer.
+        POST_CODE_BUFFER_ENABLED : boolean := true;
+        -- spi_nor_top's rate and sample point. The defaults are the SP5 boot
+        -- flash's; a flash on a slower bank or a longer path wants its own.
+        SPI_NOR_SCLK_DIVISOR : natural := 0;
+        SPI_NOR_RX_SAMPLE_TAPS : natural range 0 to 4 := 2
+    );
     port(
         clk_125m : in std_logic;
         reset_125m : in std_logic;
@@ -35,12 +47,19 @@ entity sp5_espi_flash_subsystem is
         spi_nor_dat : in std_logic_vector(3 downto 0);
         spi_nor_dat_o : out std_logic_vector(3 downto 0);
         spi_nor_dat_oe : out std_logic_vector(3 downto 0);
+        -- Parks the flash pins when low, see spi_nor_top. Only a design that
+        -- shares the flash through a mux needs to drive it.
+        spi_nor_bus_enable : in std_logic := '1';
 
-        -- SHA3 hashing engine. It lives here rather than at the top level because
-        -- it reads the flash through spi_nor_top's second client port, so it needs
-        -- the same command/response FIFO pattern the eSPI flash channel uses.
-        hash_axi_if : view axil8x32_pkg.axil_target;
-
+        -- spi_nor_top's second flash client port, for the hashing engine. The
+        -- engine sits at the project top rather than in here so that one engine
+        -- can be shared between several of these wrappers; these are the
+        -- engine's own FIFO endpoints, in spi_nor_top's port shape.
+        hash_cmd_fifo_rdata  : in std_logic_vector(31 downto 0);
+        hash_cmd_fifo_rdack  : out std_logic;
+        hash_cmd_fifo_rempty : in std_logic;
+        hash_data_fifo_wdata : out std_logic_vector(7 downto 0);
+        hash_data_fifo_write : out std_logic
     );
 end entity;
 
@@ -57,23 +76,13 @@ architecture rtl of sp5_espi_flash_subsystem is
     signal flash_rfifo_rempty : std_logic;
     signal flash_fifo_clear : std_logic;
     signal fifo_reset : std_logic;
+    signal flash_wfifo_data : std_logic_vector(7 downto 0);
+    signal flash_wfifo_write : std_logic;
+    signal espi_wfifo_rdata : std_logic_vector(7 downto 0);
+    signal espi_wfifo_rdack : std_logic;
+    signal espi_wfifo_rempty : std_logic;
     signal rst_cnts : integer range 0 to 5 := 5;
 
-    -- Hashing engine <-> spi_nor_top, the same shape as the eSPI pair above.
-    -- Deliberately not tied to fifo_reset: that is flushed on every eSPI reset,
-    -- which happens at the start of every boot and has nothing to do with a hash
-    -- the SP may have in flight. The engine resynchronises its own channel by
-    -- draining it, so a global reset is the only thing that needs to clear these.
-    signal hash_cmd_fifo_wdata : std_logic_vector(31 downto 0);
-    signal hash_cmd_fifo_write : std_logic;
-    signal hash_cmd_fifo_rdata : std_logic_vector(31 downto 0);
-    signal hash_cmd_fifo_rdack : std_logic;
-    signal hash_cmd_fifo_rempty : std_logic;
-    signal hash_data_fifo_wdata : std_logic_vector(7 downto 0);
-    signal hash_data_fifo_write : std_logic;
-    signal hash_rsp_fifo_rdata : std_logic_vector(7 downto 0);
-    signal hash_rsp_fifo_rdack : std_logic;
-    signal hash_rsp_fifo_rempty : std_logic;
 
 
 begin
@@ -139,64 +148,45 @@ begin
         rusedwds => open
     );
 
-    -- Hashing engine -> SPI NOR FIFO
-    hash_spinor_cmd_fifo: entity work.dcfifo_xpm
-     generic map(
-        fifo_write_depth => 256,
-        data_width => 32,
-        showahead_mode => true
-    )
-     port map(
-        wclk => clk_125m,
-        reset => reset_125m,
-        write_en => hash_cmd_fifo_write,
-        wdata => hash_cmd_fifo_wdata,
-        wfull => open,
-        wusedwds => open,
-        rclk => clk_125m,
-        rdata => hash_cmd_fifo_rdata,
-        rdreq => hash_cmd_fifo_rdack,
-        rempty => hash_cmd_fifo_rempty,
-        rusedwds => open
-    );
-    -- SPI NOR -> hashing engine FIFO
-    hash_spinor_data_fifo: entity work.dcfifo_xpm
-     generic map(
-        fifo_write_depth => 256,
-        data_width => 8,
-        showahead_mode => true
-    )
-     port map(
-        wclk => clk_125m,
-        reset => reset_125m,
-        write_en => hash_data_fifo_write,
-        wdata => hash_data_fifo_wdata,
-        wfull => open,
-        wusedwds => open,
-        rclk => clk_125m,
-        rdata => hash_rsp_fifo_rdata,
-        rdreq => hash_rsp_fifo_rdack,
-        rempty => hash_rsp_fifo_rempty,
-        rusedwds => open
-    );
-
-    hash_engine_inst: entity work.hash_engine_top
-     port map(
-        clk => clk_125m,
-        reset => reset_125m,
-        axi_if => hash_axi_if,
-        cmd_fifo_wdata => hash_cmd_fifo_wdata,
-        cmd_fifo_write => hash_cmd_fifo_write,
-        rsp_fifo_rdata => hash_rsp_fifo_rdata,
-        rsp_fifo_rdack => hash_rsp_fifo_rdack,
-        rsp_fifo_rempty => hash_rsp_fifo_rempty
-    );
-
     -- eSPI block
     -- Only the link layer runs at 200MHz, the remaining
     -- logic runs at 125MHz so all the interfaces are synchronous
     -- to 125MHz
+    -- Host to flash write payloads. One eSPI write's payload at most sits in
+    -- here at a time: the eSPI side issues one flash command at a time and
+    -- the payload is consumed before it reports the command done. Sized for
+    -- the flash channel's 1kB per-descriptor slot. Absent on a read-only
+    -- instance, where it would only ever be empty.
+    wfifo: if FLASH_WRITES_ALLOWED generate
+        espi_spinor_wdata_fifo: entity work.dcfifo_xpm
+         generic map(
+            fifo_write_depth => 1024,
+            data_width => 8,
+            showahead_mode => true
+        )
+         port map(
+            wclk => clk_125m,
+            reset => fifo_reset,
+            write_en => flash_wfifo_write,
+            wdata => flash_wfifo_data,
+            wfull => open,
+            wusedwds => open,
+            rclk => clk_125m,
+            rdata => espi_wfifo_rdata,
+            rdreq => espi_wfifo_rdack,
+            rempty => espi_wfifo_rempty,
+            rusedwds => open
+        );
+    else generate
+        espi_wfifo_rdata <= (others => '0');
+        espi_wfifo_rempty <= '1';
+    end generate;
+
     espi_target_top_inst: entity work.espi_target_top
+     generic map(
+        FLASH_WRITES_ALLOWED => FLASH_WRITES_ALLOWED,
+        POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED
+     )
      port map(
         clk_200m => clk_200m,
         reset_200m => reset_200m,
@@ -215,6 +205,8 @@ begin
         flash_rfifo_data => flash_rfifo_data,
         flash_rfifo_rdack => flash_rfifo_rdack,
         flash_rfifo_rempty => flash_rfifo_rempty,
+        flash_wfifo_data => flash_wfifo_data,
+        flash_wfifo_write => flash_wfifo_write,
         to_sp_uart_data => ipcc_uart_from_espi.data, 
         to_sp_uart_valid => ipcc_uart_from_espi.valid,
         to_sp_uart_ready => ipcc_uart_from_espi.ready,
@@ -231,14 +223,14 @@ begin
            -- round trip out to the flash and back has to land within half an
            -- sclk period of rx_sample_taps, and above this rate that window
            -- closes. Faster would need per-lane IDELAY read training.
-           sclk_divisor => 0,
+           sclk_divisor => SPI_NOR_SCLK_DIVISOR,
            -- Sample 8ns after the sclk rising edge. Taps are in half-clk (4ns)
            -- steps. With the flash IO flops packed into the IOBs the round trip
            -- out and back is bounded to roughly 3.7..11.6ns, which puts the
            -- usable sample window at 3.6..11.7ns; 8ns sits about 4ns clear of
            -- either end. cosmo_timing.xdc carries the arithmetic. Sweep this on
            -- hardware if reads come back corrupted.
-           rx_sample_taps => 2,
+           rx_sample_taps => SPI_NOR_RX_SAMPLE_TAPS,
             cs_setup_cnts => 4,
             cs_high_cnts  => 7
         )
@@ -252,11 +244,15 @@ begin
            io_o => spi_nor_dat_o,
            io_oe => spi_nor_dat_oe,
            sp5_owns_flash => open,
+           bus_enable => spi_nor_bus_enable,
            espi_cmd_fifo_rdata => espi_cmd_fifo_rdata,
            espi_cmd_fifo_rdack => espi_cmd_fifo_rdack,
            espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
            espi_data_fifo_wdata => espi_data_fifo_wdata,
            espi_data_fifo_write => espi_data_fifo_write,
+           espi_wfifo_rdata => espi_wfifo_rdata,
+           espi_wfifo_rdack => espi_wfifo_rdack,
+           espi_wfifo_rempty => espi_wfifo_rempty,
            hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
            hash_cmd_fifo_rdack => hash_cmd_fifo_rdack,
            hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,

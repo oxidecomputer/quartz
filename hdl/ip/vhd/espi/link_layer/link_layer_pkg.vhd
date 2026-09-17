@@ -64,7 +64,6 @@ package body link_layer_pkg is
                  opcode_get_configuration |
                  opcode_reset |
                  opcode_get_flash_c |
-                 opcode_put_flash_np |
                  opcode_get_np |
                  opcode_put_vwire |
                  opcode_get_oob |
@@ -84,6 +83,10 @@ package body link_layer_pkg is
             when opcode_put_np |
                  opcode_get_pc =>
                 return true;
+            when opcode_put_flash_np =>
+                -- reads and erases are address only; a write carries its
+                -- payload so its size is not known until the length is
+                return h.cycle_type /= flash_write;
             when others =>
                 return false;
         end case?;
@@ -96,7 +99,8 @@ package body link_layer_pkg is
         -- '-' (don't care) values.
         case? h.opcode is
             when opcode_put_pc |
-                 opcode_put_oob =>
+                 opcode_put_oob |
+                 opcode_put_flash_np =>
                 return true;
             when others =>
                 return false;
@@ -149,10 +153,14 @@ package body link_layer_pkg is
                         return To_StdLogicVector(0, 13);
                 end case;
             when opcode_put_flash_np =>
-                -- opcode, standard header (3), 4 address bytes, length bytes, crc
-                -- but we only support opcodes of reads, which don't have length data
-                -- in the cmd payload
-                return To_StdLogicVector(1 + 3 + 4 + 1, 13);
+                -- opcode, standard header (3), 4 address bytes, crc, plus the
+                -- payload for a write. For an erase the length field is a
+                -- size code and there is no payload.
+                if h.cycle_type = flash_write then
+                    return To_StdLogicVector(1 + 3 + 4 + to_integer(h.len) + 1, 13);
+                else
+                    return To_StdLogicVector(1 + 3 + 4 + 1, 13);
+                end if;
             when opcode_put_oob =>
                 -- opcode, standard header (3), length bytes, crc
                 return To_StdLogicVector(1 + 3 + to_integer(h.len) + 1, 13);

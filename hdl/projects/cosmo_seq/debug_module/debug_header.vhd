@@ -8,6 +8,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.debug_regs_pkg.all;
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 
 entity debug_header is
@@ -52,7 +53,7 @@ entity debug_header is
         mux2_sel_pins : in std_logic_vector(1 downto 0); -- mux2 sel pins debug output to pins
         mux3_sel_pins : in std_logic_vector(1 downto 0); -- mux3 sel pins debug output to pins
         -- T6 signals
-        nic_dbg_pins : view t6_debug_dbg;
+        nic_dbg_pins : view nic_debug_dbg;
         -- sp5 toggle pins
         sp5_debug2_pin : in std_logic;
 
@@ -89,7 +90,7 @@ architecture rtl of debug_header is
     signal espi_resp_csn_int : std_logic;
     signal dbg_1v8_ctrl_200 : dbg_1v8_ctrl_type;
     signal fpga1_spare_reg : std_logic_vector(7 downto 0);
-    signal nic_dbg_pins_int : t6_debug_if;
+    signal nic_dbg_pins_int : nic_debug_if;
     signal sp5_debug2_pin_int : std_logic;
     signal mux1_sel_int : std_logic_vector(1 downto 0);
     signal mux2_sel_int : std_logic_vector(1 downto 0);
@@ -191,8 +192,8 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when SP_IPCC_BUS =>
                     fpga1_spare_reg(7) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(6) <= uart1_sp_to_fpga1_dat_int;
-                when T6_SEQUENCER =>
-                    -- T6 debug pins
+                when NIC_SEQUENCER =>
+                    -- NIC debug pins, see nic_seq / versal_seq for the taps
                     fpga1_spare_reg(7) <= nic_dbg_pins_int.rails_en;
                     fpga1_spare_reg(6) <= nic_dbg_pins_int.rails_pg;
                 when MUX1_SEL =>
@@ -246,10 +247,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when SP_IPCC_BUS =>
                     fpga1_spare_reg(5) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(4) <= uart1_sp_to_fpga1_dat_int;
-                 when T6_SEQUENCER =>
-                    -- T6 debug pins
-                    fpga1_spare_reg(5) <= nic_dbg_pins.cld_rst_l;
-                    fpga1_spare_reg(4) <=  nic_dbg_pins.perst_l;
+                 when NIC_SEQUENCER =>
+                    fpga1_spare_reg(5) <= nic_dbg_pins.taps(5);
+                    fpga1_spare_reg(4) <= nic_dbg_pins.taps(4);
                 when MUX1_SEL =>
                     -- Mux1 select pins
                     fpga1_spare_reg(5) <= mux1_sel_int(1);
@@ -301,9 +301,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when SP_IPCC_BUS =>
                     fpga1_spare_reg(3) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(2) <= uart1_sp_to_fpga1_dat_int;
-                when T6_SEQUENCER =>
-                    fpga1_spare_reg(3) <= nic_dbg_pins.sp5_mfg_mode_l;
-                    fpga1_spare_reg(2) <= nic_dbg_pins.nic_mfg_mode_l;
+                when NIC_SEQUENCER =>
+                    fpga1_spare_reg(3) <= nic_dbg_pins.taps(3);
+                    fpga1_spare_reg(2) <= nic_dbg_pins.taps(2);
                 when MUX1_SEL =>
                     fpga1_spare_reg(3) <= mux1_sel_int(1);
                     fpga1_spare_reg(2) <= mux1_sel_int(0);
@@ -353,9 +353,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when SP_IPCC_BUS =>
                     fpga1_spare_reg(1) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(0) <= uart1_sp_to_fpga1_dat_int;
-                when T6_SEQUENCER =>
-                    fpga1_spare_reg(1) <= nic_dbg_pins.ext_rst_l;
-                    fpga1_spare_reg(0) <= sp5_debug2_pin_int; -- Unused in this case.
+                when NIC_SEQUENCER =>
+                    fpga1_spare_reg(1) <= nic_dbg_pins.taps(1);
+                    fpga1_spare_reg(0) <= nic_dbg_pins.taps(0);
                 when MUX1_SEL =>
                     fpga1_spare_reg(1) <= mux1_sel_int(1);
                     fpga1_spare_reg(0) <= mux1_sel_int(0);

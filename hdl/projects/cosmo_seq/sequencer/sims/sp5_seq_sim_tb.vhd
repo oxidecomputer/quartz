@@ -14,6 +14,7 @@ library vunit_lib;
 
 use work.sp5_seq_sim_pkg.all;
 use work.sequencer_regs_pkg.all;
+use work.sequencer_io_pkg.all;
 use work.rail_model_msg_pkg;
 use work.nic_model_msg_pkg.all;
 
@@ -29,11 +30,11 @@ architecture tb of sp5_seq_sim_tb is
 
 begin
 
-    th: entity work.sp5_seq_sim_th;
+    th: entity work.sp5_seq_sim_th generic map (NIC_KIND => NIC_T6);
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
-        alias sp5_t6_perst_l is << signal th.sp5_t6_perst_l : std_logic >>;
+        alias sp5_t6_perst_l is << signal th.sp5_nic_perst_l : std_logic >>;
         variable read_data       : std_logic_vector(31 downto 0);
         variable seq_state       : seq_api_status_a0_sm;
         constant grpa_v3p3_actor  : actor_t := find("grpa_v3p3_sp5_a1");

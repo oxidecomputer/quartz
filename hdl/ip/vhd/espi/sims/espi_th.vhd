@@ -37,6 +37,8 @@ architecture th of espi_th is
     signal flash_rfifo_data   : std_logic_vector(7 downto 0);
     signal flash_rfifo_rdack  : std_logic;
     signal flash_rfifo_rempty : std_logic;
+    signal flash_wfifo_data   : std_logic_vector(7 downto 0);
+    signal flash_wfifo_write  : std_logic;
     signal axi_if      : axil15x32_pkg.axil_t;
     signal uart_data_line : std_logic;
     signal uart_handshake : std_logic;
@@ -92,7 +94,13 @@ begin
             bresp   => axi_if.write_response.resp
         );
 
+    -- Built with writes allowed so the write path can be exercised; the
+    -- runtime enable bit still starts off, which is what the refusal tests
+    -- rely on.
     dut: entity work.espi_target_top
+        generic map (
+            FLASH_WRITES_ALLOWED => true
+        )
         port map (
             clk                => clk,
             reset              => reset,
@@ -109,6 +117,8 @@ begin
             flash_rfifo_data   => flash_rfifo_data,
             flash_rfifo_rdack  => flash_rfifo_rdack,
             flash_rfifo_rempty => flash_rfifo_rempty,
+            flash_wfifo_data   => flash_wfifo_data,
+            flash_wfifo_write  => flash_wfifo_write,
             to_sp_uart_data  => to_sp_uart_data,
             to_sp_uart_valid => to_sp_uart_valid,
             to_sp_uart_ready => to_sp_uart_ready,
@@ -148,6 +158,8 @@ begin
             reset               => reset,
             espi_cmd_fifo_data  => flash_cfifo_data,
             espi_cmd_fifo_write => flash_cfifo_write,
+            espi_wfifo_data     => flash_wfifo_data,
+            espi_wfifo_write    => flash_wfifo_write,
             flash_rdata         => flash_rfifo_data,
             flash_rdata_empty   => flash_rfifo_rempty,
             flash_rdata_rdack   => flash_rfifo_rdack

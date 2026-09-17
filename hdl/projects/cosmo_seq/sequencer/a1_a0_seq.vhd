@@ -6,7 +6,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-use work.sequencer_io_pkg.all;
+use work.sp5_power_pkg.all;
 use work.sequencer_regs_pkg.all;
 
 -- This is the A1/A0 sequencer for the SP5 cosmo sled

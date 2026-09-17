@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim")
+load("//tools:hdl.bzl", "vhdl_unit", "vunit_sim", "sim_only_model")
 load("//tools:rdl.bzl", "rdl_file")
 
 rdl_file(
@@ -12,10 +12,29 @@ rdl_file(
     visibility = ["PUBLIC"],
 )
 
+# The SP5-side sequencing core: the generic rail records, the SP5 rail groups,
+# and the A1/A0 state machine that drives them. None of this is cosmo-specific,
+# so sibling SP5 boards depend on this target and supply their own NIC half.
+# It still carries sequencer_regs_rdl for the A1/A0 state enums -- there is one
+# A1/A0 state machine, so there should be one encoding of its states.
+vhdl_unit(
+    name = "sequencer_core",
+    srcs = [
+        "sp5_power_pkg.vhd",
+        "a1_a0_seq.vhd",
+    ],
+    deps = [
+        ":sequencer_regs_rdl",
+    ],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)
+
 vhdl_unit(
     name = "sequencer",
-    srcs = glob(["*.vhd"]),
+    srcs = glob(["*.vhd"], exclude = ["sp5_power_pkg.vhd", "a1_a0_seq.vhd"]),
     deps = [
+        ":sequencer_core",
         ":sequencer_regs_rdl",
         "//hdl/ip/vhd/synchronizers:meta_sync",
         "//hdl/ip/vhd/irq:irq_block",
@@ -25,10 +44,32 @@ vhdl_unit(
     standard = "2019",
 )
 
+# The rail models and the SP5 model only speak sp5_power_pkg's records, so they
+# are reusable by any SP5 board's sequencer testbench, not just cosmo's.
+sim_only_model(
+    name = "sequencer_core_sims",
+    srcs = [
+        "sims/rail_model_msg_pkg.vhd",
+        "sims/rail_model.vhd",
+        "sims/cascade_rail_model.vhd",
+        "sims/sp5_sim.vhd",
+    ],
+    deps = [":sequencer_core"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)
+
 vunit_sim(
     name = "sp5_seq_tb",
-    srcs = glob(["sims/**/*.vhd"]),
-    deps = [":sequencer",
+    srcs = glob(["sims/**/*.vhd"], exclude = [
+        "sims/rail_model_msg_pkg.vhd",
+        "sims/rail_model.vhd",
+        "sims/cascade_rail_model.vhd",
+        "sims/sp5_sim.vhd",
+    ]),
+    deps = [
+        ":sequencer",
+        ":sequencer_core_sims",
     ],
     visibility = ['PUBLIC'],
     standard = "2019",

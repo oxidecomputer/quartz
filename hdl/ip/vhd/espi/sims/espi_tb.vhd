@@ -19,6 +19,7 @@ use work.espi_spec_regs_pkg.all;
 use work.espi_regs_pkg;
 use work.espi_dbg_vc_pkg.all;
 use work.espi_tb_pkg.all;
+use work.espi_protocol_pkg.all;
 use work.sp5_post_code_pkg.all;
 
 entity espi_tb is
@@ -52,6 +53,8 @@ begin
         variable payload_size    : integer;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
         variable pcfree_deasserted : boolean;
+        variable cycle_type      : std_logic_vector(7 downto 0);
+        variable length_field    : std_logic_vector(11 downto 0);
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -186,14 +189,129 @@ begin
                     end if;
                     get_flash_c(net, 16, my_queue, response_code, status,  crc_ok);
                     check(crc_ok, "CRC Check failed");
-                    -- TODO: the data's not coming back right.
                     for j in 0 to 15 loop
-                        report "Flash Byte: " & to_hstring(to_unsigned(pop_byte(my_queue), 8));
+                        check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), fake_flash_pattern(16#03020000# + j),
+                                    "Flash byte " & integer'image(j));
                     end loop;
                 end loop;
 
                 -- would normally wait for the completion alert now
                 wait for 300 us;
+            elsif run("flash_write") then
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                write_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.CONTROL_OFFSET, bus_handle.p_address_length),
+                          espi_regs_pkg.CONTROL_FLASH_WRITE_ENABLE_MASK);
+                wait_until_idle(net, bus_handle);
+
+                -- Erase, so the write lands on ones and reads back exactly
+                put_flash_erase(net, X"00001000", flash_erase_4k, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_erase CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "erase completion CRC Check failed");
+                check_equal(cycle_type, success_no_data, "erase completion cycle type");
+                check_equal(length_field, std_logic_vector'(x"000"), "erase completion length");
+
+                -- 64 bytes is the channel's max payload, written across a
+                -- page boundary to make sure nothing wraps on the way through
+                for i in 0 to 63 loop
+                    push_byte(my_queue, to_integer(write_pattern(16#10F0# + i)));
+                end loop;
+                put_flash_write(net, X"000010F0", 64, my_queue, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_write CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "write completion CRC Check failed");
+                check_equal(cycle_type, success_no_data, "write completion cycle type");
+                check_equal(length_field, std_logic_vector'(x"000"), "write completion length");
+
+                -- Read back the written range plus a byte either side
+                put_flash_read(net, X"000010EF", 66, response_code, status,  crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 66, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "read completion CRC Check failed");
+                check_equal(cycle_type, success_with_data_only, "read completion cycle type");
+                check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), std_logic_vector'(x"FF"), "byte before write still erased");
+                for i in 0 to 63 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), write_pattern(16#10F0# + i),
+                                "written byte " & integer'image(i));
+                end loop;
+                check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), std_logic_vector'(x"FF"), "byte after write still erased");
+            elsif run("flash_erase") then
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                write_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.CONTROL_OFFSET, bus_handle.p_address_length),
+                          espi_regs_pkg.CONTROL_FLASH_WRITE_ENABLE_MASK);
+                wait_until_idle(net, bus_handle);
+
+                put_flash_erase(net, X"00002000", flash_erase_4k, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_erase CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "erase completion CRC Check failed");
+                check_equal(cycle_type, success_no_data, "erase completion cycle type");
+
+                -- last bytes of the sector are erased, first of the next are not
+                put_flash_read(net, X"00002FF8", 16, response_code, status,  crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                wait_for_alert(net);
+                get_flash_c(net, 16, my_queue, response_code, status,  crc_ok);
+                check(crc_ok, "read completion CRC Check failed");
+                for i in 0 to 7 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), std_logic_vector'(x"FF"), "erased byte " & integer'image(i));
+                end loop;
+                for i in 8 to 15 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), fake_flash_pattern(16#2FF8# + i), "neighbour byte " & integer'image(i));
+                end loop;
+
+                -- an unsupported size code is answered, unsuccessfully
+                put_flash_erase(net, X"00002000", flash_erase_32k, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_erase CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "erase completion CRC Check failed");
+                check_equal(cycle_type, unsuccessful_no_data_only, "unsupported erase completion cycle type");
+                check_equal(length_field, std_logic_vector'(x"000"), "unsupported erase completion length");
+            elsif run("write_refused_by_register") then
+                -- Channel up but the write enable bit left at its reset
+                -- value: writes and erases are answered, unsuccessfully, and
+                -- the flash is untouched.
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+
+                for i in 0 to 15 loop
+                    push_byte(my_queue, 0);
+                end loop;
+                put_flash_write(net, X"00004000", 16, my_queue, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_write CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "write completion CRC Check failed");
+                check_equal(cycle_type, unsuccessful_no_data_only, "refused write completion cycle type");
+                check_equal(length_field, std_logic_vector'(x"000"), "refused write completion length");
+
+                put_flash_erase(net, X"00004000", flash_erase_4k, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_erase CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "erase completion CRC Check failed");
+                check_equal(cycle_type, unsuccessful_no_data_only, "refused erase completion cycle type");
+
+                -- and a read still works afterwards, returning the untouched contents
+                put_flash_read(net, X"00004000", 16, response_code, status,  crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 16, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "read completion CRC Check failed");
+                check_equal(cycle_type, success_with_data_only, "read completion cycle type");
+                for i in 0 to 15 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), fake_flash_pattern(16#4000# + i), "untouched byte " & integer'image(i));
+                end loop;
             elsif run("oob_no_pec_uart") then
                 enable_debug_mode(net);
                  --Enable OOB Channel

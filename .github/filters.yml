@@ -30,5 +30,11 @@ cosmo_hp:
 cosmo_seq:
   - 'hdl/projects/cosmo_seq/**/*'
 
+# metro_seq depends on cosmo_seq's shared subsystems, so a change there has to
+# rebuild metro too.
+metro_seq:
+  - 'hdl/projects/metro_seq/**/*'
+  - 'hdl/projects/cosmo_seq/**/*'
+
 cosmo_ignition:
   - 'hdl/projects/cosmo_ignition/**/*'

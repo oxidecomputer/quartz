@@ -1,5 +1,5 @@
 # Generate the PLL (copied from tcl console using the IP generator)
-create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name cosmo_pll
+create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name sys_pll
 set_property -dict [list \
   CONFIG.CLKIN1_JITTER_PS {200.0} \
   CONFIG.CLKOUT1_JITTER {154.207} \
@@ -11,7 +11,7 @@ set_property -dict [list \
   CONFIG.CLKOUT2_USED {true} \
   CONFIG.CLK_OUT1_PORT {clk_125m} \
   CONFIG.CLK_OUT2_PORT {clk_200m} \
-  CONFIG.Component_Name {cosmo_pll} \
+  CONFIG.Component_Name {sys_pll} \
   CONFIG.MMCM_CLKFBOUT_MULT_F {20.000} \
   CONFIG.MMCM_CLKIN1_PERIOD {20.000} \
   CONFIG.MMCM_CLKIN2_PERIOD {10.0} \
@@ -20,5 +20,5 @@ set_property -dict [list \
   CONFIG.NUM_OUT_CLKS {2} \
   CONFIG.PRIMARY_PORT {clk_50m} \
   CONFIG.PRIM_IN_FREQ {50} \
-] [get_ips cosmo_pll]
-synth_ip [get_ips cosmo_pll]
+] [get_ips sys_pll]
+synth_ip [get_ips sys_pll]

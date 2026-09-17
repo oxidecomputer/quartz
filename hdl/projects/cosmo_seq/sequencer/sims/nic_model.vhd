@@ -13,6 +13,7 @@ library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
 
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.nic_model_msg_pkg.all;
 use work.nic_model_msg_pkg.disable_rail_msg;

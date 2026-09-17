@@ -1,5 +1,14 @@
-// This is SystemRDL description of the sw-accessible registers in the Cosmo
-// Sequencer FPGA block.
+// SystemRDL description of the sw-accessible registers in the SP5 sequencer
+// block, shared by every SP5 board (cosmo, metro).
+//
+// The map is the union of what the boards need. The SP5 half is common. The
+// NIC half differs by board -- cosmo carries a T6 behind a single reset, metro
+// an AMD Versal with a rail per enable, boot straps and two PCIe channels --
+// and both sets of NIC registers exist on both boards: the ones a board has no
+// hardware for read as zero and their writes do nothing. Software should key
+// off the board (the info block) before trusting a NIC register. Cosmo's
+// layout is the original; everything metro added is appended or fills spare
+// bits, so cosmo's offsets and bit positions have not moved.
 
 addrmap sequencer_regs {
     name = "Power Sequencing Function";
@@ -87,6 +96,15 @@ This regulator controls VDDCR_CPU1_EN and VDDIO_SP5 rails.";
             desc = "Live. Set '1' when pwr_cont3_to_fpga1_alert_l is active (low on board).
 This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         } pwr_cont3_to_fpga1_alert[1];
+         field {
+            desc = "Live. Set '1' when pwr_cont4_to_fpga1_alert_l is active (low on board). Metro only.";
+        } pwr_cont4_to_fpga1_alert[1];
+        field {
+            desc = "Live. Set '1' when the Versal is asserting ERROR_OUT. Metro only.";
+        } versal_error_out[1];
+        field {
+            desc = "The pre-boot measurement of the NIC image failed (sticky since fpga reset or last clear). Metro only.";
+        } nic_hash_err[1];
        };
     // Set up interrupt registers using a common irq_type
     irq IFR;
@@ -111,6 +129,19 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         field {
             desc = "NIC power OK";
         } nicpwrok[1] = 0;
+        field {
+            desc = "NIC has finished loading its image (Versal DONE). Metro only.";
+        } nicdone[1] = 0;
+        field {
+            desc = "The hash engine measured the NIC image before the last boot; the
+            digest is in the hash engine's HW_DIGEST registers. Cleared when the NIC
+            is next sequenced. Metro only.";
+        } nic_hash_done[1] = 0;
+        field {
+            desc = "The pre-boot measurement failed (see the hash engine's HW_STATUS) and
+            the NIC was booted regardless. Cleared when the NIC is next sequenced.
+            Metro only.";
+        } nic_hash_err[1] = 0;
         field {
             desc = "Interrupt Pending Status (set if any enabled IRQ has its flag set)";
         } int_pend[31:31] = 0;
@@ -236,8 +267,10 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         enum nic_state_machine {
             IDLE = 8'h00 {desc = "";};
             ENABLE_POWER = 8'h01 {desc = "";};
-            NIC_RESET = 8'h02 {desc = "";};
+            NIC_RESET = 8'h02 {desc = "Rails are up, NIC held in reset (on metro: while the boot mode is strapped)";};
             DONE = 8'h03 {desc = "";};
+            BOOTING = 8'h04 {desc = "Metro only. POR_B released, waiting for DONE";};
+            MEASURING = 8'h05 {desc = "Metro only. Rails are up, holding POR_B while the hash engine measures the boot image";};
          };
         field {
             desc = "Nic SM Status";
@@ -260,7 +293,17 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             EARLY_CLD_RST = 8'h03 {desc = "";};
             EARLY_PERST = 8'h04 {desc = "";};
             EARLY_PERST_ASSERT = 8'h05 {desc = "";};
-            DONE = 8'h06 {desc = "";};
+            DONE = 8'h06 {desc = "Booted. On metro the boot flash mux is then pointed at the FPGA so the SP5 can reach it over eSPI";};
+            HSC_EN = 8'h07 {desc = "Metro (Versal). 12V hotswap enabled, waiting for 12V and 5V";};
+            CORE_EN = 8'h08 {desc = "Metro (Versal). VCCINT group enabled, waiting for PG";};
+            AUX_EN = 8'h09 {desc = "Metro (Versal). VCCAUX group enabled, waiting for PG";};
+            IO_EN = 8'h0a {desc = "Metro (Versal). VCCO group enabled, waiting for PG";};
+            RAILS_SETTLE = 8'h0b {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
+            HASH_IMAGE = 8'h0c {desc = "Metro (Versal). Rails up, POR_B held, boot flash mux pointed at the FPGA; waiting for the hash engine to measure the image";};
+            HASH_RELEASE = 8'h0d {desc = "Metro (Versal). Measurement over, waiting for the hash engine to drop its acknowledge";};
+            MODE_STRAP = 8'h0e {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
+            POR_RELEASE = 8'h0f {desc = "Metro (Versal). POR_B released";};
+            WAIT_DONE = 8'h10 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
         };
 
         field {
@@ -357,6 +400,37 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         field {
             desc = "NIC v0p96_nic_vdd_a0hp (discrete pg, enable cascade from nic 5V)";
         } v0p96_nic_vdd_a0hp[1];
+        // Metro's Versal rail tree. Its hotswaps share the nic_hsc_* bits above.
+        field {
+            desc = "Metro only. Versal VCCINT 0.8V";
+        } versal_v0p8_vccint[1];
+        field {
+            desc = "Metro only. Versal 0.88V";
+        } versal_v0p88[1];
+        field {
+            desc = "Metro only. Versal transceiver AVCC 0.92V (discrete pg, cascade enable)";
+        } versal_v0p92_avcc[1];
+        field {
+            desc = "Metro only. Versal 1.1V";
+        } versal_v1p1[1];
+        field {
+            desc = "Metro only. Versal transceiver AVTT 1.2V (discrete pg, cascade enable)";
+        } versal_v1p2_avtt[1];
+        field {
+            desc = "Metro only. Versal 1.4V";
+        } versal_v1p4[1];
+        field {
+            desc = "Metro only. Versal VCCAUX 1.5V";
+        } versal_v1p5[1];
+        field {
+            desc = "Metro only. Versal transceiver AVCCAUX 1.5V";
+        } versal_v1p5_avccaux[1];
+        field {
+            desc = "Metro only. Versal VCCO 1.8V";
+        } versal_v1p8[1];
+        field {
+            desc = "Metro only. Versal VCCO 3.3V";
+        } versal_v3p3[1];
     };
 
     rails #(.sw_kind(rw)) rail_enables ;
@@ -539,6 +613,117 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "Enable the PCIe backplane clock. (Still gated by presence)";
         } clk_en[0:0] = 0;
     } pcie_clk_ctrl;
+
+    // Everything below is metro's Versal NIC. Cosmo reads zeros here.
+
+    reg {
+        name = "Versal-related signal readbacks";
+        desc = "Metro only. Live status and readbacks of our registers and responses back from the Versal.
+        For tri-state cases, read '1' as 'Z'.  No inversions done here.";
+        default sw = r;
+        field {
+            desc = "POR_B live status, (From FPGA to Versal)";
+        } por_b[1];
+        field {
+            desc = "MODE[3:0] live status, (From FPGA to Versal)";
+        } mode[4];
+        field {
+            desc = "mode_buffer_en_l live status, (From FPGA to the MODE buffer)";
+        } mode_buffer_en_l[1];
+        field {
+            desc = "err_done_buff_en live status, (From FPGA to the DONE/ERROR_OUT buffer)";
+        } err_done_buff_en[1];
+        field {
+            desc = "DONE live status, note: only valid once err_done_buff_en is set (From Versal)";
+        } done[1];
+        field {
+            desc = "ERROR_OUT live status, note: only valid once err_done_buff_en is set (From Versal)";
+        } error_out[1];
+        field {
+            desc = "Channel A perst_l live status, (From FPGA to Versal)";
+        } cha_perst_l[1];
+        field {
+            desc = "Channel A prsnt_l live status, (From Versal)";
+        } cha_prsnt_l[1];
+        field {
+            desc = "Channel A pwren_l live status, (From Versal)";
+        } cha_pwren_l[1];
+        field {
+            desc = "Channel A clk_buff_oe_l live status, (From FPGA to buffer)";
+        } cha_clk_buff_oe_l[1];
+        field {
+            desc = "Channel B perst_l live status, (From FPGA to Versal)";
+        } chb_perst_l[1];
+        field {
+            desc = "Channel B prsnt_l live status, (From Versal)";
+        } chb_prsnt_l[1];
+        field {
+            desc = "Channel B pwren_l live status, (From Versal)";
+        } chb_pwren_l[1];
+        field {
+            desc = "Channel B clk_buff_oe_l live status, (From FPGA to buffer)";
+        } chb_clk_buff_oe_l[1];
+        field {
+            desc = "Channel A slot sp5_perst_l live status, (From SP5 hotplug to FPGA)";
+        } sp5_cha_perst_l[1];
+        field {
+            desc = "Channel B slot sp5_perst_l live status, (From SP5 hotplug to FPGA)";
+        } sp5_chb_perst_l[1];
+    } versal_readbacks;
+
+    reg {
+        name = "Versal Overrides";
+        desc = "Metro only. Control over the Versal signals for debugging purposes outside the
+        sequencer logic, muxed in by debug_enables.nic_override. A test MAPO is raised
+        through nic_overrides.nic_test_mapo as on cosmo.";
+        field {
+            desc = "por_b drive, (From FPGA to Versal)";
+        } por_b[1] = 0;
+        field {
+            desc = "mode_buffer_en_l drive, (From FPGA to the MODE buffer)";
+        } mode_buffer_en_l[1] = 1;
+        field {
+            desc = "err_done_buff_en drive, (From FPGA to the DONE/ERROR_OUT buffer)";
+        } err_done_buff_en[1] = 0;
+        field {
+            desc = "Channel A perst_l drive, (From FPGA to Versal)";
+        } cha_perst_l[1] = 0;
+        field {
+            desc = "Channel A clk_buff_oe_l drive, (From FPGA to buffer)";
+        } cha_clk_buff_oe_l[1] = 1;
+        field {
+            desc = "Channel B perst_l drive, (From FPGA to Versal)";
+        } chb_perst_l[1] = 0;
+        field {
+            desc = "Channel B clk_buff_oe_l drive, (From FPGA to buffer)";
+        } chb_clk_buff_oe_l[1] = 1;
+    } versal_overrides;
+
+    reg {
+        name = "Versal Boot Control";
+        desc = "Metro only. Boot-mode straps driven onto the Versal's MODE[3:0] pins while POR_B is held.
+        The sequencer latches these when it leaves the RAILS_SETTLE state, so changing them
+        only takes effect on the next Versal power-up.";
+        field {
+            desc = "Versal boot mode driven onto MODE[3:0]. 0x0 is JTAG, 0x2 is QSPI32, which
+            is how the board is wired. JTAG is the escape hatch for bring-up.";
+        } mode[3:0] = 4'h2;
+        field {
+            desc = "Measure the boot image with the hash engine before releasing POR_B.
+            The range comes from the hash engine's HW_FLASH_ADDR/HW_LENGTH. A failed
+            measurement is recorded in the status register and the boot goes ahead.
+            Clear to skip the measurement.";
+        } hash_image[4:4] = 1;
+    } versal_boot_ctrl;
+
+    reg {
+        name = "Board Version";
+        desc = "Metro only. Board version straps read directly off the FPGA1_VERSION_ID pins.";
+        default sw = r;
+        field {
+            desc = "FPGA1_VERSION_ID[1:0] strap value";
+        } version_id[1:0];
+    } board_version;
 
 };
    

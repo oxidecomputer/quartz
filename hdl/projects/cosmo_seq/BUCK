@@ -1,4 +1,4 @@
-load("//tools:hdl.bzl", "vhdl_unit", "black_box")
+load("//tools:hdl.bzl", "vhdl_unit", "black_box", "vunit_sim")
 load("//tools:rdl.bzl", "rdl_file")
 load("//tools:vivado.bzl", "vivado_bitstream")
 
@@ -35,15 +35,48 @@ vhdl_unit(
     visibility = ["PUBLIC"],
 )
 
+# Shared with metro_seq, which carries its own board_support but the same
+# FMC clock arrangement.
+vhdl_unit(
+    name = "fmc_clk_monitor",
+    srcs = ["board_support/fmc_clk_monitor.vhd"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
+)
+
+# Clocks, resets, the info block and the status LED. Nothing in here is
+# cosmo-specific -- the other SP5 boards use the same 50MHz input and the same
+# 125/200MHz tree -- so metro depends on this target and on the IP scripts
+# exported below rather than carrying copies.
 vhdl_unit(
     name = "board_support",
-    srcs = glob(["board_support/*.vhd"], exclude = ["board_support/reset_sync.vhd"]),
+    srcs = glob(["board_support/*.vhd"], exclude = [
+        "board_support/reset_sync.vhd",
+        "board_support/fmc_clk_monitor.vhd",
+    ]),
     deps = [
         ":reset_sync",
+        ":fmc_clk_monitor",
         ":cosmo_black_boxes",
         "//hdl/ip/vhd/info:info",
     ],
     standard = "2019",
+    visibility = ["PUBLIC"],
+)
+
+# The clock wizard bakes the module name into the generated netlist and into
+# the clock names the timing constraints use, so a board that shares
+# board_support has to generate the very same IP: these are the scripts for it.
+export_file(
+    name = "sys_pll_ip_tcl",
+    src = "xilinx_ip_gen/sys_pll_ip.tcl",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "fmc_pll_ip_tcl",
+    src = "xilinx_ip_gen/fmc_pll_ip.tcl",
+    visibility = ["PUBLIC"],
 )
 
 
@@ -57,6 +90,7 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axil_interconnect",
         "//hdl/ip/vhd/common:tristate_if_pkg",
         "//hdl/ip/vhd/fmc_if:stm32h7_fmc_target",
+        "//hdl/ip/vhd/hash_engine:hash_engine_top",
         "//hdl/projects/cosmo_seq/sp5_espi_flash_subsystem:sp5_espi_flash_subsystem",
         "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
         "//hdl/projects/cosmo_seq/sequencer:sequencer",
@@ -76,4 +110,14 @@ vivado_bitstream(
     constraints=glob(["*.xdc"]),
     pre_synth_tcl_files=glob(["xilinx_ip_gen/*.tcl"]),
     #post_synth_tcl_files=glob(["*ila.tcl"]),
+)
+
+# Analysis-only: vhdl_unit collects sources but does not run a compiler, so
+# without this nothing type-checks cosmo_seq_top until Vivado synthesis.
+vunit_sim(
+    name = "cosmo_seq_top_tb",
+    srcs = glob(["sims/*.vhd"]),
+    deps = [":cosmo_seq_top"],
+    visibility = ["PUBLIC"],
+    standard = "2019",
 )

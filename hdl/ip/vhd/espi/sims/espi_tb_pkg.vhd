@@ -71,6 +71,22 @@ package espi_tb_pkg is
         constant num_bytes: integer;
         constant bad_crc : boolean := false
         ) return cmd_t;
+    -- Payload is consumed from the queue
+    impure function build_put_flash_write_cmd(
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: integer;
+        constant payload : queue_t;
+        constant bad_crc : boolean := false
+        ) return cmd_t;
+    impure function build_put_flash_erase_cmd(
+        constant address : in std_logic_vector(31 downto 0);
+        constant size_code: std_logic_vector(11 downto 0);
+        constant bad_crc : boolean := false
+        ) return cmd_t;
+    -- Initial contents of the fake flash behind the test harness. Also a
+    -- convenient source of write payloads that differ from what is there.
+    function fake_flash_pattern(constant addr : natural) return std_logic_vector;
+    function write_pattern(constant addr : natural) return std_logic_vector;
         impure function build_get_flash_c_cmd(
         constant bad_crc : boolean := false
     ) return cmd_t;
@@ -192,6 +208,72 @@ package body espi_tb_pkg is
         push_byte(cmd.queue, to_integer(data(31 downto 24)));
         cmd.num_bytes := cmd.num_bytes + 4;
         -- CRC (1 byte)
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    function fake_flash_pattern(constant addr : natural) return std_logic_vector is
+    begin
+        -- odd multiplier so any aligned 256 byte run is a bijection
+        return To_Std_Logic_Vector((addr * 7 + 3) mod 256, 8);
+    end function;
+
+    function write_pattern(constant addr : natural) return std_logic_vector is
+    begin
+        -- flash programming can only clear bits, so what is written has to
+        -- be a subset of the erased state (all ones) and not of the initial
+        -- pattern: tests erase first and then check for exactly this
+        return To_Std_Logic_Vector((addr * 13 + 5) mod 256, 8);
+    end function;
+
+    -- Common header for the put_flash_np family: opcode, cycle type,
+    -- tag/length, length, then the 32 bit address MSB first.
+    impure function build_put_flash_hdr(
+        constant cycle_kind : std_logic_vector(7 downto 0);
+        constant address : in std_logic_vector(31 downto 0);
+        constant length_field: std_logic_vector(11 downto 0)
+    ) return cmd_t is
+        variable cmd : cmd_t := (new_queue, 0);
+    begin
+        push_byte(cmd.queue, to_integer(opcode_put_flash_np));
+        push_byte(cmd.queue, to_integer(cycle_kind));
+        push_byte(cmd.queue, to_integer("0000" & length_field(11 downto 8)));
+        push_byte(cmd.queue, to_integer(length_field(7 downto 0)));
+        push_byte(cmd.queue, to_integer(address(31 downto 24)));
+        push_byte(cmd.queue, to_integer(address(23 downto 16)));
+        push_byte(cmd.queue, to_integer(address(15 downto 8)));
+        push_byte(cmd.queue, to_integer(address(7 downto 0)));
+        cmd.num_bytes := 8;
+        return cmd;
+    end function;
+
+    impure function build_put_flash_write_cmd(
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: integer;
+        constant payload : queue_t;
+        constant bad_crc : boolean := false
+    ) return cmd_t is
+        variable cmd : cmd_t;
+    begin
+        cmd := build_put_flash_hdr(flash_write, address, To_Std_Logic_Vector(num_bytes, 12));
+        for i in 0 to num_bytes - 1 loop
+            push_byte(cmd.queue, pop_byte(payload));
+        end loop;
+        cmd.num_bytes := cmd.num_bytes + num_bytes;
+        push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
+        cmd.num_bytes := cmd.num_bytes + 1;
+        return cmd;
+    end function;
+
+    impure function build_put_flash_erase_cmd(
+        constant address : in std_logic_vector(31 downto 0);
+        constant size_code: std_logic_vector(11 downto 0);
+        constant bad_crc : boolean := false
+    ) return cmd_t is
+        variable cmd : cmd_t;
+    begin
+        cmd := build_put_flash_hdr(flash_erase, address, size_code);
         push_byte(cmd.queue, to_integer(crc8_atm(cmd.queue, bad_crc)));
         cmd.num_bytes := cmd.num_bytes + 1;
         return cmd;

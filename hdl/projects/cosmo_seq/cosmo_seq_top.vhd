@@ -21,6 +21,7 @@ use work.axi_st8_pkg;
 use work.time_pkg.all;
 use work.tristate_if_pkg.all;
 
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sp5_uart_subsystem_pkg.all;
 
@@ -335,6 +336,10 @@ architecture rtl of cosmo_seq_top is
     signal v1p2_nic_enet_a0hp_pg : std_logic;
     signal v1p1_nic_enet_a0hp_pg : std_logic;
     alias fmc_clk : std_logic is fmc_sp_to_fpga1_clk;
+    -- deskewed/phase-shifted FMC clock from the MMCM in board_support; the
+    -- FMC domain runs on this, never on the raw pin
+    signal fmc_clk_buf : std_logic;
+    signal fmc_capture_clk_buf : std_logic;
     constant INFO_RESP_IDX : integer := 0;
     constant SPINOR_RESP_IDX: integer := 1;
     constant SEQ_RESP_IDX: integer := 2;
@@ -364,12 +369,19 @@ architecture rtl of cosmo_seq_top is
     signal responders_8b : axil8x32_pkg.axil_array_t(config_array'range);
     signal responders_15b : axil15x32_pkg.axil_array_t(config_array'range);
     signal fmc_internal_data_out : std_logic_vector(15 downto 0);
-    signal fmc_data_out_enable: std_logic;
+    signal fmc_data_out_hiz: std_logic_vector(15 downto 0);
 
     signal spinor_io_o : std_logic_vector(3 downto 0);
     signal spinor_io_oe : std_logic_vector(3 downto 0);
     signal espi_io_o : std_logic_vector(3 downto 0);
     signal espi_io_oe : std_logic_vector(3 downto 0);
+    -- hash engine <-> spi_nor flash client port(s)
+    constant HASH_NUM_FLASHES : natural := 1;
+    signal hash_flash_cmd_rdata : std_logic_vector(31 downto 0);
+    signal hash_flash_cmd_rdack : std_logic_vector(HASH_NUM_FLASHES - 1 downto 0);
+    signal hash_flash_cmd_rempty : std_logic_vector(HASH_NUM_FLASHES - 1 downto 0);
+    signal hash_flash_rsp_wdata : std_logic_vector(HASH_NUM_FLASHES * 8 - 1 downto 0);
+    signal hash_flash_rsp_write : std_logic_vector(HASH_NUM_FLASHES - 1 downto 0);
 
     signal ipcc_uart_from_espi_axi_st : axi_st8_pkg.axi_st_t;
     signal ipcc_uart_to_espi_axi_st : axi_st8_pkg.axi_st_t;
@@ -415,7 +427,12 @@ architecture rtl of cosmo_seq_top is
     alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
     signal uart_dbg_if : uart_dbg_t;
     signal allow_backplane_pcie_clk : std_logic;
-    signal nic_dbg_pins : t6_debug_if;
+    signal nic_dbg_pins : nic_debug_if;
+    -- No Versal on this board; the shared sequencer's Versal ports are tied
+    -- off to these and its Versal outputs left open.
+    signal versal_rails_unused : versal_power_t := versal_power_absent;
+    signal versal_boot_unused : versal_boot_t := versal_boot_absent;
+    signal versal_pcie_unused : versal_pcie_t := versal_pcie_absent;
     signal reg_alert_l_pins : seq_power_alert_pins_t;
     signal is_rev1 : std_logic;
     signal dbg_pins_uart_out : std_logic;
@@ -470,25 +487,32 @@ begin
     stm32h7_fmc_target_inst: entity work.stm32h7_fmc_target
     port map(
        chip_reset => reset_fmc,
-       fmc_clk => fmc_clk,
+       fmc_clk => fmc_clk_buf,
+       fmc_capture_clk => fmc_capture_clk_buf,
        a(24 downto 20) => "00000",
        a(19 downto 16) => fmc_sp_to_fpga1_a(19 downto 16),
        --a(23 downto 16) => fmc_sp_to_fpga1_a,
        addr_data_in => fmc_sp_to_fpga1_da,
        data_out => fmc_internal_data_out,
-       data_out_en => fmc_data_out_enable,
+       data_out_hiz => fmc_data_out_hiz,
        ne(3 downto 1) => "111",
        ne(0) => fmc_sp_to_fpga1_cs_l,
        noe => fmc_sp_to_fpga1_oe_l,
        nwe => fmc_sp_to_fpga1_we_l,
        nl => fmc_sp_to_fpga1_adv_l,
        nwait => fmc_sp_to_fpga1_wait_l,
+       timeout_count => open,
+       contention_count => open,
        aclk => clk_125m,
        aresetn => not reset_125m,
        axi_if => fmc_axi_if
    );
     -- tristate control for the FMC data bus
-    fmc_sp_to_fpga1_da <= fmc_internal_data_out when fmc_data_out_enable = '1' else (others => 'Z');
+    -- per-bit tristate, hiz already in OBUFT T polarity so each pin's T
+    -- flop packs into its IOB with no inverter in between
+    fmc_da_tris: for i in fmc_sp_to_fpga1_da'range generate
+        fmc_sp_to_fpga1_da(i) <= 'Z' when fmc_data_out_hiz(i) = '1' else fmc_internal_data_out(i);
+    end generate;
 
    -- Axi decode/interconnect
    axil_interconnect_inst: entity work.axil_interconnect
@@ -510,6 +534,8 @@ begin
      port map(
         board_50mhz_clk => clk_50mhz_fpga1_1,
         sp_fmc_clk => fmc_clk,
+        fmc_clk_buf => fmc_clk_buf,
+        fmc_capture_clk_buf => fmc_capture_clk_buf,
         sp_system_reset_l => sp_to_fpga1_system_reset_l,
         clk_125m => clk_125m,
         reset_125m => reset_125m,
@@ -550,7 +576,29 @@ begin
         spi_nor_dat => spi_fpga1_to_flash_dat,
         spi_nor_dat_o => spinor_io_o,
         spi_nor_dat_oe => spinor_io_oe,
-        hash_axi_if => responders_8b(HASH_RESP_IDX)
+        hash_cmd_fifo_rdata => hash_flash_cmd_rdata,
+        hash_cmd_fifo_rdack => hash_flash_cmd_rdack(0),
+        hash_cmd_fifo_rempty => hash_flash_cmd_rempty(0),
+        hash_data_fifo_wdata => hash_flash_rsp_wdata(7 downto 0),
+        hash_data_fifo_write => hash_flash_rsp_write(0)
+    );
+
+    -- SHA3 hashing engine. It reads flash through spi_nor_top's second client
+    -- port and owns the FIFOs on that path; it sits here rather than inside the
+    -- eSPI wrapper so one engine can serve more than one flash.
+    hash_engine_inst: entity work.hash_engine_top
+     generic map(
+        NUM_FLASHES => HASH_NUM_FLASHES
+    )
+     port map(
+        clk => clk_125m,
+        reset => reset_125m,
+        axi_if => responders_8b(HASH_RESP_IDX),
+        flash_cmd_rdata => hash_flash_cmd_rdata,
+        flash_cmd_rdack => hash_flash_cmd_rdack,
+        flash_cmd_rempty => hash_flash_cmd_rempty,
+        flash_rsp_wdata => hash_flash_rsp_wdata,
+        flash_rsp_write => hash_flash_rsp_write
     );
     --Tristates for spi-nor flash pins and espi
     spi_nor_espi_tris:process(all)
@@ -724,7 +772,8 @@ begin
     resize_axil(fabric_responders(SEQ_RESP_IDX), responders_8b(SEQ_RESP_IDX));
     seq: entity work.sp5_sequencer
      generic map(
-        CNTS_P_MS => calc_ms(desired_ms => 1, clk_period_ns => 8)
+        CNTS_P_MS => calc_ms(desired_ms => 1, clk_period_ns => 8),
+        NIC_KIND => NIC_T6
     )
      port map(
         clk => clk_125m,
@@ -742,9 +791,15 @@ begin
         sp5_seq_pins => sp5_seq_pins,
         nic_rails_pins => nic_rails,
         nic_seq_pins => nic_seq_pins,
+        versal_rails_pins => versal_rails_unused,
+        versal_boot_pins => versal_boot_unused,
+        versal_pcie_pins => versal_pcie_unused,
+        versal_held_in_reset => open,
+        flash_owned_by_seq => open,
+        hash_req => open,
         nic_dbg_pins => nic_dbg_pins,
-        sp5_t6_perst_l => sp5_t6_perst_l,
-        sp5_t6_faulted => sp5_t6_faulted,
+        sp5_nic_perst_l => sp5_t6_perst_l,
+        sp5_nic_faulted => sp5_t6_faulted,
         ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
         ignition_creset => fpga1_to_ign_trgt_fpga_creset,
         reg_alert_l_pins => reg_alert_l_pins
@@ -858,6 +913,7 @@ begin
     reg_alert_l_pins.v0p96_nic_to_fpga1_alert_l <= v0p96_nic_to_fpga1_alert_l;
     reg_alert_l_pins.pwr_cont2_to_fpga1_alert_l <= pwr_cont2_to_fpga1_alert_l;
     reg_alert_l_pins.pwr_cont3_to_fpga1_alert_l <= pwr_cont3_to_fpga1_alert_l;
+    reg_alert_l_pins.pwr_cont4_to_fpga1_alert_l <= '1';  -- no fourth controller on this board
 
     resize_axil(fabric_responders(SPD_PROXY_RESP_IDX), responders_8b(SPD_PROXY_RESP_IDX));
     dimm_spd_proxy_top_inst: entity work.dimms_subsystem_top
