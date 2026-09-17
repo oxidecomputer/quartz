@@ -75,7 +75,7 @@ begin
     );
 
     -- Xilinx PLL instantiation
-    pll: entity work.cosmo_pll
+    pll: entity work.sys_pll
     port map ( 
         clk_50m => board_50mhz_clk,
         clk_125m => clk_125m,

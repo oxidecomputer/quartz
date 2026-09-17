@@ -44,6 +44,10 @@ vhdl_unit(
     standard = "2019",
 )
 
+# Clocks, resets, the info block and the status LED. Nothing in here is
+# cosmo-specific -- the other SP5 boards use the same 50MHz input and the same
+# 125/200MHz tree -- so metro depends on this target and on the IP scripts
+# exported below rather than carrying copies.
 vhdl_unit(
     name = "board_support",
     srcs = glob(["board_support/*.vhd"], exclude = [
@@ -57,6 +61,22 @@ vhdl_unit(
         "//hdl/ip/vhd/info:info",
     ],
     standard = "2019",
+    visibility = ["PUBLIC"],
+)
+
+# The clock wizard bakes the module name into the generated netlist and into
+# the clock names the timing constraints use, so a board that shares
+# board_support has to generate the very same IP: these are the scripts for it.
+export_file(
+    name = "sys_pll_ip_tcl",
+    src = "xilinx_ip_gen/sys_pll_ip.tcl",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "fmc_pll_ip_tcl",
+    src = "xilinx_ip_gen/fmc_pll_ip.tcl",
+    visibility = ["PUBLIC"],
 )
 
 

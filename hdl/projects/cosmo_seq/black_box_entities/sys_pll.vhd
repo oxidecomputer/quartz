@@ -9,7 +9,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
-entity cosmo_pll is
+entity sys_pll is
     port (
         clk_50m : in std_logic;
         clk_125m : out std_logic;

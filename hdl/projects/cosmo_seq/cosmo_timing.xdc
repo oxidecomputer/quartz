@@ -8,7 +8,7 @@ create_clock -name fmc_virt_clk -period 10.000;
 
 # The FMC MMCM's output clock is derived from fmc_clk_pin and must stay in
 # the synchronous group with it and the virtual clock.
-set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks {fmc_clk_pin fmc_virt_clk}] -group {clk_125m_cosmo_pll} -group {clk_200m_cosmo_pll}
+set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks {fmc_clk_pin fmc_virt_clk}] -group {clk_125m_sys_pll} -group {clk_200m_sys_pll}
 
 
 # #######################
