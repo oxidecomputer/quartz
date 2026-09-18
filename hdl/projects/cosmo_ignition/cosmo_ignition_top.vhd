@@ -57,7 +57,19 @@ architecture rtl of cosmo_ignition_top is
     signal led_counter : unsigned(24 downto 0) := (others => '0');
     signal reset_sync1 : std_logic;
     signal reset_syncd : std_logic;
-   
+    signal a2_pg_syncd_combined: std_logic;
+    signal v3p3_fpga2_a2_pg_syncd : std_logic;
+    signal v1p2_fpga2_a2_pg_syncd : std_logic;
+    signal v2p5_fpga2_a2_pg_syncd : std_logic;
+    signal v5p0_sys_a2_pg_syncd : std_logic;
+    signal v3p3_sys_a2_pg_syncd : std_logic;
+    signal v1p8_sys_a2_pg_syncd : std_logic;
+    signal v1p0_mgmt_a2_pg_syncd : std_logic;
+    signal v2p5_mgmt_a2_pg_syncd : std_logic;
+    signal v12_sys_a2_pg_l_syncd : std_logic;
+    signal main_hsc_pg_syncd : std_logic;
+    signal a3_pwr_fault_l : std_logic;
+
 begin
     rst_sync: process(clk_50mhz_ign_trgt_fpga, ign_trgt_fpga_design_reset_l)
     begin
@@ -71,6 +83,44 @@ begin
         end if;
     end process;
 
+    -- Deal with a big batch of input PGs.
+    pg_sync_inst: entity work.pg_sync
+     port map(
+        clk => clk_50mhz_ign_trgt_fpga,
+        v3p3_fpga2_a2_pg => v3p3_fpga2_a2_pg,
+        v1p2_fpga2_a2_pg => v1p2_fpga2_a2_pg,
+        v2p5_fpga2_a2_pg => v2p5_fpga2_a2_pg,
+        v5p0_sys_a2_pg => v5p0_sys_a2_pg,
+        v3p3_sys_a2_pg => v3p3_sys_a2_pg,
+        v1p8_sys_a2_pg => v1p8_sys_a2_pg,
+        v1p0_mgmt_a2_pg => v1p0_mgmt_a2_pg,
+        v2p5_mgmt_a2_pg => v2p5_mgmt_a2_pg,
+        v12_sys_a2_pg_l => v12_sys_a2_pg_l,
+        main_hsc_pg => main_hsc_pg,
+        v3p3_fpga2_a2_pg_syncd => v3p3_fpga2_a2_pg_syncd,
+        v1p2_fpga2_a2_pg_syncd => v1p2_fpga2_a2_pg_syncd,
+        v2p5_fpga2_a2_pg_syncd => v2p5_fpga2_a2_pg_syncd,
+        v5p0_sys_a2_pg_syncd => v5p0_sys_a2_pg_syncd,
+        v3p3_sys_a2_pg_syncd => v3p3_sys_a2_pg_syncd,
+        v1p8_sys_a2_pg_syncd => v1p8_sys_a2_pg_syncd,
+        v1p0_mgmt_a2_pg_syncd => v1p0_mgmt_a2_pg_syncd,
+        v2p5_mgmt_a2_pg_syncd => v2p5_mgmt_a2_pg_syncd,
+        v12_sys_a2_pg_l_syncd => v12_sys_a2_pg_l_syncd,
+        main_hsc_pg_syncd => main_hsc_pg_syncd
+    );
+
+    -- combine these to pass on as a single A2 power-good signal
+    a2_pg_syncd_combined <= v3p3_fpga2_a2_pg_syncd and
+                             v1p2_fpga2_a2_pg_syncd and
+                             v2p5_fpga2_a2_pg_syncd and
+                             v5p0_sys_a2_pg_syncd and
+                             v3p3_sys_a2_pg_syncd and
+                             v1p8_sys_a2_pg_syncd and
+                             v1p0_mgmt_a2_pg_syncd and
+                             v2p5_mgmt_a2_pg_syncd and
+                             v12_sys_a2_pg_l_syncd;
+
+    a3_pwr_fault_l <= '0' when main_hsc_pg_syncd = '1' else '1';
      -- Blink an LED at some rate
     led: process(clk_50mhz_ign_trgt_fpga, reset_syncd)
     begin
@@ -98,8 +148,8 @@ begin
         ignit_to_ibc_pwren => ibc_en,
         hotswap_restart_l => hotswap_restart_l,
         ignit_led_l => ign_trgt_fpga_debug_led,
-        a3_pwr_fault_l => '1',
-        a2_pg => '1',
+        a3_pwr_fault_l => a3_pwr_fault_l,
+        a2_pg => a2_pg_syncd_combined,
         sp_fault_l => sp_fault_l,
         rot_fault_l => rot_fault_l,
         push_btn_l => '1',

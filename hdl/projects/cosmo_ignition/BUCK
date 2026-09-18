@@ -8,6 +8,7 @@ vhdl_unit(
     deps = [
         "//hdl/ip/vhd/ignition/target:ignition_target_common",
         "//hdl/ip/vhd/ignition/target:ignition_io",
+        "//hdl/ip/vhd/synchronizers:meta_sync",
     ],
     standard = "2008",
 )
