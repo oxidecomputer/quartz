@@ -438,16 +438,17 @@ begin
         );
 
         -- Each Versal rail has its own enable, staged by versal_seq. The two
-        -- transceiver rails cascade, so they read back their group's enable.
+        -- transceiver rails cascade, so they read back the enable of the rail
+        -- versal_seq brings them up with.
         -- The hotswaps share the nic_hsc_* bits with the T6.
         rails_en_rdbk.versal_v3p3 <= versal_rails.v3p3.enable;
         rails_en_rdbk.versal_v1p8 <= versal_rails.v1p8.enable;
         rails_en_rdbk.versal_v1p5_avccaux <= versal_rails.v1p5_avccaux.enable;
         rails_en_rdbk.versal_v1p5 <= versal_rails.v1p5.enable;
         rails_en_rdbk.versal_v1p4 <= versal_rails.v1p4.enable;
-        rails_en_rdbk.versal_v1p2_avtt <= versal_rails.v1p5.enable;
+        rails_en_rdbk.versal_v1p2_avtt <= versal_rails.v1p4.enable;
         rails_en_rdbk.versal_v1p1 <= versal_rails.v1p1.enable;
-        rails_en_rdbk.versal_v0p92_avcc <= versal_rails.v0p88.enable;
+        rails_en_rdbk.versal_v0p92_avcc <= versal_rails.v1p1.enable;
         rails_en_rdbk.versal_v0p88 <= versal_rails.v0p88.enable;
         rails_en_rdbk.versal_v0p8_vccint <= versal_rails.v0p8_vccint.enable;
         rails_en_rdbk.nic_hsc_5v <= versal_rails.hsc_12v.enable;

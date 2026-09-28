@@ -271,6 +271,7 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             DONE = 8'h03 {desc = "";};
             BOOTING = 8'h04 {desc = "Metro only. POR_B released, waiting for DONE";};
             MEASURING = 8'h05 {desc = "Metro only. Rails are up, holding POR_B while the hash engine measures the boot image";};
+            DISABLE_POWER = 8'h06 {desc = "Metro only. POR_B asserted, rails being taken down in reverse order";};
          };
         field {
             desc = "Nic SM Status";
@@ -295,15 +296,20 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             EARLY_PERST_ASSERT = 8'h05 {desc = "";};
             DONE = 8'h06 {desc = "Booted. On metro the boot flash mux is then pointed at the FPGA so the SP5 can reach it over eSPI";};
             HSC_EN = 8'h07 {desc = "Metro (Versal). 12V hotswap enabled, waiting for 12V and 5V";};
-            CORE_EN = 8'h08 {desc = "Metro (Versal). VCCINT group enabled, waiting for PG";};
-            AUX_EN = 8'h09 {desc = "Metro (Versal). VCCAUX group enabled, waiting for PG";};
-            IO_EN = 8'h0a {desc = "Metro (Versal). VCCO group enabled, waiting for PG";};
+            IO_EN = 8'h08 {desc = "Metro (Versal). Group 1, V3P3 and V1P8, enabled, waiting for PG";};
+            V0P88_EN = 8'h09 {desc = "Metro (Versal). Group 2, V0P88, enabled, waiting for PG";};
+            VCCINT_EN = 8'h0a {desc = "Metro (Versal). Group 3, V0P8 VCCINT, enabled, waiting for PG";};
             RAILS_SETTLE = 8'h0b {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
             HASH_IMAGE = 8'h0c {desc = "Metro (Versal). Rails up, POR_B held, boot flash mux pointed at the FPGA; waiting for the hash engine to measure the image";};
             HASH_RELEASE = 8'h0d {desc = "Metro (Versal). Measurement over, waiting for the hash engine to drop its acknowledge";};
             MODE_STRAP = 8'h0e {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
             POR_RELEASE = 8'h0f {desc = "Metro (Versal). POR_B released";};
             WAIT_DONE = 8'h10 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
+            VCCAUX_EN = 8'h11 {desc = "Metro (Versal). Group 4, V1P5 VCCAUX, enabled, waiting for PG";};
+            GT_AVCC_EN = 8'h12 {desc = "Metro (Versal). Group 5, V0P92 GTM/GTY AVCC, enabled, waiting for PG";};
+            AVCCAUX_EN = 8'h13 {desc = "Metro (Versal). Group 6, V1P5 AVCCAUX, enabled, waiting for PG";};
+            GT_AVTT_EN = 8'h14 {desc = "Metro (Versal). Group 7, V1P2 GTM/GTY AVTT, enabled, waiting for PG";};
+            POWER_DOWN = 8'h15 {desc = "Metro (Versal). POR_B asserted, rail groups being disabled in reverse order";};
         };
 
         field {

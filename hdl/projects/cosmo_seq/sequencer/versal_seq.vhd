@@ -16,15 +16,27 @@ use work.sequencer_regs_pkg.all;
 -- Versal wants a staged rail bring-up followed by a strapped boot rather than
 -- the T6's cld_rst/perst dance.
 --
--- Rail grouping and timing below follow the Versal power-up requirements in
--- three stages -- core (VCCINT), then auxiliary (VCCAUX), then I/O (VCCO) --
--- with the transceiver rails riding along in whichever group enables them.
--- The exact inter-group delays are conservative placeholders and MUST be
+-- The rails come up in the seven groups the board's Versal power sequence
+-- calls for. Each group is enabled GROUP_DELAY_MS after the one before it
+-- reports power good, and they are taken down in the reverse order with the
+-- same spacing, whether that is software asking or a fault:
+--
+--   1. V3P3, V1P8
+--   2. V0P88
+--   3. V0P8 VCCINT
+--   4. V1P5 VCCAUX
+--   5. V0P92 GTM/GTY AVCC
+--   6. V1P5 AVCCAUX
+--   7. V1P2 GTM/GTY AVTT
+--
+-- The settle and strap delays are conservative placeholders and MUST be
 -- confirmed against the VP1202 datasheet before hardware bring-up; they are
 -- gathered into the constants below so that is a one-line change.
 entity versal_seq is
     generic(
-        CNTS_P_MS: integer
+        CNTS_P_MS: integer;
+        -- Spacing between rail groups, both on the way up and on the way down
+        GROUP_DELAY_MS : integer := 4
     );
     port(
         clk : in std_logic;
@@ -80,6 +92,7 @@ architecture rtl of versal_seq is
     constant ONE_MS : integer := 1 * CNTS_P_MS;
     constant TEN_MS : integer := 10 * ONE_MS;
     constant TWENTY_MS : integer := 20 * ONE_MS;
+    constant GROUP_DELAY : integer := GROUP_DELAY_MS * ONE_MS;
     -- How long the rails must be stable before POR_B is released.
     constant RAIL_SETTLE_MS : integer := 20 * ONE_MS;
     -- How long MODE[3:0] must be stable before POR_B is released.
@@ -88,24 +101,25 @@ architecture rtl of versal_seq is
     -- are large and come off QSPI, so this is generous on purpose.
     constant DONE_TIMEOUT_MS : integer := 5000 * ONE_MS;
 
-    -- Rail groups. The Versal wants VCCINT up before VCCAUX before VCCO.
-    -- v0p92_avcc and v1p2_avtt have no enable of their own; they cascade, so
-    -- they are checked in the group whose enable brings them up.
-    function core_group_good(rails : versal_power_t) return boolean is
-    begin
-        return (rails.v0p8_vccint.pg and rails.v0p88.pg and
-                rails.v0p92_avcc.pg) = '1';
-    end function;
+    constant NUM_GROUPS : integer := 7;
+    subtype group_t is integer range 1 to NUM_GROUPS;
 
-    function aux_group_good(rails : versal_power_t) return boolean is
+    -- The transceiver rails have no enable of their own, only a power good
+    -- shared between the GTM and GTY supplies. They are taken to be regulated
+    -- down from the rails that have an enable and no power good: V0P92 AVCC
+    -- from V1P1 and V1P2 AVTT from V1P4. So a transceiver group is its
+    -- upstream rail's enable and the transceiver rail's power good.
+    function group_good(rails : versal_power_t; grp : group_t) return boolean is
     begin
-        return (rails.v1p5.pg and rails.v1p5_avccaux.pg and rails.v1p4.pg and
-                rails.v1p1.pg and rails.v1p2_avtt.pg) = '1';
-    end function;
-
-    function io_group_good(rails : versal_power_t) return boolean is
-    begin
-        return (rails.v1p8.pg and rails.v3p3.pg) = '1';
+        case grp is
+            when 1 => return (rails.v3p3.pg and rails.v1p8.pg) = '1';
+            when 2 => return rails.v0p88.pg = '1';
+            when 3 => return rails.v0p8_vccint.pg = '1';
+            when 4 => return rails.v1p5.pg = '1';
+            when 5 => return (rails.v1p1.pg and rails.v0p92_avcc.pg) = '1';
+            when 6 => return rails.v1p5_avccaux.pg = '1';
+            when 7 => return (rails.v1p4.pg and rails.v1p2_avtt.pg) = '1';
+        end case;
     end function;
 
     type versal_r_t is record
@@ -116,9 +130,7 @@ architecture rtl of versal_seq is
         cha_perst_l_last : std_logic;
         chb_perst_l_last : std_logic;
         hsc_en : std_logic;
-        core_en : std_logic;
-        aux_en : std_logic;
-        io_en : std_logic;
+        group_en : std_logic_vector(1 to NUM_GROUPS);
         por_b : std_logic;
         mode : std_logic_vector(3 downto 0);
         mode_buffer_en_l : std_logic;
@@ -140,9 +152,7 @@ architecture rtl of versal_seq is
         cha_perst_l_last => '0',
         chb_perst_l_last => '0',
         hsc_en => '0',
-        core_en => '0',
-        aux_en => '0',
-        io_en => '0',
+        group_en => (others => '0'),
         por_b => '0',
         mode => (others => '0'),
         mode_buffer_en_l => '1',
@@ -182,7 +192,7 @@ begin
     hash_failed <= r.hash_failed;
 
     -- Debug header taps, on header pins 5..0 in this order
-    versal_dbg_pins.rails_en <= r.io_en;
+    versal_dbg_pins.rails_en <= r.group_en(NUM_GROUPS);
     versal_dbg_pins.rails_pg <= '1' when is_power_good(versal_rails) else '0';
     versal_dbg_pins.taps(5) <= final_outs.por_b;
     versal_dbg_pins.taps(4) <= final_outs.cha_perst_l;
@@ -199,8 +209,11 @@ begin
             case r.state is
                 when IDLE =>
                     api_state.nic_sm <= IDLE;
-                when HSC_EN | CORE_EN | AUX_EN | IO_EN =>
+                when HSC_EN | IO_EN | V0P88_EN | VCCINT_EN | VCCAUX_EN |
+                     GT_AVCC_EN | AVCCAUX_EN | GT_AVTT_EN =>
                     api_state.nic_sm <= ENABLE_POWER;
+                when POWER_DOWN =>
+                    api_state.nic_sm <= DISABLE_POWER;
                 when RAILS_SETTLE | MODE_STRAP =>
                     api_state.nic_sm <= NIC_RESET;
                 when HASH_IMAGE | HASH_RELEASE =>
@@ -243,9 +256,7 @@ begin
         case r.state is
             when IDLE =>
                 v.hsc_en := '0';
-                v.core_en := '0';
-                v.aux_en := '0';
-                v.io_en := '0';
+                v.group_en := (others => '0');
                 v.por_b := '0';
                 v.mode_buffer_en_l := '1';
                 v.err_done_buff_en := '0';
@@ -266,27 +277,83 @@ begin
                 v.hsc_en := '1';
                 v.cnts := (others => '0');
                 if (versal_rails.hsc_12v.pg and versal_rails.hsc_5v.pg) = '1' then
-                    v.state := CORE_EN;
-                end if;
-
-            when CORE_EN =>
-                v.core_en := '1';
-                v.cnts := (others => '0');
-                if core_group_good(versal_rails) then
-                    v.state := AUX_EN;
-                end if;
-
-            when AUX_EN =>
-                v.aux_en := '1';
-                v.cnts := (others => '0');
-                if aux_group_good(versal_rails) then
                     v.state := IO_EN;
                 end if;
 
             when IO_EN =>
-                v.io_en := '1';
+                v.group_en(1) := '1';
                 v.cnts := (others => '0');
-                if io_group_good(versal_rails) then
+                if group_good(versal_rails, 1) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                    v.state := V0P88_EN;
+                end if;
+
+            when V0P88_EN =>
+                v.group_en(2) := '1';
+                v.cnts := (others => '0');
+                if group_good(versal_rails, 2) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                    v.state := VCCINT_EN;
+                end if;
+
+            when VCCINT_EN =>
+                v.group_en(3) := '1';
+                v.cnts := (others => '0');
+                if group_good(versal_rails, 3) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                    v.state := VCCAUX_EN;
+                end if;
+
+            when VCCAUX_EN =>
+                v.group_en(4) := '1';
+                v.cnts := (others => '0');
+                if group_good(versal_rails, 4) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                    v.state := GT_AVCC_EN;
+                end if;
+
+            when GT_AVCC_EN =>
+                v.group_en(5) := '1';
+                v.cnts := (others => '0');
+                if group_good(versal_rails, 5) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                    v.state := AVCCAUX_EN;
+                end if;
+
+            when AVCCAUX_EN =>
+                v.group_en(6) := '1';
+                v.cnts := (others => '0');
+                if group_good(versal_rails, 6) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                    v.state := GT_AVTT_EN;
+                end if;
+
+            when GT_AVTT_EN =>
+                v.group_en(7) := '1';
+                v.cnts := (others => '0');
+                if group_good(versal_rails, 7) then
+                    v.cnts := r.cnts + 1;
+                end if;
+                if r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
                     v.state := RAILS_SETTLE;
                     -- Every rail is up now, so hold the whole tree to account.
                     v.rails_expected := '1';
@@ -356,20 +423,61 @@ begin
 
             when DONE =>
                 if sw_enable = '0' then
-                    v.state := IDLE;
+                    v.state := POWER_DOWN;
+                    v.por_b := '0';
+                    v.cnts := to_unsigned(1, v.cnts'length);
+                end if;
+
+            -- Take the groups down last-up-first-down, one every
+            -- GROUP_DELAY. Whoever sends us here asserts POR_B and starts the
+            -- count at one rather than zero, so the Versal has been in reset
+            -- for a full delay before the first group leaves.
+            -- This is on a timer alone: a power good going away
+            -- says the rail has left regulation, not that it has discharged,
+            -- and after a fault the rail at issue may never have had one.
+            -- Groups that never came up are passed over, so a power-up that
+            -- faulted part way only unwinds what it had enabled. The hotswap
+            -- goes last, a delay after group 1.
+            when POWER_DOWN =>
+                v.por_b := '0';
+                v.mode_buffer_en_l := '1';
+                v.err_done_buff_en := '0';
+                v.clk_buff_oe_l := '1';
+                v.rails_expected := '0';
+                v.hash_req := '0';
+                if r.cnts = 0 then
+                    v.cnts := r.cnts + 1;
+                    if or r.group_en = '0' then
+                        v.hsc_en := '0';
+                        v.state := IDLE;
+                    else
+                        for i in NUM_GROUPS downto 1 loop
+                            if r.group_en(i) = '1' then
+                                v.group_en(i) := '0';
+                                exit;
+                            end if;
+                        end loop;
+                    end if;
+                elsif r.cnts = GROUP_DELAY then
+                    v.cnts := (others => '0');
+                else
+                    v.cnts := r.cnts + 1;
                 end if;
                     -- the T6 states; this NIC never has them
             when others => null;
         end case;
 
-        -- MAPO handling, monitored in every non-IDLE state. A measurement
-        -- in flight is simply abandoned: the request drops in IDLE and the
-        -- engine's acknowledge, whenever it comes, is ignored there.
-        if r.state /= IDLE then
+        -- MAPO handling, monitored in every state that has power on or
+        -- coming on. A measurement in flight is simply abandoned: the request
+        -- drops on the way down and the engine's acknowledge, whenever it
+        -- comes, is ignored.
+        if r.state /= IDLE and r.state /= POWER_DOWN then
             if rails_faulted = '1' or upstream_ok = '0' or
                nic_test_mapo = '1' then
                 v.faulted := '1';
-                v.state := IDLE;
+                v.state := POWER_DOWN;
+                v.por_b := '0';
+                v.cnts := to_unsigned(1, v.cnts'length);
                 v.rails_expected := '0';
             end if;
         end if;
@@ -428,13 +536,13 @@ begin
 
     -- One enable per rail, staged by the state machine above.
     versal_rails.hsc_12v.enable <= r.hsc_en;
-    versal_rails.v0p8_vccint.enable <= r.core_en;
-    versal_rails.v0p88.enable <= r.core_en;
-    versal_rails.v1p5.enable <= r.aux_en;
-    versal_rails.v1p5_avccaux.enable <= r.aux_en;
-    versal_rails.v1p4.enable <= r.aux_en;
-    versal_rails.v1p1.enable <= r.aux_en;
-    versal_rails.v1p8.enable <= r.io_en;
-    versal_rails.v3p3.enable <= r.io_en;
+    versal_rails.v3p3.enable <= r.group_en(1);
+    versal_rails.v1p8.enable <= r.group_en(1);
+    versal_rails.v0p88.enable <= r.group_en(2);
+    versal_rails.v0p8_vccint.enable <= r.group_en(3);
+    versal_rails.v1p5.enable <= r.group_en(4);
+    versal_rails.v1p1.enable <= r.group_en(5);
+    versal_rails.v1p5_avccaux.enable <= r.group_en(6);
+    versal_rails.v1p4.enable <= r.group_en(7);
 
 end rtl;

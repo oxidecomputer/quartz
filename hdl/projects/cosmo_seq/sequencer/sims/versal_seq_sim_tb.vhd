@@ -13,6 +13,7 @@ library vunit_lib;
     context vunit_lib.vc_context;
 
 use work.sequencer_regs_pkg.all;
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sp5_seq_sim_pkg.all;
 use work.rail_model_msg_pkg.all;
@@ -25,6 +26,49 @@ entity versal_seq_sim_tb is
 end entity;
 
 architecture tb of versal_seq_sim_tb is
+    constant NUM_GROUPS : integer := 7;
+    -- The harness runs a millisecond as 100 counts of its 8 ns clock
+    constant SIM_MS : time := 100 * 8 ns;
+    constant GROUP_DELAY : time := 4 * SIM_MS;
+    subtype groups_t is std_logic_vector(1 to NUM_GROUPS);
+
+    -- The Versal power sequence as the pins see it, one bit per group. A
+    -- group counts as enabled as soon as any of its enables is up, and as
+    -- good only once all of its power goods are.
+    function group_enables(rails : versal_power_t) return groups_t is
+    begin
+        return (
+            1 => rails.v3p3.enable or rails.v1p8.enable,
+            2 => rails.v0p88.enable,
+            3 => rails.v0p8_vccint.enable,
+            4 => rails.v1p5.enable,
+            5 => rails.v1p1.enable,
+            6 => rails.v1p5_avccaux.enable,
+            7 => rails.v1p4.enable
+        );
+    end function;
+
+    -- On the way down, only the groups below the one just disabled are on
+    function on_below(other : integer; grp : integer) return std_logic is
+    begin
+        if other < grp then
+            return '1';
+        end if;
+        return '0';
+    end function;
+
+    function group_pgs(rails : versal_power_t) return groups_t is
+    begin
+        return (
+            1 => rails.v3p3.pg and rails.v1p8.pg,
+            2 => rails.v0p88.pg,
+            3 => rails.v0p8_vccint.pg,
+            4 => rails.v1p5.pg,
+            5 => rails.v0p92_avcc.pg,
+            6 => rails.v1p5_avccaux.pg,
+            7 => rails.v1p2_avtt.pg
+        );
+    end function;
 begin
 
     th: entity work.sp5_seq_sim_th generic map (NIC_KIND => NIC_VERSAL);
@@ -40,6 +84,7 @@ begin
         alias hash_model_fail is << signal th.hash_model_fail : boolean >>;
         alias hash_requests is << signal th.hash_requests : natural >>;
         alias versal_boot_pins is << signal th.versal_boot_pins : versal_boot_t >>;
+        alias versal_rails_pins is << signal th.versal_rails_pins : versal_power_t >>;
         constant versal_actor : actor_t := find("versal_model");
         variable read_data : std_logic_vector(31 downto 0);
         variable versal_state : nic_api_status_nic_sm;
@@ -47,6 +92,7 @@ begin
         variable readbacks : versal_readbacks_type;
         variable status : status_type;
         variable version : board_version_type;
+        variable last_event : time;
     begin
         test_runner_setup(runner, runner_cfg);
         wait until reset = '0';
@@ -75,6 +121,98 @@ begin
                             "Expected versalpwrok in the status register");
                 check_equal(status.nicdone, '1',
                             "Expected versaldone in the status register");
+
+            elsif run("rails_come_up_in_group_order") then
+                check_equal(group_enables(versal_rails_pins), groups_t'(others => '0'),
+                            "Expected no Versal rail enabled before power up");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                for grp in 1 to NUM_GROUPS loop
+                    wait until group_enables(versal_rails_pins)(grp) = '1' for 10 ms;
+                    check_equal(group_enables(versal_rails_pins)(grp), '1',
+                                "Expected group " & to_string(grp) & " to be enabled");
+                    if grp > 1 then
+                        check(now - last_event >= GROUP_DELAY,
+                              "Expected group " & to_string(grp) & " no sooner than " &
+                              to_string(GROUP_DELAY) & " after the group before it was good, got " &
+                              to_string(now - last_event));
+                    end if;
+                    if group_pgs(versal_rails_pins)(grp) /= '1' then
+                        wait until group_pgs(versal_rails_pins)(grp) = '1' for 10 ms;
+                    end if;
+                    last_event := now;
+                    check_equal(versal_rails_pins.v3p3.enable, versal_rails_pins.v1p8.enable,
+                                "Expected the group 1 rails to be enabled together");
+                    for other in 1 to NUM_GROUPS loop
+                        if other < grp then
+                            check_equal(group_pgs(versal_rails_pins)(other), '1',
+                                        "Expected group " & to_string(other) &
+                                        " good before group " & to_string(grp) & " is enabled");
+                        elsif other > grp then
+                            check_equal(group_enables(versal_rails_pins)(other), '0',
+                                        "Expected group " & to_string(other) &
+                                        " off when group " & to_string(grp) & " is enabled");
+                        end if;
+                    end loop;
+                end loop;
+                check_equal(versal_boot_pins.por_b, '0',
+                            "Expected POR_B held while the rails come up");
+                poll_for_nic_state(net, DONE);
+
+            elsif run("rails_go_down_in_reverse_group_order") then
+                power_up_to_nic_done(net);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          x"00000000");
+                for grp in NUM_GROUPS downto 1 loop
+                    wait until group_enables(versal_rails_pins)(grp) = '0' for 10 ms;
+                    check_equal(group_enables(versal_rails_pins)(grp), '0',
+                                "Expected group " & to_string(grp) & " to be disabled");
+                    check_equal(versal_boot_pins.por_b, '0',
+                                "Expected POR_B asserted before group " & to_string(grp) & " goes");
+                    if grp < NUM_GROUPS then
+                        check(now - last_event >= GROUP_DELAY,
+                              "Expected group " & to_string(grp) & " no sooner than " &
+                              to_string(GROUP_DELAY) & " after the group above it, got " &
+                              to_string(now - last_event));
+                    end if;
+                    last_event := now;
+                    for other in 1 to NUM_GROUPS loop
+                        check_equal(group_enables(versal_rails_pins)(other),
+                                    on_below(other, grp),
+                                    "Group " & to_string(other) & " enable when group " &
+                                    to_string(grp) & " is disabled");
+                    end loop;
+                    check_equal(versal_rails_pins.hsc_12v.enable, '1',
+                                "Expected the hotswap to outlast group " & to_string(grp));
+                end loop;
+                wait until versal_rails_pins.hsc_12v.enable = '0' for 10 ms;
+                check_equal(versal_rails_pins.hsc_12v.enable, '0',
+                            "Expected the hotswap to be disabled last");
+                check(now - last_event >= GROUP_DELAY,
+                      "Expected the hotswap no sooner than " & to_string(GROUP_DELAY) &
+                      " after group 1, got " & to_string(now - last_event));
+                poll_for_nic_state(net, IDLE);
+
+            elsif run("fault_takes_rails_down_in_reverse_group_order") then
+                power_up_to_nic_done(net);
+                disable_power_good(net, find("versal_v0p8_vccint"));
+                for grp in NUM_GROUPS downto 1 loop
+                    wait until group_enables(versal_rails_pins)(grp) = '0' for 10 ms;
+                    check_equal(group_enables(versal_rails_pins)(grp), '0',
+                                "Expected group " & to_string(grp) & " to be disabled");
+                    check_equal(versal_boot_pins.por_b, '0',
+                                "Expected POR_B asserted before group " & to_string(grp) & " goes");
+                    for other in 1 to NUM_GROUPS loop
+                        check_equal(group_enables(versal_rails_pins)(other),
+                                    on_below(other, grp),
+                                    "Group " & to_string(other) & " enable when group " &
+                                    to_string(grp) & " is disabled");
+                    end loop;
+                end loop;
+                enable_power_good(net, find("versal_v0p8_vccint"));
+                poll_for_nic_state(net, IDLE);
 
             elsif run("boot_mode_is_strapped") then
                 -- The default boot mode is QSPI32; check it reaches the pins.

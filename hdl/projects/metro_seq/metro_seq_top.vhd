@@ -927,13 +927,14 @@ begin
     -- enable the way cosmo does for its rev1 1V4.
     versal_rails.v1p4.pg <= versal_rails.v1p4.enable;
     v1p1_nic_a0hp_en <= versal_rails.v1p1.enable;
-    -- Likewise no discrete 1V1 power good; it comes up with the aux group.
+    -- Likewise no discrete 1V1 power good.
     versal_rails.v1p1.pg <= versal_rails.v1p1.enable;
     v0p88_nic_a0hp_en <= versal_rails.v0p88.enable;
     versal_rails.v0p88.pg <= v0p88_nic_a0hp_pg;
     v0p8_nic_vccint_a0hp_en <= versal_rails.v0p8_vccint.enable;
     versal_rails.v0p8_vccint.pg <= v0p8_nic_vccint_a0hp_pg;
-    -- Transceiver rails: readback only, they cascade off the groups above.
+    -- Transceiver rails: readback only. The sequencer brings AVCC up with
+    -- the 1V1 enable and AVTT with the 1V4 enable.
     versal_rails.v0p92_avcc.pg <= v0p92_nic_avcc_a0hp_pg;
     versal_rails.v1p2_avtt.pg <= v1p2_nic_avtt_a0hp_pg;
 

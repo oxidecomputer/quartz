@@ -305,11 +305,11 @@ begin
        generic map(actor_name => "versal_v0p8_vccint")
        port map(clk => clk, reset => reset, rail => versal_rails_pins.v0p8_vccint);
        -- The two transceiver rails have no enable of their own; they cascade
-       -- off the group that brings them up.
+       -- off the rail that feeds them.
        versal_v0p92_avcc: entity work.cascade_rail_model
-       port map(clk => clk, reset => reset, upstream_pg => versal_rails_pins.v0p88.pg, rail => versal_rails_pins.v0p92_avcc);
+       port map(clk => clk, reset => reset, upstream_pg => versal_rails_pins.v1p1.pg, rail => versal_rails_pins.v0p92_avcc);
        versal_v1p2_avtt: entity work.cascade_rail_model
-       port map(clk => clk, reset => reset, upstream_pg => versal_rails_pins.v1p5.pg, rail => versal_rails_pins.v1p2_avtt);
+       port map(clk => clk, reset => reset, upstream_pg => versal_rails_pins.v1p4.pg, rail => versal_rails_pins.v1p2_avtt);
 
        -- Four-phase handshake as hash_engine_top does it: acknowledge some
        -- time after the request, hold it until the request drops.
