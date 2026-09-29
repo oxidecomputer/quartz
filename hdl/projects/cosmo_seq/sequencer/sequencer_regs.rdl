@@ -82,7 +82,7 @@ addrmap sequencer_regs {
             desc = "Live. Set '1' when vr_v5p0_sys_to_fpga1_alert_l is active (low on board)";
         } vr_v5p0_sys_to_fpga1_alert[1];
         field {
-            desc = "Live. Set '1' when v0p96_nic_to_fpga1_alert_l is active (low on board)";
+            desc = "Live. Set '1' when v0p96_nic_to_fpga1_alert_l is active (low on board). Cosmo only.";
         } v0p96_nic_to_fpga1_alert[1];
          field {
             desc = "Live. Set '1' when pwr_cont1_to_fpga1_alert_l is active (low on board).
@@ -289,11 +289,11 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
 
         enum  nic_hw_state_machine {
             IDLE = 8'h00 {desc = "";};
-            PWR_EN = 8'h01 {desc = "";};
-            WAIT_FOR_PGS = 8'h02 {desc = "";};
-            EARLY_CLD_RST = 8'h03 {desc = "";};
-            EARLY_PERST = 8'h04 {desc = "";};
-            EARLY_PERST_ASSERT = 8'h05 {desc = "";};
+            PWR_EN = 8'h01 {desc = "Cosmo (T6).";};
+            WAIT_FOR_PGS = 8'h02 {desc = "Cosmo (T6).";};
+            EARLY_CLD_RST = 8'h03 {desc = "Cosmo (T6).";};
+            EARLY_PERST = 8'h04 {desc = "Cosmo (T6).";};
+            EARLY_PERST_ASSERT = 8'h05 {desc = "Cosmo (T6).";};
             DONE = 8'h06 {desc = "Booted. On metro the boot flash mux is then pointed at the FPGA so the SP5 can reach it over eSPI";};
             HSC_EN = 8'h07 {desc = "Metro (Versal). 12V hotswap enabled, waiting for 12V and 5V";};
             IO_EN = 8'h08 {desc = "Metro (Versal). Group 1, V3P3 and V1P8, enabled, waiting for PG";};
@@ -386,25 +386,25 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "NIC nic_hsc_5v (discrete pg, shared enable with 12V)";
         } nic_hsc_5v[1];
         field {
-            desc = "NIC v1p5_nic_a0hp (discrete pg, enable cascade from nic 5V)";
+            desc = "Cosmo only. NIC v1p5_nic_a0hp (discrete pg, enable cascade from nic 5V)";
         } v1p5_nic_a0hp[1];
         field {
-            desc = "NIC v1p2_nic_pcie_a0hp (discrete pg, enable cascade from nic 5V)";
+            desc = "Cosmo only. NIC v1p2_nic_pcie_a0hp (discrete pg, enable cascade from nic 5V)";
         } v1p2_nic_pcie_a0hp[1];
         field {
-            desc = "NIC v1p2_nic_enet_a0hp (discrete pg, enable cascade from nic 5V)";
+            desc = "Cosmo only. NIC v1p2_nic_enet_a0hp (discrete pg, enable cascade from nic 5V)";
         } v1p2_nic_enet_a0hp[1];
         field {
-            desc = "NIC v3p3_nic_a0hp (discrete pg, enable cascade from nic 5V)";
+            desc = "Cosmo only. NIC v3p3_nic_a0hp (discrete pg, enable cascade from nic 5V)";
         } v3p3_nic_a0hp[1];
         field {
-            desc = "NIC v1p1_nic_a0hp (discrete pg, enable cascade from nic 5V)";
+            desc = "Cosmo only. NIC v1p1_nic_a0hp (discrete pg, enable cascade from nic 5V)";
         } v1p1_nic_a0hp[1];
         field {
-            desc = "NIC v1p4_nic_a0hp (discrete pg, enable cascade from nic 5V). Note: mirrors enable on HCV A boards, actual pin readback on HCV B and newer boards";
+            desc = "Cosmo only. NIC v1p4_nic_a0hp (discrete pg, enable cascade from nic 5V). Note: mirrors enable on HCV A boards, actual pin readback on HCV B and newer boards";
         } v1p4_nic_a0hp[1];
         field {
-            desc = "NIC v0p96_nic_vdd_a0hp (discrete pg, enable cascade from nic 5V)";
+            desc = "Cosmo only. NIC v0p96_nic_vdd_a0hp (discrete pg, enable cascade from nic 5V)";
         } v0p96_nic_vdd_a0hp[1];
         // Metro's Versal rail tree. Its hotswaps share the nic_hsc_* bits above.
         field {
@@ -488,39 +488,40 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
 
     reg {
         name = "Nic-related signal readbacks";
-        desc = "Live status and readbacks of our registers and responses back from the NIC
+        desc = "Cosmo only; metro reads zeros here and has versal_readbacks instead.
+        Live status and readbacks of our registers and responses back from the NIC
         (and SP5 for MFG-mode)
         For tri-state cases, read '1' as 'Z'.  No inversions done here.";
         default sw = r;
         field {
-            desc = "cld_rst_l live status, (From FPGA to NIC)";
+            desc = "Cosmo only. cld_rst_l live status, (From FPGA to NIC)";
         } cld_rst_l[1];
         field {
-            desc = "perst_l live status, (From FPGA to NIC)";
+            desc = "Cosmo only. perst_l live status, (From FPGA to NIC)";
         } perst_l[1];
         field {
-            desc = "nic_mfg_mode_l live status, (From FPGA to NIC)";
+            desc = "Cosmo only. nic_mfg_mode_l live status, (From FPGA to NIC)";
         } nic_mfg_mode_l[1];
         field {
-            desc = "eeprom_wp_l live status, note: only valid when SP5 rails are up (From FPGA to eeprom)";
+            desc = "Cosmo only. eeprom_wp_l live status, note: only valid when SP5 rails are up (From FPGA to eeprom)";
         } eeprom_wp_l[1];
         field {
-            desc = "eeprom_wp_buffer_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+            desc = "Cosmo only. eeprom_wp_buffer_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
         } eeprom_wp_buffer_oe_l[1];
         field {
-            desc = "flash_wp_l live status, note: only valid when SP5 rails are up (From FPGA to flash)";
+            desc = "Cosmo only. flash_wp_l live status, note: only valid when SP5 rails are up (From FPGA to flash)";
         } flash_wp_l[1];
         field {
-            desc = "nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+            desc = "Cosmo only. nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
         } nic_pcie_clk_buff_oe_l[1];
         field {
-            desc = "ext_rst_l live status, note: only valid when NIC rails are up (From NIC)";
+            desc = "Cosmo only. ext_rst_l live status, note: only valid when NIC rails are up (From NIC)";
         } ext_rst_l[1];
         field {
-            desc = "sp5_mfg_mode_l live status, (From SP5 to FPGA)";
+            desc = "Cosmo only. sp5_mfg_mode_l live status, (From SP5 to FPGA)";
         } sp5_mfg_mode_l[1];
         field {
-            desc = "sp5_perst_l live status, (From SP5 hotplug to FPGA)";
+            desc = "Cosmo only. sp5_perst_l live status, (From SP5 hotplug to FPGA)";
         } sp5_perst_l[1];
     } nic_readbacks;
 
@@ -539,7 +540,7 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "Used for manually controlling the nic reset for debugging purposes";
         } force_nic_reset[1] = 0;
         field {
-            desc = "Let other logic run but directly force mfg mode_l to be asserted when set";
+            desc = "Cosmo only. Let other logic run but directly force mfg mode_l to be asserted when set";
         } force_mfg_mode[1] = 0;
         field {
             desc = "Hold the NIC (A0HP) sequencer off while leaving A0 alone. While set, a0_en does
@@ -551,30 +552,31 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
 
     reg {
         name = "Nic Overrides";
-        desc = "Control over the nic signals for debugging purposes outside the sequencer logic";
+        desc = "Control over the nic signals for debugging purposes outside the sequencer logic.
+        Cosmo only, apart from nic_test_mapo; metro has versal_overrides instead.";
         field {
-            desc = "cld_rst_l live status, (From FPGA to NIC)";
+            desc = "Cosmo only. cld_rst_l live status, (From FPGA to NIC)";
         } cld_rst_l[1] = 0;
         field {
-            desc = "perst_l live status, (From FPGA to NIC)";
+            desc = "Cosmo only. perst_l live status, (From FPGA to NIC)";
         } perst_l[1] = 0;
         field {
-            desc = "nic_mfg_mode_l live status, (From FPGA to NIC)";
+            desc = "Cosmo only. nic_mfg_mode_l live status, (From FPGA to NIC)";
         } nic_mfg_mode_l[1] = 0;
         field {
-            desc = "eeprom_wp_l live status, note: only valid when SP5 rails are up (From FPGA to eeprom)";
+            desc = "Cosmo only. eeprom_wp_l live status, note: only valid when SP5 rails are up (From FPGA to eeprom)";
         } eeprom_wp_l[1] = 0;
         field {
-            desc = "eeprom_wp_buffer_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+            desc = "Cosmo only. eeprom_wp_buffer_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
         } eeprom_wp_buffer_oe_l[1] = 1;
         field {
-            desc = "flash_wp_l live status, note: only valid when SP5 rails are up (From FPGA to flash)";
+            desc = "Cosmo only. flash_wp_l live status, note: only valid when SP5 rails are up (From FPGA to flash)";
         } flash_wp_l[1] = 0;
         field {
-            desc = "nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
+            desc = "Cosmo only. nic_pcie_clk_buff_oe_l live status, note: only valid when SP5 rails are up (From FPGA to buffer)";
         } nic_pcie_clk_buff_oe_l[1] = 1;
         field {
-            desc = "Self-clearing. Set to 1 to trigger a NIC-domain MAPO for testing purposes.";
+            desc = "Self-clearing. Set to 1 to trigger a NIC-domain MAPO for testing purposes. Both boards.";
         } nic_test_mapo[1] = 1;
     } nic_overrides;
 
