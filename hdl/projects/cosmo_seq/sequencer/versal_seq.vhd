@@ -219,8 +219,8 @@ begin
             case r.state is
                 when IDLE =>
                     api_state.nic_sm <= IDLE;
-                when HSC_EN | IO_EN | V0P88_EN | VCCINT_EN | VCCAUX_EN |
-                     GT_AVCC_EN | AVCCAUX_EN | GT_AVTT_EN =>
+                when HSC_EN | GROUP_1 | GROUP_2 | GROUP_3 | GROUP_4 |
+                     GROUP_5 | GROUP_6 | GROUP_7 =>
                     api_state.nic_sm <= ENABLE_POWER;
                 when POWER_DOWN =>
                     api_state.nic_sm <= DISABLE_POWER;
@@ -307,11 +307,11 @@ begin
                 v.hsc_en := '1';
                 v.cnts := (others => '0');
                 if (versal_rails.hsc_12v.pg and versal_rails.hsc_5v.pg) = '1' then
-                    v.state := IO_EN;
+                    v.state := GROUP_1;
                     v.expected(0) := '1';
                 end if;
 
-            when IO_EN =>
+            when GROUP_1 =>
                 v.group_en(1) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 1) then
@@ -319,11 +319,11 @@ begin
                 end if;
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
-                    v.state := V0P88_EN;
+                    v.state := GROUP_2;
                     v.expected(1) := '1';
                 end if;
 
-            when V0P88_EN =>
+            when GROUP_2 =>
                 v.group_en(2) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 2) then
@@ -331,11 +331,11 @@ begin
                 end if;
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
-                    v.state := VCCINT_EN;
+                    v.state := GROUP_3;
                     v.expected(2) := '1';
                 end if;
 
-            when VCCINT_EN =>
+            when GROUP_3 =>
                 v.group_en(3) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 3) then
@@ -343,11 +343,11 @@ begin
                 end if;
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
-                    v.state := VCCAUX_EN;
+                    v.state := GROUP_4;
                     v.expected(3) := '1';
                 end if;
 
-            when VCCAUX_EN =>
+            when GROUP_4 =>
                 v.group_en(4) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 4) then
@@ -355,11 +355,11 @@ begin
                 end if;
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
-                    v.state := GT_AVCC_EN;
+                    v.state := GROUP_5;
                     v.expected(4) := '1';
                 end if;
 
-            when GT_AVCC_EN =>
+            when GROUP_5 =>
                 v.group_en(5) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 5) then
@@ -367,11 +367,11 @@ begin
                 end if;
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
-                    v.state := AVCCAUX_EN;
+                    v.state := GROUP_6;
                     v.expected(5) := '1';
                 end if;
 
-            when AVCCAUX_EN =>
+            when GROUP_6 =>
                 v.group_en(6) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 6) then
@@ -379,11 +379,11 @@ begin
                 end if;
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
-                    v.state := GT_AVTT_EN;
+                    v.state := GROUP_7;
                     v.expected(6) := '1';
                 end if;
 
-            when GT_AVTT_EN =>
+            when GROUP_7 =>
                 v.group_en(7) := '1';
                 v.cnts := (others => '0');
                 if group_good(versal_rails, 7) then
