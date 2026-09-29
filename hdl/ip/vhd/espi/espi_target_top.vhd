@@ -13,6 +13,7 @@ use ieee.numeric_std_unsigned.all;
 use work.qspi_link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_spec_regs_view_pkg.all;
+use work.espi_platform_regs_pkg;
 use work.flash_channel_pkg.all;
 use work.uart_channel_pkg.all;
 use work.link_layer_pkg.all;
@@ -28,7 +29,9 @@ entity espi_target_top is
         -- completion.
         FLASH_WRITES_ALLOWED : boolean := false;
         -- Whether to keep the 4k entry post code buffer, see espi_regs.
-        POST_CODE_BUFFER_ENABLED : boolean := true
+        POST_CODE_BUFFER_ENABLED : boolean := true;
+        -- Which board the host is told it is talking to, see espi_spec_regs.
+        BOARD : espi_platform_regs_pkg.board_id_board := espi_platform_regs_pkg.COSMO
     );
     port (
         clk   : in    std_logic;
@@ -329,6 +332,9 @@ begin
 
     -- espi-internal register block
     espi_regs_inst: entity work.espi_spec_regs
+        generic map (
+            BOARD => BOARD
+        )
         port map (
             clk            => clk,
             reset          => reset,

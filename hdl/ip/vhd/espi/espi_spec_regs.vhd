@@ -13,11 +13,17 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 use work.espi_spec_regs_pkg.all;
+use work.espi_platform_regs_pkg.all;
 use work.espi_spec_regs_view_pkg.all;
 use work.link_layer_pkg.all;
 use work.espi_base_types_pkg.all;
 
 entity espi_spec_regs is
+    generic (
+        -- What the host reads back from the platform-specific board_id
+        -- register, which is how it tells the Oxide boards apart.
+        BOARD : board_id_board := COSMO
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -38,6 +44,7 @@ end entity;
 architecture rtl of espi_spec_regs is
 
     constant device_id      : device_id_type := rec_reset;
+    constant board_id       : board_id_type := (board => BOARD);
     signal gen_capabilities : general_capabilities_type;
     signal ch0_capabilities : ch0_capabilities_type;
     signal ch1_capabilities : ch1_capabilities_type;
@@ -162,6 +169,8 @@ begin
                     readdata <= pack(ch2_capabilities);
                 when CH3_CAPABILITIES_OFFSET =>
                     readdata <= pack(ch3_capabilities);
+                when BOARD_ID_OFFSET =>
+                    readdata <= pack(board_id);
                 when others =>
                     readdata <= (others => '0');
             end case;

@@ -16,6 +16,7 @@ use work.qspi_vc_pkg.all;
 use work.espi_controller_vc_pkg.all;
 use work.espi_base_types_pkg.all;
 use work.espi_spec_regs_pkg.all;
+use work.espi_platform_regs_pkg;
 use work.espi_regs_pkg;
 use work.espi_dbg_vc_pkg.all;
 use work.espi_tb_pkg.all;
@@ -130,6 +131,13 @@ begin
                 -- Expect the reset value of status here
                 expected_status := pack(status_t'(rec_reset));
                 check_equal(status, expected_status, "Status did not match reset value");
+            elsif run("board_id_reads_cosmo") then
+                -- The harness default is a cosmo, which is also what every
+                -- board that does not say otherwise reports.
+                get_config(net, espi_platform_regs_pkg.BOARD_ID_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"00000000"), "Expected board_id to read as cosmo");
+
             elsif run("set_config") then
                 get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status,  crc_ok);
                 check(crc_ok, "CRC Check failed");

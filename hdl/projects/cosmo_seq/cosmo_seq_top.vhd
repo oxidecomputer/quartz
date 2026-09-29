@@ -556,6 +556,9 @@ begin
     resize_axil(fabric_responders(SPINOR_RESP_IDX), responders_8b(SPINOR_RESP_IDX));
     resize_axil(fabric_responders(HASH_RESP_IDX), responders_8b(HASH_RESP_IDX));
     espi_spinor_ss: entity work.sp5_espi_flash_subsystem
+     generic map(
+        BOARD => work.espi_platform_regs_pkg.COSMO
+     )
      port map(
         clk_125m => clk_125m,
         reset_125m => reset_125m,

@@ -19,6 +19,8 @@ entity sp5_espi_flash_subsystem is
         -- Passed to espi_target_top. A flash-only instance has no use for
         -- the post code buffer.
         POST_CODE_BUFFER_ENABLED : boolean := true;
+        -- Passed to espi_target_top: the board the host reads back.
+        BOARD : work.espi_platform_regs_pkg.board_id_board := work.espi_platform_regs_pkg.COSMO;
         -- spi_nor_top's rate and sample point. The defaults are the SP5 boot
         -- flash's; a flash on a slower bank or a longer path wants its own.
         SPI_NOR_SCLK_DIVISOR : natural := 0;
@@ -185,7 +187,8 @@ begin
     espi_target_top_inst: entity work.espi_target_top
      generic map(
         FLASH_WRITES_ALLOWED => FLASH_WRITES_ALLOWED,
-        POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED
+        POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED,
+        BOARD => BOARD
      )
      port map(
         clk_200m => clk_200m,

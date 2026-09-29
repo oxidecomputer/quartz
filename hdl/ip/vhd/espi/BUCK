@@ -9,6 +9,13 @@ rdl_file(
 )
 
 rdl_file(
+    name = "espi_platform_regs_rdl",
+    src = "espi_platform_regs.rdl",
+    outputs = ["espi_platform_regs_pkg.vhd", "espi_platform_regs.html"],
+    visibility = ['PUBLIC']
+)
+
+rdl_file(
     name = "vwire_regs_rdl",
     src = "vwire_channel/vwire_regs.rdl",
     outputs = ["vwire_regs_pkg.vhd", "vwire_regs.html"],
@@ -35,6 +42,7 @@ vhdl_unit(
         "*.vhd"]),
     deps = [
         ":espi_spec_regs_rdl",
+        ":espi_platform_regs_rdl",
         ":espi_regs_rdl",
         ":vwire_regs_rdl",
         "//hdl/ip/vhd/common:calc_pkg",

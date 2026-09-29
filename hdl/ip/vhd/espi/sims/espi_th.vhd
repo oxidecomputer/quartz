@@ -14,8 +14,12 @@ library vunit_lib;
 use work.qspi_vc_pkg.all;
 use work.axil15x32_pkg;
 use work.espi_tb_pkg.all;
+use work.espi_platform_regs_pkg;
 
 entity espi_th is
+    generic (
+        BOARD : espi_platform_regs_pkg.board_id_board := espi_platform_regs_pkg.COSMO
+    );
 end entity;
 
 architecture th of espi_th is
@@ -99,7 +103,8 @@ begin
     -- rely on.
     dut: entity work.espi_target_top
         generic map (
-            FLASH_WRITES_ALLOWED => true
+            FLASH_WRITES_ALLOWED => true,
+            BOARD => BOARD
         )
         port map (
             clk                => clk,
