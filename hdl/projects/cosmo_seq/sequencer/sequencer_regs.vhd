@@ -55,6 +55,7 @@ entity sequencer_regs is
         versal_error_out : in std_logic := '0';
         nic_hash_done : in std_logic := '0';
         nic_hash_err : in std_logic := '0';
+        nic_hash_status : in nic_hash_status_type;
         versal_readbacks : in versal_readbacks_type;
         versal_overrides : out versal_overrides_type;
         versal_boot_ctrl : out versal_boot_ctrl_type;
@@ -338,6 +339,7 @@ begin
            irq_clear <= reset_0s;  -- clear single-cycle flags.
            igr <= reset_0s;
            nic_overrides.nic_test_mapo <= '0'; -- Clear test MAPO bit every cycle, so it's a single-cycle pulse when set.
+           versal_boot_ctrl.hash_start <= '0'; -- likewise a single-cycle pulse
            -- Max hold of the live power goods, cleared on a fresh sequence up
            -- or by writing the register.
            if a0_en_redge then
@@ -410,6 +412,7 @@ begin
                     when VERSAL_OVERRIDES_OFFSET => rdata <= pack(versal_overrides);
                     when VERSAL_BOOT_CTRL_OFFSET => rdata <= pack(versal_boot_ctrl);
                     when BOARD_VERSION_OFFSET => rdata <= pack(board_version);
+                    when NIC_HASH_STATUS_OFFSET => rdata <= pack(nic_hash_status);
                     when others => rdata <= (others => '0');
                 end case;
             end if;

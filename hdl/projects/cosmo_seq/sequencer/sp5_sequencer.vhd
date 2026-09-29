@@ -142,6 +142,7 @@ architecture rtl of sp5_sequencer is
     signal versal_boot_ctrl : versal_boot_ctrl_type;
     signal versal_hash_done : std_logic;
     signal versal_hash_failed : std_logic;
+    signal nic_hash_status : nic_hash_status_type;
     signal board_version : board_version_type;
 
 begin
@@ -204,6 +205,7 @@ begin
         versal_error_out => versal_boot.error_out,
         nic_hash_done => versal_hash_done,
         nic_hash_err => versal_hash_failed,
+        nic_hash_status => nic_hash_status,
         versal_readbacks => versal_readbacks,
         versal_overrides => versal_overrides,
         versal_boot_ctrl => versal_boot_ctrl,
@@ -386,6 +388,7 @@ begin
         versal_readbacks <= (mode => (others => '0'), others => '0');
         versal_hash_done <= '0';
         versal_hash_failed <= '0';
+        nic_hash_status <= (hash_sm => IDLE, others => '0');
         versal_held_in_reset <= '0';
         flash_owned_by_seq <= '0';
         nic_rails_up <= nic_power_ok;
@@ -435,8 +438,7 @@ begin
             hash_req => hash_req,
             hash_ack => hash_ack,
             hash_err => hash_err,
-            hash_done => versal_hash_done,
-            hash_failed => versal_hash_failed,
+            hash_status => nic_hash_status,
             versal_rails => versal_rails,
             versal_boot => versal_boot,
             versal_pcie => versal_pcie
@@ -485,6 +487,9 @@ begin
         rails_pg_rdbk.v1p2_nic_enet_a0hp <= '0';
         rails_pg_rdbk.v1p2_nic_pcie_a0hp <= '0';
         rails_pg_rdbk.v1p5_nic_a0hp <= '0';
+
+        versal_hash_done <= nic_hash_status.done;
+        versal_hash_failed <= nic_hash_status.err;
 
         -- Versal sequencing readbacks
         versal_readbacks.por_b <= versal_boot.por_b;

@@ -300,8 +300,7 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             GROUP_2 = 8'h09 {desc = "Metro (Versal). Group 2, V0P88, enabled, waiting for PG";};
             GROUP_3 = 8'h0a {desc = "Metro (Versal). Group 3, V0P8 VCCINT, enabled, waiting for PG";};
             RAILS_SETTLE = 8'h0b {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
-            HASH_IMAGE = 8'h0c {desc = "Metro (Versal). Rails up, POR_B held, boot flash mux pointed at the FPGA; waiting for the hash engine to measure the image";};
-            HASH_RELEASE = 8'h0d {desc = "Metro (Versal). Measurement over, waiting for the hash engine to drop its acknowledge";};
+            HASH_WAIT = 8'h0c {desc = "Metro (Versal). Rails up and settled, POR_B held; waiting for the image measurement to finish, see nic_hash_status. Passed straight through with no measurement in flight or with debug_enables.ignore_nic_hash set";};
             MODE_STRAP = 8'h0e {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
             POR_RELEASE = 8'h0f {desc = "Metro (Versal). POR_B released";};
             WAIT_DONE = 8'h10 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
@@ -550,6 +549,11 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             it after a fault. Setting it with the NIC up powers the NIC down as a software
             disable would, without a fault. Clearing it while a0_en is set starts the NIC sequence.";
         } a0hp_inhibit[1] = 0;
+        field {
+            desc = "Metro only. Do not wait for the image measurement before releasing POR_B. The
+            NIC's rails must still be up and settled. A measurement in flight when POR_B is
+            released loses the flash to the NIC and is recorded as abandoned.";
+        } ignore_nic_hash[1] = 0;
     } debug_enables;
 
     reg {
@@ -725,12 +729,55 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             is how the board is wired. JTAG is the escape hatch for bring-up.";
         } mode[3:0] = 4'h2;
         field {
-            desc = "Measure the boot image with the hash engine before releasing POR_B.
-            The range comes from the hash engine's HW_FLASH_ADDR/HW_LENGTH. A failed
-            measurement is recorded in the status register and the boot goes ahead.
-            Clear to skip the measurement.";
+            desc = "Start a measurement of the boot image when the NIC power sequence starts.
+            It runs alongside the rails coming up, and POR_B is not released until it
+            has finished. The range comes from the hash engine's HW_FLASH_ADDR/HW_LENGTH.
+            The engine failing to produce a digest is recorded and the boot goes ahead.
+            Clear to boot without a measurement.";
         } hash_image[4:4] = 1;
+        field {
+            desc = "Self-clearing. Set to 1 to start a measurement now. Only taken while the NIC
+            is held in POR and no measurement is in flight; otherwise it is recorded in
+            nic_hash_status.refused.";
+        } hash_start[5:5] = 0;
     } versal_boot_ctrl;
+
+    reg {
+        name = "NIC image measurement status";
+        desc = "Metro only. The state machine that has the hash engine measure the NIC's boot
+        image. It runs on its own, alongside the NIC power sequence; the digest is in the hash
+        engine's HW_DIGEST registers.";
+        default sw = r;
+
+        enum nic_hash_state_machine {
+            IDLE = 8'h00 {desc = "No measurement in flight";};
+            RUNNING = 8'h01 {desc = "Request made of the hash engine, waiting for its acknowledge";};
+            ACK_RELEASE = 8'h02 {desc = "Acknowledged, waiting for the hash engine to drop its acknowledge";};
+        };
+        field {
+            desc = "Measurement state machine";
+            encode = nic_hash_state_machine;
+        } hash_sm[7:0];
+        field {
+            desc = "The last measurement finished and produced a digest. Cleared when the next one starts.";
+        } done[8:8];
+        field {
+            desc = "The last measurement finished without a usable digest: the hash engine reported
+            an error, or the measurement was abandoned. Cleared when the next one starts.";
+        } err[9:9];
+        field {
+            desc = "POR_B was released with the measurement in flight, so the flash went to the NIC
+            part way through it. Cleared when the next one starts.";
+        } abandoned[10:10];
+        field {
+            desc = "The current or last measurement was started by versal_boot_ctrl.hash_start
+            and not by the power sequence.";
+        } sw_started[11:11];
+        field {
+            desc = "A start was turned away since the last one taken: the NIC was out of POR, or
+            a measurement was already in flight.";
+        } refused[12:12];
+    } nic_hash_status;
 
     reg {
         name = "Board Version";

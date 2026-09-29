@@ -69,8 +69,8 @@ entity versal_seq is
         -- flash away from it through the mux.
         versal_held_in_reset : out std_logic;
         -- True while the sequencer itself wants the boot flash on the FPGA
-        -- side of the mux: for the pre-boot measurement, and once the Versal
-        -- has booted so the SP5 can reach the flash over eSPI.
+        -- side of the mux: for a measurement of the image, and once the
+        -- Versal has booted so the SP5 can reach the flash over eSPI.
         flash_owned_by_seq : out std_logic;
         -- High from the moment the last group has come up good until the
         -- rails are next taken down, by request or by a fault. Drops at the
@@ -82,9 +82,8 @@ entity versal_seq is
         hash_req : out std_logic;
         hash_ack : in std_logic;
         hash_err : in std_logic;
-        -- Outcome of the measurement for the current or last boot
-        hash_done : out std_logic;
-        hash_failed : out std_logic;
+        -- The measurement state machine, which runs alongside this one
+        hash_status : out nic_hash_status_type;
 
         versal_rails : view versal_power_at_fpga;
         versal_boot : view versal_boot_at_fpga;
@@ -148,9 +147,6 @@ architecture rtl of versal_seq is
         expected : std_logic_vector(0 to NUM_GROUPS);
         faulted : std_logic;
         boot_failed : std_logic;
-        hash_req : std_logic;
-        hash_done : std_logic;
-        hash_failed : std_logic;
     end record;
 
     constant versal_r_reset : versal_r_t := (
@@ -169,10 +165,7 @@ architecture rtl of versal_seq is
         clk_buff_oe_l => '1',
         expected => (others => '0'),
         faulted => '0',
-        boot_failed => '0',
-        hash_req => '0',
-        hash_done => '0',
-        hash_failed => '0'
+        boot_failed => '0'
     );
     signal r, rin : versal_r_t;
 
@@ -181,6 +174,13 @@ architecture rtl of versal_seq is
     signal cha_perst_l : std_logic;
     signal chb_perst_l : std_logic;
     signal final_outs : versal_overrides_type;
+
+    signal held_in_reset : std_logic;
+    signal rails_ok : std_logic;
+    signal hash_start_seq : std_logic;
+    signal hash_hold : std_logic;
+    signal hash_busy : std_logic;
+    signal hash_owns_flash : std_logic;
 
 begin
 
@@ -191,15 +191,39 @@ begin
     -- safely steal the QSPI mux. Not during MODE_STRAP though: that is the
     -- last stop before POR_B releases, and a grant given there would still be
     -- in force when it does.
-    versal_held_in_reset <= '1' when r.por_b = '0' and r.state /= MODE_STRAP else '0';
+    held_in_reset <= '1' when r.por_b = '0' and r.state /= MODE_STRAP else '0';
+    versal_held_in_reset <= held_in_reset;
     -- The sequencer's own claims on the flash: measuring it, and after boot,
     -- when the Versal has finished with it and the SP5 gets it over eSPI.
     rails_up <= and r.expected;
-    flash_owned_by_seq <= '1' when r.state = HASH_IMAGE or r.state = HASH_RELEASE or
-                                   r.state = DONE else '0';
-    hash_req <= r.hash_req;
-    hash_done <= r.hash_done;
-    hash_failed <= r.hash_failed;
+    flash_owned_by_seq <= '1' when hash_owns_flash = '1' or r.state = DONE else '0';
+
+    -- What POR_B at the pin is interlocked with, whoever is driving it: every
+    -- rail has been through its good check and every one of them is good now.
+    rails_ok <= '1' when (and r.expected) = '1' and is_power_good(versal_rails) else '0';
+
+    -- The measurement sets off with the power sequence, not at some stage of
+    -- it, so that it has the whole of the rails' bring-up to run in.
+    hash_start_seq <= '1' when r.state = IDLE and (r.enable_pend and upstream_ok) = '1' and
+                               boot_ctrl.hash_image = '1' else '0';
+    -- The pin as well as our own intent, since an override can have let the
+    -- Versal out of reset without this state machine's say.
+    hash_hold <= held_in_reset and not final_outs.por_b;
+
+    nic_hash_seq_inst: entity work.nic_hash_seq
+     port map(
+        clk => clk,
+        reset => reset,
+        start_seq => hash_start_seq,
+        start_sw => boot_ctrl.hash_start,
+        hold => hash_hold,
+        busy => hash_busy,
+        owns_flash => hash_owns_flash,
+        status => hash_status,
+        hash_req => hash_req,
+        hash_ack => hash_ack,
+        hash_err => hash_err
+    );
 
     -- Debug header taps, on header pins 5..0 in this order
     versal_dbg_pins.rails_en <= r.group_en(NUM_GROUPS);
@@ -226,7 +250,7 @@ begin
                     api_state.nic_sm <= DISABLE_POWER;
                 when RAILS_SETTLE | MODE_STRAP =>
                     api_state.nic_sm <= NIC_RESET;
-                when HASH_IMAGE | HASH_RELEASE =>
+                when HASH_WAIT =>
                     api_state.nic_sm <= MEASURING;
                 when POR_RELEASE | WAIT_DONE =>
                     api_state.nic_sm <= BOOTING;
@@ -292,13 +316,10 @@ begin
                 v.err_done_buff_en := '0';
                 v.clk_buff_oe_l := '1';
                 v.expected := (others => '0');
-                v.hash_req := '0';
                 v.cnts := (others => '0');
                 if r.enable_pend and upstream_ok then
                     v.state := HSC_EN;
                     v.enable_pend := '0';
-                    v.hash_done := '0';
-                    v.hash_failed := '0';
                 end if;
 
             when HSC_EN =>
@@ -402,30 +423,17 @@ begin
                     -- cannot move the straps out from under the Versal.
                     v.mode := boot_ctrl.mode;
                     v.cnts := (others => '0');
-                    if boot_ctrl.hash_image = '1' then
-                        v.state := HASH_IMAGE;
-                    else
-                        v.state := MODE_STRAP;
-                    end if;
+                    v.state := HASH_WAIT;
                 end if;
 
-            -- Measure the boot image while the Versal is still in POR and the
-            -- flash is ours. The hash engine owns the timing: a large image
-            -- takes seconds, and software can abort a run that is going
-            -- nowhere, which comes back as an error here. Either way the
-            -- Versal boots; whether a bad measurement matters is for the SP.
-            when HASH_IMAGE =>
-                v.hash_req := '1';
-                if hash_ack = '1' then
-                    v.hash_req := '0';
-                    v.hash_done := not hash_err;
-                    v.hash_failed := hash_err;
-                    v.state := HASH_RELEASE;
-                end if;
-
-            when HASH_RELEASE =>
-                -- Let the handshake finish before anything else can start one
-                if hash_ack = '0' then
+            -- The checkpoint ahead of POR_B. The rails are up and settled;
+            -- what is left is for the image measurement, which has been
+            -- running alongside, to finish and give the flash back. With no
+            -- measurement in flight this is passed straight through, and
+            -- software can have it passed regardless. The mode strap time
+            -- that follows is what the flash mux has to swing back in.
+            when HASH_WAIT =>
+                if hash_busy = '0' or debug_enables.ignore_nic_hash = '1' then
                     v.state := MODE_STRAP;
                 end if;
 
@@ -480,7 +488,6 @@ begin
                 v.err_done_buff_en := '0';
                 v.clk_buff_oe_l := '1';
                 v.expected := (others => '0');
-                v.hash_req := '0';
                 if r.cnts = 0 then
                     v.cnts := r.cnts + 1;
                     if or r.group_en = '0' then
@@ -504,9 +511,8 @@ begin
         end case;
 
         -- MAPO handling, monitored in every state that has power on or
-        -- coming on. A measurement in flight is simply abandoned: the request
-        -- drops on the way down and the engine's acknowledge, whenever it
-        -- comes, is ignored.
+        -- coming on. A measurement in flight is left to run: POR_B is held
+        -- all the way down, and the flash does not depend on these rails.
         if r.state /= IDLE and r.state /= POWER_DOWN then
             if rails_faulted = '1' or upstream_ok = '0' or
                nic_test_mapo = '1' then
@@ -548,8 +554,9 @@ begin
         elsif rising_edge(clk) then
             if debug_enables.nic_override then
                 final_outs <= versal_overrides_reg;
+                final_outs.por_b <= versal_overrides_reg.por_b and rails_ok;
             else
-                final_outs.por_b <= r.por_b and not debug_enables.force_nic_reset;
+                final_outs.por_b <= r.por_b and rails_ok and not debug_enables.force_nic_reset;
                 final_outs.mode_buffer_en_l <= r.mode_buffer_en_l;
                 final_outs.err_done_buff_en <= r.err_done_buff_en;
                 final_outs.cha_perst_l <= cha_perst_l;

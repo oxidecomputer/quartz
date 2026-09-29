@@ -82,6 +82,7 @@ begin
         alias flash_owned_by_seq is << signal th.flash_owned_by_seq : std_logic >>;
         alias nic_rails_up is << signal th.nic_rails_up : std_logic >>;
         alias hash_req is << signal th.hash_req : std_logic >>;
+        alias hash_model_time is << signal th.hash_model_time : time >>;
         alias hash_model_fail is << signal th.hash_model_fail : boolean >>;
         alias hash_requests is << signal th.hash_requests : natural >>;
         alias versal_boot_pins is << signal th.versal_boot_pins : versal_boot_t >>;
@@ -92,6 +93,7 @@ begin
         variable rails_pg : rails_type;
         variable readbacks : versal_readbacks_type;
         variable status : status_type;
+        variable hash_status : nic_hash_status_type;
         variable version : board_version_type;
         variable last_event : time;
     begin
@@ -342,26 +344,24 @@ begin
                 check_equal(flash_owned_by_seq, '1',
                             "Expected the sequencer to hold the flash for the SP5 after boot");
 
-            elsif run("image_is_measured_before_boot") then
-                -- The sequencer asks the hash engine for a measurement with
-                -- the rails up, POR_B still held and the flash on the FPGA
-                -- side, and only releases POR_B once it has an answer.
+            elsif run("image_is_measured_alongside_power_up") then
+                -- The measurement sets off with the power sequence and runs
+                -- while the rails are still coming up.
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
                           POWER_CTRL_A0_EN_MASK);
                 wait until hash_req = '1' for 50 ms;
                 check_equal(hash_req, '1', "Expected a measurement request");
+                -- the flash claim is a few deltas behind the request
+                wait for 1 ns;
+                check_equal(versal_rails_pins.v3p3.enable, '0',
+                            "Expected the measurement to start ahead of the rails");
                 check_equal(versal_boot_pins.por_b, '0', "Expected POR_B held during the measurement");
                 check_equal(flash_owned_by_seq, '1', "Expected the flash on the FPGA side during the measurement");
-                read_bus(net, bus_handle,
-                         To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length),
-                         read_data);
-                versal_state := encode(read_data(7 downto 0));
-                check_equal(versal_state = MEASURING, true, "Expected the MEASURING api state");
                 wait until hash_req = '0';
-                -- POR_B releases only after the flash has gone back to the Versal
                 wait until versal_boot_pins.por_b = '1' for 50 ms;
-                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released after the measurement");
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released with the rails up");
+                check_equal(nic_rails_up, '1', "Expected the rails up at POR_B release");
                 check_equal(flash_owned_by_seq, '0', "Expected the flash back with the Versal for boot");
                 poll_for_nic_state(net, DONE);
                 check_equal(flash_owned_by_seq, '1', "Expected the flash back on the FPGA side after boot");
@@ -372,6 +372,129 @@ begin
                 check_equal(status.nic_hash_done, '1', "Expected versal_hash_done");
                 check_equal(status.nic_hash_err, '0', "Expected no versal_hash_err");
                 check_equal(hash_requests, 1, "Expected exactly one measurement");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.hash_sm = IDLE, true, "Expected the hash state machine idle");
+                check_equal(hash_status.done, '1', "Expected done in the hash status");
+                check_equal(hash_status.err, '0', "Expected no err in the hash status");
+                check_equal(hash_status.abandoned, '0', "Expected no abandoned in the hash status");
+                check_equal(hash_status.sw_started, '0', "Expected a sequencer-started measurement");
+
+            elsif run("por_b_waits_for_a_long_measurement") then
+                -- Longer than the rails take, so the power sequence gets to
+                -- its checkpoint first and has to wait there.
+                hash_model_time <= 400 us;
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until hash_req = '1' for 50 ms;
+                wait for 250 us;
+                check_equal(nic_rails_up, '1', "Expected the rails up while the measurement runs on");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B held for the measurement");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                versal_state := encode(read_data(7 downto 0));
+                check_equal(versal_state = MEASURING, true, "Expected the MEASURING api state");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.hash_sm = RUNNING, true, "Expected the hash state machine running");
+                wait until versal_boot_pins.por_b = '1' for 50 ms;
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released after the measurement");
+                check_equal(hash_req, '0', "Expected the measurement over before POR_B released");
+                poll_for_nic_state(net, DONE);
+
+            elsif run("measurement_can_be_ignored") then
+                hash_model_time <= 400 us;
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(DEBUG_ENABLES_OFFSET, bus_handle.p_address_length),
+                          DEBUG_ENABLES_IGNORE_NIC_HASH_MASK);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_boot_pins.por_b = '1' for 50 ms;
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released");
+                check_equal(hash_req, '1', "Expected the measurement still in flight");
+                check_equal(nic_rails_up, '1', "Expected the rails up at POR_B release");
+                check_equal(flash_owned_by_seq, '0', "Expected the flash with the Versal for boot");
+                wait until hash_req = '0' for 50 ms;
+                wait for 10 us;
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.abandoned, '1', "Expected the measurement recorded as abandoned");
+                check_equal(hash_status.done, '0', "Expected no done for an abandoned measurement");
+                check_equal(hash_status.err, '1', "Expected err for an abandoned measurement");
+
+            elsif run("software_can_start_a_measurement") then
+                -- With the NIC down: the flash does not need its rails
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000012");
+                wait until hash_req = '1' for 1 ms;
+                check_equal(hash_req, '1', "Expected a measurement request");
+                -- the flash claim is a few deltas behind the request
+                wait for 1 ns;
+                check_equal(flash_owned_by_seq, '1', "Expected the flash on the FPGA side");
+                check_equal(group_enables(versal_rails_pins), groups_t'(others => '0'),
+                            "Expected no rail enabled by a measurement");
+                wait until hash_req = '0' for 1 ms;
+                wait for 10 us;
+                check_equal(flash_owned_by_seq, '0', "Expected the flash let go of");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                check_equal(read_data, std_logic_vector'(x"00000012"), "Expected hash_start to clear itself");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.done, '1', "Expected done in the hash status");
+                check_equal(hash_status.sw_started, '1', "Expected a software-started measurement");
+                check_equal(hash_requests, 1, "Expected exactly one measurement");
+
+            elsif run("software_start_refused_once_booted") then
+                power_up_to_nic_done(net);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000012");
+                wait for 100 us;
+                check_equal(hash_requests, 1, "Expected only the power-up measurement");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.refused, '1', "Expected the start recorded as refused");
+                check_equal(hash_status.done, '1', "Expected the power-up measurement left standing");
+
+            elsif run("por_b_needs_the_rails") then
+                -- Even by override, and whatever the measurement is doing
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_OVERRIDES_OFFSET, bus_handle.p_address_length),
+                          VERSAL_OVERRIDES_POR_B_MASK or VERSAL_OVERRIDES_MODE_BUFFER_EN_L_MASK);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(DEBUG_ENABLES_OFFSET, bus_handle.p_address_length),
+                          DEBUG_ENABLES_NIC_OVERRIDE_MASK);
+                wait for 100 us;
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B held with the rails down");
+                hash_model_time <= 400 us;
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_boot_pins.por_b = '1' for 50 ms;
+                check_equal(versal_boot_pins.por_b, '1', "Expected the override to release POR_B");
+                check_equal(nic_rails_up, '1', "Expected the rails up at POR_B release");
+                check_equal(hash_req, '1', "Expected the measurement still in flight");
+                disable_power_good(net, find("versal_v0p88"));
+                wait for 1 us;
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted on losing a rail");
+                enable_power_good(net, find("versal_v0p88"));
+                wait until hash_req = '0' for 50 ms;
 
             elsif run("failed_measurement_is_recorded_and_boot_continues") then
                 hash_model_fail <= true;
