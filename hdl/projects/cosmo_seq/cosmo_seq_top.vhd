@@ -865,7 +865,8 @@ begin
     sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
     sp5_seq_pins.slp_s5_l <= sp5_to_fpga1_slp_s5_l;
     fpga1_to_sp5_rsmrst_l <= sp5_seq_pins.rsmrst_l;
-    sp5_to_fpga1_debug1 <= sp5_seq_pins.is_cosmo;
+    -- Board-type strap the SP5 samples at power up.
+    sp5_to_fpga1_debug1 <= '1'; -- always high for metro and cosmo
     fpga1_to_sp5_pwrgd <= sp5_seq_pins.pwr_good;
 
     -- Nic sequence-related pins

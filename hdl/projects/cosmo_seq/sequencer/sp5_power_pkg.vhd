@@ -48,7 +48,6 @@ package sp5_power_pkg is
         pwr_good : std_logic;
         pwrgd_out : std_logic;
         smerr_l : std_logic;
-        is_cosmo : std_logic; -- uses SP5_TO_FPGA1_DEBUG1 high at power up to indicate cosmo
     end record;
     -- FPGA's view of the world as the controller and recipient of
     -- the feedback
@@ -63,7 +62,6 @@ package sp5_power_pkg is
         rsmrst_l : out;
         pwr_btn_l : out;
         pwr_good : out;
-        is_cosmo : out;
     end view;
     alias sp5_seq_at_sp5 is sp5_seq_at_fpga'converse;
 

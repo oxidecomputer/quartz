@@ -78,7 +78,6 @@ architecture rtl of a1_a0_seq is
         group_c_expected: std_logic;
         ddr_bulk_expected: std_logic;
         faulted: std_logic;
-        is_cosmo : std_logic;
         therm_trip : std_logic;
         smerr_assert : std_logic;
     end record;
@@ -94,7 +93,6 @@ architecture rtl of a1_a0_seq is
         '0',
         '0',
         '1',
-        '0',
         '0',
         '0',
         '0',
@@ -199,7 +197,6 @@ begin
 
         case seq_r.state is
             when IDLE =>
-                v.is_cosmo := '0';  -- assert after power-up
                 v.pwr_btn_l := '1';  -- assert after power up, don't cross-drive, tris at top
                 v.ddr_bulk_en := '0';
                 v.group_a_en := '0';
@@ -318,7 +315,6 @@ begin
                 end if;
             -- Drive PWRGOOD to the SP5
             when ASSERT_PWRGOOD =>
-                v.is_cosmo := '1';  -- assert GPIO to SP5 for cosmo detection
                 v.pwr_good := '1';
                 v.state := WAIT_PWROK;
             -- We expect SP5 to respond back with PWR_OK
@@ -428,7 +424,6 @@ begin
     sp5_seq_pins.pwr_btn_l <= seq_r.pwr_btn_l;
     sp5_seq_pins.rsmrst_l <= seq_r.rsm_rst_l;
     sp5_seq_pins.pwr_good <= seq_r.pwr_good;
-    sp5_seq_pins.is_cosmo <= seq_r.is_cosmo;
 
     therm_trip <= seq_r.therm_trip;
     smerr_assert <= seq_r.smerr_assert;
