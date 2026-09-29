@@ -380,10 +380,10 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "Group C VDDCR SOC";
         } vddcr_soc[1];
         field {
-            desc = "NIC nic_hsc_12v (discrete pg, shared enable with 5V)";
+            desc = "NIC nic_hsc_12v (discrete pg, shared enable with 5V). On metro, enabled and checked ahead of group 1";
         } nic_hsc_12v[1];
         field {
-            desc = "NIC nic_hsc_5v (discrete pg, shared enable with 12V)";
+            desc = "NIC nic_hsc_5v (discrete pg, shared enable with 12V). On metro, enabled and checked ahead of group 1";
         } nic_hsc_5v[1];
         field {
             desc = "Cosmo only. NIC v1p5_nic_a0hp (discrete pg, enable cascade from nic 5V)";
@@ -407,35 +407,37 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "Cosmo only. NIC v0p96_nic_vdd_a0hp (discrete pg, enable cascade from nic 5V)";
         } v0p96_nic_vdd_a0hp[1];
         // Metro's Versal rail tree. Its hotswaps share the nic_hsc_* bits above.
+        // The group is the versal_seq rail group the rail is enabled in and whose
+        // power good check it is part of.
         field {
-            desc = "Metro only. Versal VCCINT 0.8V";
+            desc = "Metro only. Versal VCCINT 0.8V. Group 3";
         } versal_v0p8_vccint[1];
         field {
-            desc = "Metro only. Versal 0.88V";
+            desc = "Metro only. Versal 0.88V. Group 2";
         } versal_v0p88[1];
         field {
-            desc = "Metro only. Versal transceiver AVCC 0.92V (discrete pg, cascade enable)";
+            desc = "Metro only. Versal transceiver AVCC 0.92V. Group 5 (discrete pg, no enable of its own; comes up with V1P1)";
         } versal_v0p92_avcc[1];
         field {
-            desc = "Metro only. Versal 1.1V";
+            desc = "Metro only. Versal 1.1V. Group 5 (enable only; no pg pin, reads back its enable)";
         } versal_v1p1[1];
         field {
-            desc = "Metro only. Versal transceiver AVTT 1.2V (discrete pg, cascade enable)";
+            desc = "Metro only. Versal transceiver AVTT 1.2V. Group 7 (discrete pg, no enable of its own; comes up with V1P4)";
         } versal_v1p2_avtt[1];
         field {
-            desc = "Metro only. Versal 1.4V";
+            desc = "Metro only. Versal 1.4V. Group 7 (enable only; no pg pin, reads back its enable)";
         } versal_v1p4[1];
         field {
-            desc = "Metro only. Versal VCCAUX 1.5V";
+            desc = "Metro only. Versal VCCAUX 1.5V. Group 4";
         } versal_v1p5[1];
         field {
-            desc = "Metro only. Versal transceiver AVCCAUX 1.5V";
+            desc = "Metro only. Versal transceiver AVCCAUX 1.5V. Group 6";
         } versal_v1p5_avccaux[1];
         field {
-            desc = "Metro only. Versal VCCO 1.8V";
+            desc = "Metro only. Versal VCCO 1.8V. Group 1";
         } versal_v1p8[1];
         field {
-            desc = "Metro only. Versal VCCO 3.3V";
+            desc = "Metro only. Versal VCCO 3.3V. Group 1";
         } versal_v3p3[1];
     };
 
