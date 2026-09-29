@@ -217,6 +217,12 @@ begin
                     "Expected sequencer stalled at SP5_EARLY_CHECKPOINT");
                 rail_model_msg_pkg.enable_power_good(net, ddr_ghijkl_actor);
                 poll_for_seq_state(net, DONE);
+            elsif run("a0hp_inhibit_holds_nic_off") then
+                test_a0hp_inhibit_holds_nic_off(net);
+            elsif run("a0hp_inhibit_powers_nic_down") then
+                test_a0hp_inhibit_powers_nic_down(net);
+            elsif run("a0hp_inhibit_masks_perst_restart") then
+                test_a0hp_inhibit_masks_perst_restart(net, sp5_t6_perst_l);
             elsif run("nic_force_mapo") then
                 info("Starting normal A0 power sequence");
                 write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);

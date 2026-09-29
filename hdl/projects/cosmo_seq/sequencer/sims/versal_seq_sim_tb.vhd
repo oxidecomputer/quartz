@@ -214,6 +214,15 @@ begin
                 enable_power_good(net, find("versal_v0p8_vccint"));
                 poll_for_nic_state(net, IDLE);
 
+            elsif run("a0hp_inhibit_holds_nic_off") then
+                test_a0hp_inhibit_holds_nic_off(net);
+            elsif run("a0hp_inhibit_powers_nic_down") then
+                test_a0hp_inhibit_powers_nic_down(net);
+            elsif run("a0hp_inhibit_masks_perst_restart_cha") then
+                test_a0hp_inhibit_masks_perst_restart(net, sp5_versal_cha_perst_l);
+            elsif run("a0hp_inhibit_masks_perst_restart_chb") then
+                test_a0hp_inhibit_masks_perst_restart(net, sp5_versal_chb_perst_l);
+
             elsif run("boot_mode_is_strapped") then
                 -- The default boot mode is QSPI32; check it reaches the pins.
                 power_up_to_nic_done(net);

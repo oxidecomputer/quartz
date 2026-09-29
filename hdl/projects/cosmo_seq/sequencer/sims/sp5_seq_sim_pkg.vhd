@@ -58,6 +58,19 @@ package sp5_seq_sim_pkg is
         signal net : inout network_t
     );
 
+    -- debug_enables.a0hp_inhibit, for either kind of NIC. Each of these is a
+    -- whole test case.
+    procedure test_a0hp_inhibit_holds_nic_off (
+        signal net : inout network_t
+    );
+    procedure test_a0hp_inhibit_powers_nic_down (
+        signal net : inout network_t
+    );
+    procedure test_a0hp_inhibit_masks_perst_restart (
+        signal net : inout network_t;
+        signal sp5_perst_l : out std_logic
+    );
+
     -- Drop one Versal rail (a rail_model of its own, unlike the T6's rails
     -- which sit behind nic_model) once the Versal is up and check the NIC
     -- MAPO path, including that the flag can be cleared afterwards.
@@ -239,6 +252,113 @@ package body sp5_seq_sim_pkg is
                  read_data);
         nic_state := encode(read_data(7 downto 0));
         check_equal(nic_state = DONE, true, "Expected NIC sequencer to be in DONE state");
+    end procedure;
+
+    procedure set_a0hp_inhibit (
+        signal net : inout network_t;
+        constant inhibit : in boolean
+    ) is
+        variable wdata : std_logic_vector(31 downto 0) := (others => '0');
+    begin
+        if inhibit then
+            wdata := DEBUG_ENABLES_A0HP_INHIBIT_MASK;
+        end if;
+        write_bus(net, bus_handle,
+                  To_StdLogicVector(DEBUG_ENABLES_OFFSET, bus_handle.p_address_length),
+                  wdata);
+    end procedure;
+
+    procedure check_states (
+        signal net : inout network_t;
+        constant seq_expected : in seq_api_status_a0_sm;
+        constant nic_expected : in nic_api_status_nic_sm;
+        constant msg : in string
+    ) is
+        variable read_data : std_logic_vector(31 downto 0);
+        variable seq_state : seq_api_status_a0_sm;
+        variable nic_state : nic_api_status_nic_sm;
+    begin
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(SEQ_API_STATUS_OFFSET, bus_handle.p_address_length),
+                 read_data);
+        seq_state := encode(read_data(7 downto 0));
+        check_equal(seq_state = seq_expected, true, "A0 sequencer state: " & msg);
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length),
+                 read_data);
+        nic_state := encode(read_data(7 downto 0));
+        check_equal(nic_state = nic_expected, true, "NIC sequencer state: " & msg);
+    end procedure;
+
+    procedure check_no_nic_mapo (
+        signal net : inout network_t;
+        constant msg : in string
+    ) is
+        variable read_data : std_logic_vector(31 downto 0);
+    begin
+        read_bus(net, bus_handle,
+                 To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+        check_equal((read_data and IFR_NICMAPO_MASK) = x"00000000", true,
+                    "Expected no NICMAPO: " & msg);
+    end procedure;
+
+    procedure test_a0hp_inhibit_holds_nic_off (
+        signal net : inout network_t
+    ) is
+    begin
+        set_a0hp_inhibit(net, true);
+        write_bus(net, bus_handle,
+                  To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                  POWER_CTRL_A0_EN_MASK);
+        poll_for_seq_state(net, DONE);
+        -- Long enough for either NIC to have come all the way up
+        wait for 500 us;
+        check_states(net, DONE, IDLE, "A0 up and A0HP held off");
+        check_no_nic_mapo(net, "holding A0HP off is not a fault");
+
+        -- Letting go with a0_en still set is what starts A0HP
+        set_a0hp_inhibit(net, false);
+        poll_for_nic_state(net, DONE);
+        check_states(net, DONE, DONE, "A0HP up once released");
+    end procedure;
+
+    procedure test_a0hp_inhibit_powers_nic_down (
+        signal net : inout network_t
+    ) is
+    begin
+        power_up_to_nic_done(net);
+        set_a0hp_inhibit(net, true);
+        poll_for_nic_state(net, IDLE);
+        wait for 100 us;
+        check_states(net, DONE, IDLE, "A0 stays up when A0HP is taken down");
+        check_no_nic_mapo(net, "taking A0HP down is not a fault");
+    end procedure;
+
+    procedure test_a0hp_inhibit_masks_perst_restart (
+        signal net : inout network_t;
+        signal sp5_perst_l : out std_logic
+    ) is
+    begin
+        power_up_to_nic_done(net);
+        write_bus(net, bus_handle,
+                  To_StdLogicVector(NIC_OVERRIDES_OFFSET, bus_handle.p_address_length),
+                  NIC_OVERRIDES_NIC_TEST_MAPO_MASK);
+        poll_for_nic_state(net, IDLE);
+
+        -- Faulted, and the SP5 asks for the slot again: held off
+        set_a0hp_inhibit(net, true);
+        wait for 10 us;
+        sp5_perst_l <= '0';
+        wait for 10 us;
+        sp5_perst_l <= '1';
+        wait for 500 us;
+        check_states(net, DONE, IDLE, "PERST restart masked by the inhibit");
+
+        -- Letting go with a0_en still set is an enable of its own, so the
+        -- NIC comes back without the SP5 having to ask again.
+        set_a0hp_inhibit(net, false);
+        poll_for_nic_state(net, DONE);
+        check_states(net, DONE, DONE, "A0HP back up once released");
     end procedure;
 
     procedure test_versal_rail_mapo_fault_injection (

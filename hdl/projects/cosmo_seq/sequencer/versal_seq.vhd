@@ -231,8 +231,12 @@ begin
     versal_sm: process(all)
         variable v : versal_r_t;
         variable rails_faulted : std_logic;
+        variable enable : std_logic;
     begin
         v := r;
+        -- The inhibit takes the enable away from this sequencer only, so A0
+        -- can be brought up and held without A0HP following it.
+        enable := sw_enable and not debug_enables.a0hp_inhibit;
         v.cha_perst_l_last := sp5_versal_cha_perst_l;
         v.chb_perst_l_last := sp5_versal_chb_perst_l;
 
@@ -240,10 +244,12 @@ begin
         rails_faulted := '1' when r.rails_expected = '1' and
                                   (not is_power_good(versal_rails)) else '0';
 
-        v.enable_last := sw_enable;
-        if (sw_enable and not r.enable_last) = '1' or
-           (r.faulted = '1' and r.cha_perst_l_last = '0' and sp5_versal_cha_perst_l = '1') or
-           (r.faulted = '1' and r.chb_perst_l_last = '0' and sp5_versal_chb_perst_l = '1') then
+        v.enable_last := enable;
+        if (enable and not r.enable_last) = '1' or
+           (r.faulted = '1' and debug_enables.a0hp_inhibit = '0' and
+            r.cha_perst_l_last = '0' and sp5_versal_cha_perst_l = '1') or
+           (r.faulted = '1' and debug_enables.a0hp_inhibit = '0' and
+            r.chb_perst_l_last = '0' and sp5_versal_chb_perst_l = '1') then
             -- Same two re-enable paths cosmo's nic_seq has: software toggling
             -- the enable, or -- after a MAPO, where the SP5 owns slot power --
             -- the SP5 de-asserting PERST for a fresh attempt. Either slot
@@ -251,6 +257,11 @@ begin
             v.enable_pend := '1';
             v.faulted := '0';
             v.boot_failed := '0';
+        end if;
+        -- An enable that was taken but not yet acted on, waiting in IDLE for
+        -- upstream, must not outlive the inhibit being set.
+        if debug_enables.a0hp_inhibit then
+            v.enable_pend := '0';
         end if;
 
         case r.state is
@@ -422,7 +433,7 @@ begin
                 end if;
 
             when DONE =>
-                if sw_enable = '0' then
+                if enable = '0' then
                     v.state := POWER_DOWN;
                     v.por_b := '0';
                     v.cnts := to_unsigned(1, v.cnts'length);

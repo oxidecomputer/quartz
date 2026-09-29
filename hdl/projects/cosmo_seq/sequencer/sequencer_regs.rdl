@@ -541,6 +541,12 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         field {
             desc = "Let other logic run but directly force mfg mode_l to be asserted when set";
         } force_mfg_mode[1] = 0;
+        field {
+            desc = "Hold the NIC (A0HP) sequencer off while leaving A0 alone. While set, a0_en does
+            not reach the NIC sequencer and a PERST de-assertion from the SP5 does not restart
+            it after a fault. Setting it with the NIC up powers the NIC down as a software
+            disable would, without a fault. Clearing it while a0_en is set starts the NIC sequence.";
+        } a0hp_inhibit[1] = 0;
     } debug_enables;
 
     reg {

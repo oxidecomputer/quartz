@@ -951,11 +951,8 @@ begin
     sp5_seq_pins.slp_s3_l <= sp5_to_fpga1_slp_s3_l;
     sp5_seq_pins.slp_s5_l <= sp5_to_fpga1_slp_s5_l;
     fpga1_to_sp5_rsmrst_l <= sp5_seq_pins.rsmrst_l;
-    -- Board-type strap the SP5 samples at power up. a1_a0_seq drives its
-    -- is_cosmo output high here because it is cosmo's block; Metro is not
-    -- cosmo, so hold the pin low and leave that output unread until Metro's own
-    -- board-identity convention is settled with the SP5 firmware.
-    sp5_to_fpga1_debug1 <= '0';
+    -- Board-type strap the SP5 samples at power up.
+    sp5_to_fpga1_debug1 <= '1'; -- always high for metro and cosmo
     fpga1_to_sp5_pwrgd <= sp5_seq_pins.pwr_good;
 
     -- Versal boot straps and status

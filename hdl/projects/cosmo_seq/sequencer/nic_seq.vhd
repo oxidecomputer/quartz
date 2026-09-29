@@ -160,16 +160,21 @@ begin
     nic_sm:process(all)
         variable v : nic_r_t;
         variable nic_faulted_var : std_logic;
+        variable enable : std_logic;
     begin
 
         v := nic_r;
+        -- The inhibit takes the enable away from this sequencer only, so A0
+        -- can be brought up and held without A0HP following it.
+        enable := sw_enable and not debug_enables.a0hp_inhibit;
         v.nic_perst_l_last := sp5_t6_perst_l;
          
 
         -- Fault monitoring: if we expect NIC rails to be up and they're not, that's a fault
         nic_faulted_var := '1' when nic_r.nic_expected = '1' and (not is_power_good(nic_rails)) else '0';
-         v.enable_last := sw_enable;
-        if (sw_enable and not nic_r.enable_last) = '1' or (nic_r.faulted = '1' and nic_r.nic_perst_l_last = '0' and sp5_t6_perst_l = '1') then
+         v.enable_last := enable;
+        if (enable and not nic_r.enable_last) = '1' or
+           (nic_r.faulted = '1' and debug_enables.a0hp_inhibit = '0' and nic_r.nic_perst_l_last = '0' and sp5_t6_perst_l = '1') then
             -- To re-enable, there are 2 possible cases:
             -- Normally, we require sw to clear and enable the register for normal power up cases.
             -- In a MAPO situation though, the SP5 has "power control".  sp5_t6_perst_l just followes the slot power
@@ -177,6 +182,11 @@ begin
             v.enable_pend := '1';
             -- we'll use this to clear the faulted flags
             v.faulted := '0';
+        end if;
+        -- An enable that was taken but not yet acted on, waiting in IDLE for
+        -- upstream, must not outlive the inhibit being set.
+        if debug_enables.a0hp_inhibit then
+            v.enable_pend := '0';
         end if;
         case nic_r.state is
             when IDLE =>
@@ -250,7 +260,7 @@ begin
                 -- nothing downstream to worry about just go back to idle
                 -- we've now handed off control to the next state machine which deals with the SP5
                 -- hotplug state. All of this happened *well* before the SP5 is alive and doing PCIe things.
-                if sw_enable = '0' then
+                if enable = '0' then
                     v.state := IDLE;
                 end if;
 
