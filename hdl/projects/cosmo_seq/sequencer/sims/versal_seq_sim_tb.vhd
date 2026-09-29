@@ -291,6 +291,44 @@ begin
                 check_equal(nic_rails_up, '0', "Expected rails_up low after a rail fault");
                 enable_power_good(net, find("versal_v1p8"));
 
+            elsif run("early_group_fault_during_power_up") then
+                -- A group is held to account from the moment the sequence
+                -- moves on from it, not only once the whole tree is up.
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_rails_pins.v1p5.enable = '1' for 50 ms;
+                check_equal(versal_rails_pins.v1p5.enable, '1',
+                            "Expected group 4 to be enabled");
+                disable_power_good(net, find("versal_v3p3"));
+                wait for 100 us;
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+                check_equal((read_data and IFR_NICMAPO_MASK) /= x"00000000", true,
+                            "Expected a MAPO for a group 1 rail lost while group 4 came up");
+                check_equal(group_enables(versal_rails_pins), groups_t'(others => '0'),
+                            "Expected every group taken back down");
+                enable_power_good(net, find("versal_v3p3"));
+
+            elsif run("late_group_fault_during_power_up") then
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_rails_pins.v1p4.enable = '1' for 50 ms;
+                check_equal(versal_rails_pins.v1p4.enable, '1',
+                            "Expected group 7 to be enabled");
+                disable_power_good(net, find("versal_v1p5_avccaux"));
+                wait for 100 us;
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
+                check_equal((read_data and IFR_NICMAPO_MASK) /= x"00000000", true,
+                            "Expected a MAPO for a group 6 rail lost while group 7 came up");
+                check_equal(nic_rails_up, '0',
+                            "Expected rails_up never to have been reached");
+                check_equal(group_enables(versal_rails_pins), groups_t'(others => '0'),
+                            "Expected every group taken back down");
+                enable_power_good(net, find("versal_v1p5_avccaux"));
+
             elsif run("flash_mux_interlock") then
                 -- The SP may only take the boot flash while POR_B is asserted;
                 -- after boot the sequencer holds it for the SP5 instead.

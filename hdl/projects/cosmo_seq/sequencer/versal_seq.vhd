@@ -72,9 +72,9 @@ entity versal_seq is
         -- side of the mux: for the pre-boot measurement, and once the Versal
         -- has booted so the SP5 can reach the flash over eSPI.
         flash_owned_by_seq : out std_logic;
-        -- High from the moment every rail has come up good until they are
-        -- next taken down, by request or by a fault. Drops at the start of a
-        -- power-down, before the rails themselves do.
+        -- High from the moment the last group has come up good until the
+        -- rails are next taken down, by request or by a fault. Drops at the
+        -- start of a power-down, before the rails themselves do.
         rails_up : out std_logic;
 
         -- Hash engine hardware request, see hash_engine_top. Held until
@@ -140,7 +140,12 @@ architecture rtl of versal_seq is
         mode_buffer_en_l : std_logic;
         err_done_buff_en : std_logic;
         clk_buff_oe_l : std_logic;
-        rails_expected : std_logic;
+        -- What is held to account for staying good: the hotswaps at 0, then
+        -- each group from the moment the sequence moves on from it. A rail
+        -- that sags while a later group is still coming up is as much a fault
+        -- as one that sags after boot, and waiting for the whole tree before
+        -- watching any of it would let the sequence carry on over it.
+        expected : std_logic_vector(0 to NUM_GROUPS);
         faulted : std_logic;
         boot_failed : std_logic;
         hash_req : std_logic;
@@ -162,7 +167,7 @@ architecture rtl of versal_seq is
         mode_buffer_en_l => '1',
         err_done_buff_en => '0',
         clk_buff_oe_l => '1',
-        rails_expected => '0',
+        expected => (others => '0'),
         faulted => '0',
         boot_failed => '0',
         hash_req => '0',
@@ -189,7 +194,7 @@ begin
     versal_held_in_reset <= '1' when r.por_b = '0' and r.state /= MODE_STRAP else '0';
     -- The sequencer's own claims on the flash: measuring it, and after boot,
     -- when the Versal has finished with it and the SP5 gets it over eSPI.
-    rails_up <= r.rails_expected;
+    rails_up <= and r.expected;
     flash_owned_by_seq <= '1' when r.state = HASH_IMAGE or r.state = HASH_RELEASE or
                                    r.state = DONE else '0';
     hash_req <= r.hash_req;
@@ -245,9 +250,18 @@ begin
         v.cha_perst_l_last := sp5_versal_cha_perst_l;
         v.chb_perst_l_last := sp5_versal_chb_perst_l;
 
-        -- Once we expect the rails to be up, any of them dropping is a fault.
-        rails_faulted := '1' when r.rails_expected = '1' and
-                                  (not is_power_good(versal_rails)) else '0';
+        -- Anything that has passed its good check and since dropped is a
+        -- fault, whether or not the groups after it have come up yet.
+        rails_faulted := '0';
+        if r.expected(0) = '1' and
+           (versal_rails.hsc_12v.pg and versal_rails.hsc_5v.pg) /= '1' then
+            rails_faulted := '1';
+        end if;
+        for i in group_t loop
+            if r.expected(i) = '1' and not group_good(versal_rails, i) then
+                rails_faulted := '1';
+            end if;
+        end loop;
 
         v.enable_last := enable;
         if (enable and not r.enable_last) = '1' or
@@ -277,7 +291,7 @@ begin
                 v.mode_buffer_en_l := '1';
                 v.err_done_buff_en := '0';
                 v.clk_buff_oe_l := '1';
-                v.rails_expected := '0';
+                v.expected := (others => '0');
                 v.hash_req := '0';
                 v.cnts := (others => '0');
                 if r.enable_pend and upstream_ok then
@@ -294,6 +308,7 @@ begin
                 v.cnts := (others => '0');
                 if (versal_rails.hsc_12v.pg and versal_rails.hsc_5v.pg) = '1' then
                     v.state := IO_EN;
+                    v.expected(0) := '1';
                 end if;
 
             when IO_EN =>
@@ -305,6 +320,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := V0P88_EN;
+                    v.expected(1) := '1';
                 end if;
 
             when V0P88_EN =>
@@ -316,6 +332,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := VCCINT_EN;
+                    v.expected(2) := '1';
                 end if;
 
             when VCCINT_EN =>
@@ -327,6 +344,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := VCCAUX_EN;
+                    v.expected(3) := '1';
                 end if;
 
             when VCCAUX_EN =>
@@ -338,6 +356,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := GT_AVCC_EN;
+                    v.expected(4) := '1';
                 end if;
 
             when GT_AVCC_EN =>
@@ -349,6 +368,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := AVCCAUX_EN;
+                    v.expected(5) := '1';
                 end if;
 
             when AVCCAUX_EN =>
@@ -360,6 +380,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := GT_AVTT_EN;
+                    v.expected(6) := '1';
                 end if;
 
             when GT_AVTT_EN =>
@@ -371,8 +392,7 @@ begin
                 if r.cnts = GROUP_DELAY then
                     v.cnts := (others => '0');
                     v.state := RAILS_SETTLE;
-                    -- Every rail is up now, so hold the whole tree to account.
-                    v.rails_expected := '1';
+                    v.expected(7) := '1';
                 end if;
 
             when RAILS_SETTLE =>
@@ -459,7 +479,7 @@ begin
                 v.mode_buffer_en_l := '1';
                 v.err_done_buff_en := '0';
                 v.clk_buff_oe_l := '1';
-                v.rails_expected := '0';
+                v.expected := (others => '0');
                 v.hash_req := '0';
                 if r.cnts = 0 then
                     v.cnts := r.cnts + 1;
@@ -494,7 +514,7 @@ begin
                 v.state := POWER_DOWN;
                 v.por_b := '0';
                 v.cnts := to_unsigned(1, v.cnts'length);
-                v.rails_expected := '0';
+                v.expected := (others => '0');
             end if;
         end if;
 
