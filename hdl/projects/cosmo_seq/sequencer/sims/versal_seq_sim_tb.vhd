@@ -80,6 +80,7 @@ begin
         alias sp5_versal_cha_perst_l is << signal th.sp5_nic_perst_l : std_logic >>;
         alias sp5_versal_chb_perst_l is << signal th.sp5_nic_chb_perst_l : std_logic >>;
         alias flash_owned_by_seq is << signal th.flash_owned_by_seq : std_logic >>;
+        alias nic_rails_up is << signal th.nic_rails_up : std_logic >>;
         alias hash_req is << signal th.hash_req : std_logic >>;
         alias hash_model_fail is << signal th.hash_model_fail : boolean >>;
         alias hash_requests is << signal th.hash_requests : natural >>;
@@ -272,6 +273,23 @@ begin
                 check_equal(versal_pcie_pins.chb.perst_l, '1',
                             "Expected channel B PERST unaffected by slot A");
                 sp5_versal_cha_perst_l <= '1';
+
+            elsif run("rails_up_follows_the_nic_rails") then
+                -- Low while the rails are down, high once they have all
+                -- sequenced, and low again the moment a fault takes them down.
+                check_equal(nic_rails_up, '0', "Expected rails_up low before power up");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_seq_state(net, DONE);
+                wait until nic_rails_up = '1' for 50 ms;
+                check_equal(nic_rails_up, '1', "Expected rails_up once the rails have sequenced");
+                poll_for_nic_state(net, DONE);
+                check_equal(nic_rails_up, '1', "Expected rails_up to hold through boot");
+                disable_power_good(net, find("versal_v1p8"));
+                wait for 100 us;
+                check_equal(nic_rails_up, '0', "Expected rails_up low after a rail fault");
+                enable_power_good(net, find("versal_v1p8"));
 
             elsif run("flash_mux_interlock") then
                 -- The SP may only take the boot flash while POR_B is asserted;

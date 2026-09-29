@@ -401,6 +401,7 @@ architecture rtl of metro_seq_top is
     signal versal_pcie : versal_pcie_t;
     signal versal_held_in_reset : std_logic;
     signal flash_owned_by_seq : std_logic;
+    signal nic_rails_up : std_logic;
     signal versal_hash_req : std_logic;
     signal versal_hash_ack : std_logic;
     signal versal_hash_err : std_logic;
@@ -472,9 +473,9 @@ begin
     fpga1_to_fpga2_io(1 downto 0) <= (others => 'Z');
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_sp_irq_l(6 downto 2) <= (others => '1');
-    -- The JTAG mux stays pointed at the external header; the FPGA only takes it
-    -- when someone deliberately drives this from a debug session.
-    fpga1_to_jtag_mux_sel <= '0';
+    -- The JTAG mux select follows the NIC rails: low while they are down,
+    -- high once they have all sequenced up.
+    fpga1_to_jtag_mux_sel <= nic_rails_up;
     -- Metro adds a buffer enable for the dedicated debug UART header alongside
     -- the two SP-facing ones.
     fpga1_debug_uart_buf_oe_en_l <= '0';
@@ -861,6 +862,7 @@ begin
         nic_seq_pins => nic_seq_pins_unused,
         versal_held_in_reset => versal_held_in_reset,
         flash_owned_by_seq => flash_owned_by_seq,
+        nic_rails_up => nic_rails_up,
         hash_req => versal_hash_req,
         hash_ack => versal_hash_ack,
         hash_err => versal_hash_err,

@@ -72,6 +72,10 @@ entity versal_seq is
         -- side of the mux: for the pre-boot measurement, and once the Versal
         -- has booted so the SP5 can reach the flash over eSPI.
         flash_owned_by_seq : out std_logic;
+        -- High from the moment every rail has come up good until they are
+        -- next taken down, by request or by a fault. Drops at the start of a
+        -- power-down, before the rails themselves do.
+        rails_up : out std_logic;
 
         -- Hash engine hardware request, see hash_engine_top. Held until
         -- acknowledged; hash_err is valid with the acknowledge.
@@ -185,6 +189,7 @@ begin
     versal_held_in_reset <= '1' when r.por_b = '0' and r.state /= MODE_STRAP else '0';
     -- The sequencer's own claims on the flash: measuring it, and after boot,
     -- when the Versal has finished with it and the SP5 gets it over eSPI.
+    rails_up <= r.rails_expected;
     flash_owned_by_seq <= '1' when r.state = HASH_IMAGE or r.state = HASH_RELEASE or
                                    r.state = DONE else '0';
     hash_req <= r.hash_req;
