@@ -444,7 +444,7 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
     rail_enables->name = "Rail Enable Readbacks. (Out from FPGA)"; 
 
     rails rail_pgs;
-    rail_pgs->name = "Rail Power Good status (live). (Inputs to FPGA)"; 
+    rail_pgs->name = "Rail Power Good status (live). (Inputs to FPGA). A NIC rail the board does not have reads as good, so anything but all ones in the NIC bits is a real rail"; 
 
     rails #(.sw_kind(rw)) rail_pgs_max_hold;
     rail_pgs_max_hold->name = "Rail Power Good status (max hold). (Inputs to FPGA). Write clears, or sequence up clears";

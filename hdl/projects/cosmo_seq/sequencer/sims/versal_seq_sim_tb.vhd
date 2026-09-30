@@ -114,6 +114,12 @@ begin
                             "Expected the Versal VCCINT rail to read power good");
                 check_equal(rails_pg.versal_v3p3, '1',
                             "Expected the Versal 3V3 rail to read power good");
+                -- and so should the T6 rails this board does not have, so
+                -- that a bad rail stands out as the only zero.
+                check_equal(rails_pg.v1p5_nic_a0hp, '1',
+                            "Expected an absent T6 rail to read power good");
+                check_equal(rails_pg.v0p96_nic_vdd_a0hp, '1',
+                            "Expected an absent T6 rail to read power good");
 
                 -- and the status register should agree.
                 read_bus(net, bus_handle,

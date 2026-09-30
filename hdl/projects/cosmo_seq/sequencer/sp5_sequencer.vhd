@@ -346,7 +346,9 @@ begin
         rails_pg_rdbk.v1p5_nic_a0hp <= nic_rails.v1p5_nic_a0hp.pg;
         rails_pg_rdbk.nic_hsc_5v <= nic_rails.nic_hsc_5v.pg;
         rails_pg_rdbk.nic_hsc_12v <= nic_rails.nic_hsc_12v.pg;
-        -- the Versal bits are not this board's
+        -- The Versal bits are not this board's. Their power goods read as
+        -- good, so a rail_pgs that is anything but all ones points at a real
+        -- rail.
         rails_en_rdbk.versal_v0p8_vccint <= '0';
         rails_en_rdbk.versal_v0p88 <= '0';
         rails_en_rdbk.versal_v0p92_avcc <= '0';
@@ -357,16 +359,16 @@ begin
         rails_en_rdbk.versal_v1p5_avccaux <= '0';
         rails_en_rdbk.versal_v1p8 <= '0';
         rails_en_rdbk.versal_v3p3 <= '0';
-        rails_pg_rdbk.versal_v0p8_vccint <= '0';
-        rails_pg_rdbk.versal_v0p88 <= '0';
-        rails_pg_rdbk.versal_v0p92_avcc <= '0';
-        rails_pg_rdbk.versal_v1p1 <= '0';
-        rails_pg_rdbk.versal_v1p2_avtt <= '0';
-        rails_pg_rdbk.versal_v1p4 <= '0';
-        rails_pg_rdbk.versal_v1p5 <= '0';
-        rails_pg_rdbk.versal_v1p5_avccaux <= '0';
-        rails_pg_rdbk.versal_v1p8 <= '0';
-        rails_pg_rdbk.versal_v3p3 <= '0';
+        rails_pg_rdbk.versal_v0p8_vccint <= '1';
+        rails_pg_rdbk.versal_v0p88 <= '1';
+        rails_pg_rdbk.versal_v0p92_avcc <= '1';
+        rails_pg_rdbk.versal_v1p1 <= '1';
+        rails_pg_rdbk.versal_v1p2_avtt <= '1';
+        rails_pg_rdbk.versal_v1p4 <= '1';
+        rails_pg_rdbk.versal_v1p5 <= '1';
+        rails_pg_rdbk.versal_v1p5_avccaux <= '1';
+        rails_pg_rdbk.versal_v1p8 <= '1';
+        rails_pg_rdbk.versal_v3p3 <= '1';
 
         -- NIC sequencing readbacks
         nic_readbacks.nic_pcie_clk_buff_oe_l <= nic_seq.nic_pcie_clk_buff_oe_l;
@@ -472,7 +474,8 @@ begin
         rails_pg_rdbk.versal_v0p8_vccint <= versal_rails.v0p8_vccint.pg;
         rails_pg_rdbk.nic_hsc_5v <= versal_rails.hsc_5v.pg;
         rails_pg_rdbk.nic_hsc_12v <= versal_rails.hsc_12v.pg;
-        -- the T6 bits are not this board's
+        -- The T6 bits are not this board's. Their power goods read as good,
+        -- so a rail_pgs that is anything but all ones points at a real rail.
         rails_en_rdbk.v0p96_nic_vdd_a0hp <= '0';
         rails_en_rdbk.v1p1_nic_a0hp <= '0';
         rails_en_rdbk.v1p4_nic_a0hp <= '0';
@@ -480,13 +483,13 @@ begin
         rails_en_rdbk.v1p2_nic_enet_a0hp <= '0';
         rails_en_rdbk.v1p2_nic_pcie_a0hp <= '0';
         rails_en_rdbk.v1p5_nic_a0hp <= '0';
-        rails_pg_rdbk.v0p96_nic_vdd_a0hp <= '0';
-        rails_pg_rdbk.v1p1_nic_a0hp <= '0';
-        rails_pg_rdbk.v1p4_nic_a0hp <= '0';
-        rails_pg_rdbk.v3p3_nic_a0hp <= '0';
-        rails_pg_rdbk.v1p2_nic_enet_a0hp <= '0';
-        rails_pg_rdbk.v1p2_nic_pcie_a0hp <= '0';
-        rails_pg_rdbk.v1p5_nic_a0hp <= '0';
+        rails_pg_rdbk.v0p96_nic_vdd_a0hp <= '1';
+        rails_pg_rdbk.v1p1_nic_a0hp <= '1';
+        rails_pg_rdbk.v1p4_nic_a0hp <= '1';
+        rails_pg_rdbk.v3p3_nic_a0hp <= '1';
+        rails_pg_rdbk.v1p2_nic_enet_a0hp <= '1';
+        rails_pg_rdbk.v1p2_nic_pcie_a0hp <= '1';
+        rails_pg_rdbk.v1p5_nic_a0hp <= '1';
 
         versal_hash_done <= nic_hash_status.done;
         versal_hash_failed <= nic_hash_status.err;
