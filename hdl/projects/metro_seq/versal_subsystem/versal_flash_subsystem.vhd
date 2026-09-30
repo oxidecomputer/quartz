@@ -54,6 +54,7 @@ architecture rtl of versal_flash_subsystem is
     signal active_write : std_logic;
     signal rdata : std_logic_vector(31 downto 0);
     signal mux_ctrl : mux_ctrl_type;
+    signal mux_en : std_logic;
     signal mux_status : mux_status_type;
     signal granted : std_logic;
 
@@ -62,10 +63,13 @@ begin
     -- The interlock. The SP requesting is not enough; the sequencer has to be
     -- holding the Versal off the flash as well. The sequencer's own claim
     -- needs no request.
-    granted <= flash_owned_by_seq or (mux_ctrl.request and versal_held_in_reset);
+    -- to_fpga is the escape hatch past the interlock, for bring-up
+    granted <= flash_owned_by_seq or (mux_ctrl.request and versal_held_in_reset) or
+               mux_ctrl.to_fpga;
     -- Select 0 connects the FPGA to the flash, 1 the Versal
     flash_qspi_mux_sel <= not granted;
-    flash_qspi_mux_en_l <= not granted;
+    mux_en <= granted or mux_ctrl.mux_en;
+    flash_qspi_mux_en_l <= not mux_en;
 
     -- The controller parks its pins whenever we do not own the flash, so
     -- losing the grant mid-transaction stops driving within a clock.
@@ -74,7 +78,7 @@ begin
     mux_status <= (
         granted => granted,
         mux_sel => not granted,
-        mux_en_l => not granted,
+        mux_en_l => not mux_en,
         versal_held_in_reset => versal_held_in_reset,
         seq_owned => flash_owned_by_seq
     );
