@@ -63,7 +63,8 @@ begin
     -- holding the Versal off the flash as well. The sequencer's own claim
     -- needs no request.
     granted <= flash_owned_by_seq or (mux_ctrl.request and versal_held_in_reset);
-    flash_qspi_mux_sel <= granted;
+    -- Select 0 connects the FPGA to the flash, 1 the Versal
+    flash_qspi_mux_sel <= not granted;
     flash_qspi_mux_en_l <= not granted;
 
     -- The controller parks its pins whenever we do not own the flash, so
@@ -72,7 +73,7 @@ begin
 
     mux_status <= (
         granted => granted,
-        mux_sel => granted,
+        mux_sel => not granted,
         mux_en_l => not granted,
         versal_held_in_reset => versal_held_in_reset,
         seq_owned => flash_owned_by_seq
