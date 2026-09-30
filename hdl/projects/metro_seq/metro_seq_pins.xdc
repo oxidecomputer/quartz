@@ -154,11 +154,11 @@ set_property -dict { PACKAGE_PIN C1 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_
 set_property -dict { PACKAGE_PIN R5 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_vercel_flash_qspi_mux_en_l }];
 set_property -dict { PACKAGE_PIN R4 IOSTANDARD LVCMOS18 } [get_ports { fpga1_to_vercel_flash_qspi_mux_sel }];
 set_property -dict { PACKAGE_PIN F18 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_erro_done_buff_en }];
-set_property -dict { PACKAGE_PIN D2 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[0] }];
-set_property -dict { PACKAGE_PIN E3 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[1] }];
-set_property -dict { PACKAGE_PIN F6 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[2] }];
-set_property -dict { PACKAGE_PIN B7 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[3] }];
-set_property -dict { PACKAGE_PIN J16 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode_buffer_en_l }];
+set_property -dict { PACKAGE_PIN B7 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[0] }];
+set_property -dict { PACKAGE_PIN F6 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[1] }];
+set_property -dict { PACKAGE_PIN E3 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[2] }];
+set_property -dict { PACKAGE_PIN D2 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode[3] }];
+set_property -dict { PACKAGE_PIN J16 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_mode_buffer_en }];
 set_property -dict { PACKAGE_PIN E12 IOSTANDARD LVCMOS33 } [get_ports { fpga1_to_versal_por_b }];
 set_property -dict { PACKAGE_PIN AB2 IOSTANDARD LVCMOS18 } [get_ports { fpga1_uart0_buff_oe_en_l }];
 set_property -dict { PACKAGE_PIN AB3 IOSTANDARD LVCMOS18 } [get_ports { fpga1_uart1_buff_oe_en_l }];

@@ -70,7 +70,7 @@ entity metro_seq_top is
         fpga1_to_vercel_flash_qspi_mux_sel : out std_logic;
         fpga1_to_versal_erro_done_buff_en : out std_logic;
         fpga1_to_versal_mode : out std_logic_vector(3 downto 0);
-        fpga1_to_versal_mode_buffer_en_l : out std_logic;
+        fpga1_to_versal_mode_buffer_en : out std_logic;
         fpga1_to_versal_por_b : out std_logic;
         qspi_fpga1_to_vercel_flash_mux_cs_l : out std_logic;
         qspi_fpga1_to_vercel_flash_mux_d : inout std_logic_vector(3 downto 0);
@@ -960,7 +960,8 @@ begin
     -- Versal boot straps and status
     fpga1_to_versal_por_b <= versal_boot.por_b;
     fpga1_to_versal_mode <= versal_boot.mode;
-    fpga1_to_versal_mode_buffer_en_l <= versal_boot.mode_buffer_en_l;
+    -- TODO: fix the inversion up-stream later.
+    fpga1_to_versal_mode_buffer_en <= not versal_boot.mode_buffer_en_l;
     fpga1_to_versal_erro_done_buff_en <= versal_boot.err_done_buff_en;
     versal_boot.done <= versal_to_fpga1_done;
     versal_boot.error_out <= versal_to_fpga1_error_out;
@@ -969,11 +970,11 @@ begin
     -- drain on this board, same as the M.2 and backplane ones.
     pcie_fpga1_to_nic_cha_perst_l <= versal_pcie.cha.perst_l;
     versal_pcie.cha.prsnt_l <= pcie_nic_to_fpga1_cha_prsnt_l;
-    versal_pcie.cha.pwren_l <= pcie_nic_to_fpga1_cha_pwren_l;
+    versal_pcie.cha.pwren_l <= '0';
     fpga1_to_pcie_clk_buff_nic_cha_oe_l <= '0' when versal_pcie.cha.clk_buff_oe_l = '0' else 'Z';
     pcie_fpga1_to_nic_chb_perst_l <= versal_pcie.chb.perst_l;
     versal_pcie.chb.prsnt_l <= pcie_nic_to_fpga1_chb_prsnt_l;
-    versal_pcie.chb.pwren_l <= pcie_nic_to_fpga1_chb_pwren_l;
+    versal_pcie.chb.pwren_l <= '0';
     fpga1_to_pcie_clk_buff_nic_chb_oe_l <= '0' when versal_pcie.chb.clk_buff_oe_l = '0' else 'Z';
 
     -- Versal boot flash mux on sheet 137. The controller behind it is the
@@ -988,9 +989,11 @@ begin
         versal_held_in_reset => versal_held_in_reset,
         flash_owned_by_seq => flash_owned_by_seq,
         flash_qspi_mux_sel => fpga1_to_vercel_flash_qspi_mux_sel,
-        flash_qspi_mux_en_l => fpga1_to_vercel_flash_qspi_mux_en_l,
+        flash_qspi_mux_en_l => open, --fpga1_to_vercel_flash_qspi_mux_en_l,
         flash_bus_enable => versal_flash_bus_enable
     );
+
+    fpga1_to_vercel_flash_qspi_mux_en_l <= '0';
     vercel_flash_tris: process(all)
     begin
         for i in qspi_fpga1_to_vercel_flash_mux_d'range loop
