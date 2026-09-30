@@ -337,6 +337,34 @@ begin
                             "Expected every group taken back down");
                 enable_power_good(net, find("versal_v1p5_avccaux"));
 
+            elsif run("power_down_leaves_the_pins_as_found") then
+                -- Everything driven into the NIC domain goes back to its
+                -- reset value on the way down, the latched boot mode included.
+                power_up_to_nic_done(net);
+                check_equal(versal_boot_pins.mode, std_logic_vector'("0010"),
+                            "Expected the QSPI32 straps while booted");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          x"00000000");
+                poll_for_nic_state(net, IDLE);
+                wait for 1 us;
+                check_equal(versal_boot_pins.mode, std_logic_vector'("0000"),
+                            "Expected the mode straps cleared after power down");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted after power down");
+                check_equal(versal_boot_pins.mode_buffer_en_l, '1',
+                            "Expected the mode buffer disabled after power down");
+                check_equal(versal_boot_pins.err_done_buff_en, '0',
+                            "Expected the DONE/ERROR_OUT buffer disabled after power down");
+                check_equal(versal_pcie_pins.cha.perst_l, '0', "Expected channel A PERST asserted");
+                check_equal(versal_pcie_pins.chb.perst_l, '0', "Expected channel B PERST asserted");
+                check_equal(versal_pcie_pins.cha.clk_buff_oe_l, '1', "Expected channel A clock buffer off");
+                check_equal(versal_pcie_pins.chb.clk_buff_oe_l, '1', "Expected channel B clock buffer off");
+                check_equal(group_enables(versal_rails_pins), groups_t'(others => '0'),
+                            "Expected every rail enable low");
+                check_equal(versal_rails_pins.hsc_12v.enable, '0', "Expected the hotswap enable low");
+                check_equal(nic_rails_up, '0', "Expected rails_up low");
+                check_equal(flash_owned_by_seq, '0', "Expected no claim on the flash");
+
             elsif run("flash_mux_interlock") then
                 -- The SP may only take the boot flash while POR_B is asserted;
                 -- after boot the sequencer holds it for the SP5 instead.

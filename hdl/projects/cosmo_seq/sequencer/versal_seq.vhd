@@ -312,6 +312,7 @@ begin
                 v.hsc_en := '0';
                 v.group_en := (others => '0');
                 v.por_b := '0';
+                v.mode := (others => '0');
                 v.mode_buffer_en_l := '1';
                 v.err_done_buff_en := '0';
                 v.clk_buff_oe_l := '1';
@@ -484,6 +485,10 @@ begin
             -- goes last, a delay after group 1.
             when POWER_DOWN =>
                 v.por_b := '0';
+                -- The straps are only meaningful behind an enabled buffer;
+                -- leaving them driving after power-down would keep the pins
+                -- high into a Versal that is off.
+                v.mode := (others => '0');
                 v.mode_buffer_en_l := '1';
                 v.err_done_buff_en := '0';
                 v.clk_buff_oe_l := '1';
