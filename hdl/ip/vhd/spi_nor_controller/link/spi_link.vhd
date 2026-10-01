@@ -33,6 +33,8 @@ entity spi_link is
         -- Lanes to stop driving early, ahead of a controller-to-flash
         -- turnaround, so the two ends are never enabled at once
         release_lanes : in    std_logic_vector(3 downto 0);
+        -- Low parks the pins: sclk low, lanes released. See spi_nor_top.
+        bus_enable   : in    std_logic := '1';
         rx_byte      : out   std_logic_vector(7 downto 0);
         rx_byte_done : out   boolean;
         -- The next byte to shift out. Must be held ready ahead of the reload
@@ -170,6 +172,7 @@ begin
             reset         => reset,
             divisor       => divisor,
             enable        => sclk_running,
+            bus_enable    => bus_enable,
             sclk          => sclk_int,
             sclk_pin      => sclk_pin,
             sclk_fall_now => sclk_fall_now
@@ -289,7 +292,11 @@ begin
 
             tx_reg <= nxt_tx_reg;
             io_o   <= io_out_bits(nxt_tx_reg, nxt_mode);
-            io_oe  <= oe and not release_lanes;
+            if bus_enable = '1' then
+                io_oe <= oe and not release_lanes;
+            else
+                io_oe <= (others => '0');
+            end if;
         end if;
     end process;
 

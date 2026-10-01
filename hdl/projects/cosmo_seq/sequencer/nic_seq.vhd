@@ -6,6 +6,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sequencer_regs_pkg.all;
 
@@ -28,7 +29,7 @@ entity nic_seq is
         raw_state : out nic_raw_status_type;
         api_state : out nic_api_status_type;
 
-        nic_dbg_pins : view t6_debug_seq_ss;
+        nic_dbg_pins : view nic_debug_seq_ss;
 
         -- From SP5 hotplug
         sp5_t6_perst_l : in std_logic;  -- follows exactly the power_en hotplug signal. perst_l <= power_en;
@@ -102,13 +103,15 @@ begin
     
     nic_idle <= '1' when nic_r.state = IDLE else '0';
 
-    nic_dbg_pins.cld_rst_l <= final_nic_outs.cld_rst_l;
-    nic_dbg_pins.ext_rst_l <= nic_seq_pins.ext_rst_l;
+    -- Debug header taps, on header pins 5..0 in this order
     nic_dbg_pins.rails_en <= nic_r.nic_power_en;
     nic_dbg_pins.rails_pg <= '1' when is_power_good(nic_rails) else '0';
-    nic_dbg_pins.nic_mfg_mode_l <= final_nic_outs.nic_mfg_mode_l;
-    nic_dbg_pins.sp5_mfg_mode_l <= nic_seq_pins.sp5_mfg_mode_l;
-    nic_dbg_pins.perst_l <= final_nic_outs.perst_l;
+    nic_dbg_pins.taps(5) <= final_nic_outs.cld_rst_l;
+    nic_dbg_pins.taps(4) <= final_nic_outs.perst_l;
+    nic_dbg_pins.taps(3) <= nic_seq_pins.sp5_mfg_mode_l;
+    nic_dbg_pins.taps(2) <= final_nic_outs.nic_mfg_mode_l;
+    nic_dbg_pins.taps(1) <= nic_seq_pins.ext_rst_l;
+    nic_dbg_pins.taps(0) <= '0';
 
     -- Gimlet has the following sequence that was empirically determined to work
     -- We had to double-perst and we know that cld_rst_l needs to be de-asserted 10ms before perst_l
@@ -147,6 +150,8 @@ begin
                         api_state.nic_sm <= NIC_RESET;
                     end if;
 
+                            -- the Versal states; this NIC never has them
+                when others => null;
             end case;
         end if;
 
@@ -155,16 +160,21 @@ begin
     nic_sm:process(all)
         variable v : nic_r_t;
         variable nic_faulted_var : std_logic;
+        variable enable : std_logic;
     begin
 
         v := nic_r;
+        -- The inhibit takes the enable away from this sequencer only, so A0
+        -- can be brought up and held without A0HP following it.
+        enable := sw_enable and not debug_enables.a0hp_inhibit;
         v.nic_perst_l_last := sp5_t6_perst_l;
          
 
         -- Fault monitoring: if we expect NIC rails to be up and they're not, that's a fault
         nic_faulted_var := '1' when nic_r.nic_expected = '1' and (not is_power_good(nic_rails)) else '0';
-         v.enable_last := sw_enable;
-        if (sw_enable and not nic_r.enable_last) = '1' or (nic_r.faulted = '1' and nic_r.nic_perst_l_last = '0' and sp5_t6_perst_l = '1') then
+         v.enable_last := enable;
+        if (enable and not nic_r.enable_last) = '1' or
+           (nic_r.faulted = '1' and debug_enables.a0hp_inhibit = '0' and nic_r.nic_perst_l_last = '0' and sp5_t6_perst_l = '1') then
             -- To re-enable, there are 2 possible cases:
             -- Normally, we require sw to clear and enable the register for normal power up cases.
             -- In a MAPO situation though, the SP5 has "power control".  sp5_t6_perst_l just followes the slot power
@@ -172,6 +182,11 @@ begin
             v.enable_pend := '1';
             -- we'll use this to clear the faulted flags
             v.faulted := '0';
+        end if;
+        -- An enable that was taken but not yet acted on, waiting in IDLE for
+        -- upstream, must not outlive the inhibit being set.
+        if debug_enables.a0hp_inhibit then
+            v.enable_pend := '0';
         end if;
         case nic_r.state is
             when IDLE =>
@@ -245,10 +260,12 @@ begin
                 -- nothing downstream to worry about just go back to idle
                 -- we've now handed off control to the next state machine which deals with the SP5
                 -- hotplug state. All of this happened *well* before the SP5 is alive and doing PCIe things.
-                if sw_enable = '0' then
+                if enable = '0' then
                     v.state := IDLE;
                 end if;
 
+                    -- the Versal states; this NIC never has them
+            when others => null;
         end case;
 
         -- MAPO fault handling - monitored in all non-IDLE states

@@ -1,0 +1,30 @@
+// Platform-specific registers in the eSPI configuration space. The eSPI
+// specification sets 0x800 and up aside for these, so they are read with
+// GET_CONFIGURATION like the specification's own registers but are kept in
+// their own map: the specification registers are mirrored into the SP's
+// register space, where there is no room this far up.
+
+addrmap eSPI_Platform {
+    name = "espi platform registers";
+    desc = "Oxide registers in the platform-specific part of the eSPI configuration space";
+
+    default regwidth = 32;
+    default sw = r;
+    default hw = r;
+
+    reg {
+        name = "Board Identification";
+        desc = "Which Oxide board this eSPI target is on, so the host can tell them apart";
+
+        enum board_kind {
+            COSMO = 8'h00 {desc = "";};
+            METRO = 8'h01 {desc = "";};
+        };
+
+        field {
+            desc = "Board";
+            encode = board_kind;
+        } board[7:0] = 0x00;
+
+    } board_id @0x800;
+};

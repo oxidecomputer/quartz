@@ -14,6 +14,7 @@ library vunit_lib;
 
 use work.sp5_seq_sim_pkg.all;
 use work.sequencer_regs_pkg.all;
+use work.sequencer_io_pkg.all;
 use work.rail_model_msg_pkg;
 use work.nic_model_msg_pkg.all;
 
@@ -29,11 +30,11 @@ architecture tb of sp5_seq_sim_tb is
 
 begin
 
-    th: entity work.sp5_seq_sim_th;
+    th: entity work.sp5_seq_sim_th generic map (NIC_KIND => NIC_T6);
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
-        alias sp5_t6_perst_l is << signal th.sp5_t6_perst_l : std_logic >>;
+        alias sp5_t6_perst_l is << signal th.sp5_nic_perst_l : std_logic >>;
         variable read_data       : std_logic_vector(31 downto 0);
         variable seq_state       : seq_api_status_a0_sm;
         constant grpa_v3p3_actor  : actor_t := find("grpa_v3p3_sp5_a1");
@@ -41,6 +42,7 @@ begin
         constant ddr_abcdef_actor : actor_t := find("rail_ddr_abcdef_hsc");
         constant ddr_ghijkl_actor : actor_t := find("rail_ddr_ghijkl_hsc");
         variable nic_state : nic_api_status_nic_sm;
+        variable rails_pg : rails_type;
     begin
         -- Always the first thing in the process, set up things for the VUnit test runner
         test_runner_setup(runner, runner_cfg);
@@ -62,6 +64,15 @@ begin
                 seq_state := encode(read_data(7 downto 0));
                 info("A0 state after power up: " & to_hstring(read_data(7 downto 0)));
                 check_equal(seq_state = DONE, true, "Expected sequencer to be in DONE state");
+
+                -- The Versal rails this board does not have read as good, so
+                -- a bad rail stands out as the only zero in rail_pgs.
+                poll_for_nic_state(net, DONE);
+                read_bus(net, bus_handle, To_StdLogicVector(RAIL_PGS_OFFSET, bus_handle.p_address_length), read_data);
+                rails_pg := unpack(read_data);
+                check_equal(rails_pg.v1p5_nic_a0hp, '1', "Expected the T6 1V5 rail to read power good");
+                check_equal(rails_pg.versal_v3p3, '1', "Expected an absent Versal rail to read power good");
+                check_equal(rails_pg.versal_v1p2_avtt, '1', "Expected an absent Versal rail to read power good");
             elsif run("mapo_fault_v3p3_sp5_a1") then
                 test_mapo_fault_injection(net, grpa_v3p3_actor, "V3P3_SP5_A1");
             elsif run("mapo_fault_pwr_v1p5_rtc") then
@@ -216,6 +227,12 @@ begin
                     "Expected sequencer stalled at SP5_EARLY_CHECKPOINT");
                 rail_model_msg_pkg.enable_power_good(net, ddr_ghijkl_actor);
                 poll_for_seq_state(net, DONE);
+            elsif run("a0hp_inhibit_holds_nic_off") then
+                test_a0hp_inhibit_holds_nic_off(net);
+            elsif run("a0hp_inhibit_powers_nic_down") then
+                test_a0hp_inhibit_powers_nic_down(net);
+            elsif run("a0hp_inhibit_masks_perst_restart") then
+                test_a0hp_inhibit_masks_perst_restart(net, sp5_t6_perst_l);
             elsif run("nic_force_mapo") then
                 info("Starting normal A0 power sequence");
                 write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);

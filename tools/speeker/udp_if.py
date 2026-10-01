@@ -37,6 +37,11 @@ class Request:
     poke_adv2_arg = 14  # write 2 byte to addr, increment internal addr by 2
     poke_adv4_arg = 15  # write 4 byte to addr, increment internal addr by 3
     poke_adv8_arg = 16  # write 8 byte to addr, increment internal addr by 4
+    # server-side block ops: N bus accesses per op with a constant-size
+    # response, so request duration is dominated by the FMC accesses
+    peek_block_checksum_arg = 17        # u16 count; advancing; returns u32 sum
+    peek_block_checksum_fixed_arg = 18  # u16 count; same address; returns u32 sum
+    poke_block_fill_arg = 19            # u16 count + u32 value; same address
     
     def __init__(self):
         # Build a bytearray to represent the packet we're going to send
@@ -99,6 +104,24 @@ class Request:
                 else:
                     raise Exception(f"Invalid type {type(value)} for value")
 
+    def add_peek_block_checksum(self, count, advance=True) -> None:
+        """Server-side read of `count` 32-bit words returning one u32
+        wrapping-sum checksum; `advance` selects walking memory vs
+        re-reading one address."""
+        op = self.peek_block_checksum_arg if advance else self.peek_block_checksum_fixed_arg
+        self.bytes += op.to_bytes(1, byteorder='little')
+        self.bytes += count.to_bytes(2, byteorder='little')
+        self.response.add_expected_peek(ResponsePeek(self.cur_addr, 4))
+        if advance:
+            self.cur_addr += 4 * count
+
+    def add_poke_block_fill(self, count, value) -> None:
+        """Server-side write of `value` to the current address `count`
+        times (non-advancing)."""
+        self.bytes += self.poke_block_fill_arg.to_bytes(1, byteorder='little')
+        self.bytes += count.to_bytes(2, byteorder='little')
+        self.bytes += value.to_bytes(4, byteorder='little')
+
     def add_write32_advances(self, values: list) -> None:
         for value in values:
             self.bytes += self.poke_adv4_arg.to_bytes(1, byteorder='little')
@@ -157,9 +180,18 @@ class UDPMem:
     Note that the SP is IPv6 only and runs on a link-local address so
     specification of the pc's output interface is required.
     """
-    def __init__(self, target_ip, ifname, target_port=11114, timeout=2):
+    def __init__(self, target_ip, ifname, target_port=11114, timeout=2, retries=0):
         self.debug = False
         self.timeout = timeout
+        # Additional attempts after a receive timeout. Requests are
+        # idempotent (peeks re-read, pokes re-write the same value), so a
+        # resend after a dropped frame is safe; the socket is drained before
+        # each send so a late-arriving response can never be matched to a
+        # newer request.
+        self.retries = retries
+        # count of timed-out attempts that were subsequently retried; lets a
+        # caller report link flakiness instead of dying on it
+        self.timeouts_retried = 0
         # Basic UDP IPv6 socket setup
         self.sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         # Build the target address using getaddrinfo and the interface name
@@ -199,18 +231,37 @@ class UDPMem:
         request.response.process_bytes(resp_bytes)
         return request.response
 
-    def _send_get_reply_handshake(self, request: Request) -> bytes:
-        # Send the request out the wire
-        if self.debug:
-            print(f"Sending request: {request.hex()}")
-        self.sock.sendto(bytes(request), self.target_addr)
-        # try rx up to mtu size for timeout time and return
-        # response or exception on timeout
-        self.sock.settimeout(self.timeout)
+    def _drain(self) -> None:
+        """Discard any stale datagrams (late responses from a timed-out
+        attempt) so request/response pairing stays in lockstep."""
+        self.sock.setblocking(False)
         try:
-            resp = self.sock.recv(1500)
-        except socket.timeout:
-            raise Exception("Timeout- no response back from target")
-        if self.debug:
-            print(f"Got response: {resp.hex()}")
-        return resp
+            while True:
+                self.sock.recv(1500)
+        except (BlockingIOError, OSError):
+            pass
+        finally:
+            self.sock.setblocking(True)
+
+    def _send_get_reply_handshake(self, request: Request) -> bytes:
+        for attempt in range(1 + self.retries):
+            self._drain()
+            if self.debug:
+                print(f"Sending request: {request.hex()}")
+            self.sock.sendto(bytes(request), self.target_addr)
+            # try rx up to mtu size for timeout time and return
+            # response or exception on timeout
+            self.sock.settimeout(self.timeout)
+            try:
+                resp = self.sock.recv(1500)
+            except socket.timeout:
+                if attempt < self.retries:
+                    self.timeouts_retried += 1
+                    continue
+                raise Exception(
+                    "Timeout- no response back from target"
+                    + (f" after {1 + self.retries} attempts" if self.retries else "")
+                )
+            if self.debug:
+                print(f"Got response: {resp.hex()}")
+            return resp
