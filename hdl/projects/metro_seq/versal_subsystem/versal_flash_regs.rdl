@@ -27,8 +27,8 @@ addrmap versal_flash_regs {
         } to_fpga[1] = 0;
         field {
             desc = "Debug. Set to 1 to hold the mux enabled (mux_en_l low) whoever the select
-            points at, instead of enabling it only while the FPGA owns the flash. For
-            bring-up, to find out whether the Versal needs the enable to reach its flash.";
+            points at. Without it the mux is enabled while the FPGA owns the flash and
+            while the Versal is out of reset, and disabled otherwise.";
         } mux_en[1] = 0;
     } mux_ctrl;
 

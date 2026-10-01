@@ -68,7 +68,12 @@ begin
                mux_ctrl.to_fpga;
     -- Select 0 connects the FPGA to the flash, 1 the Versal
     flash_qspi_mux_sel <= not granted;
-    mux_en <= granted or mux_ctrl.mux_en;
+    -- The enable gates both sides of the mux, so the Versal needs it as much
+    -- as we do: from the mode strap time on, when it is about to be let out
+    -- of reset. With the Versal held in reset and nobody here using the
+    -- flash, the mux is off, so a flash on its own supply is not left
+    -- connected to a Versal that may have no power.
+    mux_en <= granted or mux_ctrl.mux_en or not versal_held_in_reset;
     flash_qspi_mux_en_l <= not mux_en;
 
     -- The controller parks its pins whenever we do not own the flash, so
