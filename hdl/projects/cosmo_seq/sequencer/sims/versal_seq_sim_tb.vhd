@@ -381,6 +381,10 @@ begin
             elsif run("image_is_measured_alongside_power_up") then
                 -- The measurement sets off with the power sequence and runs
                 -- while the rails are still coming up.
+                -- the measurement is off by default
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
                           POWER_CTRL_A0_EN_MASK);
@@ -419,6 +423,10 @@ begin
             elsif run("por_b_waits_for_a_long_measurement") then
                 -- Longer than the rails take, so the power sequence gets to
                 -- its checkpoint first and has to wait there.
+                -- the measurement is off by default
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 hash_model_time <= 400 us;
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
@@ -443,6 +451,10 @@ begin
                 poll_for_nic_state(net, DONE);
 
             elsif run("measurement_can_be_ignored") then
+                -- the measurement is off by default
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 hash_model_time <= 400 us;
                 write_bus(net, bus_handle,
                           To_StdLogicVector(DEBUG_ENABLES_OFFSET, bus_handle.p_address_length),
@@ -493,6 +505,10 @@ begin
                 check_equal(hash_requests, 1, "Expected exactly one measurement");
 
             elsif run("software_start_refused_once_booted") then
+                -- the measurement is off by default
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 power_up_to_nic_done(net);
                 write_bus(net, bus_handle,
                           To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
@@ -508,6 +524,10 @@ begin
 
             elsif run("por_b_needs_the_rails") then
                 -- Even by override, and whatever the measurement is doing
+                -- the measurement is off by default
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 write_bus(net, bus_handle,
                           To_StdLogicVector(VERSAL_OVERRIDES_OFFSET, bus_handle.p_address_length),
                           VERSAL_OVERRIDES_POR_B_MASK or VERSAL_OVERRIDES_MODE_BUFFER_EN_L_MASK);
@@ -531,6 +551,10 @@ begin
                 wait until hash_req = '0' for 50 ms;
 
             elsif run("failed_measurement_is_recorded_and_boot_continues") then
+                -- the measurement is off by default
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 hash_model_fail <= true;
                 power_up_to_nic_done(net);
                 read_bus(net, bus_handle,
@@ -545,10 +569,12 @@ begin
                 check_equal((read_data and IFR_NIC_HASH_ERR_MASK) /= (read_data'range => '0'), true,
                             "Expected the versal_hash_err interrupt flag");
 
-            elsif run("measurement_can_be_skipped") then
-                write_bus(net, bus_handle,
-                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_MODE_MASK and x"00000002");
+            elsif run("measurement_is_off_by_default") then
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                check_equal(read_data, std_logic_vector'(x"00000002"),
+                            "Expected QSPI32 and no measurement out of reset");
                 power_up_to_nic_done(net);
                 check_equal(hash_requests, 0, "Expected no measurement request");
                 read_bus(net, bus_handle,

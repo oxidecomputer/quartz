@@ -733,8 +733,9 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             It runs alongside the rails coming up, and POR_B is not released until it
             has finished. The range comes from the hash engine's HW_FLASH_ADDR/HW_LENGTH.
             The engine failing to produce a digest is recorded and the boot goes ahead.
-            Clear to boot without a measurement.";
-        } hash_image[4:4] = 1;
+            Off by default: the Versal boots without a measurement unless software
+            sets this before the power-up.";
+        } hash_image[4:4] = 0;
         field {
             desc = "Self-clearing. Set to 1 to start a measurement now. Only taken while the NIC
             is held in POR and no measurement is in flight; otherwise it is recorded in
