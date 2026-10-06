@@ -38,6 +38,8 @@ architecture tb of hash_spi_nor_tb is
         pack(control_type'(abort => '0', start => '1'));
     constant CFG_QSPI : std_logic_vector(31 downto 0) :=
         pack(config_type'(source => HOST_QSPI));
+    constant CFG_AUX : std_logic_vector(31 downto 0) :=
+        pack(config_type'(source => AUX_QSPI));
 
 begin
 
@@ -46,7 +48,11 @@ begin
     bench: process
         alias reset is << signal th.reset : std_logic >>;
 
-        constant flash_actor : actor_t := find("spi_nor_target");
+        constant flash_actor : actor_t := find("spi_nor_target0");
+        -- The auxiliary flash is never filled, so it reads as erased 0xFF
+        -- everywhere. That is what tells a hash of it apart from the same
+        -- range on the host flash.
+        constant aux_actor : actor_t := find("spi_nor_target1");
 
         variable status : std_logic_vector(31 downto 0);
         variable rdata  : std_logic_vector(31 downto 0);
@@ -65,11 +71,12 @@ begin
         end function;
 
         -- The message the engine should end up hashing: the 0xFF run, then the
-        -- flash from base_addr on.
+        -- flash from base_addr on. On the aux flash every byte is erased.
         impure function expected_msg (
             prepend   : natural;
             nbytes    : natural;
-            base_addr : natural
+            base_addr : natural;
+            aux       : boolean := false
         ) return queue_t is
             variable q : queue_t := new_queue;
         begin
@@ -78,7 +85,11 @@ begin
             end loop;
 
             for i in 0 to nbytes - 1 loop
-                push_byte(q, to_integer(unsigned(flash_content(base_addr + i))));
+                if aux then
+                    push_byte(q, 16#FF#);
+                else
+                    push_byte(q, to_integer(unsigned(flash_content(base_addr + i))));
+                end if;
             end loop;
 
             return q;
@@ -88,15 +99,20 @@ begin
             prepend   : natural;
             nbytes    : natural;
             base_addr : natural;
-            name      : string
+            name      : string;
+            aux       : boolean := false
         ) is
             variable e : digest_t;
             variable s : std_logic_vector(31 downto 0);
             variable d : std_logic_vector(255 downto 0);
         begin
-            e := sha3_256_digest(expected_msg(prepend, nbytes, base_addr));
+            e := sha3_256_digest(expected_msg(prepend, nbytes, base_addr, aux));
 
-            write_reg(net, CONFIG_OFFSET, CFG_QSPI);
+            if aux then
+                write_reg(net, CONFIG_OFFSET, CFG_AUX);
+            else
+                write_reg(net, CONFIG_OFFSET, CFG_QSPI);
+            end if;
             write_reg(net, PREPEND_OFFSET, To_StdLogicVector(prepend, 32));
             write_reg(net, LENGTH_OFFSET, To_StdLogicVector(prepend + nbytes, 32));
             write_reg(net, FLASH_ADDR_OFFSET, To_StdLogicVector(base_addr, 32));
@@ -172,6 +188,20 @@ begin
                 run_hash(0, 128, 16#1000#, "first fetch");
                 run_hash(0, 300, 16#3000#, "second fetch, crossing a chunk boundary");
                 run_hash(0, 64, 16#5000#, "third fetch");
+
+            elsif run("aux_flash_source") then
+                -- Same range on the other flash. The aux part is erased, so a
+                -- fetch that quietly went to the host flash would come back
+                -- with the pattern and fail the digest.
+                run_hash(0, 600, 16#1000#, "600 bytes from the aux flash", aux => true);
+
+            elsif run("host_after_aux") then
+                -- The selection is latched per run; make sure it releases the
+                -- aux flash and the host flash's channel is still in step after
+                -- a run that never touched it.
+                run_hash(0, 300, 16#2000#, "aux first", aux => true);
+                run_hash(0, 300, 16#2000#, "then host");
+                run_hash(0, 700, 16#1234#, "then aux again, unaligned", aux => true);
             end if;
         end loop;
 

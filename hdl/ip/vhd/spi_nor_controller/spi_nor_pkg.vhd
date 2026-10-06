@@ -76,6 +76,18 @@ package spi_nor_pkg is
     constant READ_SECTOR_LOCK_OP : std_logic_vector(7 downto 0)              := x"3D";
     constant SW_DIE_SELECT_OP : std_logic_vector(7 downto 0)                 := x"C2";
 
+    -- Micron (MT25Q and relatives) configuration and status registers. None of
+    -- these collide with the Winbond opcodes above, and without an entry in
+    -- get_txn_info an opcode goes out bare, with no data phase, which makes
+    -- these registers unreachable.
+    constant READ_FLAG_STATUS_OP : std_logic_vector(7 downto 0)  := x"70";
+    constant READ_NV_CONFIG_OP : std_logic_vector(7 downto 0)    := x"B5";
+    constant WRITE_NV_CONFIG_OP : std_logic_vector(7 downto 0)   := x"B1";
+    constant READ_VOL_CONFIG_OP : std_logic_vector(7 downto 0)   := x"85";
+    constant WRITE_VOL_CONFIG_OP : std_logic_vector(7 downto 0)  := x"81";
+    constant READ_ENH_VOL_CONFIG_OP : std_logic_vector(7 downto 0)  := x"65";
+    constant WRITE_ENH_VOL_CONFIG_OP : std_logic_vector(7 downto 0) := x"61";
+
     function get_txn_info (
         opcode: std_logic_vector
     ) return txn_info_t;
@@ -197,6 +209,15 @@ package body spi_nor_pkg is
                 info.data_kind := read;
             when SW_DIE_SELECT_OP =>
                 -- needs to send one byte
+                info.data_kind := write;
+            when READ_FLAG_STATUS_OP |
+                 READ_NV_CONFIG_OP |
+                 READ_VOL_CONFIG_OP |
+                 READ_ENH_VOL_CONFIG_OP =>
+                info.data_kind := read;
+            when WRITE_NV_CONFIG_OP |
+                 WRITE_VOL_CONFIG_OP |
+                 WRITE_ENH_VOL_CONFIG_OP =>
                 info.data_kind := write;
             when others =>
                 -- the default for single instruction options

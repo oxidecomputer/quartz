@@ -71,6 +71,36 @@ package espi_controller_vc_pkg is
         variable status : inout std_logic_vector(15 downto 0);
         variable crc_ok : inout boolean
     );
+    -- As get_flash_c but hands back the completion header too, for
+    -- completions whose cycle type is the interesting part.
+    procedure get_flash_completion(
+        signal net : inout network_t;
+        constant num_bytes : in integer;
+        variable data_queue: out queue_t;
+        variable cycle_type: out std_logic_vector(7 downto 0);
+        variable length: out std_logic_vector(11 downto 0);
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    );
+    -- payload queue is consumed
+    procedure put_flash_write(
+        signal net : inout network_t;
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: in integer;
+        constant payload : in queue_t;
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    );
+    procedure put_flash_erase(
+        signal net : inout network_t;
+        constant address : in std_logic_vector(31 downto 0);
+        constant size_code: in std_logic_vector(11 downto 0);
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    );
 
     procedure put_iowr_short4(
         signal net : inout network_t;
@@ -270,6 +300,83 @@ package body espi_controller_vc_pkg is
         end loop;
         status := get_status_from_queue_and_flush(rx_queue);
         
+    end;
+
+    procedure get_flash_completion(
+        signal net : inout network_t;
+        constant num_bytes : in integer;
+        variable data_queue: out queue_t;
+        variable cycle_type: out std_logic_vector(7 downto 0);
+        variable length: out std_logic_vector(11 downto 0);
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    ) is
+        variable cmd : cmd_t := (new_queue, 0);
+        variable rx_bytes : integer   := 3 + num_bytes + 4;  -- 3 bytes header, num_bytes, response, 16bit status, 1 crc,
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue : queue_t := new_queue;
+        variable hdr_byte : std_logic_vector(7 downto 0);
+    begin
+        cmd := build_get_flash_c_cmd;
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        cycle_type := To_Std_Logic_Vector(pop_byte(rx_queue), 8);
+        hdr_byte := To_Std_Logic_Vector(pop_byte(rx_queue), 8);
+        length(11 downto 8) := hdr_byte(3 downto 0);
+        length(7 downto 0) := To_Std_Logic_Vector(pop_byte(rx_queue), 8);
+        for i in 0 to num_bytes -1 loop
+                push_byte(data_queue, pop_byte(rx_queue));
+        end loop;
+        status := get_status_from_queue_and_flush(rx_queue);
+    end;
+
+    procedure put_flash_write(
+        signal net : inout network_t;
+        constant address : in std_logic_vector(31 downto 0);
+        constant num_bytes: in integer;
+        constant payload : in queue_t;
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    ) is
+        variable cmd : cmd_t := (new_queue, 0);
+        variable rx_bytes : integer   := 4;  -- response, 16bit status, 1 crc
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue : queue_t := new_queue;
+    begin
+        cmd := build_put_flash_write_cmd(address, num_bytes, payload);
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status := get_status_from_queue_and_flush(rx_queue);
+    end;
+
+    procedure put_flash_erase(
+        signal net : inout network_t;
+        constant address : in std_logic_vector(31 downto 0);
+        constant size_code: in std_logic_vector(11 downto 0);
+        variable response_code: inout std_logic_vector(7 downto 0);
+        variable status : inout std_logic_vector(15 downto 0);
+        variable crc_ok : inout boolean
+    ) is
+        variable cmd : cmd_t := (new_queue, 0);
+        variable rx_bytes : integer   := 4;  -- response, 16bit status, 1 crc
+        variable msg_target : actor_t := find("espi_vc");
+        variable rx_queue : queue_t := new_queue;
+    begin
+        cmd := build_put_flash_erase_cmd(address, size_code);
+        enqueue_tx_data_bytes(net, msg_target,  cmd.num_bytes, cmd.queue);
+        enqueue_transaction(net, msg_target, cmd.num_bytes, rx_bytes);
+        get_rx_queue(net, msg_target, rx_queue);
+        crc_ok := check_queue_crc(rx_queue); -- non-destructive to queue
+        response_code := std_logic_vector(to_unsigned(pop_byte(rx_queue), 8));
+        status := get_status_from_queue_and_flush(rx_queue);
     end;
 
     procedure put_iowr_short4(

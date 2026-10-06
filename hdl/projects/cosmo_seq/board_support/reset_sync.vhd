@@ -10,6 +10,13 @@ use ieee.numeric_std.all;
 entity reset_sync is
     port (
         pll_locked_async : in std_logic;
+        -- Additional lock qualifier for the FMC domain (the FMC MMCM on
+        -- cosmo). Defaults to "locked" so boards without one (grapefruit)
+        -- are unaffected. Asserting reset on lock loss happens
+        -- asynchronously in the bridge, which matters: when this MMCM
+        -- unlocks the FMC domain has no clock edges, and the async assert
+        -- is what still clears the FMC target's bus drive.
+        aux_locked_async : in std_logic := '1';
 
         clk_125m : in std_logic;
         reset_125m : out std_logic;
@@ -50,7 +57,7 @@ begin
     )
      port map(
         clk => sp_fmc_clk,
-        reset_async => pll_locked_async,
+        reset_async => pll_locked_async and aux_locked_async,
         reset_sync => reset_fmc_clk
     );
 

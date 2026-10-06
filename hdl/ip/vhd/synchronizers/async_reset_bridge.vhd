@@ -57,6 +57,11 @@ end entity;
 architecture rtl of async_reset_bridge is
 
     signal reset_flops : unsigned(2 downto 0);
+    -- Let synthesis replicate the output flop once it drives more loads than
+    -- one net can reach in reasonable time; every copy has the same input
+    -- and the same asynchronous assert, so the chain is no less a bridge.
+    attribute max_fanout : integer;
+    attribute max_fanout of reset_flops : signal is 400;
 
 begin
 

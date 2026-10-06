@@ -10,7 +10,7 @@ library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
 
-use work.sequencer_io_pkg.all;
+use work.sp5_power_pkg.all;
 use work.rail_model_msg_pkg.all;
 
 entity rail_model is

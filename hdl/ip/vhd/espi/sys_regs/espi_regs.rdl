@@ -33,6 +33,12 @@ addrmap espi_regs {
             desc = "Issue an espi reset via the debug logic. Cleared by hardware after reset.";
         } espi_reset[5:5] =  0;
         field {
+            desc = "Allow the host to write and erase the flash over the eSPI flash
+            channel. Only has effect on a build whose FLASH_WRITES_ALLOWED generic is
+            set; elsewhere writes are refused regardless. A refused write or erase is
+            answered with an unsuccessful completion.";
+        } flash_write_enable[4:4] =  0;
+        field {
             desc = "Set to one to reset the command FIFO. Cleared by hardware after reset.";
         } cmd_fifo_reset[3:3] =  0;
          field {

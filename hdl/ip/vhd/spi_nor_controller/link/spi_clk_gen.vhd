@@ -13,6 +13,10 @@ entity spi_clk_gen is
         reset   : in    std_logic;
         divisor : in    unsigned(15 downto 0);
         enable  : in    boolean;
+        -- Low parks the pin copy at '0' regardless of what the internal clock
+        -- is doing, so a design that shares the flash with another master can
+        -- let go of the bus without a mux between the IOB flop and the pin.
+        bus_enable : in    std_logic := '1';
         -- For internal consumers: edge detection, phase counting, debug
         sclk : out   std_logic;
         -- A second copy of the same flop, for the pin and nothing else. Both
@@ -101,7 +105,7 @@ begin
                     nxt_sclk := not sclk_int;
                 end if;
                 sclk_int <= nxt_sclk;  -- assign value to output
-                sclk_pin <= nxt_sclk;  -- IOB-resident duplicate, same edge
+                sclk_pin <= nxt_sclk and bus_enable;  -- IOB-resident duplicate, same edge
             else
                 sclk_int <= '0';
                 sclk_pin <= '0';

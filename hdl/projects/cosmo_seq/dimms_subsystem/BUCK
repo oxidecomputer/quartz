@@ -33,6 +33,7 @@ vhdl_unit(
         "//hdl/ip/vhd/i2c/common:i2c_common_pkg",
         "//hdl/ip/vhd/i2c/common:i2c_glitch_filter",
         "//hdl/ip/vhd/i2c/controller:i2c_ctrl_txn_layer",
+        "//hdl/ip/vhd/synchronizers:async_reset_bridge",
     ],
     standard = "2019",
     visibility = ['PUBLIC'],

@@ -63,7 +63,21 @@ architecture rtl of dimms_subsystem_top is
     signal dimm_pcap_syncd : std_logic_vector(11 downto 0);
     signal dimm_pcamp : dimm_pcamp_type;
     
+    -- The incoming reset is re-registered here so this block's thousands of
+    -- asynchronous clear and preset pins hang off a flop of their own, which
+    -- the placer can keep near them, rather than off the one net that serves
+    -- the whole die. Assertion is still asynchronous; de-assertion is a few
+    -- cycles later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     dimm_pcamp_raw <= dimm_a_pcamp & dimm_b_pcamp & dimm_c_pcamp &
                      dimm_d_pcamp & dimm_e_pcamp & dimm_f_pcamp &
@@ -96,7 +110,7 @@ begin
     spd_regs_inst: entity work.spd_regs
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         axi_if => axi_if,
         dimm_pcamp => dimm_pcamp,
         bus0 => bus0,
@@ -111,7 +125,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         regs_if => bus0,
         in_a0 => in_a0,
         cpu_scl_if => cpu_scl_if0,
@@ -128,7 +142,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         regs_if => bus1,
         in_a0 => in_a0,
         cpu_scl_if => cpu_scl_if1,

@@ -33,6 +33,10 @@ entity command_processor is
         post_code      : out std_logic_vector(31 downto 0);
         post_code_valid : out std_logic;
         aborted_due_to_bad_crc : out boolean;
+        -- Whether SAFS writes and erases may be forwarded to the flash. Ones
+        -- that arrive while this is low are still queued, marked refused, so
+        -- the host gets an unsuccessful completion for them.
+        flash_writes_allowed : in std_logic;
         -- flash channel requests
         flash_req : view flash_chan_req_source;
         -- uart channel put interface here
@@ -127,14 +131,14 @@ architecture rtl of command_processor is
             when opcode_put_flash_np =>
                 case header.cycle_kind is
                     when flash_write =>
-                        -- Note that while we'll rx this payload, we will not
-                        -- act upon it, as we do not allow flash writes over eSPI
+                        -- The payload streams into the flash channel's DPR
+                        -- as it arrives; see flash_req.wdata below.
                         next_state.next_state := parse_addr_header;
                         next_state.cmd_payload_bytes := to_integer(header.length);
-                    when flash_erase =>
-                        -- Note that while we'll rx this payload, we will not
-                        -- act upon it, as we do not allow flash writes over eSPI
                     when others =>
+                        -- Reads and erases are address only; for an erase
+                        -- the length field is the block size code, not a
+                        -- payload count.
                         null;
                 end case;
             when opcode_put_pc =>
@@ -174,8 +178,27 @@ begin
     -- pass through the flash channel requests here
     flash_req.espi_hdr             <= r.cmd_header;
     flash_req.sp5_flash_address    <= r.ch_addr;
-    flash_req.flash_np_enqueue_req <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_put_flash_np and r.cmd_header.cycle_kind = flash_read else false;
+    flash_req.flash_np_enqueue_req <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_put_flash_np and
+                                                (r.cmd_header.cycle_kind = flash_read or
+                                                 r.cmd_header.cycle_kind = flash_write or
+                                                 r.cmd_header.cycle_kind = flash_erase) else false;
     flash_req.flash_get_req        <= true when r.valid_redge and r.cmd_header.opcode.value = opcode_get_flash_c else false;
+    -- Permission is sampled at enqueue time only, via kind. Anything that is
+    -- not a read and is not permitted is queued as refused.
+    flash_req.kind <= flash_rd when r.cmd_header.cycle_kind = flash_read else
+                      flash_wr when r.cmd_header.cycle_kind = flash_write and flash_writes_allowed = '1' else
+                      flash_er when r.cmd_header.cycle_kind = flash_erase and flash_writes_allowed = '1' else
+                      flash_refused;
+    -- Write payload bytes go straight through as they are parsed, indexed
+    -- from the start of the payload so the channel can place them without
+    -- keeping its own count across a possibly-aborted command.
+    flash_req.wdata <= data_from_host.data;
+    flash_req.wdata_valid <= data_from_host.valid when r.cmd_header.opcode.value = opcode_put_flash_np and
+                                                       r.cmd_header.cycle_kind = flash_write and
+                                                       r.state = parse_data else '0';
+    flash_req.wdata_idx <= To_Std_Logic_Vector(to_integer(r.cmd_header.length) - r.rem_data_bytes, flash_req.wdata_idx'length)
+                           when r.state = parse_data and r.rem_data_bytes <= to_integer(r.cmd_header.length) else
+                           (others => '0');
 
     post_code <= r.io_wr_data;
     post_code_valid <= '1' when r.cmd_header.opcode.value = opcode_put_iowr_short_4byte and (r.crc_good or (r.crc_bad and (not regs_if.enforce_crcs))) else '0';

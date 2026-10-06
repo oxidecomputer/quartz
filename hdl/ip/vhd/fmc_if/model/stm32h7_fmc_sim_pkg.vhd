@@ -2,8 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
---! Bus master model based on ST's RM0433
---! figures 115 and 116
+-- Testbench-facing helpers for driving the STM32H7 FMC controller model.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -13,6 +12,7 @@ library vunit_lib;
     context vunit_lib.vunit_context;
     context vunit_lib.com_context;
 use vunit_lib.bus_master_pkg.all;
+use vunit_lib.sync_pkg.all;
 
 package stm32h7_fmc_sim_pkg is
 
@@ -24,10 +24,26 @@ package stm32h7_fmc_sim_pkg is
         variable data    : inout std_logic_vector
     );
 
+    -- Blocks until the bus cycle has completed on the FMC pins. Note the
+    -- posted write may still be crossing into the AXI domain when this
+    -- returns; a subsequent fmc_read32 orders behind it, or wait for the
+    -- CDC/AXI latency before checking memory directly.
     procedure fmc_write32 (
         signal net       : inout network_t;
         constant address : std_logic_vector;
         variable data    : inout std_logic_vector
+    );
+
+    -- Fire-and-forget variant, for queuing back-to-back traffic.
+    procedure fmc_write32_nb (
+        signal net       : inout network_t;
+        constant address : std_logic_vector;
+        variable data    : inout std_logic_vector
+    );
+
+    -- Blocks until every previously queued transaction's bus cycle is done.
+    procedure fmc_wait_idle (
+        signal net : inout network_t
     );
 
 end package;
@@ -41,13 +57,29 @@ package body stm32h7_fmc_sim_pkg is
     ) is
 
         variable queue        : queue_t;
-        constant butst_length : integer := 2;
+        constant burst_length : integer := 2;
 
     begin
         queue              := new_queue;
-        burst_read_bus(net, SP_BUS_HANDLE, address, BUTST_LENGTH, queue);
+        burst_read_bus(net, SP_BUS_HANDLE, address, BURST_LENGTH, queue);
         data(15 downto 0)  := pop_std_ulogic_vector(queue);
         data(31 downto 16) := pop_std_ulogic_vector(queue);
+    end;
+
+    procedure fmc_write32_nb (
+        signal net       : inout network_t;
+        constant address : std_logic_vector;
+        variable data    : inout std_logic_vector
+    ) is
+
+        variable queue        : queue_t;
+        constant burst_length : integer := 2;
+
+    begin
+        queue := new_queue;
+        push_std_ulogic_vector(queue, data(15 downto 0));
+        push_std_ulogic_vector(queue, data(31 downto 16));
+        burst_write_bus(net, SP_BUS_HANDLE, address, BURST_LENGTH, queue);
     end;
 
     procedure fmc_write32 (
@@ -55,18 +87,16 @@ package body stm32h7_fmc_sim_pkg is
         constant address : std_logic_vector;
         variable data    : inout std_logic_vector
     ) is
-
-        variable queue        : queue_t;
-        constant butst_length : integer := 2;
-
     begin
-        queue := new_queue;
-        push_std_ulogic_vector(queue, data(15 downto 0));
-        push_std_ulogic_vector(queue, data(31 downto 16));
-        burst_write_bus(net, SP_BUS_HANDLE, address, BUTST_LENGTH, queue);
-        -- A bit of a hack until I figure out how to make this blocking
-        -- See https://github.com/VUnit/vunit/issues/1012
-        wait for 150 ns;
+        fmc_write32_nb(net, address, data);
+        fmc_wait_idle(net);
+    end;
+
+    procedure fmc_wait_idle (
+        signal net : inout network_t
+    ) is
+    begin
+        wait_until_idle(net, SP_BUS_HANDLE.p_actor);
     end;
 
 end package body;

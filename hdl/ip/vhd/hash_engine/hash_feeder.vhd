@@ -34,6 +34,9 @@ use work.hash_engine_regs_pkg.all;
 -- removes the race entirely. It also means data written before the first start is
 -- kept, so pre-loading works.
 entity hash_feeder is
+    generic (
+        NUM_FLASHES : natural range 1 to 2 := 1
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -77,6 +80,9 @@ entity hash_feeder is
         -- hangs waiting for them.
         sw_fifo_clear : out   std_logic;
 
+        -- Which flash the run in flight reads from, held for the whole run
+        flash_sel : out   natural range 0 to NUM_FLASHES - 1;
+
         -- Flash command FIFO: word 0 is the byte address, word 1 the byte count
         cmd_fifo_wdata : out   std_logic_vector(31 downto 0);
         cmd_fifo_write : out   std_logic;
@@ -108,6 +114,7 @@ architecture rtl of hash_feeder is
         fed         : unsigned(31 downto 0);
         addr        : std_logic_vector(31 downto 0);
         src_qspi    : std_logic;
+        flash_sel   : natural range 0 to NUM_FLASHES - 1;
         clear_cnt   : natural range 0 to CLEAR_CYCLES;
         -- Set when the flush should be followed by a new run rather than idling
         restart     : std_logic;
@@ -132,6 +139,7 @@ architecture rtl of hash_feeder is
         fed         => (others => '0'),
         addr        => (others => '0'),
         src_qspi    => '0',
+        flash_sel   => 0,
         clear_cnt   => 0,
         restart     => '0',
         finished    => '0',
@@ -150,6 +158,15 @@ architecture rtl of hash_feeder is
     signal src_data   : std_logic_vector(7 downto 0);
     signal src_valid  : std_logic;
     signal beat       : std_logic;
+
+    -- The start decision, one cycle late. Comparing two 32-bit lengths and
+    -- then deciding the counters' next value from the result is too long for
+    -- one cycle at 125 MHz, so the configuration check is registered against
+    -- the inputs each cycle and the start strobe delayed to match it. The
+    -- inputs are stable across that cycle: software wrote them before it
+    -- started, and the hardware request holds its mux for the whole run.
+    signal start_q  : std_logic;
+    signal cfg_ok_q : boolean;
 
 begin
 
@@ -185,6 +202,7 @@ begin
     done      <= r.done;
     aborted   <= r.aborted;
     cfg_err   <= r.cfg_err;
+    flash_sel <= r.flash_sel;
     bytes_fed <= std_logic_vector(r.fed);
     sha3_init <= r.init;
 
@@ -205,13 +223,12 @@ begin
         stop_run := false;
 
         -- A start is refused outright if the configuration cannot produce a
-        -- message: the core has no way to express a zero length one, and a prepend
-        -- longer than the message is simply nonsense.
-        accepted := start_strobe = '1' and
-                    unsigned(msg_length.count) /= 0 and
-                    unsigned(prepend.count) <= unsigned(msg_length.count);
+        -- message: the core has no way to express a zero length one, a prepend
+        -- longer than the message is simply nonsense, and the second flash can
+        -- only be asked for on a design that has one.
+        accepted := start_q = '1' and cfg_ok_q;
 
-        if start_strobe = '1' and not accepted then
+        if start_q = '1' and not accepted then
             v.cfg_err := '1';
         end if;
 
@@ -222,7 +239,8 @@ begin
             v.prepend_cnt := unsigned(prepend.count);
             v.flash_req   := unsigned(msg_length.count) - unsigned(prepend.count);
             v.addr        := flash_addr.addr;
-            v.src_qspi    := '1' when cfg.source = HOST_QSPI else '0';
+            v.src_qspi    := '1' when cfg.source = HOST_QSPI or cfg.source = AUX_QSPI else '0';
+            v.flash_sel   := 1 when cfg.source = AUX_QSPI and NUM_FLASHES > 1 else 0;
             v.cfg_err     := '0';
             v.aborted     := '0';
             v.done        := '0';
@@ -245,7 +263,14 @@ begin
 
         if stop_run then
             -- Work out what the flash still owes us so DRAIN can swallow it.
-            v.drain_left := r.flash_req - r.flash_rx;
+            -- Nothing is owed unless the read command actually went out: a
+            -- software fed run, or a flash run abandoned during its prepend,
+            -- would otherwise wait in DRAIN for bytes that never come.
+            if r.src_qspi = '1' and r.cmd_sent = '1' then
+                v.drain_left := r.flash_req - r.flash_rx;
+            else
+                v.drain_left := (others => '0');
+            end if;
             v.finished   := '0';
             v.state      := DRAIN;
         else
@@ -351,8 +376,14 @@ begin
     begin
         if reset then
             r <= REG_RESET;
+            start_q <= '0';
+            cfg_ok_q <= false;
         elsif rising_edge(clk) then
             r <= rin;
+            start_q <= start_strobe;
+            cfg_ok_q <= unsigned(msg_length.count) /= 0 and
+                        unsigned(prepend.count) <= unsigned(msg_length.count) and
+                        not (cfg.source = AUX_QSPI and NUM_FLASHES = 1);
         end if;
     end process;
 

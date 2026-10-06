@@ -44,9 +44,19 @@ package espi_protocol_pkg is
     constant flash_read : std_logic_vector(7 downto 0)      := "00000000";
     constant success_no_data : std_logic_vector(7 downto 0) := "00000110";
 
-    -- We won't actually write/erase, our behavior catching this is TBD
     constant flash_write : std_logic_vector(7 downto 0) := "00000001";
     constant flash_erase : std_logic_vector(7 downto 0) := "00000010";
+    -- Completion cycle types. The "with data" family is 0000_1xx1 with the
+    -- middle bits as first/last flags; "without data" is 0000_0110 for success
+    -- and 0000_1x00 for failure. A single unsplit response is the "only" form.
+    -- Values per the eSPI base specification's completion cycle-type table.
+    constant success_with_data_only : std_logic_vector(7 downto 0) := "00001111";
+    constant unsuccessful_no_data_only : std_logic_vector(7 downto 0) := "00001100";
+    -- SAFS flash erase: the length field of the request carries the erase
+    -- block size as a code rather than a byte count.
+    constant flash_erase_4k : std_logic_vector(11 downto 0) := x"001";
+    constant flash_erase_32k : std_logic_vector(11 downto 0) := x"002";
+    constant flash_erase_64k : std_logic_vector(11 downto 0) := x"003";
 
     -- Header Indices for general eSPI packages
     constant cycle_type_idx : integer := 0;

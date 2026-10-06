@@ -50,12 +50,26 @@ architecture rtl of sp_i2c_subsystem is
     signal mux_reset_final : std_logic;
     constant deselected : std_logic_vector(1 downto 0) := "11";
 
+    -- The incoming reset is re-registered here so this block's asynchronous
+    -- clear and preset pins hang off a flop of their own, which the placer
+    -- can keep near them, rather than off the one net that serves the whole
+    -- die. Assertion is still asynchronous; de-assertion is a few cycles
+    -- later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     regs: entity work.sp_i2c_subsystem_regs
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         axi_if => axi_if,
         main_reset => mux_reset_reg
     );
@@ -71,7 +85,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         mux_reset => mux_reset_final,
         allowed_to_enable => '1',
         mux_is_active => mux_is_active,
@@ -105,9 +119,9 @@ begin
     -- This logic retains the masking for versions of the board without the
     -- translator control. Outputing to the control pin is safe on older versions
     -- as the pin is unused.
-    process(clk, reset)
+    process(clk, reset_local)
     begin
-        if reset = '1' then
+        if reset_local = '1' then
             i2c_mux1_sel <= deselected;
             i2c_mux1_en <= '0';
         elsif rising_edge(clk) then

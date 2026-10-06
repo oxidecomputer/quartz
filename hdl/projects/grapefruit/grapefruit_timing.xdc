@@ -64,10 +64,14 @@ set_output_delay -clock fmc_virt_clk -min 1.414 [get_ports fmc_sp_to_fpga_wait_l
 set_output_delay -clock fmc_virt_clk -max 3.851 [get_ports fmc_sp_to_fpga_da[*]]
 set_output_delay -clock fmc_virt_clk -min 0.830 [get_ports fmc_sp_to_fpga_da[*]]
 
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -setup 2
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -hold 1
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -setup 2
-set_multicycle_path -from [get_pins {stm32h7_fmc_target_inst/data_out_en_reg*/C}] -to [get_ports {fmc_sp_to_fpga_da[*]}] -hold 1
+# The streaming FSM presents read beats on consecutive cycles, so the
+# word0->word1 transition is a true single-cycle path with no multicycle
+# exception; IOB packing of the per-pin output, tristate, and nwait flops is
+# what closes single-cycle at 15 ns. See cosmo_timing.xdc for the derivation;
+# extra_beat_setup on the target is the escape hatch if this fails to close.
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *stm32h7_fmc_target*/data_out_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *stm32h7_fmc_target*/data_out_hiz_int_reg[*]}]
+set_property IOB TRUE [get_cells -hier -filter {NAME =~ *stm32h7_fmc_target*/nwait_reg}]
 
 # #######################
 # SPI NOR flash interface (Winbond W25Q01JV)

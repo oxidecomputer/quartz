@@ -62,7 +62,21 @@ architecture rtl of sp5_uart_subsystem is
     signal fpga_sp_to_host_int_rts_l : std_logic;
     signal ipcc_reset : std_logic;
 
+    -- The incoming reset is re-registered here so this block's asynchronous
+    -- clear and preset pins hang off a flop of their own, which the placer
+    -- can keep near them, rather than off the one net that serves the whole
+    -- die. Assertion is still asynchronous; de-assertion is a few cycles
+    -- later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     -- inputs from host, outputs to debug header
     process(clk)
@@ -102,7 +116,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         rx_pin => console_from_sp,
         tx_pin => console_to_sp_dat,
         rts_pin => console_to_sp_rts_l,
@@ -114,7 +128,7 @@ begin
         uart_rts_pin_copy => dbg_if.sp_uart0.uart_rts_pin_copy,
         uart_cts_pin_copy => dbg_if.sp_uart0.uart_cts_pin_copy,
         axi_clk => clk,
-        axi_reset => reset,
+        axi_reset => reset_local,
         rx_ready => console_sp_to_host.ready,
         rx_data => console_sp_to_host.data,
         rx_valid => console_sp_to_host.valid,
@@ -135,7 +149,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         rx_pin => host_to_fpga,
         tx_pin => fgpa_sp_to_host_int,
         rts_pin => fpga_sp_to_host_int_rts_l,
@@ -148,7 +162,7 @@ begin
         uart_rts_pin_copy => dbg_if.host_uart0.uart_rts_pin_copy,
         uart_cts_pin_copy => dbg_if.host_uart0.uart_cts_pin_copy,
         axi_clk => clk,
-        axi_reset => reset,
+        axi_reset => reset_local,
         rx_ready => console_host_to_sp.ready,
         rx_data => console_host_to_sp.data,
         rx_valid => console_host_to_sp.valid,
@@ -157,9 +171,9 @@ begin
         tx_ready => console_sp_to_host.ready
     );
 
-    process(clk, reset)
+    process(clk, reset_local)
     begin
-        if reset = '1' then
+        if reset_local = '1' then
             ipcc_reset <= '1';
 
         elsif rising_edge(clk) then

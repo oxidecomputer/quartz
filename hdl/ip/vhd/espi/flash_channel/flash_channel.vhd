@@ -6,6 +6,14 @@
 -- channel. It is responsible for queueing up transactions, issuing commands to
 -- to the spi flash block and providing flash response data to the transaction
 -- layer.
+--
+-- Reads, writes and erases all take a descriptor and a 1kB slot of the DPR.
+-- For a read the slot holds the flash data on its way back to the host. For a
+-- write it holds the host's payload, captured as the command is still being
+-- parsed (before its CRC is known good), and streamed out to the flash block
+-- only once the descriptor is enqueued. Writes and erases come back from the
+-- flash block as a single status byte, which lands at offset 0 of the slot
+-- and only decides whether the completion is reported as successful.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -13,6 +21,7 @@ use ieee.numeric_std.all;
 use ieee.numeric_std_unsigned.all;
 
 use work.espi_base_types_pkg.all;
+use work.espi_protocol_pkg.all;
 use work.flash_channel_pkg.all;
 
 entity flash_channel is
@@ -40,6 +49,11 @@ entity flash_channel is
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
+        -- write payload fifo, host to flash. A whole payload is pushed before
+        -- the command words for it are, so the flash block never sees a
+        -- write command it does not already have all the bytes for.
+        flash_wfifo_data : out std_logic_vector(7 downto 0);
+        flash_wfifo_write : out std_logic
 
     );
 end;
@@ -51,8 +65,19 @@ architecture rtl of flash_channel is
     constant max_txn_size : integer := 1024;
     subtype desc_index_t is natural range 0 to num_descriptors - 1;
     signal dpr_waddr : std_logic_vector(11 downto 0);
-    signal dpr_raddr : std_logic_vector(11 downto 0);
+    signal dpr_wdata : std_logic_vector(7 downto 0);
+    signal dpr_wren : std_logic;
     signal readdata : std_logic_vector(7 downto 0);
+
+    -- A DPR address is the descriptor's slot above the byte within it. Kept
+    -- as a concatenation rather than a multiply and add: with the byte never
+    -- reaching max_txn_size the two never overlap, and an adder here sat on
+    -- the tightest path of the whole design.
+    function dpr_addr(slot : desc_index_t; byte : natural range 0 to max_txn_size - 1)
+        return std_logic_vector is
+    begin
+        return To_Std_Logic_Vector(slot, 2) & To_Std_Logic_Vector(byte, 10);
+    end function;
 
     function add_wrap(a : natural; max: natural) return natural is
     begin
@@ -63,35 +88,99 @@ architecture rtl of flash_channel is
         end if;
     end function;
 
+    -- Bytes the flash block hands back for a descriptor: the data for a
+    -- read, one status byte for anything else.
+    function flash_side_bytes(desc : descriptor_t) return std_logic_vector is
+    begin
+        if desc.kind = flash_rd then
+            return desc.xfr_size_bytes;
+        else
+            return To_Std_Logic_Vector(1, desc.xfr_size_bytes'length);
+        end if;
+    end function;
 
-    type cmd_state_t is (idle, issue_flash_addr, issue_flash_len, wait_for_data);
+
+    type cmd_state_t is (idle, stream_payload, issue_flash_addr, issue_flash_len, wait_for_data);
     type complete_state_t is (idle, read_dpr);
 
     type reg_type is record
         flash_cmd_state : cmd_state_t;
         compl_state : complete_state_t;
-        flash_side_cntr : integer range 0 to 1024;
-        flash_write_addr_offset : integer range 0 to 1024;
-        compl_side_cntr : integer range 0 to 1024;
+        -- Byte offsets within a slot. None of these reaches max_txn_size:
+        -- a transfer ends on its last byte, not on the count after it.
+        -- Whether the counter is on that last byte is kept as a flag next to
+        -- it, worked out as the counter moves, so the state machines test a
+        -- flop rather than a subtract-and-compare on the transfer size.
+        flash_side_cntr : integer range 0 to max_txn_size - 1;
+        flash_side_last : boolean;
+        compl_side_cntr : integer range 0 to max_txn_size - 1;
+        compl_last : boolean;
+        -- Where the byte popped from the flash lands, captured whole: the
+        -- last byte's write goes in the cycle after its descriptor has been
+        -- retired and issue_desc has moved on.
+        flash_waddr : std_logic_vector(11 downto 0);
         cmd_queue: command_queue_t;
         dpr_write_en: std_logic;
         dpr_wdata_buf: std_logic_vector(7 downto 0);
+        -- host payload capture, registered so it shares the DPR write port
+        -- with the flash-side path above without ever colliding with it
+        host_wr_en : std_logic;
+        host_wdata : std_logic_vector(7 downto 0);
+        host_waddr : std_logic_vector(11 downto 0);
+        -- payload stream out to the flash block
+        wfifo_write : std_logic;
+        wfifo_wdata : std_logic_vector(7 downto 0);
+        -- DPR read address, registered so the read port sees a flop rather
+        -- than a counter, an adder and the reader mux: the LUTRAM read plus
+        -- the response processor's own muxing already fills most of a
+        -- 125MHz period.
+        dpr_raddr : std_logic_vector(11 downto 0);
+        -- completion header, latched when the get arrives so the descriptor
+        -- can be retired before the header has gone out on the wire
+        resp_tag : std_logic_vector(3 downto 0);
+        resp_length : std_logic_vector(11 downto 0);
+        resp_cycle_type : std_logic_vector(7 downto 0);
         tail_desc: desc_index_t;
         issue_desc: desc_index_t;
         head_desc: desc_index_t;
         flash_np_free : std_logic;
         flash_c_avail: std_logic;
     end record;
-    constant reg_reset : reg_type := (idle, idle, 0, 0, 0, (others => descriptor_init), '0', (others => '0'), 0, 0, 0, '0', '0');
+    constant reg_reset : reg_type := (
+        flash_cmd_state => idle,
+        compl_state => idle,
+        flash_side_cntr => 0,
+        flash_side_last => false,
+        flash_waddr => (others => '0'),
+        compl_side_cntr => 0,
+        compl_last => false,
+        cmd_queue => (others => descriptor_init),
+        dpr_write_en => '0',
+        dpr_wdata_buf => (others => '0'),
+        host_wr_en => '0',
+        host_wdata => (others => '0'),
+        host_waddr => (others => '0'),
+        wfifo_write => '0',
+        wfifo_wdata => (others => '0'),
+        dpr_raddr => (others => '0'),
+        resp_tag => (others => '0'),
+        resp_length => (others => '0'),
+        resp_cycle_type => success_with_data_only,
+        tail_desc => 0,
+        issue_desc => 0,
+        head_desc => 0,
+        flash_np_free => '0',
+        flash_c_avail => '0'
+    );
 
     signal r, rin : reg_type;
-    signal dpr_wdata: std_logic_vector(7 downto 0);
+    signal dpr_wdata_dbg: std_logic_vector(7 downto 0);
     signal dpr_rdata: std_logic_vector(7 downto 0);
     signal dpr_read_ack: std_logic;
     signal dpr_wr_delay: std_logic;
 
     attribute mark_debug of r : signal is "TRUE";
-    attribute mark_debug of dpr_wdata : signal is "TRUE";
+    attribute mark_debug of dpr_wdata_dbg : signal is "TRUE";
     attribute mark_debug of dpr_rdata : signal is "TRUE";
     attribute mark_debug of dpr_read_ack : signal is "TRUE";
     attribute mark_debug of dpr_wr_delay : signal is "TRUE";    
@@ -102,13 +191,13 @@ begin
     dbg_regs: process (clk, reset)
     begin
         if reset then
-            dpr_wdata <= (others => '0');
+            dpr_wdata_dbg <= (others => '0');
             dpr_rdata <= (others => '0');
             dpr_read_ack <= '0';
             dpr_wr_delay <= '0';
         elsif rising_edge(clk) then
             dpr_rdata <= readdata;
-            dpr_wdata <= flash_rfifo_data;
+            dpr_wdata_dbg <= flash_rfifo_data;
             dpr_read_ack <= response.ready;
             dpr_wr_delay <= r.dpr_write_en;
         end if;
@@ -120,15 +209,21 @@ begin
     flash_np_free <= r.flash_np_free;
 
     -- flash_c_avail is set when we have pending data to be read back out, but critically this status needs to represent
-    -- the state *after* any current message, so if we're responding now and this response is the only one available,
+    -- the status *after* any current message, so if we're responding now and this response is the only one available,
     -- this needs to be set to 0.
 
     flash_c_avail <= r.flash_c_avail when enabled else '0';
 
+    -- The length word carries the request kind in its top nibble; reads
+    -- encode as zero there so the flash block sees the original two-word
+    -- command for them.
     flash_cfifo_data <= r.cmd_queue(r.issue_desc).sp5_addr when r.flash_cmd_state = issue_flash_addr else 
-                        resize(r.cmd_queue(r.issue_desc).xfr_size_bytes, flash_cfifo_data'length) when r.flash_cmd_state = issue_flash_len else
+                        to_kind_bits(r.cmd_queue(r.issue_desc).kind) & resize(r.cmd_queue(r.issue_desc).xfr_size_bytes, flash_cfifo_data'length - 4) when r.flash_cmd_state = issue_flash_len else
                         (others => '0');
     flash_cfifo_write <= '1' when r.flash_cmd_state = issue_flash_addr or r.flash_cmd_state = issue_flash_len else '0';
+
+    flash_wfifo_data <= r.wfifo_wdata;
+    flash_wfifo_write <= r.wfifo_write;
 
     -- Let's put a 4kB buffer here as a starting point and see how it goes, this would allow 4 1024Byte max size transactions
     -- or we could shrink and say 2 2kB etc. We know we're only going read on this interface so we don't have to worry so much about
@@ -142,21 +237,26 @@ begin
      port map(
         wclk => clk,
         waddr => dpr_waddr,
-        wdata => r.dpr_wdata_buf,
-        wren => r.dpr_write_en,
+        wdata => dpr_wdata,
+        wren => dpr_wren,
         rclk => clk,
-        raddr => dpr_raddr,
+        raddr => r.dpr_raddr,
         rdata => readdata
     );
     response.data <= readdata;
     response.valid <= '1' when r.compl_state = read_dpr else '0';
-    response.tag <= r.cmd_queue(r.tail_desc).tag;
-    response.length <= r.cmd_queue(r.tail_desc).xfr_size_bytes;
-    response.cycle_type <= "00001111"; -- successful completion of with data, only completion for a split txn
+    response.tag <= r.resp_tag;
+    response.length <= r.resp_length;
+    response.cycle_type <= r.resp_cycle_type;
 
-
-    dpr_waddr <= To_Std_Logic_Vector(r.issue_desc * max_txn_size  + r.flash_write_addr_offset, 12);
-    dpr_raddr <= To_Std_Logic_Vector(r.tail_desc * max_txn_size  + r.compl_side_cntr, 12);
+    -- One write port, two writers. The host path is registered off the
+    -- incoming stream (which cannot be stalled) and the flash path only
+    -- schedules itself on a cycle where the host is not writing, so the two
+    -- enables are never set together.
+    dpr_wren <= r.host_wr_en or r.dpr_write_en;
+    dpr_waddr <= r.host_waddr when r.host_wr_en = '1' else
+                 r.flash_waddr;
+    dpr_wdata <= r.host_wdata when r.host_wr_en = '1' else r.dpr_wdata_buf;
 
     -- We have two state machines running here as both need to be able to update
     -- the descriptor queues.
@@ -179,20 +279,36 @@ begin
         v := r;
 
         -------
+        -- Capturing a write payload into the head descriptor's slot
+        ------
+        -- This happens while the command is still arriving, so nothing is
+        -- known about its CRC yet. If the CRC turns out bad the enqueue
+        -- below never happens and the next request simply overwrites the
+        -- slot. The offset is clamped to the slot so an oversized length
+        -- wraps within it rather than trampling a neighbour.
+        v.host_wr_en := request.wdata_valid;
+        v.host_wdata := request.wdata;
+        v.host_waddr := dpr_addr(r.head_desc, to_integer(request.wdata_idx(9 downto 0)));
+
+        -------
         -- Adding new requestes to the processing queue
         ------
-        -- Command processing requests flash command queue, having already filtered 
-        -- out any invalid commands such as writes/erases
+        -- Command processing requests flash command queue. Writes and erases
+        -- the command processor was not permitted to accept arrive marked
+        -- refused and still take a descriptor, so that the host gets an
+        -- unsuccessful completion rather than silence.
         -- we have 4 queue (txn) slots and can do 1024 byte per transaction max
         -- We simply carve up the DPR into 4 slots and then use those one for
         -- each descriptor, and we use the descriptors in order.
         if request.flash_np_enqueue_req and r.flash_np_free = '1' then
+            v.cmd_queue(r.head_desc).kind := request.kind;
             v.cmd_queue(r.head_desc).sp5_addr := request.sp5_flash_address;
             v.cmd_queue(r.head_desc).xfr_size_bytes := request.espi_hdr.length;
             v.cmd_queue(r.head_desc).active := true;
             v.cmd_queue(r.head_desc).tag := request.espi_hdr.tag;
             v.cmd_queue(r.head_desc).flash_issued := false;
             v.cmd_queue(r.head_desc).done := false;
+            v.cmd_queue(r.head_desc).failed := false;
             v.head_desc := add_wrap(r.head_desc, desc_index_t'high);
 
         end if;
@@ -227,12 +343,46 @@ begin
         -- and store the data back in the DPR and then issue a completion request, and hold until
         -- the master does a get to get the data
         v.dpr_write_en := '0';  --only single cycle reads, default to 0
+        v.wfifo_write := '0';
         case r.flash_cmd_state is
             when idle =>
                 -- have active command that hasn't been issued to flash
                 if flash_issue_needed then
+                    v.flash_side_cntr := 0;
+                    v.flash_side_last := to_integer(r.cmd_queue(r.issue_desc).xfr_size_bytes) = 1;
+                    case r.cmd_queue(r.issue_desc).kind is
+                        when flash_refused =>
+                            -- Nothing goes to the flash; it is complete
+                            -- (unsuccessfully) as soon as it is looked at.
+                            v.cmd_queue(r.issue_desc).flash_issued := true;
+                            v.cmd_queue(r.issue_desc).done := true;
+                            v.cmd_queue(r.issue_desc).failed := true;
+                            v.issue_desc := add_wrap(r.issue_desc, desc_index_t'high);
+                        when flash_wr =>
+                            v.flash_cmd_state := stream_payload;
+                        when others =>
+                            v.flash_cmd_state := issue_flash_addr;
+                    end case;
+                end if;
+            -- Push the captured payload out ahead of the command words.
+            -- readdata is combinational off dpr_raddr, so the byte for this
+            -- cycle's counter is registered on the way out.
+            when stream_payload =>
+                if r.compl_state /= idle then
+                    null;  -- completion owns the read port
+                elsif r.cmd_queue(r.issue_desc).xfr_size_bytes = 0 then
                     v.flash_cmd_state := issue_flash_addr;
-                    
+                else
+                    v.wfifo_write := '1';
+                    v.wfifo_wdata := readdata;
+                    if r.flash_side_last then
+                        v.flash_side_cntr := 0;
+                        v.flash_cmd_state := issue_flash_addr;
+                    else
+                        v.flash_side_cntr := r.flash_side_cntr + 1;
+                        v.flash_side_last := r.flash_side_cntr + 2 =
+                                             to_integer(r.cmd_queue(r.issue_desc).xfr_size_bytes);
+                    end if;
                 end if;
             -- issue to flash, and wait until we get all the data back
             -- and have stored it into the DPR. We can't issue more than
@@ -245,21 +395,40 @@ begin
             when issue_flash_len =>
                 v.flash_cmd_state := wait_for_data;
                 v.flash_side_cntr := 0;
+                v.flash_side_last := to_integer(flash_side_bytes(r.cmd_queue(r.issue_desc))) = 1;
                 v.cmd_queue(r.issue_desc).flash_issued := true;
                 
             when wait_for_data =>
-                if r.flash_side_cntr =  r.cmd_queue(r.issue_desc).xfr_size_bytes then
+                if flash_side_bytes(r.cmd_queue(r.issue_desc)) = 0 then
+                    -- nothing to wait for
                     v.cmd_queue(r.issue_desc).done := true;
                     v.flash_cmd_state := idle;
-                    v.flash_side_cntr := 0;
                     v.issue_desc := add_wrap(r.issue_desc, desc_index_t'high);
                 -- "empty" isn't strictly valid if we're acking this cycle since this write could
-                -- empty it. We only check for empty on a cycle where we're not acking
-                elsif not flash_rfifo_rempty and (not r.dpr_write_en) then
+                -- empty it. We only check for empty on a cycle where we're not acking.
+                -- A host payload byte arriving this cycle takes the write port next cycle.
+                elsif flash_rfifo_rempty = '0' and r.dpr_write_en = '0' and request.wdata_valid = '0' then
                     v.dpr_write_en := '1';
                     v.dpr_wdata_buf := flash_rfifo_data;
-                    v.flash_write_addr_offset := r.flash_side_cntr;
-                    v.flash_side_cntr := r.flash_side_cntr + 1;
+                    v.flash_waddr := dpr_addr(r.issue_desc, r.flash_side_cntr);
+                    -- for a write or erase the one byte back is a status,
+                    -- zero meaning the flash block finished it cleanly
+                    if r.cmd_queue(r.issue_desc).kind /= flash_rd then
+                        v.cmd_queue(r.issue_desc).failed := flash_rfifo_data /= x"00";
+                    end if;
+                    -- The last byte is done with here; its DPR write lands
+                    -- next cycle, well ahead of any completion reading it,
+                    -- which waits on the host's get.
+                    if r.flash_side_last then
+                        v.cmd_queue(r.issue_desc).done := true;
+                        v.flash_cmd_state := idle;
+                        v.flash_side_cntr := 0;
+                        v.issue_desc := add_wrap(r.issue_desc, desc_index_t'high);
+                    else
+                        v.flash_side_cntr := r.flash_side_cntr + 1;
+                        v.flash_side_last := r.flash_side_cntr + 2 =
+                                             to_integer(flash_side_bytes(r.cmd_queue(r.issue_desc)));
+                    end if;
                 end if;
         end case;
 
@@ -271,21 +440,59 @@ begin
                 if request.flash_get_req and flash_c_avail = '1' then
                     v.compl_state := read_dpr;
                     v.compl_side_cntr := 0;
+                    -- a read of one byte is on its last byte from the start;
+                    -- anything else has no data at all
+                    v.compl_last := to_integer(r.cmd_queue(r.tail_desc).xfr_size_bytes) = 1;
+                    v.resp_tag := r.cmd_queue(r.tail_desc).tag;
+                    if r.cmd_queue(r.tail_desc).kind = flash_rd then
+                        v.resp_length := r.cmd_queue(r.tail_desc).xfr_size_bytes;
+                        v.resp_cycle_type := success_with_data_only;
+                    elsif r.cmd_queue(r.tail_desc).failed then
+                        v.resp_length := (others => '0');
+                        v.resp_cycle_type := unsuccessful_no_data_only;
+                    else
+                        v.resp_length := (others => '0');
+                        v.resp_cycle_type := success_no_data;
+                    end if;
                    
                 end if;
             when read_dpr =>
                 -- We have a done descriptor, we need to read the data back out
-                -- to the eSPI master
-                if r.compl_side_cntr = r.cmd_queue(r.tail_desc).xfr_size_bytes then
+                -- to the eSPI master. A completion without data retires
+                -- straight away; the header fields were latched above.
+                if r.resp_length = 0 then
                     v.cmd_queue(r.tail_desc).active := false;
                     v.cmd_queue(r.tail_desc).done := false;
                     v.cmd_queue(r.tail_desc).flash_issued := false;
                     v.tail_desc := add_wrap(r.tail_desc, desc_index_t'high);
                     v.compl_state := idle;
                 elsif response.ready = '1' and response.valid = '1' then
-                    v.compl_side_cntr := r.compl_side_cntr + 1;
+                    if r.compl_last then
+                        -- retired with the last byte, not the cycle after
+                        v.cmd_queue(r.tail_desc).active := false;
+                        v.cmd_queue(r.tail_desc).done := false;
+                        v.cmd_queue(r.tail_desc).flash_issued := false;
+                        v.tail_desc := add_wrap(r.tail_desc, desc_index_t'high);
+                        v.compl_side_cntr := 0;
+                        v.compl_state := idle;
+                    else
+                        v.compl_side_cntr := r.compl_side_cntr + 1;
+                        v.compl_last := r.compl_side_cntr + 2 = to_integer(r.resp_length);
+                    end if;
                 end if;
         end case;
+
+        ------
+        -- One read port, two readers. Completions win; payload streaming
+        -- pauses for as long as one is in progress. Computed from the next
+        -- state so that the registered address always matches the counter
+        -- the reader is on.
+        ------
+        if v.flash_cmd_state = stream_payload and v.compl_state = idle then
+            v.dpr_raddr := dpr_addr(v.issue_desc, v.flash_side_cntr);
+        else
+            v.dpr_raddr := dpr_addr(v.tail_desc, v.compl_side_cntr);
+        end if;
 
         if not enabled then
             -- If we're not enabled, reset the state machine
@@ -304,6 +511,4 @@ begin
     end process;
     
 
-
-   
 end rtl;
