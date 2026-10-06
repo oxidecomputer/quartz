@@ -152,12 +152,26 @@ architecture rtl of hash_engine_top is
     -- Which flash the run in flight is reading, latched by the feeder at start
     signal flash_sel : natural range 0 to NUM_FLASHES - 1;
 
+    -- The incoming reset is re-registered here so this block's thousands of
+    -- asynchronous clear and preset pins hang off a flop of their own, which
+    -- the placer can keep near them, rather than off the one net that serves
+    -- the whole die. Assertion is still asynchronous; de-assertion is a few
+    -- cycles later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     hash_engine_regs_inst: entity work.hash_engine_regs
         port map (
             clk              => clk,
-            reset            => reset,
+            reset            => reset_local,
             axi_if           => axi_if,
             start_strobe     => start_strobe,
             abort_strobe     => abort_strobe,
@@ -192,9 +206,9 @@ begin
     hw_status <= hw_r.status;
     hw_digest <= hw_r.digest;
 
-    hw_request: process(clk, reset)
+    hw_request: process(clk, reset_local)
     begin
-        if reset then
+        if reset_local then
             hw_r <= hw_reg_reset;
         elsif rising_edge(clk) then
             hw_r.start <= '0';
@@ -252,7 +266,7 @@ begin
 
     -- Software data path. Written 32 bits at a time by the processor and read a
     -- byte at a time by the feeder, least significant byte first.
-    sw_fifo_reset <= reset or sw_clear;
+    sw_fifo_reset <= reset_local or sw_clear;
 
     sw_data_fifo: entity work.dcfifo_mixed_xpm
         generic map (
@@ -281,7 +295,7 @@ begin
         )
         port map (
             clk             => clk,
-            reset           => reset,
+            reset           => reset_local,
             start_strobe    => feeder_start,
             abort_strobe    => abort_strobe,
             cfg             => feeder_cfg,
@@ -321,7 +335,7 @@ begin
         )
         port map (
             wclk     => clk,
-            reset    => reset,
+            reset    => reset_local,
             write_en => cmd_fifo_write,
             wdata    => cmd_fifo_wdata,
             wfull    => open,
@@ -341,7 +355,7 @@ begin
         )
         port map (
             wclk     => clk,
-            reset    => reset,
+            reset    => reset_local,
             write_en => rsp_fifo_write,
             wdata    => rsp_fifo_wdata,
             wfull    => rsp_fifo_wfull,
@@ -385,7 +399,7 @@ begin
         )
         port map (
             clk          => clk,
-            reset        => reset,
+            reset        => reset_local,
             init         => sha3_init,
             busy         => open,
             msg_if       => msg_stream,

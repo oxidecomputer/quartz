@@ -37,6 +37,7 @@ vhdl_unit(
         ":sequencer_core",
         ":sequencer_regs_rdl",
         "//hdl/ip/vhd/synchronizers:meta_sync",
+        "//hdl/ip/vhd/synchronizers:async_reset_bridge",
         "//hdl/ip/vhd/irq:irq_block",
         "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
     ],

@@ -145,7 +145,21 @@ architecture rtl of sp5_sequencer is
     signal nic_hash_status : nic_hash_status_type;
     signal board_version : board_version_type;
 
+    -- The incoming reset is re-registered here so this block's thousands of
+    -- asynchronous clear and preset pins hang off a flop of their own, which
+    -- the placer can keep near them, rather than off the one net that serves
+    -- the whole die. Assertion is still asynchronous; de-assertion is a few
+    -- cycles later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     sp5_nic_faulted <= nic_faulted;
     a0_ok <= a0_ok_int;
@@ -154,7 +168,7 @@ begin
     sync: entity work.seq_sync
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         early_power_pins => early_power_pins,
         ddr_bulk_pins => ddr_bulk_pins,
         group_a_pins => group_a_pins,
@@ -176,7 +190,7 @@ begin
     regs: entity work.sequencer_regs
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         axi_if => axi_if,
         allow_backplane_pcie_clk => allow_backplane_pcie_clk,
         early_power_ctrl => early_power_ctrl,
@@ -273,7 +287,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         upstream_ok => fans_power_ok,
         downstream_idle => nic_idle,
         therm_trip => therm_trip,
@@ -299,7 +313,7 @@ begin
         t6_sync_inst: entity work.t6_sync
          port map(
             clk => clk,
-            reset => reset,
+            reset => reset_local,
             nic_rails_pins => nic_rails_pins,
             nic_seq_pins => nic_seq_pins,
             nic_rails => nic_rails,
@@ -312,7 +326,7 @@ begin
         )
          port map(
             clk => clk,
-            reset => reset,
+            reset => reset_local,
             nic_idle => nic_idle,
             nic_faulted => nic_faulted,
             sw_enable => power_ctrl.a0_en,
@@ -404,7 +418,7 @@ begin
         versal_sync_inst: entity work.versal_sync
          port map(
             clk => clk,
-            reset => reset,
+            reset => reset_local,
             versal_rails_pins => versal_rails_pins,
             versal_boot_pins => versal_boot_pins,
             versal_pcie_pins => versal_pcie_pins,
@@ -420,7 +434,7 @@ begin
         )
          port map(
             clk => clk,
-            reset => reset,
+            reset => reset_local,
             versal_idle => nic_idle,
             versal_faulted => nic_faulted,
             sw_enable => power_ctrl.a0_en,

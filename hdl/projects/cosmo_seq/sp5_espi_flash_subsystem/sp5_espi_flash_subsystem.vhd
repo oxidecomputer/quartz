@@ -87,14 +87,28 @@ architecture rtl of sp5_espi_flash_subsystem is
 
 
 
+    -- The incoming reset is re-registered here so this block's thousands of
+    -- asynchronous clear and preset pins hang off a flop of their own, which
+    -- the placer can keep near them, rather than off the one net that serves
+    -- the whole die. Assertion is still asynchronous; de-assertion is a few
+    -- cycles later than the port.
+    signal reset_125m_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk_125m,
+        reset_async => reset_125m,
+        reset_sync => reset_125m_local
+    );
 
     -- I don't love this pattern but we're going to combine the system reset with the 
     -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
     -- of every boot.
-    rst_combine:process(clk_125m, reset_125m)
+    rst_combine:process(clk_125m, reset_125m_local)
      begin
-        if reset_125m = '1' then
+        if reset_125m_local = '1' then
            fifo_reset <= '1';
            rst_cnts <= 5;
         elsif rising_edge(clk_125m) then
@@ -194,7 +208,7 @@ begin
         clk_200m => clk_200m,
         reset_200m => reset_200m,
         clk => clk_125m,
-        reset => reset_125m,
+        reset => reset_125m_local,
         axi_if => espi_axi_if,
         cs_n => espi_csn,
         sclk => espi_clk,
@@ -239,7 +253,7 @@ begin
         )
         port map(
            clk => clk_125m,
-           reset => reset_125m,
+           reset => reset_125m_local,
            axi_if => spinor_axi_if,
            cs_n => spi_nor_csn,
            sclk => spi_nor_clk,
