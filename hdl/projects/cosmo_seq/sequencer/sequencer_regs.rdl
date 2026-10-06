@@ -288,27 +288,30 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         default sw = r;
 
         enum  nic_hw_state_machine {
+            // In sequence order for each NIC, with DONE next to last and
+            // POWER_DOWN last, so the max-hold of this register reads as
+            // how far a power-up got.
             IDLE = 8'h00 {desc = "";};
             PWR_EN = 8'h01 {desc = "Cosmo (T6).";};
             WAIT_FOR_PGS = 8'h02 {desc = "Cosmo (T6).";};
             EARLY_CLD_RST = 8'h03 {desc = "Cosmo (T6).";};
             EARLY_PERST = 8'h04 {desc = "Cosmo (T6).";};
             EARLY_PERST_ASSERT = 8'h05 {desc = "Cosmo (T6).";};
-            DONE = 8'h06 {desc = "Booted. On metro the boot flash mux is then pointed at the FPGA so the SP5 can reach it over eSPI";};
-            HSC_EN = 8'h07 {desc = "Metro (Versal). 12V hotswap enabled, waiting for 12V and 5V";};
-            GROUP_1 = 8'h08 {desc = "Metro (Versal). Group 1, V3P3 and V1P8, enabled, waiting for PG";};
-            GROUP_2 = 8'h09 {desc = "Metro (Versal). Group 2, V0P88, enabled, waiting for PG";};
-            GROUP_3 = 8'h0a {desc = "Metro (Versal). Group 3, V0P8 VCCINT, enabled, waiting for PG";};
-            RAILS_SETTLE = 8'h0b {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
-            HASH_WAIT = 8'h0c {desc = "Metro (Versal). Rails up and settled, POR_B held; waiting for the image measurement to finish, see nic_hash_status. Passed straight through with no measurement in flight or with debug_enables.ignore_nic_hash set";};
-            MODE_STRAP = 8'h0e {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
-            POR_RELEASE = 8'h0f {desc = "Metro (Versal). POR_B released";};
-            WAIT_DONE = 8'h10 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
-            GROUP_4 = 8'h11 {desc = "Metro (Versal). Group 4, V1P5 VCCAUX, enabled, waiting for PG";};
-            GROUP_5 = 8'h12 {desc = "Metro (Versal). Group 5, V0P92 GTM/GTY AVCC, enabled, waiting for PG";};
-            GROUP_6 = 8'h13 {desc = "Metro (Versal). Group 6, V1P5 AVCCAUX, enabled, waiting for PG";};
-            GROUP_7 = 8'h14 {desc = "Metro (Versal). Group 7, V1P2 GTM/GTY AVTT, enabled, waiting for PG";};
-            POWER_DOWN = 8'h15 {desc = "Metro (Versal). POR_B asserted, rail groups being disabled in reverse order";};
+            HSC_EN = 8'h06 {desc = "Metro (Versal). 12V hotswap enabled, waiting for 12V and 5V";};
+            GROUP_1 = 8'h07 {desc = "Metro (Versal). Group 1, V3P3 and V1P8, enabled, waiting for PG";};
+            GROUP_2 = 8'h08 {desc = "Metro (Versal). Group 2, V0P88, enabled, waiting for PG";};
+            GROUP_3 = 8'h09 {desc = "Metro (Versal). Group 3, V0P8 VCCINT, enabled, waiting for PG";};
+            GROUP_4 = 8'h0a {desc = "Metro (Versal). Group 4, V1P5 VCCAUX, enabled, waiting for PG";};
+            GROUP_5 = 8'h0b {desc = "Metro (Versal). Group 5, V0P92 GTM/GTY AVCC, enabled, waiting for PG";};
+            GROUP_6 = 8'h0c {desc = "Metro (Versal). Group 6, V1P5 AVCCAUX, enabled, waiting for PG";};
+            GROUP_7 = 8'h0d {desc = "Metro (Versal). Group 7, V1P2 GTM/GTY AVTT, enabled, waiting for PG";};
+            RAILS_SETTLE = 8'h0e {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
+            HASH_WAIT = 8'h0f {desc = "Metro (Versal). Rails up and settled, POR_B held; waiting for the image measurement to finish, see nic_hash_status. Passed straight through with no measurement in flight or with debug_enables.ignore_nic_hash set";};
+            MODE_STRAP = 8'h10 {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
+            POR_RELEASE = 8'h11 {desc = "Metro (Versal). POR_B released";};
+            WAIT_DONE = 8'h12 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
+            DONE = 8'h13 {desc = "Booted. On metro the boot flash mux is then pointed at the FPGA so the SP5 can reach it over eSPI";};
+            POWER_DOWN = 8'h14 {desc = "Metro (Versal). POR_B asserted, rail groups being disabled in reverse order";};
         };
 
         field {
