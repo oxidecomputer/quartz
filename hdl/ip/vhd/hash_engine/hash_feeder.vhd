@@ -159,6 +159,15 @@ architecture rtl of hash_feeder is
     signal src_valid  : std_logic;
     signal beat       : std_logic;
 
+    -- The start decision, one cycle late. Comparing two 32-bit lengths and
+    -- then deciding the counters' next value from the result is too long for
+    -- one cycle at 125 MHz, so the configuration check is registered against
+    -- the inputs each cycle and the start strobe delayed to match it. The
+    -- inputs are stable across that cycle: software wrote them before it
+    -- started, and the hardware request holds its mux for the whole run.
+    signal start_q  : std_logic;
+    signal cfg_ok_q : boolean;
+
 begin
 
     in_prepend <= '1' when r.fed < r.prepend_cnt else '0';
@@ -217,12 +226,9 @@ begin
         -- message: the core has no way to express a zero length one, a prepend
         -- longer than the message is simply nonsense, and the second flash can
         -- only be asked for on a design that has one.
-        accepted := start_strobe = '1' and
-                    unsigned(msg_length.count) /= 0 and
-                    unsigned(prepend.count) <= unsigned(msg_length.count) and
-                    not (cfg.source = AUX_QSPI and NUM_FLASHES = 1);
+        accepted := start_q = '1' and cfg_ok_q;
 
-        if start_strobe = '1' and not accepted then
+        if start_q = '1' and not accepted then
             v.cfg_err := '1';
         end if;
 
@@ -370,8 +376,14 @@ begin
     begin
         if reset then
             r <= REG_RESET;
+            start_q <= '0';
+            cfg_ok_q <= false;
         elsif rising_edge(clk) then
             r <= rin;
+            start_q <= start_strobe;
+            cfg_ok_q <= unsigned(msg_length.count) /= 0 and
+                        unsigned(prepend.count) <= unsigned(msg_length.count) and
+                        not (cfg.source = AUX_QSPI and NUM_FLASHES = 1);
         end if;
     end process;
 
