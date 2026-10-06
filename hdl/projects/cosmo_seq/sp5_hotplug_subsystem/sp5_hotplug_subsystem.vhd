@@ -92,7 +92,21 @@ architecture rtl of sp5_hotplug_subsystem is
         desired_us => PERST_US_ONESHOT,  -- 100ms for Tpvperl
         clk_period_ns => NS_PER_CLK);
 
+    -- The incoming reset is re-registered here so this block's asynchronous
+    -- clear and preset pins hang off a flop of their own, which the placer
+    -- can keep near them, rather than off the one net that serves the whole
+    -- die. Assertion is still asynchronous; de-assertion is a few cycles
+    -- later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     m2a_pedet_synchro: entity work.meta_sync
      port map(
@@ -116,7 +130,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         scl => sp5_i2c_scl,
         scl_o => sp5_i2c_scl_o,
         scl_oe => sp5_i2c_scl_oe,
@@ -173,7 +187,7 @@ begin
      )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         power_en => m2a_hsc_en,
         perst_l => m2a_perst_l
     );
@@ -184,7 +198,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         power_en => m2b_hsc_en,
         perst_l => m2b_perst_l
     );
@@ -222,7 +236,7 @@ begin
     )
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         power_en => pcie_aux_power_en,
         perst_l => pcie_aux_rsw_perst_l
     );

@@ -20,6 +20,7 @@ vhdl_unit(
         "//hdl/ip/vhd/axi_blocks:axilite_if_2k19",
         "//hdl/projects/cosmo_seq/sp5_uart_subsystem:sp5_uart_subsystem",
         "//hdl/projects/cosmo_seq/sequencer:sequencer",
+        "//hdl/ip/vhd/synchronizers:async_reset_bridge",
     ],
     visibility = ["PUBLIC"],
     standard = "2019",

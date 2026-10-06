@@ -88,7 +88,21 @@ architecture rtl of debug_module_top is
     signal clks_since_last_toggle : std_logic_vector(31 downto 0);
     signal pin_has_toggled_atleast_once : std_logic;
     signal dbg_1v8_ctrl : dbg_1v8_ctrl_type;
+    -- The incoming reset is re-registered here so this block's asynchronous
+    -- clear and preset pins hang off a flop of their own, which the placer
+    -- can keep near them, rather than off the one net that serves the whole
+    -- die. Assertion is still asynchronous; de-assertion is a few cycles
+    -- later than the port.
+    signal reset_local : std_logic;
+
 begin
+
+    reset_bridge: entity work.async_reset_bridge
+     port map(
+        clk => clk,
+        reset_async => reset,
+        reset_sync => reset_local
+    );
 
     -- Debug header control block
     debug_header_inst: entity work.debug_header
@@ -137,11 +151,11 @@ begin
         sycnd_output => sp5_debug2_pin_syncd
     );
 
-    sp5_dbg_proc: process(clk, reset)
+    sp5_dbg_proc: process(clk, reset_local)
         variable a0_start : std_logic;
         variable pin_toggled : std_logic;
     begin
-        if reset then
+        if reset_local then
             in_a0_last <= '0';
             dbg_pin_last <= '0';
             pin_has_toggled_atleast_once <= '0';
@@ -197,7 +211,7 @@ begin
      axil_target_txn_inst: entity work.axil_target_txn
      port map(
         clk => clk,
-        reset => reset,
+        reset => reset_local,
         arvalid => axi_if.read_address.valid,
         arready => axi_if.read_address.ready,
         awvalid => axi_if.write_address.valid,
@@ -215,10 +229,10 @@ begin
     );
     axi_if.read_data.data <= rdata;
 
-    write_logic: process(clk, reset)
+    write_logic: process(clk, reset_local)
         variable dbg_convenience : dbg_convenience_type;
     begin
-        if reset then
+        if reset_local then
             dbg_uart_control <= rec_reset;
 
         elsif rising_edge(clk) then
@@ -254,9 +268,9 @@ begin
 
     
 
-    read_logic: process(clk, reset)
+    read_logic: process(clk, reset_local)
     begin
-        if reset then
+        if reset_local then
             rdata <= (others => '0');
         elsif rising_edge(clk) then
             if active_read then
