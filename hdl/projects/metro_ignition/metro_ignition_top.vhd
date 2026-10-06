@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
--- Cosmo Front Hot-plug FPGA targeting an ice40 HX8k
+-- Ignition target FPGA for metro, targeting an ice40 HX8k
 
 
 library ieee;
@@ -12,10 +12,7 @@ use ieee.numeric_std.all;
 use work.ignition_pkg.all;
 
 
-entity cosmo_ignition_top is
-    generic (
-        IS_HCV_A : boolean := false
-    );
+entity metro_ignition_top is
     port (
         clk_50mhz_ign_trgt_fpga : in std_logic;
         ign_trgt_fpga_design_reset_l : in std_logic;
@@ -48,7 +45,7 @@ entity cosmo_ignition_top is
     );
 end entity;
 
-architecture rtl of cosmo_ignition_top is
+architecture rtl of metro_ignition_top is
     signal sw0_serial_in : std_logic;
     signal sw0_serial_out : std_logic;
     signal sw1_serial_in : std_logic;
@@ -157,12 +154,8 @@ begin
         dbg => ign_trgt_fpga_spare_v3p3(4 downto 2)
     );
 
-    hsc_gen: if IS_HCV_A generate
-        main_hsc_restart <= not hotswap_restart_l;
-    else generate
-        main_hsc_restart <= hotswap_restart_l;
-    end generate;
-    
+    main_hsc_restart <= hotswap_restart_l;
+
     ignition_io_inst: entity work.ignition_io
      port map(
         clk => clk_50mhz_ign_trgt_fpga,

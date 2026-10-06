@@ -38,3 +38,6 @@ metro_seq:
 
 cosmo_ignition:
   - 'hdl/projects/cosmo_ignition/**/*'
+
+metro_ignition:
+  - 'hdl/projects/metro_ignition/**/*'
