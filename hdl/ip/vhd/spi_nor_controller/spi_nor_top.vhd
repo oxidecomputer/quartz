@@ -27,7 +27,7 @@ entity spi_nor_top is
         clk   : in    std_logic;
         reset : in    std_logic;
         -- Axilite interface
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
         -- qspi interface
         cs_n  : out   std_logic;
         sclk  : out   std_logic;

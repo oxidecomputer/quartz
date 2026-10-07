@@ -24,7 +24,7 @@ entity dimms_subsystem_top is
         reset       : in std_logic;
 
         -- AXI-Lite interface
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
 
         in_a0 : in std_logic;
 

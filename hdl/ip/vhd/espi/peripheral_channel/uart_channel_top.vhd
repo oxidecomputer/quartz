@@ -32,7 +32,7 @@ entity uart_channel_top is
         stuff_wds : in std_logic_vector(15 downto 0);
         
         -- eSPI Transaction interface
-        host_to_sp_espi : view uart_data_sink;
+        host_to_sp_espi : view uart_data_source'converse;
         sp_to_host_espi : view uart_resp_src;
 
         -- Interfaces to the UART block

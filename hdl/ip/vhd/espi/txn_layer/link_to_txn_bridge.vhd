@@ -32,20 +32,20 @@ entity link_to_txn_bridge is
 
         -- To/From the qspi link layer
         -- Fast clock domain
-        qspi_cmd : view byte_sink;
+        qspi_cmd : view byte_source'converse;
         qspi_resp : view byte_source;
         qspi_cs_n : in std_logic;
 
         -- To/From the transaction generation layer
         -- Slow clock domain
-        gen_cmd : view byte_sink;
+        gen_cmd : view byte_source'converse;
         gen_resp : view byte_source;
         gen_cs_n : in std_logic;
 
         -- To/From the transaction layer
         -- Slow clock domain
         txn_cmd : view byte_source;
-        txn_resp : view byte_sink;
+        txn_resp : view byte_source'converse;
         txn_csn : out std_logic;
     );
 end entity;

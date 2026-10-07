@@ -13,7 +13,7 @@ use work.axil32x32_pkg;
 
 entity axil8_resizer is
       port(
-            fabric  : view axil32x32_pkg.axil_target;
+            fabric  : view axil32x32_pkg.axil_controller'converse;
             responder : view axil8x32_pkg.axil_controller
       );
 end entity;

@@ -42,7 +42,7 @@ entity i2c_ctrl_txn_layer is
         txn_status : out txn_status_t;
 
         -- Transmit data stream
-        tx_st_if    : view axi_st8_pkg.axi_st_sink;
+        tx_st_if    : view axi_st8_pkg.axi_st_source'converse;
 
         -- Received data stream
         rx_st_if    : view axi_st8_pkg.axi_st_source;

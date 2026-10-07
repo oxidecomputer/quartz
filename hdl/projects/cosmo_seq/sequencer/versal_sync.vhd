@@ -24,9 +24,9 @@ entity versal_sync is
         versal_pcie_pins : view versal_pcie_at_fpga;
         -- internal, synchronized interfaces
         rail_masks : in rails_type;
-        versal_rails : view versal_power_at_reg;
-        versal_boot : view versal_boot_at_versal;
-        versal_pcie : view versal_pcie_at_nic
+        versal_rails : view versal_power_at_fpga'converse;
+        versal_boot : view versal_boot_at_fpga'converse;
+        versal_pcie : view versal_pcie_at_fpga'converse
     );
 end entity;
 

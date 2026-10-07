@@ -62,7 +62,7 @@ entity sha3_256 is
         -- AXI streaming has no zero-beat packet, so the empty message is not
         -- representable here; a consumer needing SHA3-256("") should use the
         -- known constant.
-        msg_if : view axi_st8_pkg.axi_st_pkt_sink;
+        msg_if : view axi_st8_pkg.axi_st_pkt_source'converse;
 
         -- digest(7 downto 0) is hash byte 0, ie the leftmost byte of the
         -- conventional hex string. Held stable until init or the next message

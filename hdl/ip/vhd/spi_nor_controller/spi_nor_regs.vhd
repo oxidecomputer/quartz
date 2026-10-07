@@ -14,7 +14,7 @@ entity spi_nor_regs is
         clk   : in    std_logic;
         reset : in    std_logic;
         -- axi interface
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
 
         -- system interface
         addr             : out   addr_type;

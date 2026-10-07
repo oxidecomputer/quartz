@@ -18,7 +18,7 @@ entity registers is
         clk: in std_logic;
         reset: in std_logic;
 
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
 
         spi_nor_passthru: out std_logic
 

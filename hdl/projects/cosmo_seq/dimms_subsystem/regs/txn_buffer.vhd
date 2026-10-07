@@ -17,7 +17,7 @@ entity txn_buffer is
 
         regs_if : view regs_buf_buf_side;
 
-        i2c_rx_st_if        : view axi_st8_pkg.axi_st_sink;
+        i2c_rx_st_if        : view axi_st8_pkg.axi_st_source'converse;
         i2c_tx_st_if        : view axi_st8_pkg.axi_st_source;
     );
 end entity;

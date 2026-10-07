@@ -32,7 +32,7 @@ entity link_layer is
         cmd_to_fifo: view byte_source;
         
         -- Response FIFO interface, data to host goes into this fifo
-        resp_from_fifo: view byte_sink;
+        resp_from_fifo: view byte_source'converse;
 
         -- System interface (from slow domain, already sync'd)
         wait_states : in std_logic_vector(3 downto 0);

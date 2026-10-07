@@ -19,7 +19,7 @@ entity hash_engine_regs is
         reset : in    std_logic;
 
         -- axi interface
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
 
         -- Control strobes. CONTROL.start and CONTROL.abort are self clearing, so
         -- they leave here as single cycle pulses rather than as a register.

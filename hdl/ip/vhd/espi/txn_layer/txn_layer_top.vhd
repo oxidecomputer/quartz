@@ -21,21 +21,21 @@ entity txn_layer_top is
         reset : in    std_logic;
 
         -- register layer connections
-        regs_if : view    bus_side;
+        regs_if : view    regs_side'converse;
         post_code      : out std_logic_vector(31 downto 0);
         post_code_valid : out std_logic;
         -- vwire channel connections
-        vwire_if : view vwire_cmd_side;
+        vwire_if : view vwire_regs_side'converse;
         -- flash channel status
         flash_np_free : in    std_logic;
         flash_c_avail : in    std_logic;
         -- flash channel requests/responses
         flash_writes_allowed : in std_logic;
-        flash_req  : view flash_chan_req_source;
-        flash_resp : view flash_chan_resp_sink;
+        flash_req  : view flash_chan_req_sink'converse;
+        flash_resp : view flash_chan_resp_source'converse;
         -- uart channel requests/responses
         host_to_sp_espi : view uart_data_source;
-        sp_to_host_espi : view uart_resp_sink;
+        sp_to_host_espi : view uart_resp_src'converse;
         -- uart channel status
         pc_free : in std_logic;
         pc_avail : in std_logic;
@@ -55,7 +55,7 @@ entity txn_layer_top is
         response_done   : out   boolean;
         aborted_due_to_bad_crc : out boolean;
         -- "Streaming" data to serialize and transmit
-        data_from_host : view byte_sink;
+        data_from_host : view byte_source'converse;
         live_espi_status : out std_logic_vector(15 downto 0);
         -- Packed status_t that was last sent on the wire
         last_resp_status : out std_logic_vector(15 downto 0)

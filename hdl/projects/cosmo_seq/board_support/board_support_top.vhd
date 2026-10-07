@@ -31,7 +31,7 @@ entity board_support is
         fpga1_status_led : out std_logic;
         hubris_compat_ver : in std_logic_vector(2 downto 0);
         -- AXI interface for the "info" block
-        info_axi_if : view axil_target;
+        info_axi_if : view axil_controller'converse;
         is_rev1 : out std_logic;  -- tied high if rev1 board
         is_rev2 : out std_logic  -- tied high if rev2 board
     );
