@@ -27,6 +27,11 @@ def get_relevant_files_from_buck_zip(fpga_name, zip):
             zip_names.append(item.filename)
         if item.filename.endswith(".bit"):
             zip_names.append(item.filename)
+        # Ignition targets get programmed straight from the release page with
+        # tooling that wants the raw icepack image rather than the .bz2 that
+        # hubris consumes.
+        if "ignition" in fpga_name and item.filename.endswith(".bin"):
+            zip_names.append(item.filename)
         if "maps/" in item.filename and item.filename.endswith((".json", ".html", ".adoc")):
             zip_names.append(item.filename)
         if item.filename.endswith("nextpnr.log"):

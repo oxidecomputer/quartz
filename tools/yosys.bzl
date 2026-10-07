@@ -23,13 +23,18 @@ def _ice40_bitstream_impl(ctx):
     # Register maps come out of the synth step as other_outputs; re-export them
     # here so a plain `buck2 build` of the bitstream materializes maps/.
     maps = yosys_synth_providers[0].other_outputs
+    # The uncompressed image is only an input to the compress action, so on a
+    # cache hit nothing would materialize it. Export it explicitly since the
+    # releaser publishes it for some targets.
+    raw_bitstream = icepack_providers[0].default_outputs[0]
     return [
         DefaultInfo(
             default_output=compressed[0].default_outputs[0],
-            other_outputs=maps,
+            other_outputs=maps + [raw_bitstream],
             sub_targets = {
                 "synth": yosys_synth_providers,
                 "route": next_pnr_providers,
+                "bin": icepack_providers,
                 "maps": [DefaultInfo(default_outputs=maps)],
             }
         )
