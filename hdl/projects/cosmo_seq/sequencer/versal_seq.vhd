@@ -76,6 +76,13 @@ entity versal_seq is
         -- rails are next taken down, by request or by a fault. Drops at the
         -- start of a power-down, before the rails themselves do.
         rails_up : out std_logic;
+        -- Presence as the SP5's hotplug slots get to see it, one per PCIe
+        -- channel: the Versal's own (synchronised) presence, held off until
+        -- it has booted. Before DONE there is no endpoint behind the pin to
+        -- be present, whatever the pin says, and a slot that reports present
+        -- gets powered and trained by the SP5.
+        sp5_cha_prsnt_l : out std_logic;
+        sp5_chb_prsnt_l : out std_logic;
 
         -- Hash engine hardware request, see hash_engine_top. Held until
         -- acknowledged; hash_err is valid with the acknowledge.
@@ -196,6 +203,8 @@ begin
     -- The sequencer's own claims on the flash: measuring it, and after boot,
     -- when the Versal has finished with it and the SP5 gets it over eSPI.
     rails_up <= and r.expected;
+    sp5_cha_prsnt_l <= '0' when versal_pcie.cha.prsnt_l = '0' and r.state = DONE else '1';
+    sp5_chb_prsnt_l <= '0' when versal_pcie.chb.prsnt_l = '0' and r.state = DONE else '1';
     flash_owned_by_seq <= '1' when hash_owns_flash = '1' or r.state = DONE else '0';
 
     -- What POR_B at the pin is interlocked with, whoever is driving it: every

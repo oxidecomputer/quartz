@@ -298,7 +298,7 @@ entity metro_seq_top is
         fpga1_spare_v3p3_6 : out std_logic;
         fpga1_spare_v3p3_7 : out std_logic;
         fpga1_status_led : out std_logic;
-        fpga1_to_fpga2_io : out std_logic_vector(5 downto 0);
+        fpga1_to_fpga2_io : inout std_logic_vector(5 downto 0);
         fpga1_to_ign_trgt_fpga_creset : out std_logic;
         fpga1_to_jtag_mux_sel : out std_logic;
         fpga1_to_sp_int_l : in std_logic;
@@ -402,6 +402,8 @@ architecture rtl of metro_seq_top is
     signal versal_held_in_reset : std_logic;
     signal flash_owned_by_seq : std_logic;
     signal nic_rails_up : std_logic;
+    signal sp5_versal_cha_prsnt_l : std_logic;
+    signal sp5_versal_chb_prsnt_l : std_logic;
     signal versal_hash_req : std_logic;
     signal versal_hash_ack : std_logic;
     signal versal_hash_err : std_logic;
@@ -437,10 +439,16 @@ architecture rtl of metro_seq_top is
     signal dimm_ghijkl_sda_if : tristate;
 
     signal amd_hp_irq_n_final : std_logic;
-    -- Metro's FPGA2 sends its hotplug interrupts straight to the SP
-    -- (FPGA2_TO_SP_INT[1..3]), so unlike cosmo there is no FPGA2 IRQ arriving
-    -- here to fold in.
-    alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(2);
+    -- FPGA2 runs the cosmo_hp image, which only ever raises its hotplug IRQ on
+    -- what cosmo calls fpga2_to_fpga1_io(2) (iCE40 E3). On metro that copper is
+    -- FPGA1_TO_FPGA2_IO2, so despite the net name it is an input here and gets
+    -- folded into the SP5 alert the same way cosmo does it.
+    alias fpga2_hp_irq_n_unsyncd : std_logic is fpga1_to_fpga2_io(2);
+    signal fpga2_hp_irq_n : std_logic;
+    -- FPGA2's in_a0 pin (iCE40 G3) sits on FPGA1_TO_FPGA2_IO5 on metro, the
+    -- same copper cosmo calls index 2. Left floating, FPGA2 never sees A0 drop
+    -- and holds its hotplug outputs (LEDs, slot power enables) through A2.
+    alias a0_ok_to_fpga2 : std_logic is fpga1_to_fpga2_io(5);
     signal uart_dbg_if : uart_dbg_t;
     signal allow_backplane_pcie_clk : std_logic;
     signal versal_dbg_pins : nic_debug_if;
@@ -458,6 +466,13 @@ architecture rtl of metro_seq_top is
 
 begin
 
+    meta_sync_inst_hp_irq: entity work.meta_sync
+     port map(
+        async_input => fpga2_hp_irq_n_unsyncd,
+        clk => clk_125m,
+        sycnd_output => fpga2_hp_irq_n
+    );
+
     meta_sync_inst_mux_reset_l: entity work.meta_sync
      port map(
         async_input => sp_to_fpga1_mux_reset_l,
@@ -469,8 +484,7 @@ begin
     i2c_sp5_sec_v3p3_scl <= 'Z';
     i2c_sp5_sec_v3p3_sda <= 'Z';
     -- misc things tied:
-    fpga1_to_fpga2_io(5 downto 3) <= (others => 'Z');
-    fpga1_to_fpga2_io(1 downto 0) <= (others => 'Z');
+    fpga1_to_fpga2_io(4 downto 0) <= (others => 'Z');  -- bit 2 is the FPGA2 hotplug IRQ input
     fpga1_to_sp5_sys_reset_l <= 'Z';  -- We don't use this in product, external PU.
     fpga1_to_sp_irq_l(6 downto 2) <= (others => '1');
     -- The JTAG mux select follows the NIC rails: low while they are down,
@@ -805,15 +819,16 @@ begin
         -- The Versal takes the slot the T6 has on cosmo for its channel A,
         -- and the otherwise unused fifth expander bank for channel B. Both
         -- are the one device, so both slots report the same fault; each has
-        -- its own presence and its own PERST.
+        -- its own presence and its own PERST. Presence comes by way of the
+        -- sequencer, which holds it off until the Versal has booted.
         t6_power_en => sp5_versal_power_en,
         t6_perst_l => sp5_versal_cha_perst_l,
         t6_faulted => sp5_versal_faulted,
-        t6_prsnt_l => pcie_nic_to_fpga1_cha_prsnt_l,
+        t6_prsnt_l => sp5_versal_cha_prsnt_l,
         nic2_power_en => open,
         nic2_perst_l => sp5_versal_chb_perst_l,
         nic2_faulted => sp5_versal_faulted,
-        nic2_prsnt_l => pcie_nic_to_fpga1_chb_prsnt_l,
+        nic2_prsnt_l => sp5_versal_chb_prsnt_l,
         pcie_aux_rsw_perst_l => pcie_aux_fpga1_to_rsw_perst_l,
         pcie_aux_rsw_prsnt_buff_l => pcie_aux_rsw_to_fpga1_prsnt_buff_l,
         pcie_aux_rsw_pwrflt_buff_l=> pcie_aux_rsw_to_fpga1_pwrflt_buff_l,
@@ -823,7 +838,7 @@ begin
 
     a0_ok_to_fpga2 <= a0_ok;  -- A0 OK signal to fpga2, used for power sequencing
 
-    amd_hp_irq_n_final <= hp_int_n;
+    amd_hp_irq_n_final <= '0' when fpga2_hp_irq_n = '0' or hp_int_n = '0' else '1';
     sp5_to_fpga1_genint_l <= '0' when amd_hp_irq_n_final = '0' else 'Z';
 
     fpga1_to_pcie_clk_buff_rsw_oe_l <= '0' when fpga1_to_pcie_clk_buff_rsw_oe_l_int = '0' else 'Z';
@@ -863,6 +878,8 @@ begin
         versal_held_in_reset => versal_held_in_reset,
         flash_owned_by_seq => flash_owned_by_seq,
         nic_rails_up => nic_rails_up,
+        sp5_nic_prsnt_l => sp5_versal_cha_prsnt_l,
+        sp5_nic_chb_prsnt_l => sp5_versal_chb_prsnt_l,
         hash_req => versal_hash_req,
         hash_ack => versal_hash_ack,
         hash_err => versal_hash_err,
@@ -1084,8 +1101,7 @@ begin
         reset => reset_125m,
         axi_if => responders_8b(DBG_CTRL_RESP_IDX),
         in_a0 => a0_ok,
-        -- Metro has no FPGA2 hotplug IRQ arriving here, so tie the tap idle.
-        fpga2_hp_irq_n => '1',
+        fpga2_hp_irq_n => fpga2_hp_irq_n,
         hp_int_n => hp_int_n,
         sp5_debug2_pin => sp5_to_fpga1_debug2,
         uart_headder_fall_back_to_debug_pins => uart_headder_fall_back_to_debug_pins,
