@@ -23,7 +23,7 @@ entity sgpio_regs is
         in0  : in in0_type;
         in1 : in in1_type;
 
-        axi_if : view axil_target
+        axi_if : view axil_controller'converse
 
     );
 end entity;

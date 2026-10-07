@@ -20,13 +20,13 @@ entity spd_regs is
         clk : in std_logic;
         reset : in std_logic;
         -- AXI-Lite interface
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
 
         dimm_pcamp : in dimm_pcamp_type;
 
         -- FPGA I2C Interface
-        bus0 : view reg_side;
-        bus1 : view reg_side
+        bus0 : view channel_side'converse;
+        bus1 : view channel_side'converse
     );
 end entity;
 

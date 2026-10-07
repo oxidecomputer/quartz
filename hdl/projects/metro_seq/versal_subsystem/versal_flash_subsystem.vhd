@@ -29,7 +29,7 @@ entity versal_flash_subsystem is
         reset : in std_logic;
 
         -- Control and status for the mux itself
-        ctrl_axi_if : view axil8x32_pkg.axil_target;
+        ctrl_axi_if : view axil8x32_pkg.axil_controller'converse;
 
         -- From the sequencer: high while POR_B is asserted and will stay so
         versal_held_in_reset : in std_logic;

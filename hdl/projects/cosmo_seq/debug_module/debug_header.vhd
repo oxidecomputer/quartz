@@ -53,7 +53,7 @@ entity debug_header is
         mux2_sel_pins : in std_logic_vector(1 downto 0); -- mux2 sel pins debug output to pins
         mux3_sel_pins : in std_logic_vector(1 downto 0); -- mux3 sel pins debug output to pins
         -- T6 signals
-        nic_dbg_pins : view nic_debug_dbg;
+        nic_dbg_pins : view nic_debug_seq_ss'converse;
         -- sp5 toggle pins
         sp5_debug2_pin : in std_logic;
 

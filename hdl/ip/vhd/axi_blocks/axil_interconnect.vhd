@@ -27,7 +27,7 @@ entity axil_interconnect is
         reset : in std_logic;
 
         -- Responder I/F to the main initiator, which is a *target* interface
-        initiator : view axil26x32_pkg.axil_target;
+        initiator : view axil26x32_pkg.axil_controller'converse;
 
         -- Initiator I/Fs to the responder blocks, which is a *controller* interface
         responders : view (axil32x32_pkg.axil_controller) of axil32x32_pkg.axil_array_t(config_array'range)

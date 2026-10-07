@@ -27,7 +27,7 @@ entity espi_regs is
         clk   : in    std_logic;
         reset : in    std_logic;
         -- axi interface
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
         post_code      : in std_logic_vector(31 downto 0);
         post_code_valid : in std_logic;
         espi_reset : in std_logic;
@@ -36,7 +36,7 @@ entity espi_regs is
         stuff_fifo : out std_logic;
         stuff_wds : out std_logic_vector(15 downto 0);
         -- read-only view of eSPI spec registers
-        spec_regs_view : view spec_regs_sink;
+        spec_regs_view : view spec_regs_source'converse;
         -- debug interface
         dbg_chan : view dbg_regs_if;
         to_host_tx_fifo_usedwds : in std_logic_vector(12 downto 0);

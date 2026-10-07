@@ -26,8 +26,8 @@ entity command_processor is
         -- register layer connections
         running_crc    : in    std_logic_vector(7 downto 0);
         clear_rx_crc   : out   std_logic;
-        regs_if        : view bus_side;
-        vwire_if       : view vwire_cmd_side;
+        regs_if        : view regs_side'converse;
+        vwire_if       : view vwire_regs_side'converse;
         command_header : out   espi_cmd_header;
         response_done  : in    boolean;
         post_code      : out std_logic_vector(31 downto 0);
@@ -38,7 +38,7 @@ entity command_processor is
         -- the host gets an unsuccessful completion for them.
         flash_writes_allowed : in std_logic;
         -- flash channel requests
-        flash_req : view flash_chan_req_source;
+        flash_req : view flash_chan_req_sink'converse;
         -- uart channel put interface here
         host_to_sp_espi : view uart_data_source;
 
@@ -46,7 +46,7 @@ entity command_processor is
         is_rx_crc_byte     : out   boolean;
         chip_sel_active : in    std_logic;
         -- "Streaming" data to serialize and transmit
-        data_from_host : view byte_sink
+        data_from_host : view byte_source'converse
     );
 end entity;
 

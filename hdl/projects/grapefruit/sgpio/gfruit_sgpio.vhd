@@ -23,7 +23,7 @@ entity gfruit_sgpio is
         clk: in std_logic;
         reset: in std_logic;
 
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
 
         sclk: out std_logic;
         sgpio0_do : out std_logic;

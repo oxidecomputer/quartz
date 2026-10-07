@@ -52,7 +52,7 @@ entity hash_engine_top is
         reset : in    std_logic;
 
         -- Axilite interface
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
 
         -- Hardware request, see above. Leave hw_req unconnected on a design
         -- without a requester.

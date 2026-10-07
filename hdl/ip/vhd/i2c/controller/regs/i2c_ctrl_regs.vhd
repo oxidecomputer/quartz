@@ -17,7 +17,7 @@ entity i2c_ctrl_regs is
     port (
         clk     : in    std_logic;
         reset   : in    std_logic;
-        axi_if  : view  axil_target;
+        axi_if  : view  axil_controller'converse;
     );
 end entity;
 

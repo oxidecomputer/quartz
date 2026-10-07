@@ -33,7 +33,7 @@ entity sp5_espi_flash_subsystem is
         reset_200m : in std_logic;
 
         -- espi
-        espi_axi_if : view axil15x32_pkg.axil_target;
+        espi_axi_if : view axil15x32_pkg.axil_controller'converse;
         espi_csn : in std_logic;
         espi_clk : in std_logic;
         espi_dat : in std_logic_vector(3 downto 0);
@@ -41,9 +41,9 @@ entity sp5_espi_flash_subsystem is
         espi_dat_oe : out std_logic_vector(3 downto 0);
         response_csn : out std_logic;  -- Used for saleae decoding since response is shifted by 2 clocks
         ipcc_uart_from_espi : view axi_st_source;
-        ipcc_uart_to_espi : view axi_st_sink;
+        ipcc_uart_to_espi : view axi_st_source'converse;
         -- spi nor
-        spinor_axi_if : view axil8x32_pkg.axil_target;
+        spinor_axi_if : view axil8x32_pkg.axil_controller'converse;
         spi_nor_csn : out std_logic;
         spi_nor_clk : out std_logic;
         spi_nor_dat : in std_logic_vector(3 downto 0);

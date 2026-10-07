@@ -31,11 +31,11 @@ entity dbg_link_faker is
         cs_n : out std_logic;
         alert_needed : in boolean;
         -- "Streaming" data recieved after deserialization
-        gen_resp       : view byte_sink;
+        gen_resp       : view byte_source'converse;
         -- "Streaming" data to serialize and transmit
         gen_cmd     : view byte_source;
 
-        dbg_chan : view dbg_periph_if;
+        dbg_chan : view dbg_regs_if'converse;
         dbg_espi_reset : out std_logic        
     );
 end entity;

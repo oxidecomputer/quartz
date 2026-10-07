@@ -34,7 +34,7 @@ entity sp5_sequencer is
         clk : in std_logic;
         reset : in std_logic;
 
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
         irq_l_out : out std_logic;
         -- These signals are useful throughout the design for dealing with
         -- buffers, a0-domain "reset" kinds of things etc

@@ -15,7 +15,7 @@ entity sp_i2c_subsystem is
         clk : in std_logic;
         reset : in std_logic;
 
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
         in_a0 : in std_logic;
         sp_mux_reset_l : in std_logic;
 

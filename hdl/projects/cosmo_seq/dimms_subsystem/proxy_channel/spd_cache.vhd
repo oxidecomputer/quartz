@@ -21,7 +21,7 @@ entity spd_cache is
         raddr       : in std_logic_vector(7 downto 0);
         rdata       : out std_logic_vector(31 downto 0);
         -- streaming bus from i2c controller
-        i2c_rx_st_if        : view axi_st8_pkg.axi_st_sink
+        i2c_rx_st_if        : view axi_st8_pkg.axi_st_source'converse
 
     );
 end entity;

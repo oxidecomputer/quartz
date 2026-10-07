@@ -35,7 +35,7 @@ entity sp5_hotplug_subsystem is
         int_n : out std_logic;
         a0_ok : in std_logic;
 
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
         allow_backplane_pcie_clk : in std_logic;
 
         -- M.2 things

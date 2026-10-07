@@ -29,13 +29,13 @@ entity seq_sync is
         -- internal, synchronized interfaces
         rail_masks : in rails_type;
         sp5_seq_test_mask : in sp5_seq_test_mask_type;
-        early_power : view early_power_on_board;
-        ddr_bulk: view ddr_bulk_at_reg;
-        group_a : view group_a_power_at_reg;
-        group_b : view group_b_power_at_reg;
-        group_c : view group_c_power_at_reg;
-        sp5_seq : view sp5_seq_at_sp5;
-        reg_alert_l : view power_alert_at_reg;
+        early_power : view early_power_at_fpga'converse;
+        ddr_bulk: view ddr_bulk_power_at_fpga'converse;
+        group_a : view group_a_power_at_fpga'converse;
+        group_b : view group_b_power_at_fpga'converse;
+        group_c : view group_c_power_at_fpga'converse;
+        sp5_seq : view sp5_seq_at_fpga'converse;
+        reg_alert_l : view power_alert_at_fpga'converse;
     );
     end entity;
 

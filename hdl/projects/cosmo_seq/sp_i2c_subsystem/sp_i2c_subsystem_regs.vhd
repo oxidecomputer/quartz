@@ -15,7 +15,7 @@ entity sp_i2c_subsystem_regs is
         clk : in std_logic;
         reset : in std_logic;
 
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
         main_reset : out std_logic
     );
 end entity;

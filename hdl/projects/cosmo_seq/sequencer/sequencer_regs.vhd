@@ -21,7 +21,7 @@ entity sequencer_regs is
 
         irq_l_out : out std_logic;
         allow_backplane_pcie_clk : out std_logic;
-        axi_if : view axil8x32_pkg.axil_target;
+        axi_if : view axil8x32_pkg.axil_controller'converse;
         -- from early block
         early_power_ctrl: out early_power_ctrl_type;
         early_power_rdbks : in early_power_rdbks_type;

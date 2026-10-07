@@ -40,7 +40,7 @@ entity sp5_uart_subsystem is
         uart_from_fpga_rts_l : out std_logic;
         uart_to_fpga_rts_l : in std_logic;
         -- to/from espi
-        ipcc_from_espi : view axi_st_sink;
+        ipcc_from_espi : view axi_st_source'converse;
         ipcc_to_espi : view axi_st_source;
 
         -- debug UART mux

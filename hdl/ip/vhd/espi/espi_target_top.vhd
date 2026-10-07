@@ -39,7 +39,7 @@ entity espi_target_top is
         clk_200m : in std_logic;
         reset_200m : in std_logic;
         -- Axilite interface
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
         -- phy interface
         cs_n  : in    std_logic;
         sclk  : in    std_logic;

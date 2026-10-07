@@ -21,7 +21,7 @@ entity info is
         hubris_compat_pins: in std_logic_vector(hubris_compat_num_bits-1 downto 0);
         -- axi interface. This is not using VHDL2019 views so that it's compatible with
         -- GHDL/yosys based toolchains
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
 
 
     );

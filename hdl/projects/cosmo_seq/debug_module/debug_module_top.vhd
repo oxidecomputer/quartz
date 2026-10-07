@@ -22,7 +22,7 @@ entity debug_module_top is
         clk : in std_logic;
         reset : in std_logic;
 
-        axi_if : view axil_target;
+        axi_if : view axil_controller'converse;
 
         in_a0 : in std_logic;
         sp5_debug2_pin : in std_logic;
@@ -31,7 +31,7 @@ entity debug_module_top is
         fpga2_hp_irq_n : in std_logic;
         hp_int_n : in std_logic;
 
-        uart_dbg_if : view uart_dbg_dbg_if;
+        uart_dbg_if : view uart_dbg_ss_if'converse;
 
         -- hotplug
         i2c_sp5_to_fpgax_hp_sda: in std_logic;
@@ -67,7 +67,7 @@ entity debug_module_top is
         espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
         espi_resp_csn: in std_logic;
         --T6 signals
-        nic_dbg_pins : view nic_debug_dbg;
+        nic_dbg_pins : view nic_debug_seq_ss'converse;
 
         fpga1_spare_v1p8 : out std_logic_vector(7 downto 0); -- 8 spare pins on the debug header
 

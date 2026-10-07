@@ -22,8 +22,8 @@ entity t6_sync is
         nic_rails_pins : view nic_power_at_fpga;
         nic_seq_pins: view nic_seq_at_fpga;
         -- internal, synchronized interfaces
-        nic_rails : view nic_power_at_reg;
-        nic_seq: view nic_seq_at_nic
+        nic_rails : view nic_power_at_fpga'converse;
+        nic_seq: view nic_seq_at_fpga'converse
     );
 end entity;
 

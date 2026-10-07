@@ -31,9 +31,9 @@ entity response_processor is
         is_tx_last_byte : out   boolean;
 
         -- flash channel responses
-        flash_resp : view flash_chan_resp_sink;
+        flash_resp : view flash_chan_resp_source'converse;
         -- uart channel responses
-        sp_to_host_espi : view uart_resp_sink;
+        sp_to_host_espi : view uart_resp_src'converse;
 
         alert_needed : out   boolean;
         -- Packed status_t that was last sent on the wire
