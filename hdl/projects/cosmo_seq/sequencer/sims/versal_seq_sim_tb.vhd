@@ -81,6 +81,8 @@ begin
         alias sp5_versal_chb_perst_l is << signal th.sp5_nic_chb_perst_l : std_logic >>;
         alias flash_owned_by_seq is << signal th.flash_owned_by_seq : std_logic >>;
         alias nic_rails_up is << signal th.nic_rails_up : std_logic >>;
+        alias sp5_nic_prsnt_l is << signal th.sp5_nic_prsnt_l : std_logic >>;
+        alias sp5_nic_chb_prsnt_l is << signal th.sp5_nic_chb_prsnt_l : std_logic >>;
         alias hash_req is << signal th.hash_req : std_logic >>;
         alias hash_model_time is << signal th.hash_model_time : time >>;
         alias hash_model_fail is << signal th.hash_model_fail : boolean >>;
@@ -281,6 +283,38 @@ begin
                 check_equal(versal_pcie_pins.chb.perst_l, '1',
                             "Expected channel B PERST unaffected by slot A");
                 sp5_versal_cha_perst_l <= '1';
+
+            elsif run("presence_waits_for_done") then
+                -- The model's presence pins are asserted from the start; the
+                -- hotplug slots must not see them until the Versal has booted.
+                check_equal(sp5_nic_prsnt_l, '1', "Expected channel A absent before power up");
+                check_equal(sp5_nic_chb_prsnt_l, '1', "Expected channel B absent before power up");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_boot_pins.por_b = '1' for 50 ms;
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released");
+                check_equal(sp5_nic_prsnt_l, '1', "Expected channel A absent while booting");
+                check_equal(sp5_nic_chb_prsnt_l, '1', "Expected channel B absent while booting");
+                poll_for_nic_state(net, DONE);
+                check_equal(sp5_nic_prsnt_l, '0', "Expected channel A present once DONE");
+                check_equal(sp5_nic_chb_prsnt_l, '0', "Expected channel B present once DONE");
+
+                -- each channel follows its own pin
+                versal_pcie_pins.chb.prsnt_l <= '1';
+                wait for 1 us;
+                check_equal(sp5_nic_prsnt_l, '0', "Expected channel A unaffected by channel B's pin");
+                check_equal(sp5_nic_chb_prsnt_l, '1', "Expected channel B absent with its pin high");
+                versal_pcie_pins.chb.prsnt_l <= '0';
+                wait for 1 us;
+                check_equal(sp5_nic_chb_prsnt_l, '0', "Expected channel B present again");
+
+                -- and both go away with the NIC
+                disable_power_good(net, find("versal_v1p8"));
+                wait for 100 us;
+                check_equal(sp5_nic_prsnt_l, '1', "Expected channel A absent after a fault");
+                check_equal(sp5_nic_chb_prsnt_l, '1', "Expected channel B absent after a fault");
+                enable_power_good(net, find("versal_v1p8"));
 
             elsif run("rails_up_follows_the_nic_rails") then
                 -- Low while the rails are down, high once they have all

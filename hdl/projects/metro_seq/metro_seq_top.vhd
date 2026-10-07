@@ -402,6 +402,8 @@ architecture rtl of metro_seq_top is
     signal versal_held_in_reset : std_logic;
     signal flash_owned_by_seq : std_logic;
     signal nic_rails_up : std_logic;
+    signal sp5_versal_cha_prsnt_l : std_logic;
+    signal sp5_versal_chb_prsnt_l : std_logic;
     signal versal_hash_req : std_logic;
     signal versal_hash_ack : std_logic;
     signal versal_hash_err : std_logic;
@@ -805,15 +807,16 @@ begin
         -- The Versal takes the slot the T6 has on cosmo for its channel A,
         -- and the otherwise unused fifth expander bank for channel B. Both
         -- are the one device, so both slots report the same fault; each has
-        -- its own presence and its own PERST.
+        -- its own presence and its own PERST. Presence comes by way of the
+        -- sequencer, which holds it off until the Versal has booted.
         t6_power_en => sp5_versal_power_en,
         t6_perst_l => sp5_versal_cha_perst_l,
         t6_faulted => sp5_versal_faulted,
-        t6_prsnt_l => pcie_nic_to_fpga1_cha_prsnt_l,
+        t6_prsnt_l => sp5_versal_cha_prsnt_l,
         nic2_power_en => open,
         nic2_perst_l => sp5_versal_chb_perst_l,
         nic2_faulted => sp5_versal_faulted,
-        nic2_prsnt_l => pcie_nic_to_fpga1_chb_prsnt_l,
+        nic2_prsnt_l => sp5_versal_chb_prsnt_l,
         pcie_aux_rsw_perst_l => pcie_aux_fpga1_to_rsw_perst_l,
         pcie_aux_rsw_prsnt_buff_l => pcie_aux_rsw_to_fpga1_prsnt_buff_l,
         pcie_aux_rsw_pwrflt_buff_l=> pcie_aux_rsw_to_fpga1_pwrflt_buff_l,
@@ -863,6 +866,8 @@ begin
         versal_held_in_reset => versal_held_in_reset,
         flash_owned_by_seq => flash_owned_by_seq,
         nic_rails_up => nic_rails_up,
+        sp5_nic_prsnt_l => sp5_versal_cha_prsnt_l,
+        sp5_nic_chb_prsnt_l => sp5_versal_chb_prsnt_l,
         hash_req => versal_hash_req,
         hash_ack => versal_hash_ack,
         hash_err => versal_hash_err,

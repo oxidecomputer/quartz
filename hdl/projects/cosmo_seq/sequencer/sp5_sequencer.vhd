@@ -63,6 +63,11 @@ entity sp5_sequencer is
         sp5_nic_perst_l : in std_logic;
         sp5_nic_chb_perst_l : in std_logic := '1';
         sp5_nic_faulted : out std_logic;
+        -- To SP5 hotplug: each NIC slot's presence. The T6 is soldered down
+        -- and always present; a Versal's channels are present once it has
+        -- booted and says so.
+        sp5_nic_prsnt_l : out std_logic;
+        sp5_nic_chb_prsnt_l : out std_logic;
         -- High while the NIC's rails are all up: low until they have finished
         -- sequencing, and low again as soon as they start to come down.
         nic_rails_up : out std_logic;
@@ -408,6 +413,8 @@ begin
         versal_held_in_reset <= '0';
         flash_owned_by_seq <= '0';
         nic_rails_up <= nic_power_ok;
+        sp5_nic_prsnt_l <= '0';
+        sp5_nic_chb_prsnt_l <= '0';
         hash_req <= '0';
     end generate;
 
@@ -451,6 +458,8 @@ begin
             versal_held_in_reset => versal_held_in_reset,
             flash_owned_by_seq => flash_owned_by_seq,
             rails_up => nic_rails_up,
+            sp5_cha_prsnt_l => sp5_nic_prsnt_l,
+            sp5_chb_prsnt_l => sp5_nic_chb_prsnt_l,
             hash_req => hash_req,
             hash_ack => hash_ack,
             hash_err => hash_err,

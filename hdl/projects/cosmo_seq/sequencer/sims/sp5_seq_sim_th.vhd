@@ -94,6 +94,8 @@ architecture th of sp5_seq_sim_th is
     signal versal_held_in_reset : std_logic;
     signal flash_owned_by_seq : std_logic;
     signal nic_rails_up : std_logic;
+    signal sp5_nic_prsnt_l : std_logic;
+    signal sp5_nic_chb_prsnt_l : std_logic;
     -- Hash engine stand-in. The testbench sets how long a measurement takes
     -- and whether it fails; the handshake itself is modelled here.
     signal hash_req : std_logic;
@@ -135,6 +137,8 @@ begin
        versal_held_in_reset => versal_held_in_reset,
        flash_owned_by_seq => flash_owned_by_seq,
        nic_rails_up => nic_rails_up,
+       sp5_nic_prsnt_l => sp5_nic_prsnt_l,
+       sp5_nic_chb_prsnt_l => sp5_nic_chb_prsnt_l,
        hash_req => hash_req,
        hash_ack => hash_ack,
        hash_err => hash_err,

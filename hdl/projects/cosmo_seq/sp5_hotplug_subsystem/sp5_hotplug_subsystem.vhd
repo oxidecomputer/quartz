@@ -85,6 +85,9 @@ architecture rtl of sp5_hotplug_subsystem is
     signal io_o : pca9506_pin_t;
     signal m2a_pedet_sync : std_logic;
     signal m2b_pedet_sync : std_logic;
+    -- Live pins on metro (the Versal's two PCIe channels), constants on cosmo
+    signal t6_prsnt_l_sync : std_logic;
+    signal nic2_prsnt_l_sync : std_logic;
     signal m2b_power_en : std_logic;
     signal m2a_power_en : std_logic;
     signal pcie_aux_power_en : std_logic;
@@ -121,6 +124,20 @@ begin
        clk => clk,
        sycnd_output => m2b_pedet_sync
    );
+
+    t6_prsnt_synchro: entity work.meta_sync
+     port map(
+        async_input => t6_prsnt_l,
+        clk => clk,
+        sycnd_output => t6_prsnt_l_sync
+    );
+
+    nic2_prsnt_synchro: entity work.meta_sync
+     port map(
+        async_input => nic2_prsnt_l,
+        clk => clk,
+        sycnd_output => nic2_prsnt_l_sync
+    );
 
 
    
@@ -210,7 +227,7 @@ begin
     io(2)(3) <= '1';  -- emils: nothing to report for a soldered-down NIC
     io(2)(1) <= not t6_faulted;
     io(2)(2) <= '1'; -- attnsw_l
-    io(2)(0) <= t6_prsnt_l;
+    io(2)(0) <= t6_prsnt_l_sync;
     t6_perst_l <= t6_power_en;
 
     -- Second NIC slot, bank 4. Only metro populates this; with the generic off
@@ -221,7 +238,7 @@ begin
         io(4)(3) <= '1';  -- emils
         io(4)(1) <= not nic2_faulted;
         io(4)(2) <= '1'; -- attnsw_l
-        io(4)(0) <= nic2_prsnt_l;
+        io(4)(0) <= nic2_prsnt_l_sync;
         nic2_perst_l <= nic2_power_en;
     else generate
         nic2_power_en <= '0';
