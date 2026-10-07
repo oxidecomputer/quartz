@@ -66,7 +66,9 @@ jobs:
           # BTD expects Mercurial-like format with status code (M/A/D) and space separator
           # Filter out .github/ (CI-only changes don't affect build targets)
           # but keep other dotfiles like .buckconfig which are build inputs
-          git diff --name-status "$BASE_COMMIT" HEAD | sed 's/\t/ /' | grep -v ' \.github/' > /tmp/changes.txt || touch /tmp/changes.txt
+          # --no-renames: a rename is reported as "R094 old<TAB>new", which BTD
+          # rejects outright, and a failed BTD means building every target.
+          git diff --no-renames --name-status "$BASE_COMMIT" HEAD | sed 's/\t/ /' | grep -v ' \.github/' > /tmp/changes.txt || touch /tmp/changes.txt
 
           echo "Changed files ($(wc -l < /tmp/changes.txt)):"
           cat /tmp/changes.txt

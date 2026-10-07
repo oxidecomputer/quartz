@@ -17,6 +17,12 @@ cases self-healing: a skipped-over or cancelled commit widens the next run's
 diff instead of dropping out of it. A failed run is not a valid anchor either --
 its failed targets still need building -- so only successful runs count.
 
+The anchor is found by walking back from HEAD and asking for each commit's runs
+by head_sha, rather than by listing the branch's successful runs. That listing
+(`?branch=main&status=success`) has been seen returning a months-old run as the
+newest while later successes existed, which silently widened every diff back to
+that commit.
+
 Writes `base_commit=<rev>` to $GITHUB_OUTPUT. An empty value means no usable
 base was found and the caller must build everything.
 """
@@ -56,11 +62,21 @@ def usable(rev, head):
     return True
 
 
-def last_successful_run_shas(repo, workflow, branch, token, limit=20):
-    """head_shas of recent successful runs of this workflow, newest first."""
+def first_parent_shas(head, limit):
+    """HEAD and its first-parent ancestors, newest first."""
+    out = git("rev-list", "--first-parent", f"--max-count={limit}", head)
+    return out.stdout.split() if out.returncode == 0 else []
+
+
+def built_successfully(repo, workflow, branch, sha, token):
+    """Whether this workflow has a successful run of `sha` on `branch`.
+
+    Returns None when the API could not be reached, so the caller can stop
+    walking instead of treating every commit as unbuilt.
+    """
     url = (
         f"https://api.github.com/repos/{repo}/actions/workflows/{workflow}/runs"
-        f"?branch={branch}&status=success&per_page={limit}"
+        f"?head_sha={sha}&per_page=100"
     )
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
     if token:
@@ -71,8 +87,13 @@ def last_successful_run_shas(repo, workflow, branch, token, limit=20):
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
         # Not fatal: we still have github.event.before to fall back to.
         print(f"::warning::Could not query workflow runs ({e}); falling back")
-        return []
-    return [r["head_sha"] for r in data.get("workflow_runs", [])]
+        return None
+    # Filter here rather than with query parameters; the server-side filters
+    # are what returned stale results.
+    return any(
+        r.get("head_branch") == branch and r.get("conclusion") == "success"
+        for r in data.get("workflow_runs", [])
+    )
 
 
 def resolve(args):
@@ -82,16 +103,21 @@ def resolve(args):
         return "origin/main"
 
     print(f"Looking for the last successful {args.workflow} run on {args.branch}")
-    for sha in last_successful_run_shas(
-        args.repo, args.workflow, args.branch, args.token
-    ):
+    for sha in first_parent_shas(args.head, args.max_commits):
+        built = built_successfully(
+            args.repo, args.workflow, args.branch, sha, args.token
+        )
+        if built is None:
+            break
+        if not built:
+            print(f"  {sha[:12]}: no successful run")
+            continue
         if sha == args.head:
             # A re-run of the current commit. Nothing new to build.
             print(f"  {sha[:12]}: is HEAD, using it")
-            return sha
-        if usable(sha, args.head):
+        else:
             print(f"Using last successful build at {sha[:12]}")
-            return sha
+        return sha
 
     print("::warning::No usable successful run found; falling back to event.before")
     if usable(args.event_before, args.head):
@@ -110,6 +136,12 @@ def main():
     parser.add_argument("--repo", required=True, help="owner/name")
     parser.add_argument("--branch", default="main")
     parser.add_argument("--head", default="HEAD")
+    parser.add_argument(
+        "--max-commits",
+        type=int,
+        default=50,
+        help="how far back to look for a successful run (one API call each)",
+    )
     args = parser.parse_args()
     args.token = os.environ.get("GITHUB_TOKEN", "")
 
