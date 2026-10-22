@@ -425,6 +425,7 @@ architecture rtl of metro_seq_top is
     signal vercel_flash_io_o : std_logic_vector(3 downto 0);
     signal vercel_flash_io_oe : std_logic_vector(3 downto 0);
     signal espi_resp_csn : std_logic;
+    signal espi1_resp_csn : std_logic;
     signal hp_int_n : std_logic;
 
     signal fpga1_to_pcie_clk_buff_rsw_oe_l_int : std_logic;
@@ -678,7 +679,7 @@ begin
         espi_dat => espi1_sp5_to_fpga1_dat,
         espi_dat_o => espi1_io_o,
         espi_dat_oe => espi1_io_oe,
-        response_csn => open,
+        response_csn => espi1_resp_csn,
         ipcc_uart_from_espi => espi1_uart_from_axi_st,
         ipcc_uart_to_espi => espi1_uart_to_axi_st,
         spinor_axi_if => responders_8b(VERSAL_FLASH_RESP_IDX),
@@ -1136,6 +1137,11 @@ begin
         espi0_sp5_to_fpga_cs_l => espi0_sp5_to_fpga1_cs_l,
         espi0_sp5_to_fpga1_dat => espi0_sp5_to_fpga1_dat,
         espi_resp_csn => espi_resp_csn,
+        espi1_sp5_to_fpga_clk => espi1_sp5_to_fpga1_clk,
+        espi1_sp5_to_fpga_cs_l => espi1_sp5_to_fpga1_cs_l,
+        espi1_sp5_to_fpga1_dat => espi1_sp5_to_fpga1_dat,
+        espi1_resp_csn => espi1_resp_csn,
+        espi1_alert_l => espi1_fpga1_to_sp5_alert_l,
         nic_dbg_pins => versal_dbg_pins,
         -- MUX
         mux1_sel => fpga1_to_i2c_mux1_sel,
