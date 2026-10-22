@@ -80,6 +80,7 @@ begin
         alias sp5_versal_cha_perst_l is << signal th.sp5_nic_perst_l : std_logic >>;
         alias sp5_versal_chb_perst_l is << signal th.sp5_nic_chb_perst_l : std_logic >>;
         alias flash_owned_by_seq is << signal th.flash_owned_by_seq : std_logic >>;
+        alias flash_to_espi is << signal th.flash_to_espi : std_logic >>;
         alias nic_rails_up is << signal th.nic_rails_up : std_logic >>;
         alias sp5_nic_prsnt_l is << signal th.sp5_nic_prsnt_l : std_logic >>;
         alias sp5_nic_chb_prsnt_l is << signal th.sp5_nic_chb_prsnt_l : std_logic >>;
@@ -411,6 +412,12 @@ begin
                             "Expected the SP's request to be denied once the Versal has booted");
                 check_equal(flash_owned_by_seq, '1',
                             "Expected the sequencer to hold the flash for the SP5 after boot");
+                check_equal(flash_to_espi, '1', "Expected the flash handed to eSPI1 after boot");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          x"00000000");
+                wait until flash_to_espi = '0' for 1 ms;
+                check_equal(flash_to_espi, '0', "Expected eSPI1 to lose the flash on power down");
 
             elsif run("image_is_measured_alongside_power_up") then
                 -- The measurement sets off with the power sequence and runs

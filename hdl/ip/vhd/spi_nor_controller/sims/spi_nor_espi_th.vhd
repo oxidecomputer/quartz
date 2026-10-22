@@ -63,6 +63,8 @@ architecture th of spi_nor_espi_th is
     signal espi_wfifo_rdata : std_logic_vector(7 downto 0);
     signal espi_wfifo_rdack : std_logic;
     signal espi_wfifo_rempty : std_logic;
+    -- Hardware grant of the flash to the eSPI client, driven by the testbench
+    signal espi_owns_flash_hw : std_logic := '0';
 
 begin
 
@@ -178,6 +180,7 @@ begin
             io_o                 => io_o,
             io_oe                => io_oe,
             sp5_owns_flash       => open,
+            espi_owns_flash_hw   => espi_owns_flash_hw,
             espi_cmd_fifo_rdata  => espi_cmd_fifo_rdata,
             espi_cmd_fifo_rdack  => espi_cmd_fifo_rdack,
             espi_cmd_fifo_rempty => espi_cmd_fifo_rempty,

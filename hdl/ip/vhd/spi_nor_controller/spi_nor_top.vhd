@@ -35,6 +35,11 @@ entity spi_nor_top is
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
         sp5_owns_flash : out std_logic;
+        -- Hardware grant of the flash to the eSPI path, alongside the
+        -- SPICR.sp5_owns_flash register bit: either one hands it over. For a
+        -- design where something other than software decides when the host
+        -- may have the flash.
+        espi_owns_flash_hw : in std_logic := '0';
         -- Low parks the flash pins (cs_n high, sclk low, lanes released)
         -- at the IOB flops themselves, for a design where the flash is
         -- reached through a mux shared with another master. The controller
@@ -119,6 +124,8 @@ architecture rtl of spi_nor_top is
     signal   go_strobe            : std_logic;
     signal   tx_fifo_reset        : std_logic;
     signal   rx_fifo_reset        : std_logic;
+    signal   espi_owner           : std_logic;
+    signal   espi_txn_idle        : std_logic;
     signal espi_fifo_write_allowed : std_logic;
     signal reg_fifo_write_allowed : std_logic;
     signal espi_fifo_write : std_logic;
@@ -236,17 +243,33 @@ begin
     end process;
 
     -- Mux between hash, espi and register interface for read data (rx fifos)
-    reg_fifo_write_allowed <= '1' when hash_grant = '0' and spicr_reg.sp5_owns_flash = '0' else '0';
-    espi_fifo_write_allowed <= '1' when hash_grant = '0' and spicr_reg.sp5_owns_flash = '1' else '0';
+    reg_fifo_write_allowed <= '1' when hash_grant = '0' and espi_owner = '0' else '0';
+    espi_fifo_write_allowed <= '1' when hash_grant = '0' and espi_owner = '1' else '0';
     reg_fifo_write <= reg_fifo_write_allowed and rx_fifo_write8;
     espi_fifo_write <= espi_fifo_write_allowed and rx_fifo_write8;
     hash_fifo_write <= rx_fifo_write8 when hash_grant = '1' else '0';
 
     spi_cmd_if <= hash_cmd when hash_grant = '1' else
-                  hubris_cmd when spicr_reg.sp5_owns_flash = '0' else
+                  hubris_cmd when espi_owner = '0' else
                   espi_cmd;
 
-    sp5_owns_flash <= spicr_reg.sp5_owns_flash;
+    -- Who the engine belongs to, outside of a hash run, changes only while
+    -- nothing is in flight on either side: a command split between the two
+    -- would have its bytes go to the wrong FIFO, and the eSPI side would wait
+    -- for them forever.
+    owner_reg: process(clk, reset)
+    begin
+        if reset then
+            espi_owner <= '0';
+        elsif rising_edge(clk) then
+            if spisr_reg.busy = '0' and go_strobe = '0' and espi_txn_idle = '1' then
+                espi_owner <= spicr_reg.sp5_owns_flash or espi_owns_flash_hw;
+            end if;
+        end if;
+    end process;
+    spisr_reg.espi_owns_flash <= espi_owner;
+
+    sp5_owns_flash <= espi_owner;
 
     -- Outbound bytes normally come from hubris' TX FIFO; during an eSPI page
     -- program they come from the eSPI write payload FIFO instead. The engine
@@ -395,7 +418,8 @@ begin
          espi_cmd => espi_cmd,
          spi_hw_busy => spisr_reg.busy,
          tx_from_espi => tx_from_espi,
-         espi_reads_allowed => spicr_reg.sp5_owns_flash,
+         espi_reads_allowed => espi_owner,
+         txn_idle => espi_txn_idle,
          sp_host_image_flash_addr_offset => signed(sp5_flash_offset.offset),
          amd_begin_apob_flash_addr => apob_flash_addr.offset,
          apob_window_len => apob_flash_len.offset,

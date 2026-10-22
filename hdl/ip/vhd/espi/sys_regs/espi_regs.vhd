@@ -21,7 +21,11 @@ entity espi_regs is
         -- An instance that only ever serves the flash channel never sees a
         -- post code, so it can leave the 4k entry buffer out; reads of it
         -- then return zero.
-        POST_CODE_BUFFER_ENABLED : boolean := true
+        POST_CODE_BUFFER_ENABLED : boolean := true;
+        -- A build that lets the host write through this target starts with
+        -- writes enabled, so the host needs nothing from the SP to use them;
+        -- the control bit stays as the SP's way to lock them out.
+        FLASH_WRITES_ALLOWED : boolean := false
     );
     port (
         clk   : in    std_logic;
@@ -113,6 +117,7 @@ begin
     begin
         if reset then
             control_reg <= rec_reset;
+            control_reg.flash_write_enable <= '1' when FLASH_WRITES_ALLOWED else '0';
             last_post_code_reg <= rec_reset;
             post_code_count_reg <= rec_reset;
             post_code_monitor_reg <= rec_reset;

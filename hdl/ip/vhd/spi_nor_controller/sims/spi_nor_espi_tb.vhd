@@ -37,6 +37,7 @@ begin
         alias data_rdata is <<signal th.data_rdata : std_logic_vector(7 downto 0)>>;
         alias data_rdack is <<signal th.data_rdack : std_logic>>;
         alias data_rempty is <<signal th.data_rempty : std_logic>>;
+        alias espi_owns_flash_hw is <<signal th.espi_owns_flash_hw : std_logic>>;
         constant flash : actor_t := find("spi_nor_target");
 
         -- Request kinds, as flash_channel_pkg.to_kind_bits encodes them in
@@ -49,6 +50,8 @@ begin
         constant erase_64k : natural := 3;
 
         variable data : std_logic_vector(7 downto 0);
+        variable spisr : std_logic_vector(31 downto 0);
+
 
         -- Two-word command, the way the flash channel issues one
         procedure put_cmd(constant addr : natural; constant kind : std_logic_vector(3 downto 0); constant len : natural) is
@@ -169,6 +172,48 @@ begin
                 check_status(x"00", "erase status");
                 check_flash_range(16#0000#, 16, true, "start of block");
                 check_flash_range(16#FFF0#, 16, true, "end of block");
+            elsif run("hw_grant_alone_serves_espi") then
+                -- Without either grant a request waits, untouched
+                write_bus(net, bus_handle, To_StdLogicVector(SPICR_OFFSET + 16#100#, bus_handle.p_address_length),
+                          x"00000000");
+                wait_until_idle(net, bus_handle);
+                fill_pattern(net, flash);
+                put_cmd(16#3000#, kind_read, 8);
+                wait for 20 us;
+                check_equal(data_rempty, '1', "Expected no data without a grant");
+                read_bus(net, bus_handle, To_StdLogicVector(SPISR_OFFSET + 16#100#, bus_handle.p_address_length), spisr);
+                check_equal((spisr and SPISR_ESPI_OWNS_FLASH_MASK) = x"00000000", true,
+                            "Expected SPISR to report the eSPI path not owning the flash");
+                -- The hardware grant on its own is enough, with SPICR left clear
+                espi_owns_flash_hw <= '1';
+                for i in 0 to 7 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#3000# + i), "read byte " & integer'image(i));
+                end loop;
+                read_bus(net, bus_handle, To_StdLogicVector(SPISR_OFFSET + 16#100#, bus_handle.p_address_length), spisr);
+                check_equal((spisr and SPISR_ESPI_OWNS_FLASH_MASK) /= x"00000000", true,
+                            "Expected SPISR to report the eSPI path owning the flash");
+
+            elsif run("owner_change_waits_for_the_transaction") then
+                -- Dropping the grant part way through a read must not split it
+                write_bus(net, bus_handle, To_StdLogicVector(SPICR_OFFSET + 16#100#, bus_handle.p_address_length),
+                          x"00000000");
+                wait_until_idle(net, bus_handle);
+                espi_owns_flash_hw <= '1';
+                fill_pattern(net, flash);
+                put_cmd(16#4000#, kind_read, 200);
+                get_byte(data);
+                check_equal(data, pattern_byte(16#4000#), "read byte 0");
+                espi_owns_flash_hw <= '0';
+                for i in 1 to 199 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#4000# + i), "read byte " & integer'image(i));
+                end loop;
+                wait for 2 us;
+                read_bus(net, bus_handle, To_StdLogicVector(SPISR_OFFSET + 16#100#, bus_handle.p_address_length), spisr);
+                check_equal((spisr and SPISR_ESPI_OWNS_FLASH_MASK) = x"00000000", true,
+                            "Expected ownership to go back once the read was over");
+
             elsif run("espi_erase_unsupported_size") then
                 fill_pattern(net, flash);
                 put_cmd(16#2000#, kind_erase, erase_32k);

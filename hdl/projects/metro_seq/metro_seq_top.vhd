@@ -401,6 +401,8 @@ architecture rtl of metro_seq_top is
     signal versal_pcie : versal_pcie_t;
     signal versal_held_in_reset : std_logic;
     signal flash_owned_by_seq : std_logic;
+    signal flash_to_espi : std_logic;
+    signal versal_flash_espi_owns : std_logic;
     signal nic_rails_up : std_logic;
     signal sp5_versal_cha_prsnt_l : std_logic;
     signal sp5_versal_chb_prsnt_l : std_logic;
@@ -689,6 +691,7 @@ begin
         spi_nor_dat_o => vercel_flash_io_o,
         spi_nor_dat_oe => vercel_flash_io_oe,
         spi_nor_bus_enable => versal_flash_bus_enable,
+        spi_nor_espi_owns_flash => versal_flash_espi_owns,
         hash_cmd_fifo_rdata => hash_flash_cmd_rdata,
         hash_cmd_fifo_rdack => hash_flash_cmd_rdack(1),
         hash_cmd_fifo_rempty => hash_flash_cmd_rempty(1),
@@ -878,6 +881,7 @@ begin
         nic_seq_pins => nic_seq_pins_unused,
         versal_held_in_reset => versal_held_in_reset,
         flash_owned_by_seq => flash_owned_by_seq,
+        flash_to_espi => flash_to_espi,
         nic_rails_up => nic_rails_up,
         sp5_nic_prsnt_l => sp5_versal_cha_prsnt_l,
         sp5_nic_chb_prsnt_l => sp5_versal_chb_prsnt_l,
@@ -1006,9 +1010,11 @@ begin
         ctrl_axi_if => responders_8b(VERSAL_FLASH_CTRL_RESP_IDX),
         versal_held_in_reset => versal_held_in_reset,
         flash_owned_by_seq => flash_owned_by_seq,
+        flash_to_espi => flash_to_espi,
         flash_qspi_mux_sel => fpga1_to_vercel_flash_qspi_mux_sel,
         flash_qspi_mux_en_l => open, --fpga1_to_vercel_flash_qspi_mux_en_l,
-        flash_bus_enable => versal_flash_bus_enable
+        flash_bus_enable => versal_flash_bus_enable,
+        espi_owns_flash => versal_flash_espi_owns
     );
 
     fpga1_to_vercel_flash_qspi_mux_en_l <= '0';
