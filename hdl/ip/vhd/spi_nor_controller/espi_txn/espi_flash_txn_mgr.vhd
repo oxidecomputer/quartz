@@ -48,6 +48,9 @@ entity espi_flash_txn_mgr is
         -- High while the bytes the engine shifts out have to come from the
         -- eSPI write payload FIFO rather than the hubris TX FIFO.
         tx_from_espi : out std_logic;
+        -- Between eSPI commands: nothing taken from the command FIFO that has
+        -- not been finished.
+        txn_idle : out std_logic;
         -- espi data fifo interface
         espi_flash_data_byte : out std_logic_vector(7 downto 0);
         flash_data_byte_write : out std_logic;
@@ -158,6 +161,7 @@ begin
                              '1' when r.state = report_status else
                              '0';
     espi_cmd_fifo_rdack <= r.cmd_rdack;
+    txn_idle <= '1' when r.state = idle else '0';
 
     -- state machine that will pull 2 words from the command fifo.
     -- Word1: is the 32bit SP5 address, which we'll adjust to be the flash address when we pop it

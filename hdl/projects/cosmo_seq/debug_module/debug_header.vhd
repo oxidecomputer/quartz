@@ -48,6 +48,11 @@ entity debug_header is
         espi0_sp5_to_fpga_cs_l: in std_logic;
         espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
         espi_resp_csn: in std_logic;
+        espi1_sp5_to_fpga_clk : in std_logic;
+        espi1_sp5_to_fpga_cs_l : in std_logic;
+        espi1_sp5_to_fpga1_dat : in std_logic_vector(3 downto 0);
+        espi1_resp_csn : in std_logic;
+        espi1_alert_l : in std_logic;
         -- Mux select signals
         mux1_sel_pins : in std_logic_vector(1 downto 0); -- mux1 sel pins debug output to pins   
         mux2_sel_pins : in std_logic_vector(1 downto 0); -- mux2 sel pins debug output to pins
@@ -88,6 +93,11 @@ architecture rtl of debug_header is
     signal espi0_sp5_to_fpga_cs_l_int : std_logic;
     signal espi0_sp5_to_fpga1_dat_int : std_logic_vector(3 downto 0);
     signal espi_resp_csn_int : std_logic;
+    signal espi1_sp5_to_fpga_clk_int : std_logic;
+    signal espi1_sp5_to_fpga_cs_l_int : std_logic;
+    signal espi1_sp5_to_fpga1_dat_int : std_logic_vector(3 downto 0);
+    signal espi1_resp_csn_int : std_logic;
+    signal espi1_alert_l_int : std_logic;
     signal dbg_1v8_ctrl_200 : dbg_1v8_ctrl_type;
     signal fpga1_spare_reg : std_logic_vector(7 downto 0);
     signal nic_dbg_pins_int : nic_debug_if;
@@ -125,6 +135,11 @@ sample_reg: process(clk_200m, reset_200m)
             espi0_sp5_to_fpga_cs_l_int <= espi0_sp5_to_fpga_cs_l;
             espi0_sp5_to_fpga1_dat_int <= espi0_sp5_to_fpga1_dat;
             espi_resp_csn_int <= espi_resp_csn;
+            espi1_sp5_to_fpga_clk_int <= espi1_sp5_to_fpga_clk;
+            espi1_sp5_to_fpga_cs_l_int <= espi1_sp5_to_fpga_cs_l;
+            espi1_sp5_to_fpga1_dat_int <= espi1_sp5_to_fpga1_dat;
+            espi1_resp_csn_int <= espi1_resp_csn;
+            espi1_alert_l_int <= espi1_alert_l;
             nic_dbg_pins_int <= nic_dbg_pins;
             sp5_debug2_pin_int <= sp5_debug2_pin;
             mux1_sel_int <= mux1_sel_pins;
@@ -147,7 +162,7 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
             if dbg_1v8_ctrl_200.pins5_4 /= NONE then
                 fpga1_spare_v1p8(5 downto 4) <= fpga1_spare_reg(5 downto 4);
             else
-                fpga1_spare_v1p8(4 downto 4) <= (others => 'Z');
+                fpga1_spare_v1p8(5 downto 4) <= (others => 'Z');
             end if;
             if dbg_1v8_ctrl_200.pins3_2 /= NONE then
                 fpga1_spare_v1p8(3 downto 2) <= fpga1_spare_reg(3 downto 2);
@@ -183,6 +198,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when ESPI_BUS =>
                     fpga1_spare_reg(7) <= espi0_sp5_to_fpga_clk_int;
                     fpga1_spare_reg(6) <= espi0_sp5_to_fpga_cs_l_int;
+                when ESPI1_BUS =>
+                    fpga1_spare_reg(7) <= espi1_sp5_to_fpga_clk_int;
+                    fpga1_spare_reg(6) <= espi1_sp5_to_fpga_cs_l_int;
                 when SP_CONSOLE_BUS =>
                     fpga1_spare_reg(7) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(6) <= uart0_sp_to_fpga1_dat_int;
@@ -238,6 +256,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when ESPI_BUS =>
                     fpga1_spare_reg(5) <= espi0_sp5_to_fpga1_dat_int(1);
                     fpga1_spare_reg(4) <= espi0_sp5_to_fpga1_dat_int(0);
+                when ESPI1_BUS =>
+                    fpga1_spare_reg(5) <= espi1_sp5_to_fpga1_dat_int(1);
+                    fpga1_spare_reg(4) <= espi1_sp5_to_fpga1_dat_int(0);
                 when SP_CONSOLE_BUS =>
                     fpga1_spare_reg(5) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(4) <= uart0_sp_to_fpga1_dat_int;
@@ -292,6 +313,12 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when ESPI_BUS =>
                     fpga1_spare_reg(3) <= espi_resp_csn;
                     fpga1_spare_reg(2) <= '0'; -- Unused in this case
+                when ESPI1_BUS =>
+                    fpga1_spare_reg(3) <= espi1_resp_csn_int;
+                    -- eSPI1 has a dedicated ALERT# pin, which the FPGA only
+                    -- listens to; seeing what the SP5 end does with it is
+                    -- the point of putting it here.
+                    fpga1_spare_reg(2) <= espi1_alert_l_int;
                 when SP_CONSOLE_BUS =>
                     fpga1_spare_reg(3) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(2) <= uart0_sp_to_fpga1_dat_int;
@@ -344,6 +371,9 @@ hdr_dbg_reg_1v8: process(clk_200m, reset_200m)
                 when ESPI_BUS =>
                     fpga1_spare_reg(1) <= espi0_sp5_to_fpga1_dat_int(3);
                     fpga1_spare_reg(0) <= espi0_sp5_to_fpga1_dat_int(2);
+                when ESPI1_BUS =>
+                    fpga1_spare_reg(1) <= espi1_sp5_to_fpga1_dat_int(3);
+                    fpga1_spare_reg(0) <= espi1_sp5_to_fpga1_dat_int(2);
                 when SP_CONSOLE_BUS =>
                     fpga1_spare_reg(1) <= uart1_fpga1_to_sp_dat_int;
                     fpga1_spare_reg(0) <= uart0_sp_to_fpga1_dat_int;

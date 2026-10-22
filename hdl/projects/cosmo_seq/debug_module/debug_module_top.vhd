@@ -66,6 +66,12 @@ entity debug_module_top is
         espi0_sp5_to_fpga_cs_l: in std_logic;
         espi0_sp5_to_fpga1_dat: in std_logic_vector(3 downto 0);
         espi_resp_csn: in std_logic;
+        -- eSPI1. A board without one leaves these idle.
+        espi1_sp5_to_fpga_clk : in std_logic := '0';
+        espi1_sp5_to_fpga_cs_l : in std_logic := '1';
+        espi1_sp5_to_fpga1_dat : in std_logic_vector(3 downto 0) := (others => '1');
+        espi1_resp_csn : in std_logic := '1';
+        espi1_alert_l : in std_logic := '1';
         --T6 signals
         nic_dbg_pins : view nic_debug_seq_ss'converse;
 
@@ -137,6 +143,11 @@ begin
         mux2_sel_pins => mux2_sel,
         mux3_sel_pins => mux3_sel,
         espi_resp_csn => espi_resp_csn,
+        espi1_sp5_to_fpga_clk => espi1_sp5_to_fpga_clk,
+        espi1_sp5_to_fpga_cs_l => espi1_sp5_to_fpga_cs_l,
+        espi1_sp5_to_fpga1_dat => espi1_sp5_to_fpga1_dat,
+        espi1_resp_csn => espi1_resp_csn,
+        espi1_alert_l => espi1_alert_l,
         nic_dbg_pins => nic_dbg_pins,
         sp5_debug2_pin => sp5_debug2_pin,
         fpga1_spare_v1p8 => fpga1_spare_v1p8
@@ -252,6 +263,11 @@ begin
                             dbg_1v8_ctrl.pins5_4 <= ESPI_BUS;
                             dbg_1v8_ctrl.pins3_2 <= ESPI_BUS;
                             dbg_1v8_ctrl.pins1_0 <= ESPI_BUS;
+                        elsif dbg_convenience.espi1_dbg_x4_en then
+                            dbg_1v8_ctrl.pins7_6 <= ESPI1_BUS;
+                            dbg_1v8_ctrl.pins5_4 <= ESPI1_BUS;
+                            dbg_1v8_ctrl.pins3_2 <= ESPI1_BUS;
+                            dbg_1v8_ctrl.pins1_0 <= ESPI1_BUS;
                         elsif dbg_convenience.nic_seq_en then
                             dbg_1v8_ctrl.pins7_6 <= NIC_SEQUENCER;
                             dbg_1v8_ctrl.pins5_4 <= NIC_SEQUENCER;

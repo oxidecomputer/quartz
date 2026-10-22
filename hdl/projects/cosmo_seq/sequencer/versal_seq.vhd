@@ -72,6 +72,9 @@ entity versal_seq is
         -- side of the mux: for a measurement of the image, and once the
         -- Versal has booted so the SP5 can reach the flash over eSPI.
         flash_owned_by_seq : out std_logic;
+        -- The Versal has booted and is done with its flash, which from here
+        -- on belongs to the SP5 over eSPI1.
+        flash_to_espi : out std_logic;
         -- High from the moment the last group has come up good until the
         -- rails are next taken down, by request or by a fault. Drops at the
         -- start of a power-down, before the rails themselves do.
@@ -206,6 +209,7 @@ begin
     sp5_cha_prsnt_l <= '0' when versal_pcie.cha.prsnt_l = '0' and r.state = DONE else '1';
     sp5_chb_prsnt_l <= '0' when versal_pcie.chb.prsnt_l = '0' and r.state = DONE else '1';
     flash_owned_by_seq <= '1' when hash_owns_flash = '1' or r.state = DONE else '0';
+    flash_to_espi <= '1' when r.state = DONE else '0';
 
     -- What POR_B at the pin is interlocked with, whoever is driving it: every
     -- rail has been through its good check and every one of them is good now.

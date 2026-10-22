@@ -284,10 +284,21 @@ begin
                 check(crc_ok, "erase completion CRC Check failed");
                 check_equal(cycle_type, unsuccessful_no_data_only, "unsupported erase completion cycle type");
                 check_equal(length_field, std_logic_vector'(x"000"), "unsupported erase completion length");
+            elsif run("write_enable_resets_set") then
+                -- This harness's target is built with writes allowed, so the
+                -- bit comes out of reset set and the host can write unaided.
+                read_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.CONTROL_OFFSET, bus_handle.p_address_length),
+                         data_32);
+                check_equal(data_32 and espi_regs_pkg.CONTROL_FLASH_WRITE_ENABLE_MASK,
+                            espi_regs_pkg.CONTROL_FLASH_WRITE_ENABLE_MASK,
+                            "Expected flash_write_enable set out of reset on a write-capable build");
             elsif run("write_refused_by_register") then
-                -- Channel up but the write enable bit left at its reset
-                -- value: writes and erases are answered, unsuccessfully, and
-                -- the flash is untouched.
+                -- Channel up but the SP has cleared the write enable bit:
+                -- writes and erases are answered, unsuccessfully, and the
+                -- flash is untouched.
+                write_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.CONTROL_OFFSET, bus_handle.p_address_length),
+                          x"00000000");
+                wait_until_idle(net, bus_handle);
                 flash_cap_reg.flash_channel_enable := '1';
                 set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
                 check(crc_ok, "Set Config CRC Check failed");

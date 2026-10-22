@@ -88,6 +88,7 @@ entity sp5_sequencer is
         versal_held_in_reset : out std_logic;
         -- True while the sequencer wants the boot flash on the FPGA side
         flash_owned_by_seq : out std_logic;
+        flash_to_espi : out std_logic;
         -- Hash engine hardware request for the pre-boot measurement
         hash_req : out std_logic;
         hash_ack : in std_logic := '0';
@@ -412,6 +413,7 @@ begin
         nic_hash_status <= (hash_sm => IDLE, others => '0');
         versal_held_in_reset <= '0';
         flash_owned_by_seq <= '0';
+        flash_to_espi <= '0';
         nic_rails_up <= nic_power_ok;
         sp5_nic_prsnt_l <= '0';
         sp5_nic_chb_prsnt_l <= '0';
@@ -457,6 +459,7 @@ begin
             versal_dbg_pins => nic_dbg_pins,
             versal_held_in_reset => versal_held_in_reset,
             flash_owned_by_seq => flash_owned_by_seq,
+            flash_to_espi => flash_to_espi,
             rails_up => nic_rails_up,
             sp5_cha_prsnt_l => sp5_nic_prsnt_l,
             sp5_chb_prsnt_l => sp5_nic_chb_prsnt_l,

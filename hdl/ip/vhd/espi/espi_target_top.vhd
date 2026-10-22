@@ -271,7 +271,8 @@ begin
     -- system (axi-lite) register block
    espi_sys_regs_inst: entity work.espi_regs
     generic map(
-       POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED
+       POST_CODE_BUFFER_ENABLED => POST_CODE_BUFFER_ENABLED,
+       FLASH_WRITES_ALLOWED => FLASH_WRITES_ALLOWED
     )
     port map(
        clk => clk,

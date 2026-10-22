@@ -56,6 +56,10 @@ addrmap versal_flash_regs {
             desc = "Live readback of whether the sequencer is holding the Versal
             in reset, i.e. whether a request would be granted.";
         } versal_held_in_reset[1] = 0;
+        field {
+            desc = "Set while the eSPI1 target owns the flash: the Versal has booted and the
+            SP has not taken the mux by hand with request or to_fpga.";
+        } espi_owns_flash[1] = 0;
     } mux_status;
 
 };

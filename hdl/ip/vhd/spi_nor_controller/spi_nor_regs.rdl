@@ -36,6 +36,12 @@ addrmap spi_nor_regs {
         desc = "";
         default sw = r;
         field {
+            desc = "The eSPI path owns the flash right now: SPICR.sp5_owns_flash, or the design's
+            own hardware grant where it has one (metro's Versal flash, once the Versal has
+            booted). While set, commands issued through these registers do not reach the flash.
+            Changes only between transactions.";
+        } espi_owns_flash[31:31] =  0;
+        field {
             desc = "Show used FIFO words in TX_FIFO (word = 32bits/4 bytes),
             max of 256 bytes, so 64 words";
         } tx_used_wds[30:24] =  0;

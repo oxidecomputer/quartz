@@ -36,7 +36,10 @@ addrmap espi_regs {
             desc = "Allow the host to write and erase the flash over the eSPI flash
             channel. Only has effect on a build whose FLASH_WRITES_ALLOWED generic is
             set; elsewhere writes are refused regardless. A refused write or erase is
-            answered with an unsuccessful completion.";
+            answered with an unsuccessful completion. Resets to 1 on a build with
+            FLASH_WRITES_ALLOWED set (metro's eSPI1), so the host can write without the
+            SP doing anything; the SP clears it to lock writes out. The reset value
+            below is the read-only build's.";
         } flash_write_enable[4:4] =  0;
         field {
             desc = "Set to one to reset the command FIFO. Cleared by hardware after reset.";

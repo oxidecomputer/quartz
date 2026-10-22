@@ -35,6 +35,8 @@ entity versal_flash_subsystem is
         versal_held_in_reset : in std_logic;
         -- From the sequencer: it wants the flash on the FPGA side itself
         flash_owned_by_seq : in std_logic;
+        -- The Versal has booted; its flash goes to the SP5 over eSPI1
+        flash_to_espi : in std_logic;
 
         -- Mux control pins
         flash_qspi_mux_sel : out std_logic;
@@ -44,7 +46,9 @@ entity versal_flash_subsystem is
         -- to spi_nor_top's bus_enable, which parks the pins at the IOB flops
         -- when low; muxing the pins here instead would pull those flops out
         -- of the IOBs.
-        flash_bus_enable : out std_logic
+        flash_bus_enable : out std_logic;
+        -- To the eSPI1 wrapper's spi_nor: the eSPI path owns the flash
+        espi_owns_flash : out std_logic
     );
 end entity;
 
@@ -55,6 +59,7 @@ architecture rtl of versal_flash_subsystem is
     signal rdata : std_logic_vector(31 downto 0);
     signal mux_ctrl : mux_ctrl_type;
     signal mux_en : std_logic;
+    signal espi_owns : std_logic;
     signal mux_status : mux_status_type;
     signal granted : std_logic;
 
@@ -80,12 +85,19 @@ begin
     -- losing the grant mid-transaction stops driving within a clock.
     flash_bus_enable <= granted;
 
+    -- Once the Versal has booted, the host has the flash over eSPI1 without
+    -- anyone having to ask. Taking the mux by hand is how the SP gets it back
+    -- for its register path, to write a new image.
+    espi_owns <= flash_to_espi and not (mux_ctrl.request or mux_ctrl.to_fpga);
+    espi_owns_flash <= espi_owns;
+
     mux_status <= (
         granted => granted,
         mux_sel => not granted,
         mux_en_l => not mux_en,
         versal_held_in_reset => versal_held_in_reset,
-        seq_owned => flash_owned_by_seq
+        seq_owned => flash_owned_by_seq,
+        espi_owns_flash => espi_owns
     );
 
     axil_target_txn_inst: entity work.axil_target_txn

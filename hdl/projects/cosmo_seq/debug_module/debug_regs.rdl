@@ -131,6 +131,7 @@ addrmap debug_regs {
             mux2_sel = 8'h0d {desc = "Mux2 sel pins debug output to pins";};
             mux3_sel = 8'h0e {desc = "Mux3 sel pins debug output to pins";};
             i2c_sp5_sec_bus = 8'h0f {desc = "SP5 -> FPGA sec i2c bus to pins";};
+            espi1_bus = 8'h10 {desc = "SP5 -> eSPI1 bus to pins, laid out as espi_bus with ALERT_L on pin 2";};
         };
         field {
             desc = "Selects which debug output is sent to the 1v8 debug header in sets of two pins.
@@ -165,6 +166,10 @@ addrmap debug_regs {
     reg {
         name = "Debug Convenience";
          field {
+            desc = "convenience bit for setting up x4 espi1 debug out: CLK, CS_L, DAT1, DAT0, response CS_L,
+            ALERT_L, DAT3, DAT2 on 1v8 debug header pins 7..0. Hw clears";
+        } espi1_dbg_x4_en[3:3] = 0;
+        field {
             desc = "convenience bit for setting up T6 sequencing debug out. This uses 1v8 debug header pins 7..0. Hw clears";
         } nic_seq_en[2:2] = 0;
         field {
