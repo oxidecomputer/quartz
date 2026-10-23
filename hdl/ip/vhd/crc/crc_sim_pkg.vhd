@@ -18,6 +18,8 @@ library vunit_lib;
     context vunit_lib.com_context;
     context vunit_lib.vc_context;
 
+use work.crc16_pkg.all;
+
 package crc_sim_pkg is
     -- Non-parallel, non-synth CRC8 ATM function for testbench use
     impure function crc8_atm (
@@ -29,6 +31,13 @@ package crc_sim_pkg is
     impure function crc8_autostar (
           data: queue_t;
           final_xor_value: std_logic_vector(7 downto 0) := (others => '0');
+          gen_invalid_crc: boolean := false
+    ) return std_logic_vector;
+
+    -- CRC-16/CCITT-FALSE reference for testbench use, built on the same
+    -- crc16_pkg function the RTL uses. Seed 0xFFFF, MSB first, no final xor.
+    impure function crc16_ccitt (
+          data: queue_t;
           gen_invalid_crc: boolean := false
     ) return std_logic_vector;
 
@@ -98,6 +107,23 @@ package body crc_sim_pkg is
             last_q := not last_q;
         end if;
         return last_q xor final_xor_value;
+    end function;
+
+    impure function crc16_ccitt (
+        data: queue_t;
+        gen_invalid_crc: boolean := false
+    ) return std_logic_vector is
+        -- create a copy so we don't destroy the input queue here
+        constant crc_queue : queue_t := copy(data);
+        variable crc : crc16_t := crc16_init;
+    begin
+        while not is_empty(crc_queue) loop
+            crc := crc16_next(crc, To_StdLogicVector(pop_byte(crc_queue), 8));
+        end loop;
+        if gen_invalid_crc then
+            crc := not crc;
+        end if;
+        return crc;
     end function;
 
 end package body;
