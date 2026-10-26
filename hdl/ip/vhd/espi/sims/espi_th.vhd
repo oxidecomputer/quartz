@@ -34,6 +34,7 @@ architecture th of espi_th is
     signal   io         : std_logic_vector(3 downto 0);
     signal   io_o       : std_logic_vector(3 downto 0);
     signal   io_oe      : std_logic_vector(3 downto 0);
+    signal   alert_l    : std_logic;
     constant qspi_actor : qspi_vc_t := new_qspi_vc("espi_vc");
 
     signal flash_cfifo_data   : std_logic_vector(31 downto 0);
@@ -116,6 +117,7 @@ begin
             io                 => io,
             io_o               => io_o,
             io_oe              => io_oe,
+            alert_l            => alert_l,
             axi_if             => axi_if,
             flash_cfifo_data   => flash_cfifo_data,
             flash_cfifo_write  => flash_cfifo_write,

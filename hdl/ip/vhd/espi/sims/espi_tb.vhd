@@ -38,6 +38,8 @@ begin
 
     bench: process
         alias    sim_reset       is <<signal th.reset : std_logic>>;
+        alias    alert_l         is <<signal th.alert_l : std_logic>>;
+        alias    target_io_oe    is <<signal th.io_oe : std_logic_vector(3 downto 0)>>;
         variable msg_target      : actor_t;
         variable status          : std_logic_vector(15 downto 0);
         variable response_code   : std_logic_vector(7 downto 0);
@@ -159,6 +161,64 @@ begin
                 -- check(crc_ok, "CRC Check failed");
                 -- -- Expect the reset value of gen-cap here
                 -- check_equal(data_32, exp_data_32, "General Capabilities did not match expected value");
+            elsif run("alert_pin_mode") then
+                -- The host picks the dedicated ALERT# pin: the target must
+                -- announce a completion there, and leave IO[1] alone between
+                -- transactions.
+                check_equal(alert_l, '1', "Expected ALERT# idle out of reset");
+                get_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "get_config CRC Check failed");
+                data_32 := data_32 or GENERAL_CAPABILITIES_ALERT_MODE_MASK;
+                set_config(net, GENERAL_CAPABILITIES_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "set_config CRC Check failed");
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+
+                put_flash_read(net, X"03020000", 16, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                status_rec := unpack(status);
+                if status_rec.flash_c_avail = '0' then
+                    wait until alert_l = '0' for 200 us;
+                end if;
+                check_equal(alert_l, '0', "Expected ALERT# asserted with a completion waiting");
+                -- and IO[1] not pulled low as an in-band alert meanwhile
+                wait for 2 us;
+                check_equal(target_io_oe, std_logic_vector'("0000"),
+                            "Expected the target not to drive IO between transactions in pin mode");
+
+                get_flash_c(net, 16, my_queue, response_code, status, crc_ok);
+                check(crc_ok, "get_flash_c CRC Check failed");
+                for j in 0 to 15 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), fake_flash_pattern(16#03020000# + j),
+                                "Flash byte " & integer'image(j));
+                end loop;
+                -- Taking the completion changes the status again, which the
+                -- target alerts for like any other change; a GET_STATUS, as
+                -- a host does on an alert, brings the two back in line.
+                wait for 2 us;
+                if alert_l = '0' then
+                    get_status(net, response_code, status, crc_ok);
+                    check(crc_ok, "get_status CRC Check failed");
+                end if;
+                wait for 2 us;
+                check_equal(alert_l, '1', "Expected ALERT# released once the host has seen the status");
+
+            elsif run("in_band_mode_leaves_the_pin_idle") then
+                -- The default: alerts stay on IO[1] and the pin never moves
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                put_flash_read(net, X"03020000", 16, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                status_rec := unpack(status);
+                if status_rec.flash_c_avail = '0' then
+                    wait_for_alert(net);
+                end if;
+                check_equal(alert_l, '1', "Expected ALERT# idle in in-band mode");
+                get_flash_c(net, 16, my_queue, response_code, status, crc_ok);
+                check(crc_ok, "get_flash_c CRC Check failed");
+
             elsif run("check_alert_works") then
                 -- Enable the flash channel
                 flash_cap_reg.flash_channel_enable := '1';
