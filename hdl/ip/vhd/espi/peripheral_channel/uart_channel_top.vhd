@@ -91,9 +91,12 @@ begin
     -- on this interface
     np_free <= '0';
     np_avail <= '0';
-    pc_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
+    -- Compared rather than subtracted: in showahead mode the used count can
+    -- read one past fifo_depth (the output stage counts), and depth minus that
+    -- wraps to a huge "free" in the count's width.
+    pc_free <= '1' when rx_wusedwds <= fifo_depth - max_msg_size else '0';
     pc_avail <= '0';
-    oob_free <= '1' when (fifo_depth - rx_wusedwds) >= max_msg_size else '0';
+    oob_free <= '1' when rx_wusedwds <= fifo_depth - max_msg_size else '0';
     oob_avail <= '1' when orphan_state = NOT_MASKED else '0';
 
     host_to_sp_espi.ready <= not rx_wfull;

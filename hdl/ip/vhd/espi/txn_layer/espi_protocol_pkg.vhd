@@ -53,10 +53,13 @@ package espi_protocol_pkg is
     constant success_with_data_only : std_logic_vector(7 downto 0) := "00001111";
     constant unsuccessful_no_data_only : std_logic_vector(7 downto 0) := "00001100";
     -- SAFS flash erase: the length field of the request carries the erase
-    -- block size as a code rather than a byte count.
-    constant flash_erase_4k : std_logic_vector(11 downto 0) := x"001";
-    constant flash_erase_32k : std_logic_vector(11 downto 0) := x"002";
-    constant flash_erase_64k : std_logic_vector(11 downto 0) := x"003";
+    -- block size as a code rather than a byte count. These are the target
+    -- attached codes from the spec's flash packet format table; the
+    -- controller attached (MAFS) encoding is different and starts at 1.
+    constant flash_erase_4k : std_logic_vector(11 downto 0) := x"000";
+    constant flash_erase_32k : std_logic_vector(11 downto 0) := x"001";
+    constant flash_erase_64k : std_logic_vector(11 downto 0) := x"002";
+    constant flash_erase_128k : std_logic_vector(11 downto 0) := x"003";
 
     -- Header Indices for general eSPI packages
     constant cycle_type_idx : integer := 0;
