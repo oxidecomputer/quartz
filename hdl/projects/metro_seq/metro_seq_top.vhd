@@ -52,7 +52,7 @@ entity metro_seq_top is
         espi0_sp5_to_fpga1_clk : in std_logic;
         espi0_sp5_to_fpga1_cs_l : in std_logic;
         espi0_sp5_to_fpga1_dat : inout std_logic_vector(3 downto 0);
-        espi1_fpga1_to_sp5_alert_l : in std_logic;
+        espi1_fpga1_to_sp5_alert_l : in std_logic;  -- in-band alerting; see the pin swap in metro_seq_pins.xdc
         espi1_sp5_to_fpga1_clk : in std_logic;
         espi1_sp5_to_fpga1_clk_2 : in std_logic;
         espi1_sp5_to_fpga1_cs_l : in std_logic;
@@ -428,6 +428,7 @@ architecture rtl of metro_seq_top is
     signal vercel_flash_io_oe : std_logic_vector(3 downto 0);
     signal espi_resp_csn : std_logic;
     signal espi1_resp_csn : std_logic;
+    signal espi1_cs_l_gated : std_logic;
     signal hp_int_n : std_logic;
 
     signal fpga1_to_pcie_clk_buff_rsw_oe_l_int : std_logic;
@@ -506,6 +507,12 @@ begin
     fpga1_to_bp_buff_output_en_l <= '0'; -- This buffer has to be enabled to see any BP PCIe signals
     -- Enable various buffers when we're in A0:
     fpga1_espi0_cs_l_buff_oe_en_l <= '0' when sp5_seq_pins.pwr_good else 'Z';
+    -- eSPI1's chip select runs straight to us with no buffer, and with the
+    -- SP5 unpowered it sits low, which would look like one endless
+    -- transaction. Hold it deasserted until the SP5 is up, as eSPI0's buffer
+    -- does in hardware, so the link starts from a clean frame. The debug
+    -- header still shows the raw pin.
+    espi1_cs_l_gated <= espi1_sp5_to_fpga1_cs_l when sp5_seq_pins.pwr_good else '1';
     fpga1_to_sp5_apml_xltr_en <= sp5_seq_pins.pwr_good;
     fpga1_to_m2_apml_xltr_en <= sp5_seq_pins.pwr_good;
     fpga1_uart0_buff_oe_en_l <= '0' when a0_ok else '1';
@@ -676,12 +683,13 @@ begin
         clk_200m => clk_200m,
         reset_200m => reset_200m,
         espi_axi_if => responders_15b(ESPI1_RESP_IDX),
-        espi_csn => espi1_sp5_to_fpga1_cs_l,
+        espi_csn => espi1_cs_l_gated,
         espi_clk => espi1_sp5_to_fpga1_clk,
         espi_dat => espi1_sp5_to_fpga1_dat,
         espi_dat_o => espi1_io_o,
         espi_dat_oe => espi1_io_oe,
         response_csn => espi1_resp_csn,
+        espi_alert_l => open,
         ipcc_uart_from_espi => espi1_uart_from_axi_st,
         ipcc_uart_to_espi => espi1_uart_to_axi_st,
         spinor_axi_if => responders_8b(VERSAL_FLASH_RESP_IDX),

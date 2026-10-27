@@ -47,6 +47,12 @@ entity espi_target_top is
         io_o  : out   std_logic_vector(3 downto 0);
         io_oe : out   std_logic_vector(3 downto 0);
         response_csn : out std_logic;
+        -- ALERT#, for a host that selects the dedicated pin rather than the
+        -- in-band alert on IO[1] (general_capabilities.alert_mode). Low while
+        -- the target has a status change the host has not yet seen; high
+        -- otherwise, and always high in in-band mode. Leave open where the
+        -- pin is not wired.
+        alert_l : out std_logic;
         -- Interface out to the flash block
         -- Read Command FIFO
         flash_cfifo_data : out std_logic_vector(31 downto 0);
@@ -111,6 +117,7 @@ architecture rtl of espi_target_top is
     signal txn_csn : std_logic;
     signal alert_needed_fast : std_logic;
     signal alert_needed_slow : std_logic;
+    signal alert_pin_mode : boolean;
     signal qspi_mode_vec_slow : std_logic_vector(1 downto 0);
     signal qspi_mode_vec_fast : std_logic_vector(1 downto 0);
     signal wait_states_fast: std_logic_vector(3 downto 0);
@@ -221,7 +228,21 @@ begin
     );
 
 
-    alert_needed_slow <= '1' when alert_needed else '0';
+    -- One alert, on whichever line the host asked for. In pin mode IO[1] is
+    -- left alone between transactions: nobody is looking at it, and in dual
+    -- or quad mode the host may start driving it before an in-band alert
+    -- would have been released.
+    alert_pin_mode <= spec_regs.general_capabilities.alert_mode = '1';
+    alert_needed_slow <= '1' when alert_needed and not alert_pin_mode else '0';
+
+    alert_pin: process(clk, reset)
+    begin
+        if reset then
+            alert_l <= '1';
+        elsif rising_edge(clk) then
+            alert_l <= '0' when alert_needed and alert_pin_mode else '1';
+        end if;
+    end process;
     alert_sync: entity work.meta_sync
     generic map(
        stages => 1

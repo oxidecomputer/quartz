@@ -214,6 +214,37 @@ begin
                 check_equal((spisr and SPISR_ESPI_OWNS_FLASH_MASK) = x"00000000", true,
                             "Expected ownership to go back once the read was over");
 
+            elsif run("sp_register_path_after_grant_withdrawn") then
+                -- The metro workflow: the host has the flash through the
+                -- hardware grant, then the SP takes the mux by hand (which
+                -- withdraws the grant) and programs and reads the part over
+                -- its registers, with SPICR.sp5_owns_flash left clear.
+                write_bus(net, bus_handle, To_StdLogicVector(SPICR_OFFSET + 16#100#, bus_handle.p_address_length),
+                          x"00000000");
+                wait_until_idle(net, bus_handle);
+                fill_pattern(net, flash);
+                espi_owns_flash_hw <= '1';
+                put_cmd(16#5000#, kind_read, 4);
+                for i in 0 to 3 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#5000# + i), "host read byte " & integer'image(i));
+                end loop;
+                espi_owns_flash_hw <= '0';
+                wait for 1 us;
+                read_bus(net, bus_handle, To_StdLogicVector(SPISR_OFFSET + 16#100#, bus_handle.p_address_length), spisr);
+                check_equal((spisr and SPISR_ESPI_OWNS_FLASH_MASK) = x"00000000", true,
+                            "Expected the register path to own the flash once the grant is gone");
+                check_jedec_id(net);
+                check_flash_read(net, READ_DATA_4BYTE_OP, 0, 16#5000#, 16);
+                check_program_readback(net, flash, 16#6000#);
+                -- and handing it back works too
+                espi_owns_flash_hw <= '1';
+                put_cmd(16#5010#, kind_read, 4);
+                for i in 0 to 3 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#5010# + i), "host read again byte " & integer'image(i));
+                end loop;
+
             elsif run("espi_erase_unsupported_size") then
                 fill_pattern(net, flash);
                 put_cmd(16#2000#, kind_erase, erase_32k);

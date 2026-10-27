@@ -40,6 +40,9 @@ entity sp5_espi_flash_subsystem is
         espi_dat_o : out std_logic_vector(3 downto 0);
         espi_dat_oe : out std_logic_vector(3 downto 0);
         response_csn : out std_logic;  -- Used for saleae decoding since response is shifted by 2 clocks
+        -- eSPI ALERT#, for a port whose host uses the pin rather than the
+        -- in-band alert, see espi_target_top
+        espi_alert_l : out std_logic;
         ipcc_uart_from_espi : view axi_st_source;
         ipcc_uart_to_espi : view axi_st_source'converse;
         -- spi nor
@@ -219,6 +222,7 @@ begin
         io_o => espi_dat_o,
         io_oe => espi_dat_oe,
         response_csn => response_csn,
+        alert_l => espi_alert_l,
         flash_fifo_clear => flash_fifo_clear,
         flash_cfifo_data => flash_cfifo_data,
         flash_cfifo_write => flash_cfifo_write,
