@@ -37,12 +37,16 @@ set_property -dict { PACKAGE_PIN U4 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports {
 set_property -dict { PACKAGE_PIN Y3 IOSTANDARD LVCMOS18 } [get_ports { espi0_fpga1_to_sp5_alert_l }];
 set_property -dict { PACKAGE_PIN U1 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi0_sp5_to_fpga1_dat[2] }];
 set_property -dict { PACKAGE_PIN U2 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi0_sp5_to_fpga1_dat[3] }];
-set_property -dict { PACKAGE_PIN N3 IOSTANDARD LVCMOS18 } [get_ports { espi1_fpga1_to_sp5_alert_l }];
+# eSPI1 DAT1 and ALERT_L are swapped at the balls, as eSPI0's are (W3/Y3):
+# with in-band alerting the SP5 carries DAT1 on its ALERT_L pin, so our
+# dat[1] goes on the board's ESPI1 ALERT_L net (N3) and the alert port on its
+# DAT1 net (M4).
+set_property -dict { PACKAGE_PIN M4 IOSTANDARD LVCMOS18 } [get_ports { espi1_fpga1_to_sp5_alert_l }];
 set_property -dict { PACKAGE_PIN M1 IOSTANDARD LVCMOS18 } [get_ports { espi1_sp5_to_fpga1_clk }];
 set_property -dict { PACKAGE_PIN N4 IOSTANDARD LVCMOS18 } [get_ports { espi1_sp5_to_fpga1_clk_2 }];
 set_property -dict { PACKAGE_PIN M2 IOSTANDARD LVCMOS18 } [get_ports { espi1_sp5_to_fpga1_cs_l }];
 set_property -dict { PACKAGE_PIN M3 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi1_sp5_to_fpga1_dat[0] }];
-set_property -dict { PACKAGE_PIN M4 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi1_sp5_to_fpga1_dat[1] }];
+set_property -dict { PACKAGE_PIN N3 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi1_sp5_to_fpga1_dat[1] }];
 set_property -dict { PACKAGE_PIN L1 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi1_sp5_to_fpga1_dat[2] }];
 set_property -dict { PACKAGE_PIN K1 IOSTANDARD LVCMOS18 SLEW FAST } [get_ports { espi1_sp5_to_fpga1_dat[3] }];
 set_property -dict { PACKAGE_PIN Y1 IOSTANDARD LVCMOS18 } [get_ports { espi_sp5_to_fpga1_reset_l }];
