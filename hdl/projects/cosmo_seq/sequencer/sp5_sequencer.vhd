@@ -132,6 +132,8 @@ architecture rtl of sp5_sequencer is
     signal smerr_assert : std_logic;
     signal a0_faulted : std_logic;
     signal nic_faulted : std_logic;
+    signal a0_mapo_suppressed : std_logic;
+    signal nic_mapo_suppressed : std_logic;
     signal reg_alert_l : seq_power_alert_pins_t;
     signal sp5_seq_test_mask : sp5_seq_test_mask_type;
 
@@ -214,6 +216,8 @@ begin
         nic_overrides => nic_overrides,
         a0_faulted => a0_faulted,
         nic_faulted => nic_faulted,
+        a0_mapo_suppressed => a0_mapo_suppressed,
+        nic_mapo_suppressed => nic_mapo_suppressed,
         rails_en_rdbk => rails_en_rdbk,
         rails_pg_rdbk => rails_pg_rdbk,
         sp5_readbacks => sp5_readbacks,
@@ -301,6 +305,7 @@ begin
         a0_ok => a0_ok_int,
         a0_idle => a0_idle,
         a0_faulted => a0_faulted,
+        mapo_suppressed => a0_mapo_suppressed,
         sw_enable => power_ctrl.a0_en,
         raw_state => seq_raw_status,
         api_state => seq_api_status,
@@ -335,6 +340,7 @@ begin
             reset => reset_local,
             nic_idle => nic_idle,
             nic_faulted => nic_faulted,
+            mapo_suppressed => nic_mapo_suppressed,
             sw_enable => power_ctrl.a0_en,
             raw_state => nic_raw_status,
             api_state => nic_api_status,
@@ -446,6 +452,7 @@ begin
             reset => reset_local,
             versal_idle => nic_idle,
             versal_faulted => nic_faulted,
+            mapo_suppressed => nic_mapo_suppressed,
             sw_enable => power_ctrl.a0_en,
             raw_state => nic_raw_status,
             api_state => nic_api_status,

@@ -233,6 +233,20 @@ begin
                 test_a0hp_inhibit_powers_nic_down(net);
             elsif run("a0hp_inhibit_masks_perst_restart") then
                 test_a0hp_inhibit_masks_perst_restart(net, sp5_t6_perst_l);
+            elsif run("ignore_sp5_a0_fault_stays_up") then
+                test_ignore_sp5_rail_fault(net, grpa_v3p3_actor, "V3P3_SP5_A1", false);
+            elsif run("ignore_sp5_a0_late_group_fault_stays_up") then
+                test_ignore_sp5_rail_fault(net, find("grpc_vddcr_soc"), "VDDCR_SOC", false);
+            elsif run("ignore_sp5_ddr_bulk_fault_stays_up") then
+                test_ignore_sp5_rail_fault(net, ddr_abcdef_actor, "DDR_ABCDEF_HSC", false);
+            elsif run("ignore_sp5_nic_fault_stays_up") then
+                test_ignore_sp5_t6_rail_fault(net, nic_actor, RAIL_V1P5_NIC_A0HP);
+            elsif run("ignore_sp5_upstream_loss_stays_up") then
+                test_ignore_sp5_upstream_loss(net);
+            elsif run("ignore_sp5_test_mapo_stays_up") then
+                test_ignore_sp5_test_mapo(net);
+            elsif run("ignore_sp5_cleared_mid_fault_mapos") then
+                test_ignore_sp5_cleared_mid_fault(net, grpa_v3p3_actor);
             elsif run("nic_force_mapo") then
                 info("Starting normal A0 power sequence");
                 write_bus(net, bus_handle, To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length), POWER_CTRL_A0_EN_MASK);

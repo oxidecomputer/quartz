@@ -670,6 +670,29 @@ begin
             elsif run("mapo_fault_vddcr_soc") then
                 test_mapo_fault_injection(net, find("grpc_vddcr_soc"), "vddcr_soc");
 
+            elsif run("ignore_sp5_versal_fault_stays_up") then
+                test_ignore_sp5_rail_fault(net, find("versal_v0p88"), "v0p88", true);
+            elsif run("ignore_sp5_versal_late_group_fault_stays_up") then
+                test_ignore_sp5_rail_fault(net, find("versal_v1p4"), "v1p4", true);
+            elsif run("ignore_sp5_versal_fault_holds_por_b") then
+                -- Power stays, but the Versal is held in reset while a rail is
+                -- out and let go again once it is back
+                set_ignore_sp5(net, true);
+                power_up_to_nic_done(net);
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released once booted");
+                disable_power_good(net, find("versal_v1p1"));
+                wait for 1 us;
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted with the rail out");
+                check_states(net, DONE, DONE, "Versal rail out");
+                enable_power_good(net, find("versal_v1p1"));
+                wait for 1 us;
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released with the rail back");
+            elsif run("ignore_sp5_a0_fault_keeps_versal_up") then
+                test_ignore_sp5_rail_fault(net, find("grpb_v1p1_sp5"), "v1p1_sp5", false);
+            elsif run("ignore_sp5_versal_test_mapo_stays_up") then
+                test_ignore_sp5_test_mapo(net);
+            elsif run("ignore_sp5_versal_cleared_mid_fault_mapos") then
+                test_ignore_sp5_cleared_mid_fault(net, find("grpc_vddcr_soc"));
             elsif run("versal_mapo_fault_v0p8_vccint") then
                 test_versal_rail_mapo_fault_injection(net, find("versal_v0p8_vccint"), "v0p8_vccint");
             elsif run("versal_mapo_fault_v0p88") then
