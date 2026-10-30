@@ -66,6 +66,21 @@ architecture th of spi_nor_espi_th is
     -- Hardware grant of the flash to the eSPI client, driven by the testbench
     signal espi_owns_flash_hw : std_logic := '0';
 
+    -- The hash client's FIFOs: a command pair (address, byte count) in from
+    -- the testbench, bytes back out to it, the way hash_engine_top's would be
+    signal hash_cmd_wdata : std_logic_vector(31 downto 0) := (others => '0');
+    signal hash_cmd_write : std_logic := '0';
+    signal hash_data_rdata : std_logic_vector(7 downto 0);
+    signal hash_data_rdack : std_logic := '0';
+    signal hash_data_rempty : std_logic;
+    signal hash_cmd_fifo_rdata : std_logic_vector(31 downto 0);
+    signal hash_cmd_fifo_rdack : std_logic;
+    signal hash_cmd_fifo_rempty : std_logic;
+    signal hash_data_fifo_wdata : std_logic_vector(7 downto 0);
+    signal hash_data_fifo_write : std_logic;
+    -- How many bytes the hash client has been given so far
+    signal hash_bytes : natural := 0;
+
 begin
 
     clk   <= not clk after 4 ns;
@@ -169,6 +184,55 @@ begin
             rusedwds => open
         );
 
+    count_hash_bytes: process(clk)
+    begin
+        if rising_edge(clk) then
+            if hash_data_fifo_write = '1' then
+                hash_bytes <= hash_bytes + 1;
+            end if;
+        end if;
+    end process;
+
+    hash_cmd_fifo: entity work.dcfifo_xpm
+        generic map(
+            fifo_write_depth => 16,
+            data_width => 32,
+            showahead_mode => true
+        )
+        port map(
+            wclk => clk,
+            reset => reset,
+            write_en => hash_cmd_write,
+            wdata => hash_cmd_wdata,
+            wfull => open,
+            wusedwds => open,
+            rclk => clk,
+            rdata => hash_cmd_fifo_rdata,
+            rdreq => hash_cmd_fifo_rdack,
+            rempty => hash_cmd_fifo_rempty,
+            rusedwds => open
+        );
+
+    hash_data_fifo: entity work.dcfifo_xpm
+        generic map(
+            fifo_write_depth => 4096,
+            data_width => 8,
+            showahead_mode => true
+        )
+        port map(
+            wclk => clk,
+            reset => reset,
+            write_en => hash_data_fifo_write,
+            wdata => hash_data_fifo_wdata,
+            wfull => open,
+            wusedwds => open,
+            rclk => clk,
+            rdata => hash_data_rdata,
+            rdreq => hash_data_rdack,
+            rempty => hash_data_rempty,
+            rusedwds => open
+        );
+
     spi_nor_top_inst: entity work.spi_nor_top
         port map (
             clk                  => clk,
@@ -188,7 +252,12 @@ begin
             espi_data_fifo_write => espi_data_fifo_write,
             espi_wfifo_rdata     => espi_wfifo_rdata,
             espi_wfifo_rdack     => espi_wfifo_rdack,
-            espi_wfifo_rempty    => espi_wfifo_rempty
+            espi_wfifo_rempty    => espi_wfifo_rempty,
+            hash_cmd_fifo_rdata  => hash_cmd_fifo_rdata,
+            hash_cmd_fifo_rdack  => hash_cmd_fifo_rdack,
+            hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,
+            hash_data_fifo_wdata => hash_data_fifo_wdata,
+            hash_data_fifo_write => hash_data_fifo_write
         );
 
     flash: entity work.spi_nor_target_vc

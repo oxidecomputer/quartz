@@ -27,4 +27,56 @@ addrmap eSPI_Platform {
         } board[7:0] = 0x00;
 
     } board_id @0x800;
+
+    reg {
+        name = "NIC image hash control";
+        desc = "Metro only; reads as zero elsewhere. The FPGA measures the NIC's boot image
+        (sha3-256 over the range the SP has set in the hash engine) at every NIC power-up and
+        holds the NIC in reset until the host enables slot power. This register is the host's
+        handle on that measurement. Both bits are written with a 1 to act, 0 does nothing.";
+
+        field {
+            desc = "Set by hardware when a measurement has finished and nic_hash0..7 hold its
+            digest. Write 1 to clear it; nic_hash0..7 then read as zero until the next
+            measurement finishes.";
+            sw = rw;
+        } done[0:0] = 0;
+        field {
+            desc = "Write 1 to have the image measured again. Reads 1 while the request is
+            waiting (the NIC is being configured and has the flash) or the measurement is
+            running; hardware clears it when the measurement finishes, at which point done is
+            set. Writing while a measurement runs queues one more.";
+            sw = rw;
+        } rehash[1:1] = 0;
+    } nic_hash_ctrl @0x804;
+
+    // The digest is presented least significant word first, as the hash
+    // engine's own DIGEST registers are: nic_hash0 bits 7:0 are hash byte 0,
+    // the leftmost byte of the conventional hex string. All eight words read
+    // as zero unless nic_hash_ctrl.done is set.
+    reg nic_hash_word {
+        default sw = r;
+        default hw = w;
+
+        field {
+            desc = "32 bits of the digest";
+        } data[31:0] = 0;
+    };
+
+    nic_hash_word nic_hash0 @0x820;
+    nic_hash0->desc = "Digest bytes 0 to 3";
+    nic_hash_word nic_hash1 @0x824;
+    nic_hash1->desc = "Digest bytes 4 to 7";
+    nic_hash_word nic_hash2 @0x828;
+    nic_hash2->desc = "Digest bytes 8 to 11";
+    nic_hash_word nic_hash3 @0x82c;
+    nic_hash3->desc = "Digest bytes 12 to 15";
+    nic_hash_word nic_hash4 @0x830;
+    nic_hash4->desc = "Digest bytes 16 to 19";
+    nic_hash_word nic_hash5 @0x834;
+    nic_hash5->desc = "Digest bytes 20 to 23";
+    nic_hash_word nic_hash6 @0x838;
+    nic_hash6->desc = "Digest bytes 24 to 27";
+    nic_hash_word nic_hash7 @0x83c;
+    nic_hash7->desc = "Digest bytes 28 to 31";
 };

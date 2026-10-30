@@ -45,7 +45,11 @@ entity hash_engine_top is
         NUM_FLASHES : natural range 1 to 2 := 1;
         -- Which flash a hardware request reads: 0 the host flash, 1 the aux
         -- flash (which needs NUM_FLASHES = 2).
-        HW_FLASH_SEL : natural range 0 to 1 := 0
+        HW_FLASH_SEL : natural range 0 to 1 := 0;
+        -- The range a hardware request reads until software sets one, see
+        -- hash_engine_regs. Zero fails the request.
+        HW_FLASH_ADDR_DEFAULT : natural := 0;
+        HW_LENGTH_DEFAULT : natural := 0
     );
     port (
         clk   : in    std_logic;
@@ -59,6 +63,10 @@ entity hash_engine_top is
         hw_req : in    std_logic := '0';
         hw_ack : out   std_logic;
         hw_err : out   std_logic;
+        -- The digest of the last hardware-requested run that finished without
+        -- error, as the HW_DIGEST registers show it. Whether it is current is
+        -- the requester's to know from its own acknowledge/error bookkeeping.
+        hw_digest : out   std_logic_vector(255 downto 0);
 
         -- The spi_nor side of the engine's own command and response FIFOs, one
         -- pair per flash. These match spi_nor_top's hash client port shape:
@@ -101,7 +109,6 @@ architecture rtl of hash_engine_top is
     signal hw_flash_addr : hw_flash_addr_type;
     signal hw_length     : hw_length_type;
     signal hw_status     : hw_status_type;
-    signal hw_digest     : std_logic_vector(255 downto 0);
 
     type hw_state_t is (idle, starting, running, acked);
     type hw_reg_t is record
@@ -169,6 +176,10 @@ begin
     );
 
     hash_engine_regs_inst: entity work.hash_engine_regs
+        generic map (
+            HW_FLASH_ADDR_DEFAULT => HW_FLASH_ADDR_DEFAULT,
+            HW_LENGTH_DEFAULT => HW_LENGTH_DEFAULT
+        )
         port map (
             clk              => clk,
             reset            => reset_local,

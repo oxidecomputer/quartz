@@ -75,6 +75,7 @@ begin
 
     bench: process
         alias reset is << signal th.reset : std_logic >>;
+        alias clk is << signal th.clk : std_logic >>;
         alias versal_held_in_reset is << signal th.versal_held_in_reset : std_logic >>;
         alias versal_pcie_pins is << signal th.versal_pcie_pins : versal_pcie_t >>;
         alias sp5_versal_cha_perst_l is << signal th.sp5_nic_perst_l : std_logic >>;
@@ -88,6 +89,12 @@ begin
         alias hash_model_time is << signal th.hash_model_time : time >>;
         alias hash_model_fail is << signal th.hash_model_fail : boolean >>;
         alias hash_requests is << signal th.hash_requests : natural >>;
+        alias sp5_cha_power_en is << signal th.sp5_nic_cha_power_en : std_logic >>;
+        alias sp5_chb_power_en is << signal th.sp5_nic_chb_power_en : std_logic >>;
+        alias host_hash_rehash is << signal th.host_hash_rehash : std_logic >>;
+        alias host_hash_done_clear is << signal th.host_hash_done_clear : std_logic >>;
+        alias nic_hash_host_done is << signal th.nic_hash_host_done : std_logic >>;
+        alias nic_hash_busy is << signal th.nic_hash_busy : std_logic >>;
         alias versal_boot_pins is << signal th.versal_boot_pins : versal_boot_t >>;
         alias versal_rails_pins is << signal th.versal_rails_pins : versal_power_t >>;
         constant versal_actor : actor_t := find("versal_model");
@@ -247,6 +254,35 @@ begin
                 check_equal(readbacks.mode_buffer_en_l, '0',
                             "Expected the MODE buffer to be enabled");
 
+            elsif run("boot_mode_is_latched_leaving_the_interlock") then
+                -- Changeable while the NIC waits for the SP5, fixed once the
+                -- straps are on. JTAG written at the interlock reaches the
+                -- pins; QSPI32 written once booted does not.
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, WAIT_SP5);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          x"00000000");
+                wait_until_idle(net, bus_handle);
+                check_equal(versal_boot_pins.mode, std_logic_vector'("0000"),
+                            "Expected no straps driven while waiting");
+                sp5_cha_power_en <= '1';
+                poll_for_nic_state(net, DONE);
+                check_equal(versal_boot_pins.mode, std_logic_vector'("0000"),
+                            "Expected the JTAG straps written at the interlock");
+                check_equal(versal_boot_pins.mode_buffer_en_l, '0', "Expected the MODE buffer enabled");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          x"00000002");
+                wait_until_idle(net, bus_handle);
+                wait for 1 us;
+                check_equal(versal_boot_pins.mode, std_logic_vector'("0000"),
+                            "Expected a write once booted to leave the straps alone");
+
             elsif run("pcie_resets_follow_their_slots") then
                 -- Neither channel leaves reset before the Versal is booted,
                 -- and afterwards each follows only its own slot's power
@@ -285,14 +321,23 @@ begin
                             "Expected channel B PERST unaffected by slot A");
                 sp5_versal_cha_perst_l <= '1';
 
-            elsif run("presence_waits_for_done") then
+            elsif run("presence_shows_at_the_interlock") then
                 -- The model's presence pins are asserted from the start; the
-                -- hotplug slots must not see them until the Versal has booted.
+                -- hotplug slots see them only where the host's slot power is
+                -- what comes next, and once the Versal has booted.
                 check_equal(sp5_nic_prsnt_l, '1', "Expected channel A absent before power up");
                 check_equal(sp5_nic_chb_prsnt_l, '1', "Expected channel B absent before power up");
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
                           POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, ENABLE_POWER);
+                check_equal(sp5_nic_prsnt_l, '1', "Expected channel A absent while the rails come up");
+                poll_for_nic_state(net, WAIT_SP5);
+                check_equal(sp5_nic_prsnt_l, '0', "Expected channel A present at the interlock");
+                check_equal(sp5_nic_chb_prsnt_l, '0', "Expected channel B present at the interlock");
+                sp5_cha_power_en <= '1';
                 wait until versal_boot_pins.por_b = '1' for 50 ms;
                 check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released");
                 check_equal(sp5_nic_prsnt_l, '1', "Expected channel A absent while booting");
@@ -398,16 +443,25 @@ begin
                             "Expected every rail enable low");
                 check_equal(versal_rails_pins.hsc_12v.enable, '0', "Expected the hotswap enable low");
                 check_equal(nic_rails_up, '0', "Expected rails_up low");
-                check_equal(flash_owned_by_seq, '0', "Expected no claim on the flash");
+                check_equal(flash_owned_by_seq, '1', "Expected the flash kept on the FPGA side");
 
             elsif run("flash_mux_interlock") then
-                -- The SP may only take the boot flash while POR_B is asserted;
-                -- after boot the sequencer holds it for the SP5 instead.
+                -- The flash sits on the FPGA side, with eSPI1, at every point
+                -- except while the Versal is configured from it. The SP may
+                -- only take it by request while POR_B is asserted.
                 check_equal(versal_held_in_reset, '1',
                             "Expected the Versal to be held in reset before power up");
+                check_equal(flash_owned_by_seq, '1',
+                            "Expected the flash on the FPGA side before power up");
+                check_equal(flash_to_espi, '1', "Expected the flash with eSPI1 before power up");
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_boot_pins.por_b = '1' for 50 ms;
+                check_equal(flash_to_espi, '0', "Expected eSPI1 to lose the flash for the boot");
                 check_equal(flash_owned_by_seq, '0',
-                            "Expected no sequencer claim on the flash before power up");
-                power_up_to_nic_done(net);
+                            "Expected the flash with the Versal for the boot");
+                poll_for_nic_state(net, DONE);
                 check_equal(versal_held_in_reset, '0',
                             "Expected the SP's request to be denied once the Versal has booted");
                 check_equal(flash_owned_by_seq, '1',
@@ -416,16 +470,12 @@ begin
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
                           x"00000000");
-                wait until flash_to_espi = '0' for 1 ms;
-                check_equal(flash_to_espi, '0', "Expected eSPI1 to lose the flash on power down");
+                poll_for_nic_state(net, IDLE);
+                check_equal(flash_to_espi, '1', "Expected eSPI1 to keep the flash through power down");
 
             elsif run("image_is_measured_alongside_power_up") then
                 -- The measurement sets off with the power sequence and runs
                 -- while the rails are still coming up.
-                -- the measurement is off by default
-                write_bus(net, bus_handle,
-                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
                           POWER_CTRL_A0_EN_MASK);
@@ -464,10 +514,6 @@ begin
             elsif run("por_b_waits_for_a_long_measurement") then
                 -- Longer than the rails take, so the power sequence gets to
                 -- its checkpoint first and has to wait there.
-                -- the measurement is off by default
-                write_bus(net, bus_handle,
-                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 hash_model_time <= 400 us;
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
@@ -491,22 +537,51 @@ begin
                 check_equal(hash_req, '0', "Expected the measurement over before POR_B released");
                 poll_for_nic_state(net, DONE);
 
-            elsif run("measurement_can_be_ignored") then
-                -- the measurement is off by default
+            elsif run("bypass_skips_hash_and_interlock") then
+                -- The bench switch: no measurement, no waiting for the SP5,
+                -- and slot power only gates PERST.
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
                 write_bus(net, bus_handle,
                           To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
+                          VERSAL_BOOT_CTRL_INTERLOCK_BYPASS_MASK or x"00000002");
+                -- the harness keeps PERST apart from the power enable it
+                -- follows in hardware
+                sp5_versal_cha_perst_l <= '0';
+                power_up_to_nic_done(net);
+                check_equal(hash_requests, 0, "Expected no measurement under the bypass");
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released without slot power");
+                check_equal(versal_pcie_pins.cha.perst_l, '0', "Expected PERST still to follow slot power");
+                sp5_cha_power_en <= '1';
+                sp5_versal_cha_perst_l <= '1';
+                wait for 1 us;
+                check_equal(versal_pcie_pins.cha.perst_l, '1', "Expected PERST released with slot power");
+                sp5_cha_power_en <= '0';
+                sp5_versal_cha_perst_l <= '0';
+                wait for 100 us;
+                check_states(net, DONE, DONE, "slot power off under the bypass");
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B left released under the bypass");
+
+            elsif run("bypassed_measurement_in_flight_is_abandoned") then
+                -- A software-started measurement that the bypassed sequence
+                -- does not wait for loses the flash and says so.
                 hash_model_time <= 400 us;
                 write_bus(net, bus_handle,
-                          To_StdLogicVector(DEBUG_ENABLES_OFFSET, bus_handle.p_address_length),
-                          DEBUG_ENABLES_IGNORE_NIC_HASH_MASK);
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_INTERLOCK_BYPASS_MASK or x"00000002");
                 write_bus(net, bus_handle,
                           To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
                           POWER_CTRL_A0_EN_MASK);
+                -- A0 takes longer than the model, so start once the NIC's
+                -- own rails are coming up
+                poll_for_nic_state(net, ENABLE_POWER);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
+                          VERSAL_BOOT_CTRL_INTERLOCK_BYPASS_MASK or VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000002");
+                wait until hash_req = '1' for 1 ms;
                 wait until versal_boot_pins.por_b = '1' for 50 ms;
                 check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released");
                 check_equal(hash_req, '1', "Expected the measurement still in flight");
-                check_equal(nic_rails_up, '1', "Expected the rails up at POR_B release");
                 check_equal(flash_owned_by_seq, '0', "Expected the flash with the Versal for boot");
                 wait until hash_req = '0' for 50 ms;
                 wait for 10 us;
@@ -517,12 +592,13 @@ begin
                 check_equal(hash_status.abandoned, '1', "Expected the measurement recorded as abandoned");
                 check_equal(hash_status.done, '0', "Expected no done for an abandoned measurement");
                 check_equal(hash_status.err, '1', "Expected err for an abandoned measurement");
+                check_equal(nic_hash_host_done, '0', "Expected no digest shown to the host");
 
             elsif run("software_can_start_a_measurement") then
                 -- With the NIC down: the flash does not need its rails
                 write_bus(net, bus_handle,
                           To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000012");
+                          VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000002");
                 wait until hash_req = '1' for 1 ms;
                 check_equal(hash_req, '1', "Expected a measurement request");
                 -- the flash claim is a few deltas behind the request
@@ -532,11 +608,11 @@ begin
                             "Expected no rail enabled by a measurement");
                 wait until hash_req = '0' for 1 ms;
                 wait for 10 us;
-                check_equal(flash_owned_by_seq, '0', "Expected the flash let go of");
+                check_equal(flash_owned_by_seq, '1', "Expected the flash kept on the FPGA side");
                 read_bus(net, bus_handle,
                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
                          read_data);
-                check_equal(read_data, std_logic_vector'(x"00000012"), "Expected hash_start to clear itself");
+                check_equal(read_data, std_logic_vector'(x"00000002"), "Expected hash_start to clear itself");
                 read_bus(net, bus_handle,
                          To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
                          read_data);
@@ -545,30 +621,31 @@ begin
                 check_equal(hash_status.sw_started, '1', "Expected a software-started measurement");
                 check_equal(hash_requests, 1, "Expected exactly one measurement");
 
-            elsif run("software_start_refused_once_booted") then
-                -- the measurement is off by default
-                write_bus(net, bus_handle,
-                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
+            elsif run("software_start_runs_once_booted") then
+                -- Booted, the flash is back on the FPGA side, so a start is
+                -- taken at once and eSPI1 keeps its claim throughout.
                 power_up_to_nic_done(net);
                 write_bus(net, bus_handle,
                           To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000012");
-                wait for 100 us;
-                check_equal(hash_requests, 1, "Expected only the power-up measurement");
+                          VERSAL_BOOT_CTRL_HASH_START_MASK or x"00000002");
+                wait until hash_req = '1' for 1 ms;
+                check_equal(hash_req, '1', "Expected a second measurement request");
+                check_equal(flash_to_espi, '1', "Expected eSPI1 to keep the flash over a measurement");
+                check_equal(flash_owned_by_seq, '1', "Expected the flash on the FPGA side");
+                check_equal(versal_boot_pins.por_b, '1', "Expected the Versal left running");
+                wait until hash_req = '0' for 1 ms;
+                wait for 10 us;
+                check_equal(hash_requests, 2, "Expected the power-up measurement and one more");
                 read_bus(net, bus_handle,
                          To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
                          read_data);
                 hash_status := unpack(read_data);
-                check_equal(hash_status.refused, '1', "Expected the start recorded as refused");
-                check_equal(hash_status.done, '1', "Expected the power-up measurement left standing");
+                check_equal(hash_status.sw_started, '1', "Expected a software-started measurement");
+                check_equal(hash_status.pending, '0', "Expected nothing left pending");
+                check_equal(hash_status.done, '1', "Expected done in the hash status");
 
             elsif run("por_b_needs_the_rails") then
                 -- Even by override, and whatever the measurement is doing
-                -- the measurement is off by default
-                write_bus(net, bus_handle,
-                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 write_bus(net, bus_handle,
                           To_StdLogicVector(VERSAL_OVERRIDES_OFFSET, bus_handle.p_address_length),
                           VERSAL_OVERRIDES_POR_B_MASK or VERSAL_OVERRIDES_MODE_BUFFER_EN_L_MASK);
@@ -592,10 +669,6 @@ begin
                 wait until hash_req = '0' for 50 ms;
 
             elsif run("failed_measurement_is_recorded_and_boot_continues") then
-                -- the measurement is off by default
-                write_bus(net, bus_handle,
-                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
-                          VERSAL_BOOT_CTRL_HASH_IMAGE_MASK or x"00000002");
                 hash_model_fail <= true;
                 power_up_to_nic_done(net);
                 read_bus(net, bus_handle,
@@ -610,20 +683,21 @@ begin
                 check_equal((read_data and IFR_NIC_HASH_ERR_MASK) /= (read_data'range => '0'), true,
                             "Expected the versal_hash_err interrupt flag");
 
-            elsif run("measurement_is_off_by_default") then
+            elsif run("measurement_is_on_by_default") then
                 read_bus(net, bus_handle,
                          To_StdLogicVector(VERSAL_BOOT_CTRL_OFFSET, bus_handle.p_address_length),
                          read_data);
                 check_equal(read_data, std_logic_vector'(x"00000002"),
-                            "Expected QSPI32 and no measurement out of reset");
+                            "Expected QSPI32 and no bypass out of reset");
                 power_up_to_nic_done(net);
-                check_equal(hash_requests, 0, "Expected no measurement request");
+                check_equal(hash_requests, 1, "Expected one measurement request");
                 read_bus(net, bus_handle,
                          To_StdLogicVector(STATUS_OFFSET, bus_handle.p_address_length),
                          read_data);
                 status := unpack(read_data);
-                check_equal(status.nic_hash_done, '0', "Expected no versal_hash_done");
+                check_equal(status.nic_hash_done, '1', "Expected versal_hash_done");
                 check_equal(status.nic_hash_err, '0', "Expected no versal_hash_err");
+                check_equal(nic_hash_host_done, '1', "Expected the digest shown to the host");
 
             elsif run("boot_timeout_does_not_drop_power") then
                 versal_model_msg_pkg.fail_boot(net, versal_actor);
@@ -632,20 +706,47 @@ begin
                           POWER_CTRL_A0_EN_MASK);
                 poll_for_seq_state(net, DONE);
                 poll_for_nic_state(net, BOOTING);
-                wait for 500 us;
+                check_equal(flash_to_espi, '0', "Expected the flash with the Versal while it boots");
+                -- the DONE timeout is 5 s of sequencer time
+                poll_for_nic_state(net, BOOT_FAILED, 1 ms);
 
-                -- A boot that never completes must not look like a power fault.
-                read_bus(net, bus_handle,
-                         To_StdLogicVector(NIC_API_STATUS_OFFSET, bus_handle.p_address_length),
-                         read_data);
-                versal_state := encode(read_data(7 downto 0));
-                check_equal(versal_state = BOOTING, true,
-                            "Expected the Versal sequencer to stay in BOOTING");
+                -- A boot that never completes must not look like a power fault;
+                -- the Versal goes back into reset with the flash handed to the
+                -- SP5, and stays there over the slot power that let it boot.
                 read_bus(net, bus_handle,
                          To_StdLogicVector(IFR_OFFSET, bus_handle.p_address_length), read_data);
                 check_equal((read_data and IFR_NICMAPO_MASK) = x"00000000", true,
                             "A failed boot must not raise a Versal MAPO");
+                check_equal(nic_rails_up, '1', "Expected the rails left up");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted after the failure");
+                check_equal(flash_to_espi, '1', "Expected the flash handed back to eSPI1");
+                check_equal(versal_held_in_reset, '1', "Expected the SP able to take the flash");
+                check_equal(sp5_nic_prsnt_l, '0', "Expected presence kept after the failure");
+                wait for 100 us;
+                check_states(net, DONE, BOOT_FAILED, "slot power still on after a failed boot");
+
+                -- A fresh slot power enable, both off and then one on, is
+                -- another go
                 versal_model_msg_pkg.allow_boot(net, versal_actor);
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                wait for 10 us;
+                check_states(net, DONE, BOOT_FAILED, "slot power withdrawn after a failed boot");
+                sp5_chb_power_en <= '1';
+                poll_for_nic_state(net, DONE);
+                check_equal(hash_requests, 1, "Expected no second measurement for the retry");
+
+            elsif run("error_out_fails_the_boot") then
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                wait until versal_boot_pins.por_b = '1' for 50 ms;
+                versal_model_msg_pkg.assert_error_out(net, versal_actor);
+                wait for 10 us;
+                check_states(net, DONE, BOOT_FAILED, "ERROR_OUT while booting");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted on ERROR_OUT");
+                check_equal(flash_to_espi, '1', "Expected the flash handed back to eSPI1");
+                versal_model_msg_pkg.clear_error_out(net, versal_actor);
 
             elsif run("error_out_raises_an_irq") then
                 power_up_to_nic_done(net);
@@ -656,6 +757,178 @@ begin
                 check_equal((read_data and IFR_VERSAL_ERROR_OUT_MASK) /= x"00000000", true,
                             "Expected ERROR_OUT to set its interrupt flag");
                 versal_model_msg_pkg.clear_error_out(net, versal_actor);
+
+            elsif run("configuration_waits_for_slot_power") then
+                -- Rails up and the image measured, the Versal is held in
+                -- reset with the flash on eSPI1's side until the SP5 enables
+                -- slot power on either channel.
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                sp5_versal_cha_perst_l <= '0';
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, WAIT_SP5);
+                wait for 200 us;
+                check_states(net, DONE, WAIT_SP5, "waiting for the SP5");
+                check_equal(nic_rails_up, '1', "Expected the rails up at the interlock");
+                check_equal(hash_requests, 1, "Expected the measurement done before the interlock");
+                check_equal(nic_hash_host_done, '1', "Expected the digest shown to the host");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B held at the interlock");
+                check_equal(versal_boot_pins.mode_buffer_en_l, '1', "Expected the straps off at the interlock");
+                check_equal(flash_to_espi, '1', "Expected the flash with eSPI1 at the interlock");
+                check_equal(sp5_nic_prsnt_l, '0', "Expected presence shown at the interlock");
+                sp5_chb_power_en <= '1';
+                poll_for_nic_state(net, DONE);
+                check_equal(versal_boot_pins.por_b, '1', "Expected channel B's enable to release POR_B");
+                check_equal(versal_pcie_pins.chb.perst_l, '1', "Expected channel B PERST released");
+                check_equal(versal_pcie_pins.cha.perst_l, '0', "Expected channel A PERST held");
+                sp5_versal_cha_perst_l <= '1';
+
+            elsif run("slot_power_off_holds_the_versal_in_reset") then
+                -- Withdrawn once booted, the rails stay but the Versal goes
+                -- back into reset and the flash to eSPI1; the digest stands,
+                -- and the next enable configures without measuring again.
+                power_up_to_nic_done(net);
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                wait for 10 us;
+                check_states(net, DONE, WAIT_SP5, "slot power withdrawn");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted");
+                check_equal(versal_boot_pins.mode_buffer_en_l, '1', "Expected the straps off");
+                check_equal(versal_pcie_pins.cha.clk_buff_oe_l, '1', "Expected the clock buffer off");
+                check_equal(nic_rails_up, '1', "Expected the rails left up");
+                check_equal(flash_to_espi, '1', "Expected the flash with eSPI1");
+                check_equal(sp5_nic_prsnt_l, '0', "Expected presence kept for the next power-on");
+                check_equal(nic_hash_host_done, '1', "Expected the digest kept");
+                sp5_cha_power_en <= '1';
+                poll_for_nic_state(net, DONE);
+                check_equal(versal_boot_pins.por_b, '1', "Expected POR_B released again");
+                check_equal(versal_boot_pins.mode, std_logic_vector'("0010"), "Expected the straps re-applied");
+                check_equal(hash_requests, 1, "Expected no second measurement");
+
+            elsif run("slot_power_loss_mid_boot_holds_the_versal") then
+                versal_model_msg_pkg.fail_boot(net, versal_actor);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, BOOTING);
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                wait for 10 us;
+                check_states(net, DONE, WAIT_SP5, "slot power withdrawn mid-boot");
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B asserted");
+                check_equal(flash_to_espi, '1', "Expected the flash back with eSPI1");
+                versal_model_msg_pkg.allow_boot(net, versal_actor);
+                sp5_cha_power_en <= '1';
+                poll_for_nic_state(net, DONE);
+
+            elsif run("host_rehash_runs_when_booted") then
+                power_up_to_nic_done(net);
+                host_hash_rehash <= '1';
+                wait until rising_edge(clk);
+                host_hash_rehash <= '0';
+                wait until hash_req = '1' for 1 ms;
+                check_equal(hash_req, '1', "Expected a measurement request");
+                check_equal(nic_hash_busy, '1', "Expected the host to see the rehash in flight");
+                check_equal(nic_hash_host_done, '0', "Expected the old digest withdrawn for the run");
+                check_equal(flash_to_espi, '1', "Expected eSPI1 to keep the flash");
+                check_equal(versal_boot_pins.por_b, '1', "Expected the Versal left running");
+                wait until hash_req = '0' for 1 ms;
+                wait for 10 us;
+                check_equal(nic_hash_busy, '0', "Expected the rehash finished");
+                check_equal(nic_hash_host_done, '1', "Expected the new digest shown");
+                check_equal(hash_requests, 2, "Expected two measurements");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.host_started, '1', "Expected a host-started measurement");
+                check_equal(hash_status.sw_started, '0', "Expected no software start");
+
+            elsif run("host_rehash_deferred_while_configuring") then
+                versal_model_msg_pkg.fail_boot(net, versal_actor);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, BOOTING);
+                host_hash_rehash <= '1';
+                wait until rising_edge(clk);
+                host_hash_rehash <= '0';
+                wait for 100 us;
+                check_equal(hash_req, '0', "Expected no measurement while the Versal has the flash");
+                check_equal(nic_hash_busy, '1', "Expected the request shown as waiting");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.pending, '1', "Expected the start recorded as pending");
+                versal_model_msg_pkg.allow_boot(net, versal_actor);
+                -- the model only boots on a POR_B edge, so cycle slot power
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                -- the flash comes back at the interlock, so the run goes then
+                wait for 1 us;
+                check_equal(hash_req, '1', "Expected the deferred measurement to run once the flash is back");
+                sp5_cha_power_en <= '1';
+                wait for 10 us;
+                check_equal(versal_boot_pins.por_b, '0', "Expected the boot held for the measurement");
+                wait until hash_req = '0' for 1 ms;
+                poll_for_nic_state(net, DONE);
+                check_equal(hash_requests, 2, "Expected two measurements");
+
+            elsif run("rehash_during_interlock_delays_configuration") then
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, WAIT_SP5);
+                hash_model_time <= 400 us;
+                host_hash_rehash <= '1';
+                wait until rising_edge(clk);
+                host_hash_rehash <= '0';
+                wait until hash_req = '1' for 1 ms;
+                sp5_cha_power_en <= '1';
+                wait for 200 us;
+                check_equal(versal_boot_pins.por_b, '0', "Expected POR_B held over the rehash");
+                check_states(net, DONE, WAIT_SP5, "rehash in flight at the interlock");
+                wait until hash_req = '0' for 1 ms;
+                poll_for_nic_state(net, DONE);
+                check_equal(hash_requests, 2, "Expected two measurements");
+
+            elsif run("host_done_clear_drops_done") then
+                power_up_to_nic_done(net);
+                check_equal(nic_hash_host_done, '1', "Expected the digest shown");
+                host_hash_done_clear <= '1';
+                wait until rising_edge(clk);
+                host_hash_done_clear <= '0';
+                wait for 1 us;
+                check_equal(nic_hash_host_done, '0', "Expected the digest withdrawn");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.done, '1', "Expected the SP's done left standing");
+
+            elsif run("disable_while_waiting_powers_down") then
+                sp5_cha_power_en <= '0';
+                sp5_chb_power_en <= '0';
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          POWER_CTRL_A0_EN_MASK);
+                poll_for_nic_state(net, WAIT_SP5);
+                set_a0hp_inhibit(net, true);
+                poll_for_nic_state(net, IDLE);
+                check_equal(group_enables(versal_rails_pins), groups_t'(others => '0'),
+                            "Expected every rail taken down by the inhibit");
+                set_a0hp_inhibit(net, false);
+                poll_for_nic_state(net, WAIT_SP5);
+                write_bus(net, bus_handle,
+                          To_StdLogicVector(POWER_CTRL_OFFSET, bus_handle.p_address_length),
+                          x"00000000");
+                poll_for_nic_state(net, IDLE);
+                check_equal(versal_rails_pins.hsc_12v.enable, '0', "Expected the hotswap off after a0_en cleared");
 
             elsif run("board_version_readback") then
                 read_bus(net, bus_handle,

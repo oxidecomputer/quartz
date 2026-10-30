@@ -37,7 +37,17 @@ entity espi_spec_regs is
         qspi_mode            : out   qspi_mode_t;
         wait_states          : out   std_logic_vector(3 downto 0);
         oob_enabled          : out   std_logic;
-        flash_channel_enable : out   boolean
+        flash_channel_enable : out   boolean;
+
+        -- The NIC image measurement behind the nic_hash_* platform
+        -- registers, see espi_platform_regs.rdl. A board without one leaves
+        -- these at their defaults and the registers read as zero.
+        nic_hash_digest      : in    std_logic_vector(255 downto 0) := (others => '0');
+        nic_hash_done        : in    std_logic := '0';
+        nic_hash_busy        : in    std_logic := '0';
+        -- Single-cycle, from the host writing a 1 to the matching bit
+        nic_hash_rehash      : out   std_logic;
+        nic_hash_done_clear  : out   std_logic
     );
 end entity;
 
@@ -54,6 +64,8 @@ architecture rtl of espi_spec_regs is
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
     signal qspi_freq        : qspi_freq_t;
+    signal nic_hash_ctrl    : nic_hash_ctrl_type;
+    signal digest_shown     : std_logic_vector(31 downto 0);
 
 begin
 
@@ -71,6 +83,30 @@ begin
     spec_regs_view.ch2_capabilities     <= ch2_capabilities;
     spec_regs_view.ch3_capabilities     <= ch3_capabilities;
     spec_regs_view.ch3_capabilities2    <= ch3_capabilities2;
+
+    -- The one writable platform register is all strobes: nothing is kept
+    -- here, the bits go to the sequencer that owns the measurement and the
+    -- readback comes from it. Not cleared by an eSPI reset, which cannot
+    -- undo a request already made.
+    nic_hash_ctrl <= (done => nic_hash_done, rehash => nic_hash_busy);
+    -- The digest only once it is done and until the host has said it has
+    -- read it, so a stale one is never taken for new
+    digest_shown <= (others => nic_hash_done);
+
+    platform_write: process(clk, reset)
+    begin
+        if reset then
+            nic_hash_rehash <= '0';
+            nic_hash_done_clear <= '0';
+        elsif rising_edge(clk) then
+            nic_hash_rehash <= '0';
+            nic_hash_done_clear <= '0';
+            if regs_if.addr = NIC_HASH_CTRL_OFFSET and regs_if.write = '1' then
+                nic_hash_rehash <= regs_if.wdata(1);
+                nic_hash_done_clear <= regs_if.wdata(0);
+            end if;
+        end if;
+    end process;
 
     -- Write-side of the spec-defined registers
     write_reg: process(clk, reset)
@@ -173,6 +209,24 @@ begin
                     readdata <= pack(ch3_capabilities2);
                 when BOARD_ID_OFFSET =>
                     readdata <= pack(board_id);
+                when NIC_HASH_CTRL_OFFSET =>
+                    readdata <= pack(nic_hash_ctrl);
+                when NIC_HASH0_OFFSET =>
+                    readdata <= nic_hash_digest(31 downto 0) and digest_shown;
+                when NIC_HASH1_OFFSET =>
+                    readdata <= nic_hash_digest(63 downto 32) and digest_shown;
+                when NIC_HASH2_OFFSET =>
+                    readdata <= nic_hash_digest(95 downto 64) and digest_shown;
+                when NIC_HASH3_OFFSET =>
+                    readdata <= nic_hash_digest(127 downto 96) and digest_shown;
+                when NIC_HASH4_OFFSET =>
+                    readdata <= nic_hash_digest(159 downto 128) and digest_shown;
+                when NIC_HASH5_OFFSET =>
+                    readdata <= nic_hash_digest(191 downto 160) and digest_shown;
+                when NIC_HASH6_OFFSET =>
+                    readdata <= nic_hash_digest(223 downto 192) and digest_shown;
+                when NIC_HASH7_OFFSET =>
+                    readdata <= nic_hash_digest(255 downto 224) and digest_shown;
                 when others =>
                     readdata <= (others => '0');
             end case;

@@ -67,7 +67,16 @@ entity sp5_espi_flash_subsystem is
         hash_cmd_fifo_rdack  : out std_logic;
         hash_cmd_fifo_rempty : in std_logic;
         hash_data_fifo_wdata : out std_logic_vector(7 downto 0);
-        hash_data_fifo_write : out std_logic
+        hash_data_fifo_write : out std_logic;
+
+        -- The measurement of a NIC image behind this flash, as the host sees
+        -- it in the nic_hash_* platform registers (see espi_target_top).
+        -- Leave at the defaults on a port with no such thing.
+        nic_hash_digest : in std_logic_vector(255 downto 0) := (others => '0');
+        nic_hash_done : in std_logic := '0';
+        nic_hash_busy : in std_logic := '0';
+        nic_hash_rehash : out std_logic;
+        nic_hash_done_clear : out std_logic
     );
 end entity;
 
@@ -236,7 +245,12 @@ begin
         to_sp_uart_ready => ipcc_uart_from_espi.ready,
         from_sp_uart_data => ipcc_uart_to_espi.data,
         from_sp_uart_valid => ipcc_uart_to_espi.valid,
-        from_sp_uart_ready => ipcc_uart_to_espi.ready
+        from_sp_uart_ready => ipcc_uart_to_espi.ready,
+        nic_hash_digest => nic_hash_digest,
+        nic_hash_done => nic_hash_done,
+        nic_hash_busy => nic_hash_busy,
+        nic_hash_rehash => nic_hash_rehash,
+        nic_hash_done_clear => nic_hash_done_clear
     );
 
 

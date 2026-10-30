@@ -254,21 +254,21 @@ begin
                                 v.state := report_status;
                         end case;
                     when others =>
-                        -- This comes 1-indexed from the eSPI block, so we need to subtract 1 below.
-                        -- The guard is for simulation: the fifo's showahead word is
-                        -- still the address for a delta after the pop, and a zero
+                        -- A byte count, read in chunks of up to a page. The
+                        -- count is kept as what is still to be fetched;
+                        -- txn_bytes is the chunk in hand less one, as the
+                        -- countdown in wait_for_data wants it. The guard is
+                        -- for simulation: the fifo's showahead word is still
+                        -- the address for a delta after the pop, and a zero
                         -- length would otherwise put -1 in a natural.
-                        if espi_cmd_fifo_rdata(11 downto 0) = 0 then
-                            v.rem_bytes := 0;
-                        else
-                            v.rem_bytes := to_integer(espi_cmd_fifo_rdata(11 downto 0)) - 1;
-                        end if;
+                        v.rem_bytes := to_integer(espi_cmd_fifo_rdata(11 downto 0));
                         v.step := step_read;
                         v.state := wait_idle;
-                        -- We're either going to issue the max page size, or the 0-indexed remaining bytes
-                        -- which ever is smaller.
-                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size);
-                        -- spi is 1-indexed still, so we need to add 1 here
+                        if v.rem_bytes = 0 then
+                            v.txn_bytes := 0;
+                        else
+                            v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size + 1) - 1;
+                        end if;
                         v.data_bytes := v.txn_bytes + 1;
                 end case;
 
@@ -285,7 +285,7 @@ begin
                     else
                         v.state := wait_idle;
                         v.cur_flash_addr := r.next_flash_addr;
-                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size);
+                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size + 1) - 1;
                         v.data_bytes := v.txn_bytes + 1;
                     end if;
                 end if;
@@ -318,8 +318,9 @@ begin
                     case r.step is
                         when step_read =>
                             v.state := wait_for_data;
-                            -- Adjust info for a potential next read or so we can decide we're done later
-                            v.rem_bytes := r.rem_bytes - r.txn_bytes;
+                            -- What this chunk fetches is spoken for; the
+                            -- next one, if any, starts after it
+                            v.rem_bytes := r.rem_bytes - (r.txn_bytes + 1);
                             v.next_flash_addr := r.cur_flash_addr + (r.txn_bytes + 1);
                         when step_program =>
                             v.state := wait_done;

@@ -140,6 +140,7 @@ architecture rtl of spi_nor_top is
     signal spi_cmd_if : spi_nor_cmd_t;
     signal hash_req : std_logic;
     signal hash_grant : std_logic;
+    signal hash_active : std_logic;
     signal hash_fifo_write : std_logic;
 
 begin
@@ -218,25 +219,34 @@ begin
     hubris_cmd.instr <= instr_reg.opcode;
     hubris_cmd.go_flag <= go_strobe;
 
-    -- The hash client takes the whole engine for the duration of one command,
-    -- chunking included, and only takes it when nothing else is mid transaction or
-    -- waiting. While it is not asking, everything below reduces to the original
-    -- two way sp5_owns_flash selection.
-    --
-    -- Note this does lock the eSPI path out for as long as a hash read runs, which
-    -- can be a whole flash image. That is the intended trade: measurement is
-    -- expected to happen while the host is not booting.
+    -- The hash client takes the engine a chunk at a time. A hash read can be
+    -- a whole flash image, seconds of bus time, and the host may be reading
+    -- the same flash over eSPI meanwhile, so between chunks the hash gives
+    -- the engine up to a waiting eSPI command and asks for it back after. The
+    -- host sees at most a chunk's delay on any one command; the hash takes as
+    -- much longer as the host's traffic. While nobody is hashing, everything
+    -- below reduces to the original two way sp5_owns_flash selection.
     hash_grant_sm: process(clk, reset)
     begin
         if reset then
             hash_grant <= '0';
         elsif rising_edge(clk) then
             if hash_grant = '0' then
-                if hash_req = '1' and cs_n = '1' and espi_cmd_fifo_rempty = '1' and
-                   go_strobe = '0' then
+                -- Idle on both of the other sides: the register path has no
+                -- command out, and the eSPI manager is between transactions
+                -- (not merely between the chunks of one, which is what a
+                -- high chip select on its own would say) with nothing queued.
+                -- The queue check is also what keeps the manager and this
+                -- grant from setting off on the same edge: the manager
+                -- leaves idle on exactly a non-empty queue.
+                if hash_req = '1' and spisr_reg.busy = '0' and go_strobe = '0' and
+                   espi_txn_idle = '1' and espi_cmd_fifo_rempty = '1' then
                     hash_grant <= '1';
                 end if;
-            elsif hash_req = '0' then
+            elsif hash_req = '0' or (hash_active = '0' and espi_cmd_fifo_rempty = '0') then
+                -- Done, or parked between chunks with the host waiting. The
+                -- raw manager parks itself on the same queue flag before
+                -- dropping active, so nothing of its is in flight here.
                 hash_grant <= '0';
             end if;
         end if;
@@ -402,6 +412,9 @@ begin
          cmd_fifo_rempty => hash_cmd_fifo_rempty,
          req => hash_req,
          grant => hash_grant,
+         -- An eSPI command waiting is the host asking for its turn
+         yield => not espi_cmd_fifo_rempty,
+         active => hash_active,
          cmd => hash_cmd,
          spi_hw_busy => spisr_reg.busy,
          data_byte => hash_data_fifo_wdata,
@@ -418,7 +431,9 @@ begin
          espi_cmd => espi_cmd,
          spi_hw_busy => spisr_reg.busy,
          tx_from_espi => tx_from_espi,
-         espi_reads_allowed => espi_owner,
+         -- Nothing new starts on the eSPI side while the hash holds the
+         -- engine; what the host has queued is served between its chunks.
+         espi_reads_allowed => espi_owner and not hash_grant,
          txn_idle => espi_txn_idle,
          sp_host_image_flash_addr_offset => signed(sp5_flash_offset.offset),
          amd_begin_apob_flash_addr => apob_flash_addr.offset,

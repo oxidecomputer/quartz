@@ -133,13 +133,13 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "NIC has finished loading its image (Versal DONE). Metro only.";
         } nicdone[1] = 0;
         field {
-            desc = "The hash engine measured the NIC image before the last boot; the
-            digest is in the hash engine's HW_DIGEST registers. Cleared when the NIC
-            is next sequenced. Metro only.";
+            desc = "The last measurement of the NIC image produced a digest; it is in the
+            hash engine's HW_DIGEST registers. Cleared when the next measurement starts.
+            Metro only.";
         } nic_hash_done[1] = 0;
         field {
-            desc = "The pre-boot measurement failed (see the hash engine's HW_STATUS) and
-            the NIC was booted regardless. Cleared when the NIC is next sequenced.
+            desc = "The last measurement of the NIC image failed (see the hash engine's
+            HW_STATUS) or was abandoned. Cleared when the next measurement starts.
             Metro only.";
         } nic_hash_err[1] = 0;
         field {
@@ -272,6 +272,8 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             BOOTING = 8'h04 {desc = "Metro only. POR_B released, waiting for DONE";};
             MEASURING = 8'h05 {desc = "Metro only. Rails are up, holding POR_B while the hash engine measures the boot image";};
             DISABLE_POWER = 8'h06 {desc = "Metro only. POR_B asserted, rails being taken down in reverse order";};
+            WAIT_SP5 = 8'h07 {desc = "Metro only. Rails up and the image measured, POR_B held; waiting for the SP5 to enable slot power on either channel before the Versal is configured. The boot flash is with the SP5 over eSPI1";};
+            BOOT_FAILED = 8'h08 {desc = "Metro only. The Versal asserted ERROR_OUT or did not assert DONE in time. POR_B asserted and the boot flash handed back to the SP5 over eSPI1 for reflash; a fresh slot power enable retries";};
          };
         field {
             desc = "Nic SM Status";
@@ -306,12 +308,14 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             GROUP_6 = 8'h0c {desc = "Metro (Versal). Group 6, V1P5 AVCCAUX, enabled, waiting for PG";};
             GROUP_7 = 8'h0d {desc = "Metro (Versal). Group 7, V1P2 GTM/GTY AVTT, enabled, waiting for PG";};
             RAILS_SETTLE = 8'h0e {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
-            HASH_WAIT = 8'h0f {desc = "Metro (Versal). Rails up and settled, POR_B held; waiting for the image measurement to finish, see nic_hash_status. Passed straight through with no measurement in flight or with debug_enables.ignore_nic_hash set";};
-            MODE_STRAP = 8'h10 {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
-            POR_RELEASE = 8'h11 {desc = "Metro (Versal). POR_B released";};
-            WAIT_DONE = 8'h12 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
-            DONE = 8'h13 {desc = "Booted. On metro the boot flash mux is then pointed at the FPGA so the SP5 can reach it over eSPI";};
-            POWER_DOWN = 8'h14 {desc = "Metro (Versal). POR_B asserted, rail groups being disabled in reverse order";};
+            HASH_WAIT = 8'h0f {desc = "Metro (Versal). Rails up and settled, POR_B held; waiting for the image measurement to finish, see nic_hash_status. Passed straight through with no measurement in flight or with versal_boot_ctrl.interlock_bypass set";};
+            SP5_INTERLOCK = 8'h10 {desc = "Metro (Versal). Rails up, image measured, POR_B held; presence shown to the SP5 and waiting for it to enable slot power on either channel (or versal_boot_ctrl.interlock_bypass). The flash is with eSPI1. Also where a slot power-off from DONE parks";};
+            MODE_STRAP = 8'h11 {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
+            POR_RELEASE = 8'h12 {desc = "Metro (Versal). POR_B released";};
+            WAIT_DONE = 8'h13 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
+            BOOT_FAILED = 8'h14 {desc = "Metro (Versal). ERROR_OUT, or no DONE within the timeout. POR_B asserted and the flash back with eSPI1 for reflash; presence still shown, and a fresh slot power enable (low then high) retries";};
+            DONE = 8'h15 {desc = "Booted. On metro the boot flash mux stays with the FPGA so the SP5 can reach it over eSPI";};
+            POWER_DOWN = 8'h16 {desc = "Metro (Versal). POR_B asserted, rail groups being disabled in reverse order";};
         };
 
         field {
@@ -556,11 +560,6 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             it after a fault. Setting it with the NIC up powers the NIC down as a software
             disable would, without a fault. Clearing it while a0_en is set starts the NIC sequence.";
         } a0hp_inhibit[1] = 0;
-        field {
-            desc = "Metro only. Do not wait for the image measurement before releasing POR_B. The
-            NIC's rails must still be up and settled. A measurement in flight when POR_B is
-            released loses the flash to the NIC and is recorded as abandoned.";
-        } ignore_nic_hash[1] = 0;
     } debug_enables;
 
     reg {
@@ -728,33 +727,36 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
 
     reg {
         name = "Versal Boot Control";
-        desc = "Metro only. Boot-mode straps driven onto the Versal's MODE[3:0] pins while POR_B is held.
-        The sequencer latches these when it leaves the RAILS_SETTLE state, so changing them
-        only takes effect on the next Versal power-up.";
+        desc = "Metro only. How the Versal gets configured. By default the NIC power sequence
+        measures the boot image (hash engine, range from HW_FLASH_ADDR/HW_LENGTH) while the
+        rails come up, then holds POR_B at SP5_INTERLOCK until the SP5, having read the
+        digest over eSPI1, enables slot power on either channel through the hotplug
+        controller. Without host software that does this the NIC sits at SP5_INTERLOCK
+        until interlock_bypass is set.";
         field {
             desc = "Versal boot mode driven onto MODE[3:0]. 0x0 is JTAG, 0x2 is QSPI32, which
-            is how the board is wired. JTAG is the escape hatch for bring-up.";
+            is how the board is wired. JTAG is the escape hatch for bring-up. Latched as the
+            sequencer leaves SP5_INTERLOCK, so it can be changed while the NIC waits there.";
         } mode[3:0] = 4'h2;
         field {
-            desc = "Start a measurement of the boot image when the NIC power sequence starts.
-            It runs alongside the rails coming up, and POR_B is not released until it
-            has finished. The range comes from the hash engine's HW_FLASH_ADDR/HW_LENGTH.
-            The engine failing to produce a digest is recorded and the boot goes ahead.
-            Off by default: the Versal boots without a measurement unless software
-            sets this before the power-up.";
-        } hash_image[4:4] = 0;
+            desc = "Skip the image measurement and the SP5 interlock: the power sequence starts
+            no measurement, POR_B releases as soon as the rails have settled, and slot
+            power only gates PERST rather than holding the Versal in reset. Bench use;
+            off by default.";
+        } interlock_bypass[4:4] = 0;
         field {
-            desc = "Self-clearing. Set to 1 to start a measurement now. Only taken while the NIC
-            is held in POR and no measurement is in flight; otherwise it is recorded in
-            nic_hash_status.refused.";
+            desc = "Self-clearing. Set to 1 to start a measurement now. Taken as soon as the
+            flash is on the FPGA side (any time the Versal is not being configured);
+            until then it waits, see nic_hash_status.pending.";
         } hash_start[5:5] = 0;
     } versal_boot_ctrl;
 
     reg {
         name = "NIC image measurement status";
         desc = "Metro only. The state machine that has the hash engine measure the NIC's boot
-        image. It runs on its own, alongside the NIC power sequence; the digest is in the hash
-        engine's HW_DIGEST registers.";
+        image. It runs on its own, alongside the NIC power sequence, whenever the flash is on
+        the FPGA side; the digest is in the hash engine's HW_DIGEST registers and, for the
+        SP5, in eSPI1's platform registers.";
         default sw = r;
 
         enum nic_hash_state_machine {
@@ -778,13 +780,15 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             part way through it. Cleared when the next one starts.";
         } abandoned[10:10];
         field {
-            desc = "The current or last measurement was started by versal_boot_ctrl.hash_start
-            and not by the power sequence.";
+            desc = "The current or last measurement was started by versal_boot_ctrl.hash_start.";
         } sw_started[11:11];
         field {
-            desc = "A start was turned away since the last one taken: the NIC was out of POR, or
-            a measurement was already in flight.";
-        } refused[12:12];
+            desc = "A start is waiting: for the flash to come back to the FPGA once the Versal
+            has been configured, or for the measurement in flight to finish.";
+        } pending[12:12];
+        field {
+            desc = "The current or last measurement was started by the SP5 over eSPI1.";
+        } host_started[13:13];
     } nic_hash_status;
 
     reg {

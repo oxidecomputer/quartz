@@ -14,6 +14,14 @@ use work.hash_engine_regs_pkg.all;
 -- generates types and constants, so all the behaviour lives here: this follows
 -- the same shape as spi_nor_regs.
 entity hash_engine_regs is
+    generic (
+        -- What HW_FLASH_ADDR and HW_LENGTH come out of reset as: the range a
+        -- hardware request measures before software has set one. Zero, the
+        -- IP default, fails a request with cfg_err. A board that measures a
+        -- known image, metro's Versal, sets its range here.
+        HW_FLASH_ADDR_DEFAULT : natural := 0;
+        HW_LENGTH_DEFAULT : natural := 0
+    );
     port (
         clk   : in    std_logic;
         reset : in    std_logic;
@@ -95,8 +103,8 @@ begin
         prepend <= rec_reset;
         flash_addr <= rec_reset;
         msg_length <= rec_reset;
-        hw_flash_addr <= rec_reset;
-        hw_length <= rec_reset;
+        hw_flash_addr <= (addr => To_Std_Logic_Vector(HW_FLASH_ADDR_DEFAULT, 32));
+        hw_length <= (count => To_Std_Logic_Vector(HW_LENGTH_DEFAULT, 32));
         start_strobe <= '0';
         abort_strobe <= '0';
     elsif rising_edge(clk) then

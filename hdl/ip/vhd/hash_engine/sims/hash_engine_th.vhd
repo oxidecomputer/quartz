@@ -71,7 +71,14 @@ begin
             bresp   => axi_bus.write_response.resp
         );
 
+    -- Built with a hardware range, as a board that measures a known image is,
+    -- so the reset values can be checked; the unprogrammed-range test writes
+    -- zero itself.
     dut: entity work.hash_engine_top
+        generic map (
+            HW_FLASH_ADDR_DEFAULT => 16#00123000#,
+            HW_LENGTH_DEFAULT => 4096
+        )
         port map (
             clk              => clk,
             reset            => reset,

@@ -452,9 +452,18 @@ begin
                 read_hw_digest(dig);
                 check_equal(dig, std_logic_vector(expected), "hw digest kept after a software run");
 
+            elsif run("hw_range_resets_to_generics") then
+                -- A board can build in the range its hardware requests
+                -- measure, so nothing has to be written before the first one
+                read_reg(net, HW_FLASH_ADDR_OFFSET, rdata);
+                check_equal(rdata, std_logic_vector'(x"0012_3000"), "HW_FLASH_ADDR reset value");
+                read_reg(net, HW_LENGTH_OFFSET, rdata);
+                check_equal(rdata, std_logic_vector'(x"0000_1000"), "HW_LENGTH reset value");
+
             elsif run("hw_request_zero_length_is_an_error") then
                 -- An unprogrammed range: refused as a configuration error,
                 -- reported, and the engine is still usable afterwards.
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(0, 32));
                 hw_request(err, status);
                 check_equal(err, '1', "hw request should report an error");
                 check_equal((status and HW_STATUS_CFG_ERR_MASK) /= (status'range => '0'), true, "HW_STATUS.cfg_err");

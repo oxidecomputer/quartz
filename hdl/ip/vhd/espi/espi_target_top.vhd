@@ -24,9 +24,10 @@ entity espi_target_top is
     generic (
         -- Whether this instance can ever forward SAFS flash writes and
         -- erases. False strips the ability out of the build; true still
-        -- leaves it gated by the flash_write_enable control bit, which
-        -- resets to off. Refused writes and erases get an unsuccessful
-        -- completion.
+        -- leaves it gated by the flash_write_enable control bit, which then
+        -- resets to on so the host can write without the SP's help, and
+        -- which the SP can clear. Refused writes and erases get an
+        -- unsuccessful completion.
         FLASH_WRITES_ALLOWED : boolean := false;
         -- Whether to keep the 4k entry post code buffer, see espi_regs.
         POST_CODE_BUFFER_ENABLED : boolean := true;
@@ -72,7 +73,15 @@ entity espi_target_top is
         to_sp_uart_ready: in std_logic;
         from_sp_uart_data : in std_logic_vector(7 downto 0);
         from_sp_uart_valid: in std_logic;
-        from_sp_uart_ready: out std_logic
+        from_sp_uart_ready: out std_logic;
+        -- The NIC image measurement the host sees in the nic_hash_* platform
+        -- registers, see espi_spec_regs. Leave at the defaults where there is
+        -- no such thing.
+        nic_hash_digest : in std_logic_vector(255 downto 0) := (others => '0');
+        nic_hash_done : in std_logic := '0';
+        nic_hash_busy : in std_logic := '0';
+        nic_hash_rehash : out std_logic;
+        nic_hash_done_clear : out std_logic
     );
 end entity;
 
@@ -366,7 +375,12 @@ begin
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
             flash_channel_enable => flash_channel_enable,
-            oob_enabled    => oob_enabled
+            oob_enabled    => oob_enabled,
+            nic_hash_digest => nic_hash_digest,
+            nic_hash_done => nic_hash_done,
+            nic_hash_busy => nic_hash_busy,
+            nic_hash_rehash => nic_hash_rehash,
+            nic_hash_done_clear => nic_hash_done_clear
         );
 
     -- Both halves of the write permission have to agree; the generic keeps

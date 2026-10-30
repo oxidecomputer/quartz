@@ -38,6 +38,12 @@ begin
         alias data_rdack is <<signal th.data_rdack : std_logic>>;
         alias data_rempty is <<signal th.data_rempty : std_logic>>;
         alias espi_owns_flash_hw is <<signal th.espi_owns_flash_hw : std_logic>>;
+        alias hash_cmd_wdata is <<signal th.hash_cmd_wdata : std_logic_vector(31 downto 0)>>;
+        alias hash_cmd_write is <<signal th.hash_cmd_write : std_logic>>;
+        alias hash_data_rdata is <<signal th.hash_data_rdata : std_logic_vector(7 downto 0)>>;
+        alias hash_data_rdack is <<signal th.hash_data_rdack : std_logic>>;
+        alias hash_data_rempty is <<signal th.hash_data_rempty : std_logic>>;
+        alias hash_bytes is <<signal th.hash_bytes : natural>>;
         constant flash : actor_t := find("spi_nor_target");
 
         -- Request kinds, as flash_channel_pkg.to_kind_bits encodes them in
@@ -75,6 +81,30 @@ begin
                 wait until rising_edge(clk);
             end loop;
             payload_write <= '0';
+        end procedure;
+
+        -- A hash client command: raw address, then a byte count
+        procedure put_hash_cmd(constant addr : natural; constant len : natural) is
+        begin
+            wait until rising_edge(clk);
+            hash_cmd_wdata <= std_logic_vector(to_unsigned(addr, 32));
+            hash_cmd_write <= '1';
+            wait until rising_edge(clk);
+            hash_cmd_wdata <= std_logic_vector(to_unsigned(len, 32));
+            wait until rising_edge(clk);
+            hash_cmd_write <= '0';
+        end procedure;
+
+        procedure get_hash_byte(variable b : out std_logic_vector(7 downto 0)) is
+        begin
+            loop
+                wait until rising_edge(clk);
+                exit when hash_data_rempty = '0';
+            end loop;
+            b := hash_data_rdata;
+            hash_data_rdack <= '1';
+            wait until rising_edge(clk);
+            hash_data_rdack <= '0';
         end procedure;
 
         procedure get_byte(variable b : out std_logic_vector(7 downto 0)) is
@@ -126,6 +156,76 @@ begin
                 for i in 0 to 299 loop
                     get_byte(data);
                     check_equal(data, pattern_byte(16#1000# + i), "read byte " & integer'image(i));
+                end loop;
+                -- and not a byte more: a read over a page is several flash
+                -- transactions, and anything left over would lead the next
+                -- read's data
+                wait for 5 us;
+                check_equal(data_rempty, '1', "Expected nothing left over after the read");
+            elsif run("hash_waits_for_an_espi_read_in_flight") then
+                -- A hash asked for part way through a multi-chunk eSPI read
+                -- gets the bus only between transactions: the read comes
+                -- through whole, and the hash runs after it. A read the host
+                -- queued meanwhile is served between the hash's chunks, not
+                -- after it.
+                fill_pattern(net, flash);
+                put_cmd(16#1000#, kind_read, 1000);
+                for i in 0 to 99 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#1000# + i), "read byte " & integer'image(i));
+                end loop;
+                put_hash_cmd(16#8000#, 600);
+                put_cmd(16#3000#, kind_read, 40);
+                for i in 100 to 999 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#1000# + i), "read byte " & integer'image(i));
+                end loop;
+                check_equal(hash_bytes, 0, "Expected no hash bytes before the read finished");
+                for i in 0 to 39 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#3000# + i), "queued read byte " & integer'image(i));
+                end loop;
+                check(hash_bytes < 600, "Expected the queued read served before the hash finished");
+                for i in 0 to 599 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#8000# + i), "hash byte " & integer'image(i));
+                end loop;
+            elsif run("espi_read_served_between_hash_chunks") then
+                -- A read that arrives while a hash runs waits only for the
+                -- chunk in flight, and the hash picks up where it left off.
+                -- A second hash afterwards shows the parking leaves nothing
+                -- behind.
+                fill_pattern(net, flash);
+                put_hash_cmd(16#4000#, 1500);
+                wait until hash_bytes >= 256;
+                put_cmd(16#3000#, kind_read, 64);
+                for i in 0 to 63 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#3000# + i), "read byte " & integer'image(i));
+                end loop;
+                check(hash_bytes < 1500, "Expected the read served before the hash finished");
+                for i in 0 to 1499 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#4000# + i), "hash byte " & integer'image(i));
+                end loop;
+                put_hash_cmd(16#5000#, 300);
+                for i in 0 to 299 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#5000# + i), "second hash byte " & integer'image(i));
+                end loop;
+            elsif run("hash_runs_between_back_to_back_espi_reads") then
+                fill_pattern(net, flash);
+                put_hash_cmd(16#6000#, 600);
+                put_cmd(16#1000#, kind_read, 128);
+                put_cmd(16#1080#, kind_read, 128);
+                put_cmd(16#1100#, kind_read, 128);
+                for i in 0 to 383 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#1000# + i), "read byte " & integer'image(i));
+                end loop;
+                for i in 0 to 599 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#6000# + i), "hash byte " & integer'image(i));
                 end loop;
             elsif run("espi_write_then_read_back") then
                 -- window starts erased

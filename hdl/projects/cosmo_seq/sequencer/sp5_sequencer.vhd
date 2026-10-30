@@ -62,6 +62,11 @@ entity sp5_sequencer is
         -- enable. A Versal has two slots; the T6 uses only the first.
         sp5_nic_perst_l : in std_logic;
         sp5_nic_chb_perst_l : in std_logic := '1';
+        -- The slot power enables themselves. A Versal is not configured
+        -- until the SP5 sets one of them, and is held back in reset once
+        -- both are clear; the T6 does not use them.
+        sp5_nic_cha_power_en : in std_logic := '0';
+        sp5_nic_chb_power_en : in std_logic := '0';
         sp5_nic_faulted : out std_logic;
         -- To SP5 hotplug: each NIC slot's presence. The T6 is soldered down
         -- and always present; a Versal's channels are present once it has
@@ -93,6 +98,13 @@ entity sp5_sequencer is
         hash_req : out std_logic;
         hash_ack : in std_logic := '0';
         hash_err : in std_logic := '0';
+        -- The host's handle on that measurement, from eSPI1's platform
+        -- registers: requests to measure again and to clear the digest it has
+        -- read, and what it sees back (see versal_seq)
+        host_hash_rehash : in std_logic := '0';
+        host_hash_done_clear : in std_logic := '0';
+        nic_hash_host_done : out std_logic;
+        nic_hash_busy : out std_logic;
         -- FPGA1_VERSION_ID board straps, reported straight through
         version_id : in std_logic_vector(1 downto 0) := "00"
     );
@@ -424,6 +436,8 @@ begin
         sp5_nic_prsnt_l <= '0';
         sp5_nic_chb_prsnt_l <= '0';
         hash_req <= '0';
+        nic_hash_host_done <= '0';
+        nic_hash_busy <= '0';
     end generate;
 
     -----------------------------------------------------------------------
@@ -463,6 +477,12 @@ begin
             debug_enables => debug_enables,
             sp5_versal_cha_perst_l => sp5_nic_perst_l,
             sp5_versal_chb_perst_l => sp5_nic_chb_perst_l,
+            sp5_versal_cha_power_en => sp5_nic_cha_power_en,
+            sp5_versal_chb_power_en => sp5_nic_chb_power_en,
+            host_hash_rehash => host_hash_rehash,
+            host_hash_done_clear => host_hash_done_clear,
+            hash_host_done => nic_hash_host_done,
+            hash_busy => nic_hash_busy,
             versal_dbg_pins => nic_dbg_pins,
             versal_held_in_reset => versal_held_in_reset,
             flash_owned_by_seq => flash_owned_by_seq,
