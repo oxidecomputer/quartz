@@ -26,6 +26,8 @@ entity a1_a0_seq is
         a0_ok: out std_logic;
         a0_idle: out std_logic;
         a0_faulted: out std_logic;
+        -- A MAPO that ignore_sp5 kept from happening, see below
+        mapo_suppressed: out std_logic;
         sw_enable : in std_logic;
         ignore_sp5 : in std_logic;
         raw_state : out seq_raw_status_type;
@@ -78,6 +80,7 @@ architecture rtl of a1_a0_seq is
         group_c_expected: std_logic;
         ddr_bulk_expected: std_logic;
         faulted: std_logic;
+        mapo_suppressed: std_logic;
         therm_trip : std_logic;
         smerr_assert : std_logic;
     end record;
@@ -93,6 +96,7 @@ architecture rtl of a1_a0_seq is
         '0',
         '0',
         '1',
+        '0',
         '0',
         '0',
         '0',
@@ -194,6 +198,7 @@ begin
         
         -- single cycle flags
         v.faulted := '0';
+        v.mapo_suppressed := '0';
 
         case seq_r.state is
             when IDLE =>
@@ -364,7 +369,12 @@ begin
 
         -- fault and MAPO case that are monitored in all non-IDLE cases
         if seq_r.state /= IDLE then
-            if a_faulted or b_faulted or c_faulted or ddr_bulk_faulted or (not upstream_ok) then
+            if (a_faulted or b_faulted or c_faulted or ddr_bulk_faulted or (not upstream_ok)) and ignore_sp5 then
+                -- Power testing: stay up with everything enabled. This is
+                -- not reported as a fault either, since hubris answers an
+                -- A0MAPO by taking the board to A2 itself.
+                v.mapo_suppressed := '1';
+            elsif a_faulted or b_faulted or c_faulted or ddr_bulk_faulted or (not upstream_ok) then
                 v.faulted := '1';
                 -- In the fault cases, we immediately transition to IDLE
                 -- regardless of the current state, and don't have time to
@@ -445,4 +455,5 @@ begin
     group_c.vddcr_cpu0.enable <= seq_r.group_c_en;
     group_c.vddcr_soc.enable <= seq_r.group_c_en;
     a0_faulted <= seq_r.faulted;
+    mapo_suppressed <= seq_r.mapo_suppressed;
 end rtl;

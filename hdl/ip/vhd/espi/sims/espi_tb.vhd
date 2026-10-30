@@ -53,6 +53,9 @@ begin
         variable status_rec      : status_t;
         variable cmd             : cmd_t;
         variable gen_int         : integer;
+        variable len             : natural;
+        type nat_array_t is array (natural range <>) of natural;
+        constant read_lens       : nat_array_t := (1, 2, 63, 64, 65, 127, 128, 129, 252, 253, 254, 255, 256);
         variable payload_size    : integer;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
         variable pcfree_deasserted : boolean;
@@ -344,6 +347,60 @@ begin
                 check(crc_ok, "erase completion CRC Check failed");
                 check_equal(cycle_type, unsuccessful_no_data_only, "unsupported erase completion cycle type");
                 check_equal(length_field, std_logic_vector'(x"000"), "unsupported erase completion length");
+
+                -- 64kB is the other advertised size. The model's window is
+                -- 64kB, so this clears all of it; check both ends.
+                put_flash_erase(net, X"00000000", flash_erase_64k, response_code, status, crc_ok);
+                check(crc_ok, "put_flash_erase CRC Check failed");
+                wait_for_alert(net);
+                get_flash_completion(net, 0, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                check(crc_ok, "erase completion CRC Check failed");
+                check_equal(cycle_type, success_no_data, "64k erase completion cycle type");
+                put_flash_read(net, X"00000000", 4, response_code, status,  crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                wait_for_alert(net);
+                get_flash_c(net, 4, my_queue, response_code, status,  crc_ok);
+                check(crc_ok, "read completion CRC Check failed");
+                for i in 0 to 3 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), std_logic_vector'(x"FF"), "64k erased low byte " & integer'image(i));
+                end loop;
+                put_flash_read(net, X"0000FFFC", 4, response_code, status,  crc_ok);
+                check(crc_ok, "put_flash_read CRC Check failed");
+                wait_for_alert(net);
+                get_flash_c(net, 4, my_queue, response_code, status,  crc_ok);
+                check(crc_ok, "read completion CRC Check failed");
+                for i in 0 to 3 loop
+                    check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), std_logic_vector'(x"FF"), "64k erased high byte " & integer'image(i));
+                end loop;
+            elsif run("read_flash_sizes") then
+                -- Read sizes around the payload boundaries up to the 256
+                -- bytes advertised as the target max read request size, at
+                -- addresses that are not aligned to anything, with the CRC
+                -- checked on each completion.
+                flash_cap_reg.flash_channel_enable := '1';
+                set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                for k in read_lens'range loop
+                    len := read_lens(k);
+                    put_flash_read(net, To_StdLogicVector(16#1003# + len * 37, 32), len, response_code, status,  crc_ok);
+                    check(crc_ok, "put_flash_read CRC Check failed, len " & integer'image(len));
+                    wait_for_alert(net);
+                    get_flash_completion(net, len, my_queue, cycle_type, length_field, response_code, status, crc_ok);
+                    check_equal(cycle_type, success_with_data_only, "read completion cycle type, len " & integer'image(len));
+                    check_equal(length_field, To_StdLogicVector(len, 12), "read completion length, len " & integer'image(len));
+                    for i in 0 to len - 1 loop
+                        check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), fake_flash_pattern(16#1003# + len * 37 + i),
+                                    "len " & integer'image(len) & " byte " & integer'image(i));
+                    end loop;
+                    check(crc_ok, "read completion CRC Check failed, len " & integer'image(len));
+                end loop;
+            elsif run("safs_erase_sizes_advertised") then
+                -- The host picks erase sizes from the EBS field; it has to
+                -- match what the flash side actually accepts (4kB and 64kB).
+                get_config(net, CH3_CAPABILITIES2_OFFSET, data_32, response_code, status,  crc_ok);
+                check(crc_ok, "Get Config CRC Check failed");
+                check_equal(data_32(15 downto 8), std_logic_vector'(x"44"), "Expected 4kB and 64kB erase block sizes advertised");
+                check_equal(data_32(2 downto 0), std_logic_vector'("011"), "Expected 256 byte target max read request size");
             elsif run("write_enable_resets_set") then
                 -- This harness's target is built with writes allowed, so the
                 -- bit comes out of reset set and the host can write unaided.

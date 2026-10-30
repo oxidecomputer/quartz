@@ -23,6 +23,8 @@ entity nic_seq is
         upstream_ok : in std_logic;
         nic_idle : out std_logic;
         nic_faulted : out std_logic;
+        -- A MAPO that debug_enables.ignore_sp5 kept from happening
+        mapo_suppressed : out std_logic;
         debug_enables : in debug_enables_type;
         nic_overrides_reg : in nic_overrides_type;
 
@@ -76,6 +78,7 @@ architecture rtl of nic_seq is
         nic_clk_en_l : std_logic;
         nic_expected : std_logic;
         faulted : std_logic;
+        mapo_suppressed : std_logic;
     end record;
 
     constant nic_r_reset : nic_r_t := (
@@ -89,7 +92,8 @@ architecture rtl of nic_seq is
         nic_cld_rst_l => '0',
         nic_clk_en_l => '1',
         nic_expected => '0',
-        faulted => '0'
+        faulted => '0',
+        mapo_suppressed => '0'
     );
     signal nic_r, nic_rin : nic_r_t;
 
@@ -269,8 +273,15 @@ begin
         end case;
 
         -- MAPO fault handling - monitored in all non-IDLE states
+        v.mapo_suppressed := '0';
         if nic_r.state /= IDLE then
-            if nic_faulted_var = '1' or upstream_ok = '0' or nic_overrides_reg.nic_test_mapo = '1' then
+            if (nic_faulted_var = '1' or upstream_ok = '0' or nic_overrides_reg.nic_test_mapo = '1') and
+               debug_enables.ignore_sp5 = '1' then
+                -- Power testing: stay up with everything enabled, and do not
+                -- set faulted, which would raise NICMAPO (hubris drops to A0
+                -- on it) and arm the PERST restart.
+                v.mapo_suppressed := '1';
+            elsif nic_faulted_var = '1' or upstream_ok = '0' or nic_overrides_reg.nic_test_mapo = '1' then
                 v.faulted := '1';
                 -- In fault case, immediately transition to IDLE
                 -- regardless of current state
@@ -388,5 +399,6 @@ begin
 
     nic_rails.nic_hsc_12v.enable <= nic_r.nic_power_en;
     nic_faulted <= nic_r.faulted;
+    mapo_suppressed <= nic_r.mapo_suppressed;
 
 end rtl;

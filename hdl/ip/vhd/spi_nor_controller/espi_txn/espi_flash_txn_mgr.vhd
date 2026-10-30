@@ -70,9 +70,10 @@ architecture rtl of espi_flash_txn_mgr is
     constant kind_read : std_logic_vector(3 downto 0) := x"0";
     constant kind_write : std_logic_vector(3 downto 0) := x"1";
     constant kind_erase : std_logic_vector(3 downto 0) := x"2";
-    -- eSPI SAFS erase size codes carried in the length field
-    constant erase_4k : std_logic_vector(11 downto 0) := x"001";
-    constant erase_64k : std_logic_vector(11 downto 0) := x"003";
+    -- eSPI SAFS (target attached) erase size codes carried in the length
+    -- field. Not the MAFS encoding, which is offset by one.
+    constant erase_4k : std_logic_vector(11 downto 0) := x"000";
+    constant erase_64k : std_logic_vector(11 downto 0) := x"002";
     -- Status bytes reported back for writes and erases
     constant status_ok : std_logic_vector(7 downto 0) := x"00";
     constant status_unsupported : std_logic_vector(7 downto 0) := x"01";
@@ -236,8 +237,10 @@ begin
                         end if;
                     when kind_erase =>
                         -- Length is the SAFS erase size code. Only the sizes
-                        -- with a 4-byte-address opcode are offered; anything
-                        -- else is reported back as unsupported.
+                        -- with a 4-byte-address opcode are offered (and
+                        -- advertised in the channel 3 capabilities 2 EBS
+                        -- field); anything else is reported back as
+                        -- unsupported.
                         v.step := step_wren;
                         v.data_bytes := 0;
                         v.state := wait_idle;

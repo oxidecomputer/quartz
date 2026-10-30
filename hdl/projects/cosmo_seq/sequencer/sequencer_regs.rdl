@@ -535,7 +535,11 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         field {
             desc = "Ignore sp5 allows the sequencer to bypass any SP5-related handshakes
             for power debugging. Some rails may not completely power up without a load-slammer
-            or other feedback device in place.";
+            or other feedback device in place.
+            While set, neither A0 nor the NIC MAPOs: a rail fault, upstream loss or
+            nic_test_mapo leaves everything enabled and raises no A0MAPO/NICMAPO interrupt,
+            and is recorded in mapo_suppressed instead. Metro's POR_B stays interlocked with
+            the Versal rails. Clearing the bit with a fault still present MAPOs at once.";
         } ignore_sp5[1] = 0;
          field {
             desc = "Set to mux in the nic_override signals instead of the normal nic control signals";
@@ -791,6 +795,20 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             desc = "FPGA1_VERSION_ID[1:0] strap value";
         } version_id[1:0];
     } board_version;
+
+    reg {
+        name = "Suppressed MAPOs";
+        desc = "Sticky record of MAPOs that debug_enables.ignore_sp5 kept from happening: the
+        fault was seen, but power stayed up and no interrupt was raised. Write clears.
+        While the fault lasts, rail_pgs shows which rail it is.";
+        default sw = rw;
+        field {
+            desc = "A0 would have MAPO'd";
+        } a0[0:0] = 0;
+        field {
+            desc = "The NIC (A0HP) would have MAPO'd";
+        } nic[1:1] = 0;
+    } mapo_suppressed;
 
 };
    

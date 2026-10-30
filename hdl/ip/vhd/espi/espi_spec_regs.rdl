@@ -280,17 +280,18 @@ addrmap eSPI_Spec {
         } flash_max_payload_supported[7:5] =  0x3;
 
         field {
-            desc = "Flash Access Channel Maximum Payload Size Supported:
-            This field advertises the Maximum Payload Size supported by the slave.
-            ** Note that the erase block does nothing in the Oxide implementation
-            as we do not allow the big CPU to modify flash at all
+            desc = "Flash Block Erase Size: eSPI controller sets this field to
+            communicate the block erase size to the target. This field is
+            applicable only to the controller attached flash sharing scheme;
+            for target attached flash see the EBS field at 0x44. Oxide only
+            does target attached, so this holds its default and ignores writes.
             000b: Reserved
             001b: 4 Kbytes
             010b: 64 Kbytes
             011b: Both 4 Kbytes and 64 Kbytes are supported
             100b: 128 Kbytes
             101b: 256 Kbytes
-            110b – 111b: Reserved
+            110b - 111b: Reserved
             ";
             sw = r;
 
@@ -339,28 +340,26 @@ addrmap eSPI_Spec {
         } rpmc_sup[21:16] =  0x0;
 
         field {
-            desc = "Target Flash Erase Block Size for Master’s Regions:
-            This field indicates the sizes of the erase commands the
-            master may issue. If multiple bits are set then the master
-            may issue an erase using any of the indicated sizes.
-            If multiple regions are accessible by the master, this field
-            advertises the common erase block sizes for these
-            regions.
-            ** Note that the erase block does nothing in the Oxide implementation
-            This field is only applicable when slave attached flash
+            desc = "Target Flash Erase Block Size: This field indicates the
+            sizes of the erase commands the controller may issue. If multiple
+            bits are set then the controller may issue an erase using any of
+            the indicated sizes.
+            This field is only applicable when the target attached flash
             sharing scheme is selected.
-            Bit 0: 1 Kbytes EBS supported
-            Bit 1: 2 Kbytes EBS supported
+            Oxide advertises 4 Kbytes and 64 Kbytes, the sizes with a 4-byte
+            address erase opcode; other sizes get an unsuccessful completion.
+            Bit 0: Reserved
+            Bit 1: Reserved
             Bit 2: 4 Kbytes EBS supported
-            Bit 3: 8 Kbytes EBS supported
-            Bit 4: 16 Kbytes EBS supported
+            Bit 3: Reserved
+            Bit 4: Reserved
             Bit 5: 32 Kbytes EBS supported
             Bit 6: 64 Kbytes EBS supported
             Bit 7: 128 Kbytes EBS supported
             ";
             sw = r;
 
-        } ebs_sup[15:8] =  0x0;
+        } ebs_sup[15:8] =  0x44;
 
         field {
             desc = "Target Maximum Read Request Size Supported:

@@ -147,6 +147,7 @@ begin
     -- CRC is good. This will help direct the data
     response_processor_comb: process(all)
         variable v : reg_type;
+        variable slot_free : boolean;
     begin
         v := r;
         v.resp_ack := '0';
@@ -157,184 +158,196 @@ begin
         if regs_if.rdata_valid then
             v.reg_data := regs_if.rdata;
         end if;
-        case r.state is
-            when IDLE =>
-                -- TODO: figure out a better mask here to deal with the valid response
-                -- or manage processing
-                if command_header.valid and not r.response_done then
-                    v.state := RESPONSE_CODE;
-                end if;
-            when RESPONSE_CODE =>
-                v.cur_valid := '1';
-                v.status := live_status;
-                v.resp_idx := 0;
-                -- set opcode immediately so it's ready for the next state
-                case command_header.opcode.value is
-                    when opcode_put_flash_np =>
-                        v.cur_data := defer_code;
-                    when others =>
-                        v.cur_data := accept_code;
-                        v.status := live_status;
-                end case;
-                -- determine next state based on current opcode
-                if data_to_host.ready then
-                    case command_header.opcode.value is
-                        when opcode_get_configuration =>
-                            v.state := SEND_CONFIG;
-                        when opcode_get_flash_c =>
-                            v.is_flash_response := true;
-                            v.state := RESPONSE_FLASH_HEADER;
-                        when opcode_get_pc =>
-                            v.state := RESPONSE_UART_HEADER;
-                        when opcode_get_oob =>
-                            v.state := response_oob_header;
-                        when others =>
-                            -- Default hw to just return status with accept code
-                            v.state := STATUS;
-                    end case;
-                end if;
-            when send_config =>
-                v.cur_valid := '1';
-                -- This needs to be LSB first
-                v.cur_data := v.reg_data(7 + r.resp_idx * 8 downto r.resp_idx * 8);
-                if data_to_host.ready then
-                    v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 3 then
-                        v.state := STATUS;
+
+        -- Each state below presents its own byte in cur_data and moves on,
+        -- taking the byte already on the output as gone. That only holds if
+        -- the output register is empty or being taken this cycle; otherwise
+        -- everything holds. The response FIFO towards the link layer is
+        -- shallower than the largest flash completion, so it does fill and
+        -- push back part way through one.
+        slot_free := r.cur_valid = '0' or data_to_host.ready = '1';
+        if not slot_free then
+            v.cur_valid := '1';
+        else
+            case r.state is
+                when IDLE =>
+                    -- TODO: figure out a better mask here to deal with the valid response
+                    -- or manage processing
+                    if command_header.valid and not r.response_done then
+                        v.state := RESPONSE_CODE;
                     end if;
-                end if;
-            when RESPONSE_FLASH_HEADER =>
-                v.cur_valid := '1';
-                case r.resp_idx is
-                    when 0 =>
-                        v.cur_data := response_chan_mux.cycle_type;
-                        -- These two things could change cycle-cycle but we need them to match
-                        -- so we latch them at the same time
-                        v.payload_cnt := response_chan_mux.length - 1;
-                        v.temp_length := response_chan_mux.length;
-                    when 1 =>
-                        v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
-                    when 2 =>
-                        v.cur_data := r.temp_length(7 downto 0);
-                    when others =>
-                        null;  -- not expected
-                end case;
-                if data_to_host.ready then
-                    v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 2 then
-                        -- A write or erase completes with no payload at all;
-                        -- counting one down from a zero length would run the
-                        -- payload stage for 4096 bytes.
-                        if r.temp_length = 0 then
-                            v.state := STATUS;
+                when RESPONSE_CODE =>
+                    v.cur_valid := '1';
+                    v.status := live_status;
+                    v.resp_idx := 0;
+                    -- set opcode immediately so it's ready for the next state
+                    case command_header.opcode.value is
+                        when opcode_put_flash_np =>
+                            v.cur_data := defer_code;
+                        when others =>
+                            v.cur_data := accept_code;
                             v.status := live_status;
-                        else
+                    end case;
+                    -- determine next state based on current opcode
+                    if slot_free then
+                        case command_header.opcode.value is
+                            when opcode_get_configuration =>
+                                v.state := SEND_CONFIG;
+                            when opcode_get_flash_c =>
+                                v.is_flash_response := true;
+                                v.state := RESPONSE_FLASH_HEADER;
+                            when opcode_get_pc =>
+                                v.state := RESPONSE_UART_HEADER;
+                            when opcode_get_oob =>
+                                v.state := response_oob_header;
+                            when others =>
+                                -- Default hw to just return status with accept code
+                                v.state := STATUS;
+                        end case;
+                    end if;
+                when send_config =>
+                    v.cur_valid := '1';
+                    -- This needs to be LSB first
+                    v.cur_data := v.reg_data(7 + r.resp_idx * 8 downto r.resp_idx * 8);
+                    if slot_free then
+                        v.resp_idx := r.resp_idx + 1;
+                        if r.resp_idx = 3 then
+                            v.state := STATUS;
+                        end if;
+                    end if;
+                when RESPONSE_FLASH_HEADER =>
+                    v.cur_valid := '1';
+                    case r.resp_idx is
+                        when 0 =>
+                            v.cur_data := response_chan_mux.cycle_type;
+                            -- These two things could change cycle-cycle but we need them to match
+                            -- so we latch them at the same time
+                            v.payload_cnt := response_chan_mux.length - 1;
+                            v.temp_length := response_chan_mux.length;
+                        when 1 =>
+                            v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
+                        when 2 =>
+                            v.cur_data := r.temp_length(7 downto 0);
+                        when others =>
+                            null;  -- not expected
+                    end case;
+                    if slot_free then
+                        v.resp_idx := r.resp_idx + 1;
+                        if r.resp_idx = 2 then
+                            -- A write or erase completes with no payload at all;
+                            -- counting one down from a zero length would run the
+                            -- payload stage for 4096 bytes.
+                            if r.temp_length = 0 then
+                                v.state := STATUS;
+                                v.status := live_status;
+                            else
+                                v.state := RESPONSE_PAYLOAD;
+                            end if;
+                        end if;
+                    end if;
+                when RESPONSE_UART_HEADER =>
+                    v.cur_valid := '1';
+                    -- This is a message with data message going up
+                    -- Standard header (3 bytes)
+                    -- message code (1 byte)
+                    -- message specific (4 bytes)
+                    -- then data
+                
+                    case r.resp_idx is
+                        when 0 =>
+                            v.cur_data := response_chan_mux.cycle_type;
+                            -- These two things could change cycle-cycle but we need them to match
+                            -- so we latch them at the same time, before they're needed
+                            -- internal counters are 0 indexed
+                            v.temp_length := response_chan_mux.length;
+                            v.payload_cnt := response_chan_mux.length - 1;
+                        when 1 =>
+                            v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
+                        when 2 =>
+                            v.cur_data := r.temp_length(7 downto 0);
+                        when others =>
+                           v.cur_data := (others => '0'); -- Filled in for message code, and msg specific
+                    end case;
+                    if slot_free then
+                        v.resp_idx := r.resp_idx + 1;
+                        if r.resp_idx = 7 then
                             v.state := RESPONSE_PAYLOAD;
                         end if;
                     end if;
-                end if;
-            when RESPONSE_UART_HEADER =>
-                v.cur_valid := '1';
-                -- This is a message with data message going up
-                -- Standard header (3 bytes)
-                -- message code (1 byte)
-                -- message specific (4 bytes)
-                -- then data
-                
-                case r.resp_idx is
-                    when 0 =>
-                        v.cur_data := response_chan_mux.cycle_type;
-                        -- These two things could change cycle-cycle but we need them to match
-                        -- so we latch them at the same time, before they're needed
-                        -- internal counters are 0 indexed
-                        v.temp_length := response_chan_mux.length;
-                        v.payload_cnt := response_chan_mux.length - 1;
-                    when 1 =>
-                        v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
-                    when 2 =>
-                        v.cur_data := r.temp_length(7 downto 0);
-                    when others =>
-                       v.cur_data := (others => '0'); -- Filled in for message code, and msg specific
-                end case;
-                if data_to_host.ready then
-                    v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 7 then
-                        v.state := RESPONSE_PAYLOAD;
+                when response_oob_header =>
+                    v.cur_valid := '1';
+                    case r.resp_idx is
+                        when 0 =>
+                            v.cur_data := oob_cycle_type;
+                            -- These two things could change cycle-cycle but we need them to match
+                            -- so we latch them at the same time, before they're needed
+                            -- internal counters are 0 indexed
+                            v.temp_length := response_chan_mux.length + 3;  -- 3 bytes of SMB headers
+                            v.payload_cnt := response_chan_mux.length - 1;
+                        when 1 =>
+                            v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
+                        when 2 =>
+                            v.cur_data := r.temp_length(7 downto 0);
+                        when 5 =>
+                            v.cur_data := resize(v.payload_cnt, 8) + 1; -- SMBus Byte Count
+                        when others =>
+                           v.cur_data := (others => '0'); -- SMB Headers
+                    end case;
+                    if slot_free then
+                        v.resp_idx := r.resp_idx + 1;
+                        if r.resp_idx = 5 then
+                            v.state := RESPONSE_PAYLOAD;
+                        end if;
                     end if;
-                end if;
-            when response_oob_header =>
-                v.cur_valid := '1';
-                case r.resp_idx is
-                    when 0 =>
-                        v.cur_data := oob_cycle_type;
-                        -- These two things could change cycle-cycle but we need them to match
-                        -- so we latch them at the same time, before they're needed
-                        -- internal counters are 0 indexed
-                        v.temp_length := response_chan_mux.length + 3;  -- 3 bytes of SMB headers
-                        v.payload_cnt := response_chan_mux.length - 1;
-                    when 1 =>
-                        v.cur_data := response_chan_mux.tag & r.temp_length(11 downto 8);
-                    when 2 =>
-                        v.cur_data := r.temp_length(7 downto 0);
-                    when 5 =>
-                        v.cur_data := resize(v.payload_cnt, 8) + 1; -- SMBus Byte Count
-                    when others =>
-                       v.cur_data := (others => '0'); -- SMB Headers
-                end case;
-                if data_to_host.ready then
-                    v.resp_idx := r.resp_idx + 1;
-                    if r.resp_idx = 5 then
-                        v.state := RESPONSE_PAYLOAD;
-                    end if;
-                end if;
 
-            when RESPONSE_PAYLOAD =>
-                v.cur_valid := '1';
-                v.cur_data := resp_data;
-                if data_to_host.ready then
-                    v.resp_ack := '1';
-                    if r.payload_cnt > 0 then
-                        v.payload_cnt := r.payload_cnt - 1;
-                    elsif r.payload_cnt = 0 then
-                        v.state := STATUS;
-                        v.status := live_status;
+                when RESPONSE_PAYLOAD =>
+                    v.cur_valid := '1';
+                    v.cur_data := resp_data;
+                    if slot_free then
+                        v.resp_ack := '1';
+                        if r.payload_cnt > 0 then
+                            v.payload_cnt := r.payload_cnt - 1;
+                        elsif r.payload_cnt = 0 then
+                            v.state := STATUS;
+                            v.status := live_status;
+                        end if;
                     end if;
-                end if;
-                null;
-            when STATUS =>
-                v.cur_valid := '1';
-                if data_to_host.ready then
-                    if r.status_idx = '0' then
-                        v.status_idx := '1';
-                    elsif r.status_idx = '1' then
-                        v.status_idx := '0';
-                        v.state := CALC_CRC;
+                    null;
+                when STATUS =>
+                    v.cur_valid := '1';
+                    if slot_free then
+                        if r.status_idx = '0' then
+                            v.status_idx := '1';
+                        elsif r.status_idx = '1' then
+                            v.status_idx := '0';
+                            v.state := CALC_CRC;
+                        end if;
                     end if;
-                end if;
-            when CALC_CRC =>
-               -- Need to let the CRC calc finish including the last byte
-               -- this case is special-cased below to not be a valid byte.
-               -- in the original implementation, this happened naturally
-               -- due to the delay the pipeline, but the new implementation
-               -- this can run clock-over-clock
-               v.state := CRC;
-            when CRC =>
-                v.cur_valid := '1';
-                v.cur_data := response_crc;
-                if data_to_host.ready then
-                    v.response_done := true;
-                    v.state := IDLE;
-                    v.is_flash_response := false;
-                end if;
-                v.has_responded := true;
-        end case;
-        -- Status words
-        if r.state = STATUS and r.status_idx = '0' then
-            v.status := live_status;
-            v.last_sent_status := live_status;
-            v.cur_data := pack(live_status)(7 downto 0);
-        elsif r.state = STATUS then
-            v.cur_data := pack(r.status)(15 downto 8);
+                when CALC_CRC =>
+                   -- Need to let the CRC calc finish including the last byte
+                   -- this case is special-cased below to not be a valid byte.
+                   -- in the original implementation, this happened naturally
+                   -- due to the delay the pipeline, but the new implementation
+                   -- this can run clock-over-clock
+                   v.state := CRC;
+                when CRC =>
+                    v.cur_valid := '1';
+                    v.cur_data := response_crc;
+                    if slot_free then
+                        v.response_done := true;
+                        v.state := IDLE;
+                        v.is_flash_response := false;
+                    end if;
+                    v.has_responded := true;
+            end case;
+            -- Status words
+            if r.state = STATUS and r.status_idx = '0' then
+                v.status := live_status;
+                v.last_sent_status := live_status;
+                v.cur_data := pack(live_status)(7 downto 0);
+            elsif r.state = STATUS then
+                v.cur_data := pack(r.status)(15 downto 8);
+            end if;
         end if;
 
         if espi_reset = '1' then

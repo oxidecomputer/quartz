@@ -61,9 +61,9 @@ architecture model of fake_flash_txn_mgr is
     signal write_en : std_logic;
     signal wdata : std_logic_vector(7 downto 0);
 
-    -- SAFS erase size codes
-    constant erase_4k : std_logic_vector(11 downto 0) := x"001";
-    constant erase_64k : std_logic_vector(11 downto 0) := x"003";
+    -- SAFS (target attached) erase size codes, which are not the MAFS ones
+    constant erase_4k : std_logic_vector(11 downto 0) := x"000";
+    constant erase_64k : std_logic_vector(11 downto 0) := x"002";
 
 begin
 

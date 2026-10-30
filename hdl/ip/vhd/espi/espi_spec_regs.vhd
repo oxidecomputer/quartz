@@ -169,6 +169,8 @@ begin
                     readdata <= pack(ch2_capabilities);
                 when CH3_CAPABILITIES_OFFSET =>
                     readdata <= pack(ch3_capabilities);
+                when CH3_CAPABILITIES2_OFFSET =>
+                    readdata <= pack(ch3_capabilities2);
                 when BOARD_ID_OFFSET =>
                     readdata <= pack(board_id);
                 when others =>

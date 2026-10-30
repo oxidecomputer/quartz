@@ -46,6 +46,8 @@ entity versal_seq is
         upstream_ok : in std_logic;
         versal_idle : out std_logic;
         versal_faulted : out std_logic;
+        -- A MAPO that debug_enables.ignore_sp5 kept from happening
+        mapo_suppressed : out std_logic;
         debug_enables : in debug_enables_type;
         versal_overrides_reg : in versal_overrides_type;
         -- Self-clearing test MAPO, shared with the T6 flavour's register
@@ -156,6 +158,7 @@ architecture rtl of versal_seq is
         -- watching any of it would let the sequence carry on over it.
         expected : std_logic_vector(0 to NUM_GROUPS);
         faulted : std_logic;
+        mapo_suppressed : std_logic;
         boot_failed : std_logic;
     end record;
 
@@ -175,6 +178,7 @@ architecture rtl of versal_seq is
         clk_buff_oe_l => '1',
         expected => (others => '0'),
         faulted => '0',
+        mapo_suppressed => '0',
         boot_failed => '0'
     );
     signal r, rin : versal_r_t;
@@ -197,6 +201,7 @@ begin
     raw_state.hw_sm <= r.state;
     versal_idle <= '1' when r.state = IDLE else '0';
     versal_faulted <= r.faulted;
+    mapo_suppressed <= r.mapo_suppressed;
     -- POR_B low means the Versal is held off its boot flash, so the SP may
     -- safely steal the QSPI mux. Not during MODE_STRAP though: that is the
     -- last stop before POR_B releases, and a grant given there would still be
@@ -531,8 +536,17 @@ begin
         -- MAPO handling, monitored in every state that has power on or
         -- coming on. A measurement in flight is left to run: POR_B is held
         -- all the way down, and the flash does not depend on these rails.
+        v.mapo_suppressed := '0';
         if r.state /= IDLE and r.state /= POWER_DOWN then
-            if rails_faulted = '1' or upstream_ok = '0' or
+            if (rails_faulted = '1' or upstream_ok = '0' or nic_test_mapo = '1') and
+               debug_enables.ignore_sp5 = '1' then
+                -- Power testing: stay up with everything enabled, and do not
+                -- set faulted, which would raise NICMAPO (hubris drops to A0
+                -- on it) and arm the PERST restart. POR_B is still
+                -- interlocked with the rails below; that holds the Versal in
+                -- reset while a rail is out, it does not take power away.
+                v.mapo_suppressed := '1';
+            elsif rails_faulted = '1' or upstream_ok = '0' or
                nic_test_mapo = '1' then
                 v.faulted := '1';
                 v.state := POWER_DOWN;

@@ -38,6 +38,9 @@ entity sequencer_regs is
         nic_api_status : in nic_api_status_type;
         nic_raw_status : in nic_raw_status_type;
         nic_faulted : in std_logic;
+        -- faults that debug_enables.ignore_sp5 kept from MAPOing
+        a0_mapo_suppressed : in std_logic := '0';
+        nic_mapo_suppressed : in std_logic := '0';
         rails_en_rdbk : in rails_type;
         rails_pg_rdbk : in rails_type;
         debug_enables : out debug_enables_type;
@@ -100,6 +103,7 @@ architecture rtl of sequencer_regs is
     signal a0_en_last : std_logic;
 
     signal rails_pg_max : rails_type;
+    signal mapo_suppressed : mapo_suppressed_type;
     signal irq_pending : std_logic;
    
     signal rdata : std_logic_vector(31 downto 0);
@@ -326,6 +330,7 @@ begin
             early_power_ctrl <= rec_reset;
             power_ctrl <= rec_reset;
             rails_pg_max <= reset_0s;
+            mapo_suppressed <= rec_reset;
             debug_enables <= rec_reset;
             nic_overrides <= rec_reset;
             versal_overrides <= rec_reset;
@@ -346,6 +351,17 @@ begin
                rails_pg_max <= reset_0s;
            else
                rails_pg_max <= rails_pg_max or rails_pg_rdbk;
+           end if;
+           -- Sticky until written; a write and a new fault in the same
+           -- cycle keep the fault.
+           if active_write = '1' and to_integer(axi_if.write_address.addr) = MAPO_SUPPRESSED_OFFSET then
+               mapo_suppressed <= rec_reset;
+           end if;
+           if a0_mapo_suppressed then
+               mapo_suppressed.a0 <= '1';
+           end if;
+           if nic_mapo_suppressed then
+               mapo_suppressed.nic <= '1';
            end if;
 
             if active_write then
@@ -413,6 +429,7 @@ begin
                     when VERSAL_BOOT_CTRL_OFFSET => rdata <= pack(versal_boot_ctrl);
                     when BOARD_VERSION_OFFSET => rdata <= pack(board_version);
                     when NIC_HASH_STATUS_OFFSET => rdata <= pack(nic_hash_status);
+                    when MAPO_SUPPRESSED_OFFSET => rdata <= pack(mapo_suppressed);
                     when others => rdata <= (others => '0');
                 end case;
             end if;

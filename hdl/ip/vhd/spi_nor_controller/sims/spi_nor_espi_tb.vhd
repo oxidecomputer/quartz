@@ -45,9 +45,10 @@ begin
         constant kind_read : std_logic_vector(3 downto 0) := x"0";
         constant kind_write : std_logic_vector(3 downto 0) := x"1";
         constant kind_erase : std_logic_vector(3 downto 0) := x"2";
-        constant erase_4k : natural := 1;
-        constant erase_32k : natural := 2;
-        constant erase_64k : natural := 3;
+        -- SAFS (target attached) erase size codes, which are not the MAFS ones
+        constant erase_4k : natural := 0;
+        constant erase_32k : natural := 1;
+        constant erase_64k : natural := 2;
 
         variable data : std_logic_vector(7 downto 0);
         variable spisr : std_logic_vector(31 downto 0);
