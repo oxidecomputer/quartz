@@ -16,7 +16,9 @@ use work.basic_stream_pkg.all;
 entity th_basic_stream is
     generic (
         source  : basic_source_t;
-        sink    : basic_sink_t
+        sink    : basic_sink_t;
+        pkt_source : basic_source_t;
+        pkt_sink : basic_sink_t
     );
 end entity;
 
@@ -25,6 +27,9 @@ architecture th of th_basic_stream is
     signal valid : std_logic;
     signal ready : std_logic;
     signal data  : std_logic_vector(data_length(source)-1 downto 0);
+    signal pkt_valid : std_logic;
+    signal pkt_last : std_logic;
+    signal pkt_data : std_logic_vector(data_length(pkt_source)-1 downto 0);
 begin
     clk   <= not clk after 4 ns;
 
@@ -46,5 +51,29 @@ begin
             valid   => valid,
             ready   => ready,
             data    => data
+        );
+
+    -- Push-only packet path: the sink has no ready so the source is never
+    -- stalled, which is the situation basic_pkt_sink exists for.
+    basic_pkt_source_vc : entity work.basic_pkt_source
+        generic map (
+            source  => pkt_source)
+        port map (
+            clk     => clk,
+            ready   => '1',
+            valid   => pkt_valid,
+            last    => pkt_last,
+            data    => pkt_data
+        );
+
+    basic_pkt_sink_vc : entity work.basic_pkt_sink
+        generic map (
+            sink    => pkt_sink)
+        port map (
+            clk     => clk,
+            valid   => pkt_valid,
+            last    => pkt_last,
+            err     => pkt_last,  -- flag the last beat so the pop sees it set
+            data    => pkt_data
         );
 end architecture;

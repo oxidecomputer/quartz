@@ -12,7 +12,14 @@ use work.calc_pkg.all;
 entity aligner_10bk28_5 is
     generic(
         MIN_PATTERNS_TO_LOCK : positive;
-        MAX_SYMBOLS_BEFORE_SLIP : positive
+        MAX_SYMBOLS_BEFORE_SLIP : positive;
+        -- Symbols we tolerate without a K28.5 while locked before we give up
+        -- and go back to hunting. The legacy behaviour (0) derives this from
+        -- the two generics above, MIN_PATTERNS_TO_LOCK * MAX_SYMBOLS_BEFORE_SLIP,
+        -- which ties the slip cadence while hunting to the hysteresis while
+        -- locked. Links that space their commas thousands of symbols apart
+        -- want a quick slip cadence and a long unlock budget, so they set this.
+        MAX_SYMBOLS_BEFORE_UNLOCK : natural := 0
     );
     port (
         clk         : in  std_logic;
@@ -36,10 +43,12 @@ architecture rtl of aligner_10bk28_5 is
     constant K28_5p : std_logic_vector(9 downto 0) := not K28_5n; -- k28.5 is polarity symmetric
     constant ALIGN_CNTS_SIZE : integer := num_bits_needed(MIN_PATTERNS_TO_LOCK) + 1;
     constant SYMBOL_CNTS_SIZE : integer := num_bits_needed(MAX_SYMBOLS_BEFORE_SLIP) + 1;
+    constant UNLOCK_CNTS_SIZE : integer := num_bits_needed(maximum(MAX_SYMBOLS_BEFORE_UNLOCK, 1)) + 1;
     type state_type is (LOCKING, LOCKED, SLIP);
     signal state : state_type;
     signal align_cnts : std_logic_vector(ALIGN_CNTS_SIZE - 1 downto 0);
     signal symbol_cnts : std_logic_vector(SYMBOL_CNTS_SIZE - 1 downto 0);
+    signal unlock_cnts : std_logic_vector(UNLOCK_CNTS_SIZE - 1 downto 0);
 
 begin
 
@@ -58,6 +67,7 @@ begin
             state <= LOCKING;
             align_cnts <= (others => '0');
             symbol_cnts <= (others => '0');
+            unlock_cnts <= (others => '0');
         elsif rising_edge(clk) then
             case state is
                 when LOCKING =>
@@ -93,23 +103,29 @@ begin
                         state <= LOCKING;
                         align_cnts <= (others => '0');
                         symbol_cnts <= (others => '0');
+                        unlock_cnts <= (others => '0');
                     elsif data_in_valid = '1' and data_in_align_ready = '1' then
                         if (data_in = K28_5n) or (data_in = K28_5p) then
                             -- Found alignment pattern again. reset the counters
                             align_cnts <=(others => '0');
                             symbol_cnts <= (others => '0');
-                        else
+                            unlock_cnts <= (others => '0');
+                        elsif MAX_SYMBOLS_BEFORE_UNLOCK = 0 then
                             if symbol_cnts >= MAX_SYMBOLS_BEFORE_SLIP then
                                 align_cnts <= align_cnts + 1;
                                 symbol_cnts <= (others => '0');
                             else
                                 symbol_cnts <= symbol_cnts + 1;
                             end if;
+                        else
+                            unlock_cnts <= unlock_cnts + 1;
                         end if;
-                        if align_cnts >= MIN_PATTERNS_TO_LOCK then
+                        if align_cnts >= MIN_PATTERNS_TO_LOCK or
+                           (MAX_SYMBOLS_BEFORE_UNLOCK /= 0 and unlock_cnts >= MAX_SYMBOLS_BEFORE_UNLOCK) then
                             state <= SLIP;
                             align_cnts <= (others => '0');
                             symbol_cnts <= (others => '0');
+                            unlock_cnts <= (others => '0');
                         end if;
                     end if;
 
@@ -117,6 +133,7 @@ begin
                     -- Slipping now. 0 everything and start afresh
                     align_cnts <= (others => '0');
                     symbol_cnts <= (others => '0');
+                    unlock_cnts <= (others => '0');
                     state <= LOCKING;
 
             end case;

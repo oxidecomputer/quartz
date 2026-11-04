@@ -53,6 +53,7 @@ package basic_stream_pkg is
     constant push_basic_stream_msg          : msg_type_t := new_msg_type("push basic stream");
     constant pop_basic_stream_msg           : msg_type_t := new_msg_type("pop basic stream");
     constant push_basic_pkt_stream_msg      : msg_type_t := new_msg_type("push basic pkt stream");
+    constant pop_basic_pkt_msg              : msg_type_t := new_msg_type("pop basic pkt");
 
     procedure push_basic_stream(
         signal net      : inout network_t;
@@ -77,6 +78,18 @@ package basic_stream_pkg is
         signal net : inout network_t;
         basic_sink : basic_sink_t;
         variable data : inout std_logic_vector
+    );
+
+    -- Take one whole packet out of a basic_pkt_sink: every beat up to and
+    -- including the one with last set, as a queue of bytes, plus the err
+    -- flag that was on the last beat. Blocks until the sink has captured a
+    -- complete packet. The sink keeps capturing in the meantime, so beats are
+    -- never lost between pops.
+    procedure pop_basic_pkt(
+        signal net : inout network_t;
+        basic_sink : basic_sink_t;
+        variable bytes : inout queue_t;
+        variable err : out boolean
     );
 
 end package;
@@ -174,6 +187,23 @@ package body basic_stream_pkg is
         send(net, basic_sink.p_actor, reference);
         receive_reply(net, reference, reply_msg);
         data := pop_std_ulogic_vector(reply_msg);
+        delete(reference);
+        delete(reply_msg);
+    end;
+
+    procedure pop_basic_pkt(
+        signal net : inout network_t;
+        basic_sink : basic_sink_t;
+        variable bytes : inout queue_t;
+        variable err : out boolean
+    ) is
+        variable reference : msg_t := new_msg(pop_basic_pkt_msg);
+        variable reply_msg : msg_t;
+    begin
+        send(net, basic_sink.p_actor, reference);
+        receive_reply(net, reference, reply_msg);
+        bytes := pop_queue_ref(reply_msg);
+        err := pop_boolean(reply_msg);
         delete(reference);
         delete(reply_msg);
     end;

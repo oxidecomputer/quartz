@@ -1,0 +1,95 @@
+load("//tools:hdl.bzl", "sim_only_model", "vhdl_unit", "vunit_sim")
+
+vhdl_unit(
+    name = "interlink_pkg",
+    srcs = ["interlink_pkg.vhd"],
+    deps = [
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+# Framer, deframer, lock state machine and statistics at the character boundary.
+vhdl_unit(
+    name = "interlink_link",
+    srcs = [
+        "interlink_tx.vhd",
+        "interlink_rx.vhd",
+        "interlink_sync.vhd",
+        "interlink_stats.vhd",
+        "interlink_link.vhd",
+    ],
+    deps = [
+        ":interlink_pkg",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
+        "//hdl/ip/vhd/crc:crc8atm_8wide",
+        "//hdl/ip/vhd/crc:crc16_pkg",
+        "//hdl/ip/vhd/lfsr:scrambler_lfsr8",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "interlink_phy_8b10b",
+    srcs = ["interlink_phy_8b10b.vhd"],
+    deps = [
+        ":interlink_pkg",
+        "//hdl/ip/vhd/8b10b:encode_8b10b",
+        "//hdl/ip/vhd/8b10b:decode_8b10b",
+        "//hdl/ip/vhd/ls_xcvr:aligner_10bk28_5",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vhdl_unit(
+    name = "interlink_top",
+    srcs = ["interlink_top.vhd"],
+    deps = [
+        ":interlink_pkg",
+        ":interlink_link",
+        ":interlink_phy_8b10b",
+        "//hdl/ip/vhd/axi_blocks:axist_if_2k19_pkg",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+sim_only_model(
+    name = "interlink_sim",
+    srcs = [
+        "sims/interlink_sim_pkg.vhd",
+        "sims/interlink_sim_wire.vhd",
+        "sims/interlink_th.vhd",
+    ],
+    deps = [
+        ":interlink_top",
+        "//hdl/ip/vhd/8b10b:helper_8b10b_pkg",
+        "//hdl/ip/vhd/8b10b:decode_8b10b",
+        "//hdl/ip/vhd/common:calc_pkg",
+        "//hdl/ip/vhd/crc:crc_sim_pkg",
+        "//hdl/ip/vhd/lfsr:lfsr8_pkg",
+        "//hdl/ip/vhd/ls_xcvr:ls_serdes",
+        "//hdl/ip/vhd/vunit_components:basic_stream",
+    ],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "interlink_tb",
+    srcs = ["sims/interlink_tb.vhd"],
+    deps = [":interlink_sim"],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
+
+vunit_sim(
+    name = "interlink_serial_tb",
+    srcs = ["sims/interlink_serial_tb.vhd"],
+    deps = [":interlink_sim"],
+    standard = "2019",
+    visibility = ['PUBLIC'],
+)
