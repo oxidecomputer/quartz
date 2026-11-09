@@ -50,6 +50,56 @@ addrmap eSPI_Platform {
         } rehash[1:1] = 0;
     } nic_hash_ctrl @0x804;
 
+    reg {
+        name = "NIC configuration control";
+        desc = "Metro only; reads as zero elsewhere. The host's say-so for configuring the
+        NIC from the image it has measured.";
+
+        field {
+            desc = "Set once the digest in nic_hash0..7 is acceptable: the FPGA then straps
+            the boot mode, releases POR_B and waits for the NIC's DONE, see
+            nic_config_status. Clear to put the NIC back in reset at the interlock: PERST
+            asserted, presence withdrawn, nic_config_status back to IDLE; the digest is
+            kept, so setting it again configures without measuring again. Cleared by an
+            eSPI reset.";
+            sw = rw;
+        } mission_mode_en[0:0] = 0;
+    } nic_config_ctrl @0x808;
+
+    reg {
+        name = "NIC configuration status";
+        desc = "Metro only; reads as zero elsewhere. Where the NIC's configuration stands.";
+        default sw = r;
+
+        enum config_state {
+            IDLE = 2'h0 {desc = "Not configuring: the NIC is off, or held in reset waiting for mission_mode_en";};
+            IN_PROGRESS = 2'h1 {desc = "POR_B released, waiting for DONE";};
+            DONE = 2'h2 {desc = "Configured; presence is shown and PERST follows the slot";};
+            FAILED = 2'h3 {desc = "ERROR_OUT, or no DONE within nic_config_timeout. Back in reset with the flash on eSPI1; clear and set mission_mode_en to try again";};
+        };
+        field {
+            desc = "Configuration state";
+            encode = config_state;
+        } state[1:0] = 0;
+        field {
+            desc = "The failure was the timeout rather than ERROR_OUT";
+        } timed_out[2:2] = 0;
+        field {
+            desc = "ERROR_OUT as the NIC drives it now";
+        } error_out[3:3] = 0;
+    } nic_config_status @0x80c;
+
+    reg {
+        name = "NIC configuration timeout";
+        desc = "Metro only. How long after POR_B is released the NIC has to assert DONE
+        before its configuration is failed, in milliseconds. Not cleared by an eSPI reset.";
+
+        field {
+            desc = "Milliseconds";
+            sw = rw;
+        } ms[31:0] = 10000;
+    } nic_config_timeout @0x810;
+
     // The digest is presented least significant word first, as the hash
     // engine's own DIGEST registers are: nic_hash0 bits 7:0 are hash byte 0,
     // the leftmost byte of the conventional hex string. All eight words read

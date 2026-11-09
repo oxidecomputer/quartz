@@ -47,7 +47,12 @@ entity espi_spec_regs is
         nic_hash_busy        : in    std_logic := '0';
         -- Single-cycle, from the host writing a 1 to the matching bit
         nic_hash_rehash      : out   std_logic;
-        nic_hash_done_clear  : out   std_logic
+        nic_hash_done_clear  : out   std_logic;
+        -- The host's say-so for configuring the NIC, how long it gives the
+        -- NIC to finish, and where that stands (nic_config_* registers)
+        mission_mode_en      : out   std_logic;
+        config_timeout_ms    : out   std_logic_vector(31 downto 0);
+        nic_config_status    : in    nic_config_status_type := rec_reset
     );
 end entity;
 
@@ -66,6 +71,8 @@ architecture rtl of espi_spec_regs is
     signal qspi_freq        : qspi_freq_t;
     signal nic_hash_ctrl    : nic_hash_ctrl_type;
     signal digest_shown     : std_logic_vector(31 downto 0);
+    signal nic_config_ctrl  : nic_config_ctrl_type;
+    signal nic_config_timeout : nic_config_timeout_type;
 
 begin
 
@@ -93,17 +100,33 @@ begin
     -- read it, so a stale one is never taken for new
     digest_shown <= (others => nic_hash_done);
 
+    mission_mode_en <= nic_config_ctrl.mission_mode_en;
+    config_timeout_ms <= nic_config_timeout.ms;
+
     platform_write: process(clk, reset)
     begin
         if reset then
             nic_hash_rehash <= '0';
             nic_hash_done_clear <= '0';
+            nic_config_ctrl <= rec_reset;
+            nic_config_timeout <= rec_reset;
         elsif rising_edge(clk) then
             nic_hash_rehash <= '0';
             nic_hash_done_clear <= '0';
             if regs_if.addr = NIC_HASH_CTRL_OFFSET and regs_if.write = '1' then
                 nic_hash_rehash <= regs_if.wdata(1);
                 nic_hash_done_clear <= regs_if.wdata(0);
+            end if;
+            if regs_if.addr = NIC_CONFIG_CTRL_OFFSET and regs_if.write = '1' then
+                nic_config_ctrl <= unpack(regs_if.wdata);
+            end if;
+            if regs_if.addr = NIC_CONFIG_TIMEOUT_OFFSET and regs_if.write = '1' then
+                nic_config_timeout <= unpack(regs_if.wdata);
+            end if;
+            -- A host that has been reset has to make its mind up about the
+            -- image again; how long it gives the NIC is not a matter of mind.
+            if espi_reset then
+                nic_config_ctrl <= rec_reset;
             end if;
         end if;
     end process;
@@ -211,6 +234,12 @@ begin
                     readdata <= pack(board_id);
                 when NIC_HASH_CTRL_OFFSET =>
                     readdata <= pack(nic_hash_ctrl);
+                when NIC_CONFIG_CTRL_OFFSET =>
+                    readdata <= pack(nic_config_ctrl);
+                when NIC_CONFIG_STATUS_OFFSET =>
+                    readdata <= pack(nic_config_status);
+                when NIC_CONFIG_TIMEOUT_OFFSET =>
+                    readdata <= pack(nic_config_timeout);
                 when NIC_HASH0_OFFSET =>
                     readdata <= nic_hash_digest(31 downto 0) and digest_shown;
                 when NIC_HASH1_OFFSET =>

@@ -272,8 +272,8 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             BOOTING = 8'h04 {desc = "Metro only. POR_B released, waiting for DONE";};
             MEASURING = 8'h05 {desc = "Metro only. Rails are up, holding POR_B while the hash engine measures the boot image";};
             DISABLE_POWER = 8'h06 {desc = "Metro only. POR_B asserted, rails being taken down in reverse order";};
-            WAIT_SP5 = 8'h07 {desc = "Metro only. Rails up and the image measured, POR_B held; waiting for the SP5 to enable slot power on either channel before the Versal is configured. The boot flash is with the SP5 over eSPI1";};
-            BOOT_FAILED = 8'h08 {desc = "Metro only. The Versal asserted ERROR_OUT or did not assert DONE in time. POR_B asserted and the boot flash handed back to the SP5 over eSPI1 for reflash; a fresh slot power enable retries";};
+            WAIT_SP5 = 8'h07 {desc = "Metro only. Rails up and the image measured, POR_B held; waiting for the SP5 to set mission_mode_en over eSPI1 before the Versal is configured. The boot flash is with the SP5 over eSPI1";};
+            BOOT_FAILED = 8'h08 {desc = "Metro only. The Versal asserted ERROR_OUT or did not assert DONE within the host's timeout. POR_B asserted and the boot flash handed back to the SP5 over eSPI1 for reflash; clearing and setting mission_mode_en retries";};
          };
         field {
             desc = "Nic SM Status";
@@ -309,11 +309,11 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
             GROUP_7 = 8'h0d {desc = "Metro (Versal). Group 7, V1P2 GTM/GTY AVTT, enabled, waiting for PG";};
             RAILS_SETTLE = 8'h0e {desc = "Metro (Versal). All rails good, holding POR_B while they settle";};
             HASH_WAIT = 8'h0f {desc = "Metro (Versal). Rails up and settled, POR_B held; waiting for the image measurement to finish, see nic_hash_status. Passed straight through with no measurement in flight or with versal_boot_ctrl.interlock_bypass set";};
-            SP5_INTERLOCK = 8'h10 {desc = "Metro (Versal). Rails up, image measured, POR_B held; presence shown to the SP5 and waiting for it to enable slot power on either channel (or versal_boot_ctrl.interlock_bypass). The flash is with eSPI1. Also where a slot power-off from DONE parks";};
+            SP5_INTERLOCK = 8'h10 {desc = "Metro (Versal). Rails up, image measured, POR_B held; waiting for the SP5 to set mission_mode_en over eSPI1 (or versal_boot_ctrl.interlock_bypass). The flash is with eSPI1, no presence is shown. Also where a Versal parks when mission_mode_en is cleared";};
             MODE_STRAP = 8'h11 {desc = "Metro (Versal). Boot mode driven onto MODE[3:0], buffer enabled";};
             POR_RELEASE = 8'h12 {desc = "Metro (Versal). POR_B released";};
             WAIT_DONE = 8'h13 {desc = "Metro (Versal). Waiting for the Versal to assert DONE";};
-            BOOT_FAILED = 8'h14 {desc = "Metro (Versal). ERROR_OUT, or no DONE within the timeout. POR_B asserted and the flash back with eSPI1 for reflash; presence still shown, and a fresh slot power enable (low then high) retries";};
+            BOOT_FAILED = 8'h14 {desc = "Metro (Versal). ERROR_OUT, or no DONE within the host's nic_config_timeout. POR_B asserted and the flash back with eSPI1 for reflash; clearing mission_mode_en returns to SP5_INTERLOCK for another go";};
             DONE = 8'h15 {desc = "Booted. On metro the boot flash mux stays with the FPGA so the SP5 can reach it over eSPI";};
             POWER_DOWN = 8'h16 {desc = "Metro (Versal). POR_B asserted, rail groups being disabled in reverse order";};
         };
@@ -730,9 +730,9 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         desc = "Metro only. How the Versal gets configured. By default the NIC power sequence
         measures the boot image (hash engine, range from HW_FLASH_ADDR/HW_LENGTH) while the
         rails come up, then holds POR_B at SP5_INTERLOCK until the SP5, having read the
-        digest over eSPI1, enables slot power on either channel through the hotplug
-        controller. Without host software that does this the NIC sits at SP5_INTERLOCK
-        until interlock_bypass is set.";
+        digest over eSPI1, sets mission_mode_en in eSPI1's platform registers. Without
+        host software that does this the NIC sits at SP5_INTERLOCK until interlock_bypass
+        is set.";
         field {
             desc = "Versal boot mode driven onto MODE[3:0]. 0x0 is JTAG, 0x2 is QSPI32, which
             is how the board is wired. JTAG is the escape hatch for bring-up. Latched as the
@@ -740,9 +740,8 @@ This regulator controls V1P1_SP5_A0, V1P8_SP5_A0 and V3P3_SP5_A0 rails.";
         } mode[3:0] = 4'h2;
         field {
             desc = "Skip the image measurement and the SP5 interlock: the power sequence starts
-            no measurement, POR_B releases as soon as the rails have settled, and slot
-            power only gates PERST rather than holding the Versal in reset. Bench use;
-            off by default.";
+            no measurement and POR_B releases as soon as the rails have settled, with or
+            without mission_mode_en. Bench use; off by default.";
         } interlock_bypass[4:4] = 0;
         field {
             desc = "Self-clearing. Set to 1 to start a measurement now. Taken as soon as the

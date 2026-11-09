@@ -62,11 +62,6 @@ entity sp5_sequencer is
         -- enable. A Versal has two slots; the T6 uses only the first.
         sp5_nic_perst_l : in std_logic;
         sp5_nic_chb_perst_l : in std_logic := '1';
-        -- The slot power enables themselves. A Versal is not configured
-        -- until the SP5 sets one of them, and is held back in reset once
-        -- both are clear; the T6 does not use them.
-        sp5_nic_cha_power_en : in std_logic := '0';
-        sp5_nic_chb_power_en : in std_logic := '0';
         sp5_nic_faulted : out std_logic;
         -- To SP5 hotplug: each NIC slot's presence. The T6 is soldered down
         -- and always present; a Versal's channels are present once it has
@@ -105,6 +100,11 @@ entity sp5_sequencer is
         host_hash_done_clear : in std_logic := '0';
         nic_hash_host_done : out std_logic;
         nic_hash_busy : out std_logic;
+        -- The host's say-so for configuring a Versal, how long it gives it,
+        -- and what it reads back (eSPI1's nic_config_* registers)
+        mission_mode_en : in std_logic := '0';
+        config_timeout_ms : in std_logic_vector(31 downto 0) := x"00002710";
+        nic_config_status : out work.espi_platform_regs_pkg.nic_config_status_type;
         -- FPGA1_VERSION_ID board straps, reported straight through
         version_id : in std_logic_vector(1 downto 0) := "00"
     );
@@ -438,6 +438,7 @@ begin
         hash_req <= '0';
         nic_hash_host_done <= '0';
         nic_hash_busy <= '0';
+        nic_config_status <= work.espi_platform_regs_pkg.rec_reset;
     end generate;
 
     -----------------------------------------------------------------------
@@ -477,8 +478,9 @@ begin
             debug_enables => debug_enables,
             sp5_versal_cha_perst_l => sp5_nic_perst_l,
             sp5_versal_chb_perst_l => sp5_nic_chb_perst_l,
-            sp5_versal_cha_power_en => sp5_nic_cha_power_en,
-            sp5_versal_chb_power_en => sp5_nic_chb_power_en,
+            mission_mode_en => mission_mode_en,
+            config_timeout_ms => config_timeout_ms,
+            config_status => nic_config_status,
             host_hash_rehash => host_hash_rehash,
             host_hash_done_clear => host_hash_done_clear,
             hash_host_done => nic_hash_host_done,

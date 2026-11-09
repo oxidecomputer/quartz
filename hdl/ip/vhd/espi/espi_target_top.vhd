@@ -81,7 +81,11 @@ entity espi_target_top is
         nic_hash_done : in std_logic := '0';
         nic_hash_busy : in std_logic := '0';
         nic_hash_rehash : out std_logic;
-        nic_hash_done_clear : out std_logic
+        nic_hash_done_clear : out std_logic;
+        -- and the host's control of the NIC's configuration, see espi_spec_regs
+        mission_mode_en : out std_logic;
+        config_timeout_ms : out std_logic_vector(31 downto 0);
+        nic_config_status : in espi_platform_regs_pkg.nic_config_status_type := espi_platform_regs_pkg.rec_reset
     );
 end entity;
 
@@ -380,7 +384,10 @@ begin
             nic_hash_done => nic_hash_done,
             nic_hash_busy => nic_hash_busy,
             nic_hash_rehash => nic_hash_rehash,
-            nic_hash_done_clear => nic_hash_done_clear
+            nic_hash_done_clear => nic_hash_done_clear,
+            mission_mode_en => mission_mode_en,
+            config_timeout_ms => config_timeout_ms,
+            nic_config_status => nic_config_status
         );
 
     -- Both halves of the write permission have to agree; the generic keeps

@@ -37,6 +37,9 @@ begin
         alias    nic_hash_busy is <<signal th.nic_hash_busy : std_logic>>;
         alias    rehash_count  is <<signal th.rehash_count : natural>>;
         alias    done_clear_count is <<signal th.done_clear_count : natural>>;
+        alias    mission_mode_en is <<signal th.mission_mode_en : std_logic>>;
+        alias    config_timeout_ms is <<signal th.config_timeout_ms : std_logic_vector(31 downto 0)>>;
+        alias    nic_config_status is <<signal th.nic_config_status : nic_config_status_type>>;
         variable status        : std_logic_vector(15 downto 0);
         variable response_code : std_logic_vector(7 downto 0);
         variable data_32       : std_logic_vector(31 downto 0);
@@ -111,6 +114,61 @@ begin
                 set_hash_ctrl(x"00000000");
                 check_equal(clear_pulses, 0, "Expected no done_clear strobe from a zero write");
                 check_equal(rehash_pulses, 0, "Expected no rehash strobe from a zero write");
+
+            elsif run("nic_config_ctrl_sets_and_clears_mission_mode") then
+                check_equal(mission_mode_en, '0', "Expected mission_mode_en clear out of reset");
+                set_config(net, NIC_CONFIG_CTRL_OFFSET, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(mission_mode_en, '1', "Expected mission_mode_en set");
+                get_config(net, NIC_CONFIG_CTRL_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, "Expected mission_mode_en to read back set");
+                set_config(net, NIC_CONFIG_CTRL_OFFSET, x"00000000", response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(mission_mode_en, '0', "Expected mission_mode_en cleared");
+
+            elsif run("nic_config_timeout_defaults_and_writes") then
+                check_equal(config_timeout_ms, std_logic_vector'(x"00002710"), "Expected a 10 s default on the port");
+                get_config(net, NIC_CONFIG_TIMEOUT_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"00002710"), "Expected a 10 s default");
+                set_config(net, NIC_CONFIG_TIMEOUT_OFFSET, x"000001F4", response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(config_timeout_ms, std_logic_vector'(x"000001F4"), "Expected the port to follow the write");
+                get_config(net, NIC_CONFIG_TIMEOUT_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"000001F4"), "Expected the write to read back");
+
+            elsif run("nic_config_status_reads_back") then
+                get_config(net, NIC_CONFIG_STATUS_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"00000000"), "Expected IDLE status");
+                nic_config_status <= (state => FAILED, timed_out => '1', error_out => '0');
+                wait for 100 ns;
+                get_config(net, NIC_CONFIG_STATUS_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"00000007"), "Expected FAILED with timed_out");
+                nic_config_status <= (state => DONE, timed_out => '0', error_out => '1');
+                wait for 100 ns;
+                get_config(net, NIC_CONFIG_STATUS_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"0000000A"), "Expected DONE with error_out");
+                nic_config_status <= rec_reset;
+
+            elsif run("espi_reset_clears_mission_mode") then
+                set_config(net, NIC_CONFIG_CTRL_OFFSET, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                set_config(net, NIC_CONFIG_TIMEOUT_OFFSET, x"00000064", response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(mission_mode_en, '1', "Expected mission_mode_en set");
+                send_reset(net);
+                wait for 10 us;
+                check_equal(mission_mode_en, '0', "Expected an eSPI reset to clear mission_mode_en");
+                check_equal(config_timeout_ms, std_logic_vector'(x"00000064"), "Expected the timeout to survive an eSPI reset");
             end if;
         end loop;
 

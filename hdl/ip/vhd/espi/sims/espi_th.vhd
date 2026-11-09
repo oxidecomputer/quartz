@@ -60,6 +60,10 @@ architecture th of espi_th is
     -- controller VC's SET_CONFIGURATION transaction
     signal rehash_count : natural := 0;
     signal done_clear_count : natural := 0;
+    -- and the configuration side of those registers
+    signal mission_mode_en : std_logic;
+    signal config_timeout_ms : std_logic_vector(31 downto 0);
+    signal nic_config_status : espi_platform_regs_pkg.nic_config_status_type := espi_platform_regs_pkg.rec_reset;
     signal to_sp_uart_data : std_logic_vector(7 downto 0);
     signal to_sp_uart_valid : std_logic;
     signal to_sp_uart_ready : std_logic;
@@ -147,7 +151,10 @@ begin
             nic_hash_done      => nic_hash_done,
             nic_hash_busy      => nic_hash_busy,
             nic_hash_rehash    => nic_hash_rehash,
-            nic_hash_done_clear => nic_hash_done_clear
+            nic_hash_done_clear => nic_hash_done_clear,
+            mission_mode_en    => mission_mode_en,
+            config_timeout_ms  => config_timeout_ms,
+            nic_config_status  => nic_config_status
         );
 
     strobe_counters: process(clk)

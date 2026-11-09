@@ -36,6 +36,8 @@ vhdl_unit(
     deps = [
         ":sequencer_core",
         ":sequencer_regs_rdl",
+        # the Versal's configuration status, as the host reads it over eSPI1
+        "//hdl/ip/vhd/espi:espi_platform_regs_rdl",
         "//hdl/ip/vhd/synchronizers:meta_sync",
         "//hdl/ip/vhd/synchronizers:async_reset_bridge",
         "//hdl/ip/vhd/irq:irq_block",

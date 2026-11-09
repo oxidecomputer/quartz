@@ -420,8 +420,6 @@ architecture rtl of metro_seq_top is
     signal sp5_sda_o : std_logic;
     signal sp5_sda_oe : std_logic;
 
-    signal sp5_versal_cha_power_en : std_logic;
-    signal sp5_versal_chb_power_en : std_logic;
     signal sp5_versal_cha_perst_l : std_logic;
     signal sp5_versal_chb_perst_l : std_logic;
     signal sp5_versal_faulted : std_logic;
@@ -431,6 +429,9 @@ architecture rtl of metro_seq_top is
     signal versal_hash_busy : std_logic;
     signal espi1_hash_rehash : std_logic;
     signal espi1_hash_done_clear : std_logic;
+    signal espi1_mission_mode_en : std_logic;
+    signal espi1_config_timeout_ms : std_logic_vector(31 downto 0);
+    signal versal_config_status : work.espi_platform_regs_pkg.nic_config_status_type;
     signal vercel_flash_io_o : std_logic_vector(3 downto 0);
     signal vercel_flash_io_oe : std_logic_vector(3 downto 0);
     signal espi_resp_csn : std_logic;
@@ -721,7 +722,10 @@ begin
         nic_hash_done => versal_hash_host_done,
         nic_hash_busy => versal_hash_busy,
         nic_hash_rehash => espi1_hash_rehash,
-        nic_hash_done_clear => espi1_hash_done_clear
+        nic_hash_done_clear => espi1_hash_done_clear,
+        mission_mode_en => espi1_mission_mode_en,
+        config_timeout_ms => espi1_config_timeout_ms,
+        nic_config_status => versal_config_status
     );
 
     --Tristates for spi-nor flash pins and espi
@@ -849,14 +853,12 @@ begin
         -- and the otherwise unused fifth expander bank for channel B. Both
         -- are the one device, so both slots report the same fault; each has
         -- its own presence and its own PERST. Presence comes by way of the
-        -- sequencer, which holds it off until the Versal has booted; the
-        -- power enables go to the sequencer too, as the SP5's say-so for
-        -- configuring the Versal from the image it has measured.
-        t6_power_en => sp5_versal_cha_power_en,
+        -- sequencer, which holds it off until the Versal has booted.
+        t6_power_en => open,
         t6_perst_l => sp5_versal_cha_perst_l,
         t6_faulted => sp5_versal_faulted,
         t6_prsnt_l => sp5_versal_cha_prsnt_l,
-        nic2_power_en => sp5_versal_chb_power_en,
+        nic2_power_en => open,
         nic2_perst_l => sp5_versal_chb_perst_l,
         nic2_faulted => sp5_versal_faulted,
         nic2_prsnt_l => sp5_versal_chb_prsnt_l,
@@ -919,11 +921,12 @@ begin
         host_hash_done_clear => espi1_hash_done_clear,
         nic_hash_host_done => versal_hash_host_done,
         nic_hash_busy => versal_hash_busy,
+        mission_mode_en => espi1_mission_mode_en,
+        config_timeout_ms => espi1_config_timeout_ms,
+        nic_config_status => versal_config_status,
         version_id => fpga1_version_id,
         sp5_nic_perst_l => sp5_versal_cha_perst_l,
         sp5_nic_chb_perst_l => sp5_versal_chb_perst_l,
-        sp5_nic_cha_power_en => sp5_versal_cha_power_en,
-        sp5_nic_chb_power_en => sp5_versal_chb_power_en,
         sp5_nic_faulted => sp5_versal_faulted,
         ignition_mux_sel => fpga1_to_sp_mux_ign_mux_sel,
         ignition_creset => fpga1_to_ign_trgt_fpga_creset,
