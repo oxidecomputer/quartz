@@ -60,8 +60,9 @@ addrmap eSPI_Platform {
             the boot mode, releases POR_B and waits for the NIC's DONE, see
             nic_config_status. Clear to put the NIC back in reset at the interlock: PERST
             asserted, presence withdrawn, nic_config_status back to IDLE; the digest is
-            kept, so setting it again configures without measuring again. Cleared by an
-            eSPI reset.";
+            kept, so setting it again configures without measuring again. Kept across an
+            eSPI reset, so a host reboot leaves the NIC running; cleared when the host
+            leaves A0, so each A0 entry starts with the NIC held at the interlock.";
             sw = rw;
         } mission_mode_en[0:0] = 0;
     } nic_config_ctrl @0x808;
@@ -92,13 +93,34 @@ addrmap eSPI_Platform {
     reg {
         name = "NIC configuration timeout";
         desc = "Metro only. How long after POR_B is released the NIC has to assert DONE
-        before its configuration is failed, in milliseconds. Not cleared by an eSPI reset.";
+        before its configuration is failed, in milliseconds. Kept across eSPI resets and
+        the host leaving A0.";
 
         field {
             desc = "Milliseconds";
             sw = rw;
         } ms[31:0] = 10000;
     } nic_config_timeout @0x810;
+
+    reg {
+        name = "NIC image hash range start";
+        desc = "Metro only; reads as zero elsewhere. The flash byte address the measurement
+        in nic_hash0..7 starts at, as the SP has set it in the hash engine (metro: 0).";
+        default sw = r;
+        field {
+            desc = "Flash byte address";
+        } addr[31:0] = 0;
+    } nic_hash_addr @0x814;
+
+    reg {
+        name = "NIC image hash range length";
+        desc = "Metro only; reads as zero elsewhere. How many bytes the measurement in
+        nic_hash0..7 covers, as the SP has set it in the hash engine (metro: 32MiB).";
+        default sw = r;
+        field {
+            desc = "Bytes";
+        } count[31:0] = 0;
+    } nic_hash_len @0x818;
 
     // The digest is presented least significant word first, as the hash
     // engine's own DIGEST registers are: nic_hash0 bits 7:0 are hash byte 0,

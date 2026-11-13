@@ -40,6 +40,7 @@ begin
         alias    mission_mode_en is <<signal th.mission_mode_en : std_logic>>;
         alias    config_timeout_ms is <<signal th.config_timeout_ms : std_logic_vector(31 downto 0)>>;
         alias    nic_config_status is <<signal th.nic_config_status : nic_config_status_type>>;
+        alias    host_in_a0    is <<signal th.host_in_a0 : std_logic>>;
         variable status        : std_logic_vector(15 downto 0);
         variable response_code : std_logic_vector(7 downto 0);
         variable data_32       : std_logic_vector(31 downto 0);
@@ -158,7 +159,8 @@ begin
                 check_equal(data_32, std_logic_vector'(x"0000000A"), "Expected DONE with error_out");
                 nic_config_status <= rec_reset;
 
-            elsif run("espi_reset_clears_mission_mode") then
+            elsif run("espi_reset_keeps_mission_mode") then
+                -- A host reboot must not take the NIC down with it
                 set_config(net, NIC_CONFIG_CTRL_OFFSET, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, response_code, status, crc_ok);
                 check(crc_ok, "Set Config CRC Check failed");
                 set_config(net, NIC_CONFIG_TIMEOUT_OFFSET, x"00000064", response_code, status, crc_ok);
@@ -167,8 +169,44 @@ begin
                 check_equal(mission_mode_en, '1', "Expected mission_mode_en set");
                 send_reset(net);
                 wait for 10 us;
-                check_equal(mission_mode_en, '0', "Expected an eSPI reset to clear mission_mode_en");
+                check_equal(mission_mode_en, '1', "Expected an eSPI reset to leave mission_mode_en set");
+                get_config(net, NIC_CONFIG_CTRL_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, "Expected mission_mode_en to read back set after the reset");
                 check_equal(config_timeout_ms, std_logic_vector'(x"00000064"), "Expected the timeout to survive an eSPI reset");
+
+            elsif run("leaving_a0_clears_mission_mode") then
+                set_config(net, NIC_CONFIG_CTRL_OFFSET, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                set_config(net, NIC_CONFIG_TIMEOUT_OFFSET, x"00000064", response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(mission_mode_en, '1', "Expected mission_mode_en set");
+                host_in_a0 <= '0';
+                wait for 1 us;
+                check_equal(mission_mode_en, '0', "Expected leaving A0 to clear mission_mode_en");
+                get_config(net, NIC_CONFIG_CTRL_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"00000000"), "Expected mission_mode_en to read back clear out of A0");
+                -- and it cannot be set while out of A0
+                set_config(net, NIC_CONFIG_CTRL_OFFSET, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(mission_mode_en, '0', "Expected mission_mode_en held clear out of A0");
+                check_equal(config_timeout_ms, std_logic_vector'(x"00000064"), "Expected the timeout kept across A2");
+                host_in_a0 <= '1';
+                set_config(net, NIC_CONFIG_CTRL_OFFSET, NIC_CONFIG_CTRL_MISSION_MODE_EN_MASK, response_code, status, crc_ok);
+                check(crc_ok, "Set Config CRC Check failed");
+                wait for 1 us;
+                check_equal(mission_mode_en, '1', "Expected mission_mode_en settable again in A0");
+
+            elsif run("nic_hash_range_reads_back") then
+                get_config(net, NIC_HASH_ADDR_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"00400000"), "Expected the hash range start");
+                get_config(net, NIC_HASH_LEN_OFFSET, data_32, response_code, status, crc_ok);
+                check(crc_ok, "CRC Check failed");
+                check_equal(data_32, std_logic_vector'(x"02000000"), "Expected the hash range length");
             end if;
         end loop;
 

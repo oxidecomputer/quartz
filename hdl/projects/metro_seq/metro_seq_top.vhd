@@ -425,6 +425,8 @@ architecture rtl of metro_seq_top is
     signal sp5_versal_faulted : std_logic;
     -- The Versal image measurement as the SP5 sees it over eSPI1
     signal versal_hash_digest : std_logic_vector(255 downto 0);
+    signal versal_hash_addr : std_logic_vector(31 downto 0);
+    signal versal_hash_len : std_logic_vector(31 downto 0);
     signal versal_hash_host_done : std_logic;
     signal versal_hash_busy : std_logic;
     signal espi1_hash_rehash : std_logic;
@@ -657,6 +659,8 @@ begin
         hw_ack => versal_hash_ack,
         hw_err => versal_hash_err,
         hw_digest => versal_hash_digest,
+        hw_flash_addr_out => versal_hash_addr,
+        hw_length_out => versal_hash_len,
         flash_cmd_rdata => hash_flash_cmd_rdata,
         flash_cmd_rdack => hash_flash_cmd_rdack,
         flash_cmd_rempty => hash_flash_cmd_rempty,
@@ -721,11 +725,16 @@ begin
         nic_hash_digest => versal_hash_digest,
         nic_hash_done => versal_hash_host_done,
         nic_hash_busy => versal_hash_busy,
+        nic_hash_addr => versal_hash_addr,
+        nic_hash_len => versal_hash_len,
         nic_hash_rehash => espi1_hash_rehash,
         nic_hash_done_clear => espi1_hash_done_clear,
         mission_mode_en => espi1_mission_mode_en,
         config_timeout_ms => espi1_config_timeout_ms,
-        nic_config_status => versal_config_status
+        nic_config_status => versal_config_status,
+        -- The host's go-ahead for the Versal is good for one stay in A0 and
+        -- survives the host's own resets
+        host_in_a0 => a0_ok
     );
 
     --Tristates for spi-nor flash pins and espi

@@ -48,6 +48,8 @@ begin
         alias reset is << signal th.reset : std_logic >>;
         alias hw_req is << signal th.hw_req : std_logic >>;
         alias hw_ack is << signal th.hw_ack : std_logic >>;
+        alias hw_flash_addr_out is << signal th.hw_flash_addr_out : std_logic_vector(31 downto 0) >>;
+        alias hw_length_out is << signal th.hw_length_out : std_logic_vector(31 downto 0) >>;
         alias hw_err is << signal th.hw_err : std_logic >>;
 
         variable status   : std_logic_vector(31 downto 0);
@@ -459,6 +461,14 @@ begin
                 check_equal(rdata, std_logic_vector'(x"0012_3000"), "HW_FLASH_ADDR reset value");
                 read_reg(net, HW_LENGTH_OFFSET, rdata);
                 check_equal(rdata, std_logic_vector'(x"0000_1000"), "HW_LENGTH reset value");
+                -- and the range is shown on the ports, for whoever else is told it
+                check_equal(hw_flash_addr_out, std_logic_vector'(x"0012_3000"), "hw_flash_addr_out reset value");
+                check_equal(hw_length_out, std_logic_vector'(x"0000_1000"), "hw_length_out reset value");
+                write_reg(net, HW_FLASH_ADDR_OFFSET, To_StdLogicVector(16#3000#, 32));
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(700, 32));
+                wait_until_idle(net, bus_handle);
+                check_equal(hw_flash_addr_out, To_StdLogicVector(16#3000#, 32), "hw_flash_addr_out follows a write");
+                check_equal(hw_length_out, To_StdLogicVector(700, 32), "hw_length_out follows a write");
 
             elsif run("hw_request_zero_length_is_an_error") then
                 -- An unprogrammed range: refused as a configuration error,

@@ -45,6 +45,8 @@ entity espi_spec_regs is
         nic_hash_digest      : in    std_logic_vector(255 downto 0) := (others => '0');
         nic_hash_done        : in    std_logic := '0';
         nic_hash_busy        : in    std_logic := '0';
+        nic_hash_addr        : in    std_logic_vector(31 downto 0) := (others => '0');
+        nic_hash_len         : in    std_logic_vector(31 downto 0) := (others => '0');
         -- Single-cycle, from the host writing a 1 to the matching bit
         nic_hash_rehash      : out   std_logic;
         nic_hash_done_clear  : out   std_logic;
@@ -52,7 +54,10 @@ entity espi_spec_regs is
         -- NIC to finish, and where that stands (nic_config_* registers)
         mission_mode_en      : out   std_logic;
         config_timeout_ms    : out   std_logic_vector(31 downto 0);
-        nic_config_status    : in    nic_config_status_type := rec_reset
+        nic_config_status    : in    nic_config_status_type := rec_reset;
+        -- The host's say-so is good for one stay in A0: while the host is
+        -- out of it, mission_mode_en is held clear
+        host_in_a0           : in    std_logic := '1'
     );
 end entity;
 
@@ -123,9 +128,10 @@ begin
             if regs_if.addr = NIC_CONFIG_TIMEOUT_OFFSET and regs_if.write = '1' then
                 nic_config_timeout <= unpack(regs_if.wdata);
             end if;
-            -- A host that has been reset has to make its mind up about the
-            -- image again; how long it gives the NIC is not a matter of mind.
-            if espi_reset then
+            -- A host reboot (eSPI reset) leaves the NIC as it was; leaving A0
+            -- does not, so the next A0 starts with the NIC at the interlock.
+            -- How long the host gives the NIC survives both.
+            if host_in_a0 = '0' then
                 nic_config_ctrl <= rec_reset;
             end if;
         end if;
@@ -240,6 +246,10 @@ begin
                     readdata <= pack(nic_config_status);
                 when NIC_CONFIG_TIMEOUT_OFFSET =>
                     readdata <= pack(nic_config_timeout);
+                when NIC_HASH_ADDR_OFFSET =>
+                    readdata <= nic_hash_addr;
+                when NIC_HASH_LEN_OFFSET =>
+                    readdata <= nic_hash_len;
                 when NIC_HASH0_OFFSET =>
                     readdata <= nic_hash_digest(31 downto 0) and digest_shown;
                 when NIC_HASH1_OFFSET =>

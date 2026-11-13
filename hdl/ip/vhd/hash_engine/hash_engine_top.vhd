@@ -67,6 +67,10 @@ entity hash_engine_top is
         -- error, as the HW_DIGEST registers show it. Whether it is current is
         -- the requester's to know from its own acknowledge/error bookkeeping.
         hw_digest : out   std_logic_vector(255 downto 0);
+        -- The range a hardware request measures, as HW_FLASH_ADDR/HW_LENGTH
+        -- hold it, for a requester that shows it to someone else
+        hw_flash_addr_out : out   std_logic_vector(31 downto 0);
+        hw_length_out : out   std_logic_vector(31 downto 0);
 
         -- The spi_nor side of the engine's own command and response FIFOs, one
         -- pair per flash. These match spi_nor_top's hash client port shape:
@@ -216,6 +220,8 @@ begin
     hw_err <= hw_r.err;
     hw_status <= hw_r.status;
     hw_digest <= hw_r.digest;
+    hw_flash_addr_out <= hw_flash_addr.addr;
+    hw_length_out <= hw_length.count;
 
     hw_request: process(clk, reset_local)
     begin

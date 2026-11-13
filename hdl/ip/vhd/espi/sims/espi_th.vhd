@@ -64,6 +64,9 @@ architecture th of espi_th is
     signal mission_mode_en : std_logic;
     signal config_timeout_ms : std_logic_vector(31 downto 0);
     signal nic_config_status : espi_platform_regs_pkg.nic_config_status_type := espi_platform_regs_pkg.rec_reset;
+    signal nic_hash_addr : std_logic_vector(31 downto 0) := x"00400000";
+    signal nic_hash_len : std_logic_vector(31 downto 0) := x"02000000";
+    signal host_in_a0 : std_logic := '1';
     signal to_sp_uart_data : std_logic_vector(7 downto 0);
     signal to_sp_uart_valid : std_logic;
     signal to_sp_uart_ready : std_logic;
@@ -154,7 +157,10 @@ begin
             nic_hash_done_clear => nic_hash_done_clear,
             mission_mode_en    => mission_mode_en,
             config_timeout_ms  => config_timeout_ms,
-            nic_config_status  => nic_config_status
+            nic_config_status  => nic_config_status,
+            nic_hash_addr      => nic_hash_addr,
+            nic_hash_len       => nic_hash_len,
+            host_in_a0         => host_in_a0
         );
 
     strobe_counters: process(clk)
