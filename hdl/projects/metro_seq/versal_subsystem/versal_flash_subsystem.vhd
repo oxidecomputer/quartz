@@ -66,8 +66,9 @@ architecture rtl of versal_flash_subsystem is
 begin
 
     -- The interlock. The SP requesting is not enough; the sequencer has to be
-    -- holding the Versal off the flash as well. The sequencer's own claim
-    -- needs no request.
+    -- holding the Versal off the flash as well. The sequencer's own claim,
+    -- which it has whenever the Versal is not being configured, needs no
+    -- request.
     -- to_fpga is the escape hatch past the interlock, for bring-up
     granted <= flash_owned_by_seq or (mux_ctrl.request and versal_held_in_reset) or
                mux_ctrl.to_fpga;
@@ -85,9 +86,9 @@ begin
     -- losing the grant mid-transaction stops driving within a clock.
     flash_bus_enable <= granted;
 
-    -- Once the Versal has booted, the host has the flash over eSPI1 without
-    -- anyone having to ask. Taking the mux by hand is how the SP gets it back
-    -- for its register path, to write a new image.
+    -- Whenever the Versal is not being configured, the host has the flash
+    -- over eSPI1 without anyone having to ask. Taking the mux by hand is how
+    -- the SP gets it for its own register path instead, to write an image.
     espi_owns <= flash_to_espi and not (mux_ctrl.request or mux_ctrl.to_fpga);
     espi_owns_flash <= espi_owns;
 

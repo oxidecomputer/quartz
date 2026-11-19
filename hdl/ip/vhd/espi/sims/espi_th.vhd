@@ -48,6 +48,29 @@ architecture th of espi_th is
     signal uart_data_line : std_logic;
     signal uart_handshake : std_logic;
     signal from_sp_uart_ready : std_logic;
+    -- The NIC image measurement behind the platform registers, as a
+    -- sequencer would drive it: a digest with every word distinct
+    signal nic_hash_digest : std_logic_vector(255 downto 0) :=
+        x"77777777_66666666_55555555_44444444_33333333_22222222_11111111_000000FF";
+    signal nic_hash_done : std_logic := '0';
+    signal nic_hash_busy : std_logic := '0';
+    signal nic_hash_rehash : std_logic;
+    signal nic_hash_done_clear : std_logic;
+    -- Running counts of those strobes, since they come and go inside the
+    -- controller VC's SET_CONFIGURATION transaction
+    signal rehash_count : natural := 0;
+    signal done_clear_count : natural := 0;
+    signal nic_flash_modified : std_logic;
+    signal flash_modified_count : natural := 0;
+    -- and the configuration side of those registers
+    signal mission_mode_en : std_logic;
+    signal config_timeout_ms : std_logic_vector(31 downto 0);
+    signal nic_config_status : espi_platform_regs_pkg.nic_config_status_type := espi_platform_regs_pkg.rec_reset;
+    signal nic_hash_addr : std_logic_vector(31 downto 0) := x"00400000";
+    signal nic_hash_len : std_logic_vector(31 downto 0) := x"02000000";
+    signal host_in_a0 : std_logic := '1';
+    -- High while the host is powered off, driven by the testbench
+    signal flash_flush : std_logic := '0';
     signal to_sp_uart_data : std_logic_vector(7 downto 0);
     signal to_sp_uart_valid : std_logic;
     signal to_sp_uart_ready : std_logic;
@@ -100,8 +123,7 @@ begin
         );
 
     -- Built with writes allowed so the write path can be exercised; the
-    -- runtime enable bit still starts off, which is what the refusal tests
-    -- rely on.
+    -- runtime enable bit then starts on, and the refusal tests clear it.
     dut: entity work.espi_target_top
         generic map (
             FLASH_WRITES_ALLOWED => true,
@@ -131,8 +153,36 @@ begin
             to_sp_uart_ready => to_sp_uart_ready,
             from_sp_uart_data  => from_sp_uart_data, 
             from_sp_uart_valid => from_sp_uart_valid,
-            from_sp_uart_ready => from_sp_uart_ready
+            from_sp_uart_ready => from_sp_uart_ready,
+            nic_hash_digest    => nic_hash_digest,
+            nic_hash_done      => nic_hash_done,
+            nic_hash_busy      => nic_hash_busy,
+            nic_hash_rehash    => nic_hash_rehash,
+            nic_hash_done_clear => nic_hash_done_clear,
+            nic_flash_modified => nic_flash_modified,
+            mission_mode_en    => mission_mode_en,
+            config_timeout_ms  => config_timeout_ms,
+            nic_config_status  => nic_config_status,
+            nic_hash_addr      => nic_hash_addr,
+            nic_hash_len       => nic_hash_len,
+            host_in_a0         => host_in_a0,
+            flash_flush        => flash_flush
         );
+
+    strobe_counters: process(clk)
+    begin
+        if rising_edge(clk) then
+            if nic_hash_rehash = '1' then
+                rehash_count <= rehash_count + 1;
+            end if;
+            if nic_hash_done_clear = '1' then
+                done_clear_count <= done_clear_count + 1;
+            end if;
+            if nic_flash_modified = '1' then
+                flash_modified_count <= flash_modified_count + 1;
+            end if;
+        end if;
+    end process;
 
     axi_fifo_st_uart_inst: entity work.axi_fifo_st_uart
      generic map(

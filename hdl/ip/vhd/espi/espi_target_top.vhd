@@ -24,9 +24,10 @@ entity espi_target_top is
     generic (
         -- Whether this instance can ever forward SAFS flash writes and
         -- erases. False strips the ability out of the build; true still
-        -- leaves it gated by the flash_write_enable control bit, which
-        -- resets to off. Refused writes and erases get an unsuccessful
-        -- completion.
+        -- leaves it gated by the flash_write_enable control bit, which then
+        -- resets to on so the host can write without the SP's help, and
+        -- which the SP can clear. Refused writes and erases get an
+        -- unsuccessful completion.
         FLASH_WRITES_ALLOWED : boolean := false;
         -- Whether to keep the 4k entry post code buffer, see espi_regs.
         POST_CODE_BUFFER_ENABLED : boolean := true;
@@ -62,6 +63,13 @@ entity espi_target_top is
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
         flash_fifo_clear : out std_logic;
+        -- High while the host is powered off, when anything it left
+        -- outstanding on the flash channel is dropped. Not the same thing
+        -- as host_in_a0 being low: the host reads its flash on the way up,
+        -- before it is in A0.
+        flash_flush : in std_logic := '0';
+        -- From the flash block: still discarding, see flash_channel
+        flash_flush_busy : in std_logic := '0';
         -- Write payload FIFO, host to flash. Only ever written on an
         -- instance built with FLASH_WRITES_ALLOWED; leave open otherwise.
         flash_wfifo_data : out std_logic_vector(7 downto 0);
@@ -72,7 +80,25 @@ entity espi_target_top is
         to_sp_uart_ready: in std_logic;
         from_sp_uart_data : in std_logic_vector(7 downto 0);
         from_sp_uart_valid: in std_logic;
-        from_sp_uart_ready: out std_logic
+        from_sp_uart_ready: out std_logic;
+        -- The NIC image measurement the host sees in the nic_hash_* platform
+        -- registers, see espi_spec_regs. Leave at the defaults where there is
+        -- no such thing.
+        nic_hash_digest : in std_logic_vector(255 downto 0) := (others => '0');
+        nic_hash_done : in std_logic := '0';
+        nic_hash_busy : in std_logic := '0';
+        nic_hash_addr : in std_logic_vector(31 downto 0) := (others => '0');
+        nic_hash_len : in std_logic_vector(31 downto 0) := (others => '0');
+        nic_hash_rehash : out std_logic;
+        nic_hash_done_clear : out std_logic;
+        -- One cycle as the host's write or erase is issued to the flash. The
+        -- digest the host was shown no longer describes the image.
+        nic_flash_modified : out std_logic;
+        -- and the host's control of the NIC's configuration, see espi_spec_regs
+        mission_mode_en : out std_logic;
+        config_timeout_ms : out std_logic_vector(31 downto 0);
+        nic_config_status : in espi_platform_regs_pkg.nic_config_status_type := espi_platform_regs_pkg.rec_reset;
+        host_in_a0 : in std_logic := '1'
     );
 end entity;
 
@@ -366,7 +392,18 @@ begin
             qspi_mode      => qspi_mode,
             wait_states    => wait_states_slow,
             flash_channel_enable => flash_channel_enable,
-            oob_enabled    => oob_enabled
+            oob_enabled    => oob_enabled,
+            nic_hash_digest => nic_hash_digest,
+            nic_hash_done => nic_hash_done,
+            nic_hash_busy => nic_hash_busy,
+            nic_hash_addr => nic_hash_addr,
+            nic_hash_len => nic_hash_len,
+            nic_hash_rehash => nic_hash_rehash,
+            nic_hash_done_clear => nic_hash_done_clear,
+            mission_mode_en => mission_mode_en,
+            config_timeout_ms => config_timeout_ms,
+            nic_config_status => nic_config_status,
+            host_in_a0 => host_in_a0
         );
 
     -- Both halves of the write permission have to agree; the generic keeps
@@ -382,7 +419,10 @@ begin
        request => flash_req,
        response => flash_resp,
        enabled => flash_channel_enable,
+       flush => flash_flush,
+       flash_modified => nic_flash_modified,
        flash_fifo_clear => flash_fifo_clear,
+       flash_flush_busy => flash_flush_busy,
        flash_np_free => flash_np_free,
        flash_c_avail => flash_c_avail,
        flash_cfifo_data => flash_cfifo_data,

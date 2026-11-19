@@ -187,7 +187,8 @@ addrmap hash_engine_regs {
     reg {
         name = "Hardware Request Flash Address";
         desc = "Raw byte address of the first byte hashed on a hardware request.
-        Not remapped, as FLASH_ADDR is not.";
+        Not remapped, as FLASH_ADDR is not. The reset value is set per build
+        (metro: 0, the start of the Versal image); the IP's own default is 0.";
         field {
             desc = "Flash byte address";
         } addr[31:0] = 0;
@@ -197,7 +198,8 @@ addrmap hash_engine_regs {
         name = "Hardware Request Length";
         desc = "Number of bytes hashed on a hardware request. Zero makes the
         request fail with HW_STATUS.cfg_err, which is what an unprogrammed range
-        does; the requester decides what to make of that.";
+        does; the requester decides what to make of that. The reset value is set
+        per build (metro: 32MiB, the Versal image); the IP's own default is 0.";
         field {
             desc = "Message length in bytes";
         } count[31:0] = 0;

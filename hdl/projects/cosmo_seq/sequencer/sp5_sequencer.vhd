@@ -93,6 +93,19 @@ entity sp5_sequencer is
         hash_req : out std_logic;
         hash_ack : in std_logic := '0';
         hash_err : in std_logic := '0';
+        -- The host's handle on that measurement, from eSPI1's platform
+        -- registers: requests to measure again and to clear the digest it has
+        -- read, and what it sees back (see versal_seq)
+        host_hash_rehash : in std_logic := '0';
+        host_hash_done_clear : in std_logic := '0';
+        host_flash_modified : in std_logic := '0';
+        nic_hash_host_done : out std_logic;
+        nic_hash_busy : out std_logic;
+        -- The host's say-so for configuring a Versal, how long it gives it,
+        -- and what it reads back (eSPI1's nic_config_* registers)
+        mission_mode_en : in std_logic := '0';
+        config_timeout_ms : in std_logic_vector(31 downto 0) := x"00002710";
+        nic_config_status : out work.espi_platform_regs_pkg.nic_config_status_type;
         -- FPGA1_VERSION_ID board straps, reported straight through
         version_id : in std_logic_vector(1 downto 0) := "00"
     );
@@ -424,6 +437,9 @@ begin
         sp5_nic_prsnt_l <= '0';
         sp5_nic_chb_prsnt_l <= '0';
         hash_req <= '0';
+        nic_hash_host_done <= '0';
+        nic_hash_busy <= '0';
+        nic_config_status <= work.espi_platform_regs_pkg.rec_reset;
     end generate;
 
     -----------------------------------------------------------------------
@@ -463,6 +479,14 @@ begin
             debug_enables => debug_enables,
             sp5_versal_cha_perst_l => sp5_nic_perst_l,
             sp5_versal_chb_perst_l => sp5_nic_chb_perst_l,
+            mission_mode_en => mission_mode_en,
+            config_timeout_ms => config_timeout_ms,
+            config_status => nic_config_status,
+            host_hash_rehash => host_hash_rehash,
+            host_hash_done_clear => host_hash_done_clear,
+            host_flash_modified => host_flash_modified,
+            hash_host_done => nic_hash_host_done,
+            hash_busy => nic_hash_busy,
             versal_dbg_pins => nic_dbg_pins,
             versal_held_in_reset => versal_held_in_reset,
             flash_owned_by_seq => flash_owned_by_seq,

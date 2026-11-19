@@ -23,6 +23,13 @@ entity espi_flash_txn_mgr is
         reset: in std_logic;
         -- From Hubris control
         espi_reads_allowed: in std_logic;
+        -- The eSPI side is throwing away whatever it had outstanding (its
+        -- flash channel was reset, or the host is off). While this is high
+        -- queued commands are popped and dropped rather than run, whoever
+        -- owns the flash. A transaction already under way is not cut short
+        -- on the part, since a program or erase must finish, but nothing
+        -- more of it is reported and a read stops at the end of its chunk.
+        flush : in std_logic := '0';
         -- SP-controlled absolute flash address for the desired host image base address.
         -- We have 2 image slots, SP choses which of these is the starting address. This is signed
         -- and the value is added directly to the incomming raw AMD addresses to get a physical flash address, mapped into
@@ -108,6 +115,8 @@ architecture rtl of espi_flash_txn_mgr is
         is_erase : boolean;
         status : std_logic_vector(7 downto 0);
         polls : natural range 0 to max_polls;
+        -- The request in hand was flushed part way through; see flush
+        discard : boolean;
     end record;
     constant reg_reset : reg_t := (
         state => idle,
@@ -127,7 +136,8 @@ architecture rtl of espi_flash_txn_mgr is
         erase_op => SECTOR_ERASE_4BYTE_OP,
         is_erase => false,
         status => status_ok,
-        polls => 0
+        polls => 0,
+        discard => false
     );
 
     signal r, rin: reg_t;
@@ -158,7 +168,8 @@ begin
     -- but only when we're expecting data going to the espi block and not hubris FIFOs.
     -- The status byte for a write or erase goes out the same way.
     espi_flash_data_byte <= flash_rdata when r.state = wait_for_data else r.status;
-    flash_data_byte_write <= flash_rdata_write when r.state = wait_for_data else
+    flash_data_byte_write <= '0' when flush = '1' or r.discard else
+                             flash_rdata_write when r.state = wait_for_data else
                              '1' when r.state = report_status else
                              '0';
     espi_cmd_fifo_rdack <= r.cmd_rdack;
@@ -180,7 +191,14 @@ begin
         
         case r.state is
             when idle =>
-                if espi_cmd_fifo_rempty = '0' and espi_reads_allowed = '1' then
+                if flush = '1' then
+                    -- Drop a queued word. The pop is registered, so the
+                    -- empty flag is only trusted on a cycle that is not
+                    -- already popping.
+                    if espi_cmd_fifo_rempty = '0' and r.cmd_rdack = '0' then
+                        v.cmd_rdack := '1';
+                    end if;
+                elsif espi_cmd_fifo_rempty = '0' and espi_reads_allowed = '1' then
                     v.state := read_cmd_addr;
                     -- This is a show-ahead fifo so it's no problem, espi_cmd_fifo_rdata is valid
                     -- here. Thus, we take the opportunity to precompute a couple different
@@ -254,21 +272,21 @@ begin
                                 v.state := report_status;
                         end case;
                     when others =>
-                        -- This comes 1-indexed from the eSPI block, so we need to subtract 1 below.
-                        -- The guard is for simulation: the fifo's showahead word is
-                        -- still the address for a delta after the pop, and a zero
+                        -- A byte count, read in chunks of up to a page. The
+                        -- count is kept as what is still to be fetched;
+                        -- txn_bytes is the chunk in hand less one, as the
+                        -- countdown in wait_for_data wants it. The guard is
+                        -- for simulation: the fifo's showahead word is still
+                        -- the address for a delta after the pop, and a zero
                         -- length would otherwise put -1 in a natural.
-                        if espi_cmd_fifo_rdata(11 downto 0) = 0 then
-                            v.rem_bytes := 0;
-                        else
-                            v.rem_bytes := to_integer(espi_cmd_fifo_rdata(11 downto 0)) - 1;
-                        end if;
+                        v.rem_bytes := to_integer(espi_cmd_fifo_rdata(11 downto 0));
                         v.step := step_read;
                         v.state := wait_idle;
-                        -- We're either going to issue the max page size, or the 0-indexed remaining bytes
-                        -- which ever is smaller.
-                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size);
-                        -- spi is 1-indexed still, so we need to add 1 here
+                        if v.rem_bytes = 0 then
+                            v.txn_bytes := 0;
+                        else
+                            v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size + 1) - 1;
+                        end if;
                         v.data_bytes := v.txn_bytes + 1;
                 end case;
 
@@ -278,14 +296,15 @@ begin
                     v.txn_bytes := r.txn_bytes - 1;
                 -- on final write decide where we're going
                 elsif flash_rdata_write = '1' then
-                    -- last data, no more parts of the full read to do
-                    if r.rem_bytes = 0 then
+                    -- last data, no more parts of the full read to do, or
+                    -- nobody left to read them for
+                    if r.rem_bytes = 0 or r.discard then
                         v.state := idle;
                     -- last data for this part of the transaction
                     else
                         v.state := wait_idle;
                         v.cur_flash_addr := r.next_flash_addr;
-                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size);
+                        v.txn_bytes := minimum(v.rem_bytes, max_flash_read_size + 1) - 1;
                         v.data_bytes := v.txn_bytes + 1;
                     end if;
                 end if;
@@ -318,8 +337,9 @@ begin
                     case r.step is
                         when step_read =>
                             v.state := wait_for_data;
-                            -- Adjust info for a potential next read or so we can decide we're done later
-                            v.rem_bytes := r.rem_bytes - r.txn_bytes;
+                            -- What this chunk fetches is spoken for; the
+                            -- next one, if any, starts after it
+                            v.rem_bytes := r.rem_bytes - (r.txn_bytes + 1);
                             v.next_flash_addr := r.cur_flash_addr + (r.txn_bytes + 1);
                         when step_program =>
                             v.state := wait_done;
@@ -381,6 +401,12 @@ begin
         -- read the fifo in these two states.
         if v.state = read_cmd_addr or v.state = read_cmd_len then
             v.cmd_rdack := '1';
+        end if;
+
+        if v.state = idle then
+            v.discard := false;
+        elsif flush = '1' then
+            v.discard := true;
         end if;
 
         rin <= v;

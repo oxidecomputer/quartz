@@ -37,7 +37,27 @@ entity espi_spec_regs is
         qspi_mode            : out   qspi_mode_t;
         wait_states          : out   std_logic_vector(3 downto 0);
         oob_enabled          : out   std_logic;
-        flash_channel_enable : out   boolean
+        flash_channel_enable : out   boolean;
+
+        -- The NIC image measurement behind the nic_hash_* platform
+        -- registers, see espi_platform_regs.rdl. A board without one leaves
+        -- these at their defaults and the registers read as zero.
+        nic_hash_digest      : in    std_logic_vector(255 downto 0) := (others => '0');
+        nic_hash_done        : in    std_logic := '0';
+        nic_hash_busy        : in    std_logic := '0';
+        nic_hash_addr        : in    std_logic_vector(31 downto 0) := (others => '0');
+        nic_hash_len         : in    std_logic_vector(31 downto 0) := (others => '0');
+        -- Single-cycle, from the host writing a 1 to the matching bit
+        nic_hash_rehash      : out   std_logic;
+        nic_hash_done_clear  : out   std_logic;
+        -- The host's say-so for configuring the NIC, how long it gives the
+        -- NIC to finish, and where that stands (nic_config_* registers)
+        mission_mode_en      : out   std_logic;
+        config_timeout_ms    : out   std_logic_vector(31 downto 0);
+        nic_config_status    : in    nic_config_status_type := rec_reset;
+        -- The host's say-so is good for one stay in A0: while the host is
+        -- out of it, mission_mode_en is held clear
+        host_in_a0           : in    std_logic := '1'
     );
 end entity;
 
@@ -54,6 +74,10 @@ architecture rtl of espi_spec_regs is
     signal readdata_valid   : std_logic;
     signal readdata         : std_logic_vector(31 downto 0);
     signal qspi_freq        : qspi_freq_t;
+    signal nic_hash_ctrl    : nic_hash_ctrl_type;
+    signal digest_shown     : std_logic_vector(31 downto 0);
+    signal nic_config_ctrl  : nic_config_ctrl_type;
+    signal nic_config_timeout : nic_config_timeout_type;
 
 begin
 
@@ -71,6 +95,47 @@ begin
     spec_regs_view.ch2_capabilities     <= ch2_capabilities;
     spec_regs_view.ch3_capabilities     <= ch3_capabilities;
     spec_regs_view.ch3_capabilities2    <= ch3_capabilities2;
+
+    -- The one writable platform register is all strobes: nothing is kept
+    -- here, the bits go to the sequencer that owns the measurement and the
+    -- readback comes from it. Not cleared by an eSPI reset, which cannot
+    -- undo a request already made.
+    nic_hash_ctrl <= (done => nic_hash_done, rehash => nic_hash_busy);
+    -- The digest only once it is done and until the host has said it has
+    -- read it, so a stale one is never taken for new
+    digest_shown <= (others => nic_hash_done);
+
+    mission_mode_en <= nic_config_ctrl.mission_mode_en;
+    config_timeout_ms <= nic_config_timeout.ms;
+
+    platform_write: process(clk, reset)
+    begin
+        if reset then
+            nic_hash_rehash <= '0';
+            nic_hash_done_clear <= '0';
+            nic_config_ctrl <= rec_reset;
+            nic_config_timeout <= rec_reset;
+        elsif rising_edge(clk) then
+            nic_hash_rehash <= '0';
+            nic_hash_done_clear <= '0';
+            if regs_if.addr = NIC_HASH_CTRL_OFFSET and regs_if.write = '1' then
+                nic_hash_rehash <= regs_if.wdata(1);
+                nic_hash_done_clear <= regs_if.wdata(0);
+            end if;
+            if regs_if.addr = NIC_CONFIG_CTRL_OFFSET and regs_if.write = '1' then
+                nic_config_ctrl <= unpack(regs_if.wdata);
+            end if;
+            if regs_if.addr = NIC_CONFIG_TIMEOUT_OFFSET and regs_if.write = '1' then
+                nic_config_timeout <= unpack(regs_if.wdata);
+            end if;
+            -- A host reboot (eSPI reset) leaves the NIC as it was; leaving A0
+            -- does not, so the next A0 starts with the NIC at the interlock.
+            -- How long the host gives the NIC survives both.
+            if host_in_a0 = '0' then
+                nic_config_ctrl <= rec_reset;
+            end if;
+        end if;
+    end process;
 
     -- Write-side of the spec-defined registers
     write_reg: process(clk, reset)
@@ -173,6 +238,34 @@ begin
                     readdata <= pack(ch3_capabilities2);
                 when BOARD_ID_OFFSET =>
                     readdata <= pack(board_id);
+                when NIC_HASH_CTRL_OFFSET =>
+                    readdata <= pack(nic_hash_ctrl);
+                when NIC_CONFIG_CTRL_OFFSET =>
+                    readdata <= pack(nic_config_ctrl);
+                when NIC_CONFIG_STATUS_OFFSET =>
+                    readdata <= pack(nic_config_status);
+                when NIC_CONFIG_TIMEOUT_OFFSET =>
+                    readdata <= pack(nic_config_timeout);
+                when NIC_HASH_ADDR_OFFSET =>
+                    readdata <= nic_hash_addr;
+                when NIC_HASH_LEN_OFFSET =>
+                    readdata <= nic_hash_len;
+                when NIC_HASH0_OFFSET =>
+                    readdata <= nic_hash_digest(31 downto 0) and digest_shown;
+                when NIC_HASH1_OFFSET =>
+                    readdata <= nic_hash_digest(63 downto 32) and digest_shown;
+                when NIC_HASH2_OFFSET =>
+                    readdata <= nic_hash_digest(95 downto 64) and digest_shown;
+                when NIC_HASH3_OFFSET =>
+                    readdata <= nic_hash_digest(127 downto 96) and digest_shown;
+                when NIC_HASH4_OFFSET =>
+                    readdata <= nic_hash_digest(159 downto 128) and digest_shown;
+                when NIC_HASH5_OFFSET =>
+                    readdata <= nic_hash_digest(191 downto 160) and digest_shown;
+                when NIC_HASH6_OFFSET =>
+                    readdata <= nic_hash_digest(223 downto 192) and digest_shown;
+                when NIC_HASH7_OFFSET =>
+                    readdata <= nic_hash_digest(255 downto 224) and digest_shown;
                 when others =>
                     readdata <= (others => '0');
             end case;

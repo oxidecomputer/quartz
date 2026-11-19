@@ -583,7 +583,11 @@ begin
         hash_cmd_fifo_rdack => hash_flash_cmd_rdack(0),
         hash_cmd_fifo_rempty => hash_flash_cmd_rempty(0),
         hash_data_fifo_wdata => hash_flash_rsp_wdata(7 downto 0),
-        hash_data_fifo_write => hash_flash_rsp_write(0)
+        hash_data_fifo_write => hash_flash_rsp_write(0),
+        -- With the sequencer back in idle the host is off, and anything it
+        -- left queued for its flash is dropped rather than kept for the
+        -- next boot.
+        host_off => a0_idle
     );
 
     -- SHA3 hashing engine. It reads flash through spi_nor_top's second client

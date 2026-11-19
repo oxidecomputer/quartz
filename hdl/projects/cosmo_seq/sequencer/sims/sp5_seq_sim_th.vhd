@@ -81,6 +81,13 @@ architecture th of sp5_seq_sim_th is
     signal a0_idle : std_logic;
     signal sp5_nic_perst_l : std_logic := '1';
     signal sp5_nic_chb_perst_l : std_logic := '1';
+    -- The SP5's go-ahead for configuring the measured image, as eSPI1's
+    -- registers would drive it, and how long it gives the Versal. On from the
+    -- start, as a host that has already said yes, so that a plain power-up
+    -- reaches DONE; the interlock tests take it away first.
+    signal host_mission_mode_en : std_logic := '1';
+    signal config_timeout_ms : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(10000, 32));
+    signal nic_config_status : work.espi_platform_regs_pkg.nic_config_status_type;
     signal axi_if : axil8x32_pkg.axil_t;
     signal nic_dbg_pins : nic_debug_if;
 
@@ -105,6 +112,12 @@ architecture th of sp5_seq_sim_th is
     signal hash_model_time : time := 20 us;
     signal hash_model_fail : boolean := false;
     signal hash_requests : natural := 0;
+    -- The host's side of the measurement, as eSPI1's registers would drive it
+    signal host_hash_rehash : std_logic := '0';
+    signal host_hash_done_clear : std_logic := '0';
+    signal host_flash_modified : std_logic := '0';
+    signal nic_hash_host_done : std_logic;
+    signal nic_hash_busy : std_logic;
 
 begin
 
@@ -144,10 +157,18 @@ begin
        hash_req => hash_req,
        hash_ack => hash_ack,
        hash_err => hash_err,
+       host_hash_rehash => host_hash_rehash,
+       host_hash_done_clear => host_hash_done_clear,
+       host_flash_modified => host_flash_modified,
+       nic_hash_host_done => nic_hash_host_done,
+       nic_hash_busy => nic_hash_busy,
        version_id => "01",
        nic_dbg_pins => nic_dbg_pins,
        sp5_nic_perst_l => sp5_nic_perst_l,
        sp5_nic_chb_perst_l => sp5_nic_chb_perst_l,
+       mission_mode_en => host_mission_mode_en,
+       config_timeout_ms => config_timeout_ms,
+       nic_config_status => nic_config_status,
        irq_l_out => open,
        reg_alert_l_pins => reg_alert_l_pins
    );

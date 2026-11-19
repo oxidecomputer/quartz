@@ -38,6 +38,8 @@ architecture th of hash_engine_th is
     -- Hardware request handshake, driven from the testbench
     signal hw_req : std_logic := '0';
     signal hw_ack : std_logic;
+    signal hw_flash_addr_out : std_logic_vector(31 downto 0);
+    signal hw_length_out : std_logic_vector(31 downto 0);
     signal hw_err : std_logic;
 
 
@@ -71,12 +73,21 @@ begin
             bresp   => axi_bus.write_response.resp
         );
 
+    -- Built with a hardware range, as a board that measures a known image is,
+    -- so the reset values can be checked; the unprogrammed-range test writes
+    -- zero itself.
     dut: entity work.hash_engine_top
+        generic map (
+            HW_FLASH_ADDR_DEFAULT => 16#00123000#,
+            HW_LENGTH_DEFAULT => 4096
+        )
         port map (
             clk              => clk,
             reset            => reset,
             axi_if           => axi_bus,
             hw_req           => hw_req,
+            hw_flash_addr_out => hw_flash_addr_out,
+            hw_length_out    => hw_length_out,
             hw_ack           => hw_ack,
             hw_err           => hw_err,
             flash_cmd_rdata  => cmd_fifo_rdata,

@@ -90,6 +90,10 @@ package sp5_seq_sim_pkg is
         constant nic_expected : in nic_api_status_nic_sm;
         constant msg : in string
     );
+    procedure set_a0hp_inhibit (
+        signal net : inout network_t;
+        constant inhibit : in boolean
+    );
     procedure set_ignore_sp5 (
         signal net : inout network_t;
         constant ignore : in boolean

@@ -31,6 +31,11 @@ entity flash_channel is
         reset : in std_logic;
 
         enabled: in boolean;
+        -- The host is off. Everything outstanding is dropped just as it is
+        -- while the channel is disabled, so that nothing the host asked for
+        -- before it went away is still queued when it comes back, or sits
+        -- in front of whoever uses the flash in the meantime.
+        flush : in std_logic := '0';
 
         -- eSPI Transaction interface
         request: view flash_chan_req_sink;
@@ -44,7 +49,11 @@ entity flash_channel is
         -- command fifo
         flash_cfifo_data : out std_logic_vector(31 downto 0);
         flash_cfifo_write: out std_logic;
+        -- High while the flash block should throw away what it holds for us
         flash_fifo_clear : out std_logic;
+        -- and high from then until it has, see spi_nor_top. No command is
+        -- issued while it is up: the flash block would discard it.
+        flash_flush_busy : in std_logic := '0';
         -- readback fifo
         flash_rfifo_data : in std_logic_vector(7 downto 0);
         flash_rfifo_rdack : out std_logic;
@@ -53,8 +62,12 @@ entity flash_channel is
         -- the command words for it are, so the flash block never sees a
         -- write command it does not already have all the bytes for.
         flash_wfifo_data : out std_logic_vector(7 downto 0);
-        flash_wfifo_write : out std_logic
+        flash_wfifo_write : out std_logic;
 
+        -- One cycle as a write or erase goes to the flash block: the image
+        -- is about to change, so any digest standing for it is stale.
+        -- Writes the command processor refused never get here.
+        flash_modified : out std_logic
     );
 end;
 
@@ -183,11 +196,44 @@ architecture rtl of flash_channel is
     attribute mark_debug of dpr_wdata_dbg : signal is "TRUE";
     attribute mark_debug of dpr_rdata : signal is "TRUE";
     attribute mark_debug of dpr_read_ack : signal is "TRUE";
-    attribute mark_debug of dpr_wr_delay : signal is "TRUE";    
+    attribute mark_debug of dpr_wr_delay : signal is "TRUE";
+
+    constant flush_settle_cycles : natural := 15;
+    signal flushing : std_logic;
+    signal flush_pending : std_logic;
+    signal flush_settle : natural range 0 to flush_settle_cycles;
 
 begin
 
-    flash_fifo_clear <= '1' when not enabled else '0';
+    flushing <= '1' when not enabled or flush = '1' else '0';
+    flash_fifo_clear <= flushing;
+
+    -- The readback FIFO is emptied from this end, by reading it out, rather
+    -- than by resetting it. That carries on past the flush itself until the
+    -- flash block has finished its half and the FIFO has looked empty for
+    -- long enough that a byte still crossing it would have shown up.
+    flush_tracker: process(clk, reset)
+    begin
+        if reset then
+            flush_pending <= '1';
+            flush_settle <= 0;
+        elsif rising_edge(clk) then
+            if flushing = '1' then
+                flush_pending <= '1';
+                flush_settle <= 0;
+            elsif flush_pending = '1' then
+                if flash_rfifo_rempty = '1' and flash_flush_busy = '0' then
+                    if flush_settle = flush_settle_cycles then
+                        flush_pending <= '0';
+                    else
+                        flush_settle <= flush_settle + 1;
+                    end if;
+                else
+                    flush_settle <= 0;
+                end if;
+            end if;
+        end if;
+    end process;
     dbg_regs: process (clk, reset)
     begin
         if reset then
@@ -205,7 +251,8 @@ begin
 
 
     -- Always write straight from the FIFO to the dpr so any dpr write is a fifo read ack also
-    flash_rfifo_rdack <= r.dpr_write_en;
+    flash_rfifo_rdack <= r.dpr_write_en or
+                         ((flushing or flush_pending) and not flash_rfifo_rempty);
     flash_np_free <= r.flash_np_free;
 
     -- flash_c_avail is set when we have pending data to be read back out, but critically this status needs to represent
@@ -221,6 +268,8 @@ begin
                         to_kind_bits(r.cmd_queue(r.issue_desc).kind) & resize(r.cmd_queue(r.issue_desc).xfr_size_bytes, flash_cfifo_data'length - 4) when r.flash_cmd_state = issue_flash_len else
                         (others => '0');
     flash_cfifo_write <= '1' when r.flash_cmd_state = issue_flash_addr or r.flash_cmd_state = issue_flash_len else '0';
+    flash_modified <= '1' when r.flash_cmd_state = issue_flash_len and
+                               r.cmd_queue(r.issue_desc).kind /= flash_rd else '0';
 
     flash_wfifo_data <= r.wfifo_wdata;
     flash_wfifo_write <= r.wfifo_write;
@@ -346,8 +395,10 @@ begin
         v.wfifo_write := '0';
         case r.flash_cmd_state is
             when idle =>
-                -- have active command that hasn't been issued to flash
-                if flash_issue_needed then
+                -- have active command that hasn't been issued to flash. One
+                -- that arrives on the heels of a flush waits here until the
+                -- flash block is ready to take it.
+                if flash_issue_needed and flush_pending = '0' then
                     v.flash_side_cntr := 0;
                     v.flash_side_last := to_integer(r.cmd_queue(r.issue_desc).xfr_size_bytes) = 1;
                     case r.cmd_queue(r.issue_desc).kind is
@@ -494,8 +545,8 @@ begin
             v.dpr_raddr := dpr_addr(v.tail_desc, v.compl_side_cntr);
         end if;
 
-        if not enabled then
-            -- If we're not enabled, reset the state machine
+        if flushing = '1' then
+            -- If we're not enabled, or the host is off, reset the state machine
             v := reg_reset;
         end if;
         rin <= v;

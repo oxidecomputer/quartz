@@ -9,6 +9,8 @@ use ieee.numeric_std.all;
 use work.sp5_power_pkg.all;
 use work.sequencer_io_pkg.all;
 use work.sequencer_regs_pkg.all;
+use work.espi_platform_regs_pkg.nic_config_status_type;
+use work.espi_platform_regs_pkg.nic_config_status_state;
 
 -- A0HP sequencing and boot supervision for the AMD Versal Premium VP1202 that
 -- serves as Metro's NIC. This is the metro-specific counterpart to cosmo_seq's
@@ -65,6 +67,24 @@ entity versal_seq is
         -- per channel; only the resets are.
         sp5_versal_cha_perst_l : in std_logic;
         sp5_versal_chb_perst_l : in std_logic;
+        -- The SP5's say-so, from eSPI1's platform registers: the Versal is
+        -- not configured until mission_mode_en is set, and goes back into
+        -- reset when it is cleared. config_timeout_ms is how long the host
+        -- gives it to assert DONE, and config_status is what the host reads.
+        mission_mode_en : in std_logic;
+        config_timeout_ms : in std_logic_vector(31 downto 0);
+        config_status : out nic_config_status_type;
+
+        -- The host's handle on the image measurement, from eSPI1's platform
+        -- registers: single-cycle requests to measure again and to clear the
+        -- digest it has read, and what it sees back.
+        host_hash_rehash : in std_logic;
+        host_hash_done_clear : in std_logic;
+        -- and a write or erase of the image over eSPI1, which withdraws the
+        -- digest shown (see nic_hash_seq)
+        host_flash_modified : in std_logic := '0';
+        hash_host_done : out std_logic;
+        hash_busy : out std_logic;
 
         -- True while the Versal is held in reset and not about to be let out
         -- of it, i.e. while it is safe for the SP to take the Versal's boot
@@ -112,9 +132,6 @@ architecture rtl of versal_seq is
     constant RAIL_SETTLE_MS : integer := 20 * ONE_MS;
     -- How long MODE[3:0] must be stable before POR_B is released.
     constant MODE_SETUP_MS : integer := 1 * ONE_MS;
-    -- How long to wait for DONE before calling the boot failed. Versal images
-    -- are large and come off QSPI, so this is generous on purpose.
-    constant DONE_TIMEOUT_MS : integer := 5000 * ONE_MS;
 
     constant NUM_GROUPS : integer := 7;
     subtype group_t is integer range 1 to NUM_GROUPS;
@@ -159,7 +176,10 @@ architecture rtl of versal_seq is
         expected : std_logic_vector(0 to NUM_GROUPS);
         faulted : std_logic;
         mapo_suppressed : std_logic;
-        boot_failed : std_logic;
+        -- Milliseconds since POR_B release, for the host's configuration
+        -- timeout, and whether that is what failed the last boot
+        ms_cnt : unsigned(31 downto 0);
+        timed_out : std_logic;
     end record;
 
     constant versal_r_reset : versal_r_t := (
@@ -179,7 +199,8 @@ architecture rtl of versal_seq is
         expected => (others => '0'),
         faulted => '0',
         mapo_suppressed => '0',
-        boot_failed => '0'
+        ms_cnt => (others => '0'),
+        timed_out => '0'
     );
     signal r, rin : versal_r_t;
 
@@ -192,9 +213,11 @@ architecture rtl of versal_seq is
     signal held_in_reset : std_logic;
     signal rails_ok : std_logic;
     signal hash_start_seq : std_logic;
-    signal hash_hold : std_logic;
-    signal hash_busy : std_logic;
+    signal hash_flash_free : std_logic;
+    signal hash_busy_int : std_logic;
     signal hash_owns_flash : std_logic;
+    signal configuring : std_logic;
+    signal mission_ok : std_logic;
 
 begin
 
@@ -208,25 +231,47 @@ begin
     -- in force when it does.
     held_in_reset <= '1' when r.por_b = '0' and r.state /= MODE_STRAP else '0';
     versal_held_in_reset <= held_in_reset;
-    -- The sequencer's own claims on the flash: measuring it, and after boot,
-    -- when the Versal has finished with it and the SP5 gets it over eSPI.
     rails_up <= and r.expected;
+    -- Presence to the SP5's hotplug controller only once the Versal is
+    -- configured; the host's go-ahead for configuring it comes over eSPI1,
+    -- not through the slot.
     sp5_cha_prsnt_l <= '0' when versal_pcie.cha.prsnt_l = '0' and r.state = DONE else '1';
     sp5_chb_prsnt_l <= '0' when versal_pcie.chb.prsnt_l = '0' and r.state = DONE else '1';
-    flash_owned_by_seq <= '1' when hash_owns_flash = '1' or r.state = DONE else '0';
-    flash_to_espi <= '1' when r.state = DONE else '0';
+
+    -- The flash is the Versal's only while it is being configured from it:
+    -- from the mode straps going on until DONE. The rest of the time, powered
+    -- or not, booted or not, it sits on the FPGA side where the SP5 reaches it
+    -- over eSPI1 and the hash engine can measure it. The spi_nor block
+    -- arbitrates between those two.
+    configuring <= '1' when r.state = MODE_STRAP or r.state = POR_RELEASE or
+                            r.state = WAIT_DONE else '0';
+    flash_owned_by_seq <= not configuring;
+    flash_to_espi <= not configuring;
+
+    -- The SP5 setting mission_mode_en is what lets a measured image be
+    -- booted and, cleared, what holds the Versal back in reset. The bypass
+    -- stands in for it on the bench.
+    mission_ok <= mission_mode_en or boot_ctrl.interlock_bypass;
+
+    -- What the host reads back about the configuration
+    config_status.state <= IN_PROGRESS when configuring = '1' else
+                           DONE when r.state = DONE else
+                           FAILED when r.state = BOOT_FAILED else
+                           IDLE;
+    config_status.timed_out <= r.timed_out;
+    config_status.error_out <= versal_boot.error_out;
 
     -- What POR_B at the pin is interlocked with, whoever is driving it: every
     -- rail has been through its good check and every one of them is good now.
     rails_ok <= '1' when (and r.expected) = '1' and is_power_good(versal_rails) else '0';
 
     -- The measurement sets off with the power sequence, not at some stage of
-    -- it, so that it has the whole of the rails' bring-up to run in.
+    -- it, so that it has the whole of the rails' bring-up to run in. Not
+    -- under the bypass, where nothing would wait for it.
     hash_start_seq <= '1' when r.state = IDLE and (r.enable_pend and upstream_ok) = '1' and
-                               boot_ctrl.hash_image = '1' else '0';
-    -- The pin as well as our own intent, since an override can have let the
-    -- Versal out of reset without this state machine's say.
-    hash_hold <= held_in_reset and not final_outs.por_b;
+                               boot_ctrl.interlock_bypass = '0' else '0';
+    hash_flash_free <= not configuring;
+    hash_busy <= hash_busy_int;
 
     nic_hash_seq_inst: entity work.nic_hash_seq
      port map(
@@ -234,9 +279,13 @@ begin
         reset => reset,
         start_seq => hash_start_seq,
         start_sw => boot_ctrl.hash_start,
-        hold => hash_hold,
-        busy => hash_busy,
+        start_host => host_hash_rehash,
+        done_clear => host_hash_done_clear,
+        flash_modified => host_flash_modified,
+        flash_free => hash_flash_free,
+        busy => hash_busy_int,
         owns_flash => hash_owns_flash,
+        host_done => hash_host_done,
         status => hash_status,
         hash_req => hash_req,
         hash_ack => hash_ack,
@@ -270,8 +319,12 @@ begin
                     api_state.nic_sm <= NIC_RESET;
                 when HASH_WAIT =>
                     api_state.nic_sm <= MEASURING;
+                when SP5_INTERLOCK =>
+                    api_state.nic_sm <= WAIT_SP5;
                 when POR_RELEASE | WAIT_DONE =>
                     api_state.nic_sm <= BOOTING;
+                when BOOT_FAILED =>
+                    api_state.nic_sm <= BOOT_FAILED;
                 when DONE =>
                     api_state.nic_sm <= DONE;
                             -- the T6 states; this NIC never has them
@@ -284,6 +337,18 @@ begin
         variable v : versal_r_t;
         variable rails_faulted : std_logic;
         variable enable : std_logic;
+
+        -- Back into reset with the straps and clocks off, as the Versal was
+        -- before it was configured, so that MODE_STRAP can be re-run.
+        procedure hold_in_reset is
+        begin
+            v.por_b := '0';
+            v.mode_buffer_en_l := '1';
+            v.err_done_buff_en := '0';
+            v.clk_buff_oe_l := '1';
+            v.cnts := (others => '0');
+            v.ms_cnt := (others => '0');
+        end procedure;
     begin
         v := r;
         -- The inhibit takes the enable away from this sequencer only, so A0
@@ -317,7 +382,6 @@ begin
             -- coming back is enough; there is only the one device to bring up.
             v.enable_pend := '1';
             v.faulted := '0';
-            v.boot_failed := '0';
         end if;
         -- An enable that was taken but not yet acted on, waiting in IDLE for
         -- upstream, must not outlive the inhibit being set.
@@ -438,21 +502,42 @@ begin
             when RAILS_SETTLE =>
                 v.cnts := r.cnts + 1;
                 if r.cnts = RAIL_SETTLE_MS then
-                    -- Latch the boot mode here so a register write mid-boot
-                    -- cannot move the straps out from under the Versal.
-                    v.mode := boot_ctrl.mode;
                     v.cnts := (others => '0');
                     v.state := HASH_WAIT;
                 end if;
 
-            -- The checkpoint ahead of POR_B. The rails are up and settled;
-            -- what is left is for the image measurement, which has been
-            -- running alongside, to finish and give the flash back. With no
-            -- measurement in flight this is passed straight through, and
-            -- software can have it passed regardless. The mode strap time
-            -- that follows is what the flash mux has to swing back in.
+            -- The first checkpoint ahead of POR_B. The rails are up and
+            -- settled; what is left is for the image measurement, which has
+            -- been running alongside, to finish. With no measurement in
+            -- flight this is passed straight through. The wait here is only
+            -- for the digest to exist; the SP5 reads it at the next stop.
             when HASH_WAIT =>
-                if hash_busy = '0' or debug_enables.ignore_nic_hash = '1' then
+                if hash_busy_int = '0' or boot_ctrl.interlock_bypass = '1' then
+                    v.state := SP5_INTERLOCK;
+                elsif enable = '0' then
+                    v.state := POWER_DOWN;
+                    v.cnts := to_unsigned(1, v.cnts'length);
+                end if;
+
+            -- The second checkpoint: the digest is standing in eSPI1's
+            -- registers and the SP5 has to say the image may be booted, by
+            -- setting mission_mode_en there. A measurement the SP5 asks for
+            -- while it waits here is finished first, since the flash goes to
+            -- the Versal next. The bypass waits for neither; a measurement in
+            -- flight then loses the flash and is recorded as abandoned. The
+            -- mode straps are latched on the way out, so that a register
+            -- write mid-boot cannot move them out from under the Versal. This
+            -- is also where a Versal that has been booted and then had
+            -- mission_mode_en cleared is parked.
+            when SP5_INTERLOCK =>
+                hold_in_reset;
+                v.timed_out := '0';
+                if enable = '0' then
+                    v.state := POWER_DOWN;
+                    v.cnts := to_unsigned(1, v.cnts'length);
+                elsif (mission_mode_en = '1' and hash_busy_int = '0') or
+                      boot_ctrl.interlock_bypass = '1' then
+                    v.mode := boot_ctrl.mode;
                     v.state := MODE_STRAP;
                 end if;
 
@@ -470,18 +555,39 @@ begin
                 v.clk_buff_oe_l := '0';
                 v.state := WAIT_DONE;
                 v.cnts := (others => '0');
+                v.ms_cnt := (others => '0');
 
+            -- The host says how long DONE may take, in milliseconds, so the
+            -- cycle count here only ever has to reach one of those.
             when WAIT_DONE =>
                 v.cnts := r.cnts + 1;
+                if r.cnts = ONE_MS - 1 then
+                    v.cnts := (others => '0');
+                    v.ms_cnt := r.ms_cnt + 1;
+                end if;
                 if versal_boot.done = '1' then
                     v.state := DONE;
                     v.cnts := (others => '0');
-                elsif versal_boot.error_out = '1' or r.cnts = DONE_TIMEOUT_MS then
-                    -- A boot failure is not a power fault: the rails are fine
-                    -- and there is a device to talk to over JTAG, so stay here
-                    -- and let software decide rather than dropping power.
-                    v.boot_failed := '1';
-                    v.cnts := r.cnts;
+                elsif versal_boot.error_out = '1' or r.ms_cnt = unsigned(config_timeout_ms) then
+                    -- A boot failure is not a power fault: the rails are fine.
+                    -- Back into reset with the flash handed to the SP5, which
+                    -- can reflash it and ask for another go.
+                    v.timed_out := not versal_boot.error_out;
+                    hold_in_reset;
+                    v.state := BOOT_FAILED;
+                end if;
+
+            -- Waits for the SP5 to clear mission_mode_en, a fresh go rather
+            -- than the say-so that let this boot start, so that an image that
+            -- cannot boot is not retried on a loop. The SP's way out is the
+            -- inhibit, which powers the NIC down.
+            when BOOT_FAILED =>
+                hold_in_reset;
+                if enable = '0' then
+                    v.state := POWER_DOWN;
+                    v.cnts := to_unsigned(1, v.cnts'length);
+                elsif mission_ok = '0' then
+                    v.state := SP5_INTERLOCK;
                 end if;
 
             when DONE =>
@@ -489,6 +595,12 @@ begin
                     v.state := POWER_DOWN;
                     v.por_b := '0';
                     v.cnts := to_unsigned(1, v.cnts'length);
+                elsif mission_ok = '0' then
+                    -- mission_mode_en cleared: the SP5 wants the NIC back in
+                    -- reset. Rails stay, the flash goes to eSPI1, presence
+                    -- and PERST go away, and the digest stands for next time.
+                    hold_in_reset;
+                    v.state := SP5_INTERLOCK;
                 end if;
 
             -- Take the groups down last-up-first-down, one every
@@ -532,6 +644,13 @@ begin
                     -- the T6 states; this NIC never has them
             when others => null;
         end case;
+
+        -- mission_mode_en cleared part way through configuring: back into
+        -- reset and wait for it, as from DONE.
+        if configuring = '1' and mission_ok = '0' then
+            hold_in_reset;
+            v.state := SP5_INTERLOCK;
+        end if;
 
         -- MAPO handling, monitored in every state that has power on or
         -- coming on. A measurement in flight is left to run: POR_B is held

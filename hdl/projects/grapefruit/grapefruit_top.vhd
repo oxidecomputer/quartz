@@ -224,6 +224,8 @@ architecture rtl of grapefruit_top is
     signal espi_cmd_fifo_rdata : std_logic_vector(31 downto 0);
     signal espi_cmd_fifo_rdack : std_logic;
     signal espi_cmd_fifo_rempty : std_logic;
+    signal flash_fifo_clear : std_logic;
+    signal flash_flush_busy : std_logic;
     signal espi_data_fifo_write : std_logic;
     signal espi_data_fifo_wdata : std_logic_vector(7 downto 0);
     signal flash_cfifo_data : std_logic_vector(31 downto 0);
@@ -376,6 +378,8 @@ begin
         espi_cmd_fifo_rempty => espi_cmd_fifo_rempty, 
         espi_data_fifo_wdata => espi_data_fifo_wdata,
         espi_data_fifo_write => espi_data_fifo_write,
+        espi_flush => flash_fifo_clear,
+        espi_flush_busy => flash_flush_busy,
         hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
         hash_cmd_fifo_rdack => hash_cmd_fifo_rdack(0),
         hash_cmd_fifo_rempty => hash_cmd_fifo_rempty(0),
@@ -466,6 +470,8 @@ begin
         flash_rfifo_data => flash_rfifo_data,
         flash_rfifo_rdack => flash_rfifo_rdack,
         flash_rfifo_rempty => flash_rfifo_rempty,
+        flash_fifo_clear => flash_fifo_clear,
+        flash_flush_busy => flash_flush_busy,
         to_sp_uart_data => host_espi_to_sp_uart_data,
         to_sp_uart_valid => host_espi_to_sp_uart_valid,
         to_sp_uart_ready => host_espi_to_sp_uart_ready,

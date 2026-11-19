@@ -48,6 +48,8 @@ begin
         alias reset is << signal th.reset : std_logic >>;
         alias hw_req is << signal th.hw_req : std_logic >>;
         alias hw_ack is << signal th.hw_ack : std_logic >>;
+        alias hw_flash_addr_out is << signal th.hw_flash_addr_out : std_logic_vector(31 downto 0) >>;
+        alias hw_length_out is << signal th.hw_length_out : std_logic_vector(31 downto 0) >>;
         alias hw_err is << signal th.hw_err : std_logic >>;
 
         variable status   : std_logic_vector(31 downto 0);
@@ -250,6 +252,68 @@ begin
             check_equal(d, std_logic_vector(hex_digest(expected_hex)), name);
         end procedure;
 
+        function is_set (
+            value : std_logic_vector(31 downto 0);
+            mask  : std_logic_vector(31 downto 0)
+        ) return boolean is
+        begin
+            return (value and mask) /= (value'range => '0');
+        end function;
+
+        -- Poll STATUS until the masked bits are all clear (or, with want_set,
+        -- any is set), failing the test rather than running into the watchdog
+        -- if that takes longer than timeout. The abort tests use this because
+        -- the way an abort goes wrong is the engine never coming back.
+        procedure wait_status (
+            mask     : std_logic_vector(31 downto 0);
+            want_set : boolean;
+            timeout  : time;
+            name     : string;
+            variable s : out std_logic_vector(31 downto 0)
+        ) is
+            constant deadline : time := now + timeout;
+            variable rdata : std_logic_vector(31 downto 0);
+        begin
+            loop
+                read_reg(net, STATUS_OFFSET, rdata);
+                exit when is_set(rdata, mask) = want_set;
+                if now > deadline then
+                    check_failed(name & ": timed out, STATUS = " & to_hstring(rdata));
+                    exit;
+                end if;
+            end loop;
+            s := rdata;
+        end procedure;
+
+        -- Wait for the hardware acknowledge to reach a level, bounded for the
+        -- same reason as wait_status.
+        procedure wait_hw_ack (
+            level   : std_logic;
+            timeout : time;
+            name    : string
+        ) is
+        begin
+            if hw_ack /= level then
+                wait until hw_ack = level for timeout;
+            end if;
+            check_equal(hw_ack, level, name);
+        end procedure;
+
+        -- Get a hardware requested hash of 3000 flash bytes under way and
+        -- leave it part way through its read, with the request still raised.
+        procedure start_long_hw_run is
+            variable s : std_logic_vector(31 downto 0);
+        begin
+            write_reg(net, HW_FLASH_ADDR_OFFSET, To_StdLogicVector(16#3000#, 32));
+            write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(3000, 32));
+            wait_until_idle(net, bus_handle);
+            hw_req <= '1';
+            wait for 30 us;
+            read_reg(net, HW_STATUS_OFFSET, s);
+            check(is_set(s, HW_STATUS_BUSY_MASK), "hw run should be in flight");
+            check_equal(hw_ack, '0', "hw run should not have acknowledged yet");
+        end procedure;
+
     begin
         test_runner_setup(runner, runner_cfg);
         wait until reset = '0';
@@ -427,6 +491,96 @@ begin
 
                 run_flash(0, 150, 16#7000#, "flash hash restarted over a running one");
 
+            elsif run("abort_when_idle_is_ignored") then
+                -- With nothing in flight there is nothing to abort, so the
+                -- result of the run before must be left standing.
+                expected := sha3_256_digest(expected_msg(0, 100, true, 16#1000#));
+                run_flash(0, 100, 16#1000#, "run before the stray abort");
+
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait for 2 us;
+                read_reg(net, STATUS_OFFSET, status);
+                check(is_set(status, STATUS_DONE_MASK), "done should survive an abort while idle");
+                check(not is_set(status, STATUS_ABORTED_MASK), "an abort while idle should not set aborted");
+                check(not is_set(status, STATUS_BUSY_MASK), "an abort while idle should not go busy");
+                read_digest(net, dig);
+                check_equal(dig, std_logic_vector(expected), "digest should survive an abort while idle");
+
+                run_flash(0, 64, 16#2000#, "run after the stray abort");
+
+            elsif run("abort_local_waiting_for_data") then
+                -- A software fed run that has had only part of its message is
+                -- parked waiting for the rest. Nothing is owed by the flash,
+                -- so the abort should come back promptly.
+                configure(CFG_LOCAL, 0, 64, 0);
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                feed_sw(20);
+                read_reg(net, STATUS_OFFSET, status);
+                check(is_set(status, STATUS_BUSY_MASK), "should be waiting on the rest of the message");
+
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait_status(STATUS_BUSY_MASK, false, 10 us, "abort of a software fed run", status);
+                check(is_set(status, STATUS_ABORTED_MASK), "abort should set aborted");
+                check(not is_set(status, STATUS_DONE_MASK), "abort should not report done");
+
+                -- The partial message must not be carried into this one.
+                run_local(0, 64, "software hash after an aborted software hash");
+
+            elsif run("abort_during_prepend") then
+                -- The flash command is held back until the prepend has been
+                -- fed, so an abort this early has no read to drain. Waiting
+                -- for bytes that were never asked for would hang here.
+                configure(CFG_QSPI, 20000, 20500, 16#1000#);
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                wait for 10 us;
+                read_reg(net, PROGRESS_OFFSET, rdata);
+                check(to_integer(unsigned(rdata)) < 20000, "should still be inside the prepend");
+
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait_status(STATUS_BUSY_MASK, false, 10 us, "abort during the prepend", status);
+                check(is_set(status, STATUS_ABORTED_MASK), "abort should set aborted");
+
+                run_flash(4, 128, 16#6000#, "flash hash after an abort during the prepend");
+
+            elsif run("abort_twice") then
+                -- Software that does not see busy clear may well abort again.
+                -- The second one lands while the first is still draining and
+                -- must not restart the count of bytes owed.
+                configure(CFG_QSPI, 0, 3000, 16#1000#);
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                wait for 30 us;
+
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait for 20 us;
+                read_reg(net, STATUS_OFFSET, status);
+                check(is_set(status, STATUS_BUSY_MASK), "should still be draining");
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+
+                wait_status(STATUS_BUSY_MASK, false, 1 ms, "second abort during the drain", status);
+                check(is_set(status, STATUS_ABORTED_MASK), "abort should set aborted");
+                check(not is_set(status, STATUS_DONE_MASK), "abort should not report done");
+
+                run_flash(0, 128, 16#6000#, "flash hash after two aborts");
+
+            elsif run("start_while_abort_drains") then
+                -- A start that does not wait for busy to clear after an abort
+                -- queues behind the drain and then runs with what was
+                -- programmed when it was written.
+                expected := sha3_256_digest(expected_msg(0, 150, true, 16#7000#));
+                configure(CFG_QSPI, 0, 3000, 16#1000#);
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                wait for 30 us;
+
+                configure(CFG_QSPI, 0, 150, 16#7000#);
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait for 20 us;
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+
+                wait_status(STATUS_DONE_MASK, true, 1 ms, "start during the drain", status);
+                check(not is_set(status, STATUS_ABORTED_MASK), "the accepted start should clear aborted");
+                read_digest(net, dig);
+                check_equal(dig, std_logic_vector(expected), "flash hash started during an abort's drain");
+
             elsif run("back_to_back") then
                 run_local(0, 40, "first message");
                 run_flash(4, 80, 16#3000#, "second message, flash sourced");
@@ -452,9 +606,26 @@ begin
                 read_hw_digest(dig);
                 check_equal(dig, std_logic_vector(expected), "hw digest kept after a software run");
 
+            elsif run("hw_range_resets_to_generics") then
+                -- A board can build in the range its hardware requests
+                -- measure, so nothing has to be written before the first one
+                read_reg(net, HW_FLASH_ADDR_OFFSET, rdata);
+                check_equal(rdata, std_logic_vector'(x"0012_3000"), "HW_FLASH_ADDR reset value");
+                read_reg(net, HW_LENGTH_OFFSET, rdata);
+                check_equal(rdata, std_logic_vector'(x"0000_1000"), "HW_LENGTH reset value");
+                -- and the range is shown on the ports, for whoever else is told it
+                check_equal(hw_flash_addr_out, std_logic_vector'(x"0012_3000"), "hw_flash_addr_out reset value");
+                check_equal(hw_length_out, std_logic_vector'(x"0000_1000"), "hw_length_out reset value");
+                write_reg(net, HW_FLASH_ADDR_OFFSET, To_StdLogicVector(16#3000#, 32));
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(700, 32));
+                wait_until_idle(net, bus_handle);
+                check_equal(hw_flash_addr_out, To_StdLogicVector(16#3000#, 32), "hw_flash_addr_out follows a write");
+                check_equal(hw_length_out, To_StdLogicVector(700, 32), "hw_length_out follows a write");
+
             elsif run("hw_request_zero_length_is_an_error") then
                 -- An unprogrammed range: refused as a configuration error,
                 -- reported, and the engine is still usable afterwards.
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(0, 32));
                 hw_request(err, status);
                 check_equal(err, '1', "hw request should report an error");
                 check_equal((status and HW_STATUS_CFG_ERR_MASK) /= (status'range => '0'), true, "HW_STATUS.cfg_err");
@@ -474,6 +645,87 @@ begin
                 check_equal((status and STATUS_BUSY_MASK) /= (status'range => '0'), true, "software run still busy");
                 write_reg(net, CONTROL_OFFSET, ABORT_CMD);
                 wait_not_busy(net, status);
+
+            elsif run("hw_request_aborted_by_software") then
+                -- CONTROL.abort is not fenced off from a hardware run, so
+                -- software can end one. The requester has to be told it got
+                -- no digest, and promptly: the acknowledge does not wait for
+                -- the drain.
+                start_long_hw_run;
+
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait_hw_ack('1', 10 us, "an aborted hw run should acknowledge");
+                check_equal(hw_err, '1', "an aborted hw run should report an error");
+                read_reg(net, HW_STATUS_OFFSET, status);
+                check(is_set(status, HW_STATUS_ABORTED_MASK), "HW_STATUS.aborted");
+                check(not is_set(status, HW_STATUS_DONE_MASK), "HW_STATUS.done clear");
+                check(not is_set(status, HW_STATUS_BUSY_MASK), "HW_STATUS.busy clear");
+                read_reg(net, STATUS_OFFSET, status);
+                check(is_set(status, STATUS_ABORTED_MASK), "STATUS.aborted");
+                check(not is_set(status, STATUS_DONE_MASK), "STATUS.done clear");
+
+                hw_req <= '0';
+                wait_hw_ack('0', 10 us, "acknowledge should drop with the request");
+                check_equal(hw_err, '1', "hw_err should hold until the next request");
+
+                -- Both kinds of run still work once the channel is back in step.
+                wait_status(STATUS_BUSY_MASK, false, 1 ms, "drain of the aborted hw run", status);
+                run_flash(0, 128, 16#6000#, "software run after an aborted hw run");
+
+                expected := sha3_256_digest(expected_msg(0, 400, true, 16#5000#));
+                write_reg(net, HW_FLASH_ADDR_OFFSET, To_StdLogicVector(16#5000#, 32));
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(400, 32));
+                hw_request(err, status);
+                check_equal(err, '0', "hw request after an aborted one reported an error");
+                check(is_set(status, HW_STATUS_DONE_MASK), "HW_STATUS.done");
+                check(not is_set(status, HW_STATUS_ABORTED_MASK), "HW_STATUS.aborted cleared by the new request");
+                read_hw_digest(dig);
+                check_equal(dig, std_logic_vector(expected), "hw digest after an aborted hw run");
+
+            elsif run("hw_request_refused_while_abort_drains") then
+                -- The acknowledge for an aborted run comes back before the
+                -- flash has finished handing over the bytes it owes, so a
+                -- requester that retries at once finds the engine busy. It is
+                -- refused like any other request against a busy engine, and
+                -- goes through once the drain is over.
+                start_long_hw_run;
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait_hw_ack('1', 10 us, "an aborted hw run should acknowledge");
+                hw_req <= '0';
+                wait_hw_ack('0', 10 us, "acknowledge should drop with the request");
+
+                hw_request(err, status);
+                check_equal(err, '1', "a retry during the drain should be refused");
+                check(is_set(status, HW_STATUS_ENGINE_BUSY_MASK), "HW_STATUS.engine_busy");
+
+                wait_status(STATUS_BUSY_MASK, false, 1 ms, "drain of the aborted hw run", status);
+                expected := sha3_256_digest(expected_msg(0, 3000, true, 16#3000#));
+                hw_request(err, status);
+                check_equal(err, '0', "a retry after the drain reported an error");
+                read_hw_digest(dig);
+                check_equal(dig, std_logic_vector(expected), "hw digest from the retry");
+
+            elsif run("hw_request_after_aborted_software_run") then
+                -- STATUS.aborted stays set until the next accepted start, and
+                -- it is also what ends a hardware run early. One left behind
+                -- by software must not be read as an abort of the request
+                -- that follows it.
+                configure(CFG_QSPI, 0, 3000, 16#1000#);
+                write_reg(net, CONTROL_OFFSET, START_CMD);
+                wait for 30 us;
+                write_reg(net, CONTROL_OFFSET, ABORT_CMD);
+                wait_status(STATUS_BUSY_MASK, false, 1 ms, "drain of the aborted software run", status);
+                check(is_set(status, STATUS_ABORTED_MASK), "abort should set aborted");
+
+                expected := sha3_256_digest(expected_msg(0, 700, true, 16#3000#));
+                write_reg(net, HW_FLASH_ADDR_OFFSET, To_StdLogicVector(16#3000#, 32));
+                write_reg(net, HW_LENGTH_OFFSET, To_StdLogicVector(700, 32));
+                hw_request(err, status);
+                check_equal(err, '0', "hw request after an aborted software run reported an error");
+                check(is_set(status, HW_STATUS_DONE_MASK), "HW_STATUS.done");
+                check(not is_set(status, HW_STATUS_ABORTED_MASK), "HW_STATUS.aborted clear");
+                read_hw_digest(dig);
+                check_equal(dig, std_logic_vector(expected), "hw digest after an aborted software run");
 
             elsif run("wfifo_full_backpressure") then
                 -- Fill the software FIFO with the engine idle, so nothing drains

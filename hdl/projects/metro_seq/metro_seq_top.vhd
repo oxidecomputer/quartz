@@ -420,10 +420,21 @@ architecture rtl of metro_seq_top is
     signal sp5_sda_o : std_logic;
     signal sp5_sda_oe : std_logic;
 
-    signal sp5_versal_power_en : std_logic;
     signal sp5_versal_cha_perst_l : std_logic;
     signal sp5_versal_chb_perst_l : std_logic;
     signal sp5_versal_faulted : std_logic;
+    -- The Versal image measurement as the SP5 sees it over eSPI1
+    signal versal_hash_digest : std_logic_vector(255 downto 0);
+    signal versal_hash_addr : std_logic_vector(31 downto 0);
+    signal versal_hash_len : std_logic_vector(31 downto 0);
+    signal versal_hash_host_done : std_logic;
+    signal versal_hash_busy : std_logic;
+    signal espi1_hash_rehash : std_logic;
+    signal espi1_hash_done_clear : std_logic;
+    signal espi1_flash_modified : std_logic;
+    signal espi1_mission_mode_en : std_logic;
+    signal espi1_config_timeout_ms : std_logic_vector(31 downto 0);
+    signal versal_config_status : work.espi_platform_regs_pkg.nic_config_status_type;
     signal vercel_flash_io_o : std_logic_vector(3 downto 0);
     signal vercel_flash_io_oe : std_logic_vector(3 downto 0);
     signal espi_resp_csn : std_logic;
@@ -625,7 +636,11 @@ begin
         hash_cmd_fifo_rdack => hash_flash_cmd_rdack(0),
         hash_cmd_fifo_rempty => hash_flash_cmd_rempty(0),
         hash_data_fifo_wdata => hash_flash_rsp_wdata(7 downto 0),
-        hash_data_fifo_write => hash_flash_rsp_write(0)
+        hash_data_fifo_write => hash_flash_rsp_write(0),
+        -- With the sequencer back in idle the host is off, and anything it
+        -- left queued for its flash is dropped rather than kept for the
+        -- next boot.
+        host_off => a0_idle
     );
 
     -- SHA3 hashing engine. It reads flash through spi_nor_top's second client
@@ -635,8 +650,11 @@ begin
      generic map(
         NUM_FLASHES => HASH_NUM_FLASHES,
         -- The sequencer's pre-boot measurement is of the Versal image, on
-        -- the flash behind eSPI1.
-        HW_FLASH_SEL => 1
+        -- the flash behind eSPI1: the first 32MiB of it, unless the SP says
+        -- otherwise in HW_FLASH_ADDR/HW_LENGTH.
+        HW_FLASH_SEL => 1,
+        HW_FLASH_ADDR_DEFAULT => 0,
+        HW_LENGTH_DEFAULT => 32 * 1024 * 1024
     )
      port map(
         clk => clk_125m,
@@ -645,6 +663,9 @@ begin
         hw_req => versal_hash_req,
         hw_ack => versal_hash_ack,
         hw_err => versal_hash_err,
+        hw_digest => versal_hash_digest,
+        hw_flash_addr_out => versal_hash_addr,
+        hw_length_out => versal_hash_len,
         flash_cmd_rdata => hash_flash_cmd_rdata,
         flash_cmd_rdack => hash_flash_cmd_rdack,
         flash_cmd_rempty => hash_flash_cmd_rempty,
@@ -653,13 +674,14 @@ begin
     );
     -- Second eSPI target on the SP5's other eSPI port, fronting the Versal's
     -- boot flash. This is the one place the host may write flash over SAFS,
-    -- which is how a Versal image gets loaded; the enable bit in its control
-    -- register still has to be set by the SP. There is no IPCC UART behind
-    -- this port, and no post codes either: the SP5 only writes those to
-    -- eSPI0, so the buffer for them is left out.
+    -- which is how a Versal image gets loaded; writes are allowed out of
+    -- reset, the SP can lock them out through the control register. The
+    -- host also reads the sequencer's measurement of that image here, in the
+    -- platform registers, and asks for it to be measured again. There is no
+    -- IPCC UART behind this port, and no post codes either: the SP5 only
+    -- writes those to eSPI0, so the buffer for them is left out.
     -- Its spi_nor runs at half the SP5 boot flash's rate, 125MHz
-    -- / (2 * 2) = 31.25MHz: nothing here is on a boot path, the SP only
-    -- reaches this flash while the Versal is held in reset, so there is no
+    -- / (2 * 2) = 31.25MHz: nothing here is on a boot path, so there is no
     -- reason to run at the ceiling. The slower rate widens the read sample
     -- window from roughly 3.6..11.7ns to -4.4..19.7ns, which leaves
     -- rx_sample_taps = 2 (8ns) far from either edge instead of about 4ns
@@ -704,7 +726,24 @@ begin
         hash_cmd_fifo_rdack => hash_flash_cmd_rdack(1),
         hash_cmd_fifo_rempty => hash_flash_cmd_rempty(1),
         hash_data_fifo_wdata => hash_flash_rsp_wdata(15 downto 8),
-        hash_data_fifo_write => hash_flash_rsp_write(1)
+        hash_data_fifo_write => hash_flash_rsp_write(1),
+        nic_hash_digest => versal_hash_digest,
+        nic_hash_done => versal_hash_host_done,
+        nic_hash_busy => versal_hash_busy,
+        nic_hash_addr => versal_hash_addr,
+        nic_hash_len => versal_hash_len,
+        nic_hash_rehash => espi1_hash_rehash,
+        nic_hash_done_clear => espi1_hash_done_clear,
+        nic_flash_modified => espi1_flash_modified,
+        mission_mode_en => espi1_mission_mode_en,
+        config_timeout_ms => espi1_config_timeout_ms,
+        nic_config_status => versal_config_status,
+        -- The host's go-ahead for the Versal is good for one stay in A0 and
+        -- survives the host's own resets
+        host_in_a0 => a0_ok,
+        -- and what it left queued for this flash goes when it powers off,
+        -- as on eSPI0
+        host_off => a0_idle
     );
 
     --Tristates for spi-nor flash pins and espi
@@ -833,7 +872,7 @@ begin
         -- are the one device, so both slots report the same fault; each has
         -- its own presence and its own PERST. Presence comes by way of the
         -- sequencer, which holds it off until the Versal has booted.
-        t6_power_en => sp5_versal_power_en,
+        t6_power_en => open,
         t6_perst_l => sp5_versal_cha_perst_l,
         t6_faulted => sp5_versal_faulted,
         t6_prsnt_l => sp5_versal_cha_prsnt_l,
@@ -896,6 +935,14 @@ begin
         hash_req => versal_hash_req,
         hash_ack => versal_hash_ack,
         hash_err => versal_hash_err,
+        host_hash_rehash => espi1_hash_rehash,
+        host_hash_done_clear => espi1_hash_done_clear,
+        host_flash_modified => espi1_flash_modified,
+        nic_hash_host_done => versal_hash_host_done,
+        nic_hash_busy => versal_hash_busy,
+        mission_mode_en => espi1_mission_mode_en,
+        config_timeout_ms => espi1_config_timeout_ms,
+        nic_config_status => versal_config_status,
         version_id => fpga1_version_id,
         sp5_nic_perst_l => sp5_versal_cha_perst_l,
         sp5_nic_chb_perst_l => sp5_versal_chb_perst_l,

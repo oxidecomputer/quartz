@@ -35,10 +35,16 @@ entity raw_flash_txn_mgr is
         cmd_fifo_rempty : in    std_logic;
 
         -- Ownership of the shared SPI engine. req is held for the whole command,
-        -- chunking included, so the engine is not handed to anyone else part way
-        -- through a multi chunk read.
-        req   : out   std_logic;
-        grant : in    std_logic;
+        -- chunking included, so the requester sees one request; the engine
+        -- itself is taken a chunk at a time. With yield up, the next chunk is
+        -- not started: the manager parks between chunks, with nothing in
+        -- flight, and the owner may take the grant away until the parked
+        -- manager sees it back with yield down. active says a chunk is in
+        -- flight or being issued, when the grant must stay.
+        req    : out   std_logic;
+        grant  : in    std_logic;
+        yield  : in    std_logic := '0';
+        active : out   std_logic;
 
         -- Command to the SPI transaction manager
         cmd         : out   spi_nor_cmd_t;
@@ -65,7 +71,7 @@ architecture rtl of raw_flash_txn_mgr is
     constant fast_read_dummy_cycles : natural := 8;
 
     type state_t is (idle, read_cmd_addr, read_cmd_len, size_chunk, wait_idle,
-                     issue_read, wait_for_data);
+                     parked, issue_read, wait_for_data);
 
     -- Everything here counts real bytes. The eSPI manager this was derived from
     -- mixes zero indexed and one indexed counts, and decrements its remaining
@@ -123,6 +129,7 @@ begin
     -- Ask for the engine as soon as there is a command waiting, and keep asking
     -- until the whole thing has been serviced.
     req <= '1' when r.state /= idle or cmd_fifo_rempty = '0' else '0';
+    active <= '1' when r.state = issue_read or r.state = wait_for_data else '0';
 
     sm: process(all)
 
@@ -168,9 +175,25 @@ begin
             when wait_idle =>
                 -- The previous chunk's transaction has to be completely finished
                 -- before we start asking for the next one, otherwise the busy
-                -- rise we wait on below would be its cs_n, not ours.
+                -- rise we wait on below would be its cs_n, not ours. This is
+                -- also the one place to step aside for someone else's command.
+                -- The grant can have gone in the states since idle, none of
+                -- which drive anything, so it is checked again here: a go
+                -- without it would be muxed out, and the next busy rise would
+                -- be someone else's transaction.
                 if spi_hw_busy = '0' then
-                    v.state := issue_read;
+                    if yield = '1' or grant = '0' then
+                        v.state := parked;
+                    else
+                        v.state := issue_read;
+                    end if;
+                end if;
+
+            when parked =>
+                -- The engine is someone else's for now; the grant comes back
+                -- once they are done with it.
+                if grant = '1' and yield = '0' then
+                    v.state := wait_idle;
                 end if;
 
             when issue_read =>
