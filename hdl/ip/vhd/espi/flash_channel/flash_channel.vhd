@@ -62,8 +62,12 @@ entity flash_channel is
         -- the command words for it are, so the flash block never sees a
         -- write command it does not already have all the bytes for.
         flash_wfifo_data : out std_logic_vector(7 downto 0);
-        flash_wfifo_write : out std_logic
+        flash_wfifo_write : out std_logic;
 
+        -- One cycle as a write or erase goes to the flash block: the image
+        -- is about to change, so any digest standing for it is stale.
+        -- Writes the command processor refused never get here.
+        flash_modified : out std_logic
     );
 end;
 
@@ -264,6 +268,8 @@ begin
                         to_kind_bits(r.cmd_queue(r.issue_desc).kind) & resize(r.cmd_queue(r.issue_desc).xfr_size_bytes, flash_cfifo_data'length - 4) when r.flash_cmd_state = issue_flash_len else
                         (others => '0');
     flash_cfifo_write <= '1' when r.flash_cmd_state = issue_flash_addr or r.flash_cmd_state = issue_flash_len else '0';
+    flash_modified <= '1' when r.flash_cmd_state = issue_flash_len and
+                               r.cmd_queue(r.issue_desc).kind /= flash_rd else '0';
 
     flash_wfifo_data <= r.wfifo_wdata;
     flash_wfifo_write <= r.wfifo_write;

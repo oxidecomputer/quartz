@@ -38,7 +38,9 @@ addrmap eSPI_Platform {
         field {
             desc = "Set by hardware when a measurement has finished and nic_hash0..7 hold its
             digest. Write 1 to clear it; nic_hash0..7 then read as zero until the next
-            measurement finishes.";
+            measurement finishes. Also cleared by hardware when a write or erase goes to the
+            flash over this eSPI link, since the digest no longer describes the image; a
+            measurement running while that happens finishes without setting it.";
             sw = rw;
         } done[0:0] = 0;
         field {

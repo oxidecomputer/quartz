@@ -97,6 +97,7 @@ begin
         alias config_status is << signal th.nic_config_status : nic_config_status_type >>;
         alias host_hash_rehash is << signal th.host_hash_rehash : std_logic >>;
         alias host_hash_done_clear is << signal th.host_hash_done_clear : std_logic >>;
+        alias host_flash_modified is << signal th.host_flash_modified : std_logic >>;
         alias nic_hash_host_done is << signal th.nic_hash_host_done : std_logic >>;
         alias nic_hash_busy is << signal th.nic_hash_busy : std_logic >>;
         alias versal_boot_pins is << signal th.versal_boot_pins : versal_boot_t >>;
@@ -948,6 +949,52 @@ begin
                          read_data);
                 hash_status := unpack(read_data);
                 check_equal(hash_status.done, '1', "Expected the SP's done left standing");
+
+            elsif run("host_flash_write_withdraws_the_digest") then
+                power_up_to_nic_done(net);
+                check_equal(nic_hash_host_done, '1', "Expected the digest shown");
+                host_flash_modified <= '1';
+                wait until rising_edge(clk);
+                host_flash_modified <= '0';
+                wait for 1 us;
+                check_equal(nic_hash_host_done, '0', "Expected the digest withdrawn by the write");
+                check_equal(nic_hash_busy, '0', "Expected no measurement started for it");
+                check_equal(hash_requests, 1, "Expected the host left to ask for the next measurement");
+                read_bus(net, bus_handle,
+                         To_StdLogicVector(NIC_HASH_STATUS_OFFSET, bus_handle.p_address_length),
+                         read_data);
+                hash_status := unpack(read_data);
+                check_equal(hash_status.done, '1', "Expected the SP's done left standing");
+                -- and the host's own rehash afterwards shows a digest again
+                host_hash_rehash <= '1';
+                wait until rising_edge(clk);
+                host_hash_rehash <= '0';
+                wait until nic_hash_busy = '0' for 1 ms;
+                check_equal(nic_hash_host_done, '1', "Expected the rehash shown");
+
+            elsif run("host_flash_write_during_a_measurement_hides_its_digest") then
+                power_up_to_nic_done(net);
+                host_hash_rehash <= '1';
+                wait until rising_edge(clk);
+                host_hash_rehash <= '0';
+                wait until hash_req = '1' for 1 ms;
+                check_equal(hash_req, '1', "Expected a measurement request");
+                -- The image changes under the run
+                host_flash_modified <= '1';
+                wait until rising_edge(clk);
+                host_flash_modified <= '0';
+                wait until hash_req = '0' for 1 ms;
+                wait for 10 us;
+                check_equal(nic_hash_busy, '0', "Expected the measurement finished");
+                check_equal(nic_hash_host_done, '0', "Expected a digest of a changing image kept from the host");
+                check_equal(hash_requests, 2, "Expected no measurement started on the host's behalf");
+                -- Its next request measures the settled image
+                host_hash_rehash <= '1';
+                wait until rising_edge(clk);
+                host_hash_rehash <= '0';
+                wait until nic_hash_busy = '0' for 1 ms;
+                check_equal(nic_hash_host_done, '1', "Expected the new digest shown");
+                check_equal(hash_requests, 3, "Expected the host's measurement run");
 
             elsif run("disable_while_waiting_powers_down") then
                 mission_mode_en <= '0';

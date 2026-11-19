@@ -431,6 +431,7 @@ architecture rtl of metro_seq_top is
     signal versal_hash_busy : std_logic;
     signal espi1_hash_rehash : std_logic;
     signal espi1_hash_done_clear : std_logic;
+    signal espi1_flash_modified : std_logic;
     signal espi1_mission_mode_en : std_logic;
     signal espi1_config_timeout_ms : std_logic_vector(31 downto 0);
     signal versal_config_status : work.espi_platform_regs_pkg.nic_config_status_type;
@@ -733,6 +734,7 @@ begin
         nic_hash_len => versal_hash_len,
         nic_hash_rehash => espi1_hash_rehash,
         nic_hash_done_clear => espi1_hash_done_clear,
+        nic_flash_modified => espi1_flash_modified,
         mission_mode_en => espi1_mission_mode_en,
         config_timeout_ms => espi1_config_timeout_ms,
         nic_config_status => versal_config_status,
@@ -935,6 +937,7 @@ begin
         hash_err => versal_hash_err,
         host_hash_rehash => espi1_hash_rehash,
         host_hash_done_clear => espi1_hash_done_clear,
+        host_flash_modified => espi1_flash_modified,
         nic_hash_host_done => versal_hash_host_done,
         nic_hash_busy => versal_hash_busy,
         mission_mode_en => espi1_mission_mode_en,

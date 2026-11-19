@@ -79,6 +79,7 @@ entity sp5_espi_flash_subsystem is
         nic_hash_len : in std_logic_vector(31 downto 0) := (others => '0');
         nic_hash_rehash : out std_logic;
         nic_hash_done_clear : out std_logic;
+        nic_flash_modified : out std_logic;
         -- and the host's control of that NIC's configuration
         mission_mode_en : out std_logic;
         config_timeout_ms : out std_logic_vector(31 downto 0);
@@ -253,6 +254,7 @@ begin
         nic_hash_len => nic_hash_len,
         nic_hash_rehash => nic_hash_rehash,
         nic_hash_done_clear => nic_hash_done_clear,
+        nic_flash_modified => nic_flash_modified,
         mission_mode_en => mission_mode_en,
         config_timeout_ms => config_timeout_ms,
         nic_config_status => nic_config_status,

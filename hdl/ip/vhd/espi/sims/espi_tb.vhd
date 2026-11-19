@@ -40,6 +40,7 @@ begin
         alias    sim_reset       is <<signal th.reset : std_logic>>;
         alias    alert_l         is <<signal th.alert_l : std_logic>>;
         alias    flash_flush     is <<signal th.flash_flush : std_logic>>;
+        alias    flash_modified_count is <<signal th.flash_modified_count : natural>>;
         alias    target_io_oe    is <<signal th.io_oe : std_logic_vector(3 downto 0)>>;
         variable msg_target      : actor_t;
         variable status          : std_logic_vector(15 downto 0);
@@ -58,6 +59,7 @@ begin
         type nat_array_t is array (natural range <>) of natural;
         constant read_lens       : nat_array_t := (1, 2, 63, 64, 65, 127, 128, 129, 252, 253, 254, 255, 256);
         variable payload_size    : integer;
+        variable modified_before : natural;
         variable response        : resp_t := (queue => new_queue, num_bytes => 0, response_code => (others => '0'), status => (others => '0'), crc_ok => false);
         variable pcfree_deasserted : boolean;
         variable cycle_type      : std_logic_vector(7 downto 0);
@@ -326,6 +328,7 @@ begin
                 write_bus(net, bus_handle, To_StdLogicVector(espi_regs_pkg.CONTROL_OFFSET, bus_handle.p_address_length),
                           espi_regs_pkg.CONTROL_FLASH_WRITE_ENABLE_MASK);
                 wait_until_idle(net, bus_handle);
+                modified_before := flash_modified_count;
 
                 -- Erase, so the write lands on ones and reads back exactly
                 put_flash_erase(net, X"00001000", flash_erase_4k, response_code, status, crc_ok);
@@ -362,6 +365,10 @@ begin
                                 "written byte " & integer'image(i));
                 end loop;
                 check_equal(To_Std_Logic_Vector(pop_byte(my_queue), 8), std_logic_vector'(x"FF"), "byte after write still erased");
+                -- The erase and the write each invalidate the image digest;
+                -- the read does not
+                check_equal(flash_modified_count - modified_before, 2,
+                            "Expected one flash_modified strobe each for the erase and the write");
             elsif run("flash_erase") then
                 flash_cap_reg.flash_channel_enable := '1';
                 set_config(net, CH3_CAPABILITIES_OFFSET, pack(flash_cap_reg), response_code, status,  crc_ok);

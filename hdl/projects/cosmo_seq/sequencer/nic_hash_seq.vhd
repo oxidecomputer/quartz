@@ -31,6 +31,12 @@ entity nic_hash_seq is
         start_host : in std_logic;
         -- The host acknowledging the digest it has read; drops host_done
         done_clear : in std_logic;
+        -- The host has written or erased the flash over eSPI. The digest it
+        -- was shown is withdrawn, and a run in flight will not be shown
+        -- either, since it measured an image that was changing under it.
+        -- No run is started for it: the host asks for one when its writing
+        -- is done.
+        flash_modified : in std_logic := '0';
         -- The flash is on the FPGA side and staying there, so it may be read
         flash_free : in std_logic;
 
@@ -64,6 +70,8 @@ architecture rtl of nic_hash_seq is
         sw_started : std_logic;
         host_started : std_logic;
         host_done : std_logic;
+        -- The run in flight measured an image the host has since changed
+        stale : std_logic;
     end record;
     constant reg_reset : reg_t := (
         state => IDLE,
@@ -75,7 +83,8 @@ architecture rtl of nic_hash_seq is
         abandoned => '0',
         sw_started => '0',
         host_started => '0',
-        host_done => '0'
+        host_done => '0',
+        stale => '0'
     );
     signal r, rin : reg_t;
     signal start : std_logic;
@@ -111,8 +120,11 @@ begin
             v.pend_host := r.pend_host or start_host;
         end if;
 
-        if done_clear = '1' then
+        if done_clear = '1' or flash_modified = '1' then
             v.host_done := '0';
+        end if;
+        if flash_modified = '1' then
+            v.stale := '1';
         end if;
 
         case r.state is
@@ -126,6 +138,7 @@ begin
                     v.err := '0';
                     v.abandoned := '0';
                     v.host_done := '0';
+                    v.stale := '0';
                     v.sw_started := r.pend_sw;
                     v.host_started := r.pend_host;
                 end if;
@@ -141,7 +154,7 @@ begin
                 if hash_ack = '1' then
                     v.done := not hash_err and not v.abandoned;
                     v.err := hash_err or v.abandoned;
-                    v.host_done := not hash_err and not v.abandoned;
+                    v.host_done := not hash_err and not v.abandoned and not v.stale;
                     v.state := ACK_RELEASE;
                 end if;
 

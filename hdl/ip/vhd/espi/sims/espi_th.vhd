@@ -60,6 +60,8 @@ architecture th of espi_th is
     -- controller VC's SET_CONFIGURATION transaction
     signal rehash_count : natural := 0;
     signal done_clear_count : natural := 0;
+    signal nic_flash_modified : std_logic;
+    signal flash_modified_count : natural := 0;
     -- and the configuration side of those registers
     signal mission_mode_en : std_logic;
     signal config_timeout_ms : std_logic_vector(31 downto 0);
@@ -157,6 +159,7 @@ begin
             nic_hash_busy      => nic_hash_busy,
             nic_hash_rehash    => nic_hash_rehash,
             nic_hash_done_clear => nic_hash_done_clear,
+            nic_flash_modified => nic_flash_modified,
             mission_mode_en    => mission_mode_en,
             config_timeout_ms  => config_timeout_ms,
             nic_config_status  => nic_config_status,
@@ -174,6 +177,9 @@ begin
             end if;
             if nic_hash_done_clear = '1' then
                 done_clear_count <= done_clear_count + 1;
+            end if;
+            if nic_flash_modified = '1' then
+                flash_modified_count <= flash_modified_count + 1;
             end if;
         end if;
     end process;

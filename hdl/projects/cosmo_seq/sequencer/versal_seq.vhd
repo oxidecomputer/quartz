@@ -80,6 +80,9 @@ entity versal_seq is
         -- digest it has read, and what it sees back.
         host_hash_rehash : in std_logic;
         host_hash_done_clear : in std_logic;
+        -- and a write or erase of the image over eSPI1, which withdraws the
+        -- digest shown (see nic_hash_seq)
+        host_flash_modified : in std_logic := '0';
         hash_host_done : out std_logic;
         hash_busy : out std_logic;
 
@@ -278,6 +281,7 @@ begin
         start_sw => boot_ctrl.hash_start,
         start_host => host_hash_rehash,
         done_clear => host_hash_done_clear,
+        flash_modified => host_flash_modified,
         flash_free => hash_flash_free,
         busy => hash_busy_int,
         owns_flash => hash_owns_flash,

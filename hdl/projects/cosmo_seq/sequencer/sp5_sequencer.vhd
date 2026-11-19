@@ -98,6 +98,7 @@ entity sp5_sequencer is
         -- read, and what it sees back (see versal_seq)
         host_hash_rehash : in std_logic := '0';
         host_hash_done_clear : in std_logic := '0';
+        host_flash_modified : in std_logic := '0';
         nic_hash_host_done : out std_logic;
         nic_hash_busy : out std_logic;
         -- The host's say-so for configuring a Versal, how long it gives it,
@@ -483,6 +484,7 @@ begin
             config_status => nic_config_status,
             host_hash_rehash => host_hash_rehash,
             host_hash_done_clear => host_hash_done_clear,
+            host_flash_modified => host_flash_modified,
             hash_host_done => nic_hash_host_done,
             hash_busy => nic_hash_busy,
             versal_dbg_pins => nic_dbg_pins,

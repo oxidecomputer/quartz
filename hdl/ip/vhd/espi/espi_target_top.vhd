@@ -91,6 +91,9 @@ entity espi_target_top is
         nic_hash_len : in std_logic_vector(31 downto 0) := (others => '0');
         nic_hash_rehash : out std_logic;
         nic_hash_done_clear : out std_logic;
+        -- One cycle as the host's write or erase is issued to the flash. The
+        -- digest the host was shown no longer describes the image.
+        nic_flash_modified : out std_logic;
         -- and the host's control of the NIC's configuration, see espi_spec_regs
         mission_mode_en : out std_logic;
         config_timeout_ms : out std_logic_vector(31 downto 0);
@@ -417,6 +420,7 @@ begin
        response => flash_resp,
        enabled => flash_channel_enable,
        flush => flash_flush,
+       flash_modified => nic_flash_modified,
        flash_fifo_clear => flash_fifo_clear,
        flash_flush_busy => flash_flush_busy,
        flash_np_free => flash_np_free,

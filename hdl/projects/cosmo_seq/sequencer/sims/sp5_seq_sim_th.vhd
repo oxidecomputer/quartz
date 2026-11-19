@@ -115,6 +115,7 @@ architecture th of sp5_seq_sim_th is
     -- The host's side of the measurement, as eSPI1's registers would drive it
     signal host_hash_rehash : std_logic := '0';
     signal host_hash_done_clear : std_logic := '0';
+    signal host_flash_modified : std_logic := '0';
     signal nic_hash_host_done : std_logic;
     signal nic_hash_busy : std_logic;
 
@@ -158,6 +159,7 @@ begin
        hash_err => hash_err,
        host_hash_rehash => host_hash_rehash,
        host_hash_done_clear => host_hash_done_clear,
+       host_flash_modified => host_flash_modified,
        nic_hash_host_done => nic_hash_host_done,
        nic_hash_busy => nic_hash_busy,
        version_id => "01",
