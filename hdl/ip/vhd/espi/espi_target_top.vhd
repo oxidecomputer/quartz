@@ -63,6 +63,13 @@ entity espi_target_top is
         flash_rfifo_rdack : out std_logic;
         flash_rfifo_rempty: in std_logic;
         flash_fifo_clear : out std_logic;
+        -- High while the host is powered off, when anything it left
+        -- outstanding on the flash channel is dropped. Not the same thing
+        -- as host_in_a0 being low: the host reads its flash on the way up,
+        -- before it is in A0.
+        flash_flush : in std_logic := '0';
+        -- From the flash block: still discarding, see flash_channel
+        flash_flush_busy : in std_logic := '0';
         -- Write payload FIFO, host to flash. Only ever written on an
         -- instance built with FLASH_WRITES_ALLOWED; leave open otherwise.
         flash_wfifo_data : out std_logic_vector(7 downto 0);
@@ -409,7 +416,9 @@ begin
        request => flash_req,
        response => flash_resp,
        enabled => flash_channel_enable,
+       flush => flash_flush,
        flash_fifo_clear => flash_fifo_clear,
+       flash_flush_busy => flash_flush_busy,
        flash_np_free => flash_np_free,
        flash_c_avail => flash_c_avail,
        flash_cfifo_data => flash_cfifo_data,

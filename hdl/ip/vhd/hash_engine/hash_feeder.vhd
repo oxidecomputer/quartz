@@ -262,6 +262,17 @@ begin
         end if;
 
         if stop_run then
+            -- Whatever was in flight no longer ends in a digest, including a
+            -- completed hash caught in its closing flush.
+            v.finished := '0';
+        end if;
+
+        -- A run that is already on its way out keeps going as it was: an abort
+        -- or a start that lands in DRAIN or FLUSH only changes what happens
+        -- once the flush is over. flash_rx stops counting when DRAIN takes
+        -- over, so working the debt out again from there would ask for bytes
+        -- that have already been swallowed and never come back.
+        if stop_run and r.state /= DRAIN and r.state /= FLUSH then
             -- Work out what the flash still owes us so DRAIN can swallow it.
             -- Nothing is owed unless the read command actually went out: a
             -- software fed run, or a flash run abandoned during its prepend,
@@ -271,7 +282,6 @@ begin
             else
                 v.drain_left := (others => '0');
             end if;
-            v.finished   := '0';
             v.state      := DRAIN;
         else
 
@@ -345,11 +355,13 @@ begin
 
                 when FLUSH =>
                     if r.clear_cnt = 0 then
-                        if r.restart = '1' then
+                        -- v rather than r for both: a start or an abort can
+                        -- land on this very cycle and has to be honoured.
+                        if v.restart = '1' then
                             do_begin := true;
                         else
                             v.busy  := '0';
-                            v.done  := r.finished;
+                            v.done  := v.finished;
                             v.state := IDLE;
                         end if;
                     else

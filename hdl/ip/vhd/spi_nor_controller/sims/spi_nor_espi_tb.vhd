@@ -38,6 +38,8 @@ begin
         alias data_rdack is <<signal th.data_rdack : std_logic>>;
         alias data_rempty is <<signal th.data_rempty : std_logic>>;
         alias espi_owns_flash_hw is <<signal th.espi_owns_flash_hw : std_logic>>;
+        alias espi_flush is <<signal th.espi_flush : std_logic>>;
+        alias espi_flush_busy is <<signal th.espi_flush_busy : std_logic>>;
         alias hash_cmd_wdata is <<signal th.hash_cmd_wdata : std_logic_vector(31 downto 0)>>;
         alias hash_cmd_write is <<signal th.hash_cmd_write : std_logic>>;
         alias hash_data_rdata is <<signal th.hash_data_rdata : std_logic_vector(7 downto 0)>>;
@@ -59,6 +61,37 @@ begin
         variable data : std_logic_vector(7 downto 0);
         variable spisr : std_logic_vector(31 downto 0);
 
+        -- How long a byte that is owed may take to show up. A read that has
+        -- been granted the engine delivers one in well under a microsecond,
+        -- and the worst wait behind someone else's chunk is tens of them, so
+        -- this only expires when the client has been left stranded, which is
+        -- reported here rather than by the watchdog.
+        constant byte_timeout : time := 500 us;
+
+        procedure set_spicr(constant value : std_logic_vector(31 downto 0)) is
+        begin
+            write_bus(net, bus_handle, To_StdLogicVector(SPICR_OFFSET + 16#100#, bus_handle.p_address_length),
+                      value);
+            wait_until_idle(net, bus_handle);
+        end procedure;
+
+
+        -- Ask for a flush for as long as given, then wait for the controller
+        -- to say it has finished. A write in flight is allowed its whole
+        -- program time; nothing else comes close to the bound.
+        procedure flush(constant width : time) is
+        begin
+            wait until rising_edge(clk);
+            espi_flush <= '1';
+            wait for width;
+            wait until rising_edge(clk);
+            espi_flush <= '0';
+            wait until rising_edge(clk);
+            if espi_flush_busy = '1' then
+                wait until espi_flush_busy = '0' for 5 ms;
+            end if;
+            check_equal(espi_flush_busy, '0', "Expected the flush to finish");
+        end procedure;
 
         -- Two-word command, the way the flash channel issues one
         procedure put_cmd(constant addr : natural; constant kind : std_logic_vector(3 downto 0); constant len : natural) is
@@ -96,10 +129,15 @@ begin
         end procedure;
 
         procedure get_hash_byte(variable b : out std_logic_vector(7 downto 0)) is
+            constant deadline : time := now + byte_timeout;
         begin
             loop
                 wait until rising_edge(clk);
                 exit when hash_data_rempty = '0';
+                if now > deadline then
+                    check_failed("get_hash_byte: no byte within " & time'image(byte_timeout));
+                    exit;
+                end if;
             end loop;
             b := hash_data_rdata;
             hash_data_rdack <= '1';
@@ -108,10 +146,15 @@ begin
         end procedure;
 
         procedure get_byte(variable b : out std_logic_vector(7 downto 0)) is
+            constant deadline : time := now + byte_timeout;
         begin
             loop
                 wait until rising_edge(clk);
                 exit when data_rempty = '0';
+                if now > deadline then
+                    check_failed("get_byte: no byte within " & time'image(byte_timeout));
+                    exit;
+                end if;
             end loop;
             b := data_rdata;
             data_rdack <= '1';
@@ -344,6 +387,180 @@ begin
                 for i in 0 to 3 loop
                     get_byte(data);
                     check_equal(data, pattern_byte(16#5010# + i), "host read again byte " & integer'image(i));
+                end loop;
+
+            elsif run("hash_runs_with_a_host_read_pending_and_the_sp_owning") then
+                -- The host has asked for a read while the SP holds the
+                -- flash, so the read sits in the command queue and stays
+                -- there. A hash asked for now must not queue behind it:
+                -- nothing is going to serve that read until the SP hands
+                -- the flash over, which it does only after it has measured.
+                set_spicr(x"00000000");
+                fill_pattern(net, flash);
+                put_cmd(16#3000#, kind_read, 8);
+                wait for 5 us;
+                put_hash_cmd(16#8000#, 600);
+                for i in 0 to 599 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#8000# + i), "hash byte " & integer'image(i));
+                end loop;
+                check_equal(data_rempty, '1', "Expected the host's read left alone while the SP owns the flash");
+                -- and the host gets its read once it is given the flash
+                set_spicr(SPICR_SP5_OWNS_FLASH_MASK);
+                for i in 0 to 7 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#3000# + i), "pending read byte " & integer'image(i));
+                end loop;
+
+            elsif run("host_read_arriving_mid_hash_with_the_sp_owning") then
+                -- The same, with the hash already under way: stepping aside
+                -- between chunks for a read nobody will serve would park the
+                -- hash for good.
+                set_spicr(x"00000000");
+                fill_pattern(net, flash);
+                put_hash_cmd(16#4000#, 1500);
+                wait until hash_bytes >= 256;
+                put_cmd(16#3000#, kind_read, 64);
+                for i in 0 to 1499 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#4000# + i), "hash byte " & integer'image(i));
+                end loop;
+                check_equal(data_rempty, '1', "Expected the host's read left alone while the SP owns the flash");
+                set_spicr(SPICR_SP5_OWNS_FLASH_MASK);
+                for i in 0 to 63 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#3000# + i), "pending read byte " & integer'image(i));
+                end loop;
+                -- with the host owning again a hash still shares with it
+                put_hash_cmd(16#5000#, 300);
+                for i in 0 to 299 loop
+                    get_hash_byte(data);
+                    check_equal(data, pattern_byte(16#5000# + i), "second hash byte " & integer'image(i));
+                end loop;
+
+            elsif run("owner_withdrawn_as_a_command_arrives") then
+                -- The flash is taken from the host around the moment one of
+                -- its commands lands, at every alignment of the two. The
+                -- command is either served or left queued, and in both
+                -- cases comes out whole once the host has the flash back.
+                -- What must not happen is the client taking the command on
+                -- the very edge it loses the engine: its go is then muxed
+                -- out, it never returns to idle, and since ownership only
+                -- moves while it is idle the flash can never be handed back.
+                set_spicr(x"00000000");
+                fill_pattern(net, flash);
+                for drop_at in 0 to 15 loop
+                    espi_owns_flash_hw <= '1';
+                    wait for 2 us;
+                    wait until rising_edge(clk);
+                    for cycle in 0 to 15 loop
+                        if cycle = drop_at then
+                            espi_owns_flash_hw <= '0';
+                        end if;
+                        if cycle = 4 then
+                            cmd_wdata <= std_logic_vector(to_unsigned(16#2000# + 16 * drop_at, 32));
+                            cmd_write <= '1';
+                        elsif cycle = 5 then
+                            cmd_wdata <= kind_read & std_logic_vector(to_unsigned(4, 28));
+                        elsif cycle = 6 then
+                            cmd_write <= '0';
+                        end if;
+                        wait until rising_edge(clk);
+                    end loop;
+                    wait for 20 us;
+                    espi_owns_flash_hw <= '1';
+                    for i in 0 to 3 loop
+                        get_byte(data);
+                        check_equal(data, pattern_byte(16#2000# + 16 * drop_at + i),
+                                    "grant dropped at cycle " & integer'image(drop_at) & ", byte " & integer'image(i));
+                    end loop;
+                    wait for 2 us;
+                    check_equal(data_rempty, '1', "Expected nothing left over, grant dropped at cycle " & integer'image(drop_at));
+                    -- the SP's own path has to work in between as well
+                    espi_owns_flash_hw <= '0';
+                    wait for 1 us;
+                    check_jedec_id(net);
+                end loop;
+
+            elsif run("flush_drops_a_command_the_sp_never_served") then
+                -- The host asked for a read while the SP held the flash and
+                -- then went away. The flush that follows takes the command
+                -- out of the queue without the eSPI path ever owning the
+                -- flash, so it is not what the host is handed first when it
+                -- next boots.
+                set_spicr(x"00000000");
+                fill_pattern(net, flash);
+                put_cmd(16#3000#, kind_read, 8);
+                wait for 5 us;
+                flush(1 us);
+                set_spicr(SPICR_SP5_OWNS_FLASH_MASK);
+                wait for 50 us;
+                check_equal(data_rempty, '1', "Expected the flushed read never to run");
+                put_cmd(16#4000#, kind_read, 8);
+                for i in 0 to 7 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#4000# + i), "read after the flush, byte " & integer'image(i));
+                end loop;
+
+            elsif run("flush_drops_a_deep_queue_on_a_short_request") then
+                -- The request is a few cycles long, the queue much deeper;
+                -- the controller has to keep draining after it, and say so.
+                set_spicr(x"00000000");
+                fill_pattern(net, flash);
+                for i in 0 to 19 loop
+                    put_cmd(16#3000# + 16 * i, kind_read, 8);
+                end loop;
+                put_payload(16#7000#, 600);
+                flush(40 ns);
+                set_spicr(SPICR_SP5_OWNS_FLASH_MASK);
+                wait for 50 us;
+                check_equal(data_rempty, '1', "Expected none of the flushed reads to run");
+                -- a stale payload byte would lead this write's own
+                put_payload(16#5000#, 16);
+                put_cmd(16#5000#, kind_write, 16);
+                check_status(x"00", "write after the flush");
+                check_flash_range(16#5000#, 16, false, "written after the flush");
+
+            elsif run("flush_during_a_read") then
+                -- A read in flight is not reported any further and stops at
+                -- the end of its chunk. The bytes already handed over are
+                -- the reader's to throw away, as the flash channel does.
+                fill_pattern(net, flash);
+                put_cmd(16#1000#, kind_read, 1000);
+                for i in 0 to 9 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#1000# + i), "read byte " & integer'image(i));
+                end loop;
+                flush(1 us);
+                wait for 1 us;
+                while data_rempty = '0' loop
+                    get_byte(data);
+                end loop;
+                -- long enough for the other three chunks, had they been run
+                wait for 200 us;
+                check_equal(data_rempty, '1', "Expected nothing more from the flushed read");
+                put_cmd(16#2000#, kind_read, 300);
+                for i in 0 to 299 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#2000# + i), "read after the flush, byte " & integer'image(i));
+                end loop;
+
+            elsif run("flush_lets_a_write_in_flight_finish") then
+                -- A program that has started has to complete on the part,
+                -- with the payload it was promised; only its status goes
+                -- unreported.
+                put_payload(16#6000#, 300);
+                put_cmd(16#6000#, kind_write, 300);
+                wait for 20 us;
+                flush(1 us);
+                wait for 1 us;
+                check_equal(data_rempty, '1', "Expected no status from a flushed write");
+                check_flash_range(16#6000#, 300, false, "written through the flush");
+                fill_pattern(net, flash);
+                put_cmd(16#2000#, kind_read, 4);
+                for i in 0 to 3 loop
+                    get_byte(data);
+                    check_equal(data, pattern_byte(16#2000# + i), "read after the flush, byte " & integer'image(i));
                 end loop;
 
             elsif run("espi_erase_unsupported_size") then

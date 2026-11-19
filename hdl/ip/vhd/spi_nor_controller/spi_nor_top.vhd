@@ -66,6 +66,15 @@ entity spi_nor_top is
         espi_wfifo_rdata : in std_logic_vector(7 downto 0) := (others => '0');
         espi_wfifo_rdack : out std_logic;
         espi_wfifo_rempty : in std_logic := '1';
+        -- High while the eSPI side wants everything it has outstanding here
+        -- thrown away: queued commands and write payload are popped and
+        -- dropped, and the rest of a transaction in flight goes unreported.
+        -- The FIFOs are emptied from their read ends, so they need no reset
+        -- of their own for this. espi_flush_busy stays up from the request
+        -- until all of that has settled; a command pushed before it drops
+        -- may be discarded.
+        espi_flush : in std_logic := '0';
+        espi_flush_busy : out std_logic;
 
         -- Second flash read client, same command/response FIFO shape as the eSPI
         -- one above. Used by the hashing engine. Addresses here are raw: none of
@@ -142,6 +151,14 @@ architecture rtl of spi_nor_top is
     signal hash_grant : std_logic;
     signal hash_active : std_logic;
     signal hash_fifo_write : std_logic;
+    signal espi_waiting : std_logic;
+    -- A word written to one of the eSPI FIFOs takes a few cycles to show at
+    -- its read end, so the queues are only called clean after this many
+    -- cycles of looking empty in a row.
+    constant flush_settle_cycles : natural := 15;
+    signal espi_flushing : std_logic;
+    signal espi_flush_active : std_logic;
+    signal flush_settle : natural range 0 to flush_settle_cycles;
 
 begin
 
@@ -226,6 +243,14 @@ begin
     -- host sees at most a chunk's delay on any one command; the hash takes as
     -- much longer as the host's traffic. While nobody is hashing, everything
     -- below reduces to the original two way sp5_owns_flash selection.
+    --
+    -- A queued eSPI command only counts as the host waiting while the eSPI
+    -- path owns the flash. With the SP owning it nothing is going to serve
+    -- that command until ownership changes, and the SP measures the flash
+    -- before it hands it over: a hash that deferred to the queue then would
+    -- wait on a command that is itself waiting on the hash's requester.
+    espi_waiting <= espi_owner and not espi_cmd_fifo_rempty;
+
     hash_grant_sm: process(clk, reset)
     begin
         if reset then
@@ -235,15 +260,16 @@ begin
                 -- Idle on both of the other sides: the register path has no
                 -- command out, and the eSPI manager is between transactions
                 -- (not merely between the chunks of one, which is what a
-                -- high chip select on its own would say) with nothing queued.
-                -- The queue check is also what keeps the manager and this
-                -- grant from setting off on the same edge: the manager
-                -- leaves idle on exactly a non-empty queue.
+                -- high chip select on its own would say) with nothing it
+                -- could start on. That check is also what keeps the manager
+                -- and this grant from setting off on the same edge: the
+                -- manager leaves idle on exactly a non-empty queue while it
+                -- owns the flash.
                 if hash_req = '1' and spisr_reg.busy = '0' and go_strobe = '0' and
-                   espi_txn_idle = '1' and espi_cmd_fifo_rempty = '1' then
+                   espi_txn_idle = '1' and espi_waiting = '0' then
                     hash_grant <= '1';
                 end if;
-            elsif hash_req = '0' or (hash_active = '0' and espi_cmd_fifo_rempty = '0') then
+            elsif hash_req = '0' or (hash_active = '0' and espi_waiting = '1') then
                 -- Done, or parked between chunks with the host waiting. The
                 -- raw manager parks itself on the same queue flag before
                 -- dropping active, so nothing of its is in flight here.
@@ -267,13 +293,24 @@ begin
     -- nothing is in flight on either side: a command split between the two
     -- would have its bytes go to the wrong FIFO, and the eSPI side would wait
     -- for them forever.
+    --
+    -- Idle is not enough on its own to take the engine away from the eSPI
+    -- side. Its manager leaves idle on the edge it sees a command queued, so
+    -- with one there it would set off on the very edge ownership went: its go
+    -- would be muxed out, it would never get back to idle, and with ownership
+    -- only moving while it is idle the flash could never be handed back. A
+    -- queued command is served first instead; the flash channel issues one at
+    -- a time, so the queue does empty.
     owner_reg: process(clk, reset)
+        variable want_espi : std_logic;
     begin
         if reset then
             espi_owner <= '0';
         elsif rising_edge(clk) then
-            if spisr_reg.busy = '0' and go_strobe = '0' and espi_txn_idle = '1' then
-                espi_owner <= spicr_reg.sp5_owns_flash or espi_owns_flash_hw;
+            want_espi := spicr_reg.sp5_owns_flash or espi_owns_flash_hw;
+            if spisr_reg.busy = '0' and go_strobe = '0' and espi_txn_idle = '1' and
+               (want_espi = '1' or espi_cmd_fifo_rempty = '1') then
+                espi_owner <= want_espi;
             end if;
         end if;
     end process;
@@ -286,7 +323,40 @@ begin
     -- acks whichever it is reading.
     tx_byte <= espi_wfifo_rdata when tx_from_espi = '1' else tx_fifo_data8;
     tx_fifo_read8 <= tx_byte_ack when tx_from_espi = '0' else '0';
-    espi_wfifo_rdack <= tx_byte_ack when tx_from_espi = '1' else '0';
+    -- A flush empties the payload FIFO too, but only around a transaction:
+    -- a program in flight keeps the bytes it was promised.
+    espi_wfifo_rdack <= tx_byte_ack when tx_from_espi = '1' else
+                        espi_flush_active and espi_txn_idle and not espi_wfifo_rempty;
+
+    -- A flush lasts until the eSPI side stops asking, the manager is back
+    -- in idle, and both queues have stayed empty long enough to be believed.
+    -- The request can be a short pulse (an eSPI reset is over as soon as the
+    -- host re-enables its flash channel), so this is what holds the drain
+    -- open for a queue deeper than the pulse is long.
+    espi_flush_sm: process(clk, reset)
+    begin
+        if reset then
+            espi_flushing <= '0';
+            flush_settle <= 0;
+        elsif rising_edge(clk) then
+            if espi_flush = '1' then
+                espi_flushing <= '1';
+                flush_settle <= 0;
+            elsif espi_flushing = '1' then
+                if espi_txn_idle = '1' and espi_cmd_fifo_rempty = '1' and espi_wfifo_rempty = '1' then
+                    if flush_settle = flush_settle_cycles then
+                        espi_flushing <= '0';
+                    else
+                        flush_settle <= flush_settle + 1;
+                    end if;
+                else
+                    flush_settle <= 0;
+                end if;
+            end if;
+        end if;
+    end process;
+    espi_flush_active <= espi_flush or espi_flushing;
+    espi_flush_busy <= espi_flush_active;
     -- TODO: this would be more simple with a mixed width fifo
     -- but this was faster than digging around making a new wrapper
     -- for now
@@ -412,8 +482,8 @@ begin
          cmd_fifo_rempty => hash_cmd_fifo_rempty,
          req => hash_req,
          grant => hash_grant,
-         -- An eSPI command waiting is the host asking for its turn
-         yield => not espi_cmd_fifo_rempty,
+         -- An eSPI command that can be served is the host asking for its turn
+         yield => espi_waiting,
          active => hash_active,
          cmd => hash_cmd,
          spi_hw_busy => spisr_reg.busy,
@@ -434,6 +504,7 @@ begin
          -- Nothing new starts on the eSPI side while the hash holds the
          -- engine; what the host has queued is served between its chunks.
          espi_reads_allowed => espi_owner and not hash_grant,
+         flush => espi_flush_active,
          txn_idle => espi_txn_idle,
          sp_host_image_flash_addr_offset => signed(sp5_flash_offset.offset),
          amd_begin_apob_flash_addr => apob_flash_addr.offset,

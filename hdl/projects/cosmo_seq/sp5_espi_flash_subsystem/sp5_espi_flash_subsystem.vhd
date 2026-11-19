@@ -84,7 +84,13 @@ entity sp5_espi_flash_subsystem is
         config_timeout_ms : out std_logic_vector(31 downto 0);
         nic_config_status : in work.espi_platform_regs_pkg.nic_config_status_type := work.espi_platform_regs_pkg.rec_reset;
         -- Low outside A0, when the host's say-so for that NIC lapses
-        host_in_a0 : in std_logic := '1'
+        host_in_a0 : in std_logic := '1';
+        -- High while the host is powered off altogether. Whatever it left
+        -- outstanding on the flash channel is dropped then, so that a read
+        -- it never collected is not still queued at the next boot. Not the
+        -- inverse of host_in_a0: the host reads its flash on the way up,
+        -- before it is in A0.
+        host_off : in std_logic := '0'
     );
 end entity;
 
@@ -100,13 +106,12 @@ architecture rtl of sp5_espi_flash_subsystem is
     signal flash_rfifo_rdack : std_logic;
     signal flash_rfifo_rempty : std_logic;
     signal flash_fifo_clear : std_logic;
-    signal fifo_reset : std_logic;
+    signal flash_flush_busy : std_logic;
     signal flash_wfifo_data : std_logic_vector(7 downto 0);
     signal flash_wfifo_write : std_logic;
     signal espi_wfifo_rdata : std_logic_vector(7 downto 0);
     signal espi_wfifo_rdack : std_logic;
     signal espi_wfifo_rempty : std_logic;
-    signal rst_cnts : integer range 0 to 5 := 5;
 
 
 
@@ -126,26 +131,11 @@ begin
         reset_sync => reset_125m_local
     );
 
-    -- I don't love this pattern but we're going to combine the system reset with the 
-    -- espi reset and clean out these FIFOs on an espi reset, which happens at the beginning
-    -- of every boot.
-    rst_combine:process(clk_125m, reset_125m_local)
-     begin
-        if reset_125m_local = '1' then
-           fifo_reset <= '1';
-           rst_cnts <= 5;
-        elsif rising_edge(clk_125m) then
-            if flash_fifo_clear = '1' then
-               rst_cnts <= 5;
-               fifo_reset <= '1';
-            elsif rst_cnts > 0 then
-                rst_cnts <= rst_cnts - 1;
-            else
-                fifo_reset <= '0';
-            end if;
-        end if;
-    end process;
-    
+    -- These FIFOs are only ever reset with the rest of the block. When the
+    -- eSPI side wants what is in them gone (its flash channel was reset, or
+    -- the host is off) each is emptied by whoever reads it: the flash channel
+    -- reads out the data FIFO and spi_nor_top the command and payload ones.
+
     -- eSPI block -> SPI NOR  FIFO
     espi_spinor_cmd_fifo: entity work.dcfifo_xpm
     generic map(
@@ -155,7 +145,7 @@ begin
     )
      port map(
         wclk => clk_125m,  -- eSPI slow dclock
-        reset => fifo_reset,
+        reset => reset_125m_local,
         write_en => flash_cfifo_write,
         wdata => flash_cfifo_data,
         wfull => open,
@@ -175,7 +165,7 @@ begin
     )
      port map(
         wclk => clk_125m,  -- spi nor clock
-        reset => fifo_reset,
+        reset => reset_125m_local,
         write_en => espi_data_fifo_write,
         wdata => espi_data_fifo_wdata,
         wfull => open,
@@ -205,7 +195,7 @@ begin
         )
          port map(
             wclk => clk_125m,
-            reset => fifo_reset,
+            reset => reset_125m_local,
             write_en => flash_wfifo_write,
             wdata => flash_wfifo_data,
             wfull => open,
@@ -241,6 +231,8 @@ begin
         response_csn => response_csn,
         alert_l => espi_alert_l,
         flash_fifo_clear => flash_fifo_clear,
+        flash_flush => host_off,
+        flash_flush_busy => flash_flush_busy,
         flash_cfifo_data => flash_cfifo_data,
         flash_cfifo_write => flash_cfifo_write,
         flash_rfifo_data => flash_rfifo_data,
@@ -306,6 +298,8 @@ begin
            espi_wfifo_rdata => espi_wfifo_rdata,
            espi_wfifo_rdack => espi_wfifo_rdack,
            espi_wfifo_rempty => espi_wfifo_rempty,
+           espi_flush => flash_fifo_clear,
+           espi_flush_busy => flash_flush_busy,
            hash_cmd_fifo_rdata => hash_cmd_fifo_rdata,
            hash_cmd_fifo_rdack => hash_cmd_fifo_rdack,
            hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,

@@ -65,6 +65,10 @@ architecture th of spi_nor_espi_th is
     signal espi_wfifo_rempty : std_logic;
     -- Hardware grant of the flash to the eSPI client, driven by the testbench
     signal espi_owns_flash_hw : std_logic := '0';
+    -- The eSPI side's flush request, driven by the testbench, and the
+    -- controller's answer
+    signal espi_flush : std_logic := '0';
+    signal espi_flush_busy : std_logic;
 
     -- The hash client's FIFOs: a command pair (address, byte count) in from
     -- the testbench, bytes back out to it, the way hash_engine_top's would be
@@ -253,6 +257,8 @@ begin
             espi_wfifo_rdata     => espi_wfifo_rdata,
             espi_wfifo_rdack     => espi_wfifo_rdack,
             espi_wfifo_rempty    => espi_wfifo_rempty,
+            espi_flush           => espi_flush,
+            espi_flush_busy      => espi_flush_busy,
             hash_cmd_fifo_rdata  => hash_cmd_fifo_rdata,
             hash_cmd_fifo_rdack  => hash_cmd_fifo_rdack,
             hash_cmd_fifo_rempty => hash_cmd_fifo_rempty,
